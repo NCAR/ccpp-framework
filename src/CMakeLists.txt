@@ -1,33 +1,44 @@
 #------------------------------------------------------------------------------
 # Set the sources
-file(GLOB_RECURSE SOURCES *.F90 *.f90 *.h *.c)
+add_sources(
+    atm_drv.f90
+    kinds.f90
+    errors.f90
+    strings.f90
+    types.f90
+    types.h
+    xml.c
+    xml.f90
+    xml.h
+    ipd/ipd.f90
+    ipd/ipd_phy.c
+    ipd/ipd_phy.h
+    phy/phy_field_idx.c
+    phy/phy_fields.f90
+    phy/phy_infra.f90
+)
 
 #------------------------------------------------------------------------------
-# Define the CCPP library
-add_library(ccpp SHARED ${SOURCES})
+# Find libXML2
+find_package(LibXml2 REQUIRED)
+if (LIBXML2_FOUND)
+        include_directories(${LIBXML2_INCLUDE_DIR})
+        set(LIBS ${LIBS} ${LIBXML2_LIBRARIES})
+endif(LIBXML2_FOUND)
 
 #------------------------------------------------------------------------------
-# Set the version number of the library
-set_target_properties(ccpp PROPERTIES
-                      SOVERSION ${PROJECT_VERSION_MAJOR}
-                      VERSION   ${PROJECT_VERSION})
+# Add the toplevel source directory to our include directoies
+include_directories(".")
 
 #------------------------------------------------------------------------------
-# Always use full RPATH
-# use the full RPATH for the build tree
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
+# Add all the different physics schemes
+add_subdirectory(schemes)
 
-# when building, don't use the install RPATH
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+SET(LINK_EXPORT_DYNAMIC "-Wl,--export-dynamic")
+SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${LINK_EXPORT_DYNAMIC}")
 
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+#------------------------------------------------------------------------------
+# Define the executable and what to link
+add_executable(atm_drv ${SOURCES})
+target_link_libraries(atm_drv LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 
-# add the automatically determined parts of the RPATH
-# which point to directories outside the build tree to the install RPATH
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# the RPATH to be used when installing, but only if it's not a system directory
-list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
-if("${isSystemDir}" STREQUAL "-1")
-   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-endif("${isSystemDir}" STREQUAL "-1")

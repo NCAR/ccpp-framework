@@ -13,13 +13,6 @@ set(PACKAGE "CCPP")
 set(AUTHORS  "Timothy Brown" "David Gill")
 string(TIMESTAMP YEAR "%Y")
 
-# The project version number
-#set(CCPP_VERSION_MAJOR   1   CACHE STRING "Project major version number.")
-#set(CCPP_VERSION_MINOR   0   CACHE STRING "Project minor version number.")
-#set(CCPP_VERSION_PATCH   1   CACHE STRING "Project patch version number.")
-#mark_as_advanced(CCPP_VERSION_MAJOR CCPP_VERSION_MINOR CCPP_VERSION_PATCH)
-
-
 #------------------------------------------------------------------------------
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -32,8 +25,17 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 #------------------------------------------------------------------------------
+# Set the CMake module path
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+
+# Include modules
+include(${CMAKE_MODULE_PATH}/add_sources.cmake)
+include(${CMAKE_MODULE_PATH}/export_dynamic.cmake)
+
+#------------------------------------------------------------------------------
 # Add the sub-directories
 # Source
 add_subdirectory(src)
 # Documentation
 add_subdirectory(doc)
+
