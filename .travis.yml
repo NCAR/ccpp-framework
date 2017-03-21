@@ -1,0 +1,51 @@
+#======================================================================
+# Project settings
+#======================================================================
+# Only build master.
+branches:
+  only:
+      - master
+
+language: fortran
+
+#======================================================================
+# Environment
+#======================================================================
+# Use new Travis infrastructure.
+sudo: false
+
+# Code is Fortran. While docs need doxygen and graphviz to build
+addons:
+  apt:
+    packages:
+      - cmake
+      - gfortran
+      - doxygen
+      - graphviz
+
+#======================================================================
+# Build Matrix
+#======================================================================
+matrix:
+   include:
+     - os: linux
+       compiler: gcc
+       install: export CC="gcc" export FC="gfortran"
+#     - os: osx
+#       compiler: gcc
+#       install: export CC="gcc" export FC="gfortran"
+
+#======================================================================
+# Building
+#======================================================================
+script:
+  - mkdir build && cd build && cmake .. && make
+
+#======================================================================
+# Notifications
+#======================================================================
+notifications:
+  email:
+    recipients: Timothy.P.Brown@noaa.gov
+    on_success: change
+    on_failure: always
