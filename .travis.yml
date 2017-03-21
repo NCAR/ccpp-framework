@@ -22,7 +22,7 @@ addons:
   apt:
     packages:
       - cmake
-      - gfortran
+      - gfortran-5
       - doxygen
       - graphviz
 
