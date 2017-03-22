@@ -1,7 +1,7 @@
 # ccpp
 GMTB Common Community Physics Package
 
-[![Build Status](https://travis-ci.org/t-brown/ccpp.svg?branch=develop)](https://travis-ci.org/t-brown/ccpp)
+[![Build Status](https://travis-ci.org/t-brown/ccpp.svg?branch=master)](https://travis-ci.org/t-brown/ccpp)
 
 ## Requirements
 1. Compilers [GNU Compiler Collection](https://gcc.gnu.org/)
