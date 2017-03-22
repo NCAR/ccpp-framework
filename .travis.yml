@@ -51,9 +51,6 @@ before_script:
   - export CC="gcc-6" FC="gfortran-6" CXX="g++-6" ;
 
 script:
-  - dpkg -L gcc-6
-  - dpkg -L gfortran-6
-  - ls /usr/bin
   - mkdir build && cd build && cmake .. && make
 
 #======================================================================
