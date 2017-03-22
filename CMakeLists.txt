@@ -32,6 +32,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 include(${CMAKE_MODULE_PATH}/add_sources.cmake)
 include(${CMAKE_MODULE_PATH}/export_dynamic.cmake)
 
+message(STATUS "Link flags: ${CMAKE_EXE_LINKER_FLAGS}")
 #------------------------------------------------------------------------------
 # Add the sub-directories
 # Source
