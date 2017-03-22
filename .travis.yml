@@ -35,8 +35,8 @@ addons:
 #======================================================================
 matrix:
    include:
-#     - os: linux
-#       compiler: gcc
+     - os: linux
+       compiler: gcc
      - os: osx
        compiler: gcc
 

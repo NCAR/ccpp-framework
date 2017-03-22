@@ -34,9 +34,6 @@ include_directories(".")
 # Add all the different physics schemes
 add_subdirectory(schemes)
 
-SET(LINK_EXPORT_DYNAMIC "-Wl,--export-dynamic")
-SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${LINK_EXPORT_DYNAMIC}")
-
 #------------------------------------------------------------------------------
 # Define the executable and what to link
 add_executable(atm_drv ${SOURCES})
