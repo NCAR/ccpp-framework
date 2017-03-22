@@ -39,3 +39,8 @@ add_subdirectory(src)
 # Documentation
 add_subdirectory(doc)
 
+#------------------------------------------------------------------------------
+# Enable testing
+enable_testing()
+add_test(DUMMY src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml)
+
