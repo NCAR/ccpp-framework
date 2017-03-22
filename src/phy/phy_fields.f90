@@ -151,8 +151,6 @@ module phy_fields
                 call err(ierr, 'Unable to allocate ap_data fields dims')
             end if
             ap_data%fields(i)%dims      = dims
-        else
-            ap_data%fields(i)%dims      = 0
         end if
 
         ierr = phy_field_idx_add(cstr(standard_name), i, ap_data%fields_idx)
