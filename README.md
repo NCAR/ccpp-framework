@@ -30,9 +30,9 @@ It is recommend to do an out of source build.
   * `make`
 
 ## Running
-The test program will be in the `build/src` directory. While test suite
-definitions are in the `ipd/tests` directory.
-  * `src/atm_drv ../ipd/tests/suite_DUMMY.xml`
+The test program will be in the `ccpp/build/src` directory. While test suite
+definitions are in the `ccpp/tests` directory.
+  * `src/atm_drv ../tests/suite_DUMMY.xml`
 
 ## Validating XML
 A suite is defined in XML. There is a test suite definied within
