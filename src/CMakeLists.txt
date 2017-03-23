@@ -22,8 +22,8 @@ add_sources(
 # Find libXML2
 find_package(LibXml2 REQUIRED)
 if (LIBXML2_FOUND)
-        include_directories(${LIBXML2_INCLUDE_DIR})
-        set(LIBS ${LIBS} ${LIBXML2_LIBRARIES})
+    include_directories(${LIBXML2_INCLUDE_DIR})
+    list(APPEND LIBS ${LIBXML2_LIBRARIES})
 endif(LIBXML2_FOUND)
 
 #------------------------------------------------------------------------------

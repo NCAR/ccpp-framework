@@ -1,5 +1,5 @@
-# ccpp
-GMTB Common Community Physics Package
+# CCPP
+[GMTB](http://www.dtcenter.org/GMTB/html/) Common Community Physics Package
 
 [![Build Status](https://travis-ci.org/t-brown/ccpp.svg?branch=master)](https://travis-ci.org/t-brown/ccpp)
 
@@ -45,10 +45,12 @@ suite_RAP.xml validates
 ```
 
 ## Documentation
-The code is documented with [Doxygen](www.doxygen.org/).
-
-1. Make the documentation.
-  * `make doc`
+The code is documented with [doxygen](www.doxygen.org/).
+To generate the documentation you must have [doxygen](www.doxygen.org/)
+and [graphviz](http://www.graphviz.org/) installed. The execute:
+```
+make doc
+```
 
 ## Physics Schemes
 All physics schemes are kept in the repository under the `src/schemes`
@@ -83,3 +85,17 @@ To add a new scheme one needs to
 An example of a scheme that does nothing is `src/schemes/dummy.f90`.
 
 
+## Code Coverage
+The code can be built and run to indicate code coverage. In order to do
+this, you must have GNU [gcov](https://gcc.gnu.org/onlinedocs/gcc/Gcov.html)
+and [lcov](http://ltp.sourceforge.net/coverage/lcov.php) installed.
+To generate the coverage:
+
+1. Make sure you are using the GNU compilers.
+2. Configure the build for coverage.
+  * `cmake -DCMAKE_BUILD_TYPE=Coverage ..`
+3. Build the CCPP.
+  * `make`
+4. Build the covage report
+  * `make coverage`
+The coverage report will be in the `coverage` directory within the build.

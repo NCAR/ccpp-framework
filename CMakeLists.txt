@@ -26,12 +26,26 @@ endif()
 
 #------------------------------------------------------------------------------
 # Set the CMake module path
-#SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-SET(CCPP_MACRO_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Include modules
-include(${CCPP_MACRO_PATH}/add_sources.cmake)
-include(${CCPP_MACRO_PATH}/export_dynamic.cmake)
+include(add_sources)
+include(export_dynamic)
+
+#------------------------------------------------------------------------------
+# Enable code coverage
+if(CMAKE_COMPILER_IS_GNUCC AND (CMAKE_BUILD_TYPE STREQUAL "Coverage"))
+    include(code_coverage)
+    setup_target_for_coverage(coverage
+                              "src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml"
+                              coverage)
+    list(APPEND LIBS "gcov")
+endif()
+
+#------------------------------------------------------------------------------
+# Enable testing
+enable_testing()
+add_test(DUMMY src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml)
 
 #------------------------------------------------------------------------------
 # Add the sub-directories
