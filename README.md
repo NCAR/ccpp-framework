@@ -2,6 +2,7 @@
 [GMTB](http://www.dtcenter.org/GMTB/html/) Common Community Physics Package
 
 [![Build Status](https://travis-ci.org/t-brown/ccpp.svg?branch=master)](https://travis-ci.org/t-brown/ccpp)
+[![Coverage Status](https://coveralls.io/repos/github/t-brown/ccpp/badge.svg?branch=master)](https://coveralls.io/github/t-brown/ccpp?branch=master)
 
 ## Requirements
 1. Compilers [GNU Compiler Collection](https://gcc.gnu.org/)
