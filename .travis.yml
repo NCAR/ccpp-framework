@@ -58,13 +58,15 @@ before_script:
 script:
   - mkdir build && cd build && cmake .. && make
   - make test
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
-          cmake -DCMAKE_BUILD_TYPE=Coverage .. && make coverage 
-      fi
-
-after_success:
-  - coveralls --exclude lib --exclude tests --gcov-options '\-lp'
+#  - |
+#      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
+#          make clean
+#          cmake -DCMAKE_BUILD_TYPE=Coverage .. && make coverage
+#          bash <(curl -s https://codecov.io/bash)
+#      fi
+#
+#after_success:
+#  - coveralls --exclude lib --exclude tests --gcov-options '\-lp'
 
 #======================================================================
 # Notifications
