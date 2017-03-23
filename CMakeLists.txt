@@ -26,11 +26,12 @@ endif()
 
 #------------------------------------------------------------------------------
 # Set the CMake module path
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+#SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+SET(CCPP_MACRO_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Include modules
-include(${CMAKE_MODULE_PATH}/add_sources.cmake)
-include(${CMAKE_MODULE_PATH}/export_dynamic.cmake)
+include(${CCPP_MACRO_PATH}/add_sources.cmake)
+include(${CCPP_MACRO_PATH}/export_dynamic.cmake)
 
 #------------------------------------------------------------------------------
 # Add the sub-directories
@@ -38,9 +39,3 @@ include(${CMAKE_MODULE_PATH}/export_dynamic.cmake)
 add_subdirectory(src)
 # Documentation
 add_subdirectory(doc)
-
-#------------------------------------------------------------------------------
-# Enable testing
-enable_testing()
-add_test(DUMMY src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml)
-

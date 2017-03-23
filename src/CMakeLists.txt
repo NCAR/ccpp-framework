@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # Set the sources
 add_sources(
-    atm_drv.f90
+    #atm_drv.f90
     kinds.f90
     errors.f90
     strings.f90
@@ -36,6 +36,7 @@ add_subdirectory(schemes)
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
-add_executable(atm_drv ${SOURCES})
-target_link_libraries(atm_drv LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
-
+#add_executable(atm_drv ${SOURCES})
+#target_link_libraries(atm_drv LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
+add_library(ccpp SHARED ${SOURCES})
+target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
