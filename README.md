@@ -45,14 +45,6 @@ xmllint --schema suite.xsd --noout suite_RAP.xml
 suite_RAP.xml validates
 ```
 
-## Documentation
-The code is documented with [doxygen](www.doxygen.org/).
-To generate the documentation you must have [doxygen](www.doxygen.org/)
-and [graphviz](http://www.graphviz.org/) installed. The execute:
-```
-make doc
-```
-
 ## Physics Schemes
 All physics schemes are kept in the repository under the `src/schemes`
 directory.
@@ -85,6 +77,13 @@ To add a new scheme one needs to
 
 An example of a scheme that does nothing is `src/schemes/dummy.f90`.
 
+## Documentation
+The code is documented with [doxygen](www.doxygen.org/).
+To generate the documentation you must have [doxygen](www.doxygen.org/)
+and [graphviz](http://www.graphviz.org/) installed. The execute:
+```
+make doc
+```
 
 ## Code Coverage
 The code can be built and run to indicate code coverage. In order to do
