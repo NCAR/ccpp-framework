@@ -9,6 +9,7 @@ add_sources(
     bc.f90
     dummy.f90
     dummy_scm.f90
+    dummy_scm2.f90
     gf.f90
     mp.f90
     pbl.f90
