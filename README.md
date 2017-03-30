@@ -2,8 +2,8 @@
 [GMTB](http://www.dtcenter.org/GMTB/html/) Common Community Physics Package
 (CCPP), including the Interoperable Physics Driver (IPD).
 
-[![Build Status](https://travis-ci.org/t-brown/ccpp.svg?branch=master)](https://travis-ci.org/t-brown/ccpp)
-[![Coverage Status](https://coveralls.io/repos/github/t-brown/ccpp/badge.svg?branch=master)](https://coveralls.io/github/t-brown/ccpp?branch=master)
+[![Build Status](https://travis-ci.org/t-brown/ccpp.svg?branch=master)](https://travis-ci.org/NCAR/gmtb-ccpp)
+[![Coverage Status](https://coveralls.io/repos/github/t-brown/ccpp/badge.svg?branch=master)](https://coveralls.io/github/NCAR/gmtb-ccpp?branch=master)
 
 ## Requirements
 1. Compilers [GNU Compiler Collection](https://gcc.gnu.org/)
