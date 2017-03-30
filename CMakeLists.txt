@@ -26,7 +26,7 @@ endif()
 
 #------------------------------------------------------------------------------
 # Set the CMake module path
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Include modules
 include(add_sources)
@@ -53,4 +53,3 @@ add_test(DUMMY src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml)
 add_subdirectory(src)
 # Documentation
 add_subdirectory(doc)
-
