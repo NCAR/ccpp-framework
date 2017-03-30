@@ -1,0 +1,78 @@
+#======================================================================
+# Project settings
+#======================================================================
+# Only build master.
+branches:
+  only:
+      - master
+
+language: fortran
+
+#======================================================================
+# Environment
+#======================================================================
+
+# Code is Fortran. While docs need doxygen and graphviz to build
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - cmake
+      - gcc-6
+      - gfortran-6
+      - g++-6
+      - doxygen
+      - graphviz
+      - lcov
+
+#======================================================================
+# Build Matrix
+#======================================================================
+matrix:
+   include:
+     - os: linux
+       compiler: gcc
+       sudo: false
+       dist: trusty
+     - os: osx
+       compiler: gcc
+
+#======================================================================
+# Building
+#======================================================================
+before_install:
+  - |
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
+          brew update
+          brew install gcc6
+      fi
+  - |
+      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
+          pip install --user cpp-coveralls
+      fi
+
+before_script:
+  - export CC="gcc-6" FC="gfortran-6" CXX="g++-6" ;
+
+script:
+  - mkdir build && cd build && cmake .. && make
+  - make test
+#  - |
+#      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
+#          make clean
+#          cmake -DCMAKE_BUILD_TYPE=Coverage .. && make coverage
+#          bash <(curl -s https://codecov.io/bash)
+#      fi
+#
+#after_success:
+#  - coveralls --exclude lib --exclude tests --gcov-options '\-lp'
+
+#======================================================================
+# Notifications
+#======================================================================
+notifications:
+  email:
+    recipients: Timothy.P.Brown@noaa.gov
+    on_success: change
+    on_failure: always
