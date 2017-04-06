@@ -2,22 +2,22 @@
 # Set the sources
 add_sources(
     kinds.f90
+    ccpp.f90
+    ccpp_errors.f90
+    ccpp_fields.f90
+    ccpp_fields_idx.h
+    ccpp_fields_idx.c
     ccpp_ipd.f90
     ccpp_ipd.h
     ccpp_ipd.c
     ccpp_strings.f90
+    ccpp_suite.f90
     ccpp_types.f90
-    ccpp_types.h
     ccpp_utils.h
     ccpp_utils.c
-    ccpp_errors.f90
     ccpp_xml.f90
     ccpp_xml.h
     ccpp_xml.c
-    ccpp_fields.f90
-    ccpp_fields_idx.h
-    ccpp_fields_idx.c
-    ccpp_phy_infra.f90
 )
 
 set(CMAKE_Fortran_MODULE_DIRECTORY

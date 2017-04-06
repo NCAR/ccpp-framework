@@ -1,52 +1,100 @@
 !>
-!! @brief Physics infrastructure module.
+!! @brief Physics suite infrastructure module.
 !
-module ccpp_phy_infra
+module ccpp_suite
 
-   use, intrinsic :: iso_c_binding
-   use            :: kinds,                                            &
-                     only: i_sp, r_dp
-   use            :: ccpp_types,                                       &
-                     only: STR_LEN, suite_t, ipd_t, subcycle_t,        &
-                           aip_t, field_t
-   use            :: ccpp_errors,                                      &
-                     only: ccpp_error, ccpp_warn
-   use            :: ccpp_strings,                                     &
-                     only: ccpp_fstr, ccpp_cstr
-   use            :: ccpp_xml
-   implicit none
+    use, intrinsic :: iso_c_binding,                                   &
+                      only: c_ptr, c_char
+    use            :: kinds,                                           &
+                      only: i_sp, r_dp
+    use            :: ccpp_types,                                      &
+                      only: STR_LEN, ccpp_suite_t
+    use            :: ccpp_errors,                                     &
+                      only: ccpp_error, ccpp_warn
+    use            :: ccpp_strings,                                    &
+                      only: ccpp_fstr, ccpp_cstr
+    use            :: ccpp_xml
+    implicit none
 
-   private
-   public :: ccpp_phy_init
+    private
+    public :: ccpp_suite_init,                                         &
+              ccpp_suite_fini,                                         &
+              ccpp_suite_t
 
-   !>
-   !! @brief Suite XML tags.
-   !!
-   !! @details These suite xml tags must match the elements and attributes
-   !!          of the suite.xsd.
-   !
-   character(len=*), parameter :: XML_ELE_SUITE    = "suite"
-   character(len=*), parameter :: XML_ELE_IPD      = "ipd"
-   character(len=*), parameter :: XML_ELE_SUBCYCLE = "subcycle"
-   character(len=*), parameter :: XML_ELE_SCHEME   = "scheme"
-   character(len=*), parameter :: XML_ATT_NAME     = "name"
-   character(len=*), parameter :: XML_ATT_PART     = "part"
-   character(len=*), parameter :: XML_ATT_LOOP     = "loop"
+    !>
+    !! @brief Suite XML tags.
+    !!
+    !! @details These suite xml tags must match the elements and attributes
+    !!          of the suite.xsd.
+    !
+    character(len=*), parameter :: XML_ELE_SUITE    = "suite"
+    character(len=*), parameter :: XML_ELE_IPD      = "ipd"
+    character(len=*), parameter :: XML_ELE_SUBCYCLE = "subcycle"
+    character(len=*), parameter :: XML_ELE_SCHEME   = "scheme"
+    character(len=*), parameter :: XML_ATT_NAME     = "name"
+    character(len=*), parameter :: XML_ATT_PART     = "part"
+    character(len=*), parameter :: XML_ATT_LOOP     = "loop"
+
+
+!    !>
+!    !! @typedef subcycle_t
+!    !! @breif Subcycle type
+!    !!
+!    !! The subcycle type contains all the scheme names and the number of
+!    !! times the subcycle will loop. It is a direct mapping to the IPD
+!    !! suite subcycle XML.
+!    !
+!    type :: ccpp_subcycle_t
+!            integer                                           :: loop
+!            integer                                           :: schemes_max
+!            integer                                           :: schemes_n
+!            character(:), allocatable, dimension(:)           :: schemes
+!    end type ccpp_subcycle_t
+!
+!    !! @typedef ccpp_ipd_t
+!    !! @breif IPD type
+!    !!
+!    !! The ipd type contains all the subcycles and part number of
+!    !! the ipd call. It is a direct mapping to the IPD suite ipd 
+!    !! element in XML.
+!    !
+!    type :: ccpp_ipd_t
+!            integer                                             :: part
+!            integer                                             :: subcycles_max
+!            integer                                             :: subcycles_n
+!            type(ccpp_subcycle_t), allocatable, dimension(:)    :: subcycles
+!    end type ccpp_ipd_t
+!
+!    !! @typedef ccpp_suite_t
+!    !! @breif Suite type
+!    !!
+!    !! The suite type contains all the ipd parts names and number of
+!    !! times the subcycle will loop. It is a direct mapping to the
+!    !! IPD suite subcycle XML.
+!    !
+!    type :: suite_t
+!            character(:), allocatable                           :: name
+!            integer                                             :: ipds_max
+!            integer                                             :: ipd_n
+!            type(ccpp_ipd_t), allocatable, dimension(:)         :: ipds
+!    end type ccpp_suite_t
+
 
    contains
 
    !>
-   !! Physics infrastructure initialization subroutine.
+   !! Suite initialization subroutine.
    !!
    !! @param[in]    filename The file name of the XML scheme file to load.
    !! @param[inout] suite    The suite_t type to initalize from the scheme
    !!                        XML file.
+   !! @param[  out] ierr     Integer error flag.
    !
-   subroutine ccpp_phy_init(filename, suite, ierr)
+   subroutine ccpp_suite_init(filename, suite, ierr)
         implicit none
 
         character(len=*),       intent(in)    :: filename
-        type(suite_t),          intent(inout) :: suite
+        type(ccpp_suite_t),     intent(inout) :: suite
         integer,                intent(  out) :: ierr
 
         logical                               :: is_subcycle
@@ -247,6 +295,48 @@ module ccpp_phy_infra
 
         ierr = ccpp_xml_unload(xml)
 
-   end subroutine ccpp_phy_init
+   end subroutine ccpp_suite_init
 
-end module ccpp_phy_infra
+   !>
+   !! Suite finalization subroutine.
+   !!
+   !! @param[inout] suite    The suite_t type to initalize from the scheme
+   !!                        XML file.
+   !! @param[  out] ierr     Integer error flag.
+   !
+   subroutine ccpp_suite_fini(suite, ierr)
+        type(ccpp_suite_t),     intent(inout) :: suite
+        integer,                intent(  out) :: ierr
+
+        integer                               :: i
+        integer                               :: j
+        integer                               :: k
+
+        ierr = 0
+
+!        do i=1, suite%ipds_max
+!            do j=1, suite%ipds(i)%subcycles_max
+!                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
+!                    if (allocated(suite%ipds(i)%subcycles(j)%schemes(k))) then
+!                        deallocate(suite%ipds(i)%subcycles(j)%schemes(k))
+!                    end if
+!                end do
+!                if (allocated(suite%ipds(i)%subcycles(j))) then
+!                    deallocate(suite%ipds(i)%subcycles(j))
+!                end if
+!            end do
+!            if (allocated(suite%ipds(i))) then
+!                deallocate(suite%ipds(i))
+!            end if
+!        end do
+!
+!        if (allocated(suite%name)) then
+!            deallocate(suite%name)
+!        end if
+
+        suite%ipd_n    = 0
+        suite%ipds_max = 0
+
+   end subroutine ccpp_suite_fini
+
+end module ccpp_suite

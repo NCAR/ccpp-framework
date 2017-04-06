@@ -3,21 +3,22 @@
 !!
 program test_dummy
 
-    use, intrinsic :: iso_c_binding,                       &
+    use, intrinsic :: iso_c_binding,                                   &
                       only: c_loc, c_f_pointer
-    use            :: kinds,                               &
+    use            :: kinds,                                           &
                       only: i_sp, r_dp
-    use            :: ccpp_types,                          &
-                      only: STR_LEN, aip_t
-    use            :: ccpp_ipd,                            &
-                      only: ccpp_ipd_init, ccpp_ipd_run
-    use            :: ccpp_fields,                         &
-                      only: ccpp_field_init,               &
-                            ccpp_field_add
+    use            :: ccpp_types,                                      &
+                      only: STR_LEN, ccpp_t
+    use            :: ccpp,                                            &
+                      only: ccpp_init
+    use            :: ccpp_ipd,                                        &
+                      only: ccpp_ipd_run
+    use            :: ccpp_fields,                                     &
+                      only: ccpp_fields_add
 
     implicit none
 
-    type(aip_t), target                                    :: ap_data
+    type(ccpp_t), target                                   :: cdata
     character(len=STR_LEN)                                 :: filename
     integer                                                :: len
     integer                                                :: ierr
@@ -60,22 +61,21 @@ program test_dummy
     u = 0.0_r_dp
     v = 10.0_r_dp
 
-    ! Fill in the ap_data
-    call ccpp_field_init(ap_data, ierr)
+    ! Initalize the CCPP (with the filename of the suite to load).
+    call ccpp_init(filename, cdata, ierr)
 
-    call ccpp_field_add(ap_data, 'gravity', 'm s-2', gravity, ierr)
+    ! Add all the fields we want to expose to the physics driver.
+    call ccpp_fields_add(cdata, 'gravity', 'm s-2', gravity, ierr)
 
-    call ccpp_field_add(ap_data, 'surface_temperature', 'K', surf_t, ierr)
+    call ccpp_fields_add(cdata, 'surface_temperature', 'K', surf_t, ierr)
 
-    call ccpp_field_add(ap_data, 'eastward_wind', 'm s-1', u, ierr)
+    call ccpp_fields_add(cdata, 'eastward_wind', 'm s-1', u, ierr)
 
-    call ccpp_field_add(ap_data, 'northward_wind', 'm s-1', v, ierr)
+    call ccpp_fields_add(cdata, 'northward_wind', 'm s-1', v, ierr)
 
-    call ccpp_ipd_init(filename, ap_data%suite, ierr)
-
-    do ipd_loop = 1 , ap_data%suite%ipds_max
-        ap_data%suite%ipd_n = ipd_loop
-        call ccpp_ipd_run(ap_data)
+    do ipd_loop = 1, cdata%suite%ipds_max
+        cdata%suite%ipd_n = ipd_loop
+        call ccpp_ipd_run(cdata)
     end do
 
     print *, 'In test dummy main'

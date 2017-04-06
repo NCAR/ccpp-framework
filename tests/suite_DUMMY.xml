@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="TB">
+<suite name="TB_TESTING">
   <ipd part="1">
     <subcycle loop="1">
       <scheme>DUMMY</scheme>
