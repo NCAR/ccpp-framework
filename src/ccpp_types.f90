@@ -40,8 +40,6 @@ module ccpp_types
             type(c_ptr)                                       :: ptr
     end type ccpp_field_t
 
-
-
     !>
     !! @typedef ccpp_subcycle_t
     !! @breif CCPP subcycle type

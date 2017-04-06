@@ -5,8 +5,6 @@ module ccpp_suite
 
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_ptr, c_char
-    use            :: kinds,                                           &
-                      only: i_sp, r_dp
     use            :: ccpp_types,                                      &
                       only: STR_LEN, ccpp_suite_t
     use            :: ccpp_errors,                                     &
@@ -35,62 +33,17 @@ module ccpp_suite
     character(len=*), parameter :: XML_ATT_PART     = "part"
     character(len=*), parameter :: XML_ATT_LOOP     = "loop"
 
+    contains
 
-!    !>
-!    !! @typedef subcycle_t
-!    !! @breif Subcycle type
-!    !!
-!    !! The subcycle type contains all the scheme names and the number of
-!    !! times the subcycle will loop. It is a direct mapping to the IPD
-!    !! suite subcycle XML.
-!    !
-!    type :: ccpp_subcycle_t
-!            integer                                           :: loop
-!            integer                                           :: schemes_max
-!            integer                                           :: schemes_n
-!            character(:), allocatable, dimension(:)           :: schemes
-!    end type ccpp_subcycle_t
-!
-!    !! @typedef ccpp_ipd_t
-!    !! @breif IPD type
-!    !!
-!    !! The ipd type contains all the subcycles and part number of
-!    !! the ipd call. It is a direct mapping to the IPD suite ipd 
-!    !! element in XML.
-!    !
-!    type :: ccpp_ipd_t
-!            integer                                             :: part
-!            integer                                             :: subcycles_max
-!            integer                                             :: subcycles_n
-!            type(ccpp_subcycle_t), allocatable, dimension(:)    :: subcycles
-!    end type ccpp_ipd_t
-!
-!    !! @typedef ccpp_suite_t
-!    !! @breif Suite type
-!    !!
-!    !! The suite type contains all the ipd parts names and number of
-!    !! times the subcycle will loop. It is a direct mapping to the
-!    !! IPD suite subcycle XML.
-!    !
-!    type :: suite_t
-!            character(:), allocatable                           :: name
-!            integer                                             :: ipds_max
-!            integer                                             :: ipd_n
-!            type(ccpp_ipd_t), allocatable, dimension(:)         :: ipds
-!    end type ccpp_suite_t
-
-
-   contains
-
-   !>
-   !! Suite initialization subroutine.
-   !!
-   !! @param[in]    filename The file name of the XML scheme file to load.
-   !! @param[inout] suite    The suite_t type to initalize from the scheme
-   !!                        XML file.
-   !! @param[  out] ierr     Integer error flag.
-   !
-   subroutine ccpp_suite_init(filename, suite, ierr)
+    !>
+    !! Suite initialization subroutine.
+    !!
+    !! @param[in]    filename The file name of the XML scheme file to load.
+    !! @param[inout] suite    The suite_t type to initalize from the scheme
+    !!                        XML file.
+    !! @param[  out] ierr     Integer error flag.
+    !
+    subroutine ccpp_suite_init(filename, suite, ierr)
         implicit none
 
         character(len=*),       intent(in)    :: filename
@@ -295,16 +248,16 @@ module ccpp_suite
 
         ierr = ccpp_xml_unload(xml)
 
-   end subroutine ccpp_suite_init
+    end subroutine ccpp_suite_init
 
-   !>
-   !! Suite finalization subroutine.
-   !!
-   !! @param[inout] suite    The suite_t type to initalize from the scheme
-   !!                        XML file.
-   !! @param[  out] ierr     Integer error flag.
-   !
-   subroutine ccpp_suite_fini(suite, ierr)
+    !>
+    !! Suite finalization subroutine.
+    !!
+    !! @param[inout] suite    The suite_t type to initalize from the scheme
+    !!                        XML file.
+    !! @param[  out] ierr     Integer error flag.
+    !
+    subroutine ccpp_suite_fini(suite, ierr)
         type(ccpp_suite_t),     intent(inout) :: suite
         integer,                intent(  out) :: ierr
 
@@ -314,29 +267,28 @@ module ccpp_suite
 
         ierr = 0
 
-!        do i=1, suite%ipds_max
-!            do j=1, suite%ipds(i)%subcycles_max
-!                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
-!                    if (allocated(suite%ipds(i)%subcycles(j)%schemes(k))) then
-!                        deallocate(suite%ipds(i)%subcycles(j)%schemes(k))
-!                    end if
-!                end do
-!                if (allocated(suite%ipds(i)%subcycles(j))) then
-!                    deallocate(suite%ipds(i)%subcycles(j))
-!                end if
-!            end do
-!            if (allocated(suite%ipds(i))) then
-!                deallocate(suite%ipds(i))
-!            end if
-!        end do
-!
-!        if (allocated(suite%name)) then
-!            deallocate(suite%name)
-!        end if
+        do i=1, suite%ipds_max
+            do j=1, suite%ipds(i)%subcycles_max
+                 if (allocated(suite%ipds(i)%subcycles(j)%schemes)) then
+                     deallocate(suite%ipds(i)%subcycles(j)%schemes)
+                 end if
+            end do
+            if (allocated(suite%ipds(i)%subcycles)) then
+                deallocate(suite%ipds(i)%subcycles)
+            end if
+        end do
+
+        if (allocated(suite%ipds)) then
+            deallocate(suite%ipds)
+        end if
+
+        if (allocated(suite%name)) then
+            deallocate(suite%name)
+        end if
 
         suite%ipd_n    = 0
         suite%ipds_max = 0
 
-   end subroutine ccpp_suite_fini
+    end subroutine ccpp_suite_fini
 
 end module ccpp_suite

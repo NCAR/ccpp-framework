@@ -6,8 +6,6 @@ module check_test
 
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_f_pointer, c_ptr
-    use            :: kinds,                                           &
-                      only: i_sp, r_dp
     use            :: ccpp_types,                                      &
                       only: ccpp_t, STR_LEN
     use            :: ccpp_fields,                                     &
@@ -23,11 +21,11 @@ module check_test
         implicit none
         type(c_ptr), intent(inout) :: ptr
 
-        type(ccpp_t),     pointer  :: cdata
-        real(kind=r_dp),  pointer  :: gravity
-        real(kind=r_dp),  pointer  :: surf_t(:)
-        real(kind=r_dp),  pointer  :: u(:,:,:)
-        real(kind=r_dp),  pointer  :: v(:,:,:)
+        type(ccpp_t), pointer      :: cdata
+        real, pointer              :: gravity
+        real, pointer              :: surf_t(:)
+        real, pointer              :: u(:,:,:)
+        real, pointer              :: v(:,:,:)
         character(len=STR_LEN)     :: units
         integer                    :: i
         integer                    :: ierr
@@ -45,18 +43,18 @@ module check_test
 
     subroutine test_run(gravity, u, v, surf_t)
         implicit none
-        real(kind=r_dp), pointer, intent(inout) :: gravity
-        real(kind=r_dp), pointer, intent(inout) :: surf_t(:)
-        real(kind=r_dp), pointer, intent(inout) :: u(:,:,:)
-        real(kind=r_dp), pointer, intent(inout) :: v(:,:,:)
+        real, pointer, intent(inout) :: gravity
+        real, pointer, intent(inout) :: surf_t(:)
+        real, pointer, intent(inout) :: u(:,:,:)
+        real, pointer, intent(inout) :: v(:,:,:)
 
         print *, 'In physics test_run'
         print *, 'gravity: ', gravity
         print *, 'surf_t:  ', surf_t
         print *, 'updating u to be 10m/s'
-        u = 10.0_r_dp
+        u = 10.0
         print *, 'updating v to be -10m/s'
-        v = -10.0_r_dp
+        v = -10.0
 
     end subroutine test_run
 

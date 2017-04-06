@@ -2,8 +2,6 @@ module dummy_scm2
 
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_f_pointer, c_ptr
-    use            :: kinds,                                           &
-                      only: i_sp, r_dp
     use            :: ccpp_types,                                      &
                       only: ccpp_t
     use            :: ccpp_fields,                                     &
@@ -19,9 +17,9 @@ module dummy_scm2
         implicit none
         type(c_ptr), intent(inout) :: ptr
 
-        type(ccpp_t),     pointer  :: cdata
-        real(kind=r_dp),  pointer  :: t(:), u(:), v(:), q_v(:)
-        integer                    :: ierr
+        type(ccpp_t), pointer  :: cdata
+        real, pointer          :: t(:), u(:), v(:), q_v(:)
+        integer                :: ierr
 
         call c_f_pointer(ptr, cdata)
 
@@ -35,7 +33,7 @@ module dummy_scm2
 
     subroutine dummy_scm2_run(t, u, v, q_v)
         implicit none
-        real(kind=r_dp), pointer, intent(inout) :: t(:), u(:), v(:), q_v(:)
+        real, pointer, intent(inout) :: t(:), u(:), v(:), q_v(:)
 
         print *, 'In DUMMY_SCM2'
 
