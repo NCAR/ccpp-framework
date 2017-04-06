@@ -3,10 +3,10 @@ module dummy
 
     use            :: kinds,                                            &
                       only: i_sp, r_dp
-    use            :: types,                                            &
+    use            :: ccpp_types,                                       &
                       only: aip_t
-    use            :: phy_fields,                                       &
-                      only: phy_field_data
+    use            :: ccpp_fields,                                      &
+                      only: ccpp_field_data
     implicit none
 
     private
@@ -24,13 +24,14 @@ module dummy
         real(kind=r_dp),  pointer  :: u(:,:,:)
         real(kind=r_dp),  pointer  :: v(:,:,:)
         integer :: i
+        integer :: ierr
 
         call c_f_pointer(ptr, ap_data)
 
-        call phy_field_data(ap_data, 'gravity', gravity)
-        call phy_field_data(ap_data, 'surface_temperature', surf_t)
-        call phy_field_data(ap_data, 'eastward_wind', u)
-        call phy_field_data(ap_data, 'northward_wind', v)
+        call ccpp_field_data(ap_data, 'gravity', gravity, ierr)
+        call ccpp_field_data(ap_data, 'surface_temperature', surf_t, ierr)
+        call ccpp_field_data(ap_data, 'eastward_wind', u, ierr)
+        call ccpp_field_data(ap_data, 'northward_wind', v, ierr)
 
         call dummy_run(gravity, u, v, surf_t)
     end subroutine dummy_cap

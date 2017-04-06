@@ -1,5 +1,5 @@
 /**
- * @file xml.c
+ * @file ccpp_xml.c
  *
  * @breif Routines and functions for processing a XML file.
  *        This is a very thin layer around libxml2.
@@ -18,8 +18,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
-#include "types.h"
-#include "xml.h"
+#include "ccpp_xml.h"
 
 /**
  * Read a xml file and load the information.
@@ -31,7 +30,7 @@
  * @retval     1         If there was an error.
  **/
 int
-xml_load(const char *filename, void **xml, void **root)
+ccpp_xml_load(const char *filename, void **xml, void **root)
 {
 
 	/* Read the file into a document tree */
@@ -53,7 +52,7 @@ xml_load(const char *filename, void **xml, void **root)
  * @retval     1    If there was an error.
  **/
 int
-xml_unload(void **xml)
+ccpp_xml_unload(void **xml)
 {
 	xmlDocPtr doc = NULL;         /**< XML document tree **/
 
@@ -78,7 +77,7 @@ xml_unload(void **xml)
  * @retval     1       If there was an error.
  **/
 int
-xml_ele_find(void **node, const char *name, void **ele)
+ccpp_xml_ele_find(void **node, const char *name, void **ele)
 {
 	xmlNodePtr cur = NULL;         /**< XML tree root node **/
 
@@ -113,7 +112,7 @@ xml_ele_find(void **node, const char *name, void **ele)
  * @retval     1       If there was an error.
  **/
 int
-xml_ele_next(void **node, const char *name, void **ele)
+ccpp_xml_ele_next(void **node, const char *name, void **ele)
 {
 	xmlNodePtr cur = NULL;         /**< XML tree root node **/
 
@@ -145,7 +144,7 @@ xml_ele_next(void **node, const char *name, void **ele)
  * @retval     1       If there was an error.
  **/
 int
-xml_ele_count(void **node, const char *name, int *n)
+ccpp_xml_ele_count(void **node, const char *name, int *n)
 {
 	xmlNodePtr cur = NULL;         /**< XML tree root node **/
 
@@ -174,7 +173,7 @@ xml_ele_count(void **node, const char *name, int *n)
  * @retval     1       If there was an error.
  **/
 int
-xml_ele_contents(void **node, char *(value[STR_LEN]))
+ccpp_xml_ele_contents(void **node, char **value)
 {
 	int n          = 0;            /**< String length **/
 	xmlNodePtr cur = NULL;         /**< XML tree node **/
@@ -188,8 +187,9 @@ xml_ele_contents(void **node, char *(value[STR_LEN]))
 	}
 
 	n = strlen((char *)tmp);
-	memset(*value, 32, (STR_LEN) * sizeof(char));
+	*value = malloc((n+1) * sizeof(char));
 	strncpy(*value, (char *)tmp, n * sizeof(char));
+	(*value)[n] = '\0';
 	xmlFree(tmp);
 
 	return(EXIT_SUCCESS);
@@ -205,7 +205,7 @@ xml_ele_contents(void **node, char *(value[STR_LEN]))
  * @retval     1       If there was an error.
  **/
 int
-xml_ele_att(void **node, const char *name, char *(value[STR_LEN]))
+ccpp_xml_ele_att(void **node, const char *name, char **value)
 {
 	int n          = 0;            /**< String length **/
 	xmlNodePtr cur = NULL;         /**< XML tree node **/
@@ -219,13 +219,13 @@ xml_ele_att(void **node, const char *name, char *(value[STR_LEN]))
 	}
 
 	n = strlen((char *)tmp);
-	memset(*value, 32, (STR_LEN) * sizeof(char));
+	*value = malloc((n+1) * sizeof(char));
 	strncpy(*value, (char *)tmp, n * sizeof(char));
+	(*value)[n] = '\0';
 	xmlFree(tmp);
 
 	return(EXIT_SUCCESS);
 }
-
 
 /**
  * @}

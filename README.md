@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/t-brown/ccpp/badge.svg?branch=master)](https://coveralls.io/github/NCAR/gmtb-ccpp?branch=master)
 
 ## Requirements
-1. Compilers [GNU Compiler Collection](https://gcc.gnu.org/)
+1. Compilers for example the [GNU Compiler Collection](https://gcc.gnu.org/)
   * C
   * Fortran (must be 2003 compliant)
 2. [Cmake](https://cmake.org)

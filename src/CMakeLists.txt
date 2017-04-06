@@ -1,22 +1,27 @@
 #------------------------------------------------------------------------------
 # Set the sources
 add_sources(
-    #atm_drv.f90
     kinds.f90
-    errors.f90
-    strings.f90
-    types.f90
-    types.h
-    xml.c
-    xml.f90
-    xml.h
-    ipd/ipd.f90
-    ipd/ipd_phy.c
-    ipd/ipd_phy.h
-    phy/phy_field_idx.c
-    phy/phy_fields.f90
-    phy/phy_infra.f90
+    ccpp_ipd.f90
+    ccpp_ipd.h
+    ccpp_ipd.c
+    ccpp_strings.f90
+    ccpp_types.f90
+    ccpp_types.h
+    ccpp_utils.h
+    ccpp_utils.c
+    ccpp_errors.f90
+    ccpp_xml.f90
+    ccpp_xml.h
+    ccpp_xml.c
+    ccpp_fields.f90
+    ccpp_fields_idx.h
+    ccpp_fields_idx.c
+    ccpp_phy_infra.f90
 )
+
+set(CMAKE_Fortran_MODULE_DIRECTORY
+    "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LC}")
 
 #------------------------------------------------------------------------------
 # Find libXML2
@@ -35,8 +40,21 @@ include_directories(".")
 add_subdirectory(schemes)
 
 #------------------------------------------------------------------------------
+# Add the tests
+add_subdirectory(tests)
+
+#------------------------------------------------------------------------------
 # Define the executable and what to link
-#add_executable(atm_drv ${SOURCES})
-#target_link_libraries(atm_drv LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 add_library(ccpp SHARED ${SOURCES})
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
+
+#------------------------------------------------------------------------------
+# Installation
+#
+# Define where to install the library
+install(TARGETS ccpp
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)
+
+# Define where to install the modules
+install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY} DESTINATION include)

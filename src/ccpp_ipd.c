@@ -1,5 +1,5 @@
 /**
- * @file ipd_phy.c
+ * @file ccpp_ipd.c
  *
  * Routines and functions for the IPD to call physics routines.
  *
@@ -15,7 +15,7 @@
 #include <err.h>
 #include <sysexits.h>
 
-#include "ipd_phy.h"
+#include "ccpp_ipd.h"
 
 #if 0
 static const char libname[] = "libccpp.so";  /* Library name */
@@ -31,7 +31,7 @@ static const char version[] = "1";      /* Linux needs the ver num */
  * @retval     1        If there was an error
  **/
 int
-ipd_phy(const char *scheme, void *aip)
+ccpp_ipd_phy_cap(const char *scheme, void *aip)
 {
 	void *hdl = NULL;
 	void (*f_ptr)(void *) = NULL;

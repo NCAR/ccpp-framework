@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.11)
 cmake_policy(SET CMP0048 NEW)
 
 project(CCPP VERSION 0.0.1)
+string(TOLOWER ${CMAKE_PROJECT_NAME} PROJECT_NAME_LC)
 
 #------------------------------------------------------------------------------
 # Enable Fortran
@@ -25,7 +26,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 #------------------------------------------------------------------------------
-# Set the CMake module path
+# CMake Modules
+#
+#Set the CMake module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Include modules
@@ -45,7 +48,6 @@ endif()
 #------------------------------------------------------------------------------
 # Enable testing
 enable_testing()
-add_test(DUMMY src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml)
 
 #------------------------------------------------------------------------------
 # Add the sub-directories
@@ -53,3 +55,5 @@ add_test(DUMMY src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml)
 add_subdirectory(src)
 # Documentation
 add_subdirectory(doc)
+
+

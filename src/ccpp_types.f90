@@ -5,7 +5,7 @@
 !!          atmospheic driver to call the IPD and
 !!          the CCPP.
 !
-module types
+module ccpp_types
 
     use, intrinsic :: iso_c_binding,            &
                       only: c_ptr
@@ -110,10 +110,8 @@ module types
             integer,                allocatable, dimension(:)   :: n_schemes
             character(len=STR_LEN), allocatable, dimension(:,:) :: schemes
             type(c_ptr)                                         :: fields_idx !< Data field index
-            integer                                             :: fields_max !< Maximum number of fields
-            integer                                             :: fields_n   !< Currently used fields
             type(field_t), allocatable, dimension(:)            :: fields     !< Data for fields
             type(suite_t)                                       :: suite      !< XML Suite
     end type aip_t
 
-end module types
+end module ccpp_types

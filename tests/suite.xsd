@@ -17,18 +17,18 @@
 
 <xs:element name="ipd">
   <xs:complexType>
-    <xs:sequence>
+    <xs:choice>
       <xs:element ref="subcycle" minOccurs="0" maxOccurs="unbounded"/>
       <xs:element ref="scheme" minOccurs="0" maxOccurs="unbounded"/>
-    </xs:sequence>
-    <xs:attribute name="part" type="xs:positiveInteger"/>
+    </xs:choice>
+    <xs:attribute name="part" type="xs:positiveInteger" use="optional"/>
   </xs:complexType>
 </xs:element>
 
 <xs:element name="suite">
   <xs:complexType>
     <xs:sequence>
-      <xs:element ref="ipd" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element ref="ipd" minOccurs="1" maxOccurs="unbounded"/>
     </xs:sequence>
     <xs:attribute name="name" type="xs:string"/>
   </xs:complexType>

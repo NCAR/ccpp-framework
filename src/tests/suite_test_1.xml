@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="TEST_1">
+  <ipd part="1">
+    <subcycle loop="1">
+      <scheme>noop</scheme>
+    </subcycle>
+  </ipd>
+</suite>
+

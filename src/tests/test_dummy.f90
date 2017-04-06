@@ -1,19 +1,19 @@
 !>
-!! @brief Atmospheric Driver Program
+!! @brief A Test Atmospheric Driver Program.
 !!
-program atm_drv
+program test_dummy
 
     use, intrinsic :: iso_c_binding,                       &
                       only: c_loc, c_f_pointer
     use            :: kinds,                               &
                       only: i_sp, r_dp
-    use            :: types,                               &
+    use            :: ccpp_types,                          &
                       only: STR_LEN, aip_t
-    use            :: ipd,                                 &
-                      only: ipd_init, ipd_run
-    use            :: phy_fields,                          &
-                      only: phy_field_init, phy_field_add, &
-                            phy_field_sort
+    use            :: ccpp_ipd,                            &
+                      only: ccpp_ipd_init, ccpp_ipd_run
+    use            :: ccpp_fields,                         &
+                      only: ccpp_field_init,               &
+                            ccpp_field_add
 
     implicit none
 
@@ -61,32 +61,27 @@ program atm_drv
     v = 10.0_r_dp
 
     ! Fill in the ap_data
-    call phy_field_init(ap_data, 4)
+    call ccpp_field_init(ap_data, ierr)
 
-    call phy_field_add(ap_data, 'gravity', 'm s-1', c_loc(gravity))
+    call ccpp_field_add(ap_data, 'gravity', 'm s-2', gravity, ierr)
 
-    call phy_field_add(ap_data, 'surface_temperature', 'K',            &
-                       c_loc(surf_t), size(surf_t), shape(surf_t))
+    call ccpp_field_add(ap_data, 'surface_temperature', 'K', surf_t, ierr)
 
-    call phy_field_add(ap_data, 'eastward_wind', 'm s-1',              &
-                       c_loc(u), size(u), shape(u))
+    call ccpp_field_add(ap_data, 'eastward_wind', 'm s-1', u, ierr)
 
-    call phy_field_add(ap_data, 'northward_wind', 'm s-1',             &
-                       c_loc(v), size(v), shape(v))
+    call ccpp_field_add(ap_data, 'northward_wind', 'm s-1', v, ierr)
 
-    call phy_field_sort(ap_data)
-
-    call ipd_init(filename, ap_data%suite)
+    call ccpp_ipd_init(filename, ap_data%suite, ierr)
 
     do ipd_loop = 1 , ap_data%suite%ipds_max
         ap_data%suite%ipd_n = ipd_loop
-        call ipd_run(ap_data)
+        call ccpp_ipd_run(ap_data)
     end do
 
-    print *, 'In ATM DRIVER'
+    print *, 'In test dummy main'
     print *, 'gravity: ', gravity
     print *, 'surf_t:  ', surf_t(1:2)
     print *, 'u: ', u(1,1,1)
     print *, 'v: ', v(1,1,1)
 
-end program atm_drv
+end program test_dummy

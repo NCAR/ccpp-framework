@@ -3,10 +3,10 @@ module dummy_scm
 
     use            :: kinds,                                            &
                       only: i_sp, r_dp
-    use            :: types,                                            &
+    use            :: ccpp_types,                                       &
                       only: aip_t
-    use            :: phy_fields,                                       &
-                      only: phy_field_data
+    use            :: ccpp_fields,                                      &
+                      only: ccpp_field_data
     implicit none
 
     private
@@ -20,13 +20,14 @@ module dummy_scm
 
         type(aip_t),      pointer  :: ap_data
         real(kind=r_dp),  pointer  :: t(:), u(:), v(:), q_v(:)
+        integer                    :: ierr
 
         call c_f_pointer(ptr, ap_data)
 
-        call phy_field_data(ap_data, 'temperature', t)
-        call phy_field_data(ap_data, 'eastward_wind', u)
-        call phy_field_data(ap_data, 'northward_wind', v)
-        call phy_field_data(ap_data, 'water_vapor_specific_humidity', q_v)
+        call ccpp_field_data(ap_data, 'temperature', t, ierr)
+        call ccpp_field_data(ap_data, 'eastward_wind', u, ierr)
+        call ccpp_field_data(ap_data, 'northward_wind', v, ierr)
+        call ccpp_field_data(ap_data, 'water_vapor_specific_humidity', q_v, ierr)
 
         call dummy_scm_run(t, u, v, q_v)
     end subroutine dummy_scm_cap
