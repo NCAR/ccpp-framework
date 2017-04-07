@@ -1,7 +1,6 @@
 #------------------------------------------------------------------------------
 # Set the sources
 add_sources(
-    kinds.f90
     ccpp.f90
     ccpp_errors.f90
     ccpp_fields.f90
