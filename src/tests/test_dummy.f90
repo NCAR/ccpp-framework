@@ -23,10 +23,10 @@ program test_dummy
     integer                                     :: ipd_loop, phys_loop
     integer                                     :: asize
 
-    real,                                target :: gravity
-    real, allocatable, dimension(:),     target :: surf_t
-    real, allocatable, dimension(:,:,:), target :: u
-    real, allocatable, dimension(:,:,:), target :: v
+    real, target                                 :: gravity
+    real, target, allocatable, dimension(:)      :: surf_t
+    real, target, allocatable, dimension(:,:,:)  :: u
+    real, target, allocatable, dimension(:,:,:)  :: v
 
     ierr = 0
 

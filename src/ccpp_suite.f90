@@ -64,7 +64,7 @@ module ccpp_suite
         type(c_ptr)                           :: scheme
         type(c_ptr), target                   :: tmp
         character(kind=c_char), target        :: stmp(STR_LEN)
-        character(len=:), parameter           :: err_msg =             &
+        character(len=*), parameter           :: err_msg =             &
             'Please validate the suite xml file: '
 
         ierr = 0

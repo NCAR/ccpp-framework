@@ -76,6 +76,11 @@ module ccpp_fields
        module procedure :: ccpp_fields_add_r64_1
        module procedure :: ccpp_fields_add_r64_2
        module procedure :: ccpp_fields_add_r64_3
+
+       module procedure :: ccpp_fields_add_l_0
+       module procedure :: ccpp_fields_add_l_1
+       module procedure :: ccpp_fields_add_l_2
+       module procedure :: ccpp_fields_add_l_3
     end interface ccpp_fields_add
 
     !>
@@ -101,6 +106,11 @@ module ccpp_fields
        module procedure :: ccpp_fields_get_r64_1
        module procedure :: ccpp_fields_get_r64_2
        module procedure :: ccpp_fields_get_r64_3
+
+       module procedure :: ccpp_fields_get_l_0
+       module procedure :: ccpp_fields_get_l_1
+       module procedure :: ccpp_fields_get_l_2
+       module procedure :: ccpp_fields_get_l_3
     end interface ccpp_fields_get
 
     !>
@@ -309,7 +319,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32), pointer, intent(in)    :: ptr
+        integer(kind=INT32),  intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -322,7 +332,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32), pointer, intent(in)    :: ptr(:)
+        integer(kind=INT32),  intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -335,7 +345,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32), pointer, intent(in)    :: ptr(:,:)
+        integer(kind=INT32),  intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -348,7 +358,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32), pointer, intent(in)    :: ptr(:,:,:)
+        integer(kind=INT32),  intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -366,7 +376,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64), pointer, intent(in)    :: ptr
+        integer(kind=INT64),  intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -379,7 +389,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64), pointer, intent(in)    :: ptr(:)
+        integer(kind=INT64),  intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -392,7 +402,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64), pointer, intent(in)    :: ptr(:,:)
+        integer(kind=INT64),  intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -405,7 +415,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64), pointer, intent(in)    :: ptr(:,:,:)
+        integer(kind=INT64),  intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -423,7 +433,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32), pointer,    intent(in)    :: ptr
+        real(kind=REAL32),           intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -436,7 +446,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32), pointer,    intent(in)    :: ptr(:)
+        real(kind=REAL32),           intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -449,7 +459,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32), pointer,    intent(in)    :: ptr(:,:)
+        real(kind=REAL32),           intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -462,7 +472,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32), pointer,    intent(in)    :: ptr(:,:,:)
+        real(kind=REAL32),           intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -480,7 +490,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64), pointer,    intent(in)    :: ptr
+        real(kind=REAL64),           intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -493,7 +503,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64), pointer,    intent(in)    :: ptr(:)
+        real(kind=REAL64),           intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -506,7 +516,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64), pointer,    intent(in)    :: ptr(:,:)
+        real(kind=REAL64),           intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -519,7 +529,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64), pointer,    intent(in)    :: ptr(:,:,:)
+        real(kind=REAL64),           intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -530,17 +540,74 @@ module ccpp_fields
 
     !------------------------------------------------------------------!
     !>
+    !! Logical field addition subroutines.
+    !
+    !------------------------------------------------------------------!
+    subroutine ccpp_fields_add_l_0(cdata, standard_name, units, ptr, ierr)
+        type(ccpp_t),                intent(inout) :: cdata
+        character(len=*),            intent(in)    :: standard_name
+        character(len=*),            intent(in)    :: units
+        logical,                     intent(in)    :: ptr
+        integer,                     intent(  out) :: ierr
+
+        ierr = 0
+        call ccpp_field_add_ptr(cdata, standard_name, units, &
+                               c_loc(ptr), ierr=ierr)
+
+    end subroutine ccpp_fields_add_l_0
+
+    subroutine ccpp_fields_add_l_1(cdata, standard_name, units, ptr, ierr)
+        type(ccpp_t),                intent(inout) :: cdata
+        character(len=*),            intent(in)    :: standard_name
+        character(len=*),            intent(in)    :: units
+        logical,                     intent(in)    :: ptr(:)
+        integer,                     intent(  out) :: ierr
+
+        ierr = 0
+        call ccpp_field_add_ptr(cdata, standard_name, units, &
+                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+
+    end subroutine ccpp_fields_add_l_1
+
+    subroutine ccpp_fields_add_l_2(cdata, standard_name, units, ptr, ierr)
+        type(ccpp_t),                intent(inout) :: cdata
+        character(len=*),            intent(in)    :: standard_name
+        character(len=*),            intent(in)    :: units
+        logical,                     intent(in)    :: ptr(:,:)
+        integer,                     intent(  out) :: ierr
+
+        ierr = 0
+        call ccpp_field_add_ptr(cdata, standard_name, units, &
+                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+
+    end subroutine ccpp_fields_add_l_2
+
+    subroutine ccpp_fields_add_l_3(cdata, standard_name, units, ptr, ierr)
+        type(ccpp_t),                intent(inout) :: cdata
+        character(len=*),            intent(in)    :: standard_name
+        character(len=*),            intent(in)    :: units
+        logical,                     intent(in)    :: ptr(:,:,:)
+        integer,                     intent(  out) :: ierr
+
+        ierr = 0
+        call ccpp_field_add_ptr(cdata, standard_name, units, &
+                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+
+    end subroutine ccpp_fields_add_l_3
+
+    !------------------------------------------------------------------!
+    !>
     !! Single precision (32-bit) integer field retrieval subroutines.
     !
     !------------------------------------------------------------------!
     subroutine ccpp_fields_get_i32_0(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT32), pointer, intent(  out) :: ptr
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -559,13 +626,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_i32_0
 
     subroutine ccpp_fields_get_i32_1(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT32), pointer, intent(  out) :: ptr(:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -584,13 +651,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_i32_1
 
     subroutine ccpp_fields_get_i32_2(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT32), pointer, intent(  out) :: ptr(:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -609,13 +676,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_i32_2
 
     subroutine ccpp_fields_get_i32_3(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT32), pointer, intent(  out) :: ptr(:,:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -639,13 +706,13 @@ module ccpp_fields
     !
     !------------------------------------------------------------------!
     subroutine ccpp_fields_get_i64_0(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT64), pointer, intent(  out) :: ptr
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -664,13 +731,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_i64_0
 
     subroutine ccpp_fields_get_i64_1(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT64), pointer, intent(  out) :: ptr(:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -689,13 +756,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_i64_1
 
     subroutine ccpp_fields_get_i64_2(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT64), pointer, intent(  out) :: ptr(:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -714,13 +781,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_i64_2
 
     subroutine ccpp_fields_get_i64_3(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
+        type(ccpp_t),                 intent(in)    :: cdata
+        character(len=*),             intent(in)    :: standard_name
         integer(kind=INT64), pointer, intent(  out) :: ptr(:,:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        integer,                      intent(  out) :: ierr
+        character(len=*), optional,   intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                     :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -744,13 +811,13 @@ module ccpp_fields
     !
     !------------------------------------------------------------------!
     subroutine ccpp_fields_get_r32_0(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL32), pointer,    intent(  out) :: ptr
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL32), pointer, intent(  out) :: ptr
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -769,13 +836,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_r32_0
 
     subroutine ccpp_fields_get_r32_1(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL32), pointer,    intent(  out) :: ptr(:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL32), pointer, intent(  out) :: ptr(:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -794,13 +861,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_r32_1
 
     subroutine ccpp_fields_get_r32_2(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL32), pointer,    intent(  out) :: ptr(:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL32), pointer, intent(  out) :: ptr(:,:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -819,13 +886,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_r32_2
 
     subroutine ccpp_fields_get_r32_3(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL32), pointer,    intent(  out) :: ptr(:,:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL32), pointer, intent(  out) :: ptr(:,:,:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -849,13 +916,13 @@ module ccpp_fields
     !
     !------------------------------------------------------------------!
     subroutine ccpp_fields_get_r64_0(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL64), pointer,    intent(  out) :: ptr
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL64), pointer, intent(  out) :: ptr
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -874,13 +941,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_r64_0
 
     subroutine ccpp_fields_get_r64_1(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL64), pointer,    intent(  out) :: ptr(:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL64), pointer, intent(  out) :: ptr(:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -899,13 +966,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_r64_1
 
     subroutine ccpp_fields_get_r64_2(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL64), pointer,    intent(  out) :: ptr(:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL64), pointer, intent(  out) :: ptr(:,:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -924,13 +991,13 @@ module ccpp_fields
     end subroutine ccpp_fields_get_r64_2
 
     subroutine ccpp_fields_get_r64_3(cdata, standard_name, ptr, ierr, units)
-        type(ccpp_t),                intent(in)    :: cdata
-        character(len=*),            intent(in)    :: standard_name
-        real(kind=REAL64), pointer,    intent(  out) :: ptr(:,:,:)
-        integer,                     intent(  out) :: ierr
-        character(len=*), optional,  intent(  out) :: units
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        real(kind=REAL64), pointer, intent(  out) :: ptr(:,:,:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
 
-        integer                                    :: idx
+        integer                                   :: idx
 
         ierr = 0
         ! Lookup the standard name in the index
@@ -948,6 +1015,110 @@ module ccpp_fields
 
     end subroutine ccpp_fields_get_r64_3
 
+    !------------------------------------------------------------------!
+    !>
+    !! Logical field retrieval subroutines.
+    !
+    !------------------------------------------------------------------!
+    subroutine ccpp_fields_get_l_0(cdata, standard_name, ptr, ierr, units)
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        logical, pointer,           intent(  out) :: ptr
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
+
+        integer                                   :: idx
+
+        ierr = 0
+        ! Lookup the standard name in the index
+        idx = ccpp_fields_find(cdata, standard_name, ierr)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to find the requested field')
+            return
+        end if
+
+        call c_f_pointer(cdata%fields(idx)%ptr, ptr)
+
+        if (present(units)) then
+            units = cdata%fields(idx)%units
+        end if
+
+    end subroutine ccpp_fields_get_l_0
+
+    subroutine ccpp_fields_get_l_1(cdata, standard_name, ptr, ierr, units)
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        logical, pointer,           intent(  out) :: ptr(:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
+
+        integer                                   :: idx
+
+        ierr = 0
+        ! Lookup the standard name in the index
+        idx = ccpp_fields_find(cdata, standard_name, ierr)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to find the requested field')
+            return
+        end if
+
+        call c_f_pointer(cdata%fields(idx)%ptr, ptr, cdata%fields(idx)%dims)
+
+        if (present(units)) then
+            units = cdata%fields(idx)%units
+        end if
+
+    end subroutine ccpp_fields_get_l_1
+
+    subroutine ccpp_fields_get_l_2(cdata, standard_name, ptr, ierr, units)
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        logical, pointer,           intent(  out) :: ptr(:,:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
+
+        integer                                   :: idx
+
+        ierr = 0
+        ! Lookup the standard name in the index
+        idx = ccpp_fields_find(cdata, standard_name, ierr)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to find the requested field')
+            return
+        end if
+
+        call c_f_pointer(cdata%fields(idx)%ptr, ptr, cdata%fields(idx)%dims)
+
+        if (present(units)) then
+            units = cdata%fields(idx)%units
+        end if
+
+    end subroutine ccpp_fields_get_l_2
+
+    subroutine ccpp_fields_get_l_3(cdata, standard_name, ptr, ierr, units)
+        type(ccpp_t),               intent(in)    :: cdata
+        character(len=*),           intent(in)    :: standard_name
+        logical, pointer,           intent(  out) :: ptr(:,:,:)
+        integer,                    intent(  out) :: ierr
+        character(len=*), optional, intent(  out) :: units
+
+        integer                                   :: idx
+
+        ierr = 0
+        ! Lookup the standard name in the index
+        idx = ccpp_fields_find(cdata, standard_name, ierr)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to find the requested field')
+            return
+        end if
+
+        call c_f_pointer(cdata%fields(idx)%ptr, ptr, cdata%fields(idx)%dims)
+
+        if (present(units)) then
+            units = cdata%fields(idx)%units
+        end if
+
+    end subroutine ccpp_fields_get_l_3
     !------------------------------------------------------------------!
 
 end module ccpp_fields

@@ -19,9 +19,6 @@ add_sources(
     ccpp_xml.c
 )
 
-set(CMAKE_Fortran_MODULE_DIRECTORY
-    "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LC}")
-
 #------------------------------------------------------------------------------
 # Find libXML2
 find_package(LibXml2 REQUIRED)
@@ -31,8 +28,10 @@ if (LIBXML2_FOUND)
 endif(LIBXML2_FOUND)
 
 #------------------------------------------------------------------------------
-# Add the toplevel source directory to our include directoies
-include_directories(".")
+# Add the toplevel source directory to our include directoies (for .h)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+# Add the toplevel binary directory to our include directoies (for .mod)
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 #------------------------------------------------------------------------------
 # Add all the different physics schemes
@@ -50,10 +49,32 @@ target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 #------------------------------------------------------------------------------
 # Installation
 #
+
+# Find all the C headers and Fortran modules
+file(GLOB headers
+     "${CMAKE_CURRENT_SOURCE_DIR}/ccpp*.h"
+     "${CMAKE_CURRENT_BINARY_DIR}/ccpp*.mod"
+)
+
+target_include_directories(ccpp PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME_LC}>
+)
+
 # Define where to install the library
 install(TARGETS ccpp
+        EXPORT ccpp-targets
         ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib)
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION lib
+)
+
+# Export our configuration
+install(EXPORT ccpp-targets
+        FILE ccpp-config.cmake
+        DESTINATION lib/cmake
+)
 
 # Define where to install the modules
-install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY} DESTINATION include)
+install(FILES ${headers} DESTINATION include/${PROJECT_NAME_LC})
+

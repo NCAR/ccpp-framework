@@ -1,6 +1,3 @@
-#------------------------------------------------------------------------------
-# Include the module directory
-include_directories("${CMAKE_Fortran_MODULE_DIRECTORY}")
 
 #------------------------------------------------------------------------------
 # Add all the tests

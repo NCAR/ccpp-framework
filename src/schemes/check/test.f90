@@ -43,10 +43,10 @@ module check_test
 
     subroutine test_run(gravity, u, v, surf_t)
         implicit none
-        real, pointer, intent(inout) :: gravity
-        real, pointer, intent(inout) :: surf_t(:)
-        real, pointer, intent(inout) :: u(:,:,:)
-        real, pointer, intent(inout) :: v(:,:,:)
+        real, intent(inout) :: gravity
+        real, intent(inout) :: surf_t(:)
+        real, intent(inout) :: u(:,:,:)
+        real, intent(inout) :: v(:,:,:)
 
         print *, 'In physics test_run'
         print *, 'gravity: ', gravity
