@@ -57,60 +57,60 @@ module ccpp_fields
     !! Module precedence for adding a field.
     !
     interface ccpp_fields_add
-       module procedure :: ccpp_fields_add_i32_0
-       module procedure :: ccpp_fields_add_i32_1
-       module procedure :: ccpp_fields_add_i32_2
-       module procedure :: ccpp_fields_add_i32_3
+       module procedure ccpp_fields_add_i32_0, &
+                        ccpp_fields_add_i32_1, &
+                        ccpp_fields_add_i32_2, &
+                        ccpp_fields_add_i32_3, &
 
-       module procedure :: ccpp_fields_add_i64_0
-       module procedure :: ccpp_fields_add_i64_1
-       module procedure :: ccpp_fields_add_i64_2
-       module procedure :: ccpp_fields_add_i64_3
+                        ccpp_fields_add_i64_0, &
+                        ccpp_fields_add_i64_1, &
+                        ccpp_fields_add_i64_2, &
+                        ccpp_fields_add_i64_3, &
 
-       module procedure :: ccpp_fields_add_r32_0
-       module procedure :: ccpp_fields_add_r32_1
-       module procedure :: ccpp_fields_add_r32_2
-       module procedure :: ccpp_fields_add_r32_3
+                        ccpp_fields_add_r32_0, &
+                        ccpp_fields_add_r32_1, &
+                        ccpp_fields_add_r32_2, &
+                        ccpp_fields_add_r32_3, &
 
-       module procedure :: ccpp_fields_add_r64_0
-       module procedure :: ccpp_fields_add_r64_1
-       module procedure :: ccpp_fields_add_r64_2
-       module procedure :: ccpp_fields_add_r64_3
+                        ccpp_fields_add_r64_0, &
+                        ccpp_fields_add_r64_1, &
+                        ccpp_fields_add_r64_2, &
+                        ccpp_fields_add_r64_3, &
 
-       module procedure :: ccpp_fields_add_l_0
-       module procedure :: ccpp_fields_add_l_1
-       module procedure :: ccpp_fields_add_l_2
-       module procedure :: ccpp_fields_add_l_3
+                        ccpp_fields_add_l_0, &
+                        ccpp_fields_add_l_1, &
+                        ccpp_fields_add_l_2, &
+                        ccpp_fields_add_l_3
     end interface ccpp_fields_add
 
     !>
     !! Module precedence for getting a field.
     !
     interface ccpp_fields_get
-       module procedure :: ccpp_fields_get_i32_0
-       module procedure :: ccpp_fields_get_i32_1
-       module procedure :: ccpp_fields_get_i32_2
-       module procedure :: ccpp_fields_get_i32_3
+       module procedure ccpp_fields_get_i32_0, &
+                        ccpp_fields_get_i32_1, &
+                        ccpp_fields_get_i32_2, &
+                        ccpp_fields_get_i32_3, &
 
-       module procedure :: ccpp_fields_get_i64_0
-       module procedure :: ccpp_fields_get_i64_1
-       module procedure :: ccpp_fields_get_i64_2
-       module procedure :: ccpp_fields_get_i64_3
+                        ccpp_fields_get_i64_0, &
+                        ccpp_fields_get_i64_1, &
+                        ccpp_fields_get_i64_2, &
+                        ccpp_fields_get_i64_3, &
 
-       module procedure :: ccpp_fields_get_r32_0
-       module procedure :: ccpp_fields_get_r32_1
-       module procedure :: ccpp_fields_get_r32_2
-       module procedure :: ccpp_fields_get_r32_3
+                        ccpp_fields_get_r32_0, &
+                        ccpp_fields_get_r32_1, &
+                        ccpp_fields_get_r32_2, &
+                        ccpp_fields_get_r32_3, &
 
-       module procedure :: ccpp_fields_get_r64_0
-       module procedure :: ccpp_fields_get_r64_1
-       module procedure :: ccpp_fields_get_r64_2
-       module procedure :: ccpp_fields_get_r64_3
+                        ccpp_fields_get_r64_0, &
+                        ccpp_fields_get_r64_1, &
+                        ccpp_fields_get_r64_2, &
+                        ccpp_fields_get_r64_3, &
 
-       module procedure :: ccpp_fields_get_l_0
-       module procedure :: ccpp_fields_get_l_1
-       module procedure :: ccpp_fields_get_l_2
-       module procedure :: ccpp_fields_get_l_3
+                        ccpp_fields_get_l_0, &
+                        ccpp_fields_get_l_1, &
+                        ccpp_fields_get_l_2, &
+                        ccpp_fields_get_l_3
     end interface ccpp_fields_get
 
     !>
@@ -319,7 +319,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32),  intent(in)    :: ptr
+        integer(kind=INT32), target, intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -332,7 +332,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32),  intent(in)    :: ptr(:)
+        integer(kind=INT32), target, intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -345,7 +345,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32),  intent(in)    :: ptr(:,:)
+        integer(kind=INT32), target, intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -358,7 +358,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT32),  intent(in)    :: ptr(:,:,:)
+        integer(kind=INT32), target, intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -376,7 +376,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64),  intent(in)    :: ptr
+        integer(kind=INT64), target, intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -389,7 +389,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64),  intent(in)    :: ptr(:)
+        integer(kind=INT64), target, intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -402,7 +402,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64),  intent(in)    :: ptr(:,:)
+        integer(kind=INT64), target, intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -415,7 +415,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        integer(kind=INT64),  intent(in)    :: ptr(:,:,:)
+        integer(kind=INT64), target, intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -433,7 +433,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32),           intent(in)    :: ptr
+        real(kind=REAL32), target,   intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -446,7 +446,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32),           intent(in)    :: ptr(:)
+        real(kind=REAL32), target,   intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -459,7 +459,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32),           intent(in)    :: ptr(:,:)
+        real(kind=REAL32), target,   intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -472,7 +472,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL32),           intent(in)    :: ptr(:,:,:)
+        real(kind=REAL32), target,   intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -490,7 +490,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64),           intent(in)    :: ptr
+        real(kind=REAL64), target,   intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -503,7 +503,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64),           intent(in)    :: ptr(:)
+        real(kind=REAL64), target,   intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -516,7 +516,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64),           intent(in)    :: ptr(:,:)
+        real(kind=REAL64), target,   intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -529,7 +529,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        real(kind=REAL64),           intent(in)    :: ptr(:,:,:)
+        real(kind=REAL64), target,   intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -547,7 +547,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        logical,                     intent(in)    :: ptr
+        logical, target,             intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -560,7 +560,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        logical,                     intent(in)    :: ptr(:)
+        logical, target,             intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -573,7 +573,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        logical,                     intent(in)    :: ptr(:,:)
+        logical, target,             intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
@@ -586,7 +586,7 @@ module ccpp_fields
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
         character(len=*),            intent(in)    :: units
-        logical,                     intent(in)    :: ptr(:,:,:)
+        logical, target,             intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
 
         ierr = 0
