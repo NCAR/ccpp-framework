@@ -1,5 +1,5 @@
 !>
-!! @breif The CCPP library main entry and exit points.
+!! @brief The CCPP library main entry and exit points.
 !!
 !
 module ccpp

@@ -1,9 +1,9 @@
 /**
- * \file xml.h
+ * \file ccpp_utils.h
  *
- * Routines and functions for processing xml files.
+ * CCPP utility functions.
  *
- * \ingroup XML
+ * \ingroup CCPP
  * \{
  **/
 #ifndef CCPP_UTILS_H

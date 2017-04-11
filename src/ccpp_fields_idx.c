@@ -1,7 +1,7 @@
 /**
  * @file ccpp_fields_idx.c
  *
- * @breif Routines and functions to generate and lookup fields/variables
+ * @brief Routines and functions to generate and lookup fields/variables
  *        needed for the physics routines.
  *
  * @details The fields are stored in an array of C pointers within the
@@ -52,7 +52,6 @@ cmp(const void *f1, const void *f2)
  *
  * Allocates an array for the field indices.
  *
- * @param[in]    max   The maximum number of array elements.
  * @param[inout] index The index array.
  * @retval       0     If it was sucessful.
  * @retval       1     If there was an error.
@@ -117,7 +116,6 @@ ccpp_field_idx_fini(void **index)
  * Add/Insert a field into the index.
  *
  * @param[in]    name  The name to add to the index array.
- * @param[inout] i     The index/position to add at the array.
  * @param[inout] index The index array.
  * @retval       > 0   The index location.
  * @retval       -1    If there was an error.

@@ -1,7 +1,7 @@
 /**
  * @file ccpp_xml.c
  *
- * @breif Routines and functions for processing a XML file.
+ * @brief Routines and functions for processing a XML file.
  *        This is a very thin layer around libxml2.
  *
  *

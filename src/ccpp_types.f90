@@ -24,13 +24,11 @@ module ccpp_types
     integer, parameter                          :: STR_LEN = 256
 
     !>
-    !! @typedef ccpp_field_t
     !! @breif CCPP field type
     !!
     !! The field type contains all the information/meta-data and data
     !! for fields that need to be passed between the atmosphere driver
     !! and the physics drivers.
-    !
     type :: ccpp_field_t
             character(len=STR_LEN)                            :: standard_name
             character(len=STR_LEN)                            :: long_name
@@ -41,7 +39,6 @@ module ccpp_types
     end type ccpp_field_t
 
     !>
-    !! @typedef ccpp_subcycle_t
     !! @breif CCPP subcycle type
     !!
     !! The subcycle type contains all the scheme names and the number of
@@ -55,7 +52,7 @@ module ccpp_types
             character(len=STR_LEN), allocatable, dimension(:) :: schemes
     end type ccpp_subcycle_t
 
-    !! @typedef ccpp_ipd_t
+    !>
     !! @breif CCPP IPD type
     !!
     !! The ipd type contains all the subcycles and part number of
@@ -69,7 +66,7 @@ module ccpp_types
             type(ccpp_subcycle_t), allocatable, dimension(:)    :: subcycles
     end type ccpp_ipd_t
 
-    !! @typedef ccpp_suite_t
+    !>
     !! @breif CCPP suite type
     !!
     !! The suite type contains all the ipd parts names and number of
@@ -84,7 +81,6 @@ module ccpp_types
     end type ccpp_suite_t
 
     !>
-    !! @typedef ccpp_t
     !! @breif CCPP Atmosphere/IPD/Physics type.
     !!
     !! Generic type that contains all components to run the CCPP.
