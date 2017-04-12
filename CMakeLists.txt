@@ -1,7 +1,16 @@
 cmake_minimum_required(VERSION 2.8.11)
-cmake_policy(SET CMP0048 NEW)
 
-project(CCPP VERSION 0.0.1)
+if(POLICY CMP0048)
+    cmake_policy(SET CMP0048 NEW)
+    project(CCPP VERSION 0.0.1)
+else()
+    project(CCPP)
+    set(PROJECT_VERSION 0.0.1)
+    set(PROJECT_VERSION_MAJOR 0)
+    set(PROJECT_VERSION_MINOR 0)
+    set(PROJECT_VERSION_PATCH 1)
+endif()
+
 string(TOLOWER ${CMAKE_PROJECT_NAME} PROJECT_NAME_LC)
 
 #------------------------------------------------------------------------------
