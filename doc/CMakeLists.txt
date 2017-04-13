@@ -26,6 +26,6 @@ if(BUILD_DOCUMENTATION)
 
 # Define where to install the documentation
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html
-            DESTINATION share/doc/${PROJECT_NAME_LC})
+            DESTINATION share/doc/${PROJECT_NAME})
 endif()
 

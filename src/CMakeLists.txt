@@ -43,8 +43,10 @@ add_subdirectory(tests)
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
-add_library(ccpp SHARED ${SOURCES})
+add_library(ccpp ${SOURCES})
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
+set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
+                                      SOVERSION ${PROJECT_VERSION_MAJOR})
 
 #------------------------------------------------------------------------------
 # Installation
@@ -58,7 +60,7 @@ file(GLOB headers
 
 target_include_directories(ccpp PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME_LC}>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
 
 # Define where to install the library
@@ -76,5 +78,5 @@ install(EXPORT ccpp-targets
 )
 
 # Define where to install the modules
-install(FILES ${headers} DESTINATION include/${PROJECT_NAME_LC})
+install(FILES ${headers} DESTINATION include/${PROJECT_NAME})
 
