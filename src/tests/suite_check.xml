@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="TB_TESTING">
+<suite name="Check Cap">
   <ipd part="1">
     <subcycle loop="1">
-      <scheme>DUMMY</scheme>
+      <scheme>test</scheme>
     </subcycle>
   </ipd>
 </suite>
