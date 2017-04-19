@@ -2,7 +2,7 @@
 
 <suite name="TEST_6">
   <ipd part="1">
-    <scheme>noop</scheme>
+    <scheme lib="check">noop</scheme>
   </ipd>
 </suite>
 

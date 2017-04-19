@@ -1,6 +1,6 @@
 #------------------------------------------------------------------------------
 # Set the sources
-add_sources(
+set(SOURCES
     ccpp.f90
     ccpp_errors.f90
     ccpp_fields.f90
@@ -29,13 +29,15 @@ endif(LIBXML2_FOUND)
 
 #------------------------------------------------------------------------------
 # Add the toplevel source directory to our include directoies (for .h)
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
-# Add the toplevel binary directory to our include directoies (for .mod)
-include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-#------------------------------------------------------------------------------
-# Add all the different physics schemes
-add_subdirectory(schemes)
+# Add the toplevel binary directory to our include directoies (for .mod)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+# Set a cached variable containing the includes, so schemes can use them
+set(${PACKAGE}_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}$<SEMICOLON>${CMAKE_CURRENT_BINARY_DIR}"
+     CACHE FILEPATH "${PACKAGE} include directories")
 
 #------------------------------------------------------------------------------
 # Add the tests

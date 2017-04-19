@@ -38,6 +38,7 @@ module check_test
         call ccpp_fields_get(cdata, 'northward_wind', v, ierr)
 
         call test_run(gravity, u, v, surf_t)
+        print *, 'In test_cap'
 
     end subroutine test_cap
 
