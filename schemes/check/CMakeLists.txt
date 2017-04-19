@@ -44,8 +44,8 @@ set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES ${CCPP_INCLUDE_DIRS})
 #------------------------------------------------------------------------------
 # Add the CCPP library
 set(CCPP_LIB_DIRS "" CACHE FILEPATH "Path to ccpp library")
-set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES ${CCPP_INCLUDE_DIRS})
-
+link_directories(${CCPP_LIB_DIRS})
+list(APPEND LIBS "ccpp")
 
 #------------------------------------------------------------------------------
 # Set the sources
@@ -55,7 +55,7 @@ set(SOURCES
 )
 
 add_library(check ${SOURCES})
-target_link_libraries(check LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
+target_link_libraries(check LINK_PUBLIC ${LIBS})
 set_target_properties(check PROPERTIES VERSION ${PROJECT_VERSION}
                                        SOVERSION ${PROJECT_VERSION_MAJOR})
 

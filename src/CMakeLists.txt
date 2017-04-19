@@ -38,6 +38,9 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set(${PACKAGE}_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}$<SEMICOLON>${CMAKE_CURRENT_BINARY_DIR}"
      CACHE FILEPATH "${PACKAGE} include directories")
+set(${PACKAGE}_LIB_DIRS
+    "${CMAKE_CURRENT_BINARY_DIR}"
+     CACHE FILEPATH "${PACKAGE} library directories")
 
 #------------------------------------------------------------------------------
 # Add the tests
