@@ -30,10 +30,11 @@ static const char suffix[] = ".so";
  *
  * @param[in]  scheme    The scheme name to call.
  * @param[in]  lib       The library continaing the physics scheme.
+ * @param[in]  ver       The library version number.
  * @param[out] shdl      The scheme function pointer handle.
  * @param[out] lhdl      The library handle.
- * @retval     0        If it was sucessful
- * @retval     1        If there was an error
+ * @retval     0         If it was sucessful
+ * @retval     1         If there was an error
  **/
 int
 ccpp_ipd_open(const char *scheme, const char *lib, const char *ver,
@@ -125,7 +126,7 @@ ccpp_ipd_close(void **lhdl)
 /**
  * IPD cap calling routine.
  *
- * @param[in] s_ptr     The scheme function pointer to call.
+ * @param[in] f_ptr     The scheme function pointer to call.
  * @param[in] data      The opaque ccpp_t data type to pass.
  * @retval     0        If it was sucessful
  * @retval     1        If there was an error

@@ -206,8 +206,8 @@ module ccpp_fields
     !>
     !! CCPP fields initialization subroutine.
     !!
-    !! @param[inout] cdata    The ccpp_t type data.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in,out] cdata    The ccpp_t type data.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_fields_init(cdata, ierr)
         type(ccpp_t),           intent(inout) :: cdata
@@ -236,8 +236,8 @@ module ccpp_fields
     !>
     !! CCPP fields finalization subroutine.
     !!
-    !! @param[inout] cdata    The ccpp_t type data.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in,out] cdata    The ccpp_t type data.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_fields_fini(cdata, ierr)
         type(ccpp_t),           intent(inout) :: cdata
@@ -256,13 +256,13 @@ module ccpp_fields
     !>
     !! CCPP fields addition subroutine.
     !!
-    !! @param[inout] cdata         The ccpp_t type data.
-    !! @param[in   ] standard_name The standard name for the data.
-    !! @param[in   ] units         The SI units for the data.
-    !! @param[in   ] ptr           A C pointer to the data.
-    !! @param[in   ] p_rank        Optional rank of the data.
-    !! @param[in   ] p_dims        Optional dimensions of the data.
-    !! @param[  out] ierr          Integer error flag.
+    !! @param[in,out] cdata         The ccpp_t type data.
+    !! @param[in   ]  standard_name The standard name for the data.
+    !! @param[in   ]  units         The SI units for the data.
+    !! @param[in   ]  ptr           A C pointer to the data.
+    !! @param[in   ]  p_rank        Optional rank of the data.
+    !! @param[in   ]  p_dims        Optional dimensions of the data.
+    !! @param[  out]  ierr          Integer error flag.
     !
     subroutine ccpp_field_add_ptr(cdata, standard_name, units, ptr, &
                                   rank, dims, ierr)
@@ -328,9 +328,9 @@ module ccpp_fields
     !>
     !! CCPP find a fields location/array index by standard name.
     !!
-    !! @param[inout] cdata         The ccpp_t type data.
-    !! @param[in   ] standard_name The standard name for the data.
-    !! @param[  out] ierr          Integer error flag.
+    !! @param[in,out] cdata         The ccpp_t type data.
+    !! @param[in   ]  standard_name The standard name for the data.
+    !! @param[  out]  ierr          Integer error flag.
     !
     function ccpp_fields_find(cdata, standard_name, ierr) result(location)
         type(ccpp_t),           intent(in)    :: cdata

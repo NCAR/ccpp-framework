@@ -39,10 +39,10 @@ module ccpp_suite
     !>
     !! Suite initialization subroutine.
     !!
-    !! @param[in]    filename The file name of the XML scheme file to load.
-    !! @param[inout] suite    The suite_t type to initalize from the scheme
+    !! @param[in]     filename The file name of the XML scheme file to load.
+    !! @param[in,out] suite    The suite_t type to initalize from the scheme
     !!                        XML file.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_suite_init(filename, suite, ierr)
 
@@ -278,9 +278,9 @@ module ccpp_suite
     !>
     !! Suite finalization subroutine.
     !!
-    !! @param[inout] suite    The suite_t type to initalize from the scheme
-    !!                        XML file.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in,out] suite    The suite_t type to initalize from the scheme
+    !!                         XML file.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_suite_fini(suite, ierr)
         type(ccpp_suite_t),     intent(inout) :: suite

@@ -28,9 +28,9 @@ module ccpp
     !>
     !! CCPP initialization subroutine.
     !!
-    !! @param[in]    filename The file name of the XML scheme file to load.
-    !! @param[inout] cdata    The ccpp_t type data.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in]     filename The file name of the XML scheme file to load.
+    !! @param[in,out] cdata    The ccpp_t type data.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_init(filename, cdata, ierr)
         character(len=*),       intent(in)    :: filename
@@ -65,8 +65,8 @@ module ccpp
     !>
     !! CCPP finalization subroutine.
     !!
-    !! @param[inout] cdata    The ccpp_t type data.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in,out] cdata    The ccpp_t type data.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_fini(cdata, ierr)
         type(ccpp_t),           intent(inout) :: cdata

@@ -61,8 +61,8 @@ module ccpp_ipd
     !! This loops over all defined schemes to obtain
     !! a function pointer to them.
     !!
-    !! @param[inout] cdata    The CCPP data of type ccpp_t
-    !! @param[  out] ierr     Integer error flag
+    !! @param[in,out] cdata    The CCPP data of type ccpp_t
+    !! @param[  out]  ierr     Integer error flag
     !
     subroutine ccpp_ipd_init(cdata, ierr)
 
@@ -104,8 +104,8 @@ module ccpp_ipd
     !! This loops over all defined schemes to close
     !! the handle to the scheme library
     !!
-    !! @param[inout] cdata    The CCPP data of type ccpp_t
-    !! @param[  out] ierr     Integer error flag
+    !! @param[in,out] cdata    The CCPP data of type ccpp_t
+    !! @param[   out] ierr     Integer error flag
     !
     subroutine ccpp_ipd_fini(cdata, ierr)
 
@@ -140,7 +140,9 @@ module ccpp_ipd
     !! the various physics schemes as specified in the
     !! suite data.
     !!
-    !! @param[inout] cdata   The CCPP data of type ccpp_t
+    !! @param[in    ] scheme  The scheme to run
+    !! @param[in,out] cdata   The CCPP data of type ccpp_t
+    !! @param[   out] ierr     Integer error flag
     !
     subroutine ccpp_ipd_run(scheme, cdata, ierr)
 
