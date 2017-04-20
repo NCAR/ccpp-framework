@@ -11,8 +11,8 @@
 !! @code{.f90}
 !!
 !! ! Add a field, for example the eastward_wind.
-!! call ccpp_fields_add(ipd_data, 'eastward_wind', 'm s-1',  &
-!!                      u, ierr)
+!! call ccpp_fields_add(ipd_data, 'eastward_wind', &
+!!                      u, ierr, 'm s-1')
 !! if (ierr /= 0) then
 !!   call exit(ierr)
 !! end if
@@ -355,12 +355,12 @@ module ccpp_fields
     !! Single precision (32-bit) integer field addition subroutines.
     !
     !------------------------------------------------------------------!
-    subroutine ccpp_fields_add_i32_0(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_0(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -368,12 +368,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i32_0
 
-    subroutine ccpp_fields_add_i32_1(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_1(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -381,12 +381,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i32_1
 
-    subroutine ccpp_fields_add_i32_2(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_2(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -394,12 +394,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i32_2
 
-    subroutine ccpp_fields_add_i32_3(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_3(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -407,12 +407,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i32_3
 
-    subroutine ccpp_fields_add_i32_4(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_4(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr(:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -420,12 +420,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i32_4
 
-    subroutine ccpp_fields_add_i32_5(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_5(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr(:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -433,12 +433,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i32_5
 
-    subroutine ccpp_fields_add_i32_6(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_6(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr(:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -446,12 +446,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i32_6
 
-    subroutine ccpp_fields_add_i32_7(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i32_7(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT32), target, intent(in)    :: ptr(:,:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -464,12 +464,12 @@ module ccpp_fields
     !! Double precision (64-bit) integer field addition subroutines.
     !
     !------------------------------------------------------------------!
-    subroutine ccpp_fields_add_i64_0(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_0(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -477,12 +477,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i64_0
 
-    subroutine ccpp_fields_add_i64_1(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_1(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -490,12 +490,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i64_1
 
-    subroutine ccpp_fields_add_i64_2(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_2(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -503,12 +503,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i64_2
 
-    subroutine ccpp_fields_add_i64_3(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_3(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -516,12 +516,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i64_3
 
-    subroutine ccpp_fields_add_i64_4(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_4(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr(:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -529,12 +529,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i64_4
 
-    subroutine ccpp_fields_add_i64_5(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_5(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr(:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -542,12 +542,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i64_5
 
-    subroutine ccpp_fields_add_i64_6(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_6(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr(:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -555,12 +555,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_i64_6
 
-    subroutine ccpp_fields_add_i64_7(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_i64_7(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         integer(kind=INT64), target, intent(in)    :: ptr(:,:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -573,12 +573,12 @@ module ccpp_fields
     !! Single precision (32-bit) real field addition subroutines.
     !
     !------------------------------------------------------------------!
-    subroutine ccpp_fields_add_r32_0(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_0(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -586,12 +586,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r32_0
 
-    subroutine ccpp_fields_add_r32_1(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_1(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -599,12 +599,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r32_1
 
-    subroutine ccpp_fields_add_r32_2(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_2(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -612,12 +612,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r32_2
 
-    subroutine ccpp_fields_add_r32_3(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_3(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -625,12 +625,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r32_3
 
-    subroutine ccpp_fields_add_r32_4(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_4(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr(:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -638,12 +638,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r32_4
 
-    subroutine ccpp_fields_add_r32_5(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_5(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr(:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -651,12 +651,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r32_5
 
-    subroutine ccpp_fields_add_r32_6(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_6(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr(:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -664,12 +664,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r32_6
 
-    subroutine ccpp_fields_add_r32_7(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r32_7(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL32), target,   intent(in)    :: ptr(:,:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -682,12 +682,12 @@ module ccpp_fields
     !! Double precision (64-bit) real field addition subroutines.
     !
     !------------------------------------------------------------------!
-    subroutine ccpp_fields_add_r64_0(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_0(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -695,12 +695,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r64_0
 
-    subroutine ccpp_fields_add_r64_1(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_1(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -708,12 +708,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r64_1
 
-    subroutine ccpp_fields_add_r64_2(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_2(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -721,12 +721,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r64_2
 
-    subroutine ccpp_fields_add_r64_3(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_3(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -734,12 +734,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r64_3
 
-    subroutine ccpp_fields_add_r64_4(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_4(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr(:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -747,12 +747,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r64_4
 
-    subroutine ccpp_fields_add_r64_5(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_5(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr(:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -760,12 +760,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r64_5
 
-    subroutine ccpp_fields_add_r64_6(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_6(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr(:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -773,12 +773,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_r64_6
 
-    subroutine ccpp_fields_add_r64_7(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_r64_7(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         real(kind=REAL64), target,   intent(in)    :: ptr(:,:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -791,12 +791,12 @@ module ccpp_fields
     !! Logical field addition subroutines.
     !
     !------------------------------------------------------------------!
-    subroutine ccpp_fields_add_l_0(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_0(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -804,12 +804,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_0
 
-    subroutine ccpp_fields_add_l_1(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_1(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr(:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -817,12 +817,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_1
 
-    subroutine ccpp_fields_add_l_2(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_2(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr(:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -830,12 +830,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_2
 
-    subroutine ccpp_fields_add_l_3(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_3(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr(:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -843,12 +843,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_3
 
-    subroutine ccpp_fields_add_l_4(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_4(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr(:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -856,12 +856,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_4
 
-    subroutine ccpp_fields_add_l_5(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_5(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr(:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -869,12 +869,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_5
 
-    subroutine ccpp_fields_add_l_6(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_6(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr(:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &
@@ -882,12 +882,12 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_6
 
-    subroutine ccpp_fields_add_l_7(cdata, standard_name, units, ptr, ierr)
+    subroutine ccpp_fields_add_l_7(cdata, standard_name, ptr, ierr, units)
         type(ccpp_t),                intent(inout) :: cdata
         character(len=*),            intent(in)    :: standard_name
-        character(len=*),            intent(in)    :: units
         logical, target,             intent(in)    :: ptr(:,:,:,:,:,:,:)
         integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
         call ccpp_field_add_ptr(cdata, standard_name, units, &

@@ -68,16 +68,16 @@ program test_check
     end if
 
     ! Add all the fields we want to expose to the physics driver.
-    call ccpp_fields_add(cdata, 'gravity', 'm s-2', gravity, ierr)
+    call ccpp_fields_add(cdata, 'gravity', gravity, ierr, 'm s-2')
     if (ierr /= 0) then
             call exit(1)
     end if
 
-    call ccpp_fields_add(cdata, 'surface_temperature', 'K', surf_t, ierr)
+    call ccpp_fields_add(cdata, 'surface_temperature', surf_t, ierr, 'K')
 
-    call ccpp_fields_add(cdata, 'eastward_wind', 'm s-1', u, ierr)
+    call ccpp_fields_add(cdata, 'eastward_wind', u, ierr, 'm s-1')
 
-    call ccpp_fields_add(cdata, 'northward_wind', 'm s-1', v, ierr)
+    call ccpp_fields_add(cdata, 'northward_wind', v, ierr, 'm s-1')
 
     call ccpp_ipd_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
 
