@@ -3,7 +3,16 @@
            xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
 <!-- definition of simple elements -->
-<xs:element name="scheme"   type="xs:string"/>
+<xs:element name="scheme">
+  <xs:complexType>
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="lib" type="xs:string" use="optional"/>
+        <xs:attribute name="ver" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+</xs:element>
 
 <!-- definition of complex elements -->
 <xs:element name="subcycle">
@@ -11,7 +20,7 @@
     <xs:sequence>
       <xs:element ref="scheme" minOccurs="1" maxOccurs="unbounded"/>
     </xs:sequence>
-  <xs:attribute name="loop" type="xs:positiveInteger" use="optional"/>
+    <xs:attribute name="loop" type="xs:positiveInteger" use="optional"/>
   </xs:complexType>
 </xs:element>
 

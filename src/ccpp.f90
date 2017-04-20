@@ -12,6 +12,8 @@ module ccpp
                       only: ccpp_suite_init, ccpp_suite_fini
     use            :: ccpp_fields,                                     &
                       only: ccpp_fields_init, ccpp_fields_fini
+    use            :: ccpp_ipd,                                        &
+                      only: ccpp_ipd_init, ccpp_ipd_fini
     use            :: ccpp_errors,                                     &
                       only: ccpp_error
 
@@ -26,9 +28,9 @@ module ccpp
     !>
     !! CCPP initialization subroutine.
     !!
-    !! @param[in]    filename The file name of the XML scheme file to load.
-    !! @param[inout] cdata    The ccpp_t type data.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in]     filename The file name of the XML scheme file to load.
+    !! @param[in,out] cdata    The ccpp_t type data.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_init(filename, cdata, ierr)
         character(len=*),       intent(in)    :: filename
@@ -44,6 +46,13 @@ module ccpp
                 return
         end if
 
+        ! Initialize the scheme calls
+        call ccpp_ipd_init(cdata, ierr)
+        if (ierr /= 0) then
+                call ccpp_error('In initializing the CCPP scheme calls')
+                return
+        end if
+
         ! Initialize the fields
         call ccpp_fields_init(cdata, ierr)
         if (ierr /= 0) then
@@ -56,8 +65,8 @@ module ccpp
     !>
     !! CCPP finalization subroutine.
     !!
-    !! @param[inout] cdata    The ccpp_t type data.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in,out] cdata    The ccpp_t type data.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_fini(cdata, ierr)
         type(ccpp_t),           intent(inout) :: cdata
@@ -72,7 +81,14 @@ module ccpp
                 return
         end if
 
-        ! Initialize the fields
+        ! Finalize the scheme calls
+        call ccpp_ipd_fini(cdata, ierr)
+        if (ierr /= 0) then
+                call ccpp_error('In finalizing the CCPP scheme calls')
+                return
+        end if
+
+        ! Finalize the fields
         call ccpp_fields_fini(cdata, ierr)
         if (ierr /= 0) then
                 call ccpp_error('In finalizing the CCPP fields')

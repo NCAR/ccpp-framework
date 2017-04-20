@@ -26,7 +26,7 @@
 int
 ccpp_abs_path(const char *rel, char **abs)
 {
-	size_t bsize = 0;
+	long bsize = 0;
 	char *buf = NULL;
 	struct stat sbuf = {0};
 

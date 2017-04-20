@@ -52,9 +52,9 @@ cmp(const void *f1, const void *f2)
  *
  * Allocates an array for the field indices.
  *
- * @param[inout] index The index array.
- * @retval       0     If it was sucessful.
- * @retval       1     If there was an error.
+ * @param[in,out] index The index array.
+ * @retval        0     If it was sucessful.
+ * @retval        1     If there was an error.
  **/
 int
 ccpp_field_idx_init(void **index)
@@ -85,8 +85,8 @@ ccpp_field_idx_init(void **index)
  *
  * Deallocates the field indices array.
  *
- * @param[inout] index The index array.
- * @retval       0     If it was sucessful.
+ * @param[in] index The index array.
+ * @retval    0     If it was sucessful.
  **/
 int
 ccpp_field_idx_fini(void **index)
@@ -115,10 +115,10 @@ ccpp_field_idx_fini(void **index)
 /**
  * Add/Insert a field into the index.
  *
- * @param[in]    name  The name to add to the index array.
- * @param[inout] index The index array.
- * @retval       > 0   The index location.
- * @retval       -1    If there was an error.
+ * @param[in]     name  The name to add to the index array.
+ * @param[in,out] index The index array.
+ * @retval        > 0   The index location.
+ * @retval        -1    If there was an error.
  **/
 int
 ccpp_field_idx_add(const char *name, void **index)
@@ -154,11 +154,10 @@ ccpp_field_idx_add(const char *name, void **index)
 /**
  * Find the index number of a field.
  *
- * @param[in]    name     The field name to find the index array.
- * @param[inout] index    The index array.
- * @retval       > 0      The position in the index array of the
- *                        requested field.
- * @retval       -1       If there was an error.
+ * @param[in]     name     The field name to find the index array.
+ * @param[in,out] index    The index array.
+ * @retval        > 0      The position in the index array of the requested field.
+ * @retval        -1       If there was an error.
  **/
 int
 ccpp_field_idx_find(const char *name, void **index)
@@ -197,9 +196,8 @@ ccpp_field_idx_find(const char *name, void **index)
  * Sort the index by calling qsort() and using cmp() as the
  * comparison function.
  *
- * @param[inout] index    The index array.
-
- * @retval       0        If there was no error.
+ * @param[in,out] index    The index array.
+ * @retval        0        If there was no error.
  **/
 int
 ccpp_field_idx_sort(void **index)
@@ -215,8 +213,8 @@ ccpp_field_idx_sort(void **index)
 /**
  * Grow the index field array.
  *
- * @param[inout] index    The index array.
- * @retval       0        If there was no error.
+ * @param[in,out] index    The index array.
+ * @retval        0        If there was no error.
  **/
 int
 ccpp_field_idx_grow(void **index)
@@ -241,8 +239,8 @@ ccpp_field_idx_grow(void **index)
 /**
  * Get the maximum number of fields the index array can hold.
  *
- * @param[inout] index    The index array.
- * @retval       >= 0     The maximum number of fields.
+ * @param[in,out] index    The index array.
+ * @retval        >= 0     The maximum number of fields.
  **/
 int
 ccpp_field_idx_max(void **index)

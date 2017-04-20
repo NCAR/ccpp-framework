@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="TEST_1">
+<suite name="EXAMPLE">
   <ipd part="1">
     <subcycle loop="1">
-      <scheme>noop</scheme>
+      <scheme lib="exmaple" ver="0.2">test</scheme>
     </subcycle>
   </ipd>
 </suite>

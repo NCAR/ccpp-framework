@@ -16,8 +16,7 @@ module ccpp_suite
 
     private
     public :: ccpp_suite_init,                                         &
-              ccpp_suite_fini,                                         &
-              ccpp_suite_t
+              ccpp_suite_fini
 
     !>
     !! @brief Suite XML tags.
@@ -32,19 +31,20 @@ module ccpp_suite
     character(len=*), parameter :: XML_ATT_NAME     = "name"
     character(len=*), parameter :: XML_ATT_PART     = "part"
     character(len=*), parameter :: XML_ATT_LOOP     = "loop"
+    character(len=*), parameter :: XML_ATT_LIB      = "lib"
+    character(len=*), parameter :: XML_ATT_VER      = "ver"
 
     contains
 
     !>
     !! Suite initialization subroutine.
     !!
-    !! @param[in]    filename The file name of the XML scheme file to load.
-    !! @param[inout] suite    The suite_t type to initalize from the scheme
+    !! @param[in]     filename The file name of the XML scheme file to load.
+    !! @param[in,out] suite    The suite_t type to initalize from the scheme
     !!                        XML file.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_suite_init(filename, suite, ierr)
-        implicit none
 
         character(len=*),       intent(in)    :: filename
         type(ccpp_suite_t),     intent(inout) :: suite
@@ -204,8 +204,14 @@ module ccpp_suite
 
                 suite%ipds(i)%subcycles(j)%schemes_max = n
                 allocate(suite%ipds(i)%subcycles(j)%schemes(n), stat=ierr)
+                if (ierr /= 0) then
+                    call ccpp_error('Unable to allocate schemes')
+                    return
+                end if
+
                 num_schemes_this_ipd_call = n
-                max_num_schemes_per_ipd_call = MAX ( max_num_schemes_per_ipd_call , num_schemes_this_ipd_call )
+                max_num_schemes_per_ipd_call = max(max_num_schemes_per_ipd_call, &
+                                                   num_schemes_this_ipd_call)
 
                 ! Find the first scheme
                 ierr = ccpp_xml_ele_find(subcycle, ccpp_cstr(XML_ELE_SCHEME), &
@@ -214,7 +220,26 @@ module ccpp_suite
                 ! Loop over all scheme
                 do k=1, suite%ipds(i)%subcycles(j)%schemes_max
                     ierr = ccpp_xml_ele_contents(scheme, tmp)
-                    suite%ipds(i)%subcycles(j)%schemes(k) = ccpp_fstr(tmp)
+                    suite%ipds(i)%subcycles(j)%schemes(k)%name = ccpp_fstr(tmp)
+
+                    ! See if we have a different library name
+                    ierr = ccpp_xml_ele_att(scheme, ccpp_cstr(XML_ATT_LIB), tmp)
+                    if (ierr /= 0) then
+                        suite%ipds(i)%subcycles(j)%schemes(k)%library = &
+                                suite%ipds(i)%subcycles(j)%schemes(k)%name
+                    else
+                        suite%ipds(i)%subcycles(j)%schemes(k)%library = ccpp_fstr(tmp)
+                    end if
+
+                    ! See if we have a library version
+                    ierr = ccpp_xml_ele_att(scheme, ccpp_cstr(XML_ATT_VER), tmp)
+                    if (ierr == 0) then
+                        suite%ipds(i)%subcycles(j)%schemes(k)%version = &
+                                ccpp_fstr(tmp)
+                    else
+                        suite%ipds(i)%subcycles(j)%schemes(k)%version = ''
+                    end if
+
                     ! Find the next scheme
                     ierr = ccpp_xml_ele_next(scheme, ccpp_cstr(XML_ELE_SCHEME), &
                                              scheme)
@@ -241,7 +266,7 @@ module ccpp_suite
                 write(*, '(A, I4, A, I4)') 'subcycle: ', j, ' loop: ', suite%ipds(i)%subcycles(j)%loop
                 write(*, '(A, I4)') 'schemes: ', suite%ipds(i)%subcycles(j)%schemes_max
                 do k=1, suite%ipds(i)%subcycles(j)%schemes_max
-                    write(*, '(A, A)') 'scheme: ', trim(suite%ipds(i)%subcycles(j)%schemes(k))
+                    write(*, '(A, A)') 'scheme: ', trim(suite%ipds(i)%subcycles(j)%schemes(k)%name)
                 end do
             end do
         end do
@@ -253,9 +278,9 @@ module ccpp_suite
     !>
     !! Suite finalization subroutine.
     !!
-    !! @param[inout] suite    The suite_t type to initalize from the scheme
-    !!                        XML file.
-    !! @param[  out] ierr     Integer error flag.
+    !! @param[in,out] suite    The suite_t type to initalize from the scheme
+    !!                         XML file.
+    !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_suite_fini(suite, ierr)
         type(ccpp_suite_t),     intent(inout) :: suite
