@@ -11,6 +11,10 @@ else(POLICY CMP0048)
     set(PROJECT_VERSION_PATCH 1)
 endif(POLICY CMP0048)
 
+if(POLICY CMP0042)
+    cmake_policy(SET CMP0042 NEW)
+endif(POLICY CMP0042)
+
 #------------------------------------------------------------------------------
 # Enable Fortran
 enable_language(Fortran)
