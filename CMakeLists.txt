@@ -42,14 +42,9 @@ endif()
 #Set the CMake module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Include modules
-include(add_sources)
-include(export_dynamic)
-
 #------------------------------------------------------------------------------
 # By default we want a shared library
 option(BUILD_SHARED_LIBS "Build a shared library" ON)
-
 
 #------------------------------------------------------------------------------
 # Enable code coverage
@@ -71,6 +66,8 @@ enable_testing()
 add_subdirectory(src)
 # Documentation
 add_subdirectory(doc)
+# All schemes
+add_subdirectory(schemes)
 
 #------------------------------------------------------------------------------
 # Configure and enable packaging

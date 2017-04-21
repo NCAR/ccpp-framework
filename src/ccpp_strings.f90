@@ -34,8 +34,8 @@ module ccpp_strings
     !!
     !! This function is needed to pass C char arrays to Fortran.
     !!
-    !! \param[in]  str1 The character array.
-    !! \returns    str2 The fortran string.
+    !! @param[in]  str1 The character array.
+    !! @returns    str2 The fortran string.
     !
     function ccpp_fstr(str1) result(str2)
         type(c_ptr),            intent(in) :: str1
@@ -68,8 +68,8 @@ module ccpp_strings
     !!
     !! This function is needed to pass Fortran strings to C.
     !!
-    !! \param[in]  str1 The fortran string.
-    !! \returns    str2 The trimmed, null terminated string.
+    !! @param[in]  str1 The fortran string.
+    !! @returns    str2 The trimmed, null terminated string.
     !
     function ccpp_cstr(str1) result(str2)
         character(len=*)                            :: str1

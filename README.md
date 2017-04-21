@@ -59,17 +59,15 @@ src/tests/test_init_fini my_suite.xml
 ```
 
 ## Physics Schemes
-All physics schemes are kept in the repository under the `src/schemes`
+All physics schemes are kept in the repository under the `schemes`
 directory.
 
 To add a new scheme one needs to
 
-1. Add/Create the scheme within `src/schemes`. You should create a
-   sub-directory under the `src/schemes` directory. If you are using
-   CMake as the build system, you need to add an `add_subdirectory()`
-   directive to end of those entires (before the `add_sources()` list).
-   If you are using an external build system we will need to address
-   the usage of `ExternalProject_Add()`.
+1. Add/Create the scheme within `schemes`. You should create a
+   sub-directory under the `schemes` directory. You will need to
+   add a [`ExternalProject_Add()`](https://cmake.org/cmake/help/latest/module/ExternalProject.html).
+   call to the `schemes/CMakeLists.txt` file.
 2. Create a `cap` subroutine. The IPD will call your
    cap routine.
   a. The cap routine must be labelled "schemename_cap".
@@ -82,7 +80,7 @@ To add a new scheme one needs to
      fields from the fields array with the `ccpp_fields_get()`
      subroutine.
 
-An example of a scheme that does nothing is `src/schemes/check/test.f90`.
+An example of a scheme that does nothing is `schemes/check/test.f90`.
 
 ## Documentation
 The code is documented with [doxygen](www.doxygen.org/).

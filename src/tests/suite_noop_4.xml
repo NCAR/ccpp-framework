@@ -3,19 +3,19 @@
 <suite name="TEST_4">
   <ipd part="1">
     <subcycle loop="1">
-      <scheme>noop</scheme>
+      <scheme lib="check">noop</scheme>
     </subcycle>
   </ipd>
   <ipd part="2">
     <subcycle loop="1">
-      <scheme>noop</scheme>
+      <scheme lib="check">noop</scheme>
     </subcycle>
   </ipd>
   <ipd part="3">
     <subcycle loop="1">
-      <scheme>noop</scheme>
-      <scheme>noop</scheme>
-      <scheme>noop</scheme>
+      <scheme lib="check">noop</scheme>
+      <scheme lib="check">noop</scheme>
+      <scheme lib="check">noop</scheme>
     </subcycle>
   </ipd>
 </suite>

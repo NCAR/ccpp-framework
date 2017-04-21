@@ -1,7 +1,7 @@
 !>
 !! @brief A Test Atmospheric Driver Program.
 !!
-program test_dummy
+program test_check
 
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_loc, c_f_pointer
@@ -32,8 +32,7 @@ program test_dummy
 
     call get_command_argument(1, filename, len, ierr)
     if (ierr /= 0) then
-            print *, 'Error: no suite XML file specified.'
-            stop
+            call exit(1)
     end if
 
     ! Allocate the data
@@ -41,16 +40,19 @@ program test_dummy
     allocate(surf_t(asize), stat=ierr)
     if (ierr /= 0) then
             print *, 'Unable to allocate surface temperature array'
+            call exit(1)
     end if
 
     allocate(u(asize,asize,asize), stat=ierr)
     if (ierr /= 0) then
             print *, 'Unable to allocate U array'
+            call exit(1)
     end if
 
     allocate(v(asize,asize,asize), stat=ierr)
     if (ierr /= 0) then
             print *, 'Unable to allocate U array'
+            call exit(1)
     end if
 
     ! Generate data to pass into a physics driver
@@ -61,20 +63,23 @@ program test_dummy
 
     ! Initalize the CCPP (with the filename of the suite to load).
     call ccpp_init(filename, cdata, ierr)
+    if (ierr /= 0) then
+            call exit(1)
+    end if
 
     ! Add all the fields we want to expose to the physics driver.
-    call ccpp_fields_add(cdata, 'gravity', 'm s-2', gravity, ierr)
+    call ccpp_fields_add(cdata, 'gravity', gravity, ierr, 'm s-2')
+    if (ierr /= 0) then
+            call exit(1)
+    end if
 
-    call ccpp_fields_add(cdata, 'surface_temperature', 'K', surf_t, ierr)
+    call ccpp_fields_add(cdata, 'surface_temperature', surf_t, ierr, 'K')
 
-    call ccpp_fields_add(cdata, 'eastward_wind', 'm s-1', u, ierr)
+    call ccpp_fields_add(cdata, 'eastward_wind', u, ierr, 'm s-1')
 
-    call ccpp_fields_add(cdata, 'northward_wind', 'm s-1', v, ierr)
+    call ccpp_fields_add(cdata, 'northward_wind', v, ierr, 'm s-1')
 
-    do ipd_loop = 1, cdata%suite%ipds_max
-        cdata%suite%ipd_n = ipd_loop
-        call ccpp_ipd_run(cdata)
-    end do
+    call ccpp_ipd_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
 
     print *, 'In test dummy main'
     print *, 'gravity: ', gravity
@@ -82,4 +87,4 @@ program test_dummy
     print *, 'u: ', u(1,1,1)
     print *, 'v: ', v(1,1,1)
 
-end program test_dummy
+end program test_check

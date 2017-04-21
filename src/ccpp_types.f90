@@ -8,7 +8,7 @@
 module ccpp_types
 
     use, intrinsic :: iso_c_binding,                                   &
-                      only: c_ptr
+                      only: c_ptr, c_funptr
 
     implicit none
 
@@ -16,6 +16,7 @@ module ccpp_types
     public :: STR_LEN,                                                 &
               ccpp_t,                                                  &
               ccpp_field_t,                                            &
+              ccpp_scheme_t,                                           &
               ccpp_suite_t,                                            &
               ccpp_ipd_t,                                              &
               ccpp_subcycle_t
@@ -39,6 +40,19 @@ module ccpp_types
     end type ccpp_field_t
 
     !>
+    !! @breif CCPP scheme type
+    !!
+    !! The scheme type contains all the scheme information.
+    !
+    type :: ccpp_scheme_t
+            character(len=STR_LEN)                            :: name
+            character(len=STR_LEN)                            :: library
+            character(len=STR_LEN)                            :: version
+            type(c_ptr)                                       :: scheme_hdl
+            type(c_ptr)                                       :: library_hdl
+    end type ccpp_scheme_t
+
+    !>
     !! @breif CCPP subcycle type
     !!
     !! The subcycle type contains all the scheme names and the number of
@@ -49,7 +63,7 @@ module ccpp_types
             integer                                           :: loop
             integer                                           :: schemes_max
             integer                                           :: schemes_n
-            character(len=STR_LEN), allocatable, dimension(:) :: schemes
+            type(ccpp_scheme_t), allocatable, dimension(:)    :: schemes
     end type ccpp_subcycle_t
 
     !>

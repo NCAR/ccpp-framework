@@ -3,7 +3,7 @@
 <suite name="TEST_3">
   <ipd>
     <subcycle>
-      <scheme>noop</scheme>
+      <scheme lib="check">noop</scheme>
     </subcycle>
   </ipd>
 </suite>
