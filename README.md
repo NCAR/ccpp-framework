@@ -33,9 +33,43 @@ It is recommend to do an out of source build.
 
 ## Running Tests
 There are a few test programs within the `ccpp/src/tests` directory.
-These should be built when the CCPP library is compiled. To run all
-the tests issue the following within the build directory.
+These should be built when the CCPP library is compiled.
+
+To run the tests you have to add the check scheme library (`libcheck.so`)
+to your `LD_LIBRARY_PATH` (`DYLD_LIBRARY_PATH` for OS X).
+```
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(pwd)/schemes/check/src/check-build/
+```
+
+Then issue the following within the build directory.
   * `make test`
+
+All tests should pass, if not, please open an issue. The output should be
+similar to:
+```
+Running tests...
+Test project /home/tbrown/Sources/gmtb-ccpp/build
+    Start 1: XML_1
+1/8 Test #1: XML_1 ............................   Passed    0.02 sec
+    Start 2: XML_2
+2/8 Test #2: XML_2 ............................   Passed    0.01 sec
+    Start 3: XML_3
+3/8 Test #3: XML_3 ............................   Passed    0.01 sec
+    Start 4: XML_4
+4/8 Test #4: XML_4 ............................   Passed    0.01 sec
+    Start 5: XML_5
+5/8 Test #5: XML_5 ............................   Passed    0.00 sec
+    Start 6: XML_6
+6/8 Test #6: XML_6 ............................   Passed    0.00 sec
+    Start 7: FIELDS
+7/8 Test #7: FIELDS ...........................   Passed    0.00 sec
+    Start 8: CHECK
+8/8 Test #8: CHECK ............................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 8
+
+Total Test time (real) =   0.08 sec
+```
 
 ## Validating XML
 A suite is defined in XML. There is a test suite definied within
@@ -70,6 +104,7 @@ To add a new scheme one needs to
    call to the `schemes/CMakeLists.txt` file.
 2. Create a `cap` subroutine. The IPD will call your
    cap routine.
+
   a. The cap routine must be labelled "schemename_cap".
      For example, the dummy scheme has a cap called
      "dummy_cap". The requirements are that it is
@@ -81,6 +116,56 @@ To add a new scheme one needs to
      subroutine.
 
 An example of a scheme that does nothing is `schemes/check/test.f90`.
+
+## Usage
+The CCPP must first be initialized, this is done by calling `ccpp\_init()`.
+Once initialized, all variables that will be required in a physics scheme
+have to be added to the ccpp data object (of type `ccpp_t`). These variables
+can later be retrieved in a physics schemes cap.
+
+Example usage, in an atmosphere component:
+```
+type(ccpp_t), target :: cdata
+character(len=128)   :: scheme_xml_filename
+integer              :: ierr
+
+ierr = 0
+
+! Initialize the CCPP and load the physics scheme.
+call ccpp_init(scheme_xml_filename, cdata, ierr)
+if (ierr /= 0) then
+    call exit(1)
+end if
+
+! Add surface temperature (variable surf_t).
+call ccpp_fields_add(cdata, 'surface_temperature', surf_t, ierr, 'K')
+if (ierr /= 0) then
+    call exit(1)
+end if
+
+! Call the first physics scheme
+call ccpp_ipd_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
+if (ierr /= 0) then
+    call exit(1)
+end if
+```
+
+Example usage, in a physics cap:
+```
+type(ccpp_t), pointer      :: cdata
+real, pointer              :: surf_t(:)
+integer                    :: ierr
+
+call c_f_pointer(ptr, cdata)
+call ccpp_fields_get(cdata, 'surface_temperature', surf_t, ierr)
+if (ierr /= 0) then
+    call exit(1)
+end if
+```
+
+Note, the cap routine must
+* Accept only one argument of type `type(c_ptr)`.
+* Be marked as `bind(c)`.
 
 ## Documentation
 The code is documented with [doxygen](www.doxygen.org/).
