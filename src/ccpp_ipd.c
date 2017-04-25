@@ -27,6 +27,9 @@
 #include <dlfcn.h>
 #include <err.h>
 #include <sysexits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "ccpp_ipd.h"
 
@@ -56,19 +59,27 @@ ccpp_ipd_open(const char *scheme, const char *lib, const char *ver,
 	int i = 0;
 	int n = 0;
 	const char cap[] = "_cap";
+	const char *l = NULL;
 	char *library = NULL;
 	char *scheme_cap = NULL;
 	char *error = NULL;
+	struct stat sbuf = {0};
 
-	/* Generate the library name with the platform suffix */
-	n = (strlen(prefix) + strlen(lib) + strlen(suffix) + strlen(ver) +2)
-		*sizeof(char);
-	library = malloc(n);
-	memset(library, 0, n);
-	if (strcmp(ver, "") != 0) {
-		snprintf(library, n, "%s%s.%s%s", prefix, lib, ver, suffix);
+	/* Did we get an actual library file? */
+	if (stat(lib, &sbuf) == 0) {
+		l = lib;
 	} else {
-		snprintf(library, n, "%s%s%s", prefix, lib, suffix);
+		/* Generate the library name with the platform suffix */
+		n = (strlen(prefix) + strlen(lib) + strlen(suffix) + strlen(ver) +2)
+			*sizeof(char);
+		library = malloc(n);
+		memset(library, 0, n);
+		if (strcmp(ver, "") != 0) {
+			snprintf(library, n, "%s%s.%s%s", prefix, lib, ver, suffix);
+		} else {
+			snprintf(library, n, "%s%s%s", prefix, lib, suffix);
+		}
+		l = library;
 	}
 
 	/* Generate the scheme cap function name */
@@ -83,16 +94,13 @@ ccpp_ipd_open(const char *scheme, const char *lib, const char *ver,
 	strncat(scheme_cap, cap, n);
 
 	/* Open a handle to the library */
-	*lhdl = dlopen(library, RTLD_NOW);
+	*lhdl = dlopen(l, RTLD_NOW);
 	if (!*lhdl) {
 		warnx("%s", dlerror());
 		return(EXIT_FAILURE);
 	}
 
 	dlerror();
-	/*
-	*(void **)(&(*shdl)) = dlsym(*lhdl, scheme_cap);
-	*/
 	*(void **)shdl = dlsym(*lhdl, scheme_cap);
 	if ((error = dlerror()) != NULL)  {
 		warnx("%s", error);
