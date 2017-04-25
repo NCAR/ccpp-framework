@@ -3,7 +3,7 @@
 <suite name="EXAMPLE">
   <ipd part="1">
     <subcycle loop="1">
-      <scheme lib="exmaple" ver="0.2">test</scheme>
+      <scheme lib="check" ver="0.2">test</scheme>
     </subcycle>
   </ipd>
 </suite>

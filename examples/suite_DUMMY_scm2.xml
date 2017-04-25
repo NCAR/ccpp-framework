@@ -3,7 +3,7 @@
 <suite name="SCM2_test">
   <ipd part="1">
     <subcycle loop="1">
-      <scheme>DUMMY_scm2</scheme>
+      <scheme lib="scm">DUMMY_scm2</scheme>
     </subcycle>
   </ipd>
 </suite>
