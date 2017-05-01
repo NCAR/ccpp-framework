@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.11)
 
 if(POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
-    project(ccpp VERSION 0.0.1)
+    project(ccpp VERSION 0.1.0)
 else(POLICY CMP0048)
     project(ccpp)
     set(PROJECT_VERSION 0.1.0)
