@@ -201,7 +201,7 @@ parameterization schemes within the model.
 For the initial release, this XML file has not yet been designed.
 
 
-Within the `src/tests` directoty there is `test_init_fini.f90` which
+Within the `src/tests` directory there is `test_init_fini.f90` which
 will get built when the CCPP library is built. This program only calls
   * `ccpp_init()`
   * `ccpp_fini()`
