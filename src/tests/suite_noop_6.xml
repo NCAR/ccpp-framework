@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="TEST_6">
+  <ipd part="1">
+    <scheme lib="check">noop</scheme>
+  </ipd>
+</suite>
+

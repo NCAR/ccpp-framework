@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="SCM2_test">
+  <ipd part="1">
+    <subcycle loop="1">
+      <scheme lib="scm">DUMMY_scm2</scheme>
+    </subcycle>
+  </ipd>
+</suite>

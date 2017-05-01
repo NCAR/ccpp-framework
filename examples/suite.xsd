@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<xs:schema elementFormDefault="qualified"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+<!-- definition of simple elements -->
+<xs:element name="scheme">
+  <xs:complexType>
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="lib" type="xs:string" use="optional"/>
+        <xs:attribute name="ver" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+</xs:element>
+
+<!-- definition of complex elements -->
+<xs:element name="subcycle">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element ref="scheme" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="loop" type="xs:positiveInteger" use="optional"/>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="ipd">
+  <xs:complexType>
+    <xs:choice>
+      <xs:element ref="subcycle" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element ref="scheme" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:choice>
+    <xs:attribute name="part" type="xs:positiveInteger" use="optional"/>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="suite">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element ref="ipd" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string"/>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>

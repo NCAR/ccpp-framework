@@ -31,6 +31,7 @@ physical parameterizations schemes will be provided once examples of fully funct
 schemes are part of the CCPP.
 
 ## Requirements
+
 1. Compilers
   1. [GNU Compiler Collection](https://gcc.gnu.org/)
     * C
@@ -40,6 +41,7 @@ a single convenience right now with Fortran 2008.
   3. PGI compilers do not easily support C functions calling Fortran routines. The PGI
 compilers attach the Fortran module name as a prefix to the Fortran symbol. This breaks
 the method that the CCPP uses to identify which schemes to call.
+
 2. [Cmake](https://cmake.org)
 
 ## Building
@@ -82,6 +84,7 @@ bash:
 csh:
   * `setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${cwd}/schemes/check/src/check-build/`
 
+
 Then issue the following within the build directory.
   * `make test`
 
@@ -89,6 +92,7 @@ All tests should pass, if not, please open an issue. The output should be
 similar to:
 `
 <pre>
+
 Running tests...
 Test project /home/tbrown/Sources/gmtb-ccpp/build
     Start 1: XML_1
@@ -197,6 +201,17 @@ parameterization schemes within the model.
 For the initial release, this XML file has not yet been designed.
 
 
+Within the `src/tests` directoty there is `test_init_fini.f90` which
+will get built when the CCPP library is built. This program only calls
+  * `ccpp_init()`
+  * `ccpp_fini()`
+It is a program to check the suite XML validation within the CCPP
+library. The following is an example of using it from within the
+`build` directory.
+```
+src/tests/test_init_fini my_suite.xml
+```
+
 ## Physics Schemes
 All physics schemes are kept in the repository under the `schemes`
 directory.
@@ -209,13 +224,15 @@ To add a new scheme one needs to
    call to the `schemes/CMakeLists.txt` file.
 2. Create a `cap` subroutine. The IPD will call your
    cap routine.
-
+   
   1. The cap routine must be labelled "schemename_cap".
+
      For example, the dummy scheme has a cap called
      "dummy_cap". The requirements are that it is
     1. The scheme name is lowercase (the symbol is called from a C 
        function.
     2. "_cap" is appended.
+    
   2. Map all the inputs for the cap from the `cdata` encapsulating
      type (this is of the `ccpp_t` type). The cap will extract the
      fields from the fields array with the `ccpp_fields_get()`
@@ -225,6 +242,7 @@ An example of a scheme is `schemes/check/test.f90`. It has the cap
 routine and the run routine. The run routine prints out that the
 scheme has been entered.
 
+
 ## Usage
 The CCPP must first be initialized, this is done by calling `ccpp\_init()`.
 Once initialized, all variables that will be required in a physics scheme
@@ -233,7 +251,9 @@ can later be retrieved in a physics schemes cap.
 
 Example usage, in an atmosphere component:
 ```
+
 <pre>
+
 type(ccpp_t), target :: cdata
 character(len=128)   :: scheme_xml_filename
 integer              :: ierr
@@ -257,12 +277,16 @@ call ccpp_ipd_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
 if (ierr /= 0) then
     call exit(1)
 end if
+
 </pre>
+
 ```
 
 Example usage, in a physics cap:
 ```
+
 <pre>
+
 type(ccpp_t), pointer      :: cdata
 real, pointer              :: surf_t(:)
 integer                    :: ierr
@@ -272,7 +296,9 @@ call ccpp_fields_get(cdata, 'surface_temperature', surf_t, ierr)
 if (ierr /= 0) then
     call exit(1)
 end if
+
 </pre>
+
 ```
 
 Note, the cap routine must
