@@ -22,20 +22,19 @@ program test_check
                       only: STR_LEN, ccpp_t
     use            :: ccpp,                                            &
                       only: ccpp_init
-    use            :: ccpp_ipd,                                        &
-                      only: ccpp_ipd_run
+    use            :: ccpp_fcall,                                      &
+                      only: ccpp_run
     use            :: ccpp_fields,                                     &
                       only: ccpp_fields_add
 
     implicit none
 
-    type(ccpp_t), target                        :: cdata
-    character(len=STR_LEN)                      :: filename
-    integer                                     :: len
-    integer                                     :: ierr
-    integer                                     :: ipd_loop, phys_loop
-    integer                                     :: asize
-
+    type(ccpp_t), target                         :: cdata
+    character(len=STR_LEN)                       :: filename
+    integer                                      :: len
+    integer                                      :: ierr
+    integer                                      :: ipd_loop, phys_loop
+    integer                                      :: asize
     real, target                                 :: gravity
     real, target, allocatable, dimension(:)      :: surf_t
     real, target, allocatable, dimension(:,:,:)  :: u
@@ -92,7 +91,7 @@ program test_check
 
     call ccpp_fields_add(cdata, 'northward_wind', v, ierr, 'm s-1')
 
-    call ccpp_ipd_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
+    call ccpp_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
 
     print *, 'In test dummy main'
     print *, 'gravity: ', gravity
