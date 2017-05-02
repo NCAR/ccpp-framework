@@ -12,8 +12,6 @@ module ccpp
                       only: ccpp_suite_init, ccpp_suite_fini
     use            :: ccpp_fields,                                     &
                       only: ccpp_fields_init, ccpp_fields_fini
-    use            :: ccpp_ipd,                                        &
-                      only: ccpp_ipd_init, ccpp_ipd_fini
     use            :: ccpp_errors,                                     &
                       only: ccpp_error
 
@@ -46,13 +44,6 @@ module ccpp
                 return
         end if
 
-        ! Initialize the scheme calls
-        call ccpp_ipd_init(cdata, ierr)
-        if (ierr /= 0) then
-                call ccpp_error('In initializing the CCPP scheme calls')
-                return
-        end if
-
         ! Initialize the fields
         call ccpp_fields_init(cdata, ierr)
         if (ierr /= 0) then
@@ -78,13 +69,6 @@ module ccpp
         call ccpp_suite_fini(cdata%suite, ierr)
         if (ierr /= 0) then
                 call ccpp_error('In finalizing the CCPP suite')
-                return
-        end if
-
-        ! Finalize the scheme calls
-        call ccpp_ipd_fini(cdata, ierr)
-        if (ierr /= 0) then
-                call ccpp_error('In finalizing the CCPP scheme calls')
                 return
         end if
 
