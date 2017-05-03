@@ -5,24 +5,64 @@
 [![Build Status](https://travis-ci.org/t-brown/ccpp.svg?branch=master)](https://travis-ci.org/NCAR/gmtb-ccpp)
 [![Coverage Status](https://coveralls.io/repos/github/t-brown/ccpp/badge.svg?branch=master)](https://coveralls.io/github/NCAR/gmtb-ccpp?branch=master)
 
+## Notes to Users
+This repository contains the Common Community Physics Packages (CCPP) and the driver 
+for the CCPP (which has been until recently referred to as the GMTB IPD). To avoid
+ambiguity, the term "IPD" will not be used for code contained within this repository.
+
+The repository for the CCPP and the CCPP driver contains sufficient code for standalone
+testing of the CCPP. The CCPP repository may also be used in conjunction with the 
+GMTB Single Column Model (SCM). Please see the [GMTB SCM+CCPP page](http://www.dtcenter.org/GMTB/gmtb_scm_ccpp_doc/)
+for more information on combining the GMTB SCM and the CCPP.
+
+This is the release v0.1.0 of the CCPP. As this is the initial release, the CCPP only has 
+infrastructure to support the neccesary
+functioning of the anticipated package, without having actual (i.e. physically 
+valid) physical parameterization
+schemes included. The included physical parameterization schemes inside of the 
+CCPP are "stub" only. While the schemes do have arguments
+similar to what traditional schemes require (wind, surface temperature, physical 
+constants), the schemes immediately return after a message "I am in this scheme"
+has been output.
+
+This repository for the CCPP and the CCPP driver contains tests to verify proper running
+of the CCPP and driver. Detailed information on how to include fully functioning 
+physical parameterizations schemes will be provided once examples of fully functioning
+schemes are part of the CCPP.
+
 ## Requirements
-1. Compilers for example the [GNU Compiler Collection](https://gcc.gnu.org/)
-  * C
-  * Fortran (must be 2003 compliant)
+
+1. Compilers
+  1. [GNU Compiler Collection](https://gcc.gnu.org/)
+    * C
+    * Fortran: must be 2008 compliant. There are a number of Fortran 2003 pieces, and
+a single convenience right now with Fortran 2008.
+  2. Intel 16.0.2 and beyond work OK
+  3. PGI compilers do not easily support C functions calling Fortran routines. The PGI
+compilers attach the Fortran module name as a prefix to the Fortran symbol. This breaks
+the method that the CCPP uses to identify which schemes to call.
+
 2. [Cmake](https://cmake.org)
 
 ## Building
-It is recommend to do an out of source build.
+It is recommend to do an out of source build. This is "cmake" terminology for creating a
+separate directory where all of the built code (objects, libraries, executables) exist.
 
 1. Clone the repository.
-  * `git clone https://github.com/t-brown/ccpp`
+  * `git clone https://github.com/NCAR/gmtb-ccpp ccpp`
 2. Change into the repository clone
   * `cd ccpp`
 3. Specify the compiler to use. For example the GNU compiler.
-  * `ml gcc`
-  * `export CC=gcc`
-  * `export FC=gfortran`
-  * `export CXX=g++`
+  1. sh, bash
+    * `ml gcc` or `ml gnu`
+    * `export CC=gcc`
+    * `export FC=gfortran`
+    * `export CXX=g++`
+  2. csh
+    * `ml gcc` or `ml gnu`
+    * `setenv CC gcc`
+    * `setenv FC gfortran`
+    * `setenv CXX g++`
 4. Make a build directory and change into it.
   * `mkdir build`
   * `cd build`
@@ -35,18 +75,24 @@ It is recommend to do an out of source build.
 There are a few test programs within the `ccpp/src/tests` directory.
 These should be built when the CCPP library is compiled.
 
-To run the tests you have to add the check scheme library (`libcheck.so`)
+To run the tests you have to add the CCPP check scheme library (`libcheck.so`)
 to your `LD_LIBRARY_PATH` (`DYLD_LIBRARY_PATH` for OS X).
-```
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(pwd)/schemes/check/src/check-build/
-```
+
+bash:
+  * `export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(pwd)/schemes/check/src/check-build/`
+
+csh:
+  * `setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${cwd}/schemes/check/src/check-build/`
+
 
 Then issue the following within the build directory.
   * `make test`
 
 All tests should pass, if not, please open an issue. The output should be
 similar to:
-```
+`
+<pre>
+
 Running tests...
 Test project /home/tbrown/Sources/gmtb-ccpp/build
     Start 1: XML_1
@@ -68,20 +114,94 @@ Test project /home/tbrown/Sources/gmtb-ccpp/build
 
 100% tests passed, 0 tests failed out of 8
 
+
 Total Test time (real) =   0.08 sec
-```
+</pre>
+`
 
 ## Validating XML
-A suite is defined in XML. There is a test suite definied within
-the `tests` directory, there is also the XML Schema Definition in
+A suite is defined in XML. There are several test suites defined within
+the `ccpp/src/tests` directory (which are able to test the build and
+installation of the standalone CCPP). In the `ccpp/examples` directory
+there are the XML files that call physical parameterization schemes.
+There is also the XML Schema Definition in
 that directory too. To validate a new test suite, you can use
 `xmllint`. For example to validate `suite_RAP.xml`:
-```
+`
+<pre>
+cd ccpp/examples
 xmllint --schema suite.xsd --noout suite_RAP.xml
+</pre>
+`
+The output is:
+`
+<pre>
 suite_RAP.xml validates
-```
+</pre>
+`
 
-Within the `src/tests` directoty there is `test_init_fini.f90` which
+Within the `ccpp/src/tests` directory there is a Fortran file `test_init_fini.f90` which
+will get built into an executable program when the CCPP library is built. This program only calls
+  * `ccpp_init()`
+  * `ccpp_fini()`
+
+It is a program to check the suite XML validation within the CCPP
+library. The following is an example of using it from within the
+`build` directory.
+`
+<pre>
+src/tests/test_init_fini my_suite.xml
+</pre>
+`
+
+There are two general types of XML files for the CCPP. The first is the definition file for a 
+suite. This has been mapped out, is fairly short, and examples exist. Below is `examples/suite_RAP.xml`
+`
+<pre>
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="RAP">
+  <ipd part="1">
+    <subcycle loop="1">
+      <scheme>RRTMGLW</scheme>
+      <scheme>RRTMGSW</scheme>
+      <scheme>MYNNSFC</scheme>
+      <scheme>RUCLSM</scheme>
+      <scheme>MYNNPBL</scheme>
+      <scheme>GF</scheme>
+    </subcycle>
+  </ipd>
+  <ipd part="2">
+    <subcycle loop="1">
+      <scheme>THOMPSONAERO</scheme>
+    </subcycle>
+  </ipd>
+</suite>
+</pre>
+`
+
+*  suite
+  *  This text string "name" attribute is compared to the user-selected physics suite
+option at run-time.
+*  ipd part
+  *  To allow for the design of the interface between the dynamics and
+physical parameterization schemes, this attribute clearly associates particular
+packages with the dynamical sections. In this XML example, there are two "part"
+sections, with the second part only containing the "THOMPSONAERO" microphysics
+scheme.
+  *  Users should carefully construct the XML file to map the schemes into the
+existing sections of the code that calls the physical parameterization schemes.
+*  subcycle
+  *  This functionality is not fully enabled. It is expected to be utilized for
+early testing, and is included in the initial release.
+*  scheme
+  *  The scheme elements fully describe the calling sequence of the physical
+parameterization schemes within the model.
+  *  For each scheme, an XML file (the scheme definition file) needs to exist.
+For the initial release, this XML file has not yet been designed.
+
+
+Within the `src/tests` directory there is `test_init_fini.f90` which
 will get built when the CCPP library is built. This program only calls
   * `ccpp_init()`
   * `ccpp_fini()`
@@ -104,18 +224,24 @@ To add a new scheme one needs to
    call to the `schemes/CMakeLists.txt` file.
 2. Create a `cap` subroutine. The IPD will call your
    cap routine.
+   
+  1. The cap routine must be labelled "schemename_cap".
 
-  a. The cap routine must be labelled "schemename_cap".
      For example, the dummy scheme has a cap called
      "dummy_cap". The requirements are that it is
-    1. Lowercased
+    1. The scheme name is lowercase (the symbol is called from a C 
+       function.
     2. "_cap" is appended.
-  b. Map all the inputs for the cap from the `cdata` encapsulating
+    
+  2. Map all the inputs for the cap from the `cdata` encapsulating
      type (this is of the `ccpp_t` type). The cap will extract the
      fields from the fields array with the `ccpp_fields_get()`
-     subroutine.
+     subroutine. 
 
-An example of a scheme that does nothing is `schemes/check/test.f90`.
+An example of a scheme is `schemes/check/test.f90`. It has the cap
+routine and the run routine. The run routine prints out that the
+scheme has been entered.
+
 
 ## Usage
 The CCPP must first be initialized, this is done by calling `ccpp\_init()`.
@@ -125,6 +251,9 @@ can later be retrieved in a physics schemes cap.
 
 Example usage, in an atmosphere component:
 ```
+
+<pre>
+
 type(ccpp_t), target :: cdata
 character(len=128)   :: scheme_xml_filename
 integer              :: ierr
@@ -148,10 +277,16 @@ call ccpp_ipd_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
 if (ierr /= 0) then
     call exit(1)
 end if
+
+</pre>
+
 ```
 
 Example usage, in a physics cap:
 ```
+
+<pre>
+
 type(ccpp_t), pointer      :: cdata
 real, pointer              :: surf_t(:)
 integer                    :: ierr
@@ -161,6 +296,9 @@ call ccpp_fields_get(cdata, 'surface_temperature', surf_t, ierr)
 if (ierr /= 0) then
     call exit(1)
 end if
+
+</pre>
+
 ```
 
 Note, the cap routine must
@@ -170,7 +308,7 @@ Note, the cap routine must
 ## Documentation
 The code is documented with [doxygen](www.doxygen.org/).
 To generate the documentation you must have [doxygen](www.doxygen.org/)
-and [graphviz](http://www.graphviz.org/) installed. The execute:
+and [graphviz](http://www.graphviz.org/) installed. Then execute:
 ```
 make doc
 ```
@@ -186,6 +324,6 @@ To generate the coverage:
   * `cmake -DCMAKE_BUILD_TYPE=Coverage ..`
 3. Build the CCPP.
   * `make`
-4. Build the covage report
+4. Build the coverage report
   * `make coverage`
 The coverage report will be in the `coverage` directory within the build.
