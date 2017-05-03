@@ -135,7 +135,7 @@ ccpp_ipd_close(void **lhdl)
 	char *error = NULL;
 
 	dlerror();
-	dlclose(lhdl);
+	dlclose(*lhdl);
 	if ((error = dlerror()) != NULL)  {
 		warnx("%s", error);
 		return(EXIT_FAILURE);
