@@ -3,7 +3,6 @@
 (CCPP), including the Interoperable Physics Driver (IPD).
 
 [![Build Status](https://travis-ci.com/NCAR/gmtb-ccpp.svg?branch=master)](https://travis-ci.com/NCAR/gmtb-ccpp)
-[![Coverage Status](https://coveralls.io/repos/github/NCAR/gmtb-ccpp/badge.svg?branch=master)](https://coveralls.io/github/NCAR/gmtb-ccpp?branch=master)
 
 ## Notes to Users
 This repository contains the Common Community Physics Packages (CCPP) and the driver 
