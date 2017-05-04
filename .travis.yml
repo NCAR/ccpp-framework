@@ -58,7 +58,13 @@ before_script:
 
 script:
   - mkdir build && cd build && cmake .. && make
-  - make test
+  - |
+      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
+          export LD_LIBRARY_PATH=${PWD}/schemes/check/src/check-build
+      elif [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
+          export DYLD_LIBRARY_PATH=${PWD}/schemes/check/src/check-build
+      fi
+      make test
 #  - |
 #      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
 #          make clean
