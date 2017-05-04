@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 2.8.11)
 
 if(POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
-    project(ccpp VERSION 0.0.1)
+    project(ccpp VERSION 0.1.0)
 else(POLICY CMP0048)
     project(ccpp)
-    set(PROJECT_VERSION 0.0.1)
+    set(PROJECT_VERSION 0.1.0)
     set(PROJECT_VERSION_MAJOR 0)
-    set(PROJECT_VERSION_MINOR 0)
-    set(PROJECT_VERSION_PATCH 1)
+    set(PROJECT_VERSION_MINOR 1)
+    set(PROJECT_VERSION_PATCH 0)
 endif(POLICY CMP0048)
 
 if(POLICY CMP0042)
@@ -24,6 +24,15 @@ enable_language(Fortran)
 set(PACKAGE "CCPP")
 set(AUTHORS  "Timothy Brown" "David Gill")
 string(TIMESTAMP YEAR "%Y")
+
+#------------------------------------------------------------------------------
+# The PGI compiler can not find any cap routines in their library.
+# This is due to how it labels subroutines within a modules.
+# For example the subroutine b() in the moduel a(), gets named a_b.
+# GCC and Intel do NOT do this, it is name simply as b.
+if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
+    message(FATAL_ERROR "PGI compiler is not supported")
+endif()
 
 #------------------------------------------------------------------------------
 # Set a default build type if none was specified
@@ -45,6 +54,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 #------------------------------------------------------------------------------
 # By default we want a shared library
 option(BUILD_SHARED_LIBS "Build a shared library" ON)
+
 
 #------------------------------------------------------------------------------
 # Enable code coverage

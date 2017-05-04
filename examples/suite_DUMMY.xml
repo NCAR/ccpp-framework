@@ -3,7 +3,7 @@
 <suite name="TB_TESTING">
   <ipd part="1">
     <subcycle loop="1">
-      <scheme>DUMMY</scheme>
+      <scheme lib="check">test</scheme>
     </subcycle>
   </ipd>
 </suite>
