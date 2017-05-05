@@ -1,0 +1,274 @@
+#!/usr/bin/env python
+#
+# Script to generate a cap module and subroutines
+# from a scheme xml file.
+#
+
+from __future__ import print_function
+import os
+import sys
+import getopt
+import xml.etree.ElementTree as et
+
+#################### Main program routine
+def main():
+    args = parse_args()
+    data = parse_scheme(args['scheme'])
+    cap = Cap()
+    cap.filename = args['output']
+    cap.write(data)
+
+#################### Parse the command line arguments
+def parse_args():
+    args = {}
+    opts, rem = getopt.getopt(sys.argv[1:],
+                              'hvo:',
+                              ['help',
+                               'verbose',
+                               'output=',
+                              ])
+    for opt, arg in opts:
+        if opt in ('-h', '--help'):
+            lusage()
+        elif opt in ('-v', '--verbose'):
+            args['verbose'] = True
+        elif opt in ('-o', '--output'):
+            args['output'] = arg
+        else:
+            usage()
+
+    if (not rem):
+        eprint("Must specify an input scheme file")
+        usage()
+
+    if (os.path.isfile(rem[0])):
+        args['scheme'] = rem[0]
+    else:
+        eprint("Unable to read input scheme file: {0}".format(rem[0]))
+        usage()
+
+    if (not 'output' in args):
+        args['output'] = sys.stdout
+
+    return args
+
+#################### Parse the scheme xml file into a data dictionary
+def parse_scheme(filename):
+
+    data = {}
+
+    tree = et.parse(filename)
+    root = tree.getroot()
+
+    data['module'] = root.attrib.get('module')
+    data['subs'] = {}
+
+    for sub in root.findall('subroutine'):
+        name = sub.attrib.get('name')
+        data['subs'][name] = {}
+        data['subs'][name]['vars'] = []
+
+        for var in sub.findall('var'):
+            v = Var()
+            v.name  = var.find('name').text
+            v.units = var.find('units').text
+            v.id    = var.find('id').text
+            v.type  = var.find('type').text
+            v.rank  = int(var.find('rank').text)
+            data['subs'][name]['vars'].append(v)
+
+    return data
+
+#################### Print a usage statement
+def usage():
+    name = os.path.basename(__file__)
+    eprint("Usage {0}: [-h] [-v] [-o output.f90] scheme.xml".format(name))
+    sys.exit(1)
+
+#################### Print a long usage statement
+def lusage():
+    pass
+
+#################### Print a message to STDERR
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
+###############################################################################
+class Var(object):
+
+    def __init__(self, **kwargs):
+        self._name  = None
+        self._units = None
+        self._id    = None
+        self._type  = None
+        self._rank  = None
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    @property
+    def name(self):
+        '''Get the name of the variable.'''
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def units(self):
+        '''Get the units of the variable.'''
+        return self._units
+
+    @units.setter
+    def units(self, value):
+        self._units = value
+
+    @property
+    def id(self):
+        '''Get the identification of the variable.'''
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        self._id = value
+
+    @property
+    def type(self):
+        '''Get the type of the variable.'''
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        self._type = value
+
+    @property
+    def rank(self):
+        '''Get the rank of the variable.'''
+        return self._rank
+
+    @rank.setter
+    def rank(self, value):
+        if (value == 0):
+            self._rank = ''
+        else:
+            self._rank = '('+ ','.join([':'] * value) +')'
+
+    def print_def(self):
+        '''Print the definition line for the variable.'''
+        str = "{s.type}, pointer     :: {s.id}{s.rank}"
+        return str.format(s=self)
+
+    def print_get(self):
+        '''Print the data retrieval line for the variable.'''
+
+        str='''
+        call ccpp_fields_get(cdata, '{s.name}', {s.id}, ierr)
+        if (ierr /= 0) then
+            call ccpp_error('Unable to retrieve {s.name}')
+            return
+        end if'''
+        return str.format(s=self)
+
+###############################################################################
+class Cap(object):
+
+    header='''
+!
+! This work (Common Community Physics Package), identified by NOAA, NCAR,
+! CU/CIRES, is free of known copyright restrictions and is placed in the
+! public domain.
+!
+! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+! THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+!
+
+!>
+!! @brief Auto-generated cap module for the {module} scheme
+!!
+!
+module {module}_cap
+
+    use, intrinsic :: iso_c_binding,                                   &
+                      only: c_f_pointer, c_ptr
+    use            :: ccpp_types,                                      &
+                      only: ccpp_t
+    use            :: ccpp_fields,                                     &
+                      only: ccpp_fields_get
+    use            :: ccpp_errors,                                     &
+                      only: ccpp_error
+    use            :: {module}, &
+                      only: {subroutines}
+    implicit none
+
+    private
+    public :: {subroutine_caps}
+
+    contains
+
+'''
+
+    sub='''
+    subroutine {subroutine}_cap(ptr) bind(c)
+
+        type(c_ptr), intent(inout) :: ptr
+
+        type(ccpp_t), pointer      :: cdata
+        integer                    :: ierr
+{var_defs}
+
+        call c_f_pointer(ptr, cdata)
+
+        {var_gets}
+
+        call {subroutine}({args})
+    end subroutine {subroutine}_cap
+'''
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, data):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        subs = ','.join(["{0}".format(s) for s in data['subs']])
+        sub_caps = ','.join(["{0}_cap".format(s) for s in data['subs']])
+
+        f.write(Cap.header.format(module = data['module'],
+                                  subroutines = subs,
+                                  subroutine_caps = sub_caps))
+        for (k, v) in data['subs'].items():
+            var_defs = "\n".join([" "*8 + x.print_def() for x in v['vars']])
+            var_gets = "\n".join([x.print_get() for x in v['vars']])
+            args = ','.join(["{0}={0}".format(x.id) for x in v['vars']])
+            f.write(Cap.sub.format(subroutine=k,
+                                   var_defs=var_defs,
+                                   var_gets=var_gets,
+                                   args=args))
+
+        f.write("end module {module}_cap\n".format(module = data['module']))
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+###############################################################################
+if __name__ == "__main__":
+    main()
+
