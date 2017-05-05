@@ -50,9 +50,19 @@ list(APPEND LIBS "ccpp")
 #------------------------------------------------------------------------------
 # Set the sources
 set(SOURCES
-    test.f90
-    noop.f90
+    check_test.f90
+    check_noop.f90
 )
+
+#------------------------------------------------------------------------------
+# Add the auto-generated caps
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
+    DEPENDS ${CCPP_MKCAP}
+    COMMAND ${CCPP_MKCAP} -o ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
+                             ${CMAKE_CURRENT_SOURCE_DIR}/scheme.xml
+)
+list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90)
 
 add_library(check ${SOURCES})
 target_link_libraries(check LINK_PUBLIC ${LIBS})

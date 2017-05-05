@@ -49,9 +49,19 @@ list(APPEND LIBS "ccpp")
 #------------------------------------------------------------------------------
 # Set the sources
 set(SOURCES
-    dummy_scm.f90
-    dummy_scm2.f90
+    scm.f90
 )
+
+#------------------------------------------------------------------------------
+# Add the auto-generated caps
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90
+    DEPENDS ${CCPP_MKCAP}
+    COMMAND ${CCPP_MKCAP} -o ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90
+                             ${CMAKE_CURRENT_SOURCE_DIR}/scheme.xml
+)
+list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90)
+
 
 add_library(scm ${SOURCES})
 target_link_libraries(scm LINK_PUBLIC ${LIBS})

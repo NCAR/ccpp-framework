@@ -16,6 +16,7 @@ ExternalProject_Add(
     INSTALL_COMMAND   ""
     CMAKE_ARGS -DCCPP_INCLUDE_DIRS=${CCPP_INCLUDE_DIRS}
                -DCCPP_LIB_DIRS=${CCPP_LIB_DIRS}
+               -DCCPP_MKCAP=${CMAKE_CURRENT_SOURCE_DIR}/mkcap
 )
 
 #------------------------------------------------------------------------------
@@ -30,4 +31,5 @@ ExternalProject_Add(
     INSTALL_COMMAND   ""
     CMAKE_ARGS -DCCPP_INCLUDE_DIRS=${CCPP_INCLUDE_DIRS}
                -DCCPP_LIB_DIRS=${CCPP_LIB_DIRS}
+               -DCCPP_MKCAP=${CMAKE_CURRENT_SOURCE_DIR}/mkcap
 )
