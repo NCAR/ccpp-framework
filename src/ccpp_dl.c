@@ -12,11 +12,12 @@
  */
 
 /**
- * @file ccpp_ipd.c
+ * @file ccpp_dl.c
  *
- * Routines and functions for the IPD to call physics routines.
+ * Routines for the function/subroutine calls using dynamic loaded shared
+ * objects.
  *
- * @ingroup IPD
+ * @ingroup CCPP
  * @{
  **/
 
@@ -31,7 +32,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "ccpp_ipd.h"
+#include "ccpp_dl.h"
 
 /** Shared library prefix and suffix for different platforms **/
 static const char prefix[] = "lib";
@@ -42,7 +43,10 @@ static const char suffix[] = ".so";
 #endif
 
 /**
- * IPD cap initialization routine.
+ * Function call initialization routine.
+ *
+ * This dlopen()'s the library specified and tries to
+ * obtain a handle to the function/scheme cap.
  *
  * @param[in]  scheme    The scheme name to call.
  * @param[in]  lib       The library continaing the physics scheme.
@@ -53,8 +57,8 @@ static const char suffix[] = ".so";
  * @retval     1         If there was an error
  **/
 int
-ccpp_ipd_open(const char *scheme, const char *lib, const char *ver,
-	      void **shdl, void **lhdl)
+ccpp_dl_open(const char *scheme, const char *lib, const char *ver,
+	     void **shdl, void **lhdl)
 {
 	int i = 0;
 	int n = 0;
@@ -70,12 +74,13 @@ ccpp_ipd_open(const char *scheme, const char *lib, const char *ver,
 		l = lib;
 	} else {
 		/* Generate the library name with the platform suffix */
-		n = (strlen(prefix) + strlen(lib) + strlen(suffix) + strlen(ver) +2)
-			*sizeof(char);
+		n = (strlen(prefix) + strlen(lib) + strlen(suffix)
+		     + strlen(ver) +2) *sizeof(char);
 		library = malloc(n);
 		memset(library, 0, n);
 		if (strcmp(ver, "") != 0) {
-			snprintf(library, n, "%s%s.%s%s", prefix, lib, ver, suffix);
+			snprintf(library, n, "%s%s.%s%s", prefix, lib, ver,
+				 suffix);
 		} else {
 			snprintf(library, n, "%s%s%s", prefix, lib, suffix);
 		}
@@ -123,14 +128,14 @@ ccpp_ipd_open(const char *scheme, const char *lib, const char *ver,
 }
 
 /**
- * IPD library finialization routine.
+ * Function call library closing routine.
  *
  * @param[in] lhdl      The library handle.
  * @retval     0        If it was sucessful
  * @retval     1        If there was an error
  **/
 int
-ccpp_ipd_close(void **lhdl)
+ccpp_dl_close(void **lhdl)
 {
 	char *error = NULL;
 
@@ -145,7 +150,7 @@ ccpp_ipd_close(void **lhdl)
 }
 
 /**
- * IPD cap calling routine.
+ * The function cap calling routine.
  *
  * @param[in] f_ptr     The scheme function pointer to call.
  * @param[in] data      The opaque ccpp_t data type to pass.
@@ -153,7 +158,7 @@ ccpp_ipd_close(void **lhdl)
  * @retval     1        If there was an error
  **/
 int
-ccpp_ipd_cap(void **f_ptr, void **data)
+ccpp_dl_call(void **f_ptr, void **data)
 {
 	void (*fun)(void **) = *f_ptr;
 

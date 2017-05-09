@@ -29,7 +29,7 @@ module ccpp_strings
 
     private
     public :: ccpp_fstr,                                               &
-               ccpp_cstr
+              ccpp_cstr
 
     interface
         integer(c_size_t)                                              &

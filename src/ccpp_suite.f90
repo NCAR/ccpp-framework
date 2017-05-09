@@ -25,11 +25,16 @@ module ccpp_suite
     use            :: ccpp_strings,                                    &
                       only: ccpp_fstr, ccpp_cstr
     use            :: ccpp_xml
+    use            :: ccpp_dl,                                         &
+                      only: ccpp_dl_open, ccpp_dl_close
+
     implicit none
 
     private
     public :: ccpp_suite_init,                                         &
-              ccpp_suite_fini
+              ccpp_suite_fini,                                         &
+              ccpp_suite_load,                                         &
+              ccpp_suite_unload
 
     !>
     !! @brief Suite XML tags.
@@ -269,31 +274,32 @@ module ccpp_suite
         ! Save max number of schemes that appear in any single IPD call
         !suite%total_schemes_max = max_num_schemes_per_ipd_call
 
-        write(*, '(A, A)') 'Suite name: ', trim(suite%name)
-        write(*, '(A, I4)') 'IPDs: ', suite%ipds_max
-
-        do i=1, suite%ipds_max
-            write(*, '(A, I4, A, I4)') 'IPD: ', i, ' part: ', suite%ipds(i)%part
-            write(*, '(A, I4)') 'subcycles: ',  suite%ipds(i)%subcycles_max
-            do j=1, suite%ipds(i)%subcycles_max
-                write(*, '(A, I4, A, I4)') 'subcycle: ', j, ' loop: ', suite%ipds(i)%subcycles(j)%loop
-                write(*, '(A, I4)') 'schemes: ', suite%ipds(i)%subcycles(j)%schemes_max
-                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
-                    write(*, '(A, A)') 'scheme: ', trim(suite%ipds(i)%subcycles(j)%schemes(k)%name)
-                end do
-            end do
-        end do
+!        write(*, '(A, A)') 'Suite name: ', trim(suite%name)
+!        write(*, '(A, I4)') 'IPDs: ', suite%ipds_max
+!
+!        do i=1, suite%ipds_max
+!            write(*, '(A, I4, A, I4)') 'IPD: ', i, ' part: ', suite%ipds(i)%part
+!            write(*, '(A, I4)') 'subcycles: ',  suite%ipds(i)%subcycles_max
+!            do j=1, suite%ipds(i)%subcycles_max
+!                write(*, '(A, I4, A, I4)') 'subcycle: ', j, ' loop: ', suite%ipds(i)%subcycles(j)%loop
+!                write(*, '(A, I4)') 'schemes: ', suite%ipds(i)%subcycles(j)%schemes_max
+!                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
+!                    write(*, '(A, A)') 'scheme: ', trim(suite%ipds(i)%subcycles(j)%schemes(k)%name)
+!                end do
+!            end do
+!        end do
 
         ierr = ccpp_xml_unload(xml)
+
+        call ccpp_suite_load(suite, ierr)
 
     end subroutine ccpp_suite_init
 
     !>
     !! Suite finalization subroutine.
     !!
-    !! @param[in,out] suite    The suite_t type to initalize from the scheme
-    !!                         XML file.
-    !! @param[  out]  ierr     Integer error flag.
+    !! @param[in,out] suite    The suite_t type to finialize.
+    !! @param[   out] ierr     Integer error flag.
     !
     subroutine ccpp_suite_fini(suite, ierr)
         type(ccpp_suite_t),     intent(inout) :: suite
@@ -304,6 +310,8 @@ module ccpp_suite
         integer                               :: k
 
         ierr = 0
+
+        call ccpp_suite_unload(suite, ierr)
 
         do i=1, suite%ipds_max
             do j=1, suite%ipds(i)%subcycles_max
@@ -328,5 +336,79 @@ module ccpp_suite
         suite%ipds_max = 0
 
     end subroutine ccpp_suite_fini
+
+    !>
+    !! Suite sub-components loading.
+    !!
+    !! @param[in,out] suite    The suite_t type to load all sub-components.
+    !! @param[   out] ierr     Integer error flag.
+    !
+    subroutine ccpp_suite_load(suite, ierr)
+        type(ccpp_suite_t),     intent(inout) :: suite
+        integer,                intent(  out) :: ierr
+
+        integer                               :: i
+        integer                               :: j
+        integer                               :: k
+
+        ierr = 0
+
+        do i=1, suite%ipds_max
+            do j=1, suite%ipds(i)%subcycles_max
+                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
+                    associate (s => suite%ipds(i)%subcycles(j)%schemes(k))
+                    ierr = ccpp_dl_open(ccpp_cstr(s%name),    &
+                                        ccpp_cstr(s%library), &
+                                        ccpp_cstr(s%version), &
+                                        s%scheme_hdl,         &
+                                        s%library_hdl)
+                    if (ierr /= 0) then
+                        call ccpp_error('A problem occured loading ' &
+                                        // trim(s%name) // ' from '  &
+                                        // trim(s%library))
+                    end if
+                    end associate
+                end do
+            end do
+        end do
+
+    end subroutine ccpp_suite_load
+
+    !>
+    !! Suite unload subroutine.
+    !!
+    !! This loops over all defined schemes to close
+    !! the handle to the scheme library
+    !!
+    !! @param[in,out] cdata    The CCPP data of type ccpp_t
+    !! @param[   out] ierr     Integer error flag
+    !
+    subroutine ccpp_suite_unload(suite, ierr)
+
+        type(ccpp_suite_t), intent(inout)  :: suite
+
+        integer                            :: ierr
+        integer                            :: i
+        integer                            :: j
+        integer                            :: k
+
+        ierr = 0
+
+        do i=1, suite%ipds_max
+            do j=1, suite%ipds(i)%subcycles_max
+                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
+
+                    associate (s => suite%ipds(i)%subcycles(j)%schemes(k))
+                    ierr = ccpp_dl_close(s%library_hdl)
+                    if (ierr /= 0) then
+                        call ccpp_error('A problem occured closing ' &
+                                        // trim(s%library))
+                    end if
+                    end associate
+                end do
+            end do
+        end do
+
+    end subroutine ccpp_suite_unload
 
 end module ccpp_suite
