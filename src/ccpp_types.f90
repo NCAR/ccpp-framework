@@ -102,6 +102,8 @@ module ccpp_types
     !
     type :: ccpp_suite_t
             character(:), allocatable                           :: name
+            character(:), allocatable                           :: init
+            character(:), allocatable                           :: fini
             integer                                             :: ipds_max
             integer                                             :: ipd_n
             type(ccpp_ipd_t), allocatable, dimension(:)         :: ipds

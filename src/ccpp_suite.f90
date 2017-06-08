@@ -43,6 +43,8 @@ module ccpp_suite
     !!          of the suite.xsd.
     !
     character(len=*), parameter :: XML_ELE_SUITE    = "suite"
+    character(len=*), parameter :: XML_ELE_INIT     = "init"
+    character(len=*), parameter :: XML_ELE_FINI     = "fini"
     character(len=*), parameter :: XML_ELE_IPD      = "ipd"
     character(len=*), parameter :: XML_ELE_SUBCYCLE = "subcycle"
     character(len=*), parameter :: XML_ELE_SCHEME   = "scheme"
@@ -104,6 +106,22 @@ module ccpp_suite
         end if
 
         suite%name = ccpp_fstr(tmp)
+
+        ! Get the init subroutine name
+        ierr = ccpp_xml_ele_find(root, ccpp_cstr(XML_ELE_INIT), tmp)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable retrieving suite initialization subroutine')
+        else
+            suite%init = ccpp_fstr(tmp)
+        end if
+
+        ! Get the fini subroutine name
+        ierr = ccpp_xml_ele_find(root, ccpp_cstr(XML_ELE_FINI), tmp)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable retrieving suite finalization subroutine')
+        else
+            suite%fini = ccpp_fstr(tmp)
+        end if
 
         ! Count the number of IPDs
         ierr = ccpp_xml_ele_count(root, ccpp_cstr(XML_ELE_IPD), suite%ipds_max)
