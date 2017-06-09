@@ -46,10 +46,7 @@ before_install:
   - |
       if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
           brew update
-          brew search gcc
           brew install gcc@6
-          brew search gcc
-          which gcc-6
       fi
   - |
       if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
@@ -64,10 +61,13 @@ script:
   - |
       if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
           export LD_LIBRARY_PATH=${PWD}/schemes/check/src/check-build
-      elif [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
-          export DYLD_LIBRARY_PATH=${PWD}/schemes/check/src/check-build
+          make test
       fi
-      make test
+  - |
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
+          export DYLD_LIBRARY_PATH=${PWD}/schemes/check/src/check-build
+          ctest
+      fi
 #  - |
 #      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
 #          make clean
