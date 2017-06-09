@@ -2,7 +2,7 @@
 [GMTB](http://www.dtcenter.org/GMTB/html/) Common Community Physics Package
 (CCPP), including the Interoperable Physics Driver (IPD).
 
-[![Build Status](https://travis-ci.com/NCAR/gmtb-ccpp.svg?branch=master)](https://travis-ci.com/NCAR/gmtb-ccpp)
+[![Build Status](https://travis-ci.org/NCAR/gmtb-ccpp.svg?branch=master)](https://travis-ci.org/NCAR/gmtb-ccpp)
 
 ## Notes to Users
 This repository contains the Common Community Physics Packages (CCPP) and the driver 
@@ -36,9 +36,9 @@ provided once examples of fully functioning schemes are part of the CCPP.
     * Fortran: must be 2008 compliant. There are a number of Fortran
     2003 pieces, and a single convenience right now with Fortran 2008.
   2. Intel 16.0.2 and beyond work OK
-  3. PGI compilers do not easily support C functions calling Fortran routines.
+  3. PGI compilers do **not** easily support C functions calling Fortran routines.
      The PGI compilers attach the Fortran module name as a prefix to the Fortran
-     symbol. This breaks the method that the CCPP uses to identify which schemes
+     symbol. This **breaks** the method that the CCPP uses to identify which schemes
      to call.
 2. [Cmake](https://cmake.org)
 
