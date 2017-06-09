@@ -30,17 +30,26 @@ provided once examples of fully functioning schemes are part of the CCPP.
 
 ## Requirements
 
-1. Compilers
-  1. [GNU Compiler Collection](https://gcc.gnu.org/)
-    * C
-    * Fortran: must be 2008 compliant. There are a number of Fortran
-    2003 pieces, and a single convenience right now with Fortran 2008.
-  2. Intel 16.0.2 and beyond work OK
-  3. PGI compilers do **not** easily support C functions calling Fortran routines.
-     The PGI compilers attach the Fortran module name as a prefix to the Fortran
-     symbol. This **breaks** the method that the CCPP uses to identify which schemes
-     to call.
-2. [Cmake](https://cmake.org)
+### Compilers
+The CCPP uses both the C and Fortran compilers. Note, the
+Fortran compiler must be 2008 compliant. There are a number of Fortran
+2003 pieces, and a single convenience right now with Fortran 2008.
+
+1. [GNU Compiler Collection](https://gcc.gnu.org/)
+2. [Intel 16.0.2](https://software.intel.com/en-us/intel-compilers) and beyond work.
+3. [PGI](http://www.pgroup.com/) compilers do **not** easily support C functions
+   calling Fortran routines. The PGI compilers attach the Fortran module name as a
+   prefix to the Fortran symbol. This **breaks** the method that the CCPP uses to
+   identify which schemes to call.
+
+### [Cmake](https://cmake.org)
+
+The CCPP build system uses cmake.
+
+### [LibXML2](http://xmlsoft.org/)
+
+The suite definition is currently written in XML, LibXML2 is currently used to
+parse these files.
 
 ## Building
 It is recommend to do an out of source build. This is "cmake" terminology
