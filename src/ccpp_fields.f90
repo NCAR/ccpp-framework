@@ -70,100 +70,106 @@ module ccpp_fields
     !! Module precedence for adding a field.
     !
     interface ccpp_fields_add
-       module procedure ccpp_fields_add_i32_0, &
-                        ccpp_fields_add_i32_1, &
-                        ccpp_fields_add_i32_2, &
-                        ccpp_fields_add_i32_3, &
-                        ccpp_fields_add_i32_4, &
-                        ccpp_fields_add_i32_5, &
-                        ccpp_fields_add_i32_6, &
-                        ccpp_fields_add_i32_7, &
+        module procedure           &
+            ccpp_fields_add_i32_0, &
+            ccpp_fields_add_i32_1, &
+            ccpp_fields_add_i32_2, &
+            ccpp_fields_add_i32_3, &
+            ccpp_fields_add_i32_4, &
+            ccpp_fields_add_i32_5, &
+            ccpp_fields_add_i32_6, &
+            ccpp_fields_add_i32_7, &
 
-                        ccpp_fields_add_i64_0, &
-                        ccpp_fields_add_i64_1, &
-                        ccpp_fields_add_i64_2, &
-                        ccpp_fields_add_i64_3, &
-                        ccpp_fields_add_i64_4, &
-                        ccpp_fields_add_i64_5, &
-                        ccpp_fields_add_i64_6, &
-                        ccpp_fields_add_i64_7, &
+            ccpp_fields_add_i64_0, &
+            ccpp_fields_add_i64_1, &
+            ccpp_fields_add_i64_2, &
+            ccpp_fields_add_i64_3, &
+            ccpp_fields_add_i64_4, &
+            ccpp_fields_add_i64_5, &
+            ccpp_fields_add_i64_6, &
+            ccpp_fields_add_i64_7, &
 
-                        ccpp_fields_add_r32_0, &
-                        ccpp_fields_add_r32_1, &
-                        ccpp_fields_add_r32_2, &
-                        ccpp_fields_add_r32_3, &
-                        ccpp_fields_add_r32_4, &
-                        ccpp_fields_add_r32_5, &
-                        ccpp_fields_add_r32_6, &
-                        ccpp_fields_add_r32_7, &
+            ccpp_fields_add_r32_0, &
+            ccpp_fields_add_r32_1, &
+            ccpp_fields_add_r32_2, &
+            ccpp_fields_add_r32_3, &
+            ccpp_fields_add_r32_4, &
+            ccpp_fields_add_r32_5, &
+            ccpp_fields_add_r32_6, &
+            ccpp_fields_add_r32_7, &
 
-                        ccpp_fields_add_r64_0, &
-                        ccpp_fields_add_r64_1, &
-                        ccpp_fields_add_r64_2, &
-                        ccpp_fields_add_r64_3, &
-                        ccpp_fields_add_r64_4, &
-                        ccpp_fields_add_r64_5, &
-                        ccpp_fields_add_r64_6, &
-                        ccpp_fields_add_r64_7, &
+            ccpp_fields_add_r64_0, &
+            ccpp_fields_add_r64_1, &
+            ccpp_fields_add_r64_2, &
+            ccpp_fields_add_r64_3, &
+            ccpp_fields_add_r64_4, &
+            ccpp_fields_add_r64_5, &
+            ccpp_fields_add_r64_6, &
+            ccpp_fields_add_r64_7, &
 
-                        ccpp_fields_add_l_0, &
-                        ccpp_fields_add_l_1, &
-                        ccpp_fields_add_l_2, &
-                        ccpp_fields_add_l_3, &
-                        ccpp_fields_add_l_4, &
-                        ccpp_fields_add_l_5, &
-                        ccpp_fields_add_l_6, &
-                        ccpp_fields_add_l_7
+            ccpp_fields_add_l_0, &
+            ccpp_fields_add_l_1, &
+            ccpp_fields_add_l_2, &
+            ccpp_fields_add_l_3, &
+            ccpp_fields_add_l_4, &
+            ccpp_fields_add_l_5, &
+            ccpp_fields_add_l_6, &
+            ccpp_fields_add_l_7, &
+
+            ccpp_fields_add_ptr
     end interface ccpp_fields_add
 
     !>
     !! Module precedence for getting a field.
     !
     interface ccpp_fields_get
-       module procedure ccpp_fields_get_i32_0, &
-                        ccpp_fields_get_i32_1, &
-                        ccpp_fields_get_i32_2, &
-                        ccpp_fields_get_i32_3, &
-                        ccpp_fields_get_i32_4, &
-                        ccpp_fields_get_i32_5, &
-                        ccpp_fields_get_i32_6, &
-                        ccpp_fields_get_i32_7, &
+        module procedure           &
+            ccpp_fields_get_i32_0, &
+            ccpp_fields_get_i32_1, &
+            ccpp_fields_get_i32_2, &
+            ccpp_fields_get_i32_3, &
+            ccpp_fields_get_i32_4, &
+            ccpp_fields_get_i32_5, &
+            ccpp_fields_get_i32_6, &
+            ccpp_fields_get_i32_7, &
 
-                        ccpp_fields_get_i64_0, &
-                        ccpp_fields_get_i64_1, &
-                        ccpp_fields_get_i64_2, &
-                        ccpp_fields_get_i64_3, &
-                        ccpp_fields_get_i64_4, &
-                        ccpp_fields_get_i64_5, &
-                        ccpp_fields_get_i64_6, &
-                        ccpp_fields_get_i64_7, &
+            ccpp_fields_get_i64_0, &
+            ccpp_fields_get_i64_1, &
+            ccpp_fields_get_i64_2, &
+            ccpp_fields_get_i64_3, &
+            ccpp_fields_get_i64_4, &
+            ccpp_fields_get_i64_5, &
+            ccpp_fields_get_i64_6, &
+            ccpp_fields_get_i64_7, &
 
-                        ccpp_fields_get_r32_0, &
-                        ccpp_fields_get_r32_1, &
-                        ccpp_fields_get_r32_2, &
-                        ccpp_fields_get_r32_3, &
-                        ccpp_fields_get_r32_4, &
-                        ccpp_fields_get_r32_5, &
-                        ccpp_fields_get_r32_6, &
-                        ccpp_fields_get_r32_7, &
+            ccpp_fields_get_r32_0, &
+            ccpp_fields_get_r32_1, &
+            ccpp_fields_get_r32_2, &
+            ccpp_fields_get_r32_3, &
+            ccpp_fields_get_r32_4, &
+            ccpp_fields_get_r32_5, &
+            ccpp_fields_get_r32_6, &
+            ccpp_fields_get_r32_7, &
 
-                        ccpp_fields_get_r64_0, &
-                        ccpp_fields_get_r64_1, &
-                        ccpp_fields_get_r64_2, &
-                        ccpp_fields_get_r64_3, &
-                        ccpp_fields_get_r64_4, &
-                        ccpp_fields_get_r64_5, &
-                        ccpp_fields_get_r64_6, &
-                        ccpp_fields_get_r64_7, &
+            ccpp_fields_get_r64_0, &
+            ccpp_fields_get_r64_1, &
+            ccpp_fields_get_r64_2, &
+            ccpp_fields_get_r64_3, &
+            ccpp_fields_get_r64_4, &
+            ccpp_fields_get_r64_5, &
+            ccpp_fields_get_r64_6, &
+            ccpp_fields_get_r64_7, &
 
-                        ccpp_fields_get_l_0, &
-                        ccpp_fields_get_l_1, &
-                        ccpp_fields_get_l_2, &
-                        ccpp_fields_get_l_3, &
-                        ccpp_fields_get_l_4, &
-                        ccpp_fields_get_l_5, &
-                        ccpp_fields_get_l_6, &
-                        ccpp_fields_get_l_7
+            ccpp_fields_get_l_0, &
+            ccpp_fields_get_l_1, &
+            ccpp_fields_get_l_2, &
+            ccpp_fields_get_l_3, &
+            ccpp_fields_get_l_4, &
+            ccpp_fields_get_l_5, &
+            ccpp_fields_get_l_6, &
+            ccpp_fields_get_l_7, &
+
+            ccpp_fields_get_ptr
     end interface ccpp_fields_get
 
     !>
@@ -273,12 +279,12 @@ module ccpp_fields
     !! @param[in   ]  standard_name The standard name for the data.
     !! @param[in   ]  units         The SI units for the data.
     !! @param[in   ]  ptr           A C pointer to the data.
-    !! @param[in   ]  p_rank        Optional rank of the data.
-    !! @param[in   ]  p_dims        Optional dimensions of the data.
+    !! @param[in   ]  rank          Optional rank of the data.
+    !! @param[in   ]  dims          Optional dimensions of the data.
     !! @param[  out]  ierr          Integer error flag.
     !
-    subroutine ccpp_field_add_ptr(cdata, standard_name, units, ptr, &
-                                  rank, dims, ierr)
+    subroutine ccpp_fields_add_ptr(cdata, standard_name, units, ptr, &
+                                   rank, dims, ierr)
         type(ccpp_t),                    intent(inout) :: cdata
         character(len=*),                intent(in)    :: standard_name
         character(len=*),                intent(in)    :: units
@@ -336,7 +342,63 @@ module ccpp_fields
             cdata%fields(i)%dims      = dims
         end if
 
-    end subroutine ccpp_field_add_ptr
+    end subroutine ccpp_fields_add_ptr
+
+    !>
+    !! CCPP fields retrieval subroutine.
+    !!
+    !! @param[in,out] cdata         The ccpp_t type data.
+    !! @param[in   ]  standard_name The standard name for the data.
+    !! @param[  out]  ptr           A C pointer to the data.
+    !! @param[  out]  ierr          Integer error flag.
+    !! @param[  out]  units         Optional the SI units for the data.
+    !! @param[  out]  rank          Optional rank of the data.
+    !! @param[  out]  dims          Optional dimensions of the data.
+    !
+    subroutine ccpp_fields_get_ptr(cdata, standard_name, ptr, ierr, &
+                                   units, rank, dims)
+        type(ccpp_t),                    intent(inout) :: cdata
+        character(len=*),                intent(in)    :: standard_name
+        type(c_ptr),                     intent(  out) :: ptr
+        integer,                         intent(  out) :: ierr
+        character(len=*),      optional, intent(  out) :: units
+        integer,               optional, intent(  out) :: rank
+        integer, allocatable,  optional, intent(  out) :: dims(:)
+
+        integer                                        :: idx
+
+        ierr = 0
+        ! Lookup the standard name in the index
+        idx = ccpp_fields_find(cdata, standard_name, ierr)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to find the requested field')
+            return
+        end if
+
+        ptr = cdata%fields(idx)%ptr
+
+        if (present(units)) then
+            units = cdata%fields(idx)%units
+        end if
+
+        if (present(rank)) then
+            rank = cdata%fields(idx)%rank
+        end if
+
+        if (present(dims)) then
+            if (allocated(dims)) then
+                deallocate(dims)
+            end if
+            allocate(dims(cdata%fields(idx)%rank), stat=ierr)
+            if (ierr /= 0) then
+                call ccpp_warn('Unable to allocate cdata fields dims')
+                return
+            end if
+            dims = cdata%fields(idx)%dims
+        end if
+
+    end subroutine ccpp_fields_get_ptr
+
 
     !>
     !! CCPP find a fields location/array index by standard name.
@@ -353,7 +415,7 @@ module ccpp_fields
         integer                               :: location
 
         location = ccpp_field_idx_find(ccpp_cstr(standard_name), &
-                                      cdata%fields_idx)
+                                       cdata%fields_idx)
         if (location <= 0) then
             ierr = 1
         end if
@@ -376,8 +438,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_0
 
@@ -389,8 +451,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_1
 
@@ -402,8 +464,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_2
 
@@ -415,8 +477,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_3
 
@@ -428,8 +490,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_4
 
@@ -441,8 +503,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_5
 
@@ -454,8 +516,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_6
 
@@ -467,8 +529,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i32_7
 
@@ -485,8 +547,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_0
 
@@ -498,8 +560,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_1
 
@@ -511,8 +573,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_2
 
@@ -524,8 +586,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_3
 
@@ -537,8 +599,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_4
 
@@ -550,8 +612,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_5
 
@@ -563,8 +625,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_6
 
@@ -576,8 +638,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_i64_7
 
@@ -594,8 +656,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_0
 
@@ -607,8 +669,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_1
 
@@ -620,8 +682,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_2
 
@@ -633,8 +695,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_3
 
@@ -646,8 +708,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_4
 
@@ -659,8 +721,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_5
 
@@ -672,8 +734,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_6
 
@@ -685,8 +747,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r32_7
 
@@ -703,8 +765,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_0
 
@@ -716,8 +778,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_1
 
@@ -729,8 +791,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_2
 
@@ -742,8 +804,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_3
 
@@ -755,8 +817,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_4
 
@@ -768,8 +830,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_5
 
@@ -781,8 +843,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_6
 
@@ -794,8 +856,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_r64_7
 
@@ -812,8 +874,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_0
 
@@ -825,8 +887,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_1
 
@@ -838,8 +900,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_2
 
@@ -851,8 +913,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_3
 
@@ -864,8 +926,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_4
 
@@ -877,8 +939,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_5
 
@@ -890,8 +952,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_6
 
@@ -903,8 +965,8 @@ module ccpp_fields
         character(len=*), optional,  intent(in)    :: units
 
         ierr = 0
-        call ccpp_field_add_ptr(cdata, standard_name, units, &
-                               c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
+        call ccpp_fields_add_ptr(cdata, standard_name, units, &
+                                 c_loc(ptr), size(ptr), shape(ptr), ierr=ierr)
 
     end subroutine ccpp_fields_add_l_7
 
