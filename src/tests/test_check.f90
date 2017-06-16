@@ -19,9 +19,9 @@ program test_check
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_loc, c_f_pointer
     use            :: ccpp_types,                                      &
-                      only: STR_LEN, ccpp_t
+                      only: CCPP_STR_LEN, ccpp_t
     use            :: ccpp,                                            &
-                      only: ccpp_init
+                      only: ccpp_init, ccpp_fini
     use            :: ccpp_fcall,                                      &
                       only: ccpp_run
     use            :: ccpp_fields,                                     &
@@ -30,10 +30,9 @@ program test_check
     implicit none
 
     type(ccpp_t), target                         :: cdata
-    character(len=STR_LEN)                       :: filename
+    character(len=CCPP_STR_LEN)                  :: filename
     integer                                      :: len
     integer                                      :: ierr
-    integer                                      :: ipd_loop, phys_loop
     integer                                      :: asize
     real, target                                 :: gravity
     real, target, allocatable, dimension(:)      :: surf_t
@@ -98,5 +97,19 @@ program test_check
     print *, 'surf_t:  ', surf_t(1:2)
     print *, 'u: ', u(1,1,1)
     print *, 'v: ', v(1,1,1)
+
+    call ccpp_fini(cdata, ierr)
+
+    if (allocated(surf_t)) then
+        deallocate(surf_t)
+    end if
+
+    if (allocated(u)) then
+        deallocate(u)
+    end if
+
+    if (allocated(v)) then
+        deallocate(v)
+    end if
 
 end program test_check

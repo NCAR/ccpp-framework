@@ -96,7 +96,7 @@ ccpp_xml_ele_find(void **node, const char *name, void **ele)
 
 	cur = (xmlNodePtr)(*node);
 
-	/* Loop through all children finding the first element requested */
+	/* Loop through all children finding the first requested element*/
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
 		if (xmlStrcmp(cur->name, (const xmlChar *)name) == 0) {

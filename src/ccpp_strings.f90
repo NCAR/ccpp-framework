@@ -29,15 +29,22 @@ module ccpp_strings
 
     private
     public :: ccpp_fstr,                                               &
-              ccpp_cstr
+              ccpp_cstr,                                               &
+              ccpp_free
 
     interface
         integer(c_size_t)                                              &
         function strlen(s)                                             &
                  bind(c, name='strlen')
             import :: c_size_t, c_ptr
-            type(c_ptr), value :: s
+            type(c_ptr), value, intent(in) :: s
         end function strlen
+
+        subroutine ccpp_free(s)                                        &
+                 bind(c, name='free')
+            import :: c_ptr
+            type(c_ptr), value, intent(in) :: s
+        end subroutine ccpp_free
     end interface
 
     contains

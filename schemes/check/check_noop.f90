@@ -20,7 +20,7 @@ module check_noop
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_f_pointer, c_ptr
     use            :: ccpp_types,                                      &
-                      only: ccpp_t, STR_LEN
+                      only: ccpp_t
     use            :: ccpp_fields,                                     &
                       only: ccpp_fields_get
     implicit none

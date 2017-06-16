@@ -92,6 +92,7 @@ ccpp_dl_open(const char *scheme, const char *lib, const char *ver,
 	scheme_cap = malloc(n);
 	memset(scheme_cap, 0, n);
 
+	n = strlen(scheme);
 	for (i=0; i < n; ++i) {
 		scheme_cap[i] = tolower(scheme[i]);
 	}
@@ -160,7 +161,9 @@ ccpp_dl_close(void **lhdl)
 int
 ccpp_dl_call(void **f_ptr, void **data)
 {
-	void (*fun)(void **) = *f_ptr;
+	void (*fun)(void **) = NULL;
+
+	*(void **)(&fun) = *f_ptr;
 
 	/* Call the schemes cap subroutine */
 	fun(data);
