@@ -60,9 +60,6 @@ option(BUILD_SHARED_LIBS "Build a shared library" ON)
 # Enable code coverage
 if(CMAKE_COMPILER_IS_GNUCC AND (CMAKE_BUILD_TYPE STREQUAL "Coverage"))
     include(code_coverage)
-    setup_target_for_coverage(coverage
-                              "src/atm_drv ${CMAKE_SOURCE_DIR}/tests/suite_DUMMY.xml"
-                              coverage)
     list(APPEND LIBS "gcov")
 endif()
 

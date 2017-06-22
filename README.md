@@ -2,7 +2,10 @@
 [GMTB](http://www.dtcenter.org/GMTB/html/) Common Community Physics Package
 (CCPP), including the Interoperable Physics Driver (IPD).
 
-[![Build Status](https://travis-ci.org/NCAR/gmtb-ccpp.svg?branch=master)](https://travis-ci.org/NCAR/gmtb-ccpp)
+| Branch  | Linux/MacOS Build | Coverage |
+| Master  | [![Build Status](https://travis-ci.org/NCAR/gmtb-ccpp.svg?branch=master)](https://travis-ci.org/NCAR/gmtb-ccpp)  | (https://codecov.io/github/NCAR/gmtb-ccpp/coverage.svg?branch=master)](https://codecov.io/github/NCAR/gmtb-ccpp?branch=master)
+| Develop | [![Build Status](https://travis-ci.org/NCAR/gmtb-ccpp.svg?branch=develop)](https://travis-ci.org/NCAR/gmtb-ccpp) | (https://codecov.io/github/NCAR/gmtb-ccpp/coverage.svg?branch=develop)](https://codecov.io/github/NCAR/gmtb-ccpp?branch=develop)
+
 
 ## Notes to Users
 This repository contains the Common Community Physics Packages (CCPP) and the driver 
