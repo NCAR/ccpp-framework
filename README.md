@@ -61,27 +61,42 @@ for creating a separate directory where all of the built code (objects,
 libraries, executables) exist.
 
 1. Clone the repository.
-  * `git clone https://github.com/NCAR/gmtb-ccpp ccpp`
+```
+git clone https://github.com/NCAR/gmtb-ccpp ccpp
+```
 2. Change into the repository clone
-  * `cd ccpp`
-3. Specify the compiler to use. For example the GNU compiler.
-  1. sh, bash
-    * `ml gcc` or `ml gnu`
-    * `export CC=gcc`
-    * `export FC=gfortran`
-    * `export CXX=g++`
-  2. csh
-    * `ml gcc` or `ml gnu`
-    * `setenv CC gcc`
-    * `setenv FC gfortran`
-    * `setenv CXX g++`
+```
+cd ccpp
+```
+3. Specify the compiler to use. For example the GNU compilers,
+   when it is available as a module called `gcc`.
+  * For sh or bash
+```
+ml gcc
+export CC=gcc
+export FC=gfortran
+export CXX=g++
+```
+  * For csh or tcsh
+```
+ml gcc
+setenv CC gcc
+setenv FC gfortran
+setenv CXX g++
+```
 4. Make a build directory and change into it.
-  * `mkdir build`
-  * `cd build`
+```
+mkdir build
+cd build
+```
 5. Create the makefiles.
-  * `cmake ..`
-5. Build the CCPP library and test programs.
-  * `make`
+```
+cmake ..
+```
+6. Build the CCPP library and test programs.
+```
+make
+```
 
 ## Running Tests
 There are a few test programs within the `ccpp/src/tests` directory.
@@ -90,11 +105,15 @@ These should be built when the CCPP library is compiled.
 To run the tests you have to add the CCPP check scheme library (`libcheck.so`)
 to your `LD_LIBRARY_PATH` (`DYLD_LIBRARY_PATH` for OS X).
 
-bash:
-  * `export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/schemes/check/src/check-build/`
+For sh or bash:
+```
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/schemes/check/src/check-build/
+```
 
-csh:
-  * `setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${cwd}/schemes/check/src/check-build/`
+For csh or tcsh:
+```
+setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${cwd}/schemes/check/src/check-build/
+```
 
 
 Then issue the following within the build directory.
