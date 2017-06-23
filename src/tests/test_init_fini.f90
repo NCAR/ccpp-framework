@@ -25,7 +25,7 @@
 program test_init_fini
 
     use            :: ccpp_types,                          &
-                      only: STR_LEN, ccpp_t
+                      only: CCPP_STR_LEN, ccpp_t
     use            :: ccpp,                                &
                       only: ccpp_init, ccpp_fini
 
@@ -33,7 +33,7 @@ program test_init_fini
 
     integer                :: ierr
     integer                :: len
-    character(len=STR_LEN) :: filename
+    character(len=CCPP_STR_LEN) :: filename
     type(ccpp_t), target   :: cdata
 
 

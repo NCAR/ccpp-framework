@@ -2,23 +2,21 @@
 <xs:schema elementFormDefault="qualified"
            xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-<!-- definition of simple elements -->
-<xs:element name="scheme">
-  <xs:complexType>
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="lib" type="xs:string" use="optional"/>
-        <xs:attribute name="ver" type="xs:string" use="optional"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-</xs:element>
+<!-- definition of function pointer type -->
+ <xs:complexType name="functionPointer">
+   <xs:simpleContent>
+     <xs:extension base="xs:string">
+       <xs:attribute name="lib" type="xs:string" use="optional"/>
+       <xs:attribute name="ver" type="xs:string" use="optional"/>
+     </xs:extension>
+   </xs:simpleContent>
+</xs:complexType>
 
 <!-- definition of complex elements -->
 <xs:element name="subcycle">
   <xs:complexType>
     <xs:sequence>
-      <xs:element ref="scheme" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="scheme" type="functionPointer" minOccurs="1" maxOccurs="unbounded"/>
     </xs:sequence>
     <xs:attribute name="loop" type="xs:positiveInteger" use="optional"/>
   </xs:complexType>
@@ -27,8 +25,7 @@
 <xs:element name="ipd">
   <xs:complexType>
     <xs:choice>
-      <xs:element ref="subcycle" minOccurs="0" maxOccurs="unbounded"/>
-      <xs:element ref="scheme" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element ref="subcycle" minOccurs="1" maxOccurs="unbounded"/>
     </xs:choice>
     <xs:attribute name="part" type="xs:positiveInteger" use="optional"/>
   </xs:complexType>
@@ -37,9 +34,13 @@
 <xs:element name="suite">
   <xs:complexType>
     <xs:sequence>
+      <xs:element name="init" type="functionPointer" minOccurs="0" maxOccurs="1"/>
       <xs:element ref="ipd" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="fini" type="functionPointer" minOccurs="0" maxOccurs="1"/>
     </xs:sequence>
     <xs:attribute name="name" type="xs:string"/>
+    <xs:attribute name="lib" type="xs:string" use="optional"/>
+    <xs:attribute name="ver" type="xs:string" use="optional"/>
   </xs:complexType>
 </xs:element>
 

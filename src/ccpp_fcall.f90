@@ -27,7 +27,8 @@ module ccpp_fcall
         module procedure ccpp_run_suite,    &
                          ccpp_run_ipd,      &
                          ccpp_run_subcycle, &
-                         ccpp_run_scheme
+                         ccpp_run_scheme,   &
+                         ccpp_run_fptr
     end interface ccpp_run
 
     contains
@@ -143,5 +144,28 @@ module ccpp_fcall
         end if
 
     end subroutine ccpp_run_scheme
+
+    !>
+    !! The run subroutine for a function pointer. This
+    !! will call the single function specified.
+    !!
+    !! @param[in    ] scheme  The scheme to run
+    !! @param[in,out] cdata   The CCPP data of type ccpp_t
+    !! @param[   out] ierr    Integer error flag
+    !
+    subroutine ccpp_run_fptr(fptr, cdata, ierr)
+
+        type(c_ptr),          intent(in   )  :: fptr
+        type(ccpp_t), target, intent(inout)  :: cdata
+        integer,              intent(  out)  :: ierr
+
+        ierr = 0
+
+        ierr = ccpp_dl_call(fptr, c_loc(cdata))
+        if (ierr /= 0) then
+            call ccpp_error('A problem occured calling function pointer')
+        end if
+
+    end subroutine ccpp_run_fptr
 
 end module ccpp_fcall

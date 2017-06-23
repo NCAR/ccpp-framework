@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="GFS">
+  <init>IPD_initialize</init>
+  <ipd part="1">
+    <subcycle loop="1">
+      <scheme>IPD_setup_step</scheme>
+      <scheme>IPD_radiation_step</scheme>
+      <scheme>IPD_physics_step1</scheme>
+      <scheme>IPD_physics_step2</scheme>
+    </subcycle>
+  </ipd>
+</suite>
+

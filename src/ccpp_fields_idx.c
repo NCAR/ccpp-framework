@@ -74,7 +74,6 @@ ccpp_field_idx_init(void **index)
 {
 
 	struct ccpp_field_idx *f_index = NULL;
-	int i = 0;
 
 	*index = (struct ccpp_field_idx *)malloc(sizeof(struct ccpp_field_idx));
 	if (*index == NULL) {
@@ -138,7 +137,6 @@ ccpp_field_idx_add(const char *name, void **index)
 {
 	struct ccpp_field_idx *f_index = (struct ccpp_field_idx *)(*index);
 	int n = 0;
-	int ierr = 0;
 	size_t len = 0;
 
 	n = f_index->n;
@@ -175,7 +173,6 @@ ccpp_field_idx_add(const char *name, void **index)
 int
 ccpp_field_idx_find(const char *name, void **index)
 {
-	int ierr = 0;
 	int n = 0;
 	struct ccpp_field  *key = NULL;
 	struct ccpp_field **res = NULL;

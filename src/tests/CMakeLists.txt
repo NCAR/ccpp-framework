@@ -20,13 +20,14 @@ add_test(XML_2 test_init_fini ${CMAKE_CURRENT_SOURCE_DIR}/suite_noop_2.xml)
 add_test(XML_3 test_init_fini ${CMAKE_CURRENT_SOURCE_DIR}/suite_noop_3.xml)
 add_test(XML_4 test_init_fini ${CMAKE_CURRENT_SOURCE_DIR}/suite_noop_4.xml)
 add_test(XML_5 test_init_fini ${CMAKE_CURRENT_SOURCE_DIR}/suite_noop_5.xml)
-add_test(XML_6 test_init_fini ${CMAKE_CURRENT_SOURCE_DIR}/suite_noop_6.xml)
 
 # Make sure we can grow the fields index
 add_test(FIELDS test_fields)
 
 # Make sure we can do the cap call
-add_test(CHECK test_check  ${CMAKE_CURRENT_SOURCE_DIR}/suite_check.xml)
+add_test(CHECK test_check  ${CMAKE_CURRENT_SOURCE_DIR}/suite_check_1.xml)
+add_test(CHECK test_check  ${CMAKE_CURRENT_SOURCE_DIR}/suite_check_2.xml)
+add_test(CHECK test_check  ${CMAKE_CURRENT_SOURCE_DIR}/suite_check_3.xml)
 
 #------------------------------------------------------------------------------
 # Coverage tests

@@ -26,7 +26,7 @@ module ccpp_types
     implicit none
 
     private
-    public :: STR_LEN,                                                 &
+    public :: CCPP_STR_LEN,                                            &
               ccpp_t,                                                  &
               ccpp_field_t,                                            &
               ccpp_scheme_t,                                           &
@@ -34,8 +34,8 @@ module ccpp_types
               ccpp_ipd_t,                                              &
               ccpp_subcycle_t
 
-    !> @var STR_LEN Parameter defined for string lengths.
-    integer, parameter                          :: STR_LEN = 256
+    !> @var CCPP_STR_LEN Parameter defined for string lengths.
+    integer, parameter                          :: CCPP_STR_LEN = 256
 
     !>
     !! @breif CCPP field type
@@ -44,9 +44,9 @@ module ccpp_types
     !! for fields that need to be passed between the atmosphere driver
     !! and the physics drivers.
     type :: ccpp_field_t
-            character(len=STR_LEN)                            :: standard_name
-            character(len=STR_LEN)                            :: long_name
-            character(len=STR_LEN)                            :: units
+            character(len=CCPP_STR_LEN)                       :: standard_name
+            character(len=CCPP_STR_LEN)                       :: long_name
+            character(len=CCPP_STR_LEN)                       :: units
             integer                                           :: rank
             integer, allocatable, dimension(:)                :: dims
             type(c_ptr)                                       :: ptr
@@ -58,9 +58,9 @@ module ccpp_types
     !! The scheme type contains all the scheme information.
     !
     type :: ccpp_scheme_t
-            character(len=STR_LEN)                            :: name
-            character(len=STR_LEN)                            :: library
-            character(len=STR_LEN)                            :: version
+            character(:), allocatable                         :: name
+            character(:), allocatable                         :: library
+            character(:), allocatable                         :: version
             type(c_ptr)                                       :: scheme_hdl
             type(c_ptr)                                       :: library_hdl
     end type ccpp_scheme_t
@@ -102,6 +102,10 @@ module ccpp_types
     !
     type :: ccpp_suite_t
             character(:), allocatable                           :: name
+            character(:), allocatable                           :: library
+            character(:), allocatable                           :: version
+            type(ccpp_scheme_t)                                 :: init
+            type(ccpp_scheme_t)                                 :: fini
             integer                                             :: ipds_max
             integer                                             :: ipd_n
             type(ccpp_ipd_t), allocatable, dimension(:)         :: ipds
