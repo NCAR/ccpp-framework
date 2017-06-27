@@ -49,7 +49,8 @@ ccpp_xml_load(const char *filename, void **xml, void **root)
 	/* Read the file into a document tree */
 	*xml = (void *)xmlReadFile(filename, NULL, 0);
 	if (*xml == NULL) {
-		errx(EX_SOFTWARE, "Failed to parse %s", filename);
+		warnx("Failed to parse %s", filename);
+		return(EXIT_FAILURE);
 	}
 
 	*root = (void *)xmlDocGetRootElement((xmlDocPtr)(*xml));
