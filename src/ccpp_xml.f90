@@ -406,6 +406,7 @@ module ccpp_xml
             fptr%version = ver
         end if
 
+        ierr = 0
     end subroutine ccpp_xml_parse_fptr
 
 end module ccpp_xml
