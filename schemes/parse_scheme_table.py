@@ -122,24 +122,29 @@ for i in range(len(args.file)):
             if table_found:
                 #separate the table headers
                 table_headers = file_lines[header_line].split('|')
-                table_headers = table_headers[1:-1]
-                table_header_sets.append([x.strip() for x in table_headers])
+                #check for blank table
+                if(len(table_headers) > 1):
+                    table_headers = table_headers[1:-1]
+                    table_header_sets.append([x.strip() for x in table_headers])
 
-                #get all of the variable information
-                end_of_table = False
-                k = header_line + 2
-                var_data = []
-                while not end_of_table:
-                    line = file_lines[k]
-                    words = line.split()
-                    if len(words) == 1:
-                        end_of_table = True
-                    else:
-                        var_items = line.split('|')[1:-1]
-                        var_items = [x.strip() for x in var_items]
-                        var_data.append(var_items)
-                    k += 1
-                var_data_sets.append(var_data)
+                    #get all of the variable information
+                    end_of_table = False
+                    k = header_line + 2
+                    var_data = []
+                    while not end_of_table:
+                        line = file_lines[k]
+                        words = line.split()
+                        if len(words) == 1:
+                            end_of_table = True
+                        else:
+                            var_items = line.split('|')[1:-1]
+                            var_items = [x.strip() for x in var_items]
+                            var_data.append(var_items)
+                        k += 1
+                    var_data_sets.append(var_data)
+                else:
+                    table_header_sets.append([])
+                    var_data_sets.append([])
             else:
                 #if not table is found, just append an empty list
                table_header_sets.append([])
@@ -154,18 +159,19 @@ for i in range(len(args.file)):
 
             #right now, the mapping from the tables to the XML is 'local var name' => id, 'longname' => name, units => units, rank => rank, type => type
             #### this can be generalized and updated in the future using the table header information ####
-            for k in range(len(var_data_sets[j])):
-                sub_var = ET.SubElement(sub_sub, 'var')
-                var_name = ET.SubElement(sub_var, 'name')
-                var_name.text = var_data_sets[j][k][1]
-                var_units = ET.SubElement(sub_var, 'units')
-                var_units.text = var_data_sets[j][k][3]
-                var_id = ET.SubElement(sub_var, 'id')
-                var_id.text = var_data_sets[j][k][0]
-                var_rank = ET.SubElement(sub_var, 'rank')
-                var_rank.text = var_data_sets[j][k][4]
-                var_type = ET.SubElement(sub_var, 'type')
-                var_type.text = var_data_sets[j][k][5]
+            if len(var_data_sets[j]) > 0:
+                for k in range(len(var_data_sets[j])):
+                    sub_var = ET.SubElement(sub_sub, 'var')
+                    var_name = ET.SubElement(sub_var, 'name')
+                    var_name.text = var_data_sets[j][k][1]
+                    var_units = ET.SubElement(sub_var, 'units')
+                    var_units.text = var_data_sets[j][k][3]
+                    var_id = ET.SubElement(sub_var, 'id')
+                    var_id.text = var_data_sets[j][k][0]
+                    var_rank = ET.SubElement(sub_var, 'rank')
+                    var_rank.text = var_data_sets[j][k][4]
+                    var_type = ET.SubElement(sub_var, 'type')
+                    var_type.text = var_data_sets[j][k][5]
 
         indent(top)
         tree = ET.ElementTree(top)
