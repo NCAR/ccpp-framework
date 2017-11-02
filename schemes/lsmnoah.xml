@@ -1,0 +1,700 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="lsmnoah">
+  <subroutine name="lsmnoah_init" />
+  <subroutine name="lsmnoah_finalize" />
+  <subroutine name="lsmnoah_run">
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent, start at 1</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>soil_vertical_dimension</name>
+      <units>index</units>
+      <id>km</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>soil vertical layer dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_air_pressure</name>
+      <units>Pa</units>
+      <id>ps</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>x_wind_at_lowest_layer</name>
+      <units>m s-1</units>
+      <id>u1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>x component of 1st model layer wind</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>y_wind_at_lowest__layer</name>
+      <units>m s-1</units>
+      <id>v1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>y component of 1st model layer wind</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature_at_lowest_layer</name>
+      <units>K</units>
+      <id>t1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>1st model layer air temperature</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>specific_humidity_at_lowest_layer</name>
+      <units>kg kg-1</units>
+      <id>q1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>1st model layer specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cell_soil_type</name>
+      <units>index</units>
+      <id>soiltyp</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>soil type at each grid cell</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cell_vegetation_type</name>
+      <units>index</units>
+      <id>vegtype</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>vegetation type at each grid cell</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vegetation_area_fraction</name>
+      <units>frac</units>
+      <id>sigmaf</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>areal fractional cover of green vegetation</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_longwave_emissivity</name>
+      <units>frac</units>
+      <id>sfcemis</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface longwave emissivity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_downwelling_longwave_flux</name>
+      <units>W m-2</units>
+      <id>dlwflx</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>total sky surface downward longwave flux</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_downwelling_shortwave_flux</name>
+      <units>W m-2</units>
+      <id>dswsfc</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>total sky surface downward shortwave flux</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_net_downward_shortwave_flux</name>
+      <units>W m-2</units>
+      <id>snet</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>total sky surface net shortwave flux</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_dynamics</name>
+      <units>s</units>
+      <id>delt</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>dynamics time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>deep_soil_temperature</name>
+      <units>K</units>
+      <id>tg3</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>bottom soil temperature</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_drag_coefficient_for_momentum_in_air</name>
+      <units>none</units>
+      <id>cm</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface exchange coeff for momentum</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_drag_coefficient_for_heat_and_moisture_in_air</name>
+      <units>none</units>
+      <id>ch</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface exchange coeff heat &amp; moisture</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure_at_lowest_layer</name>
+      <units>Pa</units>
+      <id>prsl1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>Model layer 1 mean pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>ratio_of_exner_function_between_midlayer_and_interface_at_lowest_layer</name>
+      <units>ratio</units>
+      <id>prslki</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>Exner function ratio bt midlayer and interface at 1st layer</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>height_above_mean_sea_level_at_lowest_layer</name>
+      <units>m</units>
+      <id>zf</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>height above MSL at 1st model layer</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>sea_land_ice_mask</name>
+      <units>flag</units>
+      <id>islimsk</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>landmask: sea/land/ice=0/1/2</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_wind_enhancement_due_to_convection</name>
+      <units>m s-1</units>
+      <id>ddvel</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface wind enhancement due to convection</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_slope_classification</name>
+      <units>index</units>
+      <id>slopetyp</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>class of sfc slope</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>minimum_vegetation_area_fraction</name>
+      <units>frac</units>
+      <id>shdmin</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>min fractional coverage of green veg</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>maximum_vegetation_area_fraction</name>
+      <units>frac</units>
+      <id>shdmax</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>max fractnl cover of green veg (not used)</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>upper_bound_on_max_albedo_over_deep_snow</name>
+      <units>frac</units>
+      <id>snoalb</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>upper bound on max albedo over deep snow</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_diffused_shortwave_albedo</name>
+      <units>frac</units>
+      <id>sfalb</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>mean surface diffused shortwave albedo</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_for_iteration</name>
+      <units>flag</units>
+      <id>flag_iter</id>
+      <rank>1</rank>
+      <type>logical</type>
+      <description>flag for iteration</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_for_guess_run</name>
+      <units>flag</units>
+      <id>flag_guess</id>
+      <rank>1</rank>
+      <type>logical</type>
+      <description>flag for guess run</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>soil_type</name>
+      <units>index</units>
+      <id>isot</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>soil type (not used)</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vegetation_type</name>
+      <units>index</units>
+      <id>ivegsrc</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vegetation type data source umd or igbp</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>water_equivalent_accumulated_snow_depth</name>
+      <units>mm</units>
+      <id>weasd</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>water equivalent accumulated snow depth</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_snow_thickness_water_equivalent</name>
+      <units>mm</units>
+      <id>snwdph</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>water equivalent snow depth over land</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_skin_temperature</name>
+      <units>K</units>
+      <id>tskin</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface skin temperature</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>precipitation_amount_in_one_dynamic_time_step</name>
+      <units>kg m-2</units>
+      <id>tprcp</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>total precipitation in each time step</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_for_snow_or_rain_precipitation</name>
+      <units>flag</units>
+      <id>srflag</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>flag for snow or rain precipitation</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>volume_fraction_of_soil_moisture</name>
+      <units>frac</units>
+      <id>smc</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>volumetric fraction of soil moisture</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>soil_temperature</name>
+      <units>K</units>
+      <id>stc</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>soil temperature</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>volume_fraction_of_unfrozen_soil_moisture</name>
+      <units>frac</units>
+      <id>slc</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>volume fraction of unfrozen soil moisture</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>canopy_water_amount</name>
+      <units>kg m-2</units>
+      <id>canopy</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>canopy moisture content</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>transpiration_flux</name>
+      <units>kg m-2 s-1</units>
+      <id>trans</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>total plant transpiration rate</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_skin_temperature_after_iteration</name>
+      <units>K</units>
+      <id>tsurf</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface skin temperature after iteration</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_roughness_length</name>
+      <units>m</units>
+      <id>zorl</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface roughness length</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_snow_area_fraction</name>
+      <units>frac</units>
+      <id>sncovr1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface snow area fraction</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>qsurf</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>upward_heat_flux_in_soil</name>
+      <units>W m-2</units>
+      <id>gflux</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>upward soil heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>subsurface_runoff_flux</name>
+      <units>kg m-2 s-1</units>
+      <id>drain</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>subsurface runoff flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>kinematic_surface_upward_latent_heat_flux</name>
+      <units>kg kg-1 m s-1</units>
+      <id>evap</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface upward evaporation flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>kinematic_surface_upward_sensible_heat_flux</name>
+      <units>K kg-1 m s-1</units>
+      <id>hflx</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface upward sensible heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_upward_potential_latent_heat_flux</name>
+      <units>W m-2</units>
+      <id>ep</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface upward potential latent heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_runoff_flux</name>
+      <units>kg m-2 s-1</units>
+      <id>runoff</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface runoff flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_drag_wind_speed_for_momentum_in_air</name>
+      <units>m s-1</units>
+      <id>cmm</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surf mom exch coef time mean surf wind</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_drag_mass_flux_for_heat_and_moisture_in_air</name>
+      <units>kg m-2 s-1</units>
+      <id>chh</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surf h&amp;m exch coef time surf wind &amp; density</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>soil_upward_latent_heat_flux</name>
+      <units>W m-2</units>
+      <id>evbs</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>soil upward latent heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>canopy_upward_latent_heat_flux</name>
+      <units>W m-2</units>
+      <id>evcw</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>canopy upward latent heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>snow_deposition_sublimation_upward_latent_heat_flux</name>
+      <units>W m-2</units>
+      <id>sbsno</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>latent heat flux from snow depo/subl</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_snow_area_fraction</name>
+      <units>frac</units>
+      <id>snowc</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface snow area fraction</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>soil_moisture_content</name>
+      <units>kg m-2</units>
+      <id>stm</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>soil moisture content</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>snow_freezing_rain_upward_latent_heat_flux</name>
+      <units>W m-2</units>
+      <id>snohf</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>latent heat flux due to snow and frz rain</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>volume_fraction_of_condensed_water_in_soil_at_wilting_point</name>
+      <units>frac</units>
+      <id>smcwlt2</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>soil water fraction at wilting point</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>threshold_volume_fraction_of_condensed_water_in_soil</name>
+      <units>frac</units>
+      <id>smcref2</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>soil moisture threshold</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>normalized_soil_wetness</name>
+      <units>frac</units>
+      <id>wet1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>normalized soil wetness</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+</scheme>

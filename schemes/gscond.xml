@@ -1,0 +1,238 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="gscond">
+  <subroutine name="gscond_init" />
+  <subroutine name="gscond_run">
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent, start at 1</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_dimension</name>
+      <units>index</units>
+      <id>ix</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_dimension</name>
+      <units>index</units>
+      <id>km</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vertical layer dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_physics</name>
+      <units>s</units>
+      <id>dt</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>physics time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_dynamics</name>
+      <units>s</units>
+      <id>dtf</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>dynamics time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure</name>
+      <units>Pa</units>
+      <id>prsl</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer mean air pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_air_pressure</name>
+      <units>Pa</units>
+      <id>ps</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>water_vapor_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>q</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>water vapor specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cloud_ice_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>clw1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cloud ice specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cloud_liquid_water_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>clw2</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cloud water specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cloud_condensed_water_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>cwm</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cloud condensed water specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature</name>
+      <units>K</units>
+      <id>t</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer mean air temperature</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature_at_two_time_step_back</name>
+      <units>K</units>
+      <id>tp</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air temperature at two time step back</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>water_vapor_specific_humidity_at_two_time_step_back</name>
+      <units>kg kg-1</units>
+      <id>qp</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>water vapor specific humidity at two time step back</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_air_pressure_at_two_time_step_back</name>
+      <units>Pa</units>
+      <id>psp</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface air pressure at two time step back</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature_at_previous_time_step</name>
+      <units>K</units>
+      <id>tp1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air temperature at previous time step</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>water_vapor_specific_humidity_at_previous_time_step</name>
+      <units>kg kg-1</units>
+      <id>qp1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>water vapor specific humidity at previous time step</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_air_pressure_at_previous_time_step</name>
+      <units>Pa</units>
+      <id>psp1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface air surface pressure at previous time step</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>critical_relative_humidity</name>
+      <units>1</units>
+      <id>u</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>critical relative humidity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_print</name>
+      <units>flag</units>
+      <id>lprnt</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>flag for printing diagnostics to output</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_index_of_printed_column</name>
+      <units>index</units>
+      <id>ipr</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal index of printed column</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+  <subroutine name="gscond_finalize" />
+</scheme>
