@@ -68,6 +68,7 @@ for i in range(len(args.file)):
             mod_end_lines.append(line_counter)
         line_counter += 1
 
+
     #for each module within the file, create a separate XML file for the "scheme"
     for l in range(len(module_names)):
         #find the *_init, *_run, *_finalize, etc. subroutines, save their location within the file and their names
@@ -85,9 +86,11 @@ for i in range(len(args.file)):
                     sub_name = words[j+1].split('(')[0].strip()
                     if sub_name.find('_') >= 0:
                         #ignore subroutines that have no postfix
-                        sub_lines.append(line_counter)
-                        sub_names.append(sub_name.lower())
-                        scheme_names.append(sub_names[-1][0:sub_names[-1].rfind('_')])
+                        if sub_name.find('init') >= 0 or sub_name.find('run') >= 0 or sub_name.find('finalize') >= 0:
+                            #ignore subroutines that have postfixes other than init, run, finalize
+                            sub_lines.append(line_counter)
+                            sub_names.append(sub_name.lower())
+                            scheme_names.append(sub_names[-1][0:sub_names[-1].rfind('_')])
             line_counter += 1
 
         #check that all the subroutine "root" names in the current module are the same
@@ -111,7 +114,7 @@ for i in range(len(args.file)):
                 line = file_lines[k]
                 words = line.split()
                 for word in words:
-                    if 'arg_table_' + sub_names[j] in word:
+                    if 'arg_table_' + sub_names[j] in word.lower():
                         table_found = True
                         header_line = k + 1
                         break
@@ -122,24 +125,29 @@ for i in range(len(args.file)):
             if table_found:
                 #separate the table headers
                 table_headers = file_lines[header_line].split('|')
-                table_headers = table_headers[1:-1]
-                table_header_sets.append([x.strip() for x in table_headers])
+                #check for blank table
+                if(len(table_headers) > 1):
+                    table_headers = table_headers[1:-1]
+                    table_header_sets.append([x.strip() for x in table_headers])
 
-                #get all of the variable information
-                end_of_table = False
-                k = header_line + 2
-                var_data = []
-                while not end_of_table:
-                    line = file_lines[k]
-                    words = line.split()
-                    if len(words) == 1:
-                        end_of_table = True
-                    else:
-                        var_items = line.split('|')[1:-1]
-                        var_items = [x.strip() for x in var_items]
-                        var_data.append(var_items)
-                    k += 1
-                var_data_sets.append(var_data)
+                    #get all of the variable information
+                    end_of_table = False
+                    k = header_line + 2
+                    var_data = []
+                    while not end_of_table:
+                        line = file_lines[k]
+                        words = line.split()
+                        if len(words) == 1:
+                            end_of_table = True
+                        else:
+                            var_items = line.split('|')[1:-1]
+                            var_items = [x.strip() for x in var_items]
+                            var_data.append(var_items)
+                        k += 1
+                    var_data_sets.append(var_data)
+                else:
+                    table_header_sets.append([])
+                    var_data_sets.append([])
             else:
                 #if not table is found, just append an empty list
                table_header_sets.append([])
@@ -152,20 +160,29 @@ for i in range(len(args.file)):
             sub_sub = ET.SubElement(top, 'subroutine')
             sub_sub.set('name', sub_names[j])
 
-            #right now, the mapping from the tables to the XML is 'local var name' => id, 'longname' => name, units => units, rank => rank, type => type
+            #right now, the mapping from the tables to the XML is 'local var name' => id, 'longname' => name, units => units, rank => rank, type => type, description => description, kind => kind, intent => intent, optional => optional
             #### this can be generalized and updated in the future using the table header information ####
-            for k in range(len(var_data_sets[j])):
-                sub_var = ET.SubElement(sub_sub, 'var')
-                var_name = ET.SubElement(sub_var, 'name')
-                var_name.text = var_data_sets[j][k][1]
-                var_units = ET.SubElement(sub_var, 'units')
-                var_units.text = var_data_sets[j][k][3]
-                var_id = ET.SubElement(sub_var, 'id')
-                var_id.text = var_data_sets[j][k][0]
-                var_rank = ET.SubElement(sub_var, 'rank')
-                var_rank.text = var_data_sets[j][k][4]
-                var_type = ET.SubElement(sub_var, 'type')
-                var_type.text = var_data_sets[j][k][5]
+            if len(var_data_sets[j]) > 0:
+                for k in range(len(var_data_sets[j])):
+                    sub_var = ET.SubElement(sub_sub, 'var')
+                    var_name = ET.SubElement(sub_var, 'name')
+                    var_name.text = var_data_sets[j][k][1]
+                    var_units = ET.SubElement(sub_var, 'units')
+                    var_units.text = var_data_sets[j][k][3]
+                    var_id = ET.SubElement(sub_var, 'id')
+                    var_id.text = var_data_sets[j][k][0]
+                    var_rank = ET.SubElement(sub_var, 'rank')
+                    var_rank.text = var_data_sets[j][k][4]
+                    var_type = ET.SubElement(sub_var, 'type')
+                    var_type.text = var_data_sets[j][k][5]
+                    var_description = ET.SubElement(sub_var, 'description')
+                    var_description.text = var_data_sets[j][k][2]
+                    var_kind = ET.SubElement(sub_var, 'kind')
+                    var_kind.text = var_data_sets[j][k][6]
+                    var_intent = ET.SubElement(sub_var, 'intent')
+                    var_intent.text = var_data_sets[j][k][7]
+                    var_optional = ET.SubElement(sub_var, 'optional')
+                    var_optional.text = var_data_sets[j][k][8]
 
         indent(top)
         tree = ET.ElementTree(top)

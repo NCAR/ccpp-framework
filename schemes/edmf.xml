@@ -1,0 +1,568 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="edmf">
+  <subroutine name="edmf_init" />
+  <subroutine name="edmf_finalize" />
+  <subroutine name="edmf_run">
+    <var>
+      <name>horizontal_dimension</name>
+      <units>index</units>
+      <id>ix</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent, start at 1</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_dimension</name>
+      <units>index</units>
+      <id>km</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vertical layer dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>number_of_vertical_diffusion_tracers</name>
+      <units>count</units>
+      <id>ntrac</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>number of tracers to diffuse vertically</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>index_for_liquid_cloud_condensate</name>
+      <units>index</units>
+      <id>ntcw</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>cloud condensate index in tracer array</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_y_wind_due_to_model_physics</name>
+      <units>m s-2</units>
+      <id>dv</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated tendency of the y wind</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_x_wind_due_to_model_physics</name>
+      <units>m s-2</units>
+      <id>du</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated tendency of the x wind</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_air_temperature_due_to_model_physics</name>
+      <units>K s-1</units>
+      <id>tau</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated tendency of the temperature</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_tracers_due_to_model_physics</name>
+      <units>kg kg-1 s-1</units>
+      <id>rtg</id>
+      <rank>3</rank>
+      <type>real</type>
+      <description>updated tendency of the tracers</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>x_wind</name>
+      <units>m s-1</units>
+      <id>u1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>x component of layer wind</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>y_wind</name>
+      <units>m s-1</units>
+      <id>v1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>y component of layer wind</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature</name>
+      <units>K</units>
+      <id>t1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer mean air temperature</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tracer_concentration</name>
+      <units>kg kg-1</units>
+      <id>q1</id>
+      <rank>3</rank>
+      <type>real</type>
+      <description>layer mean tracer concentration</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_air_temperature_due_to_shortwave_heating</name>
+      <units>K s-1</units>
+      <id>swh</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>total sky shortwave heating rate</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_air_temperature_due_to_longwave_heating</name>
+      <units>K s-1</units>
+      <id>hlw</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>total sky longwave heating rate</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_zenith_angle_adjust_factor_for_sw</name>
+      <units>none</units>
+      <id>xmu</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>time step zenith angle adjust factor for shortwave</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>exner_function_at_lowest_model_interface</name>
+      <units>none</units>
+      <id>psk</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>exner function at the surface interface</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>bulk_richardson_number_at_lowest_model_level</name>
+      <units>none</units>
+      <id>rbsoil</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>bulk Richardson number at the surface</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_roughness_length</name>
+      <units>cm</units>
+      <id>zorl</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface roughness length in cm</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>x_wind_at_10m</name>
+      <units>m s-1</units>
+      <id>u10m</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>x component of wind at 10 m</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>y_wind_at_10m</name>
+      <units>m s-1</units>
+      <id>v10m</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>y component of wind at 10 m</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>Monin-Obukhov_similarity_function_for_momentum</name>
+      <units>none</units>
+      <id>fm</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>Monin-Obukhov similarity function for momentum</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>Monin-Obukhov_similarity_function_for_heat</name>
+      <units>none</units>
+      <id>fh</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>Monin-Obukhov similarity function for heat</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_skin_temperature</name>
+      <units>K</units>
+      <id>tsea</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface temperature</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>kinematic_surface_upward_sensible_heat_flux</name>
+      <units>K m s-1</units>
+      <id>heat</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>kinematic surface upward sensible heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>kinematic_surface_upward_latent_heat_flux</name>
+      <units>kg kg-1 m s-1</units>
+      <id>evap</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>kinematic surface upward latent heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_wind_stress</name>
+      <units>m2 s-2</units>
+      <id>stress</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface wind stress</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>wind_speed_at_lowest_model_layer</name>
+      <units>m s-1</units>
+      <id>spd1</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>wind speed at lowest model level</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_index_of_top_of_atmosphere_boundary_layer</name>
+      <units>index</units>
+      <id>kpbl</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>PBL top model level index</description>
+      <kind />
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure_at_interface</name>
+      <units>Pa</units>
+      <id>prsi</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air pressure at model layer interfaces</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure_difference_between_midlayers</name>
+      <units>Pa</units>
+      <id>del</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>pres(k) - pres(k+1)</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure</name>
+      <units>Pa</units>
+      <id>prsl</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>mean layer pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>dimensionless_exner_function</name>
+      <units>none</units>
+      <id>prslk</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>Exner function at layers</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>geopotential_at_interface</name>
+      <units>m2 s-2</units>
+      <id>phii</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>geopotential at model layer interfaces</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>geopotential</name>
+      <units>m2 s-2</units>
+      <id>phil</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>geopotential at model layer centers</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_physics</name>
+      <units>s</units>
+      <id>delt</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>time step for physics</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_TKE_dissipation_heating</name>
+      <units>flag</units>
+      <id>dspheat</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>flag for using TKE dissipation heating</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>x_momentum_flux</name>
+      <units>Pa</units>
+      <id>dusfc</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>x momentum flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>y_momentum_flux</name>
+      <units>Pa</units>
+      <id>dvsfc</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>y momentum flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_upward_sensible_heat_flux</name>
+      <units>W m-2</units>
+      <id>dtsfc</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface upward sensible heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_upward_latent_heat_flux</name>
+      <units>W m-2</units>
+      <id>dqsfc</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface upward latent heat flux</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_boundary_layer_thickness</name>
+      <units>m</units>
+      <id>hpbl</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>PBL thickness</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>countergradient_mixing_term_for_temperature</name>
+      <units>K</units>
+      <id>hgamt</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>countergradient mixing term for temperature</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>countergradient_mixing_term_for_water_vapor</name>
+      <units>kg kg-1</units>
+      <id>hgamq</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>countergradient mixing term for water vapor</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_heat_diffusivity</name>
+      <units>m2 s-1</units>
+      <id>dkt</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>diffusivity for heat</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>index_of_highest_temperature_inversion</name>
+      <units>index</units>
+      <id>kinver</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>index of highest temperature inversion</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_momentum_diffusivity_background</name>
+      <units>m2 s-1</units>
+      <id>xkzm_m</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>background value of momentum diffusivity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_heat_diffusivity_background</name>
+      <units>m2 s-1</units>
+      <id>xkzm_h</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>background value of heat diffusivity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>diffusivity_background_sigma_level</name>
+      <units>none</units>
+      <id>xkzm_s</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>sigma level threshold for background diffusivity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_print</name>
+      <units>flag</units>
+      <id>lprnt</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>flag for printing diagnostics to output</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_index_of_printed_column</name>
+      <units>index</units>
+      <id>ipr</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal index of printed column</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+</scheme>

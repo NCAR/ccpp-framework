@@ -1,0 +1,150 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="gwdps_post">
+  <subroutine name="gwdps_post_init" />
+  <subroutine name="gwdps_post_run">
+    <var>
+      <name>flag_diagnostics</name>
+      <units>flag</units>
+      <id>lssav</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>flag for calculating diagnostic fields</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_diagnostics_3D</name>
+      <units>flag</units>
+      <id>ldiag3d</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>flag for calculating 3-D diagnostic fields</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_dynamics</name>
+      <units>s</units>
+      <id>dtf</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>dynamics time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>x_surface_stress_due_to_orographic_gravity_wave_drag</name>
+      <units>Pa</units>
+      <id>dusfcg</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>zonal surface stress due to orographic gravity wave drag</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>y_surface_stress_due_to_orographic_gravity_wave_drag</name>
+      <units>Pa</units>
+      <id>dvsfcg</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>meridional surface stress due to orographic gravity wave drag</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_x_wind_due_to_physics</name>
+      <units>m s-2</units>
+      <id>dudt</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>zonal wind tendency due to physics</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_y_wind_due_to_physics</name>
+      <units>m s-2</units>
+      <id>dvdt</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>meridional wind tendency due to physics</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_air_temperature_due_to_physics</name>
+      <units>K s-1</units>
+      <id>dtdt</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air temperature tendency due to physics</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_integral_of_x_surface_stress_due_to_orographic_gravity_wave_drag  ??</name>
+      <units>Pa s  ??</units>
+      <id>dugwd  ??</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>integral over time of zonal surface stress due to orographic gravity wave drag</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_integral_of_y_surface_stress_due_to_orographic_gravity_wave_drag  ??</name>
+      <units>Pa s  ??</units>
+      <id>dvgwd  ??</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>integral over time of meridional surface stress due to orographic gravity wave drag</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cumulative_change_in_x_wind_due_to_physics</name>
+      <units>m s-1  ??</units>
+      <id>du3dt  ??</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cumulative change in zonal wind due to physics</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cumulative_change_in_y_wind_due_to_physics</name>
+      <units>m s-1  ??</units>
+      <id>dv3dt  ??</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cumulative change in meridional wind due to physics</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cumulative_change_in_temperature_due_to_physics</name>
+      <units>K  ??</units>
+      <id>dt3dt  ??</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cumulative change in temperature due to physics</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+  <subroutine name="gwdps_post_finalize" />
+</scheme>

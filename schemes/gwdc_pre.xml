@@ -1,0 +1,106 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="gwdc_pre">
+  <subroutine name="gwdc_pre_init" />
+  <subroutine name="gwdc_pre_run">
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_dimension</name>
+      <units>index</units>
+      <id>levs</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>number of vertical layers</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_index_of_cloud_base</name>
+      <units>index</units>
+      <id>kbot</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>vertical index of cloud base</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_index_of_cloud_top</name>
+      <units>index</units>
+      <id>ktop</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>vertical index of cloud top</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_physics</name>
+      <units>s</units>
+      <id>dtp</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>physics time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>updated_air_temperature</name>
+      <units>m s-1</units>
+      <id>gt0</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated air temperature</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>tendency_of_air_temperature_due_to_physics</name>
+      <units>K s-1</units>
+      <id>dtdt  misleading??</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air temperature tendency due to physics</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure_difference_between_midlayers</name>
+      <units>Pa</units>
+      <id>del</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>difference between mid-layer pressures</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>maximum_column_heating_rate</name>
+      <units>K s-1</units>
+      <id>cumabs</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>maximum heating rate in column</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+  <subroutine name="gwdc_pre_finalize" />
+</scheme>

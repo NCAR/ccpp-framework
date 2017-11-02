@@ -1,0 +1,304 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="sasasshal">
+  <subroutine name="sasasshal_init" />
+  <subroutine name="sasasshal_run">
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent, start at 1</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_dimension</name>
+      <units>index</units>
+      <id>ix</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_dimension</name>
+      <units>index</units>
+      <id>km</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vertical layer dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_physics</name>
+      <units>s</units>
+      <id>delt</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>physics time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure_difference_between_midlayers</name>
+      <units>Pa</units>
+      <id>delp</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>pres(k) - pres(k+1)</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure</name>
+      <units>Pa</units>
+      <id>prslp</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>mean layer pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_air_pressure</name>
+      <units>Pa</units>
+      <id>psp</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>geopotential_at_midlayer</name>
+      <units>m2 s-2</units>
+      <id>phil</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer geopotential</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cloud_ice_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>ql1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cloud ice specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cloud_liquid_water_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>ql2</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cloud water specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>water_vapor_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>q1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated vapor specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature</name>
+      <units>K</units>
+      <id>t1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated temperature</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>x_wind</name>
+      <units>m s-1</units>
+      <id>u1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated x-direction wind</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>y_wind</name>
+      <units>m s-1</units>
+      <id>v1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>updated y-direction wind</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>convective_rainfall_amount</name>
+      <units>m</units>
+      <id>rn</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>convective rain</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_index_for_cloud_base</name>
+      <units>index</units>
+      <id>kbot</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>index for cloud base</description>
+      <kind />
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_index_for_cloud_top</name>
+      <units>index</units>
+      <id>ktop</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>index for cloud top</description>
+      <kind />
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_deep_convection</name>
+      <units>flag</units>
+      <id>kcnv</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>deep convection: 0=no, 1=yes</description>
+      <kind />
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>sea_land_ice_mask</name>
+      <units>flag</units>
+      <id>islimsk</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>landmask: sea/land/ice=0/1/2</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cell_area</name>
+      <units>m2</units>
+      <id>garea</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>grid cell area</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>omega</name>
+      <units>Pa s-1</units>
+      <id>dot</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer mean vertical velocity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>number_of_hydrometeors</name>
+      <units>count</units>
+      <id>ncloud</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>number of hydrometeors</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_boundary_layer_thickness</name>
+      <units>m</units>
+      <id>hpbl</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>PBL top height</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_updraft_convective_mass_flux</name>
+      <units>kg m-2</units>
+      <id>ud_mf</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>(updraft mass flux) * delt</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_updraft_convective_mass_flux_at_cloud_top</name>
+      <units>kg m-2</units>
+      <id>dt_mf</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>ud_mf at cloud top</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>atmosphere_convective_cloud_water_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>cnvw</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>convective cloud water</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cloud_binary_mask</name>
+      <units>flag</units>
+      <id>cnvc</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>convective cloud cover</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+  <subroutine name="sasasshal_finalize" />
+</scheme>

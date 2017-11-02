@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="gfs_pbl_generic_pre">
+  <subroutine name="gfs_pbl_generic_pre_init" />
+  <subroutine name="gfs_pbl_generic_pre_finalize" />
+  <subroutine name="gfs_pbl_generic_pre_finalize" />
+  <subroutine name="gfs_pbl_generic_pre_run">
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent, start at 1</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_dimension</name>
+      <units>index</units>
+      <id>levs</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vertical layer dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>index_of_highest_temperature_inversion</name>
+      <units>index</units>
+      <id>kinver</id>
+      <rank>1</rank>
+      <type>integer</type>
+      <description>index of highest temperature inversion</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+</scheme>

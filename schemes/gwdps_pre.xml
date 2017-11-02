@@ -1,0 +1,139 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="gwdps_pre">
+  <subroutine name="gwdps_pre_init" />
+  <subroutine name="gwdps_pre_run">
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal dimension</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>iy</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal dimension</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>number_of_statistical_measures_of_subgrid_orography</name>
+      <units>count</units>
+      <id>nmtvr</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>number of statistical measures of subgrid orography</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>statistical_measures_of_subgrid_orography</name>
+      <units>various  ??</units>
+      <id>mntvar  ??</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>array of statistical measures of subgrid orography</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>standard_deviation_of_subgrid_orography</name>
+      <units>m</units>
+      <id>hprime</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>standard deviation of subgrid orography</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>convexity_of_subgrid_orography</name>
+      <units>none</units>
+      <id>oc</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>convexity of subgrid orography</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>asymmetry_of_subgrid_orography</name>
+      <units>none</units>
+      <id>oa4</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>asymmetry of subgrid orography</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>fraction_of_grid_box_with_subgrid_orography_higher_than_critical_height</name>
+      <units>frac</units>
+      <id>clx</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>horizontal fraction of grid box covered by subgrid orography higher than critical height</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>angle_from_east_of_maximum_subgrid_orographic_variations</name>
+      <units>degrees</units>
+      <id>theta</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>angle with_respect to east of maximum subgrid orographic variations</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>slope_of_subgrid_orography</name>
+      <units>none</units>
+      <id>sigma</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>slope of subgrid orography</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>anisotropy_of_subgrid_orography</name>
+      <units>none</units>
+      <id>gamma</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>anisotropy of subgrid orography</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>maximum_subgrid_orography</name>
+      <units>m</units>
+      <id>elvmax</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>maximum of subgrid orography</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+  <subroutine name="gwdps_pre_finalize" />
+</scheme>
