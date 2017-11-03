@@ -91,7 +91,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>air_temperature</name>
+      <name>air_temperature_updated_by_physics</name>
       <units>K</units>
       <id>t</id>
       <rank>2</rank>
@@ -102,7 +102,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>rainfall_amount</name>
+      <name>instantaneous_rainfall_amount</name>
       <units>m</units>
       <id>rn</id>
       <rank>1</rank>

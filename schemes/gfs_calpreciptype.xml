@@ -1,0 +1,271 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="gfs_calpreciptype">
+  <subroutine name="gfs_calpreciptype_init" />
+  <subroutine name="gfs_calpreciptype_run">
+    <var>
+      <name>index_of_time_step</name>
+      <units>index</units>
+      <id>kdt</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>current time step index</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>array_dimension_of_random_number</name>
+      <units>count</units>
+      <id>nrcm</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>second dimension of random number array</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent, start at 1</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_dimension</name>
+      <units>index</units>
+      <id>ix</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_dimension</name>
+      <units>index</units>
+      <id>lm</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vertical layer dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_interface_dimension</name>
+      <units>index</units>
+      <id>lp1</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vertical interface dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>random_number_array</name>
+      <units>none</units>
+      <id>randomno</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>random number array</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>flag_for_precipitation_type_algorithm</name>
+      <units>flag</units>
+      <id>cal_pre</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>flag controls precip type algorithm</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature_updated_by_physics</name>
+      <units>K</units>
+      <id>gt0</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer mean air temperature</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>water_vapor_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>gq0</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>water vapor specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure</name>
+      <units>Pa</units>
+      <id>prsl</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer mean pressure</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure_at_interface</name>
+      <units>Pa</units>
+      <id>prsi</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>pressure at layer interface</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>total_rainfall_amount</name>
+      <units>m</units>
+      <id>prec</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>instantaneous total precipitation at surface</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>geopotential_at_interface</name>
+      <units>m2 s-2</units>
+      <id>phii</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>geopotential at model layer interfaces</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>array_dimension_of_microphysics</name>
+      <units>count</units>
+      <id>n3dfercld</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>number of 3D arrays needed for microphysics</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>surface_skin_temperature</name>
+      <units>K</units>
+      <id>tskin</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>surface skin temperature</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>ratio_of_snowfall_to_rainfall</name>
+      <units>frac</units>
+      <id>sr</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>ratio of snowfall to rainfall</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature_at_previous_time_step</name>
+      <units>K</units>
+      <id>phy_f3d</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air temperature at previous time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>dominant_rain_type</name>
+      <units>none</units>
+      <id>domr</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>dominant rain type</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>dominant_freezing_rain_type</name>
+      <units>none</units>
+      <id>domzr</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>dominant freezing rain type</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>dominant_sleet_type</name>
+      <units>none</units>
+      <id>domip</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>dominant sleet type</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>dominant_snow_type</name>
+      <units>none</units>
+      <id>doms</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>dominant snow type</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>preciptation_type_flag</name>
+      <units>1</units>
+      <id>srflag</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>snow(1)/rain(0) flag for precipitation</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>precipitation_amount_in_one_dynamics_time_step</name>
+      <units>m</units>
+      <id>tprcp</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>precipitation amount in one dynamics time step</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+  <subroutine name="gfs_calpreciptype_finalize" />
+</scheme>

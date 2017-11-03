@@ -124,7 +124,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>air_temperature</name>
+      <name>air_temperature_updated_by_physics</name>
       <units>K</units>
       <id>t</id>
       <rank>2</rank>
