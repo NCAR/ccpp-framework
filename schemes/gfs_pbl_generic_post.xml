@@ -59,7 +59,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>surface_upward_sensible_heat_flux</name>
+      <name>instantaneous_surface_upward_sensible_heat_flux</name>
       <units>W m-2</units>
       <id>dtsfc1</id>
       <rank>1</rank>
@@ -70,7 +70,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>surface_upward_latent_heat_flux</name>
+      <name>instantaneous_surface_upward_latent_heat_flux</name>
       <units>W m-2</units>
       <id>dqsfc1</id>
       <rank>1</rank>

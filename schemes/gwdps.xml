@@ -47,34 +47,34 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>tendency_of_y_wind_due_to_physics</name>
+      <name>tendency_of_y_wind_due_to_model_physics</name>
       <units>m s-2</units>
       <id>A</id>
       <rank>2</rank>
       <type>real</type>
-      <description>meridional wind tendency due to physics</description>
+      <description>meridional wind tendency due to model physics</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>
     </var>
     <var>
-      <name>tendency_of_x_wind_due_to_physics</name>
+      <name>tendency_of_x_wind_due_to_model_physics</name>
       <units>m s-2</units>
       <id>B</id>
       <rank>2</rank>
       <type>real</type>
-      <description>zonal wind tendency due to physics</description>
+      <description>zonal wind tendency due to model physics</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>
     </var>
     <var>
-      <name>tendency_of_air_temperature_due_to_physics</name>
+      <name>tendency_of_air_temperature_due_to_model_physics</name>
       <units>K s-1</units>
       <id>C</id>
       <rank>2</rank>
       <type>real</type>
-      <description>air temperature tendency due to physics</description>
+      <description>air temperature tendency due to model physics</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>
@@ -124,12 +124,12 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>index_of_PBL_top_layer</name>
+      <name>vertical_index_at_top_of_atmosphere_boundary_layer</name>
       <units>index</units>
       <id>kpbl</id>
       <rank>1</rank>
       <type>integer</type>
-      <description>vertical index of top layer of PBL</description>
+      <description>vertical index at top atmospheric boundary layer</description>
       <kind>default</kind>
       <intent>in</intent>
       <optional>F</optional>
@@ -311,7 +311,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>x_surface_stress_due_to_orographic_gravity_wave_drag</name>
+      <name>instantaneous_x_stress_due_to_gravity_wave_drag</name>
       <units>Pa</units>
       <id>dusfc</id>
       <rank>1</rank>
@@ -322,7 +322,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>y_surface_stress_due_to_orographic_gravity_wave_drag</name>
+      <name>instantaneous_y_stress_due_to_gravity_wave_drag</name>
       <units>Pa</units>
       <id>dvsfc</id>
       <rank>1</rank>
@@ -399,12 +399,12 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>multiplication_factors_for_mountain_blocking_and_gravity_wave_drag</name>
+      <name>multiplication_factors_for_mountain_blocking_and_orographic_gravity_wave_drag</name>
       <units>none</units>
       <id>cdmbgwd</id>
       <rank>1</rank>
       <type>real</type>
-      <description>multiplic. factors for (1) mountain blocking drag coeff. and (2) ref. level gravity wave drag</description>
+      <description>multiplic. factors for (1) mountain blocking drag coeff. and (2) ref. level orographic gravity wave drag</description>
       <kind>kind_phys</kind>
       <intent>in</intent>
       <optional>F</optional>

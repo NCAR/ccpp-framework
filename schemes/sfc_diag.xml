@@ -147,7 +147,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>ratio_of_exner_function_between_midlayer_and_interface_at_lowest_layer</name>
+      <name>ratio_of_exner_function_between_midlayer_and_interface_at_lowest_model_layer</name>
       <units>ratio</units>
       <id>prslki</id>
       <rank>1</rank>

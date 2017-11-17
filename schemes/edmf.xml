@@ -312,7 +312,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>vertical_index_of_top_of_atmosphere_boundary_layer</name>
+      <name>vertical_index_at_top_of_atmosphere_boundary_layer</name>
       <units>index</units>
       <id>kpbl</id>
       <rank>1</rank>
@@ -411,7 +411,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>x_momentum_flux</name>
+      <name>instantaneous_surface_x_momentum_flux</name>
       <units>Pa</units>
       <id>dusfc</id>
       <rank>1</rank>
@@ -422,7 +422,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>y_momentum_flux</name>
+      <name>instantaneous_surface_y_momentum_flux</name>
       <units>Pa</units>
       <id>dvsfc</id>
       <rank>1</rank>
@@ -433,7 +433,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>surface_upward_sensible_heat_flux</name>
+      <name>instantaneous_surface_upward_sensible_heat_flux</name>
       <units>W m-2</units>
       <id>dtsfc</id>
       <rank>1</rank>
@@ -444,7 +444,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>surface_upward_latent_heat_flux</name>
+      <name>instantaneous_surface_upward_latent_heat_flux</name>
       <units>W m-2</units>
       <id>dqsfc</id>
       <rank>1</rank>

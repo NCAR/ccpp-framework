@@ -1,0 +1,227 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme module="gfs_mp_generic_post">
+  <subroutine name="gfs_mp_generic_post_init" />
+  <subroutine name="gfs_mp_generic_post_run">
+    <var>
+      <name>horizontal_loop_extent</name>
+      <units>index</units>
+      <id>im</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal loop extent, start at 1</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>horizontal_dimension</name>
+      <units>index</units>
+      <id>ix</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>horizontal dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>vertical_dimension</name>
+      <units>index</units>
+      <id>levs</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>vertical layer dimension</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>time_step_for_dynamics</name>
+      <units>s</units>
+      <id>dtf</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>dynamics time step</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_pressure_difference_between_midlayers</name>
+      <units>Pa</units>
+      <id>del</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air pressure difference between midlayers</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>logical_flag_for_physics_diagnostics</name>
+      <units>flag</units>
+      <id>lssav</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>logical flag for model physics diagnostics</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>logical_flag_for_3D_diagnostics</name>
+      <units>flag</units>
+      <id>ldiag3d</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>logical flag for 3D diagnostics</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>total_rainfall_at_surface</name>
+      <units>m</units>
+      <id>rain</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>instantaneous total precipitation at surface (APCP)</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>factor_for_centered_difference_scheme</name>
+      <units>none</units>
+      <id>frain</id>
+      <rank>0</rank>
+      <type>real</type>
+      <description>dtf/dtp; factor for centered difference scheme correction</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>index_for_liquid_cloud_condensate</name>
+      <units>index</units>
+      <id>ntcw</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>cloud condensate index in tracer array(3)</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>choice_of_cloud_scheme</name>
+      <units>none</units>
+      <id>ncld</id>
+      <rank>0</rank>
+      <type>integer</type>
+      <description>choice of cloud scheme(1 for Z-C)</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>cloud_condensed_water_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>cwm</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>cloud condensed water specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature_updated_by_physics</name>
+      <units>K</units>
+      <id>t</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>layer mean air temperature</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>water_vapor_specific_humidity</name>
+      <units>kg kg-1</units>
+      <id>q</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>water vapor specific humidity</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>air_temperature_before_microphysics_scheme</name>
+      <units>K</units>
+      <id>dtdt</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>air temperature saved before micophysics scheme</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>specific_humidity_before_microphysics_scheme</name>
+      <units>kg kg-1</units>
+      <id>dqdt1</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>specific humidity saved before microphysics schme</description>
+      <kind>kind_phys</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>precipitation_rate_at_surface</name>
+      <units>kg m-2 s-1</units>
+      <id>totprcp</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>precipitation rate at surface</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>large_scale_condensate_heating_rate_at_model_layers</name>
+      <units>K s-1</units>
+      <id>dt3dt6</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>large scale condensate heating rate at model layers</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>large_scale_condensate_moistening_rate_at_model_layers</name>
+      <units>kg kg-1 s-1</units>
+      <id>dq3dt4</id>
+      <rank>2</rank>
+      <type>real</type>
+      <description>large scale condensate moistening rate at model layers</description>
+      <kind>kind_phys</kind>
+      <intent>inout</intent>
+      <optional>F</optional>
+    </var>
+    <var>
+      <name>column_precipitable_water</name>
+      <units>kg m-2</units>
+      <id>pwat</id>
+      <rank>1</rank>
+      <type>real</type>
+      <description>column integrated precipitable water</description>
+      <kind>kind_phys</kind>
+      <intent>out</intent>
+      <optional>F</optional>
+    </var>
+  </subroutine>
+  <subroutine name="gfs_mp_generic_post_finalize" />
+</scheme>

@@ -245,7 +245,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>preciptation_type_flag</name>
+      <name>flag_for_precipitation_type</name>
       <units>1</units>
       <id>srflag</id>
       <rank>1</rank>

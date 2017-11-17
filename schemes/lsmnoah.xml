@@ -48,7 +48,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>y_wind_at_lowest__layer</name>
+      <name>y_wind_at_lowest_layer</name>
       <units>m s-1</units>
       <id>v1</id>
       <rank>1</rank>
@@ -202,7 +202,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>air_pressure_at_lowest_layer</name>
+      <name>air_pressure_at_lowest_model_layer</name>
       <units>Pa</units>
       <id>prsl1</id>
       <rank>1</rank>
@@ -213,7 +213,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>ratio_of_exner_function_between_midlayer_and_interface_at_lowest_layer</name>
+      <name>ratio_of_exner_function_between_midlayer_and_interface_at_lowest_model_layer</name>
       <units>ratio</units>
       <id>prslki</id>
       <rank>1</rank>
@@ -389,7 +389,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>precipitation_amount_in_one_dynamic_time_step</name>
+      <name>precipitation_amount_in_one_dynamics_time_step</name>
       <units>kg m-2</units>
       <id>tprcp</id>
       <rank>1</rank>
@@ -400,7 +400,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>flag_for_snow_or_rain_precipitation</name>
+      <name>flag_for_precipitation_type</name>
       <units>flag</units>
       <id>srflag</id>
       <rank>1</rank>

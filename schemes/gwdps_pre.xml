@@ -37,8 +37,8 @@
     </var>
     <var>
       <name>statistical_measures_of_subgrid_orography</name>
-      <units>various  ??</units>
-      <id>mntvar  ??</id>
+      <units>various</units>
+      <id>mntvar</id>
       <rank>2</rank>
       <type>real</type>
       <description>array of statistical measures of subgrid orography</description>

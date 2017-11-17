@@ -123,6 +123,7 @@ for i in range(len(args.call_file)):
                     print 'Too many arguments (mandatory + optional) were supplied in the call to ' + subroutine.name
                     print 'calling arguments: ' + str(len(subroutine.calling_vars))
                     print 'subroutine arguments: ' + str(len(subroutine.arguments))
+                    print subroutine.calling_vars
                 else:
                     #the number of arguments supplied in the call is greater than the number of non-optional arguments but less than the total of non-optional and optional arguments expected by the subroutine; check for optional arguments
                     for k in range(len(subroutine.arguments)):

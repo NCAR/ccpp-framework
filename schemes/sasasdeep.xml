@@ -48,7 +48,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>air_pressure_layer_difference</name>
+      <name>air_pressure_difference_between_midlayers</name>
       <units>Pa</units>
       <id>delp</id>
       <rank>2</rank>
@@ -59,7 +59,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>air_pressure_layer</name>
+      <name>air_pressure</name>
       <units>Pa</units>
       <id>prslp</id>
       <rank>2</rank>
@@ -125,7 +125,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>air_temperature</name>
+      <name>air_temperature_updated_by_physics</name>
       <units>K</units>
       <id>t1</id>
       <rank>2</rank>
@@ -136,7 +136,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>x_wind</name>
+      <name>x_wind_updated_by_physics</name>
       <units>m s-1</units>
       <id>u1</id>
       <rank>2</rank>
@@ -147,7 +147,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>y_wind</name>
+      <name>y_wind_updated_by_physics</name>
       <units>m s-1</units>
       <id>v1</id>
       <rank>2</rank>
@@ -169,7 +169,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>convective_rainfall_amount</name>
+      <name>instantaneous_rainfall_amount</name>
       <units>m</units>
       <id>rn</id>
       <rank>1</rank>
@@ -180,7 +180,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>index_for_cloud_base</name>
+      <name>vertical_index_at_cloud_base</name>
       <units>index</units>
       <id>kbot</id>
       <rank>1</rank>
@@ -191,7 +191,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>index_for_cloud_top</name>
+      <name>vertical_index_at_cloud_top</name>
       <units>index</units>
       <id>ktop</id>
       <rank>1</rank>

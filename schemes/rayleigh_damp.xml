@@ -3,6 +3,17 @@
   <subroutine name="rayleigh_damp_init" />
   <subroutine name="rayleigh_damp_run">
     <var>
+      <name>flag_idealized_physics</name>
+      <units>flag</units>
+      <id>lsidea</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>flag for idealized physics</description>
+      <kind>default</kind>
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
       <name>horizontal_loop_extent</name>
       <units>index</units>
       <id>im</id>
@@ -47,34 +58,34 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>tendency_of_y_wind_due_to_physics</name>
+      <name>tendency_of_y_wind_due_to_model_physics</name>
       <units>m s-2</units>
       <id>A</id>
       <rank>2</rank>
       <type>real</type>
-      <description>meridional wind tendency due to physics</description>
+      <description>meridional wind tendency due to model physics</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>
     </var>
     <var>
-      <name>tendency_of_x_wind_due_to_physics</name>
+      <name>tendency_of_x_wind_due_to_model_physics</name>
       <units>m s-2</units>
       <id>B</id>
       <rank>2</rank>
       <type>real</type>
-      <description>zonal wind tendency due to physics</description>
+      <description>zonal wind tendency due to model physics</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>
     </var>
     <var>
-      <name>tendency_of_air_temperature_due_to_physics</name>
+      <name>tendency_of_air_temperature_due_to_model_physics</name>
       <units>K s-1</units>
       <id>C</id>
       <rank>2</rank>
       <type>real</type>
-      <description>air temperature tendency due to physics</description>
+      <description>air temperature tendency due to model physics</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>

@@ -57,7 +57,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>ozone_concentration_layer</name>
+      <name>ozone_concentration</name>
       <units>gm gm-1</units>
       <id>olyr</id>
       <rank>2</rank>
@@ -200,7 +200,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>surface_emissivity</name>
+      <name>surface_longwave_emissivity</name>
       <units />
       <id>sfemis</id>
       <rank>1</rank>
@@ -222,7 +222,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>horizontal_dimension</name>
+      <name>horizontal_loop_extent</name>
       <units>index</units>
       <id>npts</id>
       <rank>0</rank>
@@ -278,7 +278,7 @@
     </var>
     <var>
       <name>lw_heating_rate_total_sky</name>
-      <units>K s-1???</units>
+      <units>K s-1</units>
       <id>hlwc</id>
       <rank>2</rank>
       <type>real</type>
@@ -311,7 +311,7 @@
     </var>
     <var>
       <name>lw_heating_rate_csk</name>
-      <units>K s-1???</units>
+      <units>K s-1</units>
       <id>hlw0</id>
       <rank>2</rank>
       <type>real</type>
@@ -322,7 +322,7 @@
     </var>
     <var>
       <name>lw_heating_rate_spectral</name>
-      <units>K s-1???</units>
+      <units>K s-1</units>
       <id>hlwb</id>
       <rank>3</rank>
       <type>real</type>

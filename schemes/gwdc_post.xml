@@ -80,7 +80,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>x_stress_at_cloud_top_due_to_convective_gravity_wave_drag</name>
+      <name>instantaneous_x_stress_due_to_gravity_wave_drag</name>
       <units>Pa</units>
       <id>tauctx</id>
       <rank>1</rank>
@@ -91,7 +91,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>y_stress_at_cloud_top_due_to_convective_gravity_wave_drag</name>
+      <name>instantaneous_y_stress_due_to_gravity_wave_drag</name>
       <units>Pa</units>
       <id>taucty</id>
       <rank>1</rank>
@@ -124,31 +124,31 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>time_integral_of_x_stress_at_cloud_top_due_to_convective_gravity_wave_drag  ??</name>
-      <units>Pa s  ??</units>
-      <id>dugwd  ??</id>
+      <name>time_integral_of_x_stress_due_to_gravity_wave_drag</name>
+      <units>Pa s</units>
+      <id>dugwd</id>
       <rank>2</rank>
       <type>real</type>
-      <description>integral over time of zonal cloud top stress due to convective gravity wave drag</description>
+      <description>integral over time of zonal stress due to gravity wave drag</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>
     </var>
     <var>
-      <name>time_integral_of_y_stress_at_cloud_top_due_to_convective_gravity_wave_drag  ??</name>
-      <units>Pa s  ??</units>
-      <id>dvgwd  ??</id>
+      <name>time_integral_of_y_stress_due_to_gravity_wave_drag</name>
+      <units>Pa s</units>
+      <id>dvgwd</id>
       <rank>2</rank>
       <type>real</type>
-      <description>integral over time of meridional cloud top stress due to convective gravity wave drag</description>
+      <description>integral over time of meridional stress due to gravity wave drag</description>
       <kind>kind_phys</kind>
       <intent>inout</intent>
       <optional>F</optional>
     </var>
     <var>
       <name>cumulative_change_in_x_wind_due_to_convective_gravity_wave_drag</name>
-      <units>m s-1  ??</units>
-      <id>du3dt  ??</id>
+      <units>m s-1</units>
+      <id>du3dt</id>
       <rank>2</rank>
       <type>real</type>
       <description>cumulative change in zonal wind due to convective gravity wave drag</description>
@@ -158,8 +158,8 @@
     </var>
     <var>
       <name>cumulative_change_in_y_wind_due_to_convective_gravity_wave_drag</name>
-      <units>m s-1  ??</units>
-      <id>dv3dt  ??</id>
+      <units>m s-1</units>
+      <id>dv3dt</id>
       <rank>2</rank>
       <type>real</type>
       <description>cumulative change in meridional wind due to convective gravity wave drag</description>
@@ -168,7 +168,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>updated_x_wind</name>
+      <name>x_wind_updated_by_physics</name>
       <units>m s-1</units>
       <id>gu0</id>
       <rank>2</rank>
@@ -179,7 +179,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>updated_y_wind</name>
+      <name>y_wind_updated_by_physics</name>
       <units>m s-1</units>
       <id>gv0</id>
       <rank>2</rank>
@@ -190,7 +190,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>updated_air_temperature</name>
+      <name>air_temperature_updated_by_physics</name>
       <units>m s-1</units>
       <id>gt0</id>
       <rank>2</rank>

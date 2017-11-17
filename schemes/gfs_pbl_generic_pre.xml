@@ -2,7 +2,6 @@
 <scheme module="gfs_pbl_generic_pre">
   <subroutine name="gfs_pbl_generic_pre_init" />
   <subroutine name="gfs_pbl_generic_pre_finalize" />
-  <subroutine name="gfs_pbl_generic_pre_finalize" />
   <subroutine name="gfs_pbl_generic_pre_run">
     <var>
       <name>horizontal_loop_extent</name>

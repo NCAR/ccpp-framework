@@ -244,7 +244,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>horizontal_dimension</name>
+      <name>horizontal_loop_extent</name>
       <units>index</units>
       <id>npts</id>
       <rank>0</rank>
@@ -299,8 +299,19 @@
       <optional>F</optional>
     </var>
     <var>
+      <name>flag_to_calc_sw</name>
+      <units>logical</units>
+      <id>lsswr</id>
+      <rank>0</rank>
+      <type>logical</type>
+      <description>logical flag to calculate SW irradiances</description>
+      <kind />
+      <intent>in</intent>
+      <optional>F</optional>
+    </var>
+    <var>
       <name>sw_heating_rate_total_sky</name>
-      <units>k s-1???</units>
+      <units>k s-1</units>
       <id>hswc</id>
       <rank>2</rank>
       <type>real</type>
@@ -333,7 +344,7 @@
     </var>
     <var>
       <name>sw_heating_rate_csk</name>
-      <units>K s-1???</units>
+      <units>K s-1</units>
       <id>hsw0</id>
       <rank>2</rank>
       <type>real</type>
@@ -344,7 +355,7 @@
     </var>
     <var>
       <name>sw_heating_rate_spectral</name>
-      <units>K s-1???</units>
+      <units>K s-1</units>
       <id>hswb</id>
       <rank>3</rank>
       <type>real</type>

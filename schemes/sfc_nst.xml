@@ -15,7 +15,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>vertical_dimension</name>
+      <name>soil_vertical_dimension</name>
       <units>index</units>
       <id>km</id>
       <rank>0</rank>
@@ -158,7 +158,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>sin_of_latitude</name>
+      <name>sine_of_latitude</name>
       <units>none</units>
       <id>sinlat</id>
       <rank>1</rank>

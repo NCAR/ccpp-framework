@@ -157,29 +157,29 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>vertical_index_of_cloud_top</name>
+      <name>vertical_index_at_cloud_top</name>
       <units>index</units>
       <id>ktop</id>
       <rank>1</rank>
       <type>integer</type>
-      <description>vertical index of cloud top</description>
+      <description>vertical index at cloud top</description>
       <kind>default</kind>
       <intent>in</intent>
       <optional>F</optional>
     </var>
     <var>
-      <name>vertical_index_of_cloud_base</name>
+      <name>vertical_index_at_cloud_base</name>
       <units>index</units>
       <id>kbot</id>
       <rank>1</rank>
       <type>integer</type>
-      <description>vertical index of cloud base</description>
+      <description>vertical index at cloud base</description>
       <kind>default</kind>
       <intent>in</intent>
       <optional>F</optional>
     </var>
     <var>
-      <name>column_convection_flag</name>
+      <name>flag_deep_convection</name>
       <units>index</units>
       <id>kcnv</id>
       <rank>1</rank>
@@ -322,7 +322,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>x_stress_at_cloud_top_due_to_convective_gravity_wave_drag</name>
+      <name>instantaneous_x_stress_due_to_gravity_wave_drag</name>
       <units>Pa</units>
       <id>tauctx</id>
       <rank>1</rank>
@@ -333,7 +333,7 @@
       <optional>F</optional>
     </var>
     <var>
-      <name>y_stress_at_cloud_top_due_to_convective_gravity_wave_drag</name>
+      <name>instantaneous_y_stress_due_to_gravity_wave_drag</name>
       <units>Pa</units>
       <id>taucty</id>
       <rank>1</rank>
