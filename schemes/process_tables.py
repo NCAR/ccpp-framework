@@ -12,176 +12,357 @@
 
 
 import argparse  #needed for command line argument filenames
-from xml.etree import ElementTree as ET #needed for reading XML
 import collections
-
-#set up the command line argument parser
-parser = argparse.ArgumentParser()
-
-#the only arguments are a a list of XML files to parse and a list of files with the subroutine calls
-parser.add_argument('file', help='paths to XML files generated from scheme tables', nargs='*')
-parser.add_argument('--call_file', nargs = '*', action='store', help = 'paths to fortran files that call the schemes')
-#parser.add_argument('call_file', help='paths to fortran files that call the schemes', nargs='1' )
-args = parser.parse_args()
+import datetime
+from xml.etree import ElementTree as ET #needed for reading XML
 
 #set up named tuple types
 var_metadata_type = collections.namedtuple('var_metadata_type', 'longname units id rank type description kind intent optional calling_var')
 scheme_type = collections.namedtuple('scheme_type', 'name subroutines')
 subroutine_type = collections.namedtuple('subroutine_type', 'name arguments calling_vars') #
 
-#each XML file represents one scheme; read in the argument table information from each file
-schemes = []
-for i in range(len(args.file)):
-    filename = args.file[i]
+#for formatted html output
+HTML_DATA_TOP = """<html>
+<head>
+    <title>GMTB separators - longname conflicts</title>
+</head>
+<body>
+<p><h1>GMTB separators - longname conflicts</h1>
+Last update {0}</p>
 
-    tree = ET.parse(filename)
-    scheme = tree.getroot()
+{1}
 
-    #multiple subroutines can be associated with each scheme; XML children of each "scheme" are the subroutines
-    subroutines = []
-    for sub in scheme:
-        vars = []
-        #XML children of each subroutine are the variable metadata
-        for var in sub:
-            #get the metadata from the XML fields
-            longname = var[0].text
-            units = var[1].text
-            id = var[2].text
-            rank = var[3].text
-            type = var[4].text
-            description = var[5].text
-            kind = var[6].text
-            intent = var[7].text
-            optional = var[8].text
-            #create a var_metadata_type with the variable metadata, leaving the calling var field blank at this point (will be filled in using the subroutine call information)
-            var_metadata = var_metadata_type(longname=longname, units=units, id=id, rank=rank, type=type, description=description, kind=kind, intent=intent, optional=optional, calling_var='')
-            #put all var_metadata_types into a vars list
-            vars.append(var_metadata)
-        #append each subroutine_type to a list of subroutines
-        subroutines.append(subroutine_type(name = sub.attrib['name'], arguments = vars, calling_vars = []))
-    #append each scheme_type to a list of schemes
-    schemes.append(scheme_type(name=scheme.attrib['module'], subroutines=subroutines))
+<p><h2>List of schemes and subroutines</h2></p>
 
-#for each file that contains calling information, read the calling argument variables and associate them with a subroutine
-for i in range(len(args.call_file)):
-    filename = args.call_file[i]
+<table rows="2" border="0">
+<tr>
+    <th align="left">Scheme name</th>
+    <th align="left">Subroutines</th>
+</tr>
+{2}
+</table>
 
-    #read all lines of the file at once
-    with (open(filename, 'r')) as file:
-        file_lines = file.readlines()
+"""
 
-    #look for all of the schemes and subroutine calls in this file
+HTML_DATA_MIDDLE ="""<p><h2>List of calling variables</h2></p>
+
+<table rows="2" border="0">
+<tr>
+    <th align="left">Calling variable name</th>
+    <th align="left">Called by</th>
+    <th align="left">Longnames used</th>
+</tr>
+{0}
+</table>
+
+<p><h3>{1}</h3></p>
+
+"""
+
+HTML_DATA_BOTTOM_NO_CONFLICTS = """</body>
+</html>
+"""
+
+HTML_DATA_BOTTOM_CONFLICTS = """<p><h2>Conflicts</h2></p>
+
+<table rows="6" border="0">
+<tr>
+    <th align="left">Calling variable name</th>
+    <th align="left">Long name</th>
+    <th align="left">Local variable name</th>
+    <th align="left">Subroutine</th>
+</tr>
+{0}
+</table>
+</body>
+</html>
+"""
+
+def parse_xml_files(files):
+    #each XML file represents one scheme; read in the argument table information from each file
+    schemes = []
+    for i in range(len(files)):
+        filename = files[i]
+
+        tree = ET.parse(filename)
+        scheme = tree.getroot()
+
+        #multiple subroutines can be associated with each scheme; XML children of each "scheme" are the subroutines
+        subroutines = []
+        for sub in scheme:
+            vars = []
+            #XML children of each subroutine are the variable metadata
+            for var in sub:
+                #get the metadata from the XML fields
+                longname = var[0].text
+                units = var[1].text
+                id = var[2].text
+                rank = var[3].text
+                type = var[4].text
+                #the following attributes are optional
+                try:
+                    description = var[5].text
+                except IndexError:
+                    description = 'missing'
+                try:
+                    kind = var[6].text
+                except IndexError:
+                    kind = 'missing'
+                try:
+                    intent = var[7].text
+                except IndexError:
+                    intent = 'missing'
+                try:
+                    optional = var[8].text
+                except IndexError:
+                    optional = 'missing'
+                #create a var_metadata_type with the variable metadata, leaving the calling var field blank at this point (will be filled in using the subroutine call information)
+                var_metadata = var_metadata_type(longname=longname,
+                                                 units=units,
+                                                 id=id,
+                                                 rank=rank,
+                                                 type=type,
+                                                 description=description,
+                                                 kind=kind,
+                                                 intent=intent,
+                                                 optional=optional,
+                                                 calling_var='')
+                #put all var_metadata_types into a vars list
+                vars.append(var_metadata)
+            #append each subroutine_type to a list of subroutines
+            subroutines.append(subroutine_type(name = sub.attrib['name'], arguments = vars, calling_vars = []))
+        #append each scheme_type to a list of schemes
+        schemes.append(scheme_type(name=scheme.attrib['module'], subroutines=subroutines))
+    return schemes
+
+def process_arguments(subroutine):
+    # Flag indicating success or failure
+    success = True
+
+    #determine how many non-optional arguments are in the subroutine
+    num_non_optional_arguments = 0
+    for k in range(len(subroutine.arguments)):
+        if not (subroutine.arguments[k].optional.lower() == 't' or subroutine.arguments[k].optional.lower() == 'true'):
+            num_non_optional_arguments += 1
+    #num_optional_arguments = (len(subroutine.arguments)) - num_non_optional_arguments
+
+    if len(subroutine.calling_vars) < num_non_optional_arguments:
+        #if the number of calling argument variables are less than the number of non-optional arguments, let the user know that there is a problem
+        message = 'Too few arguments were supplied in the call to {0}\n'.format(subroutine.name)
+        message += 'calling arguments: {0}\n'.format(len(subroutine.calling_vars))
+        message += 'non-optional subroutine arguments: {0}\n'.format(num_non_optional_arguments)
+        message += '{0}'.format(subroutine.arguments)
+        print 'WARNING: {0} - IGNORING SUBROUTINE'.format(message)
+        success = False
+        #raise Exception(message)
+    elif len(subroutine.calling_vars) == num_non_optional_arguments:
+        #if the number of calling arguments is the same as the number of non-optional arguments, assume that the arguments are positionally correct and assign the calling variables to the subroutine arguments by ORDER
+        for k in range(len(subroutine.arguments)):
+            new_tuple = var_metadata_type(longname=subroutine.arguments[k].longname,
+                                          units=subroutine.arguments[k].units,
+                                          id=subroutine.arguments[k].id,
+                                          rank=subroutine.arguments[k].rank,
+                                          type=subroutine.arguments[k].type,
+                                          description=subroutine.arguments[k].description,
+                                          kind=subroutine.arguments[k].kind,
+                                          intent=subroutine.arguments[k].intent,
+                                          optional=subroutine.arguments[k].optional,
+                                          calling_var=subroutine.calling_vars[k])
+            subroutine.arguments[k] = new_tuple
+    elif len(subroutine.calling_vars) > len(subroutine.arguments):
+        #if there are more calling argument variables supplied than the subroutine expects, let the user know
+        message = 'Too many arguments (mandatory + optional) were supplied in the call to {0}\n'.format(subroutine.name)
+        message += 'calling arguments: {0}\n'.format(len(subroutine.calling_vars))
+        message += 'subroutine arguments: {0}'.format(len(subroutine.arguments))
+        print 'WARNING: {0} - IGNORING SUBROUTINE'.format(message)
+        success = False
+        #raise Exception(message)
+    else:
+        #the number of arguments supplied in the call is greater than the number of non-optional arguments but less than the total of non-optional and optional arguments expected by the subroutine; check for optional arguments
+        for k in range(len(subroutine.arguments)):
+            if subroutine.arguments[k].optional.lower() == 't' or subroutine.arguments[k].optional.lower() == 'true':
+                #for optional arguments, look for arguments being passed in with keywords by id; if the id is not found in the calling variables, then optional_calling_var is an empty list
+                optional_calling_var = [s for s in subroutine.calling_vars if subroutine.arguments[k].id in s]
+                if optional_calling_var:
+                    optional_calling_var = optional_calling_var[0].split('=')[1]
+                    new_tuple = var_metadata_type(longname=subroutine.arguments[k].longname,
+                                                  units=subroutine.arguments[k].units,
+                                                  id=subroutine.arguments[k].id,
+                                                  rank=subroutine.arguments[k].rank,
+                                                  type=subroutine.arguments[k].type,
+                                                  description=subroutine.arguments[k].description,
+                                                  kind=subroutine.arguments[k].kind,
+                                                  intent=subroutine.arguments[k].intent,
+                                                  optional=subroutine.arguments[k].optional,
+                                                  calling_var=optional_calling_var)
+                    subroutine.arguments[k] = new_tuple
+            else:
+                new_tuple = var_metadata_type(longname=subroutine.arguments[k].longname,
+                                              units=subroutine.arguments[k].units,
+                                              id=subroutine.arguments[k].id,
+                                              rank=subroutine.arguments[k].rank,
+                                              type=subroutine.arguments[k].type,
+                                              description=subroutine.arguments[k].description,
+                                              kind=subroutine.arguments[k].kind,
+                                              intent=subroutine.arguments[k].intent,
+                                              optional=subroutine.arguments[k].optional,
+                                              calling_var=subroutine.calling_vars[k])
+                subroutine.arguments[k] = new_tuple
+    return (success, subroutine)
+
+def find_longname_conflicts(calling_var_set, schemes, separators_info = ''):
+    longname_conflicts = []
+    longname_success = []
+
+    print "Parsed schemes and subroutines:"
+    schemes_parsed = {}
     for scheme in schemes:
+        if not scheme.name in schemes_parsed.keys():
+            schemes_parsed[scheme.name] = []
         for subroutine in scheme.subroutines:
-            sub_found = False
-            line_counter = 0
-            for line in file_lines:
-                if line.lower().find(subroutine.name) >= 0:
-                    words = line.split()
-                    for j in range(len(words)):
-                        #search for the subroutine name and that where the subroutine name is found has the structure "call subroutine_name"
-                        if words[j].lower() == subroutine.name and j == 1 and words[j-1].lower() == 'call':
-                            sub_found = True
-                            print subroutine.name + ' found in file ' + filename + ' at line ' + str(line_counter+1)
-                            #grab all the text between the opening and closing () !!!!This section could be made much more robust and be utilized to read the actual fortran files !!!!
-                            args_start = line.find('(')
-                            args_end = line.rfind(')')
-                            args_str = line[args_start+1:args_end]
-                            #divide the string by ', ' (not by ',' alone due to commas in array slice syntax - NOTE: this means that the calling syntax should have all variables separated by ', ' and that all array slices don't have whitespace)
-                            args = [x.strip(' ') for x in args_str.split(', ')]
+            schemes_parsed[scheme.name].append(subroutine.name)
+        schemes_parsed[scheme.name] = sorted(list(set(schemes_parsed[scheme.name])))
+        print scheme.name, ":", schemes_parsed[scheme.name]
 
-                            #since tuples are immutable, create a new one and replace the old one with the calling argument variable information
-                            new_tuple = subroutine_type(name = subroutine.name, arguments = subroutine.arguments, calling_vars = args)
-                            subroutine = new_tuple
+    # Create first part of html output
+    now = datetime.datetime.utcnow()
+    html_text = ''
+    for scheme_name in sorted(schemes_parsed.keys()):
+        html_text += '<tr><td>{0}</td><td>{1}</td></tr>\n'.format(scheme_name, ', '.join(schemes_parsed[scheme_name]))
+    html = HTML_DATA_TOP.format(now.strftime('%Y-%m-%d %H:%M UTC'), separators_info, html_text)
+
+    print "Calling vars:"
+    html_text = ''
+    for calling_var in sorted(calling_var_set):
+        #process each calling variable in the set by searching through the schemes / subroutines for where the calling variable is used, saving the calling var, longname, local_name, and subroutine_name for each time a calling variable is used.
+
+        calling_vars = []
+        longnames = []
+        local_names = []
+        subroutine_names = []
+        for scheme in schemes:
+            for subroutine in scheme.subroutines:
+                for var in subroutine.arguments:
+                    if var.calling_var == calling_var:
+                        calling_vars.append(calling_var)
+                        longnames.append(var.longname)
+                        local_names.append(var.id)
+                        subroutine_names.append(subroutine.name)
+
+        if not longnames:
+            continue
+
+        #check for conflicts; a conflict is when not all longnames used for each calling variable match exactly
+        if longnames.count(longnames[0]) == len(longnames):
+            success = True
+            longname_success.append((calling_vars, longnames, local_names, subroutine_names))
+        else:
+            success = False
+            longname_conflicts.append((calling_vars, longnames, local_names, subroutine_names))
+
+        #print the list of all calling variables and where they are being used
+        print calling_var, subroutine_names, sorted(list(set(longnames)))
+        if success:
+            html_text += '<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>\n'.format(calling_var,
+                                               ', '.join(sorted(list(set(subroutine_names)))),
+                                                      ', '.join(sorted(list(set(longnames)))))
+        else:
+            html_text += '<tr><td>{0}</td><td>{1}</td><td><font color="red">{2}</font></td></tr>\n'.format(calling_var,
+                                                                        ', '.join(sorted(list(set(subroutine_names)))),
+                                                                               ', '.join(sorted(list(set(longnames)))))
+
+    #print the conflicts (or success)
+    if len(longname_success) == len(calling_var_set):
+        message = '100% success!'
+        print message
+        # Create second part of html output
+        html += HTML_DATA_MIDDLE.format(html_text, message)
+        # Create third part of html output (empty, no conflicts)
+        html += HTML_DATA_BOTTOM_NO_CONFLICTS
+    else:
+        message = '{0} conflicts were found out of {1} possible comparisons!'.format(
+                                       len(longname_conflicts), len(calling_var_set))
+        print message
+        # Create second part of html output
+        html += HTML_DATA_MIDDLE.format(html_text, message)
+        print 'Conflicts:'
+        # Create third part of html output (populated, conflicts)
+        html_text = ''
+        for conflict in longname_conflicts:
+            for i in range(len(conflict[0])):
+                print conflict[0][i], conflict[1][i], conflict[2][i], conflict[3][i]
+                html_text += '<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td></tr>\n'.format(
+                                   conflict[0][i], conflict[1][i], conflict[2][i], conflict[3][i])
+            print # blank line
+            html_text += '<tr><td colspan="4"></td></tr>\n'
+        html += HTML_DATA_BOTTOM_CONFLICTS.format(html_text)
+    return html
+
+def main():
+    #set up the command line argument parser
+    parser = argparse.ArgumentParser()
+
+    #the only arguments are a a list of XML files to parse and a list of files with the subroutine calls
+    parser.add_argument('file', help='paths to XML files generated from scheme tables', nargs='*')
+    parser.add_argument('--call_file', nargs = '*', action='store', help = 'paths to fortran files that call the schemes')
+    #parser.add_argument('call_file', help='paths to fortran files that call the schemes', nargs='1' )
+    args = parser.parse_args()
+
+    schemes = parse_xml_files(args.file)
+
+    #for each file that contains calling information, read the calling argument variables and associate them with a subroutine
+    for i in range(len(args.call_file)):
+        filename = args.call_file[i]
+
+        #read all lines of the file at once
+        with (open(filename, 'r')) as file:
+            file_lines = file.readlines()
+
+        #look for all of the schemes and subroutine calls in this file
+        for scheme in schemes:
+            for subroutine in scheme.subroutines:
+                sub_found = False
+                line_counter = 0
+                for line in file_lines:
+                    if line.lower().find(subroutine.name) >= 0:
+                        words = line.split()
+                        for j in range(len(words)):
+                            #search for the subroutine name and that where the subroutine name is found has the structure "call subroutine_name"
+                            if words[j].lower() == subroutine.name and j == 1 and words[j-1].lower() == 'call':
+                                sub_found = True
+                                print subroutine.name + ' found in file ' + filename + ' at line ' + str(line_counter+1)
+                                #grab all the text between the opening and closing () !!!!This section could be made much more robust and be utilized to read the actual fortran files !!!!
+                                args_start = line.find('(')
+                                args_end = line.rfind(')')
+                                args_str = line[args_start+1:args_end]
+                                #divide the string by ', ' (not by ',' alone due to commas in array slice syntax - NOTE: this means that the calling syntax should have all variables separated by ', ' and that all array slices don't have whitespace)
+                                args = [x.strip(' ') for x in args_str.split(', ')]
+
+                                #since tuples are immutable, create a new one and replace the old one with the calling argument variable information
+                                new_tuple = subroutine_type(name = subroutine.name,
+                                                            arguments = subroutine.arguments,
+                                                            calling_vars = args)
+                                subroutine = new_tuple
 
 
-                        if sub_found:
-                            break
-                line_counter += 1
+                            if sub_found:
+                                break
+                    line_counter += 1
 
-            if sub_found:
-                #determine how many non-optional arguments are in the subroutine
-                num_non_optional_arguments = 0
-                for k in range(len(subroutine.arguments)):
-                    if not (subroutine.arguments[k].optional.lower() == 't' or subroutine.arguments[k].optional.lower() == 'true'):
-                        num_non_optional_arguments += 1
-                #num_optional_arguments = (len(subroutine.arguments)) - num_non_optional_arguments
+                if sub_found:
+                    (success, subroutine) = process_arguments(subroutine)
+                    if not success:
+                        del subroutine
 
-                if len(subroutine.calling_vars) < num_non_optional_arguments:
-                    #if the number of calling argument variables are less than the number of non-optional arguments, let the user know that there is a problem
-                    print 'Too few arguments were supplied in the call to ' + subroutine.name
-                    print 'calling arguments: ' + str(len(subroutine.calling_vars))
-                    print 'non-optional subroutine arguments: ' + str(num_non_optional_arguments)
-                    print subroutine.arguments
-                elif len(subroutine.calling_vars) == num_non_optional_arguments:
-                    #if the number of calling arguments is the same as the number of non-optional arguments, assume that the arguments are positionally correct and assign the calling variables to the subroutine arguments by ORDER
-                    for k in range(len(subroutine.arguments)):
-                        new_tuple = var_metadata_type(longname=subroutine.arguments[k].longname, units=subroutine.arguments[k].units, id=subroutine.arguments[k].id, rank=subroutine.arguments[k].rank, type=subroutine.arguments[k].type, description=subroutine.arguments[k].description, kind=subroutine.arguments[k].kind, intent=subroutine.arguments[k].intent, optional=subroutine.arguments[k].optional, calling_var=subroutine.calling_vars[k])
-                        subroutine.arguments[k] = new_tuple
-                elif len(subroutine.calling_vars) > len(subroutine.arguments):
-                    #if there are more calling argument variables supplied than the subroutine expects, let the user know
-                    print 'Too many arguments (mandatory + optional) were supplied in the call to ' + subroutine.name
-                    print 'calling arguments: ' + str(len(subroutine.calling_vars))
-                    print 'subroutine arguments: ' + str(len(subroutine.arguments))
-                    print subroutine.calling_vars
-                else:
-                    #the number of arguments supplied in the call is greater than the number of non-optional arguments but less than the total of non-optional and optional arguments expected by the subroutine; check for optional arguments
-                    for k in range(len(subroutine.arguments)):
-                        if subroutine.arguments[k].optional.lower() == 't' or subroutine.arguments[k].optional.lower() == 'true':
-                            #for optional arguments, look for arguments being passed in with keywords by id; if the id is not found in the calling variables, then optional_calling_var is an empty list
-                            optional_calling_var = [s for s in subroutine.calling_vars if subroutine.arguments[k].id in s]
-                            if optional_calling_var:
-                                optional_calling_var = optional_calling_var[0].split('=')[1]
-                                new_tuple = var_metadata_type(longname=subroutine.arguments[k].longname, units=subroutine.arguments[k].units, id=subroutine.arguments[k].id, rank=subroutine.arguments[k].rank, type=subroutine.arguments[k].type, description=subroutine.arguments[k].description, kind=subroutine.arguments[k].kind, intent=subroutine.arguments[k].intent, optional=subroutine.arguments[k].optional, calling_var=optional_calling_var)
-                                subroutine.arguments[k] = new_tuple
-                        else:
-                            new_tuple = var_metadata_type(longname=subroutine.arguments[k].longname, units=subroutine.arguments[k].units, id=subroutine.arguments[k].id, rank=subroutine.arguments[k].rank, type=subroutine.arguments[k].type, description=subroutine.arguments[k].description, kind=subroutine.arguments[k].kind, intent=subroutine.arguments[k].intent, optional=subroutine.arguments[k].optional, calling_var=subroutine.calling_vars[k])
-                            subroutine.arguments[k] = new_tuple
-
-
-calling_var_set = set()
-for scheme in schemes:
-    for subroutine in scheme.subroutines:
-        for var in subroutine.arguments:
-            #only add the calling var to the set if it is not empty
-            if(var.calling_var):
-                calling_var_set.add(var.calling_var)
-
-longname_conflicts = []
-longname_success = []
-
-for calling_var in sorted(calling_var_set):
-    #process each calling variable in the set by searching through the schemes / subroutines for where the calling variable is used, saving the calling var, longname, local_name, and subroutine_name for each time a calling variable is used.
-
-    calling_vars = []
-    longnames = []
-    local_names = []
-    subroutine_names = []
+    calling_var_set = set()
     for scheme in schemes:
         for subroutine in scheme.subroutines:
             for var in subroutine.arguments:
-                if var.calling_var == calling_var:
-                    calling_vars.append(calling_var)
-                    longnames.append(var.longname)
-                    local_names.append(var.id)
-                    subroutine_names.append(subroutine.name)
+                #only add the calling var to the set if it is not empty
+                if(var.calling_var):
+                    calling_var_set.add(var.calling_var)
 
-    #check for conflicts; a conflict is when not all longnames used for each calling variable match exactly
-    if longnames.count(longnames[0]) == len(longnames):
-        longname_success.append((calling_vars, longnames, local_names, subroutine_names))
-    else:
-        longname_conflicts.append((calling_vars, longnames, local_names, subroutine_names))
+    find_longname_conflicts(calling_var_set, schemes)
 
-    #print the list of all calling variables and where they are being used
-    print calling_var, subroutine_names
-
-#print the conflicts (or success)
-if len(longname_success) == len(calling_var_set):
-    print "100% success!"
-else:
-    print str(len(longname_conflicts)) + ' conflicts were found out of ' + str(len(calling_var_set)) + ' possible comparisons.'
-    print 'Conflicts:'
-    for conflict in longname_conflicts:
-        for i in range(len(conflict[0])):
-            print conflict[0][i], conflict[1][i], conflict[2][i], conflict[3][i]
-        print #blank line
+if __name__ == '__main__':
+    main()
