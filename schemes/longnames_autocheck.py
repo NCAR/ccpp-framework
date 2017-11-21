@@ -28,7 +28,7 @@ separators = [
     { 
      'user' : 'grantfirl',
      'branch' : 'EDMF_table',
-     'files' : ['moninedmf.f', 'GFS_PBL_generic.f90', 'GFS_DCNV_generic.f90'],
+     'files' : ['moninedmf.f', 'GFS_PBL_generic.f90', 'GFS_DCNV_generic.f90', 'GFS_suite_interstitial.f90' ],
      'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
      'use_existing' : False,
     },
