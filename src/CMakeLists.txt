@@ -1,21 +1,21 @@
 #------------------------------------------------------------------------------
 # Set the sources
 set(SOURCES
-    ccpp.f90
+    ccpp.F90
     ccpp_dl.h
     ccpp_dl.c
-    ccpp_dl.f90
-    ccpp_errors.f90
-    ccpp_fcall.f90
-    ccpp_fields.f90
+    ccpp_dl.F90
+    ccpp_errors.F90
+    ccpp_fcall.F90
+    ccpp_fields.F90
     ccpp_fields_idx.h
     ccpp_fields_idx.c
-    ccpp_strings.f90
-    ccpp_suite.f90
-    ccpp_types.f90
+    ccpp_strings.F90
+    ccpp_suite.F90
+    ccpp_types.F90
     ccpp_utils.h
     ccpp_utils.c
-    ccpp_xml.f90
+    ccpp_xml.F90
     ccpp_xml.h
     ccpp_xml.c
 )

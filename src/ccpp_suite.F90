@@ -21,7 +21,7 @@ module ccpp_suite
     use            :: ccpp_types,                                      &
                       only: ccpp_suite_t
     use            :: ccpp_errors,                                     &
-                      only: ccpp_error, ccpp_warn
+                      only: ccpp_error, ccpp_warn, ccpp_debug
     use            :: ccpp_strings,                                    &
                       only: ccpp_fstr, ccpp_cstr
     use            :: ccpp_dl,                                         &
@@ -66,6 +66,8 @@ module ccpp_suite
 
         ierr = 0
         tmp = c_null_ptr
+
+        call ccpp_debug('Called ccpp_suite_init')
 
         ! Load the xml document.
         ierr = ccpp_xml_load(ccpp_cstr(filename), xml, root)
@@ -216,6 +218,8 @@ module ccpp_suite
 
         ierr = 0
 
+        call ccpp_debug('Called ccpp_suite_finalize')
+
         call ccpp_suite_unload(suite, ierr)
 
         do i=1, suite%ipds_max
@@ -306,6 +310,8 @@ module ccpp_suite
 
         ierr = 0
 
+        call ccpp_debug('Called ccpp_suite_load')
+
         if (allocated(suite%init%name)) then
             ierr = ccpp_dl_open(ccpp_cstr(suite%init%name),    &
                                 ccpp_cstr(suite%init%library), &
@@ -372,6 +378,8 @@ module ccpp_suite
         integer                            :: k
 
         ierr = 0
+
+        call ccpp_debug('Called ccpp_suite_unload')
 
         if (allocated(suite%init%name)) then
             ierr = ccpp_dl_close(suite%init%library_hdl)
