@@ -79,8 +79,8 @@ ccpp_dl_open(const char *scheme, const char *lib, const char *ver,
 		library = malloc(n);
 		memset(library, 0, n);
 		if (strcmp(ver, "") != 0) {
-			snprintf(library, n, "%s%s.%s%s", prefix, lib, ver,
-				 suffix);
+			snprintf(library, n, "%s%s.%s%s", prefix, lib,
+				 suffix, ver);
 		} else {
 			snprintf(library, n, "%s%s%s", prefix, lib, suffix);
 		}
