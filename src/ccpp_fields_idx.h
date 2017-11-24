@@ -49,9 +49,8 @@ struct ccpp_field_idx {
 /** CCPP field index initialization routine. **/
 int ccpp_field_idx_init(void **);
 
-
-/** CCPP field index finialization routine. **/
-int ccpp_field_idx_fini(void **);
+/** CCPP field index finalization routine. **/
+int ccpp_field_idx_finalize(void **);
 
 /** CCPP field index add/insert a field. **/
 int ccpp_field_idx_add(const char *, void **);

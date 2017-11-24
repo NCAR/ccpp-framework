@@ -32,7 +32,7 @@ module ccpp_suite
 
     private
     public :: ccpp_suite_init,                                         &
-              ccpp_suite_fini,                                         &
+              ccpp_suite_finalize,                                     &
               ccpp_suite_load,                                         &
               ccpp_suite_unload
 
@@ -94,13 +94,13 @@ module ccpp_suite
             end if
         end if
 
-        ! Find the fini subroutine
-        call ccpp_xml_ele_find(root, ccpp_cstr(CCPP_XML_ELE_FINI), &
+        ! Find the finalize subroutine
+        call ccpp_xml_ele_find(root, ccpp_cstr(CCPP_XML_ELE_FINALIZE), &
                                tmp, ierr)
         if (ierr == 0) then
-        ! Get the fini subroutine name
+        ! Get the finalize subroutine name
             call ccpp_xml_parse(tmp, suite%library, suite%version, &
-                                suite%fini, ierr)
+                                suite%finalize, ierr)
             if (ierr /= 0) then
                call ccpp_error('Unable to load finalization subroutine')
                call ccpp_error(err_msg // trim(filename))
@@ -203,10 +203,10 @@ module ccpp_suite
     !>
     !! Suite finalization subroutine.
     !!
-    !! @param[in,out] suite    The suite_t type to finialize.
+    !! @param[in,out] suite    The suite_t type to finalize.
     !! @param[   out] ierr     Integer error flag.
     !
-    subroutine ccpp_suite_fini(suite, ierr)
+    subroutine ccpp_suite_finalize(suite, ierr)
         type(ccpp_suite_t),     intent(inout) :: suite
         integer,                intent(  out) :: ierr
 
@@ -259,17 +259,17 @@ module ccpp_suite
             deallocate(suite%init%version)
         end if
 
-        ! Clean up the fini
-        if (allocated(suite%fini%name)) then
-            deallocate(suite%fini%name)
+        ! Clean up the finalize
+        if (allocated(suite%finalize%name)) then
+            deallocate(suite%finalize%name)
         end if
 
-        if (allocated(suite%fini%library)) then
-            deallocate(suite%fini%library)
+        if (allocated(suite%finalize%library)) then
+            deallocate(suite%finalize%library)
         end if
 
-        if (allocated(suite%fini%version)) then
-            deallocate(suite%fini%version)
+        if (allocated(suite%finalize%version)) then
+            deallocate(suite%finalize%version)
         end if
 
         ! Clean up ourself
@@ -288,7 +288,7 @@ module ccpp_suite
         suite%ipd_n    = 0
         suite%ipds_max = 0
 
-    end subroutine ccpp_suite_fini
+    end subroutine ccpp_suite_finalize
 
     !>
     !! Suite sub-components loading.
@@ -319,16 +319,16 @@ module ccpp_suite
             end if
         end if
 
-        if (allocated(suite%fini%name)) then
-            ierr = ccpp_dl_open(ccpp_cstr(suite%fini%name),    &
-                                ccpp_cstr(suite%fini%library), &
-                                ccpp_cstr(suite%fini%version), &
-                                suite%fini%scheme_hdl,         &
-                                suite%fini%library_hdl)
+        if (allocated(suite%finalize%name)) then
+            ierr = ccpp_dl_open(ccpp_cstr(suite%finalize%name),    &
+                                ccpp_cstr(suite%finalize%library), &
+                                ccpp_cstr(suite%finalize%version), &
+                                suite%finalize%scheme_hdl,         &
+                                suite%finalize%library_hdl)
             if (ierr /= 0) then
                 call ccpp_error('A problem occured loading '         &
-                                // trim(suite%fini%name) // ' from ' &
-                                // trim(suite%fini%library))
+                                // trim(suite%finalize%name) // ' from ' &
+                                // trim(suite%finalize%library))
             end if
         end if
 
@@ -381,11 +381,11 @@ module ccpp_suite
             end if
         end if
 
-        if (allocated(suite%fini%name)) then
-            ierr = ccpp_dl_close(suite%fini%library_hdl)
+        if (allocated(suite%finalize%name)) then
+            ierr = ccpp_dl_close(suite%finalize%library_hdl)
             if (ierr /= 0) then
                 call ccpp_error('A problem occured closing '         &
-                                // trim(suite%fini%library))
+                                // trim(suite%finalize%library))
             end if
         end if
 

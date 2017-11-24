@@ -36,7 +36,7 @@
     <xs:sequence>
       <xs:element name="init" type="functionPointer" minOccurs="0" maxOccurs="1"/>
       <xs:element ref="ipd" minOccurs="1" maxOccurs="unbounded"/>
-      <xs:element name="fini" type="functionPointer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="finalize" type="functionPointer" minOccurs="0" maxOccurs="1"/>
     </xs:sequence>
     <xs:attribute name="name" type="xs:string"/>
     <xs:attribute name="lib" type="xs:string" use="optional"/>

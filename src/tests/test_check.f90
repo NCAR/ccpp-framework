@@ -21,7 +21,7 @@ program test_check
     use            :: ccpp_types,                                      &
                       only: CCPP_STR_LEN, ccpp_t
     use            :: ccpp,                                            &
-                      only: ccpp_init, ccpp_fini
+                      only: ccpp_init, ccpp_finalize
     use            :: ccpp_fcall,                                      &
                       only: ccpp_run
     use            :: ccpp_fields,                                     &
@@ -98,7 +98,7 @@ program test_check
     print *, 'u: ', u(1,1,1)
     print *, 'v: ', v(1,1,1)
 
-    call ccpp_fini(cdata, ierr)
+    call ccpp_finalize(cdata, ierr)
 
     if (allocated(surf_t)) then
         deallocate(surf_t)
