@@ -26,7 +26,7 @@ module ccpp
     use            :: ccpp_fields,                                     &
                       only: ccpp_fields_init, ccpp_fields_fini
     use            :: ccpp_errors,                                     &
-                      only: ccpp_error
+                      only: ccpp_error, ccpp_debug
 
     implicit none
 
@@ -49,6 +49,8 @@ module ccpp
         integer,                intent(  out) :: ierr
 
         ierr = 0
+
+        call ccpp_debug('Called ccpp_init')
 
         ! Initialize the suite
         call ccpp_suite_init(filename, cdata%suite, ierr)
@@ -77,6 +79,8 @@ module ccpp
         integer,                intent(  out) :: ierr
 
         ierr = 0
+
+        call ccpp_debug('Called ccpp_finalize')
 
         ! Finalize the suite
         call ccpp_suite_fini(cdata%suite, ierr)

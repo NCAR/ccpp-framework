@@ -17,14 +17,21 @@
 !! @details Subroutines for reporting warnings.
 !
 module ccpp_errors
+
+! DH* - if cmake build types are aligned with NEMS build types,
+! need to change this to #define DEBUG strcmp(CMAKE_BUILD_TYPE, "DEBUG")
+#define DEBUG strcmp(CMAKE_BUILD_TYPE, "Debug")
+
     use, intrinsic :: iso_fortran_env,                                 &
-                      only: error_unit
+                      only: error_unit, output_unit
 
     implicit none
 
     private
     public :: ccpp_error,                                              &
               ccpp_warn,                                               &
+              ccpp_info,                                               &
+              ccpp_debug,                                              &
               ccpp_if_error,                                           &
               ccpp_if_warn
 
@@ -55,6 +62,34 @@ module ccpp_errors
 
         write(error_unit, *) 'WARN: ', trim(message)
     end subroutine ccpp_warn
+
+    !>
+    !! Reporting on info level
+    !!
+    !! Write an info message to output_unit/stdout.
+    !!
+    !! @param[in] message   The info message to write.
+    !
+    subroutine ccpp_info(message)
+        character(len=*),        intent(in) :: message
+
+        write(output_unit, *) 'INFO: ', trim(message)
+    end subroutine ccpp_info
+
+    !>
+    !! Reporting on debug level
+    !!
+    !! Write a debug message to output_unit/stdout.
+    !!
+    !! @param[in] message   The debug message to write.
+    !
+    subroutine ccpp_debug(message)
+        character(len=*),        intent(in) :: message
+
+#ifdef DEBUG
+        write(output_unit, *) 'DEBUG: ', trim(message)
+#endif
+    end subroutine ccpp_debug
 
     !>
     !! Fatal error checking and reporting.
