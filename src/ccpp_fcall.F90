@@ -12,7 +12,7 @@ module ccpp_fcall
                       only: ccpp_t, ccpp_suite_t, ccpp_ipd_t,          &
                             ccpp_subcycle_t, ccpp_scheme_t
     use            :: ccpp_errors,                                     &
-                      only: ccpp_error
+                      only: ccpp_error, ccpp_debug
     use            :: ccpp_strings,                                    &
                       only: ccpp_cstr
     use            :: ccpp_dl,                                         &
@@ -51,6 +51,8 @@ module ccpp_fcall
 
         ierr = 0
 
+        call ccpp_debug('Called ccpp_run_suite')
+
         do i=1,suite%ipds_max
             suite%ipd_n = i
             call ccpp_run_ipd(suite%ipds(i), cdata, ierr)
@@ -78,6 +80,8 @@ module ccpp_fcall
         integer                               :: i
 
         ierr = 0
+
+        call ccpp_debug('Called ccpp_run_ipd')
 
         do i=1,ipd%subcycles_max
             ipd%subcycle_n = i

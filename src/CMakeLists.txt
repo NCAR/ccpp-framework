@@ -1,21 +1,21 @@
 #------------------------------------------------------------------------------
 # Set the sources
 set(SOURCES
-    ccpp.f90
+    ccpp.F90
     ccpp_dl.h
     ccpp_dl.c
-    ccpp_dl.f90
-    ccpp_errors.f90
-    ccpp_fcall.f90
-    ccpp_fields.f90
+    ccpp_dl.F90
+    ccpp_errors.F90
+    ccpp_fcall.F90
+    ccpp_fields.F90
     ccpp_fields_idx.h
     ccpp_fields_idx.c
-    ccpp_strings.f90
-    ccpp_suite.f90
-    ccpp_types.f90
+    ccpp_strings.F90
+    ccpp_suite.F90
+    ccpp_types.F90
     ccpp_utils.h
     ccpp_utils.c
-    ccpp_xml.f90
+    ccpp_xml.F90
     ccpp_xml.h
     ccpp_xml.c
 )
@@ -27,6 +27,19 @@ if (LIBXML2_FOUND)
     include_directories(${LIBXML2_INCLUDE_DIR})
     list(APPEND LIBS ${LIBXML2_LIBRARIES})
 endif(LIBXML2_FOUND)
+
+#------------------------------------------------------------------------------
+# The Fortran compiler/linker flag inserted by cmake to create shared libraries
+# with the Intel compiler is deprecated (-i_dynamic), correct here.
+# CMAKE_Fortran_COMPILER_ID = {"Intel", "PGI", "GNU", "Clang", "MSVC", ...}
+if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
+    string(REPLACE "-i_dynamic" "-shared-intel"
+           CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS
+           "${CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS}")
+    string(REPLACE "-i_dynamic" "-shared-intel"
+           CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS
+           "${CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS}")
+endif()
 
 #------------------------------------------------------------------------------
 # Add the toplevel source directory to our include directoies (for .h)
