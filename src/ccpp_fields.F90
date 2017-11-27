@@ -61,7 +61,7 @@ module ccpp_fields
 
     private
     public :: ccpp_fields_init,                                        &
-              ccpp_fields_fini,                                        &
+              ccpp_fields_finalize,                                    &
               ccpp_fields_find,                                        &
               ccpp_fields_add,                                         &
               ccpp_fields_get
@@ -185,12 +185,12 @@ module ccpp_fields
        end function ccpp_field_idx_init
 
        integer(c_int32_t)                                              &
-       function ccpp_field_idx_fini                                    &
+       function ccpp_field_idx_finalize                                &
                 (idx)                                                  &
-                bind(c, name='ccpp_field_idx_fini')
+                bind(c, name='ccpp_field_idx_finalize')
         import :: c_int32_t, c_ptr
         type(c_ptr)                          :: idx
-       end function ccpp_field_idx_fini
+       end function ccpp_field_idx_finalize
 
        integer(c_int32_t)                                              &
        function ccpp_field_idx_add                                     &
@@ -258,7 +258,7 @@ module ccpp_fields
     !! @param[in,out] cdata    The ccpp_t type data.
     !! @param[  out]  ierr     Integer error flag.
     !
-    subroutine ccpp_fields_fini(cdata, ierr)
+    subroutine ccpp_fields_finalize(cdata, ierr)
         type(ccpp_t),           intent(inout) :: cdata
         integer,                intent(  out) :: ierr
 
@@ -268,9 +268,9 @@ module ccpp_fields
             deallocate(cdata%fields)
         end if
 
-        ierr = ccpp_field_idx_fini(cdata%fields_idx)
+        ierr = ccpp_field_idx_finalize(cdata%fields_idx)
 
-    end subroutine ccpp_fields_fini
+    end subroutine ccpp_fields_finalize
 
     !>
     !! CCPP fields addition subroutine.

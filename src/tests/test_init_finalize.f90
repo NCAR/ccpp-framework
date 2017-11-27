@@ -22,12 +22,12 @@
 !!          It can be used multipile times to test the parsing
 !!          of various suite XML files.
 !
-program test_init_fini
+program test_init_finalize
 
     use            :: ccpp_types,                          &
                       only: CCPP_STR_LEN, ccpp_t
     use            :: ccpp,                                &
-                      only: ccpp_init, ccpp_fini
+                      only: ccpp_init, ccpp_finalize
 
     implicit none
 
@@ -50,9 +50,9 @@ program test_init_fini
         call exit(ierr)
     end if
 
-    call ccpp_fini(cdata, ierr)
+    call ccpp_finalize(cdata, ierr)
     if (ierr /= 0) then
         call exit(ierr)
     end if
 
-end program test_init_fini
+end program test_init_finalize

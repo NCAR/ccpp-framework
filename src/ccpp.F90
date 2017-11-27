@@ -22,9 +22,9 @@ module ccpp
     use            :: ccpp_types,                                      &
                       only: ccpp_t
     use            :: ccpp_suite,                                      &
-                      only: ccpp_suite_init, ccpp_suite_fini
+                      only: ccpp_suite_init, ccpp_suite_finalize
     use            :: ccpp_fields,                                     &
-                      only: ccpp_fields_init, ccpp_fields_fini
+                      only: ccpp_fields_init, ccpp_fields_finalize
     use            :: ccpp_errors,                                     &
                       only: ccpp_error, ccpp_debug
 
@@ -32,7 +32,7 @@ module ccpp
 
     private
     public :: ccpp_init,                                               &
-              ccpp_fini
+              ccpp_finalize
 
     contains
 
@@ -74,7 +74,7 @@ module ccpp
     !! @param[in,out] cdata    The ccpp_t type data.
     !! @param[  out]  ierr     Integer error flag.
     !
-    subroutine ccpp_fini(cdata, ierr)
+    subroutine ccpp_finalize(cdata, ierr)
         type(ccpp_t),           intent(inout) :: cdata
         integer,                intent(  out) :: ierr
 
@@ -83,19 +83,19 @@ module ccpp
         call ccpp_debug('Called ccpp_finalize')
 
         ! Finalize the suite
-        call ccpp_suite_fini(cdata%suite, ierr)
+        call ccpp_suite_finalize(cdata%suite, ierr)
         if (ierr /= 0) then
                 call ccpp_error('In finalizing the CCPP suite')
                 return
         end if
 
         ! Finalize the fields
-        call ccpp_fields_fini(cdata, ierr)
+        call ccpp_fields_finalize(cdata, ierr)
         if (ierr /= 0) then
                 call ccpp_error('In finalizing the CCPP fields')
                 return
         end if
 
-    end subroutine ccpp_fini
+    end subroutine ccpp_finalize
 
 end module ccpp

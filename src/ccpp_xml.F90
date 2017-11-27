@@ -41,7 +41,7 @@ module ccpp_xml
               ccpp_xml_parse,                                         &
               CCPP_XML_ELE_SUITE,                                     &
               CCPP_XML_ELE_INIT,                                      &
-              CCPP_XML_ELE_FINI,                                      &
+              CCPP_XML_ELE_FINALIZE,                                  &
               CCPP_XML_ELE_IPD,                                       &
               CCPP_XML_ELE_SUBCYCLE,                                  &
               CCPP_XML_ELE_SCHEME
@@ -61,7 +61,7 @@ module ccpp_xml
     !
     character(len=*), parameter :: CCPP_XML_ELE_SUITE    = "suite"
     character(len=*), parameter :: CCPP_XML_ELE_INIT     = "init"
-    character(len=*), parameter :: CCPP_XML_ELE_FINI     = "fini"
+    character(len=*), parameter :: CCPP_XML_ELE_FINALIZE = "finalize"
     character(len=*), parameter :: CCPP_XML_ELE_IPD      = "ipd"
     character(len=*), parameter :: CCPP_XML_ELE_SUBCYCLE = "subcycle"
     character(len=*), parameter :: CCPP_XML_ELE_SCHEME   = "scheme"
@@ -363,7 +363,7 @@ module ccpp_xml
     end subroutine ccpp_xml_parse_subcycle
 
     !>
-    !! Function pointer (scheme/init/fini) parsing from an XML file.
+    !! Function pointer (scheme/init/finalize) parsing from an XML file.
     !!
     !! @param[in    ] node     The current xml node.
     !! @param[in    ] lib      The default library name.
