@@ -105,7 +105,7 @@ module ccpp_types
             character(:), allocatable                           :: library
             character(:), allocatable                           :: version
             type(ccpp_scheme_t)                                 :: init
-            type(ccpp_scheme_t)                                 :: fini
+            type(ccpp_scheme_t)                                 :: finalize
             integer                                             :: ipds_max
             integer                                             :: ipd_n
             type(ccpp_ipd_t), allocatable, dimension(:)         :: ipds

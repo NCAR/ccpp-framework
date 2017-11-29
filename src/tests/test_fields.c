@@ -42,7 +42,7 @@ main(int argc, char **argv)
 	i = ccpp_field_idx_find("f_90", &cdata);
 	printf("%d\n", i);
 
-	if (ccpp_field_idx_fini(&cdata)) {
+	if (ccpp_field_idx_finalize(&cdata)) {
 		return(EXIT_FAILURE);
 	}
 

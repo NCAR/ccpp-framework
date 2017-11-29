@@ -115,6 +115,9 @@ For csh or tcsh:
 setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${cwd}/schemes/check/src/check-build/
 ```
 
+Note that if CCPP was built as part of a build system, you might have to load
+the compiler and set environment variables that were used by the build system.
+
 
 Then issue the following within the build directory.
   * `make test`
@@ -162,17 +165,22 @@ suite_RAP.xml validates
 ~~~~
 
 Within the `ccpp/src/tests` directory there is a Fortran file
-`test_init_fini.f90` which will get built into an executable program
+`test_init_finalize.f90` which will get built into an executable program
 when the CCPP library is built. This program only calls:
   * `ccpp_init()`
-  * `ccpp_fini()`
+  * `ccpp_finalize()`
 
 It is a program to check the suite XML validation within the CCPP
 library. The following is an example of using it from within the
 `build` directory.
 ~~~~{.sh}
-src/tests/test_init_fini my_suite.xml
+src/tests/test_init_finalize my_suite.xml
 ~~~~
+
+For this to work, the library that is referenced in the xml file
+must be added to the LD_LIBRARY_PATH (see above). To test the
+correct functionality of CCPP itself, the suite suite_EXAMPLE.xml
+in gmtb-ccp/sr/examples can be used.
 
 There are two general types of XML files for the CCPP. The first is the
 definition file for a suite. This has been mapped out, is fairly short,

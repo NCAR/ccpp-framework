@@ -93,7 +93,7 @@ ccpp_field_idx_init(void **index)
 }
 
 /**
- * Finialization routine.
+ * Finalization routine.
  *
  * Deallocates the field indices array.
  *
@@ -101,7 +101,7 @@ ccpp_field_idx_init(void **index)
  * @retval    0     If it was sucessful.
  **/
 int
-ccpp_field_idx_fini(void **index)
+ccpp_field_idx_finalize(void **index)
 {
 	int i = 0;
 
