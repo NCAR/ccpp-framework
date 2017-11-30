@@ -3,30 +3,30 @@
 <scheme module="scm">
   <subroutine name="run_1">
     <var>
-      <name>water_vapor_specific_humidity</name>
+      <standard_name>water_vapor_specific_humidity</standard_name>
       <units>K kg-1</units>
-      <id>q_v</id>
+      <local_name>q_v</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
     <var>
-      <name>temperature</name>
+      <standard_name>temperature</standard_name>
       <units>K</units>
-      <id>t</id>
+      <local_name>t</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
     <var>
-      <name>eastward_wind</name>
+      <standard_name>eastward_wind</standard_name>
       <units>m s-1</units>
-      <id>u</id>
+      <local_name>u</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
     <var>
-      <name>northward_wind</name>
+      <standard_name>northward_wind</standard_name>
       <units>m s-1</units>
-      <id>v</id>
+      <local_name>v</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
@@ -34,30 +34,30 @@
 
   <subroutine name="run_2">
     <var>
-      <name>water_vapor_specific_humidity</name>
+      <standard_name>water_vapor_specific_humidity</standard_name>
       <units>K kg-1</units>
-      <id>q_v</id>
+      <local_name>q_v</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
     <var>
-      <name>temperature</name>
+      <standard_name>temperature</standard_name>
       <units>K</units>
-      <id>t</id>
+      <local_name>t</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
     <var>
-      <name>eastward_wind</name>
+      <standard_name>eastward_wind</standard_name>
       <units>m s-1</units>
-      <id>u</id>
+      <local_name>u</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
     <var>
-      <name>northward_wind</name>
+      <standard_name>northward_wind</standard_name>
       <units>m s-1</units>
-      <id>v</id>
+      <local_name>v</local_name>
       <rank>1</rank>
       <type>real</type>
     </var>
