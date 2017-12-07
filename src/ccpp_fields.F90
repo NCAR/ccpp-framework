@@ -55,7 +55,7 @@ module ccpp_fields
     use            :: ccpp_strings,                                     &
                       only: ccpp_cstr
     use            :: ccpp_errors,                                      &
-                      only: ccpp_warn
+                      only: ccpp_debug, ccpp_warn
 
     implicit none
 
@@ -298,6 +298,8 @@ module ccpp_fields
         integer                                        :: new_fields_max
         type(ccpp_field_t), allocatable, dimension(:)  :: tmp
 
+        call ccpp_debug('Called ccpp_fields_add for field ' // trim(standard_name))
+
         ierr = 0
 
         ! Get the current/old fields max
@@ -366,6 +368,8 @@ module ccpp_fields
         integer, allocatable,  optional, intent(  out) :: dims(:)
 
         integer                                        :: idx
+
+        call ccpp_debug('Called ccpp_fields_get for field ' // trim(standard_name))
 
         ierr = 0
         ! Lookup the standard name in the index
