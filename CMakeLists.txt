@@ -31,7 +31,7 @@ string(TIMESTAMP YEAR "%Y")
 # For example the subroutine b() in the moduel a(), gets named a_b.
 # GCC and Intel do NOT do this, it is name simply as b.
 if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
-    message(FATAL_ERROR "PGI compiler is not supported")
+    message(STATUS "WARNING: PGI compiler is not fully ISO_C compliant; working solution involves a hack pgifix.py")
 endif()
 
 #------------------------------------------------------------------------------
