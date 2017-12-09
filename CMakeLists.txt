@@ -35,6 +35,19 @@ if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
 endif()
 
 #------------------------------------------------------------------------------
+# The Fortran compiler/linker flag inserted by cmake to create shared libraries
+# with the Intel compiler is deprecated (-i_dynamic), correct here.
+# CMAKE_Fortran_COMPILER_ID = {"Intel", "PGI", "GNU", "Clang", "MSVC", ...}
+if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
+    string(REPLACE "-i_dynamic" "-shared-intel"
+           CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS
+           "${CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS}")
+    string(REPLACE "-i_dynamic" "-shared-intel"
+           CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS
+           "${CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS}")
+endif()
+
+#------------------------------------------------------------------------------
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to 'Debug' as none was specified.")
