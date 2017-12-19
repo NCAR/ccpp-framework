@@ -91,9 +91,18 @@ if (ierr /= 0) then
 end if
 """
 
-CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE = \
+CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE_SCALAR = \
 """
-call ccpp_fields_add(cdata_block(nb), '{0}', '', c_loc({1}), size({1}), shape({1}), ierr)
+call ccpp_fields_add(cdata_block(nb), '{0}', '', c_loc({1}), ierr)
+!call ccpp_fields_add(cdata_block(nb), '{0}', '', {1}, ierr=ierr)
+if (ierr /= 0) then
+    call error_mesg('ccpp', 'error calling ccpp_fields_add for field "{0}"', FATAL)
+end if
+"""
+
+CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE_ARRAY = \
+"""
+call ccpp_fields_add(cdata_block(nb), '{0}', '', c_loc({1}), rank=size({1}), dims=shape({1}), ierr=ierr)
 if (ierr /= 0) then
     call error_mesg('ccpp', 'error calling ccpp_fields_add for field "{0}"', FATAL)
 end if
@@ -124,12 +133,14 @@ def compare_metadata(metadata_define, metadata_request):
     """Compare the requested metadata to the defined one. For each requested entry, a
     single (i.e. non-ambiguous entry) must be present in the defined entries. Also ..."""
     success = True
+    missing = 0
     modules = []
     metadata = {}
     for var_name in sorted(metadata_request.keys()):
         # Check that variable is provided by the model
         if not var_name in metadata_define.keys():
             success = False
+            missing += 1
             print 'Error, requested variable {0} not provided by the model'.format(var_name)
             continue
         # Check that an unambiguous target exists for this variable
@@ -165,6 +176,10 @@ def compare_metadata(metadata_define, metadata_request):
 
     # Remove duplicated from list of modules
     modules = sorted(list(set(modules)))
+    if missing > 0:
+        print '---'
+        print 'In total, {0} variables missing'.format(missing)
+        print '---'
     return (success, modules, metadata)
 
 def create_module_use_statements(modules):
@@ -199,8 +214,10 @@ def create_ccpp_fields_add_statements(metadata):
         #    continue
         if var.type in STANDARD_VARIABLE_TYPES:
             ccpp_fields_add_template = CCPP_FIELDS_ADD_TEMPLATE_STANDARD_VARIABLE_TYPE
+        elif var.rank == '0':
+            ccpp_fields_add_template = CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE_SCALAR
         else:
-            ccpp_fields_add_template = CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE
+            ccpp_fields_add_template = CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE_ARRAY
         # *DH
         ccpp_fields_add_statements += ccpp_fields_add_template.format(standard_name, target, units)
         cnt += 1
