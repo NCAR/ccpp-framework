@@ -67,7 +67,7 @@ module ccpp_suite
         ierr = 0
         tmp = c_null_ptr
 
-        call ccpp_debug('Called ccpp_suite_init')
+        !call ccpp_debug('Called ccpp_suite_init')
 
         ! Load the xml document.
         ierr = ccpp_xml_load(ccpp_cstr(filename), xml, root)
@@ -218,7 +218,7 @@ module ccpp_suite
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_suite_finalize')
+        !call ccpp_debug('Called ccpp_suite_finalize')
 
         call ccpp_suite_unload(suite, ierr)
 
@@ -310,7 +310,7 @@ module ccpp_suite
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_suite_load')
+        !call ccpp_debug('Called ccpp_suite_load')
 
         if (allocated(suite%init%name)) then
             ierr = ccpp_dl_open(ccpp_cstr(suite%init%name),    &
@@ -379,7 +379,7 @@ module ccpp_suite
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_suite_unload')
+        !call ccpp_debug('Called ccpp_suite_unload')
 
         if (allocated(suite%init%name)) then
             ierr = ccpp_dl_close(suite%init%library_hdl)

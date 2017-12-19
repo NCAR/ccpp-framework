@@ -50,7 +50,7 @@ module ccpp
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_init')
+        !call ccpp_debug('Called ccpp_init')
 
         ! Initialize the suite
         call ccpp_suite_init(filename, cdata%suite, ierr)
@@ -80,7 +80,7 @@ module ccpp
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_finalize')
+        !call ccpp_debug('Called ccpp_finalize')
 
         ! Finalize the suite
         call ccpp_suite_finalize(cdata%suite, ierr)

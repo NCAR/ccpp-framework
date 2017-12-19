@@ -51,7 +51,7 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_suite')
+        !call ccpp_debug('Called ccpp_run_suite')
 
         do i=1,suite%ipds_max
             suite%ipd_n = i
@@ -81,7 +81,7 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_ipd')
+        !call ccpp_debug('Called ccpp_run_ipd')
 
         do i=1,ipd%subcycles_max
             ipd%subcycle_n = i
