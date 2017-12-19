@@ -29,6 +29,32 @@ if (LIBXML2_FOUND)
 endif(LIBXML2_FOUND)
 
 #------------------------------------------------------------------------------
+# CMake Modules
+# Set the CMake module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+
+#------------------------------------------------------------------------------
+# Find OpenMP for C/C++
+find_package(OpenMP)
+if(OPENMP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  message(STATUS "Enabled OpenMP support for C/C++ compiler")
+else(OPENMP_FOUND)
+  message (STATUS "C/C++ compiler does not support OpenMP")
+endif()
+
+#------------------------------------------------------------------------------
+# Find OpenMP for Fortran
+FIND_PACKAGE(OpenMP_Fortran)
+if(OpenMP_FLAG_DETECTED)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+  message(STATUS "Enabled OpenMP support for Fortran compiler")
+else(OpenMP_FLAG_DETECTED)
+  message (STATUS "Fortran compiler does not support OpenMP")
+endif()
+
+#------------------------------------------------------------------------------
 # The Fortran compiler/linker flag inserted by cmake to create shared libraries
 # with the Intel compiler is deprecated (-i_dynamic), correct here.
 # CMAKE_Fortran_COMPILER_ID = {"Intel", "PGI", "GNU", "Clang", "MSVC", ...}
@@ -65,7 +91,9 @@ add_subdirectory(tests)
 add_library(ccpp ${SOURCES})
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
-                                      SOVERSION ${PROJECT_VERSION_MAJOR})
+                                      SOVERSION ${PROJECT_VERSION_MAJOR}
+                                      COMPILE_FLAGS ${OpenMP_Fortran_FLAGS}
+                                      LINK_FLAGS ${OpenMP_Fortran_FLAGS})
 
 #------------------------------------------------------------------------------
 # Installation
