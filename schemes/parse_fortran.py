@@ -66,7 +66,7 @@ def parse_subroutine_call(file, subroutine):
                 count_opening_brackets += line.count('(')
                 count_closing_brackets += line.count(')')
                 # Call over multiple lines
-                if count_closing_brackets == count_opening_brackets:
+                if (count_closing_brackets == count_opening_brackets) and (count_closing_brackets>0):
                     parse = False
                     arguments = extract_arguments(call)
                     calls.append(arguments)
