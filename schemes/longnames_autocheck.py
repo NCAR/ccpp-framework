@@ -11,41 +11,41 @@ from process_tables import scheme_type, subroutine_type, parse_xml_files, proces
 
 
 separators = [
-    {
-     'user' : 'christopherwharrop',
-     'branch' : 'harrop_gfs',
-     'files' : ['sfc_nst.f'],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
-     'use_existing' : False,
-    },
-    { 
-     'user' : 'davegill',
-     'branch' : 'gfs_separator_SASS',
-     'files' : ['mfdeepcnv.f'],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
-     'use_existing' : False,
-    },
-    { 
-     'user' : 'grantfirl',
-     'branch' : 'EDMF_table',
-     'files' : ['moninedmf.f', 'GFS_PBL_generic.f90', 'GFS_DCNV_generic.f90', 'GFS_suite_interstitial.f90' ],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
-     'use_existing' : False,
-    },
-    {
-     'user' : 'gsketefian',
-     'branch' : 'gsk_separator_work_gfs',
-     'files' : ['gwdc.f', 'gwdps.f', 'rayleigh_damp.f', 'get_prs_fv3.f90', 'get_prs_fv3.f90', 'cnvc90.f', 'dcyc2.f', ],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
-     'use_existing' : False,
-    },
-    { 
-     'user' : 'JulieSchramm',
-     'branch' : 'gfs_separator_shalcnv',
-     'files' : ['mfshalcnv.f'],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
-     'use_existing' : False,
-    },
+    #{
+    # 'user' : 'christopherwharrop',
+    # 'branch' : 'harrop_gfs',
+    # 'files' : ['sfc_nst.f'],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
+    #{
+    # 'user' : 'davegill',
+    # 'branch' : 'gfs_separator_SASS',
+    # 'files' : ['mfdeepcnv.f'],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
+    #{
+    # 'user' : 'grantfirl',
+    # 'branch' : 'EDMF_table',
+    # 'files' : ['moninedmf.f', 'GFS_PBL_generic.f90', 'GFS_DCNV_generic.f90', 'GFS_suite_interstitial.f90', 'GFS_SCNV_generic.f90' ],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
+    #{
+    # 'user' : 'gsketefian',
+    # 'branch' : 'gsk_separator_work_gfs',
+    # 'files' : ['gwdc.f', 'gwdps.f', 'rayleigh_damp.f', 'get_prs_fv3.f90', 'cnvc90.f', 'dcyc2.f', 'ozphys.f' ],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
+    #{
+    # 'user' : 'JulieSchramm',
+    # 'branch' : 'gfs_separator_shalcnv',
+    # 'files' : ['mfshalcnv.f'],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
     #{
     # 'user' : 'kellylittleblackdog',
     # 'branch' : 'seaice_separator_work_gfs',
@@ -53,26 +53,79 @@ separators = [
     # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
     # 'use_existing' : False,
     #},
+    #{
+    # 'user' : 'lulinxue',
+    # 'branch' : 'GFS_separate_Noah_LSM_master_gfsphysics',
+    # 'files' : ['sfc_drv.f', 'sfc_diff.f', 'sfc_diag.f', 'GFS_surface_loop_control.f' ],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
+    #{
+    # 'user' : 'mzhangw',
+    # 'branch' : 'masep',
+    # 'files' : ['gscond.f', 'precpd.f', 'GFS_calpreciptype.f90', 'GFS_MP_generic_pre.f90', 'GFS_MP_generic_post.f90', 'GFS_zhao_carr_pre.f90' ],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
+    #{
+    # 'user' : 'mzhangw',
+    # 'branch' : 'radiation2-zhang',
+    # 'files' : [ 'GFS_RRTMG_pre.f90'],
+    # #'files' : [ 'GFS_RRTMG_pre.f90', 'GFS_RRTMG_post.f90', 'GFS_rad_time_vary.f90' ],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
+    #{
+    # 'user' : 'pedro-jm',
+    # 'branch' : 'radiation2',
+    # 'files' : ['radsw_main.f', 'radlw_main.f'],
+    # 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+    # 'use_existing' : False,
+    #},
     {
-     'user' : 'lulinxue',
-     'branch' : 'GFS_separate_Noah_LSM_master_gfsphysics',
-     'files' : ['sfc_drv.f', 'sfc_diff.f', 'sfc_diag.f'],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
-     'use_existing' : True,
-    },
-    { 
-     'user' : 'mzhangw',
-     'branch' : 'masep',
-     'files' : ['gscond.f', 'precpd.f', 'GFS_calpreciptype.f90', 'GFS_MP_generic_pre.f90', 'GFS_MP_generic_post.f90'],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
+     'user' : 'NCAR',
+     'branch' : 'master',
+     'files' : [
+        'GFS_DCNV_generic.f90',
+        'GFS_MP_generic_post.f90',
+        'GFS_MP_generic_pre.f90',
+        'GFS_PBL_generic.f90',
+        'GFS_RRTMG_post.f90',
+        'GFS_RRTMG_pre.f90',
+        'GFS_SCNV_generic.f90',
+        'GFS_calpreciptype.f90',
+        'GFS_rad_time_vary.f90',
+        'GFS_radlw_post.f90',
+        'GFS_radlw_pre.f90',
+        'GFS_radsw_post.f90',
+        'GFS_radsw_pre.f90',
+        'GFS_suite_interstitial.f90',
+        'GFS_suite_setup.f90',
+        'GFS_surface_generic.f90',
+        'GFS_surface_loop_control.f',
+        'GFS_zhao_carr_pre.f90',
+        'cnvc90.f',
+        'dcyc2.f',
+        'get_prs_fv3.f90',
+        'gscond.f',
+        'gwdc.f',
+        'gwdps.f',
+        'mfdeepcnv.f',
+        'mfshalcnv.f',
+        'moninedmf.f',
+        'ozphys.f',
+        'precpd.f',
+        'radlw_main.f',
+        'radsw_main.f',
+        'rayleigh_damp.f',
+        'sfc_diag.f',
+        'sfc_diff.f',
+        'sfc_drv.f',
+        'sfc_nst.f',
+        'sfc_sice.f',
+         ],
+     'driverfiles' : ['GFS_driver.F90', 'GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
      'use_existing' : False,
-    },
-    { 
-     'user' : 'pedro-jm',
-     'branch' : 'radiation2',
-     'files' : ['radsw_main.f', 'radlw_main.f'],
-     'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'],
-     'use_existing' : True,
     },
     #{ 'user' : '', 'branch' : '', 'files' : [''], 'driverfiles' : ['GFS_physics_driver.F90', 'GFS_radiation_driver.F90'], 'use_existing' : False,},
     ]
@@ -165,9 +218,15 @@ def main():
     # Create info on separators as html table
     html_text = ''
     for separator in separators:
-        html_text += '<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>\n'.format(separator['user'],
-                                                                                 separator['branch'],
-                                                                                 ', '.join(separator['files']))
+        for ffile in separator['files']:
+            if ffile == separator['files'][0]:
+                html_text += '<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>\n'.format(separator['user'],
+                                                                                      separator['branch'],
+                                                                                      ffile)
+            else:
+                html_text += '<tr><td></td><td></td><td>{2}</td></tr>\n'.format(separator['user'],
+                                                                                separator['branch'],
+                                                                                ffile)
     separators_info = SEPARATORS_INFO_HTML_TEMPLATE.format(html_text)
 
     html = find_longname_conflicts(calling_var_set, all_schemes, separators_info)
