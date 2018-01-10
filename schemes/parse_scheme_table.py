@@ -180,7 +180,7 @@ def parse_scheme_tables(files):
                         try:
                             var_name.text = var_data_sets[j][k][1]
                         except IndexError:
-                            raise IndexError('This can be caused by the argument table missing an empty (!!) line')
+                            raise IndexError('This can be caused by the argument table missing an empty (!!) line in {0}'.format(filename))
                         var_units = ET.SubElement(sub_var, 'units')
                         var_units.text = var_data_sets[j][k][3]
                         var_id = ET.SubElement(sub_var, 'id')
