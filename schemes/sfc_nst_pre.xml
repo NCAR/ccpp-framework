@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<scheme module="sfc_nst_pre">
-  <subroutine name="sfc_nst_pre_init" />
-  <subroutine name="sfc_nst_pre_finalize" />
-  <subroutine name="sfc_nst_pre_run" />
-</scheme>

@@ -145,7 +145,7 @@ def process_arguments(subroutine):
         if not (subroutine.arguments[k].optional.lower() == 't' or subroutine.arguments[k].optional.lower() == 'true'):
             num_non_optional_arguments += 1
     #num_optional_arguments = (len(subroutine.arguments)) - num_non_optional_arguments
-    
+
     if len(subroutine.calling_vars) < num_non_optional_arguments:
         #if the number of calling argument variables are less than the number of non-optional arguments, let the user know that there is a problem
         message = 'Too few arguments were supplied in the call to {0}\n'.format(subroutine.name)
