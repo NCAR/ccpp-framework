@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<scheme module="sfc_nst_post">
-  <subroutine name="sfc_nst_post_init" />
-  <subroutine name="sfc_nst_post_finalize" />
-  <subroutine name="sfc_nst_post_run" />
-</scheme>
