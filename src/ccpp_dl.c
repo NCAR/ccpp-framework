@@ -79,8 +79,16 @@ ccpp_dl_open(const char *scheme, const char *lib, const char *ver,
 		library = malloc(n);
 		memset(library, 0, n);
 		if (strcmp(ver, "") != 0) {
+#ifdef __APPLE__
+			snprintf(library, n, "%s%s.%s%s", prefix, lib,
+				 ver, suffix);
+#elif defined(__linux__) || defined(__unix__)
 			snprintf(library, n, "%s%s%s.%s", prefix, lib,
 				 suffix, ver);
+#else
+		 	warnx("CCPP library name not configured for this operating system");
+		 	return(EXIT_FAILURE);
+#endif
 		} else {
 			snprintf(library, n, "%s%s%s", prefix, lib, suffix);
 		}
