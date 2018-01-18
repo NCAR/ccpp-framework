@@ -15,6 +15,7 @@ from mkcap import Var
 # !! | ...            | ...                                                   |                                    |         |      |         |           |        |          |
 # !!
 # Notes on the input format:
+# - if the argument table starts a new doxygen section, it should start with !> \section instead of !! \section
 # - the "\section arg_table_{SubroutineName,DerivedTypeName,ModuleName}" command denotes the start of the table
 #      - SubroutineName must match the name of the subroutine that the argument table describes
 #      - DerivedTypeName must match the name of the derived type that the argument table describes
@@ -170,7 +171,7 @@ def parse_variable_tables(filename):
             # Check for beginning of new table
             words = line.split()
             # DH* case sensitive
-            if len(words) > 2 and words[0] == '!!' and '\section' in words[1] and 'arg_table_' in words[2]:
+            if len(words) > 2 and words[0] in ['!!', '!>'] and '\section' in words[1] and 'arg_table_' in words[2]:
                 if in_table:
                     raise Exception('Encountered table start for table {0} while still in table {1}'.format(words[2].lstrip('arg_table_'), table_name))
                 table_name = words[2].lstrip('arg_table_')
@@ -180,7 +181,9 @@ def parse_variable_tables(filename):
                 header_line_number = current_line_number + 1
                 line_counter += 1
                 continue
-
+            elif (words[0].startswith('!!') or words[0].startswith('!>')) and '\section' in words[0]:
+                print words
+                raise Exception("Malformatted table found in {0} / {1} / {2}".format(filename, module_name, table_name))
             # If an argument table is found, parse it
             if in_table:
                 words = line.split('|')
@@ -438,11 +441,15 @@ def parse_scheme_tables(filename):
                     line = lines[line_number]
                     words = line.split()
                     for word in words:
-                        if len(words) > 2 and words[0] == '!!' and '\section' in words[1] and 'arg_table_' in words[2]:
+                        if (len(words) > 2 and words[0] in ['!!', '!>'] and '\section' in words[1] and 'arg_table_{0}'.format(subroutine_name) in words[2]):
                             table_found = True
                             header_line_number = line_number + 1
                             table_name = subroutine_name
                             break
+                        else:
+                            for word in words:
+                                if 'arg_table_{0}'.format(subroutine_name) in word:
+                                    raise Exception("Malformatted table found in {0} / {1} / {2} / {3}".format(filename, module_name, scheme_name, subroutine_name))
                     if table_found:
                         break
                 # If an argument table is found, parse it

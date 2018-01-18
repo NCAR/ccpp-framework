@@ -4,6 +4,12 @@
 import os
 import sys
 
+# DH*
+# CONSISTENCY CHECK BETWEEN OPTIONAL ARGUMENTS IN THE METADATA TABLE AND IN
+# THE ACTUAL ARGUMENT LIST?
+# FURTHER CONSISTENCY CHECKS OF RANKS, TYPE, INTENT
+# *DH
+
 # Local modules
 from common import execute
 from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_variable_tables
@@ -14,56 +20,94 @@ from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_var
 
 variable_definition_files = [
     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
+    'FV3/gfsphysics/physics/physcons.f90',
     ]
 
-#driver_files = [
-#    'FV3/GFS_physics_driver.F90',
-#    'FV3/GFS_radiation_driver.F90',
-#    ]
-
+# DH* NEED THIS ONE?
 physicsdirs = [
     'FV3/gfsphysics/physics',
     ]
 
+# DH* separator work physics after big merge and after fixing longname conflicts
 scheme_files = [
-    'FV3/gfsphysics/physics/moninedmf.f.tmp.ccpp-compliant-from-grant-for-testing',
-    ]
-# DH* use output from longnames_autocheck.py to test ccpp_prebuild.py for completeness of variables
-scheme_files = [
-    'manual_fixes_for_testing_ccpp_prebuild/christopherwharrop_harrop_gfs_gmtb-gfsphysics/physics/sfc_nst.f',
-    'manual_fixes_for_testing_ccpp_prebuild/davegill_gfs_separator_SASS_gmtb-gfsphysics/physics/mfdeepcnv.f',
-    'manual_fixes_for_testing_ccpp_prebuild/grantfirl_EDMF_table_gmtb-gfsphysics/physics/moninedmf.f',
-    'manual_fixes_for_testing_ccpp_prebuild/grantfirl_EDMF_table_gmtb-gfsphysics/physics/GFS_PBL_generic.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/grantfirl_EDMF_table_gmtb-gfsphysics/physics/GFS_DCNV_generic.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/grantfirl_EDMF_table_gmtb-gfsphysics/physics/GFS_suite_interstitial.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/grantfirl_EDMF_table_gmtb-gfsphysics/physics/GFS_SCNV_generic.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/gsketefian_gsk_separator_work_gfs_gmtb-gfsphysics/physics/gwdc.f',
-    'manual_fixes_for_testing_ccpp_prebuild/gsketefian_gsk_separator_work_gfs_gmtb-gfsphysics/physics/gwdps.f',
-    'manual_fixes_for_testing_ccpp_prebuild/gsketefian_gsk_separator_work_gfs_gmtb-gfsphysics/physics/rayleigh_damp.f',
-    'manual_fixes_for_testing_ccpp_prebuild/gsketefian_gsk_separator_work_gfs_gmtb-gfsphysics/physics/get_prs_fv3.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/gsketefian_gsk_separator_work_gfs_gmtb-gfsphysics/physics/cnvc90.f',
-    'manual_fixes_for_testing_ccpp_prebuild/gsketefian_gsk_separator_work_gfs_gmtb-gfsphysics/physics/dcyc2.f',
-    'manual_fixes_for_testing_ccpp_prebuild/gsketefian_gsk_separator_work_gfs_gmtb-gfsphysics/physics/ozphys.f',
-    'manual_fixes_for_testing_ccpp_prebuild/JulieSchramm_gfs_separator_shalcnv_gmtb-gfsphysics/physics/mfshalcnv.f',
-    # DH* 'manual_fixes_for_testing_ccpp_prebuild/kellylittleblackdog_seaice_separator_work_gfs_gmtb-gfsphysics/physics/sfc_sice.f',
-    'manual_fixes_for_testing_ccpp_prebuild/lulinxue_GFS_separate_Noah_LSM_master_gfsphysics_gmtb-gfsphysics/physics/sfc_drv.f',
-    'manual_fixes_for_testing_ccpp_prebuild/lulinxue_GFS_separate_Noah_LSM_master_gfsphysics_gmtb-gfsphysics/physics/sfc_diff.f',
-    'manual_fixes_for_testing_ccpp_prebuild/lulinxue_GFS_separate_Noah_LSM_master_gfsphysics_gmtb-gfsphysics/physics/sfc_diag.f',
-    'manual_fixes_for_testing_ccpp_prebuild/lulinxue_GFS_separate_Noah_LSM_master_gfsphysics_gmtb-gfsphysics/physics/GFS_surface_loop_control.f',
-    'manual_fixes_for_testing_ccpp_prebuild/mzhangw_masep_gmtb-gfsphysics/physics/gscond.f',
-    'manual_fixes_for_testing_ccpp_prebuild/mzhangw_masep_gmtb-gfsphysics/physics/precpd.f',
-    'manual_fixes_for_testing_ccpp_prebuild/mzhangw_masep_gmtb-gfsphysics/physics/GFS_calpreciptype.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/mzhangw_masep_gmtb-gfsphysics/physics/GFS_MP_generic_pre.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/mzhangw_masep_gmtb-gfsphysics/physics/GFS_MP_generic_post.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/mzhangw_masep_gmtb-gfsphysics/physics/GFS_zhao_carr_pre.f90',
-    'manual_fixes_for_testing_ccpp_prebuild/pedro-jm_radiation2_gmtb-gfsphysics/physics/radsw_main.f',
-    'manual_fixes_for_testing_ccpp_prebuild/pedro-jm_radiation2_gmtb-gfsphysics/physics/radlw_main.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_DCNV_generic.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_MP_generic_post.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_MP_generic_pre.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_PBL_generic.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_RRTMG_post.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_RRTMG_pre.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_SCNV_generic.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_calpreciptype.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_rad_time_vary.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_radlw_post.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_radlw_pre.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_radsw_post.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_radsw_pre.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_suite_interstitial.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_suite_setup.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_surface_generic.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_surface_loop_control.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/GFS_zhao_carr_pre.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/cnvc90.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/dcyc2.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/get_prs_fv3.f90',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/gscond.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/gwdc.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/gwdps.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/mfdeepcnv.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/mfshalcnv.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/moninedmf.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/ozphys.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/precpd.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/radlw_main.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/radsw_main.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/rayleigh_damp.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/sfc_diag.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/sfc_diff.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/sfc_drv.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/sfc_nst.f',
+    '/Users/dom.heinzeller/work/gmtb-fv3_bigmerge/gmtb-fv3-longnamefix/FV3/gfsphysics/physics/sfc_sice.f',
     ]
 
 target_files = [
-    'FV3/atmos_model.F90',
-    'FV3/gfsphysics/IPD_layer/IPD_Driver.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_CCPP_Driver.F90',
     ]
+
+# Optional arguments - only required for schemes that use optional arguments. This script will throw
+# an exception if it encounters a scheme subroutine with optional arguments if no entry is made in
+# the following dictionary. Valid values are 'all', 'none' or a list of arguments: [ 'var1', 'var3' ].
+optional_arguments = {
+    'module_radsw_main' : {
+        'swrad_run' : [
+            'tendency_of_air_temperature_due_to_shortwave_heating_assuming_clear_sky_on_radiation_time_step',
+            'components_of_surface_downward_shortwave_fluxes',
+            'cloud_liquid_water_path',
+            'mean_effective_radius_for_liquid_cloud',
+            'cloud_ice_water_path',
+            'mean_effective_radius_for_ice_cloud',
+            'cloud_rain_water_path',
+            'mean_effective_radius_for_rain_drop',
+            'cloud_snow_water_path',
+            'mean_effective_radius_for_snow_flake',
+            ],
+        },
+    'module_radlw_main' : {
+        'lwrad_run' : [
+            'tendency_of_air_temperature_due_to_longwave_heating_assuming_clear_sky_on_radiation_time_step',
+            'cloud_liquid_water_path',
+            'mean_effective_radius_for_liquid_cloud',
+            'cloud_ice_water_path',
+            'mean_effective_radius_for_ice_cloud',
+            'cloud_rain_water_path',
+            'mean_effective_radius_for_rain_drop',
+            'cloud_snow_water_path',
+            'mean_effective_radius_for_snow_flake',
+            ],
+        },
+    #'subroutine_name_1' : 'all',
+    #'subroutine_name_2' : 'none',
+    #'subroutine_name_2' : [ 'var1', 'var3'],
+    }
 
 module_include_file = 'ccpp_modules.inc'
 
@@ -75,7 +119,9 @@ fields_include_file = 'ccpp_fields.inc'
 
 # Modules to load for auto-generated ccpp_fields_add code (e.g. error handling)
 MODULE_USE_TEMPLATE = \
-"""use fms_mod, only: error_mesg, FATAL
+"""
+use mpi
+use ccpp_errors, only: ccpp_error
 """
 
 # call ccpp_fields_add(cdata, 'eastward_wind', c_loc(u), size(u), shape(u), ierr, 'm s-1')
@@ -87,16 +133,19 @@ CCPP_FIELDS_ADD_TEMPLATE_STANDARD_VARIABLE_TYPE = \
 """
 call ccpp_fields_add(cdata_block(nb), '{0}', {1}, ierr, '{2}')
 if (ierr /= 0) then
-    call error_mesg('ccpp', 'error calling ccpp_fields_add for field "{0}"', FATAL)
+    call ccpp_error('Unable to add field "{0}" to CCPP data structure')
+    call MPI_FINALIZE(ierr)
+    stop
 end if
 """
 
 CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE_SCALAR = \
 """
 call ccpp_fields_add(cdata_block(nb), '{0}', '', c_loc({1}), ierr)
-!call ccpp_fields_add(cdata_block(nb), '{0}', '', {1}, ierr=ierr)
 if (ierr /= 0) then
-    call error_mesg('ccpp', 'error calling ccpp_fields_add for field "{0}"', FATAL)
+    call ccpp_error('Unable to add field "{0}" to CCPP data structure')
+    call MPI_FINALIZE(ierr)
+    stop
 end if
 """
 
@@ -104,7 +153,9 @@ CCPP_FIELDS_ADD_TEMPLATE_DERIVED_VARIABLE_TYPE_ARRAY = \
 """
 call ccpp_fields_add(cdata_block(nb), '{0}', '', c_loc({1}), rank=size({1}), dims=shape({1}), ierr=ierr)
 if (ierr /= 0) then
-    call error_mesg('ccpp', 'error calling ccpp_fields_add for field "{0}"', FATAL)
+    call ccpp_error('Unable to add field "{0}" to CCPP data structure')
+    call MPI_FINALIZE(ierr)
+    stop
 end if
 """
 
@@ -122,12 +173,60 @@ def gather_variable_definitions():
     return metadata_define
 
 def collect_physics_subroutines():
-    """Scan all Fortran source files in the physics directory for subroutines with argument tables"""
+    """Scan all Fortran source files in the physics directory for subroutines with argument tables."""
     metadata_request = {}
     for scheme_file in scheme_files:
         metadata = parse_scheme_tables(scheme_file)
         metadata_request = merge_metadata_dicts(metadata_request, metadata)
     return metadata_request
+
+def check_optional_arguments(metadata_request):
+    """Check if for each subroutine with optional arguments, an entry exists in the
+    optional_arguments dictionary. This is required to generate the caps correctly
+    and to assess whether the variable is required from the host model. Optional
+    arguments that are not requested by the model as specified in the dictionary
+    optional_arguments are deleted from the list of requested data individually
+    for each subroutine."""
+
+    success = True
+    for var_name in sorted(metadata_request.keys()):
+        # The notation metadata_request[var_name][:] is a convenient way to make a copy
+        # of the metadata_request[var_name] list, which allows removing items as we go
+        for var in metadata_request[var_name][:]:
+            if var.optional in ['t', 'T']:
+                for item in var.container.split(' '):
+                    subitems = item.split('_')
+                    if subitems[0] == 'MODULE':
+                        module_name = '_'.join(subitems[1:])
+                    elif subitems[0] == 'SUBROUTINE':
+                        subroutine_name = '_'.join(subitems[1:])
+                    else:
+                        success = False
+                        print 'Error, invalid identifier {0} in container value {1} of requested variable {2}'.format(
+                                                                                 subitems[0], var.container, var_name)
+                if not module_name in optional_arguments.keys() or not \
+                        subroutine_name in optional_arguments[module_name].keys():
+                    success = False
+                    print 'Error, No entry found in optional_arguments dictionary for optional argument ' + \
+                           '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, module_name)
+                if type(optional_arguments[module_name][subroutine_name]) is list:
+                    if var_name in optional_arguments[module_name][subroutine_name]:
+                        print "Optional argument {0} to subroutine {1} in module {2} is required, keep in list".format(
+                                                                                var_name, subroutine_name, module_name)
+                    else:
+                        print "Optional argument {0} to subroutine {1} in module {2} is not required, remove from list".format(
+                                                                                        var_name, subroutine_name, module_name)
+                        metadata_request[var_name].remove(var)
+                elif optional_arguments[module_name][subroutine_name] == 'all':
+                    print "Optional argument {0} to subroutine {1} in module {2} is required, keep in list".format(
+                                                                            var_name, subroutine_name, module_name)
+
+        # If metadata_request[var_name] is now empty, i.e. the variable is not
+        # requested at all by the model, remove the entry from metadata_request
+        if not metadata_request[var_name]:
+            del metadata_request[var_name]
+
+    return (success, metadata_request)
 
 def compare_metadata(metadata_define, metadata_request):
     """Compare the requested metadata to the defined one. For each requested entry, a
@@ -137,19 +236,36 @@ def compare_metadata(metadata_define, metadata_request):
     modules = []
     metadata = {}
     for var_name in sorted(metadata_request.keys()):
+        # Check if all requests for this variable are optional
+        optional = True
+        for var in metadata_request[var_name]:
+            if var.optional in ['f', 'F']:
+                optional = False
         # Check that variable is provided by the model
         if not var_name in metadata_define.keys():
-            success = False
-            missing += 1
-            print 'Error, requested variable {0} not provided by the model'.format(var_name)
+            requested_by = ' & '.join(var.container for var in metadata_request[var_name])
+            if optional:
+                print 'WARNSFX, {0}, {1}'.format(var_name, requested_by)
+                print 'Warning, optional variable {0} requested by {1} not provided by the model'.format(var_name, requested_by)
+            else:
+                success = False
+                missing += 1
+                print 'ERRSFX, {0}, {1}'.format(var_name, requested_by)
+                print 'Error, variable {0} requested by {1} not provided by the model'.format(var_name, requested_by)
             continue
         # Check that an unambiguous target exists for this variable
         if len(metadata_define[var_name]) > 1:
             success = False
-            print 'Error, requested variable {0} cannot be identified unambiguously.' +\
-                    ' multiple definitions in {1}'.format(' & '.join(var.container for var in metadata_define[var_name]))
+            requested_by = ' & '.join(var.container for var in metadata_request[var_name])
+            provided_by = ' & '.join(var.container for var in metadata_define[var_name])
+            print 'Error, variable {0} requested by {1} cannot be identified unambiguously. Multiple definitions in {2}'.format(var_name, requested_by, provided_by)
             continue
         # DH* MISSING - compliancy check
+        if not metadata_request[var_name][0].compatible(metadata_define[var_name][0]):
+            raise Exception('Incompatible entries in metadata for variable {0}:\n'.format(var_name) +\
+                            'provided:  {0}\n'.format(metadata_define[var_name][0].print_debug()) +\
+                            'requested: {0}'.format(metadata_request[var_name][0].print_debug()))
+
         # Construct the actual target variable and list of modules to use from the information in 'container'
         var = metadata_define[var_name][0]
         target = ''
@@ -172,7 +288,10 @@ def compare_metadata(metadata_define, metadata_request):
         #print var_name, metadata_define[var_name][0].type
         for var in metadata[var_name]:
             var.target = target
-            print 'Requested variable {0} in {1} matched to target {2} in module {3}'.format(var_name, var.container, target, modules[-1])
+            if optional:
+                print 'Optional variable {0} in {1} matched to target {2} in module {3}'.format(var_name, var.container, target, modules[-1])
+            else:
+                print 'Requested variable {0} in {1} matched to target {2} in module {3}'.format(var_name, var.container, target, modules[-1])
 
     # Remove duplicated from list of modules
     modules = sorted(list(set(modules)))
@@ -244,14 +363,14 @@ def generate_include_files(module_use_statements, ccpp_fields_add_statements):
 
 def main():
     metadata_define = gather_variable_definitions()
-    print metadata_define
     metadata_request = collect_physics_subroutines()
-    print metadata_request
-    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request)
-    print metadata
+    (success, metadata_request) = check_optional_arguments(metadata_request)
     if not success:
-        print 'ERROR, Call to compare_metadata failed. Ignore and proceed for testing purposes ...'
-        #raise Exception('Call to compare_metadata failed.')
+        raise Exception('Call to check_optional_arguments failed.')
+    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request)
+    if not success:
+        #print 'ERROR, Call to compare_metadata failed. Ignore and proceed for testing purposes ...'
+        raise Exception('Call to compare_metadata failed.')
     print
     module_use_statements = create_module_use_statements(modules)
     print "module_use_statements:"
