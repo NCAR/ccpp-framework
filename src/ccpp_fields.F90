@@ -299,7 +299,7 @@ module ccpp_fields
         integer                                        :: new_fields_max
         type(ccpp_field_t), allocatable, dimension(:)  :: tmp
 
-        call ccpp_debug('Called ccpp_fields_get_ptr for field ' // trim(standard_name))
+        call ccpp_debug('Called ccpp_fields_add_ptr for field ' // trim(standard_name))
 
         ierr_local = 0
 
@@ -985,10 +985,6 @@ module ccpp_fields
 
     end subroutine ccpp_fields_add_l_7
 
-    !subroutine ccpp_fields_add_derived_type_scalar(cdata, standard_name, units, ptr, ierr)
-    !                               
-    !                               cdata, standard_name, ptr, cdata_block(nb), '{0}', '', {1}, ierr)
-    !end subroutine ccpp_fields_add_derived_type_scalar
     !------------------------------------------------------------------!
     !>
     !! Single precision (32-bit) integer field retrieval subroutines.
