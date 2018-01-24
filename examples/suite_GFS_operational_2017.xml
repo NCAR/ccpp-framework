@@ -4,21 +4,24 @@
   <init>IPD_initialize</init>
   <ipd part="1">
     <subcycle loop="1">
-      <scheme>GFS_phys_time_vary1_run</scheme>
+      <scheme>GFS_phys_time_vary_1_run</scheme>
       <scheme>GFS_rad_time_vary_run</scheme>
-      <scheme>GFS_phys_time_vary2_run</scheme>
+      <scheme>GFS_phys_time_vary_2_run</scheme>
     </subcycle>
   </ipd>
   <ipd part="2">
     <subcycle loop="1">
       <scheme>GFS_RRTMG_pre_run</scheme>
-      <scheme>swrad_run</scheme>
-      <scheme>swrad_post_run</scheme>
-      <scheme>lwrad_pre_run</scheme>
-      <scheme>lwrad_run</scheme>
-      <scheme>lwrad_post_run</scheme>
+      <scheme>radsw_run</scheme>
+      <scheme>GFS_radsw_post_run</scheme>
+      <scheme>GFS_radlw_pre_run</scheme>
+      <scheme>radlw_run</scheme>
+      <scheme>GFS_radlw_post_run</scheme>
       <scheme>GFS_RRTMG_post_run</scheme>
-      <scheme>GFS_suite_interstitial_1_run</scheme>
+    </subcycle>
+  </ipd>
+  <ipd part="3">
+    <subcycle loop="1">
       <scheme>get_prs_fv3_run</scheme>
       <scheme>GFS_suite_interstitial_2_run</scheme>
       <scheme>dcyc2t3_run</scheme>
@@ -27,7 +30,6 @@
       <scheme>GFS_surface_generic_pre_run</scheme>
       <scheme>sfc_sice_pre_run</scheme>
       <scheme>lsm_noah_pre_run</scheme>
-
       <scheme>sfc_ex_coef_run</scheme>
       <scheme>GFS_surface_loop_control_part1_run</scheme>
       <scheme>sfc_nst_pre_run</scheme>
@@ -44,7 +46,6 @@
       <scheme>lsm_noah_run</scheme>
       <scheme>sfc_sice_run</scheme>
       <scheme>GFS_surface_loop_control_part2_run</scheme>
-
       <scheme>sfc_diag_run</scheme>
       <scheme>lsm_noah_post_run</scheme>
       <scheme>sfc_sice_post_run</scheme>
@@ -77,8 +78,11 @@
       <scheme>precpd_run</scheme>
       <scheme>GFS_calpreciptype_run</scheme>
       <scheme>GFS_MP_generic_post_run</scheme>
-      <scheme>GFS_suite_interstitial_5_run</scheme>
-
+    </subcycle>
+  </ipd>
+  <ipd part="4">
+    <subcycle loop="1">
+      <scheme>GFS_stochastics_run</scheme>
     </subcycle>
   </ipd>
 </suite>
