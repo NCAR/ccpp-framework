@@ -335,6 +335,7 @@ module ccpp_suite
                 call ccpp_error('A problem occured loading '         &
                                 // trim(suite%finalize%name) // ' from ' &
                                 // trim(suite%finalize%library))
+                return
             end if
         end if
 
@@ -351,6 +352,7 @@ module ccpp_suite
                         call ccpp_error('A problem occured loading ' &
                                         // trim(s%name) // ' from '  &
                                         // trim(s%library))
+                        return
                     end if
                     end associate
                 end do
@@ -371,8 +373,8 @@ module ccpp_suite
     subroutine ccpp_suite_unload(suite, ierr)
 
         type(ccpp_suite_t), intent(inout)  :: suite
+        integer           , intent(  out)  :: ierr
 
-        integer                            :: ierr
         integer                            :: i
         integer                            :: j
         integer                            :: k
@@ -386,6 +388,7 @@ module ccpp_suite
             if (ierr /= 0) then
                 call ccpp_error('A problem occured closing '         &
                                 // trim(suite%init%library))
+                return
             end if
         end if
 
@@ -394,6 +397,7 @@ module ccpp_suite
             if (ierr /= 0) then
                 call ccpp_error('A problem occured closing '         &
                                 // trim(suite%finalize%library))
+                return
             end if
         end if
 
@@ -405,6 +409,7 @@ module ccpp_suite
                     if (ierr /= 0) then
                         call ccpp_error('A problem occured closing ' &
                                         // trim(s%library))
+                        return
                     end if
                     end associate
                 end do
