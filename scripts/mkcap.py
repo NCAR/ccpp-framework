@@ -10,13 +10,15 @@ import sys
 import getopt
 import xml.etree.ElementTree as ET
 
+STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
+
 #################### Main program routine
 def main():
     args = parse_args()
     data = parse_scheme(args['scheme'])
     cap = Cap()
     cap.filename = args['output']
-    cap.write(data)
+    cap.write_from_xml(data)
 
 #################### Parse the command line arguments
 def parse_args():
@@ -106,6 +108,9 @@ class Var(object):
         self._type          = None
         self._rank          = None
         self._container     = None
+        self._kind          = None
+        self._intent        = None
+        self._optional      = None
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -169,6 +174,15 @@ class Var(object):
             self._rank = '('+ ','.join([':'] * value) +')'
 
     @property
+    def kind(self):
+        '''Get the kind of the variable.'''
+        return self._kind
+
+    @kind.setter
+    def kind(self, value):
+        self._kind = value
+
+    @property
     def intent(self):
         '''Get the intent of the variable.'''
         return self._intent
@@ -200,33 +214,87 @@ class Var(object):
         self._container = value
 
     def compatible(self, other):
-        # DH* 20171206 - removed long_name from mandatory items for compatibility
-        #            and self.long_name == other.long_name \
         return self.standard_name == other.standard_name \
             and self.units == other.units \
             and self.type == other.type \
+            and self.kind == other.kind \
             and self.rank == other.rank
 
     def print_def(self):
         '''Print the definition line for the variable.'''
-        str = "{s.type}, pointer     :: {s.local_name}{s.rank}"
+        if self.type in STANDARD_VARIABLE_TYPES:
+            if self.kind:
+                str = "{s.type}({s._kind}), pointer     :: {s.local_name}{s.rank}"
+            else:
+                str = "{s.type}, pointer     :: {s.local_name}{s.rank}"
+        else:
+            if self.kind:
+                error_message = "Generating variable definition statements for derived types with" + \
+                                " kind attributes not implemented; variable: {0}".format(self.standard_name)
+                raise Exception(error_message)
+            else:
+                str = "type({s.type}), pointer     :: {s.local_name}{s.rank}"
         return str.format(s=self)
 
     def print_get(self):
-        '''Print the data retrieval line for the variable.'''
-
-        str='''
-        call ccpp_fields_get(cdata, '{s.standard_name}', {s.local_name}, ierr)
-        if (ierr /= 0) then
-            call ccpp_error('Unable to retrieve {s.standard_name}')
-            return
-        end if'''
+        '''Print the data retrieval line for the variable. Depends on the type and of variable'''
+        # Standard-type variables, scalar and array
+        if self.type in STANDARD_VARIABLE_TYPES:
+            str='''
+            call ccpp_fields_get(cdata, '{s.standard_name}', {s.local_name}, ierr)
+            if (ierr /= 0) then
+                call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
+            end if'''
+        # Derived-type variables, scalar
+        elif self.rank == '':
+            str='''
+            call ccpp_fields_get(cdata, '{s.standard_name}', cptr, ierr)
+            if (ierr /= 0) then
+                call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
+            end if
+            call c_f_pointer(cptr, {s.local_name})'''
+        # Derived-type variables, array
+        else:
+            str='''
+            call ccpp_fields_get(cdata, '{s.standard_name}', cptr, ierr, dims=cdims)
+            if (ierr /= 0) then
+                call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
+            end if
+            call c_f_pointer(cptr, {s.local_name}, cdims)
+            deallocate(cdims)'''
         return str.format(s=self)
+
+    def print_add(self, ccpp_data_structure):
+        '''Print the data addition line for the variable. Depends on the type of variable.
+        Since the name of the ccpp data structure is not known, this needs to be filled later.'''
+        # Standard-type variables, scalar and array
+        if self.type in STANDARD_VARIABLE_TYPES:
+            str='''
+            call ccpp_fields_add({ccpp_data_structure}, '{s.standard_name}', {s.target}, ierr, '{s.units}')
+            if (ierr /= 0) then
+                call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
+                return
+            end if'''
+        # Derived-type variables, scalar
+        elif self.rank == '':
+            str='''
+            call ccpp_fields_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), ierr)
+            if (ierr /= 0) then
+                call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
+                return
+            end if'''
+        # Derived-type variables, array
+        else:
+            str='''
+            call ccpp_fields_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), rank=size({s.target}), dims=shape({s.target}), ierr=ierr)
+            if (ierr /= 0) then
+                call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
+                return
+            end if'''
+        return str.format(ccpp_data_structure=ccpp_data_structure, s=self)
 
     def print_debug(self):
         '''Print the data retrieval line for the variable.'''
-    
-        # DH* 20171206 - removed long_name from mandatory items for compatibility
         str='''Contents of {s} (* = mandatory for compatibility):
         standard_name = {s.standard_name} *
         long_name     = {s.long_name}
@@ -234,6 +302,7 @@ class Var(object):
         local_name    = {s.local_name}
         type          = {s.type} *
         rank          = {s.rank} *
+        kind          = {s.kind} *
         intent        = {s.intent}
         optional      = {s.optional}
         container     = {s.container}'''
@@ -241,28 +310,22 @@ class Var(object):
     
     @classmethod
     def from_table(cls, columns, data):
-        # DH* - workaround to use the existing table headers
-        standard_name = data[columns.index('longname')]
-        #standard_name = data[columns.index('standard_name')]
-        long_name = data[columns.index('description')]
-        #long_name = data[columns.index('long_name')]
-        units = data[columns.index('units')]
-        local_name = data[columns.index('local var name')]
-        #local_name = data[columns.index('local_name')]
-        type = data[columns.index('type')]
-        rank = data[columns.index('rank')]
-        intent = data[columns.index('intent')]
-        optional = data[columns.index('optional')]
+        var = cls()
+        # DH* TODO RENAME COLUMNS IN TABLES
+        var.standard_name = data[columns.index('longname')]
+        #var.standard_name = data[columns.index('standard_name')]
+        var.long_name     = data[columns.index('description')]
+        #var.long_name     = data[columns.index('long_name')]
+        var.units         = data[columns.index('units')]
+        #var.local_name    = data[columns.index('local_name')]
+        var.local_name    = data[columns.index('local var name')]
+        var.rank          = int(data[columns.index('rank')])
+        var.type          = data[columns.index('type')]
+        var.kind          = data[columns.index('kind')]
+        var.intent        = data[columns.index('intent')]
+        var.optional      = data[columns.index('optional')]
         # *DH
-        return cls(standard_name = standard_name,
-                   long_name = long_name,
-                   units = units,
-                   local_name = local_name,
-                   type = type,
-                   rank = rank,
-                   intent = intent,
-                   optional = optional,
-                   )
+        return var
 
     def to_xml(self, element):
         element.set('name', self._standard_name)
@@ -319,6 +382,9 @@ module {module}_cap
                       only: ccpp_error
     use            :: {module}, &
                       only: {subroutines}
+    ! Other modules required, e.g. type definitions
+    {module_use}
+
     implicit none
 
     private
@@ -334,22 +400,26 @@ module {module}_cap
         type(c_ptr), intent(inout) :: ptr
 
         type(ccpp_t), pointer      :: cdata
+        type(c_ptr)                :: cptr
+        integer, allocatable       :: cdims(:)
         integer                    :: ierr
 {var_defs}
 
         call c_f_pointer(ptr, cdata)
 
-        {var_gets}
+{var_gets}
 
         call {subroutine}({args})
+
     end subroutine {subroutine}_cap
 '''
 
     def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, data):
+    def write_from_xml(self, data):
         if (self.filename is not sys.stdout):
             f = open(self.filename, 'w')
         else:
@@ -359,6 +429,7 @@ module {module}_cap
         sub_caps = ','.join(["{0}_cap".format(s) for s in data['subs']])
 
         f.write(Cap.header.format(module = data['module'],
+                                  module_use = '',
                                   subroutines = subs,
                                   subroutine_caps = sub_caps))
         for (k, v) in data['subs'].items():
@@ -370,7 +441,142 @@ module {module}_cap
                                    var_gets=var_gets,
                                    args=args))
 
-        f.write("end module {module}_cap\n".format(module = data['module']))
+        f.write("end module {module}_cap\n".format(moduleZ= data['module']))
+
+        if (f is not sys.stdout):
+            f.close()
+
+    def write(self, module, module_use, data):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        subs = ','.join(["{0}".format(s) for s in data.keys()])
+        sub_caps = ','.join(["{0}_cap".format(s) for s in data.keys()])
+
+        f.write(Cap.header.format(module = module,
+                                  module_use = module_use,
+                                  subroutines = subs,
+                                  subroutine_caps = sub_caps))
+
+        for sub in data.keys():
+            var_defs = "\n".join([" "*8 + x.print_def() for x in data[sub]])
+            var_gets = "\n".join([x.print_get() for x in data[sub]])
+            # Split args so that lines don't exceed 260 characters (for PGI)
+            args = ''
+            length = 0
+            for x in data[sub]:
+                arg = "{0}={0},".format(x.local_name)
+                args += arg
+                length += len(arg)
+                if length > 70 and not x == data[sub][-1]:
+                    args += ' &\n                  '
+                    length = 0
+            args = args.rstrip(',')
+            # Write to scheme cap
+            f.write(Cap.sub.format(subroutine=sub,
+                                   var_defs=var_defs,
+                                   var_gets=var_gets,
+                                   args=args))
+        f.write("end module {module}_cap\n".format(module = module))
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+class CapsMakefile(object):
+
+    header='''
+# All CCPP caps are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+CAPS_F90 ='''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, caps):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for cap in caps:
+            contents += ' \\\n\t   {0}'.format(cap)
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+class SchemesMakefile(object):
+
+    header='''
+# All CCPP schemes are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+SCHEMES_F =
+
+SCHEMES_F90 =
+
+SCHEMES_f =
+
+SCHEMES_f90 ='''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, schemes):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        schemes_F = 'SCHEMES_F ='
+        schemes_F90 = 'SCHEMES_F90 ='
+        schemes_f = 'SCHEMES_f ='
+        schemes_f90 = 'SCHEMES_f90 ='
+        for scheme in schemes:
+            if scheme.endswith('.F'):
+                schemes_F += ' \\\n\t   {0}'.format(scheme)
+            elif scheme.endswith('.F90'):
+                schemes_F90 += ' \\\n\t   {0}'.format(scheme)
+            elif scheme.endswith('.f'):
+                schemes_f += ' \\\n\t   {0}'.format(scheme)
+            elif scheme.endswith('.f90'):
+                schemes_f90 += ' \\\n\t   {0}'.format(scheme)
+        contents = contents.replace('SCHEMES_F =', schemes_F)
+        contents = contents.replace('SCHEMES_F90 =', schemes_F90)
+        contents = contents.replace('SCHEMES_f =', schemes_f)
+        contents = contents.replace('SCHEMES_f90 =', schemes_f90)
+        f.write(contents)
 
         if (f is not sys.stdout):
             f.close()
