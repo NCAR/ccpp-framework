@@ -269,6 +269,10 @@ module ccpp_fields
         end if
 
         ierr = ccpp_field_idx_finalize(cdata%fields_idx)
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to clean up cdata field index')
+            return
+        end if
 
     end subroutine ccpp_fields_finalize
 
