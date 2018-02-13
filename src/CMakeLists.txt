@@ -68,6 +68,14 @@ if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
 endif()
 
 #------------------------------------------------------------------------------
+# Pass debug/release flag to Fortran files for preprocessor
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DDEBUG")
+else(CMAKE_BUILD_TYPE)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DRELEASE")
+endif()
+
+#------------------------------------------------------------------------------
 # Add the toplevel source directory to our include directoies (for .h)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 

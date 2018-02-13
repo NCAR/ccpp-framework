@@ -18,10 +18,6 @@
 !
 module ccpp_errors
 
-! DH* - if cmake build types are aligned with NEMS build types,
-! need to change this to #define DEBUG strcmp(CMAKE_BUILD_TYPE, "DEBUG")
-#define DEBUG strcmp(CMAKE_BUILD_TYPE, "Debug")
-
     use, intrinsic :: iso_fortran_env,                                 &
                       only: error_unit, output_unit
 
