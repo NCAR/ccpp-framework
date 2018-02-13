@@ -22,7 +22,7 @@ enable_language(Fortran)
 #------------------------------------------------------------------------------
 # Set package definitions
 set(PACKAGE "CCPP")
-set(AUTHORS  "Timothy Brown" "David Gill")
+set(AUTHORS  "Timothy Brown" "David Gill" "Dom Heinzeller")
 string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
