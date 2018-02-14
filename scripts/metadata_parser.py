@@ -170,8 +170,8 @@ def parse_variable_tables(filename):
             # This is case sensitive
             if len(words) > 2 and words[0] in ['!!', '!>'] and '\section' in words[1] and 'arg_table_' in words[2]:
                 if in_table:
-                    raise Exception('Encountered table start for table {0} while still in table {1}'.format(words[2].lstrip('arg_table_'), table_name))
-                table_name = words[2].lstrip('arg_table_')
+                    raise Exception('Encountered table start for table {0} while still in table {1}'.format(words[2].replace('arg_table_',''), table_name))
+                table_name = words[2].replace('arg_table_','')
                 if not (table_name == module_name or table_name in registry[module_name].keys()):
                     raise Exception('Encountered table with name {0} without corresponding module or type name'.format(table_name))
                 in_table = True
@@ -319,7 +319,7 @@ def parse_scheme_tables(filename):
 
     # Argument lists of each subroutine in the file
     arguments = collections.OrderedDict()
-    
+
     # Read all lines of the file at once
     with (open(filename, 'r')) as file:
         file_lines = file.readlines()
@@ -411,7 +411,7 @@ def parse_scheme_tables(filename):
                     raise Exception('Encountered closing statement "end" without descriptor (subroutine, module, ...): ' +\
                                     'line {0}="{1}" in file {2}'.format(original_line_numbers[current_line_number], line, filename))
             line_counter += 1
-        
+
         # Check that for each registered subroutine the start and end lines were found
         for scheme_name in registry[module_name].keys():
             for subroutine_name in registry[module_name][scheme_name].keys():

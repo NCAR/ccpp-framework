@@ -92,18 +92,20 @@ list(APPEND LIBS "ccpp")
 #------------------------------------------------------------------------------
 # Set the sources
 set(SOURCES
-    scm.f90
+    scm_test1_kinds.f90
+    scm_test1.f90
+    scm_test1_cap.F90
 )
 
 #------------------------------------------------------------------------------
 # Add the auto-generated caps
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90
-    DEPENDS ${CCPP_MKCAP}
-    COMMAND ${CCPP_MKCAP} -o ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90
-                             ${CMAKE_CURRENT_SOURCE_DIR}/scheme.xml
-)
-list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90)
+#add_custom_command(
+#    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90
+#    DEPENDS ${CCPP_MKCAP}
+#    COMMAND ${CCPP_MKCAP} -o ${CMAKE_CURRENT_BINARY_DIR}/scm_cap.f90
+#                             ${CMAKE_CURRENT_SOURCE_DIR}/scheme.xml
+#)
+#list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/scm_test1_cap.f90)
 
 
 add_library(scm ${SOURCES})
@@ -112,4 +114,3 @@ set_target_properties(scm PROPERTIES VERSION ${PROJECT_VERSION}
                                      SOVERSION ${PROJECT_VERSION_MAJOR}
                                      COMPILE_FLAGS ${OpenMP_Fortran_FLAGS}
                                      LINK_FLAGS ${OpenMP_Fortran_FLAGS})
-
