@@ -15,7 +15,7 @@
 # - table headers are the first row; right now, the only ones parsed into XML (only ones required) are 'local var name' => id, 'longname' => name, units => units, rank => rank, type => type
 # - the second row must have the |---|-----| format
 # - after the last row of the table, there should be a blank doxygen line (only '!!') to denote the end of the table
-# Output: for each filename specified, this routine converts the argument tables for all subroutines (*_init, *_run, *_finalize) into an XML file suitable to be used with mkcap (which generates the fortran code for the scheme cap)
+# Output: for each filename specified, this routine converts the argument tables for all subroutines (*_init, *_run, *_finalize) into an XML file suitable to be used with mkcap.py (which generates the fortran code for the scheme cap)
 # - the script generates a separate file for each module within the given files
 
 import argparse  #needed for command line argument filenames
@@ -160,7 +160,7 @@ def parse_scheme_tables(files):
                    table_header_sets.append([])
                    var_data_sets.append([])
 
-            #write out the XML in the format that mkcap wants
+            #write out the XML in the format that mkcap.py wants
             top = ET.Element('scheme')
             top.set('module', scheme_name)
             for j in range(len(sub_names)):

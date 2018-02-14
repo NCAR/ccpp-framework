@@ -176,9 +176,7 @@ def main():
             if not os.path.isfile(file):
                 raise Exception('Input file {0} for user {1} and branch {2} not found.'.format(file, user, branch))
         xmlfiles = parse_scheme_tables(files)
-        #print xmlfiles
         schemes = parse_xml_files(xmlfiles)
-        #print schemes
 
         for driverfile in separator['driverfiles']:
             driverfilepath = os.path.join(clonedir, 'GFS_layer', driverfile)

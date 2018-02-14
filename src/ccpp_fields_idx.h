@@ -59,10 +59,10 @@ int ccpp_field_idx_add(const char *, void **);
 int ccpp_field_idx_find(const char *, void **);
 
 /** CCPP field index sorting routine. **/
-int ccpp_field_idx_sort(void **);
+static int ccpp_field_idx_sort(void **);
 
 /** CCPP field index array extension. **/
-int ccpp_field_idx_grow(void **);
+static int ccpp_field_idx_grow(void **);
 
 /** CCPP field index maximum number of fields. **/
 int ccpp_field_idx_max(void **);

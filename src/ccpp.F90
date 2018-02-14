@@ -50,20 +50,20 @@ module ccpp
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_init')
+        !call ccpp_debug('Called ccpp_init')
 
         ! Initialize the suite
         call ccpp_suite_init(filename, cdata%suite, ierr)
         if (ierr /= 0) then
-                call ccpp_error('In initializing the CCPP suite')
-                return
+            call ccpp_error('In initializing the CCPP suite')
+            return
         end if
 
         ! Initialize the fields
         call ccpp_fields_init(cdata, ierr)
         if (ierr /= 0) then
-                call ccpp_error('In initializing the CCPP fields')
-                return
+            call ccpp_error('In initializing the CCPP fields')
+            return
         end if
 
     end subroutine ccpp_init
@@ -80,7 +80,7 @@ module ccpp
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_finalize')
+        !call ccpp_debug('Called ccpp_finalize')
 
         ! Finalize the suite
         call ccpp_suite_finalize(cdata%suite, ierr)

@@ -22,7 +22,7 @@ enable_language(Fortran)
 #------------------------------------------------------------------------------
 # Set package definitions
 set(PACKAGE "CCPP")
-set(AUTHORS  "Timothy Brown" "David Gill")
+set(AUTHORS  "Timothy Brown" "David Gill" "Dom Heinzeller")
 string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
@@ -32,6 +32,47 @@ string(TIMESTAMP YEAR "%Y")
 # GCC and Intel do NOT do this, it is name simply as b.
 if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
     message(STATUS "WARNING: PGI compiler is not fully ISO_C compliant; working solution involves a hack pgifix.py")
+endif()
+
+#------------------------------------------------------------------------------
+# CMake Modules
+# Set the CMake module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+#------------------------------------------------------------------------------
+# Find OpenMP for C/C++
+if (OPENMP)
+  find_package(OpenMP)
+  if(OPENMP_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    message(STATUS "Enabled OpenMP support for C/C++ compiler")
+  else(OPENMP_FOUND)
+    message (FATAL_ERROR "C/C++ compiler does not support OpenMP")
+  endif()
+else(OPENMP)
+    message (STATUS "Disable OpenMP support for C/C++ compiler")
+endif()
+
+#------------------------------------------------------------------------------
+# Find OpenMP for Fortran
+if (OPENMP)
+  FIND_PACKAGE(OpenMP_Fortran)
+  if(OpenMP_FLAG_DETECTED)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+    message(STATUS "Enabled OpenMP support for Fortran compiler")
+  else(OpenMP_FLAG_DETECTED)
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      # On MacOSX, OpenMP_FLAG_DETECTED is not set correctly, even though
+      # the flags and libraries are set correctly. Force cmake to continue.
+      message (INFO "Detecting OpenMP on MacOSX not working properly - force CMAKE_Fortran_FLAGS='${CMAKE_Fortran_FLAGS}'")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+    else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      message (FATAL_ERROR "Fortran compiler does not support OpenMP")
+    endif()
+  endif()
+else(OPENMP)
+    message (STATUS "Disable OpenMP support for Fortran compiler")
 endif()
 
 #------------------------------------------------------------------------------
@@ -59,15 +100,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 #------------------------------------------------------------------------------
-# CMake Modules
-#
-#Set the CMake module path
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
-#------------------------------------------------------------------------------
 # By default we want a shared library
 option(BUILD_SHARED_LIBS "Build a shared library" ON)
-
 
 #------------------------------------------------------------------------------
 # Enable code coverage

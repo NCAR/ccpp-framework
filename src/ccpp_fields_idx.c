@@ -55,8 +55,10 @@
 static int
 cmp(const void *f1, const void *f2)
 {
-	struct ccpp_field *f_1 = *(struct ccpp_field * const *) f1;
-	struct ccpp_field *f_2 = *(struct ccpp_field * const *) f2;
+	struct ccpp_field *f_1;
+	struct ccpp_field *f_2;
+	f_1 = *(struct ccpp_field * const *) f1;
+	f_2 = *(struct ccpp_field * const *) f2;
 	return strcmp(f_1->name, f_2->name);
 }
 
@@ -72,8 +74,8 @@ cmp(const void *f1, const void *f2)
 int
 ccpp_field_idx_init(void **index)
 {
-
-	struct ccpp_field_idx *f_index = NULL;
+	struct ccpp_field_idx *f_index;
+	f_index = NULL;
 
 	*index = (struct ccpp_field_idx *)malloc(sizeof(struct ccpp_field_idx));
 	if (*index == NULL) {
@@ -103,9 +105,11 @@ ccpp_field_idx_init(void **index)
 int
 ccpp_field_idx_finalize(void **index)
 {
-	int i = 0;
+	int i;
 
-	struct ccpp_field_idx *f_index = (struct ccpp_field_idx *)(*index);
+	struct ccpp_field_idx *f_index;
+
+	f_index = (struct ccpp_field_idx *)(*index);
 
 	for (i = 0; i < f_index->n; ++i) {
 		if (f_index->fields[i]->name) {
@@ -135,9 +139,12 @@ ccpp_field_idx_finalize(void **index)
 int
 ccpp_field_idx_add(const char *name, void **index)
 {
-	struct ccpp_field_idx *f_index = (struct ccpp_field_idx *)(*index);
-	int n = 0;
-	size_t len = 0;
+	struct ccpp_field_idx *f_index;
+	int n;
+	size_t len;
+	f_index = (struct ccpp_field_idx *)(*index);
+	n = 0;
+	len = 0;
 
 	n = f_index->n;
 	if (n == f_index->max) {
@@ -173,11 +180,14 @@ ccpp_field_idx_add(const char *name, void **index)
 int
 ccpp_field_idx_find(const char *name, void **index)
 {
-	int n = 0;
-	struct ccpp_field  *key = NULL;
-	struct ccpp_field **res = NULL;
-
-	struct ccpp_field_idx *f_index = (struct ccpp_field_idx *)(*index);
+	int n;
+	struct ccpp_field  *key;
+	struct ccpp_field **res;
+	struct ccpp_field_idx *f_index;
+	n = 0;
+	key = NULL;
+	res = NULL;
+	f_index = (struct ccpp_field_idx *)(*index);
 
 	if (f_index->sorted == 0) {
 		ccpp_field_idx_sort(index);
@@ -209,10 +219,11 @@ ccpp_field_idx_find(const char *name, void **index)
  * @param[in,out] index    The index array.
  * @retval        0        If there was no error.
  **/
-int
+static int
 ccpp_field_idx_sort(void **index)
 {
-	struct ccpp_field_idx *f_index = (struct ccpp_field_idx *)(*index);
+	struct ccpp_field_idx *f_index;
+	f_index = (struct ccpp_field_idx *)(*index);
 
 	qsort(f_index->fields, f_index->n, sizeof(struct ccpp_field *), cmp);
 	f_index->sorted = 1;
@@ -226,12 +237,15 @@ ccpp_field_idx_sort(void **index)
  * @param[in,out] index    The index array.
  * @retval        0        If there was no error.
  **/
-int
+static int
 ccpp_field_idx_grow(void **index)
 {
-	struct ccpp_field_idx *f_index = (struct ccpp_field_idx *)(*index);
-	struct ccpp_field **new = NULL;
-	int new_max = 0;
+	struct ccpp_field_idx *f_index;
+	struct ccpp_field **new;
+	int new_max;
+	f_index = (struct ccpp_field_idx *)(*index);
+	new = NULL;
+	new_max = 0;
 
 	new_max = f_index->max * CCPP_FIELD_IDX_GROW;
 
@@ -255,7 +269,8 @@ ccpp_field_idx_grow(void **index)
 int
 ccpp_field_idx_max(void **index)
 {
-	struct ccpp_field_idx *f_index = (struct ccpp_field_idx *)(*index);
+	struct ccpp_field_idx *f_index;
+	f_index = (struct ccpp_field_idx *)(*index);
 
 	assert(f_index->max > 0);
 

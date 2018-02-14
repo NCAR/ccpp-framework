@@ -113,6 +113,8 @@ module ccpp_fcall
 
         ierr = 0
 
+        call ccpp_debug('Called ccpp_run_subcycle')
+
         do i=1,subcycle%loop
             do j=1,subcycle%schemes_max
                 subcycle%scheme_n = j
@@ -141,6 +143,8 @@ module ccpp_fcall
 
         ierr = 0
 
+        call ccpp_debug('Called ccpp_run_scheme for "' // trim(scheme%name) // '"')
+
         ierr = ccpp_dl_call(scheme%scheme_hdl, c_loc(cdata))
         if (ierr /= 0) then
             call ccpp_error('A problem occured calling '// &
@@ -164,6 +168,8 @@ module ccpp_fcall
         integer,              intent(  out)  :: ierr
 
         ierr = 0
+
+        call ccpp_debug('Called ccpp_run_fptr')
 
         ierr = ccpp_dl_call(fptr, c_loc(cdata))
         if (ierr /= 0) then
