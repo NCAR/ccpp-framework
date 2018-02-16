@@ -4,10 +4,7 @@
   <init>IPD_initialize</init>
   <ipd part="1">
     <subcycle loop="1">
-      <scheme>GFS_phys_time_vary_1_run</scheme>
-      <scheme>GFS_rad_time_vary_run</scheme>
-      <scheme>GFS_phys_time_vary_2_run</scheme>
-      <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
+      <scheme>IPD_setup_step</scheme>
     </subcycle>
   </ipd>
   <ipd part="2">

@@ -46,8 +46,6 @@ scheme_files = [
     'FV3/gfsphysics/physics/GFS_SCNV_generic.f90',
     'FV3/gfsphysics/physics/GFS_calpreciptype.f90',
     'FV3/gfsphysics/physics/GFS_debug.f90',
-    'FV3/gfsphysics/physics/GFS_phys_time_vary.f90',
-    'FV3/gfsphysics/physics/GFS_rad_time_vary.f90',
     'FV3/gfsphysics/physics/GFS_radlw_post.F90',
     'FV3/gfsphysics/physics/GFS_radlw_pre.F90',
     'FV3/gfsphysics/physics/GFS_radsw_post.F90',
@@ -149,11 +147,11 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
        use module_radlw_parameters, only: sfcflw_type, topflw_type
        use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
        use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
-                               GFS_sfcprop_type,  GFS_sfccycle_type,    &
-                               GFS_coupling_type, GFS_control_type,     &
-                               GFS_grid_type,     GFS_tbd_type,         &
-                               GFS_cldprop_type,  GFS_radtend_type,     &
-                               GFS_diag_type,     GFS_interstitial_type
+                               GFS_sfcprop_type,  GFS_coupling_type,    &
+                               GFS_control_type,  GFS_grid_type,        &
+                               GFS_tbd_type,      GFS_cldprop_type,     &
+                               GFS_radtend_type,  GFS_diag_type,        &
+                               GFS_interstitial_type
 '''
 
 ###############################################################################
