@@ -31,7 +31,7 @@ basedir = os.getcwd()
 
 # Relative to basedir
 variable_definition_files = [
-    '../../gmtb_scm.f90'
+    '../../gmtb_scm_type_defs.f90'
 #    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
 #    'FV3/gfsphysics/physics/physcons.f90',
     ]
@@ -142,7 +142,7 @@ MODULE_USE_TEMPLATE_HOST_CAP = \
 use ccpp_errors, only: ccpp_error
 '''
 
-CCPP_DATA_STRUCTURE = 'cdata'
+CCPP_DATA_STRUCTURE = 'cdata(i)'
 
 # Modules to load for auto-generated ccpp_fields_add code (e.g. error handling)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
