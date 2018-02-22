@@ -94,8 +94,8 @@ caps_dir = 'FV3/gfsphysics/physics'
 # an exception if it encounters a scheme subroutine with optional arguments if no entry is made in
 # the following dictionary. Valid values are 'all', 'none' or a list of arguments: [ 'var1', 'var3' ].
 optional_arguments = {
-    'module_radsw_main' : {
-        'radsw_run' : [
+    'rrtmg_sw' : {
+        'rrtmg_sw_run' : [
             'tendency_of_air_temperature_due_to_shortwave_heating_assuming_clear_sky_on_radiation_time_step',
             'components_of_surface_downward_shortwave_fluxes',
             'cloud_liquid_water_path',
@@ -108,8 +108,8 @@ optional_arguments = {
             'mean_effective_radius_for_snow_flake',
             ],
         },
-    'module_radlw_main' : {
-        'radlw_run' : [
+    'rrtmg_lw' : {
+        'rrtmg_lw_run' : [
             'tendency_of_air_temperature_due_to_longwave_heating_assuming_clear_sky_on_radiation_time_step',
             'cloud_liquid_water_path',
             'mean_effective_radius_for_liquid_cloud',
