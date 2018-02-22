@@ -387,8 +387,8 @@ def parse_scheme_tables(filename):
                         if subroutine_suffix in subroutine_suffices:
                             scheme_name = subroutine_name[0:subroutine_name.rfind('_')]
                             if not scheme_name == module_name:
-                                logging.error('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
-                                                                                                          module_name, scheme_name))
+                                raise Exception('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
+                                                                                                             module_name, scheme_name))
                             if not scheme_name in registry[module_name].keys():
                                 registry[module_name][scheme_name] = {}
                             if subroutine_name in registry[module_name][scheme_name].keys():
