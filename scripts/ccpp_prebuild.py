@@ -31,53 +31,49 @@ basedir = os.getcwd()
 
 # Relative to basedir
 variable_definition_files = [
-    '../../gmtb_scm_type_defs.f90'
-#    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
-#    'FV3/gfsphysics/physics/physcons.f90',
+    '../../gmtb_scm_type_defs.f90',
+    '../schemes/gfsphysics/physics/physcons.f90',
     ]
 
 # Location of scheme_files relative to basedir
 scheme_files = [
-    '../schemes/scm/scm_test1.f90'
-    # 'FV3/gfsphysics/physics/GFS_DCNV_generic.f90',
-    # 'FV3/gfsphysics/physics/GFS_MP_generic_post.f90',
-    # 'FV3/gfsphysics/physics/GFS_MP_generic_pre.f90',
-    # 'FV3/gfsphysics/physics/GFS_PBL_generic.f90',
-    # 'FV3/gfsphysics/physics/GFS_RRTMG_post.F90',
-    # 'FV3/gfsphysics/physics/GFS_RRTMG_pre.F90',
-    # 'FV3/gfsphysics/physics/GFS_SCNV_generic.f90',
-    # 'FV3/gfsphysics/physics/GFS_calpreciptype.f90',
-    # 'FV3/gfsphysics/physics/GFS_debug.f90',
-    # 'FV3/gfsphysics/physics/GFS_phys_time_vary.f90',
-    # 'FV3/gfsphysics/physics/GFS_rad_time_vary.f90',
-    # 'FV3/gfsphysics/physics/GFS_radlw_post.F90',
-    # 'FV3/gfsphysics/physics/GFS_radlw_pre.F90',
-    # 'FV3/gfsphysics/physics/GFS_radsw_post.F90',
-    # 'FV3/gfsphysics/physics/GFS_radsw_pre.F90',
-    # 'FV3/gfsphysics/physics/GFS_stochastics.f90',
-    # 'FV3/gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
-    # 'FV3/gfsphysics/physics/GFS_surface_generic.f90',
-    # 'FV3/gfsphysics/physics/GFS_surface_loop_control.f',
-    # 'FV3/gfsphysics/physics/GFS_zhao_carr_pre.f90',
-    # 'FV3/gfsphysics/physics/cnvc90.f',
-    # 'FV3/gfsphysics/physics/dcyc2.f',
-    # 'FV3/gfsphysics/physics/get_prs_fv3.f90',
-    # 'FV3/gfsphysics/physics/gscond.f',
-    # 'FV3/gfsphysics/physics/gwdc.f',
-    # 'FV3/gfsphysics/physics/gwdps.f',
-    # 'FV3/gfsphysics/physics/mfdeepcnv.f',
-    # 'FV3/gfsphysics/physics/mfshalcnv.f',
-    # 'FV3/gfsphysics/physics/moninedmf.f',
-    # 'FV3/gfsphysics/physics/ozphys.f',
-    # 'FV3/gfsphysics/physics/precpd.f',
-    # 'FV3/gfsphysics/physics/radlw_main.f',
-    # 'FV3/gfsphysics/physics/radsw_main.f',
-    # 'FV3/gfsphysics/physics/rayleigh_damp.f',
-    # 'FV3/gfsphysics/physics/sfc_diag.f',
-    # 'FV3/gfsphysics/physics/sfc_diff.f',
-    # 'FV3/gfsphysics/physics/sfc_drv.f',
-    # 'FV3/gfsphysics/physics/sfc_nst.f',
-    # 'FV3/gfsphysics/physics/sfc_sice.f',
+    '../schemes/gfsphysics/physics/GFS_phys_time_vary.f90',
+    '../schemes/gfsphysics/physics/GFS_rad_time_vary.f90',
+    '../schemes/gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
+    '../schemes/gfsphysics/physics/GFS_RRTMG_pre.F90',
+    '../schemes/gfsphysics/physics/GFS_radsw_pre.F90',
+    '../schemes/gfsphysics/physics/radsw_main.f',
+    '../schemes/gfsphysics/physics/GFS_radsw_post.F90',
+    '../schemes/gfsphysics/physics/GFS_radlw_pre.F90',
+    '../schemes/gfsphysics/physics/radlw_main.f',
+    '../schemes/gfsphysics/physics/GFS_radlw_post.F90',
+    '../schemes/gfsphysics/physics/GFS_RRTMG_post.F90',
+    '../schemes/gfsphysics/physics/get_prs_fv3.f90',
+    '../schemes/gfsphysics/physics/sfc_sice.f',
+    '../schemes/gfsphysics/physics/dcyc2.f',
+    '../schemes/gfsphysics/physics/GFS_surface_generic.f90',
+    '../schemes/gfsphysics/physics/GFS_PBL_generic.f90',
+    '../schemes/gfsphysics/physics/sfc_drv.f',
+    '../schemes/gfsphysics/physics/sfc_diff.f',
+    '../schemes/gfsphysics/physics/GFS_surface_loop_control.f',
+    '../schemes/gfsphysics/physics/sfc_nst.f',
+    '../schemes/gfsphysics/physics/sfc_diag.f',
+    '../schemes/gfsphysics/physics/moninedmf.f',
+    '../schemes/gfsphysics/physics/gwdps.f',
+    '../schemes/gfsphysics/physics/rayleigh_damp.f',
+    '../schemes/gfsphysics/physics/ozphys.f',
+    '../schemes/gfsphysics/physics/GFS_DCNV_generic.f90',
+    '../schemes/gfsphysics/physics/GFS_zhao_carr_pre.f90',
+    '../schemes/gfsphysics/physics/mfdeepcnv.f',
+    '../schemes/gfsphysics/physics/gwdc.f',
+    '../schemes/gfsphysics/physics/GFS_SCNV_generic.f90',
+    '../schemes/gfsphysics/physics/mfshalcnv.f',
+    '../schemes/gfsphysics/physics/cnvc90.f',
+    '../schemes/gfsphysics/physics/GFS_MP_generic_pre.f90',
+    '../schemes/gfsphysics/physics/gscond.f',
+    '../schemes/gfsphysics/physics/precpd.f',
+    '../schemes/gfsphysics/physics/GFS_calpreciptype.f90',
+    '../schemes/gfsphysics/physics/GFS_MP_generic_post.f90',
     ]
 
 # Relative to basedir
@@ -89,8 +85,8 @@ target_files = [
     ]
 
 # Relative to basedir
-caps_makefile = '../schemes/scm/CCPP_CAPS.mk'
-caps_dir = '../schemes/scm'
+caps_makefile = '../schemes/gfsphysics/CCPP_CAPS.mk'
+caps_dir = '../schemes/gfsphysics/physics'
 
 # Optional arguments - only required for schemes that use optional arguments. This script will throw
 # an exception if it encounters a scheme subroutine with optional arguments if no entry is made in
@@ -147,19 +143,16 @@ CCPP_DATA_STRUCTURE = 'cdata(i)'
 # Modules to load for auto-generated ccpp_fields_add code (e.g. error handling)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
-    use scm_test1_kinds, only: sp, dp, qp
+       use machine, only: kind_phys
+       use module_radlw_parameters, only: sfcflw_type, topflw_type
+       use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
+       use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
+                               GFS_sfcprop_type,  GFS_sfccycle_type,    &
+                               GFS_coupling_type, GFS_control_type,     &
+                               GFS_grid_type,     GFS_tbd_type,         &
+                               GFS_cldprop_type,  GFS_radtend_type,     &
+                               GFS_diag_type,     GFS_interstitial_type
 '''
-# '''
-#        use machine, only: kind_phys
-#        use module_radlw_parameters, only: sfcflw_type, topflw_type
-#        use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
-#        use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
-#                                GFS_sfcprop_type,  GFS_sfccycle_type,    &
-#                                GFS_coupling_type, GFS_control_type,     &
-#                                GFS_grid_type,     GFS_tbd_type,         &
-#                                GFS_cldprop_type,  GFS_radtend_type,     &
-#                                GFS_diag_type,     GFS_interstitial_type
-# '''
 
 ###############################################################################
 # Functions and subroutines                                                   #
