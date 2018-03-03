@@ -164,19 +164,16 @@ ccpp_dl_close(void **lhdl)
  * @param[in] f_ptr     The scheme function pointer to call.
  * @param[in] data      The opaque ccpp_t data type to pass.
  * @retval     0        If it was sucessful
- * @retval     1        If there was an error
+ * @retval    !=0       If there was an error
  **/
 int
 ccpp_dl_call(void **f_ptr, void **data)
 {
-	void (*fun)(void **) = NULL;
+	int (*fun)(void **) = NULL;
 
-	*(void **)(&fun) = *f_ptr;
+	*(int **)(&fun) = *f_ptr;
 
-	/* Call the schemes cap subroutine */
-	fun(data);
-
-	return(EXIT_SUCCESS);
+	return(fun(data));
 }
 
 /**
