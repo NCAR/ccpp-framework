@@ -22,7 +22,7 @@ module check_nans
     use            :: ccpp_types,                                      &
                       only: ccpp_t
     use            :: ccpp_fields,                                     &
-                      only: ccpp_fields_get
+                      only: ccpp_field_get
     implicit none
 
     private
@@ -41,7 +41,7 @@ module check_nans
 
         call c_f_pointer(ptr, cdata)
 
-        call ccpp_fields_get(cdata, 'northward_wind', v, ierr)
+        call ccpp_field_get(cdata, 'northward_wind', v, ierr)
 
         call test_run(gravity, u, v, surf_t)
 

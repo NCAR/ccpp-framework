@@ -215,7 +215,7 @@ class Var(object):
         '''Print the data retrieval line for the variable.'''
 
         str='''
-        call ccpp_fields_get(cdata, '{s.standard_name}', {s.local_name}, ierr)
+        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr)
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name}')
             return
@@ -312,7 +312,7 @@ module {module}_cap
     use            :: ccpp_types,                                      &
                       only: ccpp_t
     use            :: ccpp_fields,                                     &
-                      only: ccpp_fields_get
+                      only: ccpp_field_get
     use            :: ccpp_errors,                                     &
                       only: ccpp_error
     use            :: {module}, &
