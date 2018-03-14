@@ -109,6 +109,7 @@ module ccpp_types
             integer                                             :: ipds_max
             integer                                             :: ipd_n
             type(ccpp_ipd_t), allocatable, dimension(:)         :: ipds
+            logical                                             :: iscopy
     end type ccpp_suite_t
 
     !>
