@@ -251,7 +251,7 @@ To add a new scheme one needs to
     
   2. Map all the inputs for the cap from the `cdata` encapsulating
      type (this is of the `ccpp_t` type). The cap will extract the
-     fields from the fields array with the `ccpp_fields_get()`
+     fields from the fields array with the `ccpp_field_get()`
      subroutine. 
 
 An example of a scheme is `schemes/check/test.f90`. It has the cap
@@ -280,7 +280,7 @@ if (ierr /= 0) then
 end if
 
 ! Add surface temperature (variable surf_t).
-call ccpp_fields_add(cdata, 'surface_temperature', surf_t, ierr, 'K')
+call ccpp_field_add(cdata, 'surface_temperature', surf_t, ierr, 'K')
 if (ierr /= 0) then
     call exit(1)
 end if
@@ -299,7 +299,7 @@ real, pointer              :: surf_t(:)
 integer                    :: ierr
 
 call c_f_pointer(ptr, cdata)
-call ccpp_fields_get(cdata, 'surface_temperature', surf_t, ierr)
+call ccpp_field_get(cdata, 'surface_temperature', surf_t, ierr)
 if (ierr /= 0) then
     call exit(1)
 end if

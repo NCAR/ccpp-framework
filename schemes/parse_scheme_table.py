@@ -3,7 +3,7 @@
 # Usage: ./parse_scheme_table.py filename1 [filename2 filename3 ...]
 # Input: fortran filenames with doxygen-compliant and CCPP-compliant physics schemes; the argument tables should have the following format:
 # !! \section arg_table_schemename_run
-# !! | local var name | longname                                              | description                        | units   | rank | type    |    kind   | intent | optional |
+# !! | local_name     | standard_name                                         | long_name                          | units   | rank | type    |    kind   | intent | optional |
 # !! |----------------|-------------------------------------------------------|------------------------------------|---------|------|---------|-----------|--------|----------|
 # !! | im             | horizontal_loop_extent                                | horizontal loop extent, start at 1 | index   |    0 | integer |           | in     | F        |
 # !! | ix             | horizontal_dimension                                  | horizontal dimension               | index   |    0 | integer |           | in     | F        |
