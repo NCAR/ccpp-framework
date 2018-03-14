@@ -282,14 +282,16 @@ class Var(object):
 
     def print_add(self, ccpp_data_structure):
         '''Print the data addition line for the variable. Depends on the type of variable.
-        Since the name of the ccpp data structure is not known, this needs to be filled later.'''
+        Since the name of the ccpp data structure is not known, this needs to be filled later.
+        In case of errors a message is printed to screen; using 'return' statements as above
+        for ccpp_field_get is not possible, since the ccpp_field_add statements may be placed
+        inside OpenMP parallel regions.'''
         # Standard-type variables, scalar and array
         if self.type in STANDARD_VARIABLE_TYPES:
             str='''
             call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', {s.target}, ierr, '{s.units}')
             if (ierr /= 0) then
                 call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
-                return
             end if'''
         # Derived-type variables, scalar
         elif self.rank == '':
@@ -297,7 +299,6 @@ class Var(object):
             call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), ierr)
             if (ierr /= 0) then
                 call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
-                return
             end if'''
         # Derived-type variables, array
         else:
@@ -305,7 +306,6 @@ class Var(object):
             call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), rank=size(shape({s.target})), dims=shape({s.target}), ierr=ierr)
             if (ierr /= 0) then
                 call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
-                return
             end if'''
         return str.format(ccpp_data_structure=ccpp_data_structure, s=self)
 
