@@ -29,8 +29,8 @@ extern "C"
 #endif
 
 
-#define  CCPP_FIELD_IDX_MAX     75
-#define  CCPP_FIELD_IDX_GROW    1.75
+#define  CCPP_FIELD_IDX_MAX     500 // was 75
+#define  CCPP_FIELD_IDX_GROW    2   // was 1.75
 
 
 struct ccpp_field {

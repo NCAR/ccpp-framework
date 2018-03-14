@@ -88,8 +88,7 @@ ccpp_field_idx_init(void **index)
 	f_index->sorted = 0;
 	f_index->n      = 0;
 	f_index->max    = CCPP_FIELD_IDX_MAX;
-	f_index->fields = malloc(CCPP_FIELD_IDX_MAX *
-				 sizeof(struct ccpp_field *));
+	f_index->fields = malloc(CCPP_FIELD_IDX_MAX * sizeof(struct ccpp_field *));
 
 	return(EXIT_SUCCESS);
 }
@@ -200,7 +199,7 @@ ccpp_field_idx_find(const char *name, void **index)
 	key->name[n] = '\0';
 
 	res = bsearch(&key, f_index->fields, f_index->n,
-		      sizeof(struct ccpp_field *), cmp);
+		          sizeof(struct ccpp_field *), cmp);
 	if (*res == NULL) {
 		warnx("Unable to find in index: %s", name);
 		return(-1);
@@ -240,6 +239,9 @@ ccpp_field_idx_sort(void **index)
 static int
 ccpp_field_idx_grow(void **index)
 {
+	// Warn user that field index array needs to grow
+	warnx("Growing field index array");
+
 	struct ccpp_field_idx *f_index;
 	struct ccpp_field **new;
 	int new_max;
