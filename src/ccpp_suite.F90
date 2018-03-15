@@ -200,6 +200,9 @@ module ccpp_suite
         ierr = ccpp_xml_unload(xml)
         call ccpp_suite_load(suite, ierr)
 
+        ! Set flag indicating that this suite is not a copy of another suite
+        suite%iscopy = .False.
+
     end subroutine ccpp_suite_init
 
     !>
@@ -220,7 +223,9 @@ module ccpp_suite
 
         !call ccpp_debug('Called ccpp_suite_finalize')
 
-        call ccpp_suite_unload(suite, ierr)
+        if (.not.suite%iscopy) then
+            call ccpp_suite_unload(suite, ierr)
+        end if
 
         do i=1, suite%ipds_max
             do j=1, suite%ipds(i)%subcycles_max
