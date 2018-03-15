@@ -7,19 +7,20 @@
       <scheme>GFS_phys_time_vary_1_run</scheme>
       <scheme>GFS_rad_time_vary_run</scheme>
       <scheme>GFS_phys_time_vary_2_run</scheme>
+      <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
     </subcycle>
   </ipd>
   <ipd part="2">
     <subcycle loop="1">
       <scheme>GFS_suite_interstitial_rad_reset_run</scheme>
-      <scheme>GFS_RRTMG_pre_run</scheme>
-      <scheme>GFS_radsw_pre_run</scheme>
-      <scheme>radsw_run</scheme>
-      <scheme>GFS_radsw_post_run</scheme>
-      <scheme>GFS_radlw_pre_run</scheme>
-      <scheme>radlw_run</scheme>
-      <scheme>GFS_radlw_post_run</scheme>
-      <scheme>GFS_RRTMG_post_run</scheme> -->
+      <scheme>GFS_rrtmg_pre_run</scheme>
+      <scheme>rrtmg_sw_pre_run</scheme>
+      <scheme>rrtmg_sw_run</scheme>
+      <scheme>rrtmg_sw_post_run</scheme>
+      <scheme>rrtmg_lw_pre_run</scheme>
+      <scheme>rrtmg_lw_run</scheme>
+      <scheme>rrtmg_lw_post_run</scheme>
+      <scheme>GFS_rrtmg_post_run</scheme>
       <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
       <!-- <scheme>GFS_interstitialtoscreen_run</scheme> -->
     </subcycle>
@@ -45,7 +46,7 @@
       <scheme>sfc_nst_post_run</scheme>
       <scheme>lsm_noah_run</scheme>
       <scheme>sfc_sice_run</scheme>
-      <scheme>GFS_surface_loop_control_part2_run</scheme>-->
+      <scheme>GFS_surface_loop_control_part2_run</scheme>
       <!-- Surface iteration loop 2 -->
       <scheme>GFS_surface_loop_control_part0_run</scheme>
       <scheme>sfc_ex_coef_run</scheme>
@@ -55,7 +56,7 @@
       <scheme>sfc_nst_post_run</scheme>
       <scheme>lsm_noah_run</scheme>
       <scheme>sfc_sice_run</scheme>
-      <scheme>GFS_surface_loop_control_part2_run</scheme> -->
+      <scheme>GFS_surface_loop_control_part2_run</scheme>
       <!-- End of surface iteration loop -->
       <scheme>dcyc2t3_post_run</scheme>
       <scheme>sfc_diag_run</scheme>
@@ -73,19 +74,19 @@
       <scheme>get_phi_fv3_run</scheme>
       <scheme>GFS_suite_interstitial_3_run</scheme>
       <scheme>GFS_zhao_carr_pre_run</scheme>
-      <scheme>sasasdeep_run</scheme>
+      <scheme>sasas_deep_run</scheme>
       <scheme>GFS_DCNV_generic_post_run</scheme>
       <scheme>gwdc_pre_run</scheme>
       <scheme>gwdc_run</scheme>
       <scheme>gwdc_post_run</scheme>
       <scheme>GFS_SCNV_generic_pre_run</scheme>
-      <scheme>sasasshal_run</scheme>
-      <scheme>sasasshal_post_run</scheme>
+      <scheme>sasas_shal_run</scheme>
+      <scheme>sasas_shal_post_run</scheme>
       <scheme>GFS_SCNV_generic_post_run</scheme>
       <scheme>cnvc90_run</scheme>
       <scheme>GFS_MP_generic_pre_run</scheme>
-      <scheme>gscond_run</scheme>
-      <scheme>precpd_run</scheme>
+      <scheme>zhaocarr_gscond_run</scheme>
+      <scheme>zhaocarr_precpd_run</scheme>
       <scheme>GFS_calpreciptype_run</scheme>
       <scheme>GFS_MP_generic_post_run</scheme>
       <scheme>sfc_diag_run</scheme>
@@ -95,4 +96,5 @@
       <!-- <scheme>GFS_interstitialtoscreen_run</scheme> -->
     </subcycle>
   </ipd>
+  <!-- <finalize>IPD_finalize</finalize> -->
 </suite>
