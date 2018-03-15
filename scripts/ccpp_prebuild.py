@@ -94,8 +94,8 @@ caps_dir = '../../gmtb-gfsphysics/physics'
 # an exception if it encounters a scheme subroutine with optional arguments if no entry is made in
 # the following dictionary. Valid values are 'all', 'none' or a list of arguments: [ 'var1', 'var3' ].
 optional_arguments = {
-    'module_radsw_main' : {
-        'radsw_run' : [
+    'rrtmg_sw' : {
+        'rrtmg_sw_run' : [
             'tendency_of_air_temperature_due_to_shortwave_heating_assuming_clear_sky_on_radiation_time_step',
             'components_of_surface_downward_shortwave_fluxes',
             'cloud_liquid_water_path',
@@ -108,8 +108,8 @@ optional_arguments = {
             'mean_effective_radius_for_snow_flake',
             ],
         },
-    'module_radlw_main' : {
-        'radlw_run' : [
+    'rrtmg_lw' : {
+        'rrtmg_lw_run' : [
             'tendency_of_air_temperature_due_to_longwave_heating_assuming_clear_sky_on_radiation_time_step',
             'cloud_liquid_water_path',
             'mean_effective_radius_for_liquid_cloud',
@@ -134,7 +134,7 @@ fields_include_file = 'ccpp_fields.inc'
 # Template code to generate include files                                     #
 ###############################################################################
 
-# Modules to load for auto-generated ccpp_fields_add code (e.g. error handling)
+# Modules to load for auto-generated ccpp_field_add code (e.g. error handling)
 MODULE_USE_TEMPLATE_HOST_CAP = \
 '''
 use ccpp_errors, only: ccpp_error
@@ -142,7 +142,7 @@ use ccpp_errors, only: ccpp_error
 
 CCPP_DATA_STRUCTURE = 'cdata(i)'
 
-# Modules to load for auto-generated ccpp_fields_add code (e.g. error handling)
+# Modules to load for auto-generated ccpp_field_add code (e.g. error handling)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
        use machine, only: kind_phys
@@ -314,10 +314,18 @@ def compare_metadata(metadata_define, metadata_request):
             else:
                 logging.error('Unknown identifier {0} in container value of defined variable {1}'.format(subitems[0], var_name))
         target += var.local_name
+        # Copy the length kind from the variable definition to update len=* in the variable requests
+        if var.type == 'character':
+            kind = var.kind
         metadata[var_name] = metadata_request[var_name]
+        # Set target and kind (if applicable)
         for var in metadata[var_name]:
             var.target = target
             logging.debug('Requested variable {0} in {1} matched to target {2} in module {3}'.format(var_name, var.container, target, modules[-1]))
+            # Update len=* for character variables
+            if var.type == 'character' and var.kind == 'len=*':
+                logging.debug('Update kind information for requested variable {0} in {1} from {2} to {3}'.format(var_name, var.container, var.kind, kind))
+                var.kind = kind
 
     # Remove duplicated from list of modules
     modules = sorted(list(set(modules)))
@@ -325,7 +333,7 @@ def compare_metadata(metadata_define, metadata_request):
 
 def create_module_use_statements(modules):
     # MODULE_USE_TEMPLATE_HOST_CAP must include the required modules
-    # for error handling of the ccpp_fields_add statments
+    # for error handling of the ccpp_field_add statments
     logging.info('Generating module use statements ...')
     success = True
     module_use_statements = MODULE_USE_TEMPLATE_HOST_CAP
@@ -336,29 +344,26 @@ def create_module_use_statements(modules):
     logging.info('Generated module use statements for {0} module(s)'.format(cnt))
     return (success, module_use_statements)
 
-def create_ccpp_fields_add_statements(metadata):
+def create_ccpp_field_add_statements(metadata):
     # The metadata container may contain multiple entries
     # for the same variable standard_name, but for different
     # "callers" (i.e. subroutines using it) with potentially
     # different local_name. We only need to add it once to
     # the add_field statement, since the target (i.e. the
     # original variable defined by the model) is the same.
-    logging.info('Generating ccpp_fields_add statements ...')
+    logging.info('Generating ccpp_field_add statements ...')
     success = True
-    ccpp_fields_add_statements = ''
+    ccpp_field_add_statements = ''
     cnt = 0
     for var_name in sorted(metadata.keys()):
         # Add variable with var_name = standard_name once
         var = metadata[var_name][0]
-        standard_name = var.standard_name
-        units = var.units
-        target = var.target
-        ccpp_fields_add_statements += var.print_add(CCPP_DATA_STRUCTURE)
+        ccpp_field_add_statements += var.print_add(CCPP_DATA_STRUCTURE)
         cnt += 1
-    logging.info('Generated ccpp_fields_add statements for {0} variable(s)'.format(cnt))
-    return (success, ccpp_fields_add_statements)
+    logging.info('Generated ccpp_field_add statements for {0} variable(s)'.format(cnt))
+    return (success, ccpp_field_add_statements)
 
-def generate_include_files(module_use_statements, ccpp_fields_add_statements):
+def generate_include_files(module_use_statements, ccpp_field_add_statements):
     logging.info('Generating include files for host model cap {0} ...'.format(', '.join(target_files)))
     success = True
     target_dirs = []
@@ -371,11 +376,11 @@ def generate_include_files(module_use_statements, ccpp_fields_add_statements):
         logging.info('Generated module-use include file {0}'.format(includefile))
         with open(includefile, "w") as f:
             f.write(module_use_statements)
-        # ccpp_fields_add statements
+        # ccpp_field_add statements
         includefile = os.path.join(target_dir, fields_include_file)
         logging.info('Generated fields-add include file {0}'.format(includefile))
         with open(includefile, "w") as f:
-            f.write(ccpp_fields_add_statements)
+            f.write(ccpp_field_add_statements)
     return success
 
 def generate_scheme_caps(metadata, arguments):
@@ -477,12 +482,12 @@ def main():
         raise Exception('Call to create_module_use_statements failed.')
 
     # Crate ccpp_fiels_add statements to inject into the host model cap
-    (success, ccpp_fields_add_statements) = create_ccpp_fields_add_statements(metadata)
+    (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata)
     if not success:
-        raise Exception('Call to create_ccpp_fields_add_statements failed.')
+        raise Exception('Call to create_ccpp_field_add_statements failed.')
 
-    # Generate include files for module_use_statements and ccpp_fields_add_statements
-    success = generate_include_files(module_use_statements, ccpp_fields_add_statements)
+    # Generate include files for module_use_statements and ccpp_field_add_statements
+    success = generate_include_files(module_use_statements, ccpp_field_add_statements)
     if not success:
         raise Exception('Call to generate_include_files failed.')
 

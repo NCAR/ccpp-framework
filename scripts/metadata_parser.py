@@ -10,11 +10,13 @@ from mkcap import Var
 
 # The argument tables for schemes and variable definitions should have the following format:
 # !! \section arg_table_SubroutineName (e.g. SubroutineName = SchemeName_run) OR \section arg_table_DerivedTypeName OR \section arg_table_ModuleName
-# !! | local var name | longname                                              | description                        | units   | rank | type    |    kind   | intent | optional |
-# !! |----------------|-------------------------------------------------------|------------------------------------|---------|------|---------|-----------|--------|----------|
-# !! | im             | horizontal_loop_extent                                | horizontal loop extent, start at 1 | index   |    0 | integer |           | in     | F        |
-# !! | ix             | horizontal_dimension                                  | horizontal dimension               | index   |    0 | integer |           | in     | F        |
-# !! | ...            | ...                                                   |                                    |         |      |         |           |        |          |
+# !! | local_name     | standard_name                                         | long_name                                | units   | rank | type      |    kind   | intent | optional |
+# !! |----------------|-------------------------------------------------------|------------------------------------------|---------|------|-----------|-----------|--------|----------|
+# !! | im             | horizontal_loop_extent                                | horizontal loop extent, start at 1       | index   |    0 | integer   |           | in     | F        |
+# !! | ix             | horizontal_dimension                                  | horizontal dimension                     | index   |    0 | integer   |           | in     | F        |
+# !! | ...            | ...                                                   |                                          |         |      |           |           |        |          |
+# !! | errmsg         | error_message                                         | error message for error handling in CCPP | none    |    0 | character |           | out    | F        |
+# !! | ierr           | error_flag                                            | error flag for error handling in CCPP    | none    |    0 | integer   |           | out    | F        |
 # !!
 # Notes on the input format:
 # - if the argument table starts a new doxygen section, it should start with !> \section instead of !! \section
@@ -28,22 +30,46 @@ from mkcap import Var
 # - table headers are the first row, the second row must have the |---|-----| format
 # - after the last row of the table, there must be a blank doxygen line (only '!!') to denote the end of the table
 # - for variable type definitions and module variables, the intent and optional columns must be set to 'none' and 'F'
+# - each argument table (and its subroutine) must accept the following two arguments for error handling:
+#      - character(len=512), intent(out) :: errmsg
+#          - errmsg must be initialized as '' and contains the error message in case an error occurs
+#      - integer, intent(out) :: ierr
+#          - ierr must be initialized as 0 and set to >1 in case of errors
 # Output: This routine converts the argument tables for all subroutines / typedefs / module variables into an XML file
 # suitable to be used with mkcap.py (which generates the fortran code for the scheme cap)
 # - the script generates a separate file for each module within the given files
 
 
 VALID_ITEMS = {
-    # DH* TODO RENAME COLUMN HEADERS IN METADATA TABLES
-    #'header' : ['local_name', 'standard_name', 'long_name', 'units', 'rank', 'type', 'kind', 'intent', 'optional'],
-    'header' : ['local var name', 'longname', 'description', 'units', 'rank', 'type', 'kind', 'intent', 'optional'],
-    # *DH
-    #'type' : ['character', 'integer', 'real'],
-    #'kind' : ['default', 'kind_phys'],
+    'header' : ['local_name', 'standard_name', 'long_name', 'units', 'rank', 'type', 'kind', 'intent', 'optional'],
+    #'type' : ['character', 'integer', 'real', ...],
+    #'kind' : ['default', 'kind_phys', ...],
     'intent' : ['none', 'in', 'out', 'inout'],
     'optional' : ['T', 'F'],
     }
 
+CCPP_MANDATORY_VARIABLES = {
+    'error_message' : Var(local_name    = 'errmsg',
+                          standard_name = 'error_message',
+                          long_name     = 'error message for error handling in CCPP',
+                          units         = 'none',
+                          type          = 'character',
+                          rank          = '',
+                          kind          = 'len=*',
+                          intent        = 'out',
+                          optional      = 'F'
+                          ),
+    'error_flag' : Var(local_name    = 'ierr',
+                       standard_name = 'error_flag',
+                       long_name     = 'error flag for error handling in CCPP',
+                       units         = 'flag',
+                       type          = 'integer',
+                       rank          = '',
+                       kind          = '',
+                       intent        = 'out',
+                       optional      = 'F'
+                       ),
+    }
 
 def merge_metadata_dicts(x, y):
     """Give up the order of variables - fine."""
@@ -198,15 +224,9 @@ def parse_variable_tables(filename):
                             raise Exception('Invalid column header {0} in argument table {1}'.format(item, table_name))
                     # Locate mandatory column 'standard_name'
                     try:
-                        # DH* TODO RENAME COLUMN HEADERS IN METADATA TABLES
-                        #standard_name_index = table_header.index('standard_name')
-                        standard_name_index = table_header.index('longname')
-                        # *DH
+                        standard_name_index = table_header.index('standard_name')
                     except ValueError:
-                        # DH* TODO RENAME COLUMN HEADERS IN METADATA TABLES
-                        #raise Exception('Mandatory column standard_name not found in argument table of subroutine {0}'.format(sub_name))
-                        raise Exception('Mandatory column longname not found in argument table {0}'.format(table_name))
-                        # *DH
+                        raise Exception('Mandatory column standard_name not found in argument table {0}'.format(table_name))
                     line_counter += 1
                     continue
                 elif current_line_number == header_line_number + 1:
@@ -235,6 +255,13 @@ def parse_variable_tables(filename):
                             else:
                                 container = encode_container(module_name, table_name)
                             var.container = container
+                            # Check for incompatible definitions with CCPP mandatory variables
+                            if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
+                                raise Exception('Entry for variable {0}'.format(var_name) + \
+                                                ' in argument table {0}'.format(table_name) +\
+                                                ' is incompatible with mandatory variable:\n' +\
+                                                '    existing: {0}\n'.format(CCPP_MANDATORY_VARIABLES[var_name].print_debug()) +\
+                                                '     vs. new: {0}'.format(var.print_debug()))
                             # Add variable to metadata dictionary
                             if not var_name in metadata.keys():
                                 metadata[var_name] = [var]
@@ -387,8 +414,8 @@ def parse_scheme_tables(filename):
                         if subroutine_suffix in subroutine_suffices:
                             scheme_name = subroutine_name[0:subroutine_name.rfind('_')]
                             if not scheme_name == module_name:
-                                logging.error('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
-                                                                                                          module_name, scheme_name))
+                                raise Exception('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
+                                                                                                             module_name, scheme_name))
                             if not scheme_name in registry[module_name].keys():
                                 registry[module_name][scheme_name] = {}
                             if subroutine_name in registry[module_name][scheme_name].keys():
@@ -464,15 +491,9 @@ def parse_scheme_tables(filename):
                             raise Exception('Invalid column header {0} in argument table {1}'.format(item, table_name))
                     # Locate mandatory column 'standard_name'
                     try:
-                        # DH* TODO RENAME COLUMN HEADERS IN METADATA TABLES
-                        #standard_name_index = table_header.index('standard_name')
-                        standard_name_index = table_header.index('longname')
-                        # *DH
+                        standard_name_index = table_header.index('standard_name')
                     except ValueError:
-                        # DH* TODO RENAME COLUMN HEADERS IN METADATA TABLES
-                        #raise Exception('Mandatory column standard_name not found in argument table of subroutine {0}'.format(sub_name))
-                        raise Exception('Mandatory column longname not found in argument table {0}'.format(table_name))
-                        # *DH
+                        raise Exception('Mandatory column standard_name not found in argument table {0}'.format(table_name))
                     # Get all of the variable information in table
                     end_of_table = False
                     line_number = header_line_number + 2
@@ -489,12 +510,20 @@ def parse_scheme_tables(filename):
                             if not len(var_items) == len(table_header):
                                 raise Exception('Error parsing variable entry "{0}" in argument table {1}'.format(var_items, table_name))
                             var_name = var_items[standard_name_index]
-                            # standard_name cannot be left blank in scheme_tables
+                            # Column standard_name cannot be left blank in scheme_tables
                             if not var_name:
                                 raise Exception('Encountered line "{0}" without standard name in argument table {1}'.format(line, table_name))
                             # Add standard_name to argument list for this subroutine
                             arguments[module_name][scheme_name][subroutine_name].append(var_name)
                             var = Var.from_table(table_header,var_items)
+                            # Check for incompatible definitions with CCPP mandatory variables
+                            if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
+                                raise Exception('Entry for variable {0}'.format(var_name) + \
+                                                ' in argument table of subroutine {0}'.format(subroutine_name) +\
+                                                ' is incompatible with mandatory variable:\n' +\
+                                                '    existing: {0}\n'.format(CCPP_MANDATORY_VARIABLES[var_name].print_debug()) +\
+                                                '     vs. new: {0}'.format(var.print_debug()))
+                            # Record the location of this variable: module, scheme, table
                             container = encode_container(module_name, scheme_name, table_name)
                             var.container = container
                             # Add variable to metadata dictionary
@@ -511,6 +540,12 @@ def parse_scheme_tables(filename):
                                 metadata[var_name].append(var)
 
                         line_number += 1
+
+                    # After parsing entire metadata table for the subroutine, check that all mandatory CCPP variables are present
+                    for var_name in CCPP_MANDATORY_VARIABLES.keys():
+                        if not var_name in arguments[module_name][scheme_name][subroutine_name]:
+                            raise Exception('Mandatory CCPP variable {0} not declared in metadata table of subroutine {1}'.format(
+                                                                                                       var_name, subroutine_name))
 
         # For CCPP-compliant files (i.e. files with metadata tables, perform additional checks)
         if len(metadata.keys()) > 0:

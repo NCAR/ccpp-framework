@@ -22,7 +22,7 @@ module check_noop
     use            :: ccpp_types,                                      &
                       only: ccpp_t
     use            :: ccpp_fields,                                     &
-                      only: ccpp_fields_get
+                      only: ccpp_field_get
     implicit none
 
     private
