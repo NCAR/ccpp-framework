@@ -31,64 +31,64 @@ basedir = os.getcwd()
 
 # Relative to basedir
 variable_definition_files = [
-    '../../gmtb_scm_type_defs.f90',
-    '../../gmtb_scm_physical_constants.f90'
+    '../../gmtb-scm/src/gmtb_scm_type_defs.f90',
+    '../../gmtb-scm/src/gmtb_scm_physical_constants.f90'
     #'../schemes/gfsphysics/physics/physcons.f90',
     ]
 
 # Location of scheme_files relative to basedir
 scheme_files = [
-    '../schemes/gfsphysics/GFS_layer/GFS_initialize_scm.F90',
-    '../schemes/gfsphysics/physics/GFS_phys_time_vary.f90',
-    '../schemes/gfsphysics/physics/GFS_rad_time_vary.f90',
-    '../schemes/gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
-    '../schemes/gfsphysics/physics/GFS_RRTMG_pre.F90',
-    '../schemes/gfsphysics/physics/GFS_radsw_pre.F90',
-    '../schemes/gfsphysics/physics/radsw_main.f',
-    '../schemes/gfsphysics/physics/GFS_radsw_post.F90',
-    '../schemes/gfsphysics/physics/GFS_radlw_pre.F90',
-    '../schemes/gfsphysics/physics/radlw_main.f',
-    '../schemes/gfsphysics/physics/GFS_radlw_post.F90',
-    '../schemes/gfsphysics/physics/GFS_RRTMG_post.F90',
-    '../schemes/gfsphysics/physics/get_prs_fv3.f90',
-    '../schemes/gfsphysics/physics/sfc_sice.f',
-    '../schemes/gfsphysics/physics/dcyc2.f',
-    '../schemes/gfsphysics/physics/GFS_surface_generic.f90',
-    '../schemes/gfsphysics/physics/GFS_PBL_generic.f90',
-    '../schemes/gfsphysics/physics/sfc_drv.f',
-    '../schemes/gfsphysics/physics/sfc_diff.f',
-    '../schemes/gfsphysics/physics/GFS_surface_loop_control.f',
-    '../schemes/gfsphysics/physics/sfc_nst.f',
-    '../schemes/gfsphysics/physics/sfc_diag.f',
-    '../schemes/gfsphysics/physics/moninedmf.f',
-    '../schemes/gfsphysics/physics/gwdps.f',
-    '../schemes/gfsphysics/physics/rayleigh_damp.f',
-    '../schemes/gfsphysics/physics/ozphys.f',
-    '../schemes/gfsphysics/physics/GFS_DCNV_generic.f90',
-    '../schemes/gfsphysics/physics/GFS_zhao_carr_pre.f90',
-    '../schemes/gfsphysics/physics/mfdeepcnv.f',
-    '../schemes/gfsphysics/physics/gwdc.f',
-    '../schemes/gfsphysics/physics/GFS_SCNV_generic.f90',
-    '../schemes/gfsphysics/physics/mfshalcnv.f',
-    '../schemes/gfsphysics/physics/cnvc90.f',
-    '../schemes/gfsphysics/physics/GFS_MP_generic_pre.f90',
-    '../schemes/gfsphysics/physics/gscond.f',
-    '../schemes/gfsphysics/physics/precpd.f',
-    '../schemes/gfsphysics/physics/GFS_calpreciptype.f90',
-    '../schemes/gfsphysics/physics/GFS_MP_generic_post.f90',
+    '../../gmtb-gfsphysics/GFS_layer/GFS_initialize_scm.F90',
+    '../../gmtb-gfsphysics/physics/GFS_phys_time_vary.f90',
+    '../../gmtb-gfsphysics/physics/GFS_rad_time_vary.f90',
+    '../../gmtb-gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
+    '../../gmtb-gfsphysics/physics/GFS_RRTMG_pre.F90',
+    '../../gmtb-gfsphysics/physics/GFS_radsw_pre.F90',
+    '../../gmtb-gfsphysics/physics/radsw_main.f',
+    '../../gmtb-gfsphysics/physics/GFS_radsw_post.F90',
+    '../../gmtb-gfsphysics/physics/GFS_radlw_pre.F90',
+    '../../gmtb-gfsphysics/physics/radlw_main.f',
+    '../../gmtb-gfsphysics/physics/GFS_radlw_post.F90',
+    '../../gmtb-gfsphysics/physics/GFS_RRTMG_post.F90',
+    '../../gmtb-gfsphysics/physics/get_prs_fv3.f90',
+    '../../gmtb-gfsphysics/physics/sfc_sice.f',
+    '../../gmtb-gfsphysics/physics/dcyc2.f',
+    '../../gmtb-gfsphysics/physics/GFS_surface_generic.f90',
+    '../../gmtb-gfsphysics/physics/GFS_PBL_generic.f90',
+    '../../gmtb-gfsphysics/physics/sfc_drv.f',
+    '../../gmtb-gfsphysics/physics/sfc_diff.f',
+    '../../gmtb-gfsphysics/physics/GFS_surface_loop_control.f',
+    '../../gmtb-gfsphysics/physics/sfc_nst.f',
+    '../../gmtb-gfsphysics/physics/sfc_diag.f',
+    '../../gmtb-gfsphysics/physics/moninedmf.f',
+    '../../gmtb-gfsphysics/physics/gwdps.f',
+    '../../gmtb-gfsphysics/physics/rayleigh_damp.f',
+    '../../gmtb-gfsphysics/physics/ozphys.f',
+    '../../gmtb-gfsphysics/physics/GFS_DCNV_generic.f90',
+    '../../gmtb-gfsphysics/physics/GFS_zhao_carr_pre.f90',
+    '../../gmtb-gfsphysics/physics/mfdeepcnv.f',
+    '../../gmtb-gfsphysics/physics/gwdc.f',
+    '../../gmtb-gfsphysics/physics/GFS_SCNV_generic.f90',
+    '../../gmtb-gfsphysics/physics/mfshalcnv.f',
+    '../../gmtb-gfsphysics/physics/cnvc90.f',
+    '../../gmtb-gfsphysics/physics/GFS_MP_generic_pre.f90',
+    '../../gmtb-gfsphysics/physics/gscond.f',
+    '../../gmtb-gfsphysics/physics/precpd.f',
+    '../../gmtb-gfsphysics/physics/GFS_calpreciptype.f90',
+    '../../gmtb-gfsphysics/physics/GFS_MP_generic_post.f90',
     ]
 
 # Relative to basedir
-schemes_makefile = '../schemes/scm/CCPP_SCHEMES.mk'
+schemes_makefile = '../../gmtb-gfsphysics/CCPP_SCHEMES.mk'
 
 # Relative to basedir
 target_files = [
-    '../../gmtb_scm.f90',
+    '../../gmtb-scm/src/gmtb_scm.f90',
     ]
 
 # Relative to basedir
-caps_makefile = '../schemes/gfsphysics/CCPP_CAPS.mk'
-caps_dir = '../schemes/gfsphysics/physics'
+caps_makefile = '../../gmtb-gfsphysics/CCPP_CAPS.mk'
+caps_dir = '../../gmtb-gfsphysics/physics'
 
 # Optional arguments - only required for schemes that use optional arguments. This script will throw
 # an exception if it encounters a scheme subroutine with optional arguments if no entry is made in
