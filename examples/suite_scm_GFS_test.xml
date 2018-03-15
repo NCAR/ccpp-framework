@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <suite name="GFS_operational_2017" lib="gfsphysics" ver="0.0.1">
+  <init>GFS_initialize_scm_run</init>
   <ipd part="1">
     <subcycle loop="1">
       <scheme>GFS_phys_time_vary_1_run</scheme>

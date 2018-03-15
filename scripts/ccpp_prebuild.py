@@ -32,11 +32,13 @@ basedir = os.getcwd()
 # Relative to basedir
 variable_definition_files = [
     '../../gmtb_scm_type_defs.f90',
-    '../schemes/gfsphysics/physics/physcons.f90',
+    '../../gmtb_scm_physical_constants.f90'
+    #'../schemes/gfsphysics/physics/physcons.f90',
     ]
 
 # Location of scheme_files relative to basedir
 scheme_files = [
+    '../schemes/gfsphysics/GFS_layer/GFS_initialize_scm.F90',
     '../schemes/gfsphysics/physics/GFS_phys_time_vary.f90',
     '../schemes/gfsphysics/physics/GFS_rad_time_vary.f90',
     '../schemes/gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
@@ -151,7 +153,8 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
                                GFS_coupling_type, GFS_control_type,     &
                                GFS_grid_type,     GFS_tbd_type,         &
                                GFS_cldprop_type,  GFS_radtend_type,     &
-                               GFS_diag_type,     GFS_interstitial_type
+                               GFS_diag_type,     GFS_interstitial_type,&
+                               GFS_init_type
 '''
 
 ###############################################################################
