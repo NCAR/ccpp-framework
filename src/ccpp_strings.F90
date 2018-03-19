@@ -14,7 +14,7 @@
 !>
 !! @brief String routines module.
 !!
-!! @details A module continaing subroutines and fuctions to
+!! @details A module continaing subroutines and functions to
 !!          manipulate strings.
 !
 module ccpp_strings

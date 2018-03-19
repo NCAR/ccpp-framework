@@ -33,7 +33,7 @@ def execute(cmd, abort = True):
     return (status, stdout.rstrip('\n'), stderr.rstrip('\n'))
 
 
-#subroutine for writing "pretty" XML; copied from http://effbot.org/zone/element-lib.htm#prettyprint
+# Subroutine for writing "pretty" XML; copied from http://effbot.org/zone/element-lib.htm#prettyprint
 def indent(elem, level=0):
   i = "\n" + level*"  "
   if len(elem):
@@ -58,22 +58,3 @@ def encode_container(*args):
     elif len(args)==1:
         container = 'MODULE_{0}'.format(*args)
     return container
-
-
-#def decode_container(container)
-#    args = []
-#    for arg in container.split(' '):
-#        
-#def dict_sweep(dictionary, value):
-#    for key in dictionary.keys():
-#        if dictionary.get(key) is dict:
-#            print "Decending into subtree {0}".format(key)
-#            dictionary[key] = dict_sweep(dictionary[key])
-#        elif dictionary.get(key) is list:
-#            if value in dictionary[key]:
-#                print "Deleting value {0} from list {1} for key {2}".format(value, dictionary[key], key)
-#                dictionary[key] = dictionary[key].remove(value)
-#        elif dictionary.get(key) == value:
-#            print "Deleting key-value pair {0} {1} from dictionary".format(key, value)
-#            del dictionary[key]
-#    return dictionary

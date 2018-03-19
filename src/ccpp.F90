@@ -20,7 +20,7 @@ module ccpp
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_ptr
     use            :: ccpp_types,                                      &
-                      only: ccpp_t
+                      only: ccpp_t, ccpp_suite_t
     use            :: ccpp_suite,                                      &
                       only: ccpp_suite_init, ccpp_suite_finalize
     use            :: ccpp_fields,                                     &
@@ -43,20 +43,26 @@ module ccpp
     !! @param[in,out] cdata    The ccpp_t type data.
     !! @param[  out]  ierr     Integer error flag.
     !
-    subroutine ccpp_init(filename, cdata, ierr)
-        character(len=*),       intent(in)    :: filename
-        type(ccpp_t),           intent(inout) :: cdata
-        integer,                intent(  out) :: ierr
+    subroutine ccpp_init(filename, cdata, ierr, suite)
+        character(len=*),   intent(in)           :: filename
+        type(ccpp_t),       intent(inout)        :: cdata
+        integer,            intent(  out)        :: ierr
+        type(ccpp_suite_t), intent(in), optional :: suite
 
         ierr = 0
 
         !call ccpp_debug('Called ccpp_init')
 
-        ! Initialize the suite
-        call ccpp_suite_init(filename, cdata%suite, ierr)
-        if (ierr /= 0) then
-            call ccpp_error('In initializing the CCPP suite')
-            return
+        if (present(suite)) then
+            cdata%suite = suite
+            cdata%suite%iscopy = .True.
+        else
+            ! Initialize the suite
+            call ccpp_suite_init(filename, cdata%suite, ierr)
+            if (ierr /= 0) then
+                call ccpp_error('In initializing the CCPP suite')
+                return
+            end if
         end if
 
         ! Initialize the fields
