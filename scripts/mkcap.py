@@ -323,7 +323,7 @@ class Var(object):
         optional      = {s.optional}
         container     = {s.container}'''
         return str.format(s=self)
-
+    
     @classmethod
     def from_table(cls, columns, data):
         var = cls()
@@ -537,7 +537,7 @@ CAPS_F90 ='''
 
         contents = self.header
         for cap in caps:
-            contents += ' \n\t   {0}'.format(cap)
+            contents += ' \\\n\t   {0}'.format(cap)
         f.write(contents)
 
         if (f is not sys.stdout):
@@ -614,3 +614,4 @@ SCHEMES_f90 ='''
 ###############################################################################
 if __name__ == "__main__":
     main()
+
