@@ -32,9 +32,9 @@ SET (OpenMP_Fortran_FLAG_CANDIDATES
      #Microsoft Visual Studio
      "/openmp"
      #Intel windows
-     "/Qopenmp" 
+     "/Qopenmp"
      #Intel
-     "-openmp" 
+     "-qopenmp"
      #Gnu
      "-fopenmp"
      #Empty, if compiler automatically accepts openmp
