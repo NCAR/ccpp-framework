@@ -40,39 +40,19 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 #------------------------------------------------------------------------------
-# Find OpenMP for C/C++
+# Find OpenMP for C/C++/Fortran
 if (OPENMP)
   find_package(OpenMP)
   if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    message(STATUS "Enabled OpenMP support for C/C++ compiler")
-  else(OPENMP_FOUND)
-    message (FATAL_ERROR "C/C++ compiler does not support OpenMP")
-  endif()
-else(OPENMP)
-    message (STATUS "Disable OpenMP support for C/C++ compiler")
-endif()
-
-#------------------------------------------------------------------------------
-# Find OpenMP for Fortran
-if (OPENMP)
-  FIND_PACKAGE(OpenMP_Fortran)
-  if(OpenMP_FLAG_DETECTED)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
-    message(STATUS "Enabled OpenMP support for Fortran compiler")
-  else(OpenMP_FLAG_DETECTED)
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      # On MacOSX, OpenMP_FLAG_DETECTED is not set correctly, even though
-      # the flags and libraries are set correctly. Force cmake to continue.
-      message (INFO "Detecting OpenMP on MacOSX not working properly - force CMAKE_Fortran_FLAGS='${CMAKE_Fortran_FLAGS}'")
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
-    else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      message (FATAL_ERROR "Fortran compiler does not support OpenMP")
-    endif()
+    message(STATUS "Enabled OpenMP support for C/C++/Fortran compiler")
+  else(OPENMP_FOUND)
+    message (FATAL_ERROR "C/C++/Fortran compiler does not support OpenMP")
   endif()
 else(OPENMP)
-    message (STATUS "Disable OpenMP support for Fortran compiler")
+  message (STATUS "Disable OpenMP support for C/C++/Fortran compiler")
 endif()
 
 #------------------------------------------------------------------------------
