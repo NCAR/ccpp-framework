@@ -34,24 +34,19 @@ endif(LIBXML2_FOUND)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 #------------------------------------------------------------------------------
-# Find OpenMP for C/C++
-find_package(OpenMP)
-if(OPENMP_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  message(STATUS "Enabled OpenMP support for C/C++ compiler")
-else(OPENMP_FOUND)
-  message (STATUS "C/C++ compiler does not support OpenMP")
-endif()
-
-#------------------------------------------------------------------------------
-# Find OpenMP for Fortran
-FIND_PACKAGE(OpenMP_Fortran)
-if(OpenMP_FLAG_DETECTED)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
-  message(STATUS "Enabled OpenMP support for Fortran compiler")
-else(OpenMP_FLAG_DETECTED)
-  message (STATUS "Fortran compiler does not support OpenMP")
+# Find OpenMP for C/C++/Fortran
+if (OPENMP)
+  find_package(OpenMP)
+  if(OPENMP_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+    message(STATUS "Enabled OpenMP support for C/C++/Fortran compiler")
+  else(OPENMP_FOUND)
+    message (FATAL_ERROR "C/C++/Fortran compiler does not support OpenMP")
+  endif()
+else(OPENMP)
+    message (STATUS "Disable OpenMP support for C/C++/Fortran compiler")
 endif()
 
 #------------------------------------------------------------------------------
@@ -65,6 +60,19 @@ if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
     string(REPLACE "-i_dynamic" "-shared-intel"
            CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS
            "${CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS}")
+endif()
+
+#------------------------------------------------------------------------------
+# Set a default build type if none was specified
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    #message(STATUS "Setting build type to 'Debug' as none was specified.")
+    #set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+    message(STATUS "Setting build type to 'Release' as none was specified.")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+
+    # Set the possible values of build type for cmake-gui
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
+                 "MinSizeRel" "RelWithDebInfo")
 endif()
 
 #------------------------------------------------------------------------------
@@ -100,8 +108,8 @@ add_library(ccpp ${SOURCES})
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}
-                                      COMPILE_FLAGS ${OpenMP_Fortran_FLAGS}
-                                      LINK_FLAGS ${OpenMP_Fortran_FLAGS})
+                                      COMPILE_FLAGS ${CMAKE_Fortran_FLAGS}
+                                      LINK_FLAGS ${CMAKE_Fortran_FLAGS})
 
 #------------------------------------------------------------------------------
 # Installation
