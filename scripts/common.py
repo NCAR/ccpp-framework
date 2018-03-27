@@ -57,4 +57,14 @@ def encode_container(*args):
         container = 'MODULE_{0} TYPE_{1}'.format(*args)
     elif len(args)==1:
         container = 'MODULE_{0}'.format(*args)
+    else:
+        raise Exception("encode_container not implemented for {0} arguments".format(len(args)))
     return container
+
+def decode_container(container):
+    items = container.split(' ')
+    if not len(items) in [1, 2, 3]:
+        raise Exception("decode_container not implemented for {0} items".format(len(items)))
+    for i in xrange(len(items)):
+        items[i] = items[i][items[i].find('_')+1:]
+    return items

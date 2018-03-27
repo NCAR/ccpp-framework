@@ -106,6 +106,14 @@ OPTIONAL_ARGUMENTS = {
 MODULE_INCLUDE_FILE = 'ccpp_modules.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields.inc'
 
+# HTML document containing the model-defined CCPP variables, relateive to basedir
+HTML_VARTABLE_FILE = 'FV3/gfsphysics/CCPP_VARIABLES.html'
+
+
+###############################################################################
+# Template code to generate include files                                     #
+###############################################################################
+
 # Modules to load for auto-generated ccpp_field_add code (e.g. error handling)
 MODULE_USE_TEMPLATE_HOST_CAP = \
 '''

@@ -1,0 +1,60 @@
+\chapter{Running SCM}
+\label{chapter: runningscm}
+\setlength{\parskip}{12pt}
+\label{section: runningscm}
+
+\section{A sample test case}
+
+The CCPP uses a run-time, dynamically loaded physics library to select physics suites at runtime.  To utilize a given library (of CCPP-complient!) physics parameterizations, first append the path to the physics suite libraries that you need
+within the CCPP. For example, for the gmtb-gfsphysics suite, use:
+\begin{itemize}
+	\item for sh, bash
+
+     \exec{export LD\_LIBRARY\_PATH=\$\{LD\_LIBRARY\_PATH\}:/path/to/build/directory/ccpp-physics}\\
+
+	\item for csh
+
+     if appending: \\
+	\exec{setenv LD\_LIBRARY\_PATH \$\{LD\_LIBRARY\_PATH\}:/path/to/build/directory/ccpp-physics}
+
+     if setting: \\
+	\exec{setenv LD\_LIBRARY\_PATH path/to/build/directory/ccpp-physics}
+\end{itemize}
+
+
+\section{Run the SCM with the supplied case} 
+The test case provided with the SCM is TWP-ICE, the Tropical Warm Pool-International Cloud Experiment. The SCM will go through the time steps, applying forcing and calling the physics defined in the suite definition file.
+There is a single command line argument required, which is the name of the case configuration file.  For the provided case, that name is \exec{twpice}.
+
+  \exec{./gmtb\_scm twpice}
+
+A netcdf output file is generated in the location specified in the case
+configuration file. Any standard NetCDF file viewing or analysis tools may be used to 
+examine the output file (ncdump, ncview, NCL, etc).  For the twpice case, it is located in:
+
+\exec{gmtb-scm/output\_twpice/output.nc}
+
+Additional details may be found in the SCM technical documention, including setting physics parameters, examining the output files, etc.  
+
+\url{https://dtcenter.org/gmtb/users/ccpp/index.php}
+
+
+\section{Setting up the physics suite}
+First, a physics suite is defined using an XML file located in
+src/ccpp/examples. The XML file contains the suite name, the number of suite
+"parts" (suite parts exist so that an atmosphere "cap" can execute code between
+calls to the physics driver), the number of subcycles for each scheme (if
+physics schemes require smaller time steps than the dynamics), and the scheme
+names. Scheme names found in the suite XML files must correspond to schemes
+located within the physics directory.
+
+Using a suite in the SCM framework involves specifying its name in the case
+configuration file to be used. For example, for the twpice case
+(case\_config/twpice.nml), the variable 'physics suite' is set to the desired
+suite name. NOTE: As mentioned in the 'Running' section above, since the schemes
+ are in their own libraries, you must specify the path to the compiled scheme
+ libraries that are being used in the suite by appending the LD\_LIBRARY\_PATH
+ (or DYLD\_LIBRARY\_PATH for Mac OS). Without this step, the scheme libraries will
+  not be found at runtime.
+
+

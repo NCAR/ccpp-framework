@@ -9,63 +9,63 @@
 
 # Relative to basedir defined in ccpp_prebuild.py
 VARIABLE_DEFINITION_FILES = [
-    '../../gmtb-scm/src/gmtb_scm_type_defs.f90',
-    '../../gmtb-scm/src/gmtb_scm_physical_constants.f90'
+    '../../scm/src/gmtb_scm_type_defs.f90',
+    '../../scm/src/gmtb_scm_physical_constants.f90'
     ]
 
 # Location of scheme_files relative to basedir defined in ccpp_prebuild.py
 SCHEME_FILES = [
-    '../../gmtb-gfsphysics/GFS_layer/GFS_initialize_scm.F90',
-    '../../gmtb-gfsphysics/physics/GFS_DCNV_generic.f90',
-    '../../gmtb-gfsphysics/physics/GFS_MP_generic_post.f90',
-    '../../gmtb-gfsphysics/physics/GFS_MP_generic_pre.f90',
-    '../../gmtb-gfsphysics/physics/GFS_PBL_generic.f90',
-    '../../gmtb-gfsphysics/physics/GFS_SCNV_generic.f90',
-    '../../gmtb-gfsphysics/physics/GFS_calpreciptype.f90',
-    '../../gmtb-gfsphysics/physics/GFS_phys_time_vary.f90',
-    '../../gmtb-gfsphysics/physics/GFS_rad_time_vary.f90',
-    '../../gmtb-gfsphysics/physics/GFS_rrtmg_post.F90',
-    '../../gmtb-gfsphysics/physics/GFS_rrtmg_pre.F90',
-    '../../gmtb-gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
-    '../../gmtb-gfsphysics/physics/GFS_surface_generic.f90',
-    '../../gmtb-gfsphysics/physics/GFS_surface_loop_control.f',
-    '../../gmtb-gfsphysics/physics/GFS_zhao_carr_pre.f90',
-    '../../gmtb-gfsphysics/physics/cnvc90.f',
-    '../../gmtb-gfsphysics/physics/dcyc2.f',
-    '../../gmtb-gfsphysics/physics/get_prs_fv3.f90',
-    '../../gmtb-gfsphysics/physics/gscond.f',
-    '../../gmtb-gfsphysics/physics/gwdc.f',
-    '../../gmtb-gfsphysics/physics/gwdps.f',
-    '../../gmtb-gfsphysics/physics/mfdeepcnv.f',
-    '../../gmtb-gfsphysics/physics/mfshalcnv.f',
-    '../../gmtb-gfsphysics/physics/moninedmf.f',
-    '../../gmtb-gfsphysics/physics/ozphys.f',
-    '../../gmtb-gfsphysics/physics/precpd.f',
-    '../../gmtb-gfsphysics/physics/radlw_main.f',
-    '../../gmtb-gfsphysics/physics/radsw_main.f',
-    '../../gmtb-gfsphysics/physics/rayleigh_damp.f',
-    '../../gmtb-gfsphysics/physics/rrtmg_lw_post.F90',
-    '../../gmtb-gfsphysics/physics/rrtmg_lw_pre.F90',
-    '../../gmtb-gfsphysics/physics/rrtmg_sw_post.F90',
-    '../../gmtb-gfsphysics/physics/rrtmg_sw_pre.F90',
-    '../../gmtb-gfsphysics/physics/sfc_diag.f',
-    '../../gmtb-gfsphysics/physics/sfc_diff.f',
-    '../../gmtb-gfsphysics/physics/sfc_drv.f',
-    '../../gmtb-gfsphysics/physics/sfc_nst.f',
-    '../../gmtb-gfsphysics/physics/sfc_sice.f',
+    '../../ccpp-physics/GFS_layer/GFS_initialize_scm.F90',
+    '../../ccpp-physics/physics/GFS_DCNV_generic.f90',
+    '../../ccpp-physics/physics/GFS_MP_generic_post.f90',
+    '../../ccpp-physics/physics/GFS_MP_generic_pre.f90',
+    '../../ccpp-physics/physics/GFS_PBL_generic.f90',
+    '../../ccpp-physics/physics/GFS_SCNV_generic.f90',
+    '../../ccpp-physics/physics/GFS_calpreciptype.f90',
+    '../../ccpp-physics/physics/GFS_phys_time_vary.f90',
+    '../../ccpp-physics/physics/GFS_rad_time_vary.f90',
+    '../../ccpp-physics/physics/GFS_rrtmg_post.F90',
+    '../../ccpp-physics/physics/GFS_rrtmg_pre.F90',
+    '../../ccpp-physics/physics/GFS_suite_interstitial.ccpp.f90',
+    '../../ccpp-physics/physics/GFS_surface_generic.f90',
+    '../../ccpp-physics/physics/GFS_surface_loop_control.f',
+    '../../ccpp-physics/physics/GFS_zhao_carr_pre.f90',
+    '../../ccpp-physics/physics/cnvc90.f',
+    '../../ccpp-physics/physics/dcyc2.f',
+    '../../ccpp-physics/physics/get_prs_fv3.f90',
+    '../../ccpp-physics/physics/gscond.f',
+    '../../ccpp-physics/physics/gwdc.f',
+    '../../ccpp-physics/physics/gwdps.f',
+    '../../ccpp-physics/physics/mfdeepcnv.f',
+    '../../ccpp-physics/physics/mfshalcnv.f',
+    '../../ccpp-physics/physics/moninedmf.f',
+    '../../ccpp-physics/physics/ozphys.f',
+    '../../ccpp-physics/physics/precpd.f',
+    '../../ccpp-physics/physics/radlw_main.f',
+    '../../ccpp-physics/physics/radsw_main.f',
+    '../../ccpp-physics/physics/rayleigh_damp.f',
+    '../../ccpp-physics/physics/rrtmg_lw_post.F90',
+    '../../ccpp-physics/physics/rrtmg_lw_pre.F90',
+    '../../ccpp-physics/physics/rrtmg_sw_post.F90',
+    '../../ccpp-physics/physics/rrtmg_sw_pre.F90',
+    '../../ccpp-physics/physics/sfc_diag.f',
+    '../../ccpp-physics/physics/sfc_diff.f',
+    '../../ccpp-physics/physics/sfc_drv.f',
+    '../../ccpp-physics/physics/sfc_nst.f',
+    '../../ccpp-physics/physics/sfc_sice.f',
     ]
 
 # Relative to basedir defined in ccpp_prebuild.py
-SCHEMES_MAKEFILE = '../../gmtb-gfsphysics/CCPP_SCHEMES.mk'
+SCHEMES_MAKEFILE = '../../ccpp-physics/CCPP_SCHEMES.mk'
 
 # Relative to basedir defined in ccpp_prebuild.py
 TARGET_FILES = [
-    '../../gmtb-scm/src/gmtb_scm.f90',
+    '../../scm/src/gmtb_scm.f90',
     ]
 
 # Relative to basedir defined in ccpp_prebuild.py
-CAPS_MAKEFILE = '../../gmtb-gfsphysics/CCPP_CAPS.mk'
-CAPS_DIR = '../../gmtb-gfsphysics/physics'
+CAPS_MAKEFILE = '../../ccpp-physics/CCPP_CAPS.mk'
+CAPS_DIR = '../../ccpp-physics/physics'
 
 # Optional arguments - only required for schemes that use optional arguments. This script will throw
 # an exception if it encounters a scheme subroutine with optional arguments if no entry is made in
@@ -107,6 +107,9 @@ OPTIONAL_ARGUMENTS = {
 MODULE_INCLUDE_FILE = 'ccpp_modules.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields.inc'
 
+# HTML document containing the model-defined CCPP variables, relateive to basedir
+HTML_VARTABLE_FILE = '../../ccpp-physics/CCPP_VARIABLES.html'
+
 
 ###############################################################################
 # Template code to generate include files                                     #
@@ -119,7 +122,7 @@ use ccpp_errors, only: ccpp_error
 '''
 
 # Name of the CCPP data structure in the host model cap
-CCPP_DATA_STRUCTURE = 'cdata(i)' 
+CCPP_DATA_STRUCTURE = 'cdata(i)'
 
 # Modules to load for auto-generated ccpp_field_add code (e.g. error handling)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
