@@ -16,6 +16,7 @@ import sys
 from common import encode_container, execute
 from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, SchemesMakefile
+from mkdoc import metadata_to_html
 
 #set up the command line argument parser
 parser = argparse.ArgumentParser()
@@ -55,6 +56,8 @@ caps_dir                  = ccpp_prebuild_config.CAPS_DIR
 optional_arguments        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
 module_include_file       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
 fields_include_file       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
+
+html_vartable_file        = ccpp_prebuild_config.HTML_VARTABLE_FILE
 
 ###############################################################################
 # Template code to generate include files (imported)                          #
@@ -367,6 +370,11 @@ def main():
     (success, metadata_define) = gather_variable_definitions()
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
+
+    # Create table with all variables provided by the model
+    success = metadata_to_html(metadata_define, HOST_MODEL, html_vartable_file)
+    if not success:
+        raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
     (success, metadata_request, arguments_request) = collect_physics_subroutines()
