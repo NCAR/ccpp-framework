@@ -6,7 +6,7 @@
 \section{A sample test case}
 
 The CCPP uses a run-time, dynamically loaded physics library to select physics suites at runtime.  To utilize a given library (of CCPP-complient!) physics parameterizations, first append the path to the physics suite libraries that you need
-within the CCPP. For example, for the gmtb-gfsphysics suite, use:
+within the CCPP. For example, for the GMTB GFS physics suite, use:
 \begin{itemize}
 	\item for sh, bash
 
@@ -26,7 +26,7 @@ within the CCPP. For example, for the gmtb-gfsphysics suite, use:
 The test case provided with the SCM is TWP-ICE, the Tropical Warm Pool-International Cloud Experiment. The SCM will go through the time steps, applying forcing and calling the physics defined in the suite definition file.
 There is a single command line argument required, which is the name of the case configuration file.  For the provided case, that name is \exec{twpice}.
 
-  \exec{./gmtb\_scm twpice}
+\exec{./gmtb\_scm twpice}
 
 A netcdf output file is generated in the location specified in the case
 configuration file. Any standard NetCDF file viewing or analysis tools may be used to 
