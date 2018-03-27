@@ -79,7 +79,7 @@ def main():
         os.chdir(basedir)
         user = separator['user']
         branch = separator['branch']
-        clonedir = '{0}_{1}_gmtb-gfsphysics'.format(user, branch)
+        clonedir = '{0}_{1}_ccpp-physics'.format(user, branch)
         use_existing = separator['use_existing']
         if use_existing and not os.path.isdir(clonedir):
             raise Exception('I was asked to use existing clone directory {0}, but it does not exist.'.format(clonedir))
@@ -90,7 +90,7 @@ def main():
 
         if not use_existing:
             # Clone repository
-            cmd = 'git clone https://github.com/{0}/gmtb-gfsphysics.git {1}'.format(user, clonedir)
+            cmd = 'git clone https://github.com/{0}/ccpp-physics.git {1}'.format(user, clonedir)
             execute(cmd)
             # Checkout branch
             os.chdir(clonedir)
