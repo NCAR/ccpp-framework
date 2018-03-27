@@ -10,20 +10,21 @@ within the CCPP. For example, for the gmtb-gfsphysics suite, use:
 \begin{itemize}
 	\item for sh, bash
 
-     \exec{export LD\_LIBRARY\_PATH=\$\{LD\_LIBRARY\_PATH\}:/path/to/build/directory/ccpp-physics}
+     \exec{export LD\_LIBRARY\_PATH=\$\{LD\_LIBRARY\_PATH\}:/path/to/build/directory/ccpp-physics}\\
 
 	\item for csh
 
-     if appending: \exec{setenv LD\_LIBRARY\_PATH \$\{LD\_LIBRARY\_PATH\}:/path/to/build/directory/ccpp-physics}
+     if appending: \\
+	\exec{setenv LD\_LIBRARY\_PATH \$\{LD\_LIBRARY\_PATH\}:/path/to/build/directory/ccpp-physics}
 
-     if setting: \exec{setenv LD\_LIBRARY\_PATH path/to/build/directory/ccpp-physics}
+     if setting: \\
+	\exec{setenv LD\_LIBRARY\_PATH path/to/build/directory/ccpp-physics}
 \end{itemize}
 
 
 \section{Run the SCM with the supplied case} 
-The test case provided with the SCM is twpice --- ADD DETAILS HERE?. The SCM will go through the time
- steps, applying forcing and calling the physics defined in the suite definition
- file.
+The test case provided with the SCM is TWP-ICE, the Tropical Warm Pool-International Cloud Experiment. The SCM will go through the time steps, applying forcing and calling the physics defined in the suite definition file.
+There is a single command line argument required, which is the name of the case configuration file.  For the provided case, that name is \exec{twpice}.
 
   \exec{./gmtb\_scm twpice}
 
@@ -35,7 +36,7 @@ examine the output file (ncdump, ncview, NCL, etc).  For the twpice case, it is 
 
 Additional details may be found in the SCM technical documention, including setting physics parameters, examining the output files, etc.  
 
-\url{https://dtcenter.org/gmtb/users/ccpp/}
+\url{https://dtcenter.org/gmtb/users/ccpp/index.php}
 
 
 \section{Setting up the physics suite}
