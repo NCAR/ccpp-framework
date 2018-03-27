@@ -48,6 +48,8 @@ module ccpp_suite
     !
     subroutine ccpp_suite_init(filename, suite, ierr)
 
+        implicit none
+
         character(len=*),       intent(in)    :: filename
         type(ccpp_suite_t),     intent(inout) :: suite
         integer,                intent(  out) :: ierr
@@ -67,7 +69,7 @@ module ccpp_suite
         ierr = 0
         tmp = c_null_ptr
 
-        !call ccpp_debug('Called ccpp_suite_init')
+        call ccpp_debug('Called ccpp_suite_init')
 
         ! Load the xml document.
         ierr = ccpp_xml_load(ccpp_cstr(filename), xml, root)
@@ -172,30 +174,39 @@ module ccpp_suite
             call ccpp_xml_ele_next(ipd, CCPP_XML_ELE_IPD, ipd, ierr)
         end do
 
-!        write(6, '(A, A, A, A, A, A, A)') &
-!                 '<suite name="', trim(suite%name), &
-!                 '" lib="', trim(suite%library),    &
-!                 '" ver="', trim(suite%version),    &
-!                 '">'
-!
-!        do i=1, suite%ipds_max
-!            write(6, '(A, I0, A)') '  <ipd part="', suite%ipds(i)%part, '">'
-!            do j=1, suite%ipds(i)%subcycles_max
-!                write(6, '(A, I0, A)') '    <subcycle loop="', suite%ipds(i)%subcycles(j)%loop, '">'
-!                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
-!                    write(6, '(A, A, A, A, A, A, A)') &
-!                          '     <scheme lib="', &
-!                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%library), &
-!                          '" ver="', &
-!                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%version), '">', &
-!                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%name), &
-!                          '</scheme>'
-!                end do
-!                write(6, '(A)') '    </subcycle>'
-!            end do
-!            write(6, '(A)') '  </ipd>'
-!        end do
-!        write(6, '(A)') '</suite>'
+#if 0
+        write(6, '(A)') '--------------------------------------------------------------------------------'
+        write(6, '(A)') 'CCPP suite configuration parsed from SDF ' // trim(filename)
+        write(6, '(A)') '--------------------------------------------------------------------------------'
+        write(6, '(A, A, A, A, A, A, A)') &
+                 '<suite name="', trim(suite%name), &
+                 '" lib="', trim(suite%library),    &
+                 '" ver="', trim(suite%version),    &
+                 '">'
+
+        write(6, '(A, I0)') '[suite%ipds_max] = ', suite%ipds_max
+        do i=1, suite%ipds_max
+            write(6, '(A, I0, A)') '  <ipd part="', suite%ipds(i)%part, '">'
+            write(6, '(A, I0)') '  [suite%ipds(i)%subcycles_max] = ', suite%ipds(i)%subcycles_max
+            do j=1, suite%ipds(i)%subcycles_max
+                write(6, '(A, I0, A)') '    <subcycle loop="', suite%ipds(i)%subcycles(j)%loop, '">'
+                write(6, '(A, I0)') '    [suite%ipds(i)%subcycles(j)%schemes_max] = ', suite%ipds(i)%subcycles(j)%schemes_max
+                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
+                    write(6, '(A, A, A, A, A, A, A)') &
+                          '     <scheme lib="', &
+                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%library), &
+                          '" ver="', &
+                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%version), '">', &
+                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%name), &
+                          '</scheme>'
+                end do
+                write(6, '(A)') '    </subcycle>'
+            end do
+            write(6, '(A)') '  </ipd>'
+        end do
+        write(6, '(A)') '</suite>'
+        write(6, '(A)') '--------------------------------------------------------------------------------'
+#endif
 
         ierr = ccpp_xml_unload(xml)
         call ccpp_suite_load(suite, ierr)
