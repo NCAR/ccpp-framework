@@ -9,8 +9,8 @@
 
 # Relative to basedir defined in ccpp_prebuild.py
 VARIABLE_DEFINITION_FILES = [
-    '../../gmtb-scm/src/gmtb_scm_type_defs.f90',
-    '../../gmtb-scm/src/gmtb_scm_physical_constants.f90'
+    '../../scm/src/gmtb_scm_type_defs.f90',
+    '../../scm/src/gmtb_scm_physical_constants.f90'
     ]
 
 # Location of scheme_files relative to basedir defined in ccpp_prebuild.py
@@ -60,7 +60,7 @@ SCHEMES_MAKEFILE = '../../ccpp-physics/CCPP_SCHEMES.mk'
 
 # Relative to basedir defined in ccpp_prebuild.py
 TARGET_FILES = [
-    '../../gmtb-scm/src/gmtb_scm.f90',
+    '../../scm/src/gmtb_scm.f90',
     ]
 
 # Relative to basedir defined in ccpp_prebuild.py
@@ -108,7 +108,7 @@ MODULE_INCLUDE_FILE = 'ccpp_modules.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields.inc'
 
 # HTML document containing the model-defined CCPP variables, relateive to basedir
-HTML_VARTABLE_FILE = '../../gmtb-gfsphysics/CCPP_VARIABLES.html'
+HTML_VARTABLE_FILE = '../../ccpp-physics/CCPP_VARIABLES.html'
 
 
 ###############################################################################
