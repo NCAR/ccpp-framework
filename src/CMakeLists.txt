@@ -34,22 +34,6 @@ endif(LIBXML2_FOUND)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 #------------------------------------------------------------------------------
-# Find OpenMP for C/C++/Fortran
-if (OPENMP)
-  find_package(OpenMP)
-  if(OPENMP_FOUND)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
-    message(STATUS "Enabled OpenMP support for C/C++/Fortran compiler")
-  else(OPENMP_FOUND)
-    message (FATAL_ERROR "C/C++/Fortran compiler does not support OpenMP")
-  endif()
-else(OPENMP)
-    message (STATUS "Disable OpenMP support for C/C++/Fortran compiler")
-endif()
-
-#------------------------------------------------------------------------------
 # The Fortran compiler/linker flag inserted by cmake to create shared libraries
 # with the Intel compiler is deprecated (-i_dynamic), correct here.
 # CMAKE_Fortran_COMPILER_ID = {"Intel", "PGI", "GNU", "Clang", "MSVC", ...}
