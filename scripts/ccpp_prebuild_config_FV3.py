@@ -19,11 +19,11 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/GFS_MP_generic_post.f90',
     'FV3/gfsphysics/physics/GFS_MP_generic_pre.f90',
     'FV3/gfsphysics/physics/GFS_PBL_generic.f90',
-    'FV3/gfsphysics/physics/GFS_rrtmg_post.F90',
-    'FV3/gfsphysics/physics/GFS_rrtmg_pre.F90',
     'FV3/gfsphysics/physics/GFS_SCNV_generic.f90',
     'FV3/gfsphysics/physics/GFS_calpreciptype.f90',
     'FV3/gfsphysics/physics/GFS_debug.f90',
+    'FV3/gfsphysics/physics/GFS_rrtmg_post.F90',
+    'FV3/gfsphysics/physics/GFS_rrtmg_pre.F90',
     'FV3/gfsphysics/physics/GFS_stochastics.f90',
     'FV3/gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
     'FV3/gfsphysics/physics/GFS_surface_generic.f90',
@@ -62,7 +62,7 @@ TARGET_FILES = [
     'FV3/gfsphysics/IPD_layer/IPD_CCPP_Driver.F90',
     ]
 
-# Relative to basedir defined in ccpp_prebuild.py
+# Relative to basedir
 CAPS_MAKEFILE = 'FV3/gfsphysics/CCPP_CAPS.mk'
 CAPS_DIR = 'FV3/gfsphysics/physics'
 
@@ -120,6 +120,7 @@ MODULE_USE_TEMPLATE_HOST_CAP = \
 use ccpp_errors, only: ccpp_error
 '''
 
+# Name of the CCPP data structure in the host model cap
 CCPP_DATA_STRUCTURE = 'cdata_block(nb,nt)'
 
 # Modules to load for auto-generated ccpp_field_add code (e.g. error handling)

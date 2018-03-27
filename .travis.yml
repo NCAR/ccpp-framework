@@ -36,8 +36,10 @@ matrix:
        compiler: gcc
        sudo: false
        dist: trusty
-     - os: osx
-       compiler: gcc
+# DH commented out 03/27/2018 because travis has problems with brew
+# todo: fix (maybe below brew install gcc@6?)
+#     - os: osx
+#       compiler: gcc
 
 #======================================================================
 # Building
@@ -86,6 +88,6 @@ after_success:
 #======================================================================
 notifications:
   email:
-    recipients: Timothy.P.Brown@noaa.gov
+    recipients: dom.heinzeller@noaa.gov
     on_success: change
     on_failure: always

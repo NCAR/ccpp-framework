@@ -29,8 +29,8 @@ parser.add_argument('--debug', action='store_true', help = 'enable debugging out
 ###############################################################################
 
 # Define host model (only parameter to set in this file)
-#HOST_MODEL = "SCM"
-HOST_MODEL = "FV3"
+HOST_MODEL = "SCM"
+#HOST_MODEL = "FV3"
 
 # No further modifications should be required below,
 # all other parameters are set in ccpp_prebuild_config_HOST_MODEL.py

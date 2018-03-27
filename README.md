@@ -1,4 +1,5 @@
 # GMTB CCPP
+
 [GMTB](http://www.dtcenter.org/GMTB/html/) Common Community Physics Package
 (CCPP), including the Interoperable Physics Driver (IPD).
 
@@ -62,7 +63,7 @@ libraries, executables) exist.
 
 1. Clone the repository.
 ```
-git clone https://github.com/NCAR/gmtb-ccpp ccpp
+git clone https://github.com/NCAR/ccpp-framework ccpp
 ```
 2. Change into the repository clone
 ```
@@ -126,7 +127,7 @@ All tests should pass, if not, please open an issue. The output should be
 similar to:
 ~~~~{.sh}
 Running tests...
-Test project /home/tbrown/Sources/gmtb-ccpp/build
+Test project /home/tbrown/Sources/ccpp-framework/build
     Start 1: XML_1
 1/8 Test #1: XML_1 ............................   Passed    0.02 sec
     Start 2: XML_2
