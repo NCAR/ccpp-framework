@@ -5,7 +5,7 @@
 
 
 \section{Overview}
-The following components are included in this release bundle:
+The following components are included in this release:
 
 \begin{itemize}
 	\item CCPP physics
@@ -15,7 +15,7 @@ The following components are included in this release bundle:
 
 
 This chapter provides instructions for obtaining and compiling 
-the GMTB single column model (SCM). The SCM code calls CCPP-compliant
+the GMTB SCM. The SCM code calls CCPP-compliant
 physics schemes through the CCPP framework code. As such, it requires the
 CCPP framework code and physics code, both of which are included as 
 subdirectories within the SCM code. This package can be considered a simple example
@@ -43,23 +43,19 @@ The CCPP framework can be found in the ccpp-framework subdirectory at this level
 
 If you would like to contribute as a developer to this project, please see the Developers Guide at:\\
 
-\url{https://dtcenter.org/gmtb/users/ccpp/index.php}
+\url{https://dtcenter.org/gmtb/users/ccpp/developers/index.php}
 
 
 \section{System Requirements, Libraries, and Tools}
 \label{section: systemrequirements}
 
 The source code for the SCM and CCPP component is in the form
-of programs written in FORTRAN, FORTRAN 90, and C. In addition, there
-are several Python scripts used during the build. 
-
-In addition, the I/O relies on the netCDF
+of programs written in FORTRAN, FORTRAN 90, and C. In addition, the I/O relies on the netCDF
 libraries. Beyond the standard scripts, the build system relies
 on use of the Python scripting language, along with cmake, GNU make and date.
 
-The basic requirements for building and running the HWRF system are
+The basic requirements for building and running the CCPP and SCM bundle are
 listed below:
-
 
 \begin{itemize}
 	\item FORTRAN 90+ compiler
@@ -92,13 +88,14 @@ are built during the compilation phase, and include
 
 
 \subsection{Compilers}
-The CCPP and Single Column Model  has been tested on a variety of
+The CCPP and SCM have been tested on a variety of
 computing platforms. Currently the CCPP system is actively supported
 on Linux and MacOS computing platforms using the Intel, PGI or GNU Fortran
 compilers. Unforeseen build issues may occur when using older
 compiler versions. Typically the best results come from using the
 most recent version of a compiler. The "Known Issues" section of the
-community website provides notes regarding compiler support and known issues.
+community website (\url{https://dtcenter.org/gmtb/users/ccpp/support/CCPP_KnownIssues.php}) provides notes regarding compiler support and known issues.
+
 
 
 \section{Compiling SCM with CCPP}
