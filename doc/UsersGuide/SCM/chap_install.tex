@@ -107,19 +107,18 @@ The first step in compiling the CCPP and SCM is to match the physics variables, 
 
 \begin{enumerate}
 	\item Run the CCPP prebuild script to match required physics variables with those available from the dycore (SCM) and to generate physics caps and makefile segments.\\
-  \exec{cd ccpp-framework/scripts} \\
-  \exec{./ccpp\_prebuild.py}\\
+  \exec{./ccpp-framework/scripts/ccpp\_prebuild.py}\\
 
 	\item Change directory to the top-level SCM directory.\\
-  \exec{cd ../../gmtb-scm} \\
-	\item Run the machine setup script if necessary. This script loads compiler modules (Fortran 2003-compliant Intel), netCDF module, etc. and sets compiler environment variables.  \\
+  \exec{cd scm} \\
+	\item Run the machine setup script if necessary. This script loads compiler modules (Fortran 2003-compliant Intel), netCDF module, etc. and sets compiler environment variables.\marginpar{MACOSX?}  \\
 For t/csh shell, \\
-  \exec{source Theia\_setup.csh} or\\
-  \exec{source Cheyenne\_setup.csh}\\
+  \exec{source etc/Theia\_setup.csh} or\\
+  \exec{source etc/Cheyenne\_setup.csh}\\
 
 For bourne/bash shells,\\
-  \exec{source Theia\_setup.sh} or\\
-  \exec{source Cheyenne\_setup.sh}\\
+  \exec{. etc/Theia\_setup.sh} or\\
+  \exec{. etc/Cheyenne\_setup.sh}\\
 
 	\item Make a build directory and change into it.  \\
   \exec{mkdir bin \&\& cd bin}\\
