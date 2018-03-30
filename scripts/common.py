@@ -66,5 +66,11 @@ def decode_container(container):
     if not len(items) in [1, 2, 3]:
         raise Exception("decode_container not implemented for {0} items".format(len(items)))
     for i in xrange(len(items)):
-        items[i] = items[i][items[i].find('_')+1:]
-    return items
+        items[i] = items[i][:items[i].find('_')] + ' ' + items[i][items[i].find('_')+1:]
+    return ' '.join(items)
+
+def escape_tex(text):
+    return text.replace(
+                '%', '\%').replace(
+                '_', '\_')
+

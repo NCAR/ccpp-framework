@@ -1,7 +1,7 @@
 \documentclass[12pt,letterpaper,oneside]{scrbook}
 
 \usepackage{import}
-\import{../../common/}{gmtb.sty}
+\import{../common/}{gmtb.sty}
 
 \makeindex
 
@@ -17,8 +17,14 @@
 \mainmatter
 
 \import{./}{chap_intro.tex}
-\import{./}{chap_install.tex}
-\import{./}{chap_run.tex}
+\import{./}{chap_schemes.tex}
+\import{./}{chap_hostmodel.tex}
+
+\appendix
+
+\renewcommand{\thechapter}{\Alph{chapter}}
+%\import{./}{chap_appendix.tex}
+
 \backmatter
 
 \end{document}
