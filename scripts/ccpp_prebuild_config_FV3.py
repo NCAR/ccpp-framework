@@ -7,13 +7,14 @@
 # Definitions                                                                 #
 ###############################################################################
 
-# Relative to basedir defined in ccpp_prebuild.py
+# Add all files with metadata tables on the host model side,
+# relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     'FV3/gfsphysics/physics/physcons.f90',
     ]
 
-# Location of scheme_files relative to basedir defined in ccpp_prebuild.py
+# Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'FV3/gfsphysics/physics/GFS_DCNV_generic.f90',
     'FV3/gfsphysics/physics/GFS_MP_generic_post.f90',
@@ -56,21 +57,26 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/sfc_sice.f',
     ]
 
-# Relative to basedir defined in ccpp_prebuild.py
+# Auto-generated makefile fragment that contains all schemes
 SCHEMES_MAKEFILE = 'FV3/gfsphysics/CCPP_SCHEMES.mk'
 
-# Relative to basedir defined in ccpp_prebuild.py
+# CCPP host cap in which to insert the ccpp_field_add statements;
+# determines the directory to place ccpp_{modules,fields}.inc
 TARGET_FILES = [
     'FV3/gfsphysics/IPD_layer/IPD_CCPP_Driver.F90',
     ]
 
-# Relative to basedir
+# Auto-generated makefile fragment that contains all caps
 CAPS_MAKEFILE = 'FV3/gfsphysics/CCPP_CAPS.mk'
+
+# Directory where to put all auto-generated physics caps
 CAPS_DIR = 'FV3/gfsphysics/physics'
 
-# Optional arguments - only required for schemes that use optional arguments. This script will throw
-# an exception if it encounters a scheme subroutine with optional arguments if no entry is made in
-# the following dictionary. Valid values are 'all', 'none' or a list of arguments: [ 'var1', 'var3' ].
+# Optional arguments - only required for schemes that use
+# optional arguments. ccpp_prebuild.py will throw an exception
+# if it encounters a scheme subroutine with optional arguments
+# if no entry is made here. Possible values are: 'all', 'none',
+# or a list of standard_names: [ 'var1', 'var3' ].
 OPTIONAL_ARGUMENTS = {
     'rrtmg_sw' : {
         'rrtmg_sw_run' : [
@@ -104,28 +110,38 @@ OPTIONAL_ARGUMENTS = {
     #'subroutine_name_2' : [ 'var1', 'var3'],
     }
 
-# No path needed - will be created in directory of target files defined above
+# Names of Fortran include files in the host model cap (do not change);
+# both files will be written to the directory of each target file
 MODULE_INCLUDE_FILE = 'ccpp_modules.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields.inc'
 
-# HTML document containing the model-defined CCPP variables, relateive to basedir
-HTML_VARTABLE_FILE = 'FV3/gfsphysics/CCPP_VARIABLES.html'
+# HTML document containing the model-defined CCPP variables
+HTML_VARTABLE_FILE = 'FV3/gfsphysics/CCPP_VARIABLES_FV3.html'
+
+# LaTeX document containing the provided vs requested CCPP variables
+LATEX_VARTABLE_FILE = 'ccpp-framework/doc/DevelopersGuide/CCPP_VARIABLES_FV3.tex'
 
 
 ###############################################################################
 # Template code to generate include files                                     #
 ###############################################################################
 
-# Modules to load for auto-generated ccpp_field_add code (e.g. error handling)
+# Name of the CCPP data structure in the host model cap;
+# in the case of FV3, this is a 2-dimensional array with
+# the number of blocks as the first and the number of
+# OpenMP threads as the second dimension; nb is the loop
+# index for the current block, nt for the current thread
+CCPP_DATA_STRUCTURE = 'cdata_block(nb,nt)'
+
+# Modules to load for auto-generated ccpp_field_add code
+# in the host model cap (e.g. error handling)
 MODULE_USE_TEMPLATE_HOST_CAP = \
 '''
 use ccpp_errors, only: ccpp_error
 '''
 
-# Name of the CCPP data structure in the host model cap
-CCPP_DATA_STRUCTURE = 'cdata_block(nb,nt)'
-
-# Modules to load for auto-generated ccpp_field_add code (e.g. error handling)
+# Modules to load for auto-generated ccpp_field_get code
+# in the physics scheme cap (e.g. derived data types)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
        use machine, only: kind_phys
