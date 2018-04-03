@@ -61,6 +61,19 @@ add_custom_command(
 )
 list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90)
 
+#------------------------------------------------------------------------------
+# The Fortran compiler/linker flag inserted by cmake to create shared libraries
+# with the Intel compiler is deprecated (-i_dynamic), correct here.
+# CMAKE_Fortran_COMPILER_ID = {"Intel", "PGI", "GNU", "Clang", "MSVC", ...}
+if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
+    string(REPLACE "-i_dynamic" "-shared-intel"
+           CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS
+           "${CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS}")
+    string(REPLACE "-i_dynamic" "-shared-intel"
+           CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS
+           "${CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS}")
+endif()
+
 # Guard for undefined/empty CMAKE_Fortran_FLAGS
 set(CMAKE_Fortran_FLAGS " ${CMAKE_Fortran_FLAGS}")
 
