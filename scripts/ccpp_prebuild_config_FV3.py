@@ -57,7 +57,7 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/sfc_sice.f',
     ]
 
-# Auto-generated makefile fragment that contains all schemes
+# Auto-generated makefile snippet that contains all schemes
 SCHEMES_MAKEFILE = 'FV3/gfsphysics/CCPP_SCHEMES.mk'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
@@ -66,7 +66,7 @@ TARGET_FILES = [
     'FV3/gfsphysics/IPD_layer/IPD_CCPP_Driver.F90',
     ]
 
-# Auto-generated makefile fragment that contains all caps
+# Auto-generated makefile snippet that contains all caps
 CAPS_MAKEFILE = 'FV3/gfsphysics/CCPP_CAPS.mk'
 
 # Directory where to put all auto-generated physics caps
