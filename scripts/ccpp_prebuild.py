@@ -329,7 +329,7 @@ def generate_scheme_caps(metadata, arguments):
     return (success, scheme_caps)
 
 def generate_schemes_makefile(schemes):
-    logging.info('Generating schemes makefile fragment ...')
+    logging.info('Generating schemes makefile snippet ...')
     success = True
     makefile = SchemesMakefile()
     makefile.filename = schemes_makefile
@@ -345,7 +345,7 @@ def generate_schemes_makefile(schemes):
     return success
 
 def generate_caps_makefile(caps):
-    logging.info('Generating caps makefile fragment ...')
+    logging.info('Generating caps makefile snippet ...')
     success = True
     makefile = CapsMakefile()
     makefile.filename = caps_makefile
