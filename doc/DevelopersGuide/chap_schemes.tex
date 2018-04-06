@@ -8,7 +8,7 @@ The rules for writing a CCPP-compliant scheme are summarized in the following. L
 
 General rules:
 \begin{itemize}
-\item Scheme must be in its own module (module name $=$ scheme name) and must have three entry points (subroutines) starting with the name of the module: module \execout{scheme\_template} $\rightarrow$ subroutines \execout{scheme\_template\_\{init,finalize,run\}}. Note: at present, the \execout{\_init} and \execout{\_finalize} routines can not be used, but placeholders (c.\,f. listing~\ref{lst_scheme_template}) 
+\item Scheme must be in its own module (module name $=$ scheme name) and must have three entry points (subroutines) starting with the name of the module: module \execout{scheme\_template} $\rightarrow$ subroutines \execout{scheme\_template\_\{init,finalize,run\}}. Note: at present, the \execout{\_init} and \execout{\_finalize} routines can not be used, but placeholders (c.\,f. listing~\ref{lst_scheme_template})
 \item Empty schemes (e.\,g. \execout{scheme\_template\_init} in listing~\ref{lst_scheme_template}) need no argument table.
 \item Schemes in use require an argument table as below, the order of arguments in the table must be the same as in the argument list of the subroutine.
 \item An argument table must precede the subroutine, must start with
@@ -29,7 +29,7 @@ and end with a line containing only
 #endif
 \end{lstlisting}
 \item Module names, scheme names and subroutine names are case sensitive.
-\item For better readibility, it is suggested to align the columns in the metadata table.
+\item For better readability, it is suggested to align the columns in the metadata table.
 \end{itemize}
 
 Input/output variable (argument) rules:
