@@ -8,10 +8,10 @@ The rules for writing a CCPP-compliant scheme are summarized in the following. L
 
 General rules:
 \begin{itemize}
-\item Scheme must be in its own module (module name $=$ scheme name) and must have three entry points (subroutines) starting with the name of the module: module \execout{scheme\_template} $\rightarrow$ subroutines \execout{scheme\_template\_\{init,finalize,run\}}. Note: at present, the \execout{\_init} and \execout{\_finalize} routines can not be used, but placeholders (c.\,f. listing~\ref{lst_scheme_template})
+\item Scheme must be in its own module (module name $=$ scheme name) and must have three entry points (subroutines) starting with the name of the module: module \execout{scheme\_template} $\rightarrow$ subroutines \execout{scheme\_template\_\{init,finalize,run\}}. Note: at present, the \execout{\_init} and \execout{\_finalize} routines can not be used, and are simply placeholders (c.\,f. listing~\ref{lst_scheme_template})
 \item Empty schemes (e.\,g. \execout{scheme\_template\_init} in listing~\ref{lst_scheme_template}) need no argument table.
 \item Schemes in use require an argument table as below, the order of arguments in the table must be the same as in the argument list of the subroutine.
-\item An argument table must precede the subroutine, must start with
+\item An argument table must precede the subroutine, and must start with
 \begin{lstlisting}[language=Fortran]
 !> \section arg_table_subroutine_name Argument Table
 \end{lstlisting}
@@ -58,7 +58,14 @@ Parallel programming rules:
 \item If OpenMP is used, the number of allowed threads must be provided by the
   host model as an \execout{intent(in)} argument in the argument list.
 \item If MPI is used, it is restricted to global communications: {barrier}, {broadcast}, {gather}, {scatter}, {reduce}; the MPI communicator must be provided by the host model as an \execout{intent(in)} argument in the argument list.
-\item If Fortran coarrays are used, consult with the GMTB Help Desk (\url{gmtb-help@ucar.edu}).
+\item If Fortran coarrays are used, consult with the GMTB helpdesk at (\url{gmtb-help@ucar.edu}).
+\end{itemize}
+Scientific Documentation rules:
+\begin{itemize}
+\item Scientific documentation is not technically needed for a parameterization to work with the CCPP. However, inclusion of inline scientific documentation is highly recommended and necessary before a parameterization is submitted for inclusion in the CCPP. 
+\item Scientific documentation for CCPP parameterizations should be inline within the Fortran code using markups according to the Doxygen software. Reviewing the documentation for CCPP v1.0 parameterizations is a good way of getting started in writing documentation for a new scheme.
+\item The CCPP Scientific Documentation can be converted to html format (see \url{https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc/}.
+\item For precise instructions on creating the scientific documentation, contact the GMTB helpdesk at \url{gmtb-help@ucar.edu}.
 \end{itemize}
 \begin{sidewaysfigure}
 \lstinputlisting[language=Fortran,
@@ -73,8 +80,8 @@ Parallel programming rules:
 \label{sec_addscheme}
 This section describes briefly how to add a new scheme to the CCPP pool and use it with a host model that already supports the CCPP.
 \begin{enumerate}
-\item Identify the required variables for your target host model: for a list of variables available for host model \execsub{XYZ} (currently \execout{SCM} and \execout{FV3}), see \execout{ccpp-framework/doc/DevelopersGuide/CCPP\_VARIABLES\_XYZ.pdf}. Contact the GMTB Help Desk at \url{gmtb-help@ucar.edu} if you need additional variables that you believe should be provided by the host model or as part of an interstitial pre-/post-scheme instead of being calculated from existing variables inside your scheme.
-\item Identify if your new scheme requires additional interstitial code that must be run before/after the scheme and that cannot be part of the scheme itself, for example because of dependencies on other schemes and/or the order the scheme is run in the suite definition file. As of now, interstitial schemes should be created in cooperation with the GMTB help desk.
+\item Identify the required variables for your target host model: for a list of variables available for host model \execsub{XYZ} (currently \execout{SCM} and \execout{FV3}), see \execout{ccpp-framework/doc/DevelopersGuide/CCPP\_VARIABLES\_XYZ.pdf}. Contact the GMTB helpdesk at \url{gmtb-help@ucar.edu} if you need additional variables that you believe should be provided by the host model or as part of a pre-/post-scheme (interstitial scheme) instead of being calculated from existing variables inside your scheme.
+\item Identify if your new scheme requires additional interstitial code that must be run before/after the scheme and that cannot be part of the scheme itself, for example because of dependencies on other schemes and/or the order the scheme is run in the suite definition file. As of now, interstitial schemes should be created in cooperation with the GMTB helpdesk.
 \item Follow the guidelines outlined in the previous section to make your scheme CCPP-compliant. Make sure to use an uppercase suffix \execout{.F90} to enable CPP preprocessing.
 \item Locate the CCPP prebuild configuration files for the target host model, for example:
 \begin{lstlisting}[language=Python]
@@ -103,8 +110,8 @@ OPTIONAL_ARGUMENTS = {
         },
     }
 \end{lstlisting}
-\item Copy new scheme to the same location as existing schemes in the CCPP directory structure, e.\,g. \execout{../some\_relative\_path/new\_scheme.F90}.
-\item Edit the runtime suite definition file (see, for example, GMTB Single Column Model Technical Guide v1.0, chapter 6.1.3, {\red\url{URL MISSING}}) and add new scheme at the place it should be run.
+\item Place new scheme in the same location as existing schemes in the CCPP directory structure, e.\,g. \execout{../some\_relative\_path/new\_scheme.F90}.
+\item Edit the runtime suite definition file (see, for example, GMTB Single Column Model Technical Guide v1.0, chapter 6.1.3, \url{https://dtcenter.org/gmtb/users/ccpp/docs}) and add the new scheme at the place it should be run.
 \item Done!
 \end{enumerate}
-\textbf{Note:} Making a scheme CCPP-compliant is a necessary step for acceptance of the scheme in the pool of supported CCPP physics schemes, but does not guarantee it. Acceptance is subject to approval by a review committee and depends on scientific innovation, demonstrated added value and compliance with the above rules. For further information see {\red MISSING --- LIGIA PLEASE ADD NAME AND URL/LINK OF THE CORRESPONDING DOCUMENT HERE}.
+\textbf{Note:} Making a scheme CCPP-compliant is a necessary step for acceptance of the scheme in the pool of supported CCPP physics schemes, but does not guarantee it. Acceptance is subject to approval by a Governance committee and depends on scientific innovation, demonstrated added value, and compliance with the above rules. The criteria for acceptance of innovations into the CCPP is under development. For further information, please contact the GMTB helpdesk at \url{gmtb-help@ucar.edu}.
