@@ -35,6 +35,7 @@
 \usetikzlibrary{calc}
 \usepackage{hyperref}
 \usepackage{rotating}
+\usepackage{xfrac}
 
 % Colours
 \definecolor{white}{rgb}{1.0,1.0,1.0}
@@ -47,16 +48,17 @@
 
 \hypersetup{
         pdfauthor={},
-        pdftitle={GMTB CCPP Users Guide},
+        pdftitle={},
         pdfsubject={},
         pdfkeywords={},
         bookmarksnumbered=true,
         % Either of these.. I prefer the 2nd as this means
         % the colour of the text in the document overrides
         % whatever has been defined as urlcolor.
-        %colorlinks=true,
-        %urlcolor=black,
-        colorlinks=false,
+        colorlinks=true,
+        urlcolor=blue,
+        linkcolor=blue,
+        %colorlinks=false,
         pdfborder={0 0 0}
 }
 
@@ -88,7 +90,7 @@
 %\pagestyle{plain}
 
 %Formatting for code listings
-\lstset{ 
+\lstset{
     %basicstyle=\footnotesize\fontfamily{qcr}\fontshape{n}\fontseries{l}\selectfont,
     basicstyle=\footnotesize\ttfamily,
     %basicstyle=\footnotesize\fontfamily{txtt},
@@ -135,6 +137,8 @@
 
 % Shorthand degree symbol
 \newcommand{\dgr}{$^{\circ}$}
+
 % Change the default font to be Sans Serif
 %\renewcommand{\familydefault}{\sfdefault}
+
 \sloppy
