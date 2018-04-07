@@ -56,7 +56,7 @@ SCHEME_FILES = [
     'ccpp-physics/physics/sfc_sice.f',
     ]
 
-# Auto-generated makefile fragment that contains all schemes
+# Auto-generated makefile snippet that contains all schemes
 SCHEMES_MAKEFILE = 'ccpp-physics/CCPP_SCHEMES.mk'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
@@ -65,7 +65,7 @@ TARGET_FILES = [
     'scm/src/gmtb_scm.f90',
     ]
 
-# Auto-generated makefile fragment that contains all caps
+# Auto-generated makefile snippet that contains all caps
 CAPS_MAKEFILE = 'ccpp-physics/CCPP_CAPS.mk'
 
 # Directory where to put all auto-generated physics caps
