@@ -16,7 +16,7 @@ import sys
 from common import encode_container, execute
 from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, SchemesMakefile
-from mkdoc import metadata_to_html
+from mkdoc import metadata_to_html, metadata_to_latex
 
 #set up the command line argument parser
 parser = argparse.ArgumentParser()
@@ -58,6 +58,7 @@ module_include_file       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
 fields_include_file       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
 
 html_vartable_file        = ccpp_prebuild_config.HTML_VARTABLE_FILE
+latex_vartable_file       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
 
 ###############################################################################
 # Template code to generate include files (imported)                          #
@@ -328,7 +329,7 @@ def generate_scheme_caps(metadata, arguments):
     return (success, scheme_caps)
 
 def generate_schemes_makefile(schemes):
-    logging.info('Generating schemes makefile fragment ...')
+    logging.info('Generating schemes makefile snippet ...')
     success = True
     makefile = SchemesMakefile()
     makefile.filename = schemes_makefile
@@ -344,7 +345,7 @@ def generate_schemes_makefile(schemes):
     return success
 
 def generate_caps_makefile(caps):
-    logging.info('Generating caps makefile fragment ...')
+    logging.info('Generating caps makefile snippet ...')
     success = True
     makefile = CapsMakefile()
     makefile.filename = caps_makefile
@@ -371,7 +372,7 @@ def main():
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
-    # Create table with all variables provided by the model
+    # Create an HTML table with all variables provided by the model
     success = metadata_to_html(metadata_define, HOST_MODEL, html_vartable_file)
     if not success:
         raise Exception('Call to metadata_to_html failed.')
@@ -385,6 +386,11 @@ def main():
     (success, metadata_request, arguments_request) = check_optional_arguments(metadata_request, arguments_request)
     if not success:
         raise Exception('Call to check_optional_arguments failed.')
+
+    # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
+    success = metadata_to_latex(metadata_define, metadata_request, HOST_MODEL, latex_vartable_file)
+    if not success:
+        raise Exception('Call to metadata_to_latex failed.')
 
     # Check requested against defined arguments to generate metadata (list/dict of variables for CCPP)
     (success, modules, metadata) = compare_metadata(metadata_define, metadata_request)
@@ -420,6 +426,8 @@ def main():
     success = generate_caps_makefile(scheme_caps)
     if not success:
         raise Exception('Call to generate_caps_makefile failed.')
+
+    logging.info('CCPP prebuild step completed successfully.')
 
 if __name__ == '__main__':
     main()
