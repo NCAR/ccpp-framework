@@ -23,8 +23,8 @@ SCHEME_FILES = [
     'ccpp-physics/physics/GFS_PBL_generic.f90',
     'ccpp-physics/physics/GFS_SCNV_generic.f90',
     'ccpp-physics/physics/GFS_calpreciptype.f90',
-    'ccpp-physics/physics/GFS_phys_time_vary.f90',
-    'ccpp-physics/physics/GFS_rad_time_vary.f90',
+    'ccpp-physics/physics/GFS_phys_time_vary.scm.f90',
+    'ccpp-physics/physics/GFS_rad_time_vary.scm.f90',
     'ccpp-physics/physics/GFS_rrtmg_post.F90',
     'ccpp-physics/physics/GFS_rrtmg_pre.F90',
     'ccpp-physics/physics/GFS_suite_interstitial.ccpp.f90',
@@ -144,7 +144,7 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
        use module_radlw_parameters, only: sfcflw_type, topflw_type
        use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
        use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
-                               GFS_sfcprop_type,  GFS_sfccycle_type,    &
+                               GFS_sfcprop_type,                        &
                                GFS_coupling_type, GFS_control_type,     &
                                GFS_grid_type,     GFS_tbd_type,         &
                                GFS_cldprop_type,  GFS_radtend_type,     &

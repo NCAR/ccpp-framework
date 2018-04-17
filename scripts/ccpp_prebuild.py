@@ -21,7 +21,7 @@ from mkdoc import metadata_to_html, metadata_to_latex
 #set up the command line argument parser
 parser = argparse.ArgumentParser()
 
-#the only arguments are a a list of XML files to parse and a list of files with the subroutine calls
+# command line argument: debug flag
 parser.add_argument('--debug', action='store_true', help = 'enable debugging output', default=False)
 
 ###############################################################################
