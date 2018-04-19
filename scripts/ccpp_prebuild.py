@@ -18,55 +18,23 @@ from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_var
 from mkcap import Cap, CapsMakefile, SchemesMakefile
 from mkdoc import metadata_to_html, metadata_to_latex
 
-#set up the command line argument parser
-parser = argparse.ArgumentParser()
-
-# command line argument: debug flag
-parser.add_argument('--debug', action='store_true', help = 'enable debugging output', default=False)
-
 ###############################################################################
 # User definitions                                                            #
 ###############################################################################
 
-# Define host model (only parameter to set in this file)
-HOST_MODEL = "SCM"
-#HOST_MODEL = "FV3"
-
-# No further modifications should be required below,
-# all other parameters are set in ccpp_prebuild_config_HOST_MODEL.py
+# List of configured host models
+HOST_MODELS = ["FV3", "SCM"]
 
 ###############################################################################
-# Definitions (imported)                                                      #
+# Set up the command line argument parser and other global variables          #
 ###############################################################################
 
-# basedir is the current directory where this script is executed
-basedir = os.getcwd()
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', action='store', choices=HOST_MODELS, help='host model (case-sensitive)', required=True)
+parser.add_argument('--debug', action='store_true', help='enable debugging output', default=False)
 
-# Import the host-model specific CCPP prebuild config
-ccpp_prebuild_config_name = "ccpp_prebuild_config_{0}".format(HOST_MODEL)
-ccpp_prebuild_config = __import__(ccpp_prebuild_config_name)
-
-# Definitions in host-model dependent CCPP prebuild config script
-variable_definition_files = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
-scheme_files              = ccpp_prebuild_config.SCHEME_FILES
-schemes_makefile          = ccpp_prebuild_config.SCHEMES_MAKEFILE
-target_files              = ccpp_prebuild_config.TARGET_FILES
-caps_makefile             = ccpp_prebuild_config.CAPS_MAKEFILE
-caps_dir                  = ccpp_prebuild_config.CAPS_DIR
-optional_arguments        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
-module_include_file       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
-fields_include_file       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
-
-html_vartable_file        = ccpp_prebuild_config.HTML_VARTABLE_FILE
-latex_vartable_file       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
-
-###############################################################################
-# Template code to generate include files (imported)                          #
-###############################################################################
-
-module_use_template_host_cap   = ccpp_prebuild_config.MODULE_USE_TEMPLATE_HOST_CAP
-ccpp_data_structure            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
-module_use_template_scheme_cap = ccpp_prebuild_config.MODULE_USE_TEMPLATE_SCHEME_CAP
+# BASEDIR is the current directory where this script is executed
+BASEDIR = os.getcwd()
 
 ###############################################################################
 # Functions and subroutines                                                   #
@@ -76,8 +44,38 @@ def parse_arguments():
     """Parse command line arguments."""
     success = True
     args = parser.parse_args()
+    host_model = args.model
     debug = args.debug
-    return (success, debug)
+    return (success, host_model, debug)
+
+def import_config(host_model):
+    """Import the configuration file for a given host model"""
+    success = True
+    config = {}
+
+    # Import the host-model specific CCPP prebuild config
+    ccpp_prebuild_config_name = "ccpp_prebuild_config_{0}".format(host_model)
+    ccpp_prebuild_config = __import__(ccpp_prebuild_config_name)
+
+    # Definitions in host-model dependent CCPP prebuild config script
+    config['variable_definition_files'] = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
+    config['scheme_files']              = ccpp_prebuild_config.SCHEME_FILES
+    config['schemes_makefile']          = ccpp_prebuild_config.SCHEMES_MAKEFILE
+    config['target_files']              = ccpp_prebuild_config.TARGET_FILES
+    config['caps_makefile']             = ccpp_prebuild_config.CAPS_MAKEFILE
+    config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR
+    config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
+    config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
+    config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
+    config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE
+    config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
+
+    # Template code in host-model dependent CCPP prebuild config script
+    config['module_use_template_host_cap']   = ccpp_prebuild_config.MODULE_USE_TEMPLATE_HOST_CAP
+    config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
+    config['module_use_template_scheme_cap'] = ccpp_prebuild_config.MODULE_USE_TEMPLATE_SCHEME_CAP
+
+    return(success, config)
 
 def setup_logging(debug):
     success = True
@@ -92,7 +90,7 @@ def setup_logging(debug):
         logging.info('Logging level set to INFO')
     return success
 
-def gather_variable_definitions():
+def gather_variable_definitions(variable_definition_files):
     """Scan all Fortran source files with variable definitions on the host model side."""
     logging.info('Parsing metadata tables for variables provided by host model ...')
     success = True
@@ -100,14 +98,14 @@ def gather_variable_definitions():
     for variable_definition_file in variable_definition_files:
         (filedir, filename) = os.path.split(variable_definition_file)
         # Change to directory of variable_definition_file and parse it
-        os.chdir(os.path.join(basedir,filedir))
+        os.chdir(os.path.join(BASEDIR,filedir))
         metadata = parse_variable_tables(filename)
         metadata_define = merge_metadata_dicts(metadata_define, metadata)
-        # Return to basedir
-        os.chdir(basedir)
+        # Return to BASEDIR
+        os.chdir(BASEDIR)
     return (success, metadata_define)
 
-def collect_physics_subroutines():
+def collect_physics_subroutines(scheme_files):
     """Scan all Fortran source files in scheme_files for subroutines with argument tables."""
     logging.info('Parsing metadata tables in physics scheme files ...')
     success = True
@@ -121,12 +119,12 @@ def collect_physics_subroutines():
         (metadata, arguments) = parse_scheme_tables(scheme_filename)
         metadata_request = merge_metadata_dicts(metadata_request, metadata)
         arguments_request.update(arguments)
-        os.chdir(basedir)
-    # Return to basedir
-    os.chdir(basedir)
+        os.chdir(BASEDIR)
+    # Return to BASEDIR
+    os.chdir(BASEDIR)
     return (success, metadata_request, arguments_request)
 
-def check_optional_arguments(metadata, arguments):
+def check_optional_arguments(metadata, arguments, optional_arguments):
     """Check if for each subroutine with optional arguments, an entry exists in the
     optional_arguments dictionary. This is required to generate the caps correctly
     and to assess whether the variable is required from the host model. Optional
@@ -242,7 +240,7 @@ def compare_metadata(metadata_define, metadata_request):
     modules = sorted(list(set(modules)))
     return (success, modules, metadata)
 
-def create_module_use_statements(modules):
+def create_module_use_statements(modules, module_use_template_host_cap):
     # module_use_template_host_cap must include the required modules
     # for error handling of the ccpp_field_add statments
     logging.info('Generating module use statements ...')
@@ -255,7 +253,7 @@ def create_module_use_statements(modules):
     logging.info('Generated module use statements for {0} module(s)'.format(cnt))
     return (success, module_use_statements)
 
-def create_ccpp_field_add_statements(metadata):
+def create_ccpp_field_add_statements(metadata, ccpp_data_structure):
     # The metadata container may contain multiple entries
     # for the same variable standard_name, but for different
     # "callers" (i.e. subroutines using it) with potentially
@@ -274,7 +272,8 @@ def create_ccpp_field_add_statements(metadata):
     logging.info('Generated ccpp_field_add statements for {0} variable(s)'.format(cnt))
     return (success, ccpp_field_add_statements)
 
-def generate_include_files(module_use_statements, ccpp_field_add_statements):
+def generate_include_files(module_use_statements, ccpp_field_add_statements,
+                           target_files, module_include_file, fields_include_file):
     logging.info('Generating include files for host model cap {0} ...'.format(', '.join(target_files)))
     success = True
     target_dirs = []
@@ -294,7 +293,7 @@ def generate_include_files(module_use_statements, ccpp_field_add_statements):
             f.write(ccpp_field_add_statements)
     return success
 
-def generate_scheme_caps(metadata, arguments):
+def generate_scheme_caps(metadata, arguments, caps_dir, module_use_template_scheme_cap):
     success = True
     # Change to physics directory
     os.chdir(caps_dir)
@@ -325,10 +324,10 @@ def generate_scheme_caps(metadata, arguments):
             # Write cap
             cap.write(module_name, module_use_statement, capdata)
     #
-    os.chdir(basedir)
+    os.chdir(BASEDIR)
     return (success, scheme_caps)
 
-def generate_schemes_makefile(schemes):
+def generate_schemes_makefile(schemes, schemes_makefile):
     logging.info('Generating schemes makefile snippet ...')
     success = True
     makefile = SchemesMakefile()
@@ -344,7 +343,7 @@ def generate_schemes_makefile(schemes):
     logging.info('Added {0} schemes to makefile {1}'.format(len(schemes_with_path), makefile.filename))
     return success
 
-def generate_caps_makefile(caps):
+def generate_caps_makefile(caps, caps_makefile, caps_dir):
     logging.info('Generating caps makefile snippet ...')
     success = True
     makefile = CapsMakefile()
@@ -359,7 +358,7 @@ def generate_caps_makefile(caps):
 
 def main():
     # Parse command line arguments
-    (success, debug) = parse_arguments()
+    (success, host_model, debug) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -367,28 +366,33 @@ def main():
     if not success:
         raise Exception('Call to setup_logging failed.')
 
+    (success, config) = import_config(host_model)
+    if not success:
+        raise Exception('Call to import_config failed.')
+
     # Variables defined by the host model
-    (success, metadata_define) = gather_variable_definitions()
+    (success, metadata_define) = gather_variable_definitions(config['variable_definition_files'])
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
     # Create an HTML table with all variables provided by the model
-    success = metadata_to_html(metadata_define, HOST_MODEL, html_vartable_file)
+    success = metadata_to_html(metadata_define, host_model, config['html_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
-    (success, metadata_request, arguments_request) = collect_physics_subroutines()
+    (success, metadata_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
     # Process optional arguments based on configuration in above dictionary optional_arguments
-    (success, metadata_request, arguments_request) = check_optional_arguments(metadata_request, arguments_request)
+    (success, metadata_request, arguments_request) = check_optional_arguments(metadata_request,arguments_request,
+                                                                              config['optional_arguments'])
     if not success:
         raise Exception('Call to check_optional_arguments failed.')
 
     # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
-    success = metadata_to_latex(metadata_define, metadata_request, HOST_MODEL, latex_vartable_file)
+    success = metadata_to_latex(metadata_define, metadata_request, host_model, config['latex_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_latex failed.')
 
@@ -398,32 +402,34 @@ def main():
         raise Exception('Call to compare_metadata failed.')
 
     # Crate module use statements to inject into the host model cap
-    (success, module_use_statements) = create_module_use_statements(modules)
+    (success, module_use_statements) = create_module_use_statements(modules, config['module_use_template_host_cap'])
     if not success:
         raise Exception('Call to create_module_use_statements failed.')
 
     # Crate ccpp_fiels_add statements to inject into the host model cap
-    (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata)
+    (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata, config['ccpp_data_structure'])
     if not success:
         raise Exception('Call to create_ccpp_field_add_statements failed.')
 
     # Generate include files for module_use_statements and ccpp_field_add_statements
-    success = generate_include_files(module_use_statements, ccpp_field_add_statements)
+    success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
+                                     config['module_include_file'], config['fields_include_file'])
     if not success:
         raise Exception('Call to generate_include_files failed.')
 
     # Generate scheme caps
-    (success, scheme_caps) = generate_scheme_caps(metadata_request, arguments_request)
+    (success, scheme_caps) = generate_scheme_caps(metadata_request, arguments_request, config['caps_dir'],
+                                                  config['module_use_template_scheme_cap'])
     if not success:
         raise Exception('Call to generate_scheme_caps failed.')
 
     # Add filenames of schemes to makefile
-    success = generate_schemes_makefile(scheme_files)
+    success = generate_schemes_makefile(config['scheme_files'], config['schemes_makefile'])
     if not success:
         raise Exception('Call to generate_schemes_makefile failed.')
 
     # Add filenames of scheme caps to makefile
-    success = generate_caps_makefile(scheme_caps)
+    success = generate_caps_makefile(scheme_caps, config['caps_makefile'], config['caps_dir'])
     if not success:
         raise Exception('Call to generate_caps_makefile failed.')
 

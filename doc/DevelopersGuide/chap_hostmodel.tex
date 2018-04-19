@@ -128,7 +128,7 @@ In order to connect CCPP with a host model \execsub{XYZ}, a Python-based configu
 \begin{lstlisting}[language=bash]
 cp ccpp_prebuild_config_FV3.py ccpp_prebuild_config_XYZ.py
 \end{lstlisting}
-and add \execout{HOST\_MODEL=XYZ} to section \execout{User definitions} in \execout{ccpp\_prebuild.py}.
+and adding \execout{XYZ} to the \execout{HOST_MODELS} list in the section \execout{User definitions} in \execout{ccpp\_prebuild.py}.
 
 The configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} depends largely on (a) the directory structure of the host model itself, (b) where the \execout{ccpp-framework} and the \execout{ccpp-physics} directories are located relative to the directory structure of the host model, and (c) from which directory the \execout{ccpp\_prebuild.py} script is executed before/during the build process (this is referred to as \execout{basedir} in \execout{ccpp\_prebuild\_config\_XYZ.py}).
 
@@ -207,7 +207,7 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
 
 Once the configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} is complete, run
 \begin{lstlisting}[language=bash]
-./ccpp-framework/scripts/ccpp_prebuild.py [--debug]
+./ccpp-framework/scripts/ccpp_prebuild.py --model=XYZ [--debug]
 \end{lstlisting}
 from the top-level directory. Without the debugging flag, the output should look similar to
 \begin{lstlisting}[language=bash,basicstyle=\scriptsize\ttfamily]
@@ -282,4 +282,3 @@ Following the steps outlined Section~\ref{sec_ccpp_build_steps}, the include fil
 Thus, setting the environment variables \execout{FFLAGS} and \execout{LDFLAGS} as in Sect.~\ref{sec_ccpp_build_steps} should be sufficient to compile the host model with its newly created host model cap (Sect.~\ref{sec_hostmodel_cap}) and connect to the CCPP library and framework.
 
 For a complete integration of the CCPP infrastructure and physics library build systems in the host model build system, users are referred to the existing implementations in the GMTB SCM.
-
