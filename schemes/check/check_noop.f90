@@ -39,7 +39,7 @@ module check_noop
         call c_f_pointer(ptr, cdata)
 
         print *, 'In noop_cap'
-        print *, cdata%suite%ipds(1)%subcycles(1)%schemes(1)%name
+        print *, cdata%suite%groups(1)%subcycles(1)%schemes(1)%name
 
     end subroutine noop_cap
 

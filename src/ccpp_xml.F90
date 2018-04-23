@@ -22,7 +22,7 @@ module ccpp_xml
 
     use, intrinsic :: iso_c_binding
     use            :: ccpp_types,                                     &
-                      only: ccpp_suite_t, ccpp_ipd_t,                 &
+                      only: ccpp_suite_t, ccpp_group_t,               &
                             ccpp_subcycle_t, ccpp_scheme_t,           &
                             CCPP_STR_LEN
     use            :: ccpp_strings,                                   &
@@ -42,13 +42,13 @@ module ccpp_xml
               CCPP_XML_ELE_SUITE,                                     &
               CCPP_XML_ELE_INIT,                                      &
               CCPP_XML_ELE_FINALIZE,                                  &
-              CCPP_XML_ELE_IPD,                                       &
+              CCPP_XML_ELE_GROUP,                                     &
               CCPP_XML_ELE_SUBCYCLE,                                  &
               CCPP_XML_ELE_SCHEME
 
     interface ccpp_xml_parse
         module procedure ccpp_xml_parse_suite,                        &
-                         ccpp_xml_parse_ipd,                          &
+                         ccpp_xml_parse_group,                        &
                          ccpp_xml_parse_subcycle,                     &
                          ccpp_xml_parse_fptr
     end interface ccpp_xml_parse
@@ -62,7 +62,7 @@ module ccpp_xml
     character(len=*), parameter :: CCPP_XML_ELE_SUITE    = "suite"
     character(len=*), parameter :: CCPP_XML_ELE_INIT     = "init"
     character(len=*), parameter :: CCPP_XML_ELE_FINALIZE = "finalize"
-    character(len=*), parameter :: CCPP_XML_ELE_IPD      = "ipd"
+    character(len=*), parameter :: CCPP_XML_ELE_GROUP    = "group"
     character(len=*), parameter :: CCPP_XML_ELE_SUBCYCLE = "subcycle"
     character(len=*), parameter :: CCPP_XML_ELE_SCHEME   = "scheme"
 
@@ -232,32 +232,32 @@ module ccpp_xml
             ierr = 0
         end if
 
-        ! Count the number of IPDs
-        ierr = ccpp_xml_ele_count(node, ccpp_cstr(CCPP_XML_ELE_IPD), suite%ipds_max)
+        ! Count the number of groups
+        ierr = ccpp_xml_ele_count(node, ccpp_cstr(CCPP_XML_ELE_GROUP), suite%groups_max)
         if (ierr /= 0) then
-            call ccpp_error('Unable count the number of ipds')
+            call ccpp_error('Unable count the number of groups')
             return
         end if
 
-        allocate(suite%ipds(suite%ipds_max), stat=ierr)
+        allocate(suite%groups(suite%groups_max), stat=ierr)
         if (ierr /= 0) then
-            call ccpp_error('Unable to allocate ipds')
+            call ccpp_error('Unable to allocate groups')
             return
         end if
 
     end subroutine ccpp_xml_parse_suite
 
-    !! IPD parsing from an XML file.
+    !! Group parsing from an XML file.
     !!
-    !! @param[in    ] node     The current xml node.
-    !! @param[in    ] max_ipds The maximum number of IPDs.
-    !! @param[in,out] ipd      The ccpp_ipd_t type to parse into.
-    !! @param[   out] ierr     Integer error flag.
+    !! @param[in    ] node       The current xml node.
+    !! @param[in    ] max_groups The maximum number of groups.
+    !! @param[in,out] group      The ccpp_group_t type to parse into.
+    !! @param[   out] ierr       Integer error flag.
     !
-    subroutine ccpp_xml_parse_ipd(node, max_ipds, ipd, ierr)
+    subroutine ccpp_xml_parse_group(node, max_groups, group, ierr)
         type(c_ptr),                intent(in   ) :: node
-        integer,                    intent(in   ) :: max_ipds
-        type(ccpp_ipd_t),           intent(inout) :: ipd
+        integer,                    intent(in   ) :: max_groups
+        type(ccpp_group_t),         intent(inout) :: group
         integer,                    intent(  out) :: ierr
 
         type(c_ptr), target                       :: tmp
@@ -266,50 +266,50 @@ module ccpp_xml
 
         tmp = c_null_ptr
 
-        ! Get the ipd part number
+        ! Get the group part number
         ierr = ccpp_xml_ele_att(node, ccpp_cstr(CCPP_XML_ATT_PART), tmp)
-        if (ierr /= 0 .and. max_ipds == 1) then
-            call ccpp_warn('Unable to find IPD attribute: ' // CCPP_XML_ATT_PART &
+        if (ierr /= 0 .and. max_groups == 1) then
+            call ccpp_warn('Unable to find group attribute: ' // CCPP_XML_ATT_PART &
                            // ' (assuming 1)')
-            ipd%part = 1
-        else if (ierr /= 0 .and. max_ipds > 1) then
-            call ccpp_error('Unable to find IPD attribute: ' // CCPP_XML_ATT_PART)
+            group%part = 1
+        else if (ierr /= 0 .and. max_groups > 1) then
+            call ccpp_error('Unable to find group attribute: ' // CCPP_XML_ATT_PART)
             return
         else
             stmp = ccpp_fstr(tmp)
-            read(stmp, *, iostat=ierr) ipd%part
+            read(stmp, *, iostat=ierr) group%part
             call ccpp_free(tmp)
             tmp = c_null_ptr
             if (ierr /= 0) then
-                call ccpp_error('Unable to convert IPD attribute "' // &
+                call ccpp_error('Unable to convert group attribute "' // &
                                  CCPP_XML_ATT_PART // '" to an integer')
             return
             end if
         end if
 
-        ! Count the number of subcycles in this IPD
+        ! Count the number of subcycles in this group
         ierr = ccpp_xml_ele_count(node, ccpp_cstr(CCPP_XML_ELE_SUBCYCLE), &
-                                  ipd%subcycles_max)
+                                  group%subcycles_max)
         if (ierr /= 0) then
             call ccpp_error('Unable to count the number of: ' // &
                             CCPP_XML_ELE_SUBCYCLE)
             return
         end if
 
-        allocate(ipd%subcycles(ipd%subcycles_max), stat=ierr)
+        allocate(group%subcycles(group%subcycles_max), stat=ierr)
         if (ierr /= 0) then
             call ccpp_error('Unable to allocate subcycles')
             return
         end if
 
-    end subroutine ccpp_xml_parse_ipd
+    end subroutine ccpp_xml_parse_group
 
     !>
     !! Subcycle parsing from an XML file.
     !!
     !! @param[in    ] node          The current xml node.
     !! @param[in    ] max_subcycles The maximum number of subcycles.
-    !! @param[in,out] ipd           The ccpp_subcycle_t type to parse into.
+    !! @param[in,out] subcycle      The ccpp_subcycle_t type to parse into.
     !! @param[   out] ierr          Integer error flag.
     !
     subroutine ccpp_xml_parse_subcycle(node, max_subcycles, subcycle, ierr)

@@ -2,14 +2,14 @@
 !! @brief The CCPP function call module.
 !!
 !! @details The CCPP routines for calling the specified
-!!          physics ipd/subcyce/scheme.
+!!          physics group/subcyce/scheme.
 !
 module ccpp_fcall
 
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_int32_t, c_char, c_ptr, c_loc, c_funptr
     use            :: ccpp_types,                                      &
-                      only: ccpp_t, ccpp_suite_t, ccpp_ipd_t,          &
+                      only: ccpp_t, ccpp_suite_t, ccpp_group_t,        &
                             ccpp_subcycle_t, ccpp_scheme_t
     use            :: ccpp_errors,                                     &
                       only: ccpp_error, ccpp_debug
@@ -25,7 +25,7 @@ module ccpp_fcall
 
     interface ccpp_run
         module procedure ccpp_run_suite,    &
-                         ccpp_run_ipd,      &
+                         ccpp_run_group,    &
                          ccpp_run_subcycle, &
                          ccpp_run_scheme,   &
                          ccpp_run_fptr
@@ -35,7 +35,7 @@ module ccpp_fcall
 
     !>
     !! The run subroutine for a suite. This will call
-    !! the all ipds within a suite.
+    !! the all groups within a suite.
     !!
     !! @param[in    ] suite    The suite to run
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
@@ -53,9 +53,9 @@ module ccpp_fcall
 
         call ccpp_debug('Called ccpp_run_suite')
 
-        do i=1,suite%ipds_max
-            suite%ipd_n = i
-            call ccpp_run_ipd(suite%ipds(i), cdata, ierr)
+        do i=1,suite%groups_max
+            suite%group_n = i 
+            call ccpp_run_group(suite%groups(i), cdata, ierr)
             if (ierr /= 0) then
                 return
             end if
@@ -64,16 +64,16 @@ module ccpp_fcall
     end subroutine ccpp_run_suite
 
     !>
-    !! The run subroutine for an ipd. This will call
-    !! the all subcycles within an ipd.
+    !! The run subroutine for a group. This will call
+    !! the all subcycles within a group.
     !!
-    !! @param[in    ] ipd      The ipd to run
+    !! @param[in    ] group    The group to run
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_run_ipd(ipd, cdata, ierr)
+    subroutine ccpp_run_group(group, cdata, ierr)
 
-        type(ccpp_ipd_t),      intent(inout)  :: ipd
+        type(ccpp_group_t),    intent(inout)  :: group
         type(ccpp_t), target,  intent(inout)  :: cdata
         integer,               intent(  out)  :: ierr
 
@@ -81,17 +81,17 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_ipd')
+        call ccpp_debug('Called ccpp_run_group')
 
-        do i=1,ipd%subcycles_max
-            ipd%subcycle_n = i
-            call ccpp_run_subcycle(ipd%subcycles(i), cdata, ierr)
+        do i=1,group%subcycles_max
+            group%subcycle_n = i
+            call ccpp_run_subcycle(group%subcycles(i), cdata, ierr)
             if (ierr /= 0) then
                 return
             end if
         end do
 
-    end subroutine ccpp_run_ipd
+    end subroutine ccpp_run_group
 
     !>
     !! The run subroutine for a subcycle. This will call

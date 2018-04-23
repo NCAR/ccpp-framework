@@ -59,7 +59,7 @@ module ccpp_suite
         integer                               :: k
         type(c_ptr)                           :: xml
         type(c_ptr)                           :: root
-        type(c_ptr)                           :: ipd
+        type(c_ptr)                           :: group
         type(c_ptr)                           :: subcycle
         type(c_ptr)                           :: scheme
         type(c_ptr), target                   :: tmp
@@ -112,26 +112,26 @@ module ccpp_suite
             end if
         end if
 
-        ! Find the first IPD
-        call ccpp_xml_ele_find(root, CCPP_XML_ELE_IPD, ipd, ierr)
+        ! Find the first group
+        call ccpp_xml_ele_find(root, CCPP_XML_ELE_GROUP, group, ierr)
         if (ierr /= 0) then
-            call ccpp_error('Unable to find first ipd')
+            call ccpp_error('Unable to find first group')
             call ccpp_error(err_msg // trim(filename))
             return
         end if
 
-        ! Loop over all IPDs
-        do i=1, suite%ipds_max
+        ! Loop over all groups
+        do i=1, suite%groups_max
 
-            ! Parse the IPD
-            call ccpp_xml_parse(ipd, suite%ipds_max, suite%ipds(i), ierr)
+            ! Parse the group
+            call ccpp_xml_parse(group, suite%groups_max, suite%groups(i), ierr)
             if (ierr /= 0) then
                 call ccpp_error(err_msg // trim(filename))
                 return
             end if
 
             ! Find the first subcycle
-            call ccpp_xml_ele_find(ipd, CCPP_XML_ELE_SUBCYCLE, subcycle, ierr)
+            call ccpp_xml_ele_find(group, CCPP_XML_ELE_SUBCYCLE, subcycle, ierr)
             if (ierr /= 0) then
                 call ccpp_error('Unable to locate element: ' &
                                 // CCPP_XML_ELE_SUBCYCLE)
@@ -140,12 +140,12 @@ module ccpp_suite
             end if
 
             ! Loop over all subcycles
-            do j=1, suite%ipds(i)%subcycles_max
+            do j=1, suite%groups(i)%subcycles_max
 
                 ! Parse the subcycle
                 call ccpp_xml_parse(subcycle,                    &
-                                    suite%ipds(i)%subcycles_max, &
-                                    suite%ipds(i)%subcycles(j),  &
+                                    suite%groups(i)%subcycles_max, &
+                                    suite%groups(i)%subcycles(j),  &
                                     ierr)
                 if (ierr /= 0) then
                     call ccpp_error(err_msg // trim(filename))
@@ -157,10 +157,10 @@ module ccpp_suite
                                        scheme, ierr)
 
                 ! Loop over all scheme
-                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
+                do k=1, suite%groups(i)%subcycles(j)%schemes_max
                     ! Parse the scheme
                     call ccpp_xml_parse(scheme, suite%library, suite%version,  &
-                                        suite%ipds(i)%subcycles(j)%schemes(k), &
+                                        suite%groups(i)%subcycles(j)%schemes(k), &
                                         ierr)
                     ! Find the next scheme
                     call ccpp_xml_ele_next(scheme, CCPP_XML_ELE_SCHEME, &
@@ -170,8 +170,8 @@ module ccpp_suite
                 call ccpp_xml_ele_next(subcycle, CCPP_XML_ELE_SUBCYCLE, &
                                        subcycle, ierr)
             end do
-            ! Find the next IPD
-            call ccpp_xml_ele_next(ipd, CCPP_XML_ELE_IPD, ipd, ierr)
+            ! Find the next group
+            call ccpp_xml_ele_next(group, CCPP_XML_ELE_GROUP, group, ierr)
         end do
 
 #if 0
@@ -184,25 +184,25 @@ module ccpp_suite
                  '" ver="', trim(suite%version),    &
                  '">'
 
-        write(6, '(A, I0)') '[suite%ipds_max] = ', suite%ipds_max
-        do i=1, suite%ipds_max
-            write(6, '(A, I0, A)') '  <ipd part="', suite%ipds(i)%part, '">'
-            write(6, '(A, I0)') '  [suite%ipds(i)%subcycles_max] = ', suite%ipds(i)%subcycles_max
-            do j=1, suite%ipds(i)%subcycles_max
-                write(6, '(A, I0, A)') '    <subcycle loop="', suite%ipds(i)%subcycles(j)%loop, '">'
-                write(6, '(A, I0)') '    [suite%ipds(i)%subcycles(j)%schemes_max] = ', suite%ipds(i)%subcycles(j)%schemes_max
-                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
+        write(6, '(A, I0)') '[suite%groups_max] = ', suite%groups_max
+        do i=1, suite%groups_max
+            write(6, '(A, I0, A)') '  <group part="', suite%groups(i)%part, '">'
+            write(6, '(A, I0)') '  [suite%groups(i)%subcycles_max] = ', suite%groups(i)%subcycles_max
+            do j=1, suite%groups(i)%subcycles_max
+                write(6, '(A, I0, A)') '    <subcycle loop="', suite%groups(i)%subcycles(j)%loop, '">'
+                write(6, '(A, I0)') '    [suite%groups(i)%subcycles(j)%schemes_max] = ', suite%groups(i)%subcycles(j)%schemes_max
+                do k=1, suite%groups(i)%subcycles(j)%schemes_max
                     write(6, '(A, A, A, A, A, A, A)') &
                           '     <scheme lib="', &
-                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%library), &
+                          trim(suite%groups(i)%subcycles(j)%schemes(k)%library), &
                           '" ver="', &
-                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%version), '">', &
-                          trim(suite%ipds(i)%subcycles(j)%schemes(k)%name), &
+                          trim(suite%groups(i)%subcycles(j)%schemes(k)%version), '">', &
+                          trim(suite%groups(i)%subcycles(j)%schemes(k)%name), &
                           '</scheme>'
                 end do
                 write(6, '(A)') '    </subcycle>'
             end do
-            write(6, '(A)') '  </ipd>'
+            write(6, '(A)') '  </group>'
         end do
         write(6, '(A)') '</suite>'
         write(6, '(A)') '--------------------------------------------------------------------------------'
@@ -238,32 +238,32 @@ module ccpp_suite
             call ccpp_suite_unload(suite, ierr)
         end if
 
-        do i=1, suite%ipds_max
-            do j=1, suite%ipds(i)%subcycles_max
-                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
-                    if (allocated(suite%ipds(i)%subcycles(j)%schemes(k)%name)) then
-                        deallocate(suite%ipds(i)%subcycles(j)%schemes(k)%name)
+        do i=1, suite%groups_max
+            do j=1, suite%groups(i)%subcycles_max
+                do k=1, suite%groups(i)%subcycles(j)%schemes_max
+                    if (allocated(suite%groups(i)%subcycles(j)%schemes(k)%name)) then
+                        deallocate(suite%groups(i)%subcycles(j)%schemes(k)%name)
                     end if
-                    if (allocated(suite%ipds(i)%subcycles(j)%schemes(k)%library)) &
+                    if (allocated(suite%groups(i)%subcycles(j)%schemes(k)%library)) &
                             then
-                        deallocate(suite%ipds(i)%subcycles(j)%schemes(k)%library)
+                        deallocate(suite%groups(i)%subcycles(j)%schemes(k)%library)
                     end if
-                    if (allocated(suite%ipds(i)%subcycles(j)%schemes(k)%version)) &
+                    if (allocated(suite%groups(i)%subcycles(j)%schemes(k)%version)) &
                             then
-                        deallocate(suite%ipds(i)%subcycles(j)%schemes(k)%version)
+                        deallocate(suite%groups(i)%subcycles(j)%schemes(k)%version)
                     end if
                 end do
-                if (allocated(suite%ipds(i)%subcycles(j)%schemes)) then
-                    deallocate(suite%ipds(i)%subcycles(j)%schemes)
+                if (allocated(suite%groups(i)%subcycles(j)%schemes)) then
+                    deallocate(suite%groups(i)%subcycles(j)%schemes)
                 end if
             end do
-            if (allocated(suite%ipds(i)%subcycles)) then
-                deallocate(suite%ipds(i)%subcycles)
+            if (allocated(suite%groups(i)%subcycles)) then
+                deallocate(suite%groups(i)%subcycles)
             end if
         end do
 
-        if (allocated(suite%ipds)) then
-            deallocate(suite%ipds)
+        if (allocated(suite%groups)) then
+            deallocate(suite%groups)
         end if
 
         ! Clean up the init
@@ -305,8 +305,8 @@ module ccpp_suite
             deallocate(suite%version)
         end if
 
-        suite%ipd_n    = 0
-        suite%ipds_max = 0
+        suite%group_n    = 0
+        suite%groups_max = 0
 
     end subroutine ccpp_suite_finalize
 
@@ -355,10 +355,10 @@ module ccpp_suite
             end if
         end if
 
-        do i=1, suite%ipds_max
-            do j=1, suite%ipds(i)%subcycles_max
-                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
-                    associate (s => suite%ipds(i)%subcycles(j)%schemes(k))
+        do i=1, suite%groups_max
+            do j=1, suite%groups(i)%subcycles_max
+                do k=1, suite%groups(i)%subcycles(j)%schemes_max
+                    associate (s => suite%groups(i)%subcycles(j)%schemes(k))
                     ierr = ccpp_dl_open(ccpp_cstr(s%name),    &
                                         ccpp_cstr(s%library), &
                                         ccpp_cstr(s%version), &
@@ -417,10 +417,10 @@ module ccpp_suite
             end if
         end if
 
-        do i=1, suite%ipds_max
-            do j=1, suite%ipds(i)%subcycles_max
-                do k=1, suite%ipds(i)%subcycles(j)%schemes_max
-                    associate (s => suite%ipds(i)%subcycles(j)%schemes(k))
+        do i=1, suite%groups_max
+            do j=1, suite%groups(i)%subcycles_max
+                do k=1, suite%groups(i)%subcycles(j)%schemes_max
+                    associate (s => suite%groups(i)%subcycles(j)%schemes(k))
                     ierr = ccpp_dl_close(s%library_hdl)
                     if (ierr /= 0) then
                         call ccpp_error('A problem occured closing ' &

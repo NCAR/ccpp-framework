@@ -90,7 +90,7 @@ program test_check
 
     call ccpp_field_add(cdata, 'northward_wind', v, ierr, 'm s-1')
 
-    call ccpp_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
+    call ccpp_run(cdata%suite%groups(1)%subcycles(1)%schemes(1), cdata, ierr)
 
     print *, 'In test dummy main'
     print *, 'gravity: ', gravity
