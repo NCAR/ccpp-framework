@@ -74,7 +74,6 @@ module ccpp_types
     type :: ccpp_subcycle_t
             integer                                           :: loop
             integer                                           :: schemes_max
-            integer                                           :: scheme_n
             type(ccpp_scheme_t), allocatable, dimension(:)    :: schemes
     end type ccpp_subcycle_t
 
@@ -87,7 +86,6 @@ module ccpp_types
     type :: ccpp_group_t
             integer                                             :: part
             integer                                             :: subcycles_max
-            integer                                             :: subcycle_n
             type(ccpp_subcycle_t), allocatable, dimension(:)    :: subcycles
     end type ccpp_group_t
 
@@ -105,7 +103,6 @@ module ccpp_types
             type(ccpp_scheme_t)                                 :: init
             type(ccpp_scheme_t)                                 :: finalize
             integer                                             :: groups_max
-            integer                                             :: group_n
             type(ccpp_group_t), allocatable, dimension(:)       :: groups
             logical                                             :: iscopy
     end type ccpp_suite_t

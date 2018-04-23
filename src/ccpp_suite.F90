@@ -305,7 +305,6 @@ module ccpp_suite
             deallocate(suite%version)
         end if
 
-        suite%group_n    = 0
         suite%groups_max = 0
 
     end subroutine ccpp_suite_finalize

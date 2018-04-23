@@ -54,7 +54,6 @@ module ccpp_fcall
         call ccpp_debug('Called ccpp_run_suite')
 
         do i=1,suite%groups_max
-            suite%group_n = i 
             call ccpp_run_group(suite%groups(i), cdata, ierr)
             if (ierr /= 0) then
                 return
@@ -84,7 +83,6 @@ module ccpp_fcall
         call ccpp_debug('Called ccpp_run_group')
 
         do i=1,group%subcycles_max
-            group%subcycle_n = i
             call ccpp_run_subcycle(group%subcycles(i), cdata, ierr)
             if (ierr /= 0) then
                 return
@@ -117,7 +115,6 @@ module ccpp_fcall
 
         do i=1,subcycle%loop
             do j=1,subcycle%schemes_max
-                subcycle%scheme_n = j
                 call ccpp_run_scheme(subcycle%schemes(j), cdata, ierr)
                 if (ierr /= 0) then
                     return
