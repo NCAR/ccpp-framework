@@ -174,7 +174,7 @@ module ccpp_suite
             call ccpp_xml_ele_next(group, CCPP_XML_ELE_GROUP, group, ierr)
         end do
 
-#if 0
+#ifdef DEBUG
         write(6, '(A)') '--------------------------------------------------------------------------------'
         write(6, '(A)') 'CCPP suite configuration parsed from SDF ' // trim(filename)
         write(6, '(A)') '--------------------------------------------------------------------------------'
