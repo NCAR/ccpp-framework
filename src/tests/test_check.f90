@@ -18,14 +18,13 @@ program test_check
 
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_loc, c_f_pointer
-    use            :: ccpp_types,                                      &
-                      only: CCPP_STR_LEN, ccpp_t
-    use            :: ccpp,                                            &
-                      only: ccpp_init, ccpp_finalize
-    use            :: ccpp_fcall,                                      &
-                      only: ccpp_run
-    use            :: ccpp_fields,                                     &
-                      only: ccpp_field_add
+    use            :: ccpp_api,                                        &
+                      only: CCPP_STR_LEN,                              &
+                            ccpp_t,                                    &
+                            ccpp_init,                                 &
+                            ccpp_finalize,                             &
+                            ccpp_physics_run,                          &
+                            ccpp_field_add
 
     implicit none
 
@@ -75,7 +74,7 @@ program test_check
     ! Initalize the CCPP (with the filename of the suite to load).
     call ccpp_init(filename, cdata, ierr)
     if (ierr /= 0) then
-            call exit(1)
+        call exit(1)
     end if
 
     ! Add all the fields we want to expose to the physics driver.
@@ -90,7 +89,7 @@ program test_check
 
     call ccpp_field_add(cdata, 'northward_wind', v, ierr, 'm s-1')
 
-    call ccpp_run(cdata%suite%groups(1)%subcycles(1)%schemes(1), cdata, ierr)
+    call ccpp_physics_run(cdata, scheme_name="test", ierr=ierr)
 
     print *, 'In test dummy main'
     print *, 'gravity: ', gravity
