@@ -80,11 +80,11 @@ module ccpp_types
     !>
     !! @breif CCPP group type
     !!
-    !! The group type contains all the subcycles and part number of
+    !! The group type contains all the subcycles and the name of
     !! the group call. It is a direct mapping to the group element in XML.
     !
     type :: ccpp_group_t
-            integer                                             :: part
+            character(:), allocatable                           :: name
             integer                                             :: subcycles_max
             type(ccpp_subcycle_t), allocatable, dimension(:)    :: subcycles
     end type ccpp_group_t

@@ -67,7 +67,6 @@ module ccpp_xml
     character(len=*), parameter :: CCPP_XML_ELE_SCHEME   = "scheme"
 
     character(len=*), parameter :: CCPP_XML_ATT_NAME     = "name"
-    character(len=*), parameter :: CCPP_XML_ATT_PART     = "part"
     character(len=*), parameter :: CCPP_XML_ATT_LOOP     = "loop" 
     character(len=*), parameter :: CCPP_XML_ATT_LIB      = "lib"
     character(len=*), parameter :: CCPP_XML_ATT_VER      = "ver"
@@ -198,12 +197,12 @@ module ccpp_xml
         ! Get the suite name
         ierr = ccpp_xml_ele_att(node, ccpp_cstr(CCPP_XML_ATT_NAME), tmp)
         if (ierr /= 0) then
-            call ccpp_error('Unable retrieving suite name')
+            call ccpp_error('Unable to retrieve suite name')
             return
         end if
-
         suite%name = ccpp_fstr(tmp)
         call ccpp_free(tmp)
+
         tmp = c_null_ptr
 
         ! Get the optional library name
@@ -263,29 +262,18 @@ module ccpp_xml
         type(c_ptr), target                       :: tmp
         character(kind=c_char), target            :: stmp(CCPP_STR_LEN)
 
-
         tmp = c_null_ptr
 
-        ! Get the group part number
-        ierr = ccpp_xml_ele_att(node, ccpp_cstr(CCPP_XML_ATT_PART), tmp)
-        if (ierr /= 0 .and. max_groups == 1) then
-            call ccpp_warn('Unable to find group attribute: ' // CCPP_XML_ATT_PART &
-                           // ' (assuming 1)')
-            group%part = 1
-        else if (ierr /= 0 .and. max_groups > 1) then
-            call ccpp_error('Unable to find group attribute: ' // CCPP_XML_ATT_PART)
+        ! Get the group name
+        ierr = ccpp_xml_ele_att(node, ccpp_cstr(CCPP_XML_ATT_NAME), tmp)
+        if (ierr /= 0) then
+            call ccpp_error('Unable to retrieve group name')
             return
-        else
-            stmp = ccpp_fstr(tmp)
-            read(stmp, *, iostat=ierr) group%part
-            call ccpp_free(tmp)
-            tmp = c_null_ptr
-            if (ierr /= 0) then
-                call ccpp_error('Unable to convert group attribute "' // &
-                                 CCPP_XML_ATT_PART // '" to an integer')
-            return
-            end if
         end if
+        group%name = ccpp_fstr(tmp)
+        call ccpp_free(tmp)
+
+        tmp = c_null_ptr
 
         ! Count the number of subcycles in this group
         ierr = ccpp_xml_ele_count(node, ccpp_cstr(CCPP_XML_ELE_SUBCYCLE), &
@@ -326,11 +314,7 @@ module ccpp_xml
 
         ! Get the subcycle loop number
         ierr = ccpp_xml_ele_att(node, ccpp_cstr(CCPP_XML_ATT_LOOP), tmp)
-        if (ierr /= 0 .and. max_subcycles == 1) then
-            call ccpp_warn('Unable to find subcycle attribute: ' // CCPP_XML_ATT_LOOP &
-                           // ' (assuming 1)')
-            subcycle%loop = 1
-        else if (ierr /= 0 .and. max_subcycles > 1) then
+        if (ierr /= 0) then
             call ccpp_error('Unable to find subcycle attribute: ' // CCPP_XML_ATT_LOOP)
             return
         else

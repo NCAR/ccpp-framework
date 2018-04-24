@@ -186,7 +186,7 @@ module ccpp_suite
 
         write(6, '(A, I0)') '[suite%groups_max] = ', suite%groups_max
         do i=1, suite%groups_max
-            write(6, '(A, I0, A)') '  <group part="', suite%groups(i)%part, '">'
+            write(6, '(A, A, A)') '  <group name="', trim(suite%groups(i)%name), '">'
             write(6, '(A, I0)') '  [suite%groups(i)%subcycles_max] = ', suite%groups(i)%subcycles_max
             do j=1, suite%groups(i)%subcycles_max
                 write(6, '(A, I0, A)') '    <subcycle loop="', suite%groups(i)%subcycles(j)%loop, '">'
