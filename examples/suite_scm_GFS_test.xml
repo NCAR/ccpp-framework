@@ -96,5 +96,5 @@
       <!-- <scheme>GFS_interstitialtoscreen_run</scheme> -->
     </subcycle>
   </group>
-  <!-- <finalize>IPD_finalize</finalize> -->
+  <finalize>GFS_finalize_scm_run</finalize> <!-- need to add this one? -->
 </suite>

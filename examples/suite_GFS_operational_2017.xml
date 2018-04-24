@@ -99,5 +99,5 @@
       <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
     </subcycle>
   </group>
-  <!-- <finalize>IPD_finalize</finalize> -->
+  <finalize>IPD_finalize</finalize>
 </suite>
