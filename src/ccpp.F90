@@ -51,9 +51,11 @@ module ccpp
 
         ierr = 0
 
-        !call ccpp_debug('Called ccpp_init')
+        call ccpp_debug('Called ccpp_init')
 
         if (present(suite)) then
+            ! Makes a copy of the suite to avoid multiple
+            ! reads/parses of the suite definiton file
             cdata%suite = suite
             cdata%suite%iscopy = .True.
         else
@@ -86,7 +88,7 @@ module ccpp
 
         ierr = 0
 
-        !call ccpp_debug('Called ccpp_finalize')
+        call ccpp_debug('Called ccpp_finalize')
 
         ! Finalize the suite
         call ccpp_suite_finalize(cdata%suite, ierr)
