@@ -78,6 +78,7 @@ def import_config(host_model):
     return(success, config)
 
 def setup_logging(debug):
+    """Sets up the logging module and logging level."""
     success = True
     if debug:
         level = logging.DEBUG
@@ -241,8 +242,9 @@ def compare_metadata(metadata_define, metadata_request):
     return (success, modules, metadata)
 
 def create_module_use_statements(modules, module_use_template_host_cap):
-    # module_use_template_host_cap must include the required modules
-    # for error handling of the ccpp_field_add statments
+    """Create Fortran module use statements to be included in the host cap.
+    The template module_use_template_host_cap must include the required
+    modules for error handling of the ccpp_field_add statments."""
     logging.info('Generating module use statements ...')
     success = True
     module_use_statements = module_use_template_host_cap
@@ -254,12 +256,13 @@ def create_module_use_statements(modules, module_use_template_host_cap):
     return (success, module_use_statements)
 
 def create_ccpp_field_add_statements(metadata, ccpp_data_structure):
-    # The metadata container may contain multiple entries
-    # for the same variable standard_name, but for different
-    # "callers" (i.e. subroutines using it) with potentially
-    # different local_name. We only need to add it once to
-    # the add_field statement, since the target (i.e. the
-    # original variable defined by the model) is the same.
+    """Create Fortran code to add host model variables to the cdata
+    structure. The metadata container may contain multiple entries
+    of a variable with the same standard_name, but for different
+    "callers" (i.e. subroutines using it) with identical or
+    different local_name. We only need to add it once to
+    the add_field statement, since the target (i.e. the
+    original variable defined by the model) is the same."""
     logging.info('Generating ccpp_field_add statements ...')
     success = True
     ccpp_field_add_statements = ''
@@ -274,6 +277,7 @@ def create_ccpp_field_add_statements(metadata, ccpp_data_structure):
 
 def generate_include_files(module_use_statements, ccpp_field_add_statements,
                            target_files, module_include_file, fields_include_file):
+    """Generate include files for modules and field-add statements for host model cap."""
     logging.info('Generating include files for host model cap {0} ...'.format(', '.join(target_files)))
     success = True
     target_dirs = []
@@ -294,6 +298,7 @@ def generate_include_files(module_use_statements, ccpp_field_add_statements,
     return success
 
 def generate_scheme_caps(metadata, arguments, caps_dir, module_use_template_scheme_cap):
+    """Generate scheme caps for all schemes parsed."""
     success = True
     # Change to physics directory
     os.chdir(caps_dir)
@@ -328,6 +333,7 @@ def generate_scheme_caps(metadata, arguments, caps_dir, module_use_template_sche
     return (success, scheme_caps)
 
 def generate_schemes_makefile(schemes, schemes_makefile):
+    """Generate traditional makefile snippets for all schemes."""
     logging.info('Generating schemes makefile snippet ...')
     success = True
     makefile = SchemesMakefile()
@@ -344,6 +350,7 @@ def generate_schemes_makefile(schemes, schemes_makefile):
     return success
 
 def generate_caps_makefile(caps, caps_makefile, caps_dir):
+    """Generate traditional makefile snippets for all scheme caps."""
     logging.info('Generating caps makefile snippet ...')
     success = True
     makefile = CapsMakefile()
@@ -357,6 +364,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_dir):
     return success
 
 def main():
+    """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
     (success, host_model, debug) = parse_arguments()
     if not success:

@@ -40,6 +40,9 @@ from mkcap import Var
 # - the script generates a separate file for each module within the given files
 
 
+# Items in this dictionary are used for checking valid entries in metadata tables. For columsn with no keys/keys
+# commented out, no check is performed. This is the case for 'type' and 'kind' right now, since models use their
+# own derived data types and kind types.
 VALID_ITEMS = {
     'header' : ['local_name', 'standard_name', 'long_name', 'units', 'rank', 'type', 'kind', 'intent', 'optional'],
     #'type' : ['character', 'integer', 'real', ...],
@@ -48,6 +51,7 @@ VALID_ITEMS = {
     'optional' : ['T', 'F'],
     }
 
+# Mandatory variables that every scheme needs to have
 CCPP_MANDATORY_VARIABLES = {
     'error_message' : Var(local_name    = 'errmsg',
                           standard_name = 'error_message',
@@ -72,7 +76,11 @@ CCPP_MANDATORY_VARIABLES = {
     }
 
 def merge_metadata_dicts(x, y):
-    """Give up the order of variables - fine."""
+    """Merges two metadata dictionaries. For each list of elements
+    (variables = class Var in mkcap.py) in one dictionary, we know
+    that all entries are compatible. If one or more elements exist
+    in both x and y, we therefore have to test compatibility of
+    one of the items in each dictionary only."""
     z = {}
     x_keys = sorted(x.keys())
     y_keys = sorted(y.keys())
@@ -95,7 +103,12 @@ def merge_metadata_dicts(x, y):
 
 
 def parse_variable_tables(filename):
-    """DOCUMENTATION MISSING"""
+    """Parses metadata tables on the host model side that define the available variables.
+    Metadata tables can describe to variables inside a module or as part of a derived
+    datatype, which itself is defined inside a module (depending on the location of the
+    metadata table). Each variable (standard_name) can exist only once, i.e. each entry
+    (list of variables) in the metadata dictionary contains only one element
+    (variable = instance of class Var defined in mkcap.py)"""
     # Set debug to true if logging level is debug
     debug = logging.getLogger().getEffectiveLevel() == logging.DEBUG
 
@@ -275,8 +288,8 @@ def parse_variable_tables(filename):
                                                         '     vs. new: {0}'.format(var.print_debug()))
 
                                 metadata[var_name].append(var)
-                        else:
-                            logging.debug('Skipping variable entry "{0}" without a standard_name'.format(var_items))
+                        #else:
+                        #    logging.debug('Skipping variable entry "{0}" without a standard_name'.format(var_items))
 
             line_counter += 1
 
@@ -329,7 +342,18 @@ def parse_variable_tables(filename):
 
 
 def parse_scheme_tables(filename):
-    """DOCUMENTATION MISSING"""
+    """Parses metadata tables for a physics scheme that requests/requires variables as
+    input arguments. Metadata tables can only describe variables required by a subroutine
+    'subroutine_name' of scheme 'scheme_name' inside a module 'module_name'.Each variable
+    (standard_name) can exist only once, i.e. each entry (list of variables) in the metadata
+    dictionary  contains only one element (variable = instance of class Var defined in
+    mkcap.py). The metadata dictionaries of the individual schemes are merged afterwards
+    (called from ccpp_prebuild.py) using merge_metadata_dicts, where multiple instances
+    of variables are compared for compatibility and collected in a list (entry in the 
+    merged metadata dictionary). The merged metadata dictionary of all schemes (which
+    contains only compatible variable instances in the list referred to by standard_name)
+    is then compared to the unique definition in the metadata dictionary of the variables
+    provided by the host model using compare_metadata in ccpp_prebuild.py."""
 
     # Set debug to true if logging level is debug
     debug = logging.getLogger().getEffectiveLevel() == logging.DEBUG
