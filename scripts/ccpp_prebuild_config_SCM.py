@@ -55,6 +55,7 @@ SCHEME_FILES = [
     'ccpp-physics/physics/sfc_drv.f',
     'ccpp-physics/physics/sfc_nst.f',
     'ccpp-physics/physics/sfc_sice.f',
+    'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.f90'
     ]
 
 # Auto-generated makefile snippet that contains all schemes
