@@ -55,6 +55,8 @@ module ccpp
         call ccpp_debug('Called ccpp_init')
 
         if (present(suite)) then
+            ! Makes a copy of the suite to avoid multiple
+            ! reads/parses of the suite definiton file
             cdata%suite = suite
             cdata%suite%iscopy = .True.
         else
