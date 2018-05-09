@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# CCPP prebuild config for GFDL Finite-Volume Cubed-Sphere Model (FV3) v0.0
+# CCPP prebuild config for GFDL Finite-Volume Cubed-Sphere Model (FV3) v0
 
 
 ###############################################################################
@@ -14,6 +14,11 @@ VARIABLE_DEFINITION_FILES = [
     'FV3/gfsphysics/physics/physcons.f90',
     ]
 
+# Can be empty, since all physics schemes and their
+# dependencies are hardcoded in the makefile in
+# FV3/gfsphysics - will be fixed in FV3 v1
+SCHEME_FILES_DEPENDENCIES = []
+
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'FV3/gfsphysics/physics/GFS_DCNV_generic.f90',
@@ -22,7 +27,7 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/GFS_PBL_generic.f90',
     'FV3/gfsphysics/physics/GFS_SCNV_generic.f90',
     'FV3/gfsphysics/physics/GFS_calpreciptype.f90',
-    'FV3/gfsphysics/physics/GFS_debug.f90',
+    'FV3/gfsphysics/physics/GFS_debug.F90',
     'FV3/gfsphysics/physics/GFS_rrtmg_post.F90',
     'FV3/gfsphysics/physics/GFS_rrtmg_pre.F90',
     'FV3/gfsphysics/physics/GFS_stochastics.f90',
@@ -55,8 +60,9 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/sfc_sice.f',
     ]
 
-# Auto-generated makefile snippet that contains all schemes
+# Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = 'FV3/gfsphysics/CCPP_SCHEMES.mk'
+SCHEMES_CMAKEFILE = 'FV3/gfsphysics/CCPP_SCHEMES.cmake'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
@@ -64,8 +70,9 @@ TARGET_FILES = [
     'FV3/gfsphysics/IPD_layer/IPD_CCPP_Driver.F90',
     ]
 
-# Auto-generated makefile snippet that contains all caps
+# Auto-generated makefile/cmakefile snippets that contain all caps
 CAPS_MAKEFILE = 'FV3/gfsphysics/CCPP_CAPS.mk'
+CAPS_CMAKEFILE = 'FV3/gfsphysics/CCPP_CAPS.cmake'
 
 # Directory where to put all auto-generated physics caps
 CAPS_DIR = 'FV3/gfsphysics/physics'
