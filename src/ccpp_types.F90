@@ -120,6 +120,7 @@ module ccpp_types
             type(c_ptr)                                         :: fields_idx
             type(ccpp_field_t), allocatable, dimension(:)       :: fields
             type(ccpp_suite_t)                                  :: suite
+            logical                                             :: initialized = .false.
     end type ccpp_t
 
 end module ccpp_types
