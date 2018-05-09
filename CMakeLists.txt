@@ -1,13 +1,23 @@
+# Set default project to unknown
+if(NOT PROJECT)
+  message(STATUS "Setting CCPP project to 'unknown' as none was specified.")
+  set(PROJECT "Unknown")
+endif (NOT PROJECT)
+
+#------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 2.8.11)
+
+# Use rpaths on MacOSX
+set(CMAKE_MACOSX_RPATH 1)
 
 if(POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
-    project(ccpp VERSION 0.1.0)
+    project(ccpp VERSION 1.0.0)
 else(POLICY CMP0048)
     project(ccpp)
-    set(PROJECT_VERSION 0.1.0)
-    set(PROJECT_VERSION_MAJOR 0)
-    set(PROJECT_VERSION_MINOR 1)
+    set(PROJECT_VERSION 1.0.0)
+    set(PROJECT_VERSION_MAJOR 1)
+    set(PROJECT_VERSION_MINOR 0)
     set(PROJECT_VERSION_PATCH 0)
 endif(POLICY CMP0048)
 
@@ -21,18 +31,9 @@ enable_language(Fortran)
 
 #------------------------------------------------------------------------------
 # Set package definitions
-set(PACKAGE "CCPP")
-set(AUTHORS  "Timothy Brown" "David Gill" "Dom Heinzeller")
+set(PACKAGE "ccpp-framework")
+set(AUTHORS "Dom Heinzeller" "Timothy Brown" "David Gill")
 string(TIMESTAMP YEAR "%Y")
-
-#------------------------------------------------------------------------------
-# The PGI compiler can not find any cap routines in their library.
-# This is due to how it labels subroutines within a modules.
-# For example the subroutine b() in the moduel a(), gets named a_b.
-# GCC and Intel do NOT do this, it is name simply as b.
-if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
-    message(STATUS "WARNING: PGI compiler is not fully ISO_C compliant; working solution involves a hack pgifix.py")
-endif()
 
 #------------------------------------------------------------------------------
 # CMake Modules
@@ -72,8 +73,16 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
 
     # Set the possible values of build type for cmake-gui
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
-                 "MinSizeRel" "RelWithDebInfo")
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "Coverage")
+endif()
+
+#------------------------------------------------------------------------------
+# The PGI compiler can not find any cap routines in their library.
+# This is due to how it labels subroutines within a modules.
+# For example the subroutine b() in the moduel a(), gets named a_b.
+# GCC and Intel do NOT do this, it is name simply as b.
+if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "PGI")
+    message(STATUS "WARNING: PGI compiler is not fully ISO_C compliant; working solution involves a hack pgifix.py")
 endif()
 
 #------------------------------------------------------------------------------
@@ -82,7 +91,7 @@ option(BUILD_SHARED_LIBS "Build a shared library" ON)
 
 #------------------------------------------------------------------------------
 # Enable code coverage
-if(CMAKE_COMPILER_IS_GNUCC AND (CMAKE_BUILD_TYPE STREQUAL "Coverage"))
+if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU" AND (CMAKE_BUILD_TYPE STREQUAL "Coverage"))
     include(code_coverage)
     list(APPEND LIBS "gcov")
 endif()
@@ -102,8 +111,8 @@ add_subdirectory(schemes)
 
 #------------------------------------------------------------------------------
 # Configure and enable packaging
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Common Community Phyics Package")
-set(CPACK_PACKAGE_VENDOR "DTC NCAR")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Common Community Physics Package - Framework")
+set(CPACK_PACKAGE_VENDOR "GMTB NOAA/NCAR")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
@@ -115,7 +124,5 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME
     "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
 set(CPACK_SOURCE_GENERATOR "TBZ2")
 set(CPACK_GENERATOR "TBZ2")
-#set(CPACK_GENERATOR "DEB")
-#set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Timothy Brown")
 
 include(CPack)

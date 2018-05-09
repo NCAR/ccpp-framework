@@ -15,7 +15,7 @@ import sys
 # Local modules
 from common import encode_container, execute
 from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_variable_tables
-from mkcap import Cap, CapsMakefile, SchemesMakefile
+from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
 from mkdoc import metadata_to_html, metadata_to_latex
 
 ###############################################################################
@@ -23,7 +23,7 @@ from mkdoc import metadata_to_html, metadata_to_latex
 ###############################################################################
 
 # List of configured host models
-HOST_MODELS = ["FV3", "SCM"]
+HOST_MODELS = ["FV3v0", "FV3v1", "SCM"]
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -60,9 +60,12 @@ def import_config(host_model):
     # Definitions in host-model dependent CCPP prebuild config script
     config['variable_definition_files'] = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
     config['scheme_files']              = ccpp_prebuild_config.SCHEME_FILES
+    config['scheme_files_dependencies'] = ccpp_prebuild_config.SCHEME_FILES_DEPENDENCIES
     config['schemes_makefile']          = ccpp_prebuild_config.SCHEMES_MAKEFILE
+    config['schemes_cmakefile']         = ccpp_prebuild_config.SCHEMES_CMAKEFILE
     config['target_files']              = ccpp_prebuild_config.TARGET_FILES
     config['caps_makefile']             = ccpp_prebuild_config.CAPS_MAKEFILE
+    config['caps_cmakefile']            = ccpp_prebuild_config.CAPS_CMAKEFILE
     config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
     config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
@@ -332,12 +335,14 @@ def generate_scheme_caps(metadata, arguments, caps_dir, module_use_template_sche
     os.chdir(BASEDIR)
     return (success, scheme_caps)
 
-def generate_schemes_makefile(schemes, schemes_makefile):
-    """Generate traditional makefile snippets for all schemes."""
-    logging.info('Generating schemes makefile snippet ...')
+def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile):
+    """Generate makefile/cmakefile snippets for all schemes."""
+    logging.info('Generating schemes makefile/cmakefile snippet ...')
     success = True
     makefile = SchemesMakefile()
     makefile.filename = schemes_makefile
+    cmakefile = SchemesCMakefile()
+    cmakefile.filename = schemes_cmakefile
     # Adjust relative file path to schemes from caps makefile
     schemes_with_path = []
     schemes_makefile_dir = os.path.split(os.path.abspath(schemes_makefile))[0]
@@ -346,21 +351,27 @@ def generate_schemes_makefile(schemes, schemes_makefile):
         relative_path = './{0}'.format(os.path.relpath(scheme_filepath, schemes_makefile_dir))
         schemes_with_path.append(os.path.join(relative_path, scheme_filename))
     makefile.write(schemes_with_path)
-    logging.info('Added {0} schemes to makefile {1}'.format(len(schemes_with_path), makefile.filename))
+    cmakefile.write(schemes_with_path)
+    logging.info('Added {0} schemes to makefile/cmakefile {1}/{2}'.format(
+           len(schemes_with_path), makefile.filename, cmakefile.filename))
     return success
 
-def generate_caps_makefile(caps, caps_makefile, caps_dir):
-    """Generate traditional makefile snippets for all scheme caps."""
-    logging.info('Generating caps makefile snippet ...')
+def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
+    """Generate makefile/cmakefile snippets for all caps."""
+    logging.info('Generating caps makefile/cmakefile snippet ...')
     success = True
     makefile = CapsMakefile()
     makefile.filename = caps_makefile
+    cmakefile = CapsCMakefile()
+    cmakefile.filename = caps_cmakefile
     # Adjust relative file path to schemes from caps makefile
     caps_makefile_dir = os.path.split(os.path.abspath(caps_makefile))[0]
     relative_path = './{0}'.format(os.path.relpath(caps_dir, caps_makefile_dir))
     caps_with_path = [ os.path.join(relative_path, cap) for cap in caps]
     makefile.write(caps_with_path)
-    logging.info('Added {0} auto-generated caps to makefile {1}'.format(len(caps_with_path), makefile.filename))
+    cmakefile.write(caps_with_path)
+    logging.info('Added {0} auto-generated caps to makefile/cmakefile {1}/{2}'.format(
+                          len(caps_with_path), makefile.filename, cmakefile.filename))
     return success
 
 def main():
@@ -431,13 +442,14 @@ def main():
     if not success:
         raise Exception('Call to generate_scheme_caps failed.')
 
-    # Add filenames of schemes to makefile
-    success = generate_schemes_makefile(config['scheme_files'], config['schemes_makefile'])
+    # Add filenames of schemes to makefile - add dependencies for schemes
+    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'],
+                                             config['schemes_makefile'], config['schemes_cmakefile'])
     if not success:
         raise Exception('Call to generate_schemes_makefile failed.')
 
     # Add filenames of scheme caps to makefile
-    success = generate_caps_makefile(scheme_caps, config['caps_makefile'], config['caps_dir'])
+    success = generate_caps_makefile(scheme_caps, config['caps_makefile'], config['caps_cmakefile'], config['caps_dir'])
     if not success:
         raise Exception('Call to generate_caps_makefile failed.')
 

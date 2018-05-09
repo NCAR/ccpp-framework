@@ -32,7 +32,8 @@ module ccpp
 
     private
     public :: ccpp_init,                                               &
-              ccpp_finalize
+              ccpp_finalize,                                           &
+              ccpp_initialized
 
     contains
 
@@ -74,6 +75,9 @@ module ccpp
             return
         end if
 
+        ! Set flag indicating initialization state of cdata
+        cdata%initialized = .true.
+
     end subroutine ccpp_init
 
     !>
@@ -104,6 +108,25 @@ module ccpp
                 return
         end if
 
+        ! Set flag indicating initialization state of cdata
+        cdata%initialized = .false.
+
     end subroutine ccpp_finalize
+
+    !>
+    !! CCPP test initialization routine
+    !!
+    !! @param[in]     cdata        The ccpp_t type data
+    !! @return        initialized  .true. or .false.
+    !
+    function ccpp_initialized(cdata) result(initialized)
+        type(ccpp_t), intent(in) :: cdata
+        logical                  :: initialized
+
+        call ccpp_debug('Called ccpp_initialized')
+
+        initialized = cdata%initialized
+
+    end function ccpp_initialized
 
 end module ccpp
