@@ -33,7 +33,7 @@ SCHEME_FILES = [
     'ccpp-physics/physics/GFS_rad_time_vary.scm.f90',
     'ccpp-physics/physics/GFS_rrtmg_post.F90',
     'ccpp-physics/physics/GFS_rrtmg_pre.F90',
-    'ccpp-physics/physics/GFS_suite_interstitial.ccpp.f90',
+    'ccpp-physics/physics/GFS_suite_interstitial.ccpp.F90',
     'ccpp-physics/physics/GFS_surface_generic.f90',
     'ccpp-physics/physics/GFS_surface_loop_control.f',
     'ccpp-physics/physics/GFS_zhao_carr_pre.f90',
