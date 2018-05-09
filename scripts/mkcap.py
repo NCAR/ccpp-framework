@@ -552,6 +552,48 @@ CAPS_F90 ='''
     def filename(self, value):
         self._filename = value
 
+class CapsCMakefile(object):
+
+    header='''
+# All CCPP caps are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+set(CAPS
+'''
+    footer=''')
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, schemes):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for scheme in schemes:
+            contents += '      {0}\n'.format(scheme)
+        contents += self.footer
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
 class SchemesMakefile(object):
 
     header='''
@@ -597,6 +639,48 @@ SCHEMES_f90 ='''
         contents = contents.replace('SCHEMES_F90 =', schemes_F90)
         contents = contents.replace('SCHEMES_f =', schemes_f)
         contents = contents.replace('SCHEMES_f90 =', schemes_f90)
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+class SchemesCMakefile(object):
+
+    header='''
+# All CCPP schemes are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+set(SCHEMES
+'''
+    footer=''')
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, schemes):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for scheme in schemes:
+            contents += '      {0}\n'.format(scheme)
+        contents += self.footer
         f.write(contents)
 
         if (f is not sys.stdout):
