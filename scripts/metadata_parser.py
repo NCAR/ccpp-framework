@@ -104,7 +104,7 @@ def merge_metadata_dicts(x, y):
 
 def parse_variable_tables(filename):
     """Parses metadata tables on the host model side that define the available variables.
-    Metadata tables can describe to variables inside a module or as part of a derived
+    Metadata tables can refer to variables inside a module or as part of a derived
     datatype, which itself is defined inside a module (depending on the location of the
     metadata table). Each variable (standard_name) can exist only once, i.e. each entry
     (list of variables) in the metadata dictionary contains only one element
@@ -344,7 +344,7 @@ def parse_variable_tables(filename):
 def parse_scheme_tables(filename):
     """Parses metadata tables for a physics scheme that requests/requires variables as
     input arguments. Metadata tables can only describe variables required by a subroutine
-    'subroutine_name' of scheme 'scheme_name' inside a module 'module_name'.Each variable
+    'subroutine_name' of scheme 'scheme_name' inside a module 'module_name'. Each variable
     (standard_name) can exist only once, i.e. each entry (list of variables) in the metadata
     dictionary  contains only one element (variable = instance of class Var defined in
     mkcap.py). The metadata dictionaries of the individual schemes are merged afterwards
