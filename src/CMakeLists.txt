@@ -11,6 +11,8 @@ set(SOURCES_C
     ccpp_dl.c
     ccpp_fields_idx.h
     ccpp_fields_idx.c
+    ccpp_memory.h
+    ccpp_memory.c
     ccpp_utils.h
     ccpp_utils.c
     ccpp_xml.h
@@ -22,6 +24,7 @@ set(SOURCES_F90
     ccpp_errors.F90
     ccpp_fcall.F90
     ccpp_fields.F90
+    ccpp_memory.F90
     ccpp_strings.F90
     ccpp_suite.F90
     ccpp_types.F90
