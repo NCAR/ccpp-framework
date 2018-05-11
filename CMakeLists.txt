@@ -41,6 +41,12 @@ string(TIMESTAMP YEAR "%Y")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 #------------------------------------------------------------------------------
+# Set MPI preprocessor flag for legacy CCPP-FV3v0
+if (PROJECT STREQUAL "CCPP-FV3v0")
+    add_definitions("-DMPI")
+endif (PROJECT STREQUAL "CCPP-FV3v0")
+
+#------------------------------------------------------------------------------
 # Set OpenMP flags for C/C++/Fortran
 if (OPENMP)
   include(detect_openmp)
@@ -48,10 +54,14 @@ if (OPENMP)
   set (CMAKE_Fortran_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set (CMAKE_Fortran_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+  # Set OpenMP preprocessor flag for legacy CCPP-FV3v0
+  if (PROJECT STREQUAL "CCPP-FV3v0")
+      add_definitions("-DOPENMP")
+  endif (PROJECT STREQUAL "CCPP-FV3v0")
   message(STATUS "Enable OpenMP support for C/C++/Fortran compiler")
-else(OPENMP)
+else (OPENMP)
   message (STATUS "Disable OpenMP support for C/C++/Fortran compiler")
-endif()
+endif (OPENMP)
 
 #------------------------------------------------------------------------------
 # The Fortran compiler/linker flag inserted by cmake to create shared libraries
@@ -81,7 +91,7 @@ endif()
 # This is due to how it labels subroutines within a modules.
 # For example the subroutine b() in the moduel a(), gets named a_b.
 # GCC and Intel do NOT do this, it is name simply as b.
-if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "PGI")
+if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
     message(STATUS "WARNING: PGI compiler is not fully ISO_C compliant; working solution involves a hack pgifix.py")
 endif()
 
@@ -91,7 +101,7 @@ option(BUILD_SHARED_LIBS "Build a shared library" ON)
 
 #------------------------------------------------------------------------------
 # Enable code coverage
-if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU" AND (CMAKE_BUILD_TYPE STREQUAL "Coverage"))
+if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" AND (CMAKE_BUILD_TYPE STREQUAL "Coverage"))
     include(code_coverage)
     list(APPEND LIBS "gcov")
 endif()
