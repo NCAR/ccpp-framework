@@ -11,6 +11,8 @@ set(SOURCES_C
     ccpp_dl.c
     ccpp_fields_idx.h
     ccpp_fields_idx.c
+    ccpp_memory.h
+    ccpp_memory.c
     ccpp_utils.h
     ccpp_utils.c
     ccpp_xml.h
@@ -22,6 +24,7 @@ set(SOURCES_F90
     ccpp_errors.F90
     ccpp_fcall.F90
     ccpp_fields.F90
+    ccpp_memory.F90
     ccpp_strings.F90
     ccpp_suite.F90
     ccpp_types.F90
@@ -115,17 +118,17 @@ file(GLOB HEADERS_C
      "${CMAKE_CURRENT_SOURCE_DIR}/ccpp*.h"
 )
 
-if (PROJECT MATCHES "CCPP-FV3")
+if (PROJECT STREQUAL "CCPP-FV3")
   target_include_directories(ccpp PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
       $<INSTALL_INTERFACE:include>
   )
-else (PROJECT MATCHES "CCPP-FV3")
+else (PROJECT STREQUAL "CCPP-FV3")
   target_include_directories(ccpp PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
       $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
   )
-endif (PROJECT MATCHES "CCPP-FV3")
+endif (PROJECT STREQUAL "CCPP-FV3")
 
 # Define where to install the library
 install(TARGETS ccpp
@@ -141,12 +144,12 @@ install(EXPORT ccpp-targets
         DESTINATION lib/cmake
 )
 
-if (PROJECT MATCHES "CCPP-FV3")
+if (PROJECT STREQUAL "CCPP-FV3")
   # Define where to install the C headers and Fortran modules
   install(FILES ${HEADERS_C} DESTINATION include)
   install(FILES ${MODULES_F90} DESTINATION include)
-else (PROJECT MATCHES "CCPP-FV3")
+else (PROJECT STREQUAL "CCPP-FV3")
   # Define where to install the C headers and Fortran modules
   install(FILES ${HEADERS_C} DESTINATION include/${PROJECT_NAME})
   install(FILES ${MODULES_F90} DESTINATION include/${PROJECT_NAME})
-endif (PROJECT MATCHES "CCPP-FV3")
+endif (PROJECT STREQUAL "CCPP-FV3")

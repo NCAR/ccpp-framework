@@ -7,10 +7,6 @@ endif (NOT PROJECT)
 # Use rpaths on MacOSX
 set(CMAKE_MACOSX_RPATH 1)
 
-message (INFO "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
-message (INFO "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
-#message (FATAL_ERROR "BLA")
-
 #------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 2.8.11)
 
@@ -46,7 +42,7 @@ option(BUILD_SHARED_LIBS "Build a shared library" ON)
 #------------------------------------------------------------------------------
 # Add the CCPP include/module directory and libraries, currently depends on build
 # see FV3_current_trunk/ccpp/CMakeLists.txt on how to set CCPP_INCLUDE_DIRS etc.
-if (PROJECT MATCHES "CCPP-FV3")
+if (PROJECT STREQUAL "CCPP-FV3")
   # Add the CCPP include/module directory
   set(CCPP_INCLUDE_DIRS "" CACHE FILEPATH "Path to ccpp includes")
   set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES ${CCPP_INCLUDE_DIRS})
@@ -54,13 +50,13 @@ if (PROJECT MATCHES "CCPP-FV3")
   set(CCPP_LIB_DIRS "" CACHE FILEPATH "Path to ccpp library")
   link_directories(${CCPP_LIB_DIRS})
   list(APPEND LIBS "ccpp")
-else (PROJECT MATCHES "CCPP-FV3")
+else (PROJECT STREQUAL "CCPP-FV3")
   # Add the CCPP include/module directory
   INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/../../../../src")
   # Add the CCPP library
   LINK_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/../../../../src")
   list(APPEND LIBS "ccpp")
-endif (PROJECT MATCHES "CCPP-FV3")
+endif (PROJECT STREQUAL "CCPP-FV3")
 
 #------------------------------------------------------------------------------
 # Set the sources

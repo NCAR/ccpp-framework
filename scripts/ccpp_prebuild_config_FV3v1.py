@@ -71,7 +71,7 @@
 ###     'ccpp/physics/physics/GFS_rrtmg_post.F90',
 ###     'ccpp/physics/physics/GFS_rrtmg_pre.F90',
 ###     'ccpp/physics/physics/GFS_stochastics.f90',
-###     'ccpp/physics/physics/GFS_suite_interstitial.ccpp.f90',
+###     'ccpp/physics/physics/GFS_suite_interstitial.ccpp.F90',
 ###     'ccpp/physics/physics/GFS_surface_generic.f90',
 ###     'ccpp/physics/physics/GFS_surface_loop_control.f',
 ###     'ccpp/physics/physics/GFS_zhao_carr_pre.f90',

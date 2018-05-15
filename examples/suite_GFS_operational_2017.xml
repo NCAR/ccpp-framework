@@ -18,6 +18,7 @@
       <scheme>rrtmg_lw_run</scheme>
       <scheme>rrtmg_lw_post_run</scheme>
       <scheme>GFS_rrtmg_post_run</scheme>
+      <!-- <scheme>memcheck_run</scheme> -->
       <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
       <!-- <scheme>GFS_interstitialtoscreen_run</scheme> -->
     </subcycle>
@@ -89,6 +90,7 @@
       <scheme>sfc_diag_run</scheme>
       <scheme>lsm_noah_post_run</scheme>
       <scheme>sfc_sice_post_run</scheme>
+      <!-- <scheme>memcheck_run</scheme> -->
       <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
       <!-- <scheme>GFS_interstitialtoscreen_run</scheme> -->
     </subcycle>
@@ -96,6 +98,7 @@
   <group name="stochastics">
     <subcycle loop="1">
       <scheme>GFS_stochastics_run</scheme>
+      <!-- <scheme>memcheck_run</scheme> -->
       <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
     </subcycle>
   </group>
