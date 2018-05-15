@@ -14,10 +14,62 @@ VARIABLE_DEFINITION_FILES = [
     'FV3/gfsphysics/physics/physcons.f90',
     ]
 
-# Can be empty, since all physics schemes and their
-# dependencies are hardcoded in the makefile in
-# FV3/gfsphysics - will be fixed in FV3 v1
-SCHEME_FILES_DEPENDENCIES = []
+# Add all physics scheme dependencies relative to basedir - note that these are all violations
+# of the CCPP requirement to not use any external modules except Fortran standard modules!
+SCHEME_FILES_DEPENDENCIES = [
+    'FV3/gfsphysics/physics/GFDL_parse_tracers.F90',
+    'FV3/gfsphysics/physics/GFS_phys_time_vary.fv3.f90',
+    'FV3/gfsphysics/physics/GFS_rad_time_vary.fv3.f90',
+    'FV3/gfsphysics/physics/GFS_radupdate.f90',
+    'FV3/gfsphysics/physics/date_def.f',
+    'FV3/gfsphysics/physics/funcphys.f90',
+    'FV3/gfsphysics/physics/gfs_phy_tracer_config.f',
+    'FV3/gfsphysics/physics/gocart_tracer_config_stub.f',
+    'FV3/gfsphysics/physics/gcycle.f90',
+    'FV3/gfsphysics/physics/h2o_def.f',
+    'FV3/gfsphysics/physics/h2ointerp.f90',
+    'FV3/gfsphysics/physics/iounitdef.f',
+    'FV3/gfsphysics/physics/machine.F',
+    'FV3/gfsphysics/physics/mersenne_twister.f',
+    'FV3/gfsphysics/physics/mfpbl.f',
+    'FV3/gfsphysics/physics/module_bfmicrophysics.f',
+    'FV3/gfsphysics/physics/module_nst_model.f90',
+    'FV3/gfsphysics/physics/module_nst_parameters.f90',
+    'FV3/gfsphysics/physics/module_nst_water_prop.f90',
+    'FV3/gfsphysics/physics/namelist_soilveg.f',
+    'FV3/gfsphysics/physics/num_parthds.F',
+    'FV3/gfsphysics/physics/ozinterp.f90',
+    'FV3/gfsphysics/physics/ozne_def.f',
+    'FV3/gfsphysics/physics/physcons.f90',
+    'FV3/gfsphysics/physics/physparam.f',
+    'FV3/gfsphysics/physics/radcons.f90',
+    'FV3/gfsphysics/physics/rad_initialize.f',
+    'FV3/gfsphysics/physics/radiation_aerosols.f',
+    'FV3/gfsphysics/physics/radiation_astronomy.f',
+    'FV3/gfsphysics/physics/radiation_clouds.f',
+    'FV3/gfsphysics/physics/radiation_gases.f',
+    'FV3/gfsphysics/physics/radiation_surface.f',
+    'FV3/gfsphysics/physics/radlw_datatb.f',
+    'FV3/gfsphysics/physics/radlw_param.f',
+    'FV3/gfsphysics/physics/radsw_datatb.f',
+    'FV3/gfsphysics/physics/radsw_param.f',
+    'FV3/gfsphysics/physics/rascnvv2.f',
+    'FV3/gfsphysics/physics/set_soilveg.f',
+    'FV3/gfsphysics/physics/sfcsub.F',
+    'FV3/gfsphysics/physics/sflx.f',
+    'FV3/gfsphysics/physics/tridi.f',
+    'FV3/gfsphysics/physics/wam_f107_kp_mod.f90',
+    'FV3/gfsphysics/GFS_layer/GFS_abstraction_layer.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_diagnostics.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_driver.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_radiation_driver.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_restart.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_CCPP_driver.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_driver.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_driver_cap.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_typedefs.F90',
+    ]
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
