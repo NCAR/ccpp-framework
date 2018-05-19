@@ -7,5 +7,10 @@
       <scheme>FV3_test_run</scheme>
     </subcycle>
   </group>
+  <group name="physics">
+    <subcycle loop="1">
+      <scheme>cnvc90_run</scheme>
+    </subcycle>
+  </group>
   <finalize>FV3_test_finalize</finalize>
 </suite>
