@@ -7,99 +7,6 @@
 # Definitions                                                                 #
 ###############################################################################
 
-# DH* THIS ENTIRE BLOCK COMPILES, but remove for initial integration in FV3v1
-### # Add all files with metadata tables on the host model side,
-### # relative to basedir = top-level directory of host model
-### VARIABLE_DEFINITION_FILES = [
-###     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
-###     # DH* NEED TO CHANGE - THESE MUST BE IN FV3 CODEBASE, NOT IN CCPP! (DOES NOT APPLY TO PHYSCONS?)
-###     'ccpp/physics/GFS_layer/GFS_typedefs.F90',
-###     # *DH 
-###     'ccpp/physics/physics/physcons.f90',
-###     ]
-### 
-### # Add all physics scheme dependencies relative to basedir - note that these are all violations
-### # of the CCPP requirement to not use any external modules except Fortran standard modules!
-### SCHEME_FILES_DEPENDENCIES = [
-###     'ccpp/physics/physics/GFDL_parse_tracers.F90',
-###     'ccpp/physics/physics/date_def.f',
-###     'ccpp/physics/physics/funcphys.f90',
-###     'ccpp/physics/physics/gfs_phy_tracer_config.f',
-###     'ccpp/physics/physics/gocart_tracer_config_stub.f',
-###     'ccpp/physics/physics/h2o_def.f',
-###     'ccpp/physics/physics/iounitdef.f',
-###     'ccpp/physics/physics/machine.F',
-###     'ccpp/physics/physics/mersenne_twister.f',
-###     'ccpp/physics/physics/mfpbl.f',
-###     'ccpp/physics/physics/module_bfmicrophysics.f',
-###     'ccpp/physics/physics/module_nst_model.f90',
-###     'ccpp/physics/physics/module_nst_parameters.f90',
-###     'ccpp/physics/physics/module_nst_water_prop.f90',
-###     'ccpp/physics/physics/namelist_soilveg.f',
-###     'ccpp/physics/physics/ozne_def.f',
-###     'ccpp/physics/physics/physcons.f90',
-###     'ccpp/physics/physics/physparam.f',
-###     'ccpp/physics/physics/radcons.f90',
-###     'ccpp/physics/physics/radiation_aerosols.f',
-###     'ccpp/physics/physics/radiation_astronomy.f',
-###     'ccpp/physics/physics/radiation_clouds.f',
-###     'ccpp/physics/physics/radiation_gases.f',
-###     'ccpp/physics/physics/radiation_surface.f',
-###     'ccpp/physics/physics/radlw_datatb.f',
-###     'ccpp/physics/physics/radlw_param.f',
-###     'ccpp/physics/physics/radsw_datatb.f',
-###     'ccpp/physics/physics/radsw_param.f',
-###     'ccpp/physics/physics/rascnvv2.f',
-###     'ccpp/physics/physics/sflx.f',
-###     'ccpp/physics/physics/tridi.f',
-###     'ccpp/physics/physics/wam_f107_kp_mod.f90',
-###     # DH* NEED TO CHANGE - THIS MUST BE IN FV3 CODEBASE, NOT IN CCPP! *DH
-###     #'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
-###     'ccpp/physics/GFS_layer/GFS_typedefs.F90',
-###     ]
-### 
-### # Add all physics scheme files relative to basedir
-### SCHEME_FILES = [
-###     'ccpp/physics/physics/FV3_test.F90',
-###     'ccpp/physics/physics/GFS_DCNV_generic.f90',
-###     'ccpp/physics/physics/GFS_MP_generic_post.f90',
-###     'ccpp/physics/physics/GFS_MP_generic_pre.f90',
-###     'ccpp/physics/physics/GFS_PBL_generic.f90',
-###     'ccpp/physics/physics/GFS_SCNV_generic.f90',
-###     'ccpp/physics/physics/GFS_calpreciptype.f90',
-###     'ccpp/physics/physics/GFS_debug.F90',
-###     'ccpp/physics/physics/GFS_rrtmg_post.F90',
-###     'ccpp/physics/physics/GFS_rrtmg_pre.F90',
-###     'ccpp/physics/physics/GFS_stochastics.f90',
-###     'ccpp/physics/physics/GFS_suite_interstitial.ccpp.F90',
-###     'ccpp/physics/physics/GFS_surface_generic.f90',
-###     'ccpp/physics/physics/GFS_surface_loop_control.f',
-###     'ccpp/physics/physics/GFS_zhao_carr_pre.f90',
-###     'ccpp/physics/physics/cnvc90.f',
-###     'ccpp/physics/physics/dcyc2.f',
-###     'ccpp/physics/physics/get_prs_fv3.f90',
-###     'ccpp/physics/physics/gscond.f',
-###     'ccpp/physics/physics/gwdc.f',
-###     'ccpp/physics/physics/gwdps.f',
-###     'ccpp/physics/physics/mfdeepcnv.f',
-###     'ccpp/physics/physics/mfshalcnv.f',
-###     'ccpp/physics/physics/moninedmf.f',
-###     'ccpp/physics/physics/ozphys.f',
-###     'ccpp/physics/physics/precpd.f',
-###     'ccpp/physics/physics/radlw_main.f',
-###     'ccpp/physics/physics/radsw_main.f',
-###     'ccpp/physics/physics/rayleigh_damp.f',
-###     'ccpp/physics/physics/rrtmg_lw_post.F90',
-###     'ccpp/physics/physics/rrtmg_lw_pre.F90',
-###     'ccpp/physics/physics/rrtmg_sw_post.F90',
-###     'ccpp/physics/physics/rrtmg_sw_pre.F90',
-###     'ccpp/physics/physics/sfc_diag.f',
-###     'ccpp/physics/physics/sfc_diff.f',
-###     'ccpp/physics/physics/sfc_drv.f',
-###     'ccpp/physics/physics/sfc_nst.f',
-###     'ccpp/physics/physics/sfc_sice.f',
-###     ]
-
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
@@ -109,17 +16,103 @@ VARIABLE_DEFINITION_FILES = [
 # Add all physics scheme dependencies relative to basedir - note that these are all violations
 # of the CCPP requirement to not use any external modules except Fortran standard modules!
 SCHEME_FILES_DEPENDENCIES = [
-    'ccpp/physics/physics/machine.F',
-    'ccpp/physics/physics/radlw_param.f',
-    'ccpp/physics/physics/radsw_param.f',
-    'ccpp/physics/physics/physparam.f',
+#    'ccpp/physics/physics/GFDL_parse_tracers.F90',
+#    'ccpp/physics/physics/date_def.f',
+#    'ccpp/physics/physics/funcphys.f90',
+#    'ccpp/physics/physics/gfs_phy_tracer_config.f',
+#    'ccpp/physics/physics/gocart_tracer_config_stub.f',
+#    'ccpp/physics/physics/h2o_def.f',
+#    'ccpp/physics/physics/iounitdef.f',
+    'ccpp/physics/physics/machine.F', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
+#    'ccpp/physics/physics/mersenne_twister.f',
+#    'ccpp/physics/physics/mfpbl.f',
+#    'ccpp/physics/physics/module_bfmicrophysics.f',
+#    'ccpp/physics/physics/module_nst_model.f90',
+#    'ccpp/physics/physics/module_nst_parameters.f90',
+#    'ccpp/physics/physics/module_nst_water_prop.f90',
+#    'ccpp/physics/physics/namelist_soilveg.f',
+#    'ccpp/physics/physics/ozne_def.f',
+#    'ccpp/physics/physics/physcons.f90',
+    'ccpp/physics/physics/physparam.f', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
+#    'ccpp/physics/physics/radcons.f90',
+#    'ccpp/physics/physics/radiation_aerosols.f',
+#    'ccpp/physics/physics/radiation_astronomy.f',
+#    'ccpp/physics/physics/radiation_clouds.f',
+#    'ccpp/physics/physics/radiation_gases.f',
+#    'ccpp/physics/physics/radiation_surface.f',
+#    'ccpp/physics/physics/radlw_datatb.f',
+    'ccpp/physics/physics/radlw_param.f', # DH should this be in FV3/gfsphysics/physics/radlw_param.f
+#    'ccpp/physics/physics/radsw_datatb.f',
+    'ccpp/physics/physics/radsw_param.f', # DH should this be in FV3/gfsphysics/physics/radsw_param.f
+#    'ccpp/physics/physics/rascnvv2.f',
+#    'ccpp/physics/physics/sflx.f',
+#    'ccpp/physics/physics/tridi.f',
+#    'ccpp/physics/physics/wam_f107_kp_mod.f90',
+#    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     ]
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'ccpp/physics/physics/FV3_test.F90',
+#    'ccpp/physics/physics/GFS_DCNV_generic.f90',
+#    'ccpp/physics/physics/GFS_MP_generic_post.f90',
+#    'ccpp/physics/physics/GFS_MP_generic_pre.f90',
+#    'ccpp/physics/physics/GFS_PBL_generic.f90',
+#    'ccpp/physics/physics/GFS_SCNV_generic.f90',
+#    'ccpp/physics/physics/GFS_calpreciptype.f90',
+#    'ccpp/physics/physics/GFS_debug.F90',
+#    'ccpp/physics/physics/GFS_rrtmg_post.F90',
+#    'ccpp/physics/physics/GFS_rrtmg_pre.F90',
+#    'ccpp/physics/physics/GFS_stochastics.f90',
+#    'ccpp/physics/physics/GFS_suite_interstitial.ccpp.F90',
+#    'ccpp/physics/physics/GFS_surface_generic.f90',
+#    'ccpp/physics/physics/GFS_surface_loop_control.f',
+#    'ccpp/physics/physics/GFS_zhao_carr_pre.f90',
+    'ccpp/physics/physics/cnvc90.f',
+#    'ccpp/physics/physics/dcyc2.f',
+#    'ccpp/physics/physics/get_prs_fv3.f90',
+#    'ccpp/physics/physics/gscond.f',
+#    'ccpp/physics/physics/gwdc.f',
+#    'ccpp/physics/physics/gwdps.f',
+#    'ccpp/physics/physics/mfdeepcnv.f',
+#    'ccpp/physics/physics/mfshalcnv.f',
+#    'ccpp/physics/physics/moninedmf.f',
+#    'ccpp/physics/physics/ozphys.f',
+#    'ccpp/physics/physics/precpd.f',
+#    'ccpp/physics/physics/radlw_main.f',
+#    'ccpp/physics/physics/radsw_main.f',
+#    'ccpp/physics/physics/rayleigh_damp.f',
+#    'ccpp/physics/physics/rrtmg_lw_post.F90',
+#    'ccpp/physics/physics/rrtmg_lw_pre.F90',
+#    'ccpp/physics/physics/rrtmg_sw_post.F90',
+#    'ccpp/physics/physics/rrtmg_sw_pre.F90',
+#    'ccpp/physics/physics/sfc_diag.f',
+#    'ccpp/physics/physics/sfc_diff.f',
+#    'ccpp/physics/physics/sfc_drv.f',
+#    'ccpp/physics/physics/sfc_nst.f',
+#    'ccpp/physics/physics/sfc_sice.f',
     ]
-# *DH
+
+## Add all files with metadata tables on the host model side,
+## relative to basedir = top-level directory of host model
+#VARIABLE_DEFINITION_FILES = [
+#    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
+#    ]
+#
+## Add all physics scheme dependencies relative to basedir - note that these are all violations
+## of the CCPP requirement to not use any external modules except Fortran standard modules!
+#SCHEME_FILES_DEPENDENCIES = [
+#    'ccpp/physics/physics/machine.F',
+#    'ccpp/physics/physics/radlw_param.f',
+#    'ccpp/physics/physics/radsw_param.f',
+#    'ccpp/physics/physics/physparam.f',
+#    ]
+#
+## Add all physics scheme files relative to basedir
+#SCHEME_FILES = [
+#    'ccpp/physics/physics/FV3_test.F90',
+#    ]
+## *DH
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = 'ccpp/physics/CCPP_SCHEMES.mk'
@@ -144,6 +137,9 @@ CAPS_DIR = 'ccpp/physics/physics'
 # if it encounters a scheme subroutine with optional arguments
 # if no entry is made here. Possible values are: 'all', 'none',
 # or a list of standard_names: [ 'var1', 'var3' ].
+#
+# DH check if this is still correct
+#
 OPTIONAL_ARGUMENTS = {
     'rrtmg_sw' : {
         'rrtmg_sw_run' : [
