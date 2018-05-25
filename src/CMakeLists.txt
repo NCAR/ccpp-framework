@@ -26,6 +26,7 @@ set(SOURCES_F90
     ccpp_fields.F90
     ccpp_memory.F90
     ccpp_strings.F90
+    ccpp_scheme.F90
     ccpp_suite.F90
     ccpp_types.F90
     ccpp_xml.F90
