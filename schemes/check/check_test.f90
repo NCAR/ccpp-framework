@@ -20,11 +20,11 @@ module check_test
     implicit none
 
     private
-    public :: test
+    public :: test_run
 
     contains
 
-    subroutine test(gravity, u, v, surf_t)
+    subroutine test_run(gravity, u, v, surf_t)
         implicit none
         real, intent(inout) :: gravity
         real, intent(inout) :: surf_t(:)
@@ -39,6 +39,6 @@ module check_test
         print *, 'updating v to be -10m/s'
         v = -10.0
 
-    end subroutine test
+    end subroutine test_run
 
 end module check_test

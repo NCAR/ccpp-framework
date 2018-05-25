@@ -43,11 +43,11 @@ module check_nans
 
         call ccpp_field_get(cdata, 'northward_wind', v, ierr)
 
-        call test_run(gravity, u, v, surf_t)
+        call nans_run(gravity, u, v, surf_t)
 
     end subroutine nans_cap
 
-    subroutine run(gravity, u, v, surf_t)
+    subroutine nans_run(gravity, u, v, surf_t)
         implicit none
         real, pointer, intent(inout) :: gravity
         real, pointer, intent(inout) :: surf_t(:)
@@ -56,6 +56,6 @@ module check_nans
 
         print *, 'In physics check nans run'
 
-    end subroutine test_run
+    end subroutine nans_run
 
 end module check_test
