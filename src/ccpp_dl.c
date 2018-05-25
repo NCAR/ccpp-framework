@@ -51,14 +51,14 @@ static const char suffix[] = ".so";
  * @param[in]  scheme    The scheme name to call.
  * @param[in]  lib       The library continaing the physics scheme.
  * @param[in]  ver       The library version number.
- * @param[out] shdl      The scheme function pointer handle.
+ * @param[out] fhdl      The scheme function pointer handle.
  * @param[out] lhdl      The library handle.
  * @retval     0         If it was sucessful
  * @retval     1         If there was an error
  **/
 int
 ccpp_dl_open(const char *scheme, const char *lib, const char *ver,
-	     void **shdl, void **lhdl)
+	     void **fhdl, void **lhdl)
 {
 	int i = 0;
 	int n = 0;
@@ -115,7 +115,7 @@ ccpp_dl_open(const char *scheme, const char *lib, const char *ver,
 	}
 
 	dlerror();
-	*(void **)shdl = dlsym(*lhdl, scheme_cap);
+	*(void **)fhdl = dlsym(*lhdl, scheme_cap);
 	if ((error = dlerror()) != NULL)  {
 		warnx("%s", error);
 		return(EXIT_FAILURE);
