@@ -23,12 +23,14 @@ module ccpp_api
     use ccpp_errors,        only: ccpp_error,                          &
                                   ccpp_debug
     use ccpp,               only: ccpp_init,                           &
-                                  ccpp_finalize
+                                  ccpp_finalize,                       &
+                                  ccpp_initialized
     use ccpp_fcall,         only: ccpp_physics_init,                   &
                                   ccpp_physics_run,                    &
                                   ccpp_physics_finalize
     use ccpp_fields,        only: ccpp_field_add,                      &
                                   ccpp_field_get
+    use ccpp_memory,        only: ccpp_memory_usage
 
     implicit none
 
@@ -41,6 +43,8 @@ module ccpp_api
               ccpp_physics_init,                                       &
               ccpp_physics_run,                                        &
               ccpp_physics_finalize,                                   &
-              ccpp_field_add
+              ccpp_field_add,                                          &
+              ccpp_initialized,                                        &
+              ccpp_memory_usage
 
 end module ccpp_api

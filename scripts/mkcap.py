@@ -10,96 +10,14 @@ import sys
 import getopt
 import xml.etree.ElementTree as ET
 
+###############################################################################
+
 STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
 
 CCPP_ERROR_FLAG_VARIABLE = 'error_flag'
 
-#################### Main program routine
-def main():
-    args = parse_args()
-    data = parse_scheme(args['scheme'])
-    cap = Cap()
-    cap.filename = args['output']
-    cap.write_from_xml(data)
-
-#################### Parse the command line arguments
-def parse_args():
-    args = {}
-    opts, rem = getopt.getopt(sys.argv[1:],
-                              'hvo:',
-                              ['help',
-                               'verbose',
-                               'output=',
-                              ])
-    for opt, arg in opts:
-        if opt in ('-h', '--help'):
-            lusage()
-        elif opt in ('-v', '--verbose'):
-            args['verbose'] = True
-        elif opt in ('-o', '--output'):
-            args['output'] = arg
-        else:
-            usage()
-
-    if (not rem):
-        eprint("Must specify an input scheme file")
-        usage()
-
-    if (os.path.isfile(rem[0])):
-        args['scheme'] = rem[0]
-    else:
-        eprint("Unable to read input scheme file: {0}".format(rem[0]))
-        usage()
-
-    if (not 'output' in args):
-        args['output'] = sys.stdout
-
-    return args
-
-#################### Parse the scheme xml file into a data dictionary
-def parse_scheme(filename):
-
-    data = {}
-
-    tree = ET.parse(filename)
-    root = tree.getroot()
-
-    data['module'] = root.attrib.get('module')
-    data['subs'] = {}
-
-    for sub in root.findall('subroutine'):
-        name = sub.attrib.get('name')
-        data['subs'][name] = {}
-        data['subs'][name]['vars'] = []
-
-        for var in sub.findall('var'):
-            v = Var()
-            v.standard_name = var.find('standard_name').text
-            #v.long_name     = var.find('long_name').text
-            v.units         = var.find('units').text
-            v.local_name    = var.find('local_name').text
-            v.type          = var.find('type').text
-            v.rank          = int(var.find('rank').text)
-            data['subs'][name]['vars'].append(v)
-
-    return data
-
-#################### Print a usage statement
-def usage():
-    name = os.path.basename(__file__)
-    eprint("Usage {0}: [-h] [-v] [-o output.f90] scheme.xml".format(name))
-    sys.exit(1)
-
-#################### Print a long usage statement
-def lusage():
-    pass
-
-#################### Print a message to STDERR
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-
 ###############################################################################
+
 class Var(object):
 
     def __init__(self, **kwargs):
@@ -433,33 +351,6 @@ module {module}_cap
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write_from_xml(self, data):
-        if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
-        else:
-            f = sys.stdout
-
-        subs = ','.join(["{0}".format(s) for s in data['subs']])
-        sub_caps = ','.join(["{0}_cap".format(s) for s in data['subs']])
-
-        f.write(Cap.header.format(module = data['module'],
-                                  module_use = '',
-                                  subroutines = subs,
-                                  subroutine_caps = sub_caps))
-        for (k, v) in data['subs'].items():
-            var_defs = "\n".join([" "*8 + x.print_def() for x in v['vars']])
-            var_gets = "\n".join([x.print_get() for x in v['vars']])
-            args = ','.join(["{0}={0}".format(x.local_name) for x in v['vars']])
-            f.write(Cap.sub.format(subroutine=k,
-                                   var_defs=var_defs,
-                                   var_gets=var_gets,
-                                   args=args,
-                                   ierr_assign=''))
-        f.write("end module {module}_cap\n".format(module=data['module']))
-
-        if (f is not sys.stdout):
-            f.close()
-
     def write(self, module, module_use, data):
         if (self.filename is not sys.stdout):
             f = open(self.filename, 'w')
@@ -552,6 +443,48 @@ CAPS_F90 ='''
     def filename(self, value):
         self._filename = value
 
+class CapsCMakefile(object):
+
+    header='''
+# All CCPP caps are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+set(CAPS
+'''
+    footer=''')
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, schemes):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for scheme in schemes:
+            contents += '      {0}\n'.format(scheme)
+        contents += self.footer
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
 class SchemesMakefile(object):
 
     header='''
@@ -611,7 +544,48 @@ SCHEMES_f90 ='''
     def filename(self, value):
         self._filename = value
 
+class SchemesCMakefile(object):
+
+    header='''
+# All CCPP schemes are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+set(SCHEMES
+'''
+    footer=''')
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, schemes):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for scheme in schemes:
+            contents += '      {0}\n'.format(scheme)
+        contents += self.footer
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
 ###############################################################################
 if __name__ == "__main__":
     main()
-

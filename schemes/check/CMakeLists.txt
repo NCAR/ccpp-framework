@@ -1,3 +1,9 @@
+# Set default project to unknown
+if(NOT PROJECT)
+  message(STATUS "Setting CCPP project to 'unknown' as none was specified.")
+  set(PROJECT "Unknown")
+endif (NOT PROJECT)
+
 # Use rpaths on MacOSX
 set(CMAKE_MACOSX_RPATH 1)
 
@@ -34,15 +40,23 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
 option(BUILD_SHARED_LIBS "Build a shared library" ON)
 
 #------------------------------------------------------------------------------
-# Add the CCPP include/module directory
-set(CCPP_INCLUDE_DIRS "" CACHE FILEPATH "Path to ccpp includes")
-set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES ${CCPP_INCLUDE_DIRS})
-
-#------------------------------------------------------------------------------
-# Add the CCPP library
-set(CCPP_LIB_DIRS "" CACHE FILEPATH "Path to ccpp library")
-link_directories(${CCPP_LIB_DIRS})
-list(APPEND LIBS "ccpp")
+# Add the CCPP include/module directory and libraries, currently depends on build
+# see FV3_current_trunk/ccpp/CMakeLists.txt on how to set CCPP_INCLUDE_DIRS etc.
+if (PROJECT STREQUAL "CCPP-FV3")
+  # Add the CCPP include/module directory
+  set(CCPP_INCLUDE_DIRS "" CACHE FILEPATH "Path to ccpp includes")
+  set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES ${CCPP_INCLUDE_DIRS})
+  # Add the CCPP library
+  set(CCPP_LIB_DIRS "" CACHE FILEPATH "Path to ccpp library")
+  link_directories(${CCPP_LIB_DIRS})
+  list(APPEND LIBS "ccpp")
+else (PROJECT STREQUAL "CCPP-FV3")
+  # Add the CCPP include/module directory
+  INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/../../../../src")
+  # Add the CCPP library
+  LINK_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/../../../../src")
+  list(APPEND LIBS "ccpp")
+endif (PROJECT STREQUAL "CCPP-FV3")
 
 #------------------------------------------------------------------------------
 # Set the sources
@@ -51,15 +65,18 @@ set(SOURCES
     check_noop.f90
 )
 
-#------------------------------------------------------------------------------
-# Add the auto-generated caps
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
-    DEPENDS ${CCPP_MKCAP}
-    COMMAND ${CCPP_MKCAP} -o ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
-                             ${CMAKE_CURRENT_SOURCE_DIR}/scheme.xml
-)
-list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90)
+# DH the mechanism to create caps from XML is no longer supported; todo:
+# replace with a test that parses a simple metadata table in check_test.f90
+# and creates check_test_cap.f90 - also needs a variable definition file.
+##------------------------------------------------------------------------------
+## Add the auto-generated caps
+#add_custom_command(
+#    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
+#    DEPENDS ${CCPP_MKCAP}
+#    COMMAND ${CCPP_MKCAP} -o ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
+#                             ${CMAKE_CURRENT_SOURCE_DIR}/scheme.xml
+#)
+#list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90)
 
 #------------------------------------------------------------------------------
 # The Fortran compiler/linker flag inserted by cmake to create shared libraries

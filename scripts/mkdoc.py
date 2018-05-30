@@ -1,26 +1,24 @@
 #!/usr/bin/env python
+
 #
-# Script to generate basic documentation for CCPP metadata
+# Functions to generate basic documentation in HTML and LaTeX for CCPP metadata
 #
+
+# DH* TODO: create a Python module metadata.py with a class Metadata
+# and use this for ccpp_prebuild.py; create to_html and to_latex routines for it
 
 import logging
 
 from common import decode_container, escape_tex
 
-#################### Main program routine
-def main():
-    pass
-
 ###############################################################################
 
-# DH* TODO: create a Python module metadata.py with a class Metadata
-# and use this for ccpp_prebuild.py; create a to_html routine for it
-
 def metadata_to_html(metadata, model, filename):
-    """Create a metadata table for each variable recorded"""
-
-    # Set debug to true if logging level is debug
-    #debug = logging.getLogger().getEffectiveLevel() == logging.DEBUG
+    """Create an HTML page with a table that lists each variable provided
+    by the model. Contrary to metadata_to_latex below, this table does not
+    include information on variables requested by schemes. The primary use
+    of the HTML table is to help physics scheme developers to identify the
+    variables they need when writing a CCPP-compliant scheme."""
 
     shading = { 0 : 'darkgray', 1 : 'lightgray' }
     success = True
@@ -75,10 +73,8 @@ def metadata_to_html(metadata, model, filename):
 
 
 def metadata_to_latex(metadata_define, metadata_request, model, filename):
-    """Create a metadata table for each variable provided and/or requested"""
-
-    # Set debug to true if logging level is debug
-    #debug = logging.getLogger().getEffectiveLevel() == logging.DEBUG
+    """Create a LaTeX document with a table that lists  each variable provided
+    and/or requested. Uses the GMTB LaTeX templates and style definitons in gmtb.sty."""
 
     shading = { 0 : 'darkgray', 1 : 'lightgray' }
     success = True
@@ -104,7 +100,8 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
         else:
             var = metadata_request[var_name][0]
         line = '''
-\hyperlink{{{standard_name_ref}}}{{\\blue\\underline{{\\execout{{{standard_name}}}}}}} \\\\'''.format(standard_name=escape_tex(var.standard_name), standard_name_ref=var.standard_name)
+\hyperlink{{{standard_name_ref}}}{{\\blue\\underline{{\\execout{{{standard_name}}}}}}} \\\\'''.format(
+                     standard_name=escape_tex(var.standard_name), standard_name_ref=var.standard_name)
         latex += line
 
     latex += '''
@@ -168,7 +165,3 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
 
     logging.info('Metadata table for model {0} written to {1}'.format(model, filename))
     return success
-
-###############################################################################
-if __name__ == "__main__":
-    main()

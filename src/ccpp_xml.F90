@@ -91,7 +91,7 @@ module ccpp_xml
         end function ccpp_xml_unload
 
         integer(c_int32_t)                                             &
-        function ccpp_xml_ele_find_c                                     &
+        function ccpp_xml_ele_find_c                                   &
                  (xml, name, ele)                                      &
                  bind(c, name='ccpp_xml_ele_find')
             import :: c_int32_t, c_ptr, c_char

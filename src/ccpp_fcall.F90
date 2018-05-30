@@ -369,6 +369,7 @@ module ccpp_fcall
     end subroutine ccpp_run_scheme
 
 #if 0
+    ! DH 20180504 - keep for future use
     !>
     !! The run subroutine for a function pointer. This
     !! will call the single function specified.

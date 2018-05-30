@@ -32,7 +32,8 @@ module ccpp
 
     private
     public :: ccpp_init,                                               &
-              ccpp_finalize
+              ccpp_finalize,                                           &
+              ccpp_initialized
 
     contains
 
@@ -51,9 +52,11 @@ module ccpp
 
         ierr = 0
 
-        !call ccpp_debug('Called ccpp_init')
+        call ccpp_debug('Called ccpp_init')
 
         if (present(suite)) then
+            ! Makes a copy of the suite to avoid multiple
+            ! reads/parses of the suite definiton file
             cdata%suite = suite
             cdata%suite%iscopy = .True.
         else
@@ -72,6 +75,9 @@ module ccpp
             return
         end if
 
+        ! Set flag indicating initialization state of cdata
+        cdata%initialized = .true.
+
     end subroutine ccpp_init
 
     !>
@@ -86,7 +92,7 @@ module ccpp
 
         ierr = 0
 
-        !call ccpp_debug('Called ccpp_finalize')
+        call ccpp_debug('Called ccpp_finalize')
 
         ! Finalize the suite
         call ccpp_suite_finalize(cdata%suite, ierr)
@@ -102,6 +108,25 @@ module ccpp
                 return
         end if
 
+        ! Set flag indicating initialization state of cdata
+        cdata%initialized = .false.
+
     end subroutine ccpp_finalize
+
+    !>
+    !! CCPP test initialization routine
+    !!
+    !! @param[in]     cdata        The ccpp_t type data
+    !! @return        initialized  .true. or .false.
+    !
+    function ccpp_initialized(cdata) result(initialized)
+        type(ccpp_t), intent(in) :: cdata
+        logical                  :: initialized
+
+        call ccpp_debug('Called ccpp_initialized')
+
+        initialized = cdata%initialized
+
+    end function ccpp_initialized
 
 end module ccpp

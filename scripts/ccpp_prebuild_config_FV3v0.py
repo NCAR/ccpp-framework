@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# CCPP prebuild config for GFDL Finite-Volume Cubed-Sphere Model (FV3) v0.0
+# CCPP prebuild config for GFDL Finite-Volume Cubed-Sphere Model (FV3) v0
 
 
 ###############################################################################
@@ -14,6 +14,63 @@ VARIABLE_DEFINITION_FILES = [
     'FV3/gfsphysics/physics/physcons.f90',
     ]
 
+# Add all physics scheme dependencies relative to basedir - note that these are all violations
+# of the CCPP requirement to not use any external modules except Fortran standard modules!
+SCHEME_FILES_DEPENDENCIES = [
+    'FV3/gfsphysics/physics/GFDL_parse_tracers.F90',
+    'FV3/gfsphysics/physics/GFS_phys_time_vary.fv3.f90',
+    'FV3/gfsphysics/physics/GFS_rad_time_vary.fv3.f90',
+    'FV3/gfsphysics/physics/GFS_radupdate.f90',
+    'FV3/gfsphysics/physics/date_def.f',
+    'FV3/gfsphysics/physics/funcphys.f90',
+    'FV3/gfsphysics/physics/gfs_phy_tracer_config.f',
+    'FV3/gfsphysics/physics/gocart_tracer_config_stub.f',
+    'FV3/gfsphysics/physics/gcycle.f90',
+    'FV3/gfsphysics/physics/h2o_def.f',
+    'FV3/gfsphysics/physics/h2ointerp.f90',
+    'FV3/gfsphysics/physics/iounitdef.f',
+    'FV3/gfsphysics/physics/machine.F',
+    'FV3/gfsphysics/physics/mersenne_twister.f',
+    'FV3/gfsphysics/physics/mfpbl.f',
+    'FV3/gfsphysics/physics/module_bfmicrophysics.f',
+    'FV3/gfsphysics/physics/module_nst_model.f90',
+    'FV3/gfsphysics/physics/module_nst_parameters.f90',
+    'FV3/gfsphysics/physics/module_nst_water_prop.f90',
+    'FV3/gfsphysics/physics/namelist_soilveg.f',
+    'FV3/gfsphysics/physics/num_parthds.F',
+    'FV3/gfsphysics/physics/ozinterp.f90',
+    'FV3/gfsphysics/physics/ozne_def.f',
+    'FV3/gfsphysics/physics/physcons.f90',
+    'FV3/gfsphysics/physics/physparam.f',
+    'FV3/gfsphysics/physics/radcons.f90',
+    'FV3/gfsphysics/physics/rad_initialize.f',
+    'FV3/gfsphysics/physics/radiation_aerosols.f',
+    'FV3/gfsphysics/physics/radiation_astronomy.f',
+    'FV3/gfsphysics/physics/radiation_clouds.f',
+    'FV3/gfsphysics/physics/radiation_gases.f',
+    'FV3/gfsphysics/physics/radiation_surface.f',
+    'FV3/gfsphysics/physics/radlw_datatb.f',
+    'FV3/gfsphysics/physics/radlw_param.f',
+    'FV3/gfsphysics/physics/radsw_datatb.f',
+    'FV3/gfsphysics/physics/radsw_param.f',
+    'FV3/gfsphysics/physics/rascnvv2.f',
+    'FV3/gfsphysics/physics/set_soilveg.f',
+    'FV3/gfsphysics/physics/sfcsub.F',
+    'FV3/gfsphysics/physics/sflx.f',
+    'FV3/gfsphysics/physics/tridi.f',
+    'FV3/gfsphysics/physics/wam_f107_kp_mod.f90',
+    'FV3/gfsphysics/GFS_layer/GFS_abstraction_layer.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_diagnostics.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_driver.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_radiation_driver.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_restart.F90',
+    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_CCPP_driver.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_driver.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_driver_cap.F90',
+    'FV3/gfsphysics/IPD_layer/IPD_typedefs.F90',
+    ]
+
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'FV3/gfsphysics/physics/GFS_DCNV_generic.f90',
@@ -22,11 +79,11 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/GFS_PBL_generic.f90',
     'FV3/gfsphysics/physics/GFS_SCNV_generic.f90',
     'FV3/gfsphysics/physics/GFS_calpreciptype.f90',
-    'FV3/gfsphysics/physics/GFS_debug.f90',
+    'FV3/gfsphysics/physics/GFS_debug.F90',
     'FV3/gfsphysics/physics/GFS_rrtmg_post.F90',
     'FV3/gfsphysics/physics/GFS_rrtmg_pre.F90',
     'FV3/gfsphysics/physics/GFS_stochastics.f90',
-    'FV3/gfsphysics/physics/GFS_suite_interstitial.ccpp.f90',
+    'FV3/gfsphysics/physics/GFS_suite_interstitial.ccpp.F90',
     'FV3/gfsphysics/physics/GFS_surface_generic.f90',
     'FV3/gfsphysics/physics/GFS_surface_loop_control.f',
     'FV3/gfsphysics/physics/GFS_zhao_carr_pre.f90',
@@ -36,6 +93,7 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/gscond.f',
     'FV3/gfsphysics/physics/gwdc.f',
     'FV3/gfsphysics/physics/gwdps.f',
+    'FV3/gfsphysics/physics/memcheck.F90',
     'FV3/gfsphysics/physics/mfdeepcnv.f',
     'FV3/gfsphysics/physics/mfshalcnv.f',
     'FV3/gfsphysics/physics/moninedmf.f',
@@ -55,8 +113,9 @@ SCHEME_FILES = [
     'FV3/gfsphysics/physics/sfc_sice.f',
     ]
 
-# Auto-generated makefile snippet that contains all schemes
+# Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = 'FV3/gfsphysics/CCPP_SCHEMES.mk'
+SCHEMES_CMAKEFILE = 'FV3/gfsphysics/CCPP_SCHEMES.cmake'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
@@ -64,8 +123,9 @@ TARGET_FILES = [
     'FV3/gfsphysics/IPD_layer/IPD_CCPP_Driver.F90',
     ]
 
-# Auto-generated makefile snippet that contains all caps
+# Auto-generated makefile/cmakefile snippets that contain all caps
 CAPS_MAKEFILE = 'FV3/gfsphysics/CCPP_CAPS.mk'
+CAPS_CMAKEFILE = 'FV3/gfsphysics/CCPP_CAPS.cmake'
 
 # Directory where to put all auto-generated physics caps
 CAPS_DIR = 'FV3/gfsphysics/physics'
