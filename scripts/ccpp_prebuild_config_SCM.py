@@ -21,8 +21,7 @@ SCHEME_FILES_DEPENDENCIES = []
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
-    'ccpp-physics/GFS_layer/GFS_initialize_scm.F90',
-    'ccpp-physics/GFS_layer/GFS_finalize_scm.F90',
+    'ccpp-physics/GFS_layer/GFS_suite_setup_scm.F90',
     'ccpp-physics/physics/GFS_DCNV_generic.f90',
     'ccpp-physics/physics/GFS_MP_generic_post.f90',
     'ccpp-physics/physics/GFS_MP_generic_pre.f90',
