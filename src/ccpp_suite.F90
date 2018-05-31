@@ -17,16 +17,17 @@
 module ccpp_suite
 
     use, intrinsic :: iso_c_binding,                                   &
-                      only: c_ptr, c_char, c_null_ptr
+                      only: c_ptr, c_null_ptr
     use            :: ccpp_types,                                      &
                       only: ccpp_suite_t
     use            :: ccpp_errors,                                     &
-                      only: ccpp_error, ccpp_warn, ccpp_debug
+                      only: ccpp_error, ccpp_debug
     use            :: ccpp_strings,                                    &
-                      only: ccpp_fstr, ccpp_cstr
-    use            :: ccpp_dl,                                         &
-                      only: ccpp_dl_open, ccpp_dl_close
+                      only: ccpp_cstr
     use            :: ccpp_xml
+    use            :: ccpp_scheme,                                     &
+                      only: ccpp_scheme_init, ccpp_scheme_finalize,    &
+                            ccpp_scheme_load, ccpp_scheme_unload
 
     implicit none
 
@@ -57,6 +58,7 @@ module ccpp_suite
         integer                               :: i
         integer                               :: j
         integer                               :: k
+        integer                               :: l
         type(c_ptr)                           :: xml
         type(c_ptr)                           :: root
         type(c_ptr)                           :: group
@@ -96,6 +98,15 @@ module ccpp_suite
                call ccpp_error(err_msg // trim(filename))
                return
             end if
+            ! Do not allow empty init constructs <<init></init>
+            if (trim(suite%init%name) == '') then
+                call ccpp_error('CCPP does not allow empty <init></init> ' &
+                                // ' XML elements; remove if not used')
+                ierr = 1
+                return
+            end if
+            ! Initialize the scheme
+            call ccpp_scheme_init(suite%init, ierr)
         end if
 
         ! Find the finalize subroutine
@@ -110,6 +121,16 @@ module ccpp_suite
                call ccpp_error(err_msg // trim(filename))
                return
             end if
+            ! Do not allow empty init constructs <<init></init>
+            if (trim(suite%finalize%name) == '') then
+                call ccpp_error('CCPP does not allow empty <finalize></finalize> ' &
+                                // 'XML elements; remove if not used')
+                ierr = 1
+                return
+            end if
+            ! Initialize the scheme
+            call ccpp_scheme_init(suite%finalize, ierr)
+            if (ierr /= 0) return
         end if
 
         ! Find the first group
@@ -143,7 +164,7 @@ module ccpp_suite
             do j=1, suite%groups(i)%subcycles_max
 
                 ! Parse the subcycle
-                call ccpp_xml_parse(subcycle,                    &
+                call ccpp_xml_parse(subcycle,                      &
                                     suite%groups(i)%subcycles_max, &
                                     suite%groups(i)%subcycles(j),  &
                                     ierr)
@@ -159,9 +180,14 @@ module ccpp_suite
                 ! Loop over all scheme
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
                     ! Parse the scheme
-                    call ccpp_xml_parse(scheme, suite%library, suite%version,  &
+                    call ccpp_xml_parse(scheme, suite%library, suite%version,    &
                                         suite%groups(i)%subcycles(j)%schemes(k), &
                                         ierr)
+
+                    ! Initialize the scheme
+                    call ccpp_scheme_init(suite%groups(i)%subcycles(j)%schemes(k), ierr)
+                    if (ierr /= 0) return
+
                     ! Find the next scheme
                     call ccpp_xml_ele_next(scheme, CCPP_XML_ELE_SCHEME, &
                                            scheme, ierr)
@@ -178,7 +204,7 @@ module ccpp_suite
         write(6, '(A)') '--------------------------------------------------------------------------------'
         write(6, '(A)') 'CCPP suite configuration parsed from SDF ' // trim(filename)
         write(6, '(A)') '--------------------------------------------------------------------------------'
-        write(6, '(A, A, A, A, A, A, A)') &
+        write(6, '(*(A))') &
                  '<suite name="', trim(suite%name), &
                  '" lib="', trim(suite%library),    &
                  '" ver="', trim(suite%version),    &
@@ -190,15 +216,25 @@ module ccpp_suite
             write(6, '(A, I0)') '  [suite%groups(i)%subcycles_max] = ', suite%groups(i)%subcycles_max
             do j=1, suite%groups(i)%subcycles_max
                 write(6, '(A, I0, A)') '    <subcycle loop="', suite%groups(i)%subcycles(j)%loop, '">'
-                write(6, '(A, I0)') '    [suite%groups(i)%subcycles(j)%schemes_max] = ', suite%groups(i)%subcycles(j)%schemes_max
+                write(6, '(A, I0)') '    [suite%groups(i)%subcycles(j)%schemes_max] = ', &
+                                                  suite%groups(i)%subcycles(j)%schemes_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
-                    write(6, '(A, A, A, A, A, A, A)') &
-                          '     <scheme lib="', &
+                    write(6, '(*(A))') &
+                          '      <scheme name="', &
+                          trim(suite%groups(i)%subcycles(j)%schemes(k)%name), &
+                          '" lib="', &
                           trim(suite%groups(i)%subcycles(j)%schemes(k)%library), &
                           '" ver="', &
-                          trim(suite%groups(i)%subcycles(j)%schemes(k)%version), '">', &
-                          trim(suite%groups(i)%subcycles(j)%schemes(k)%name), &
-                          '</scheme>'
+                          trim(suite%groups(i)%subcycles(j)%schemes(k)%version), '">'
+                    write(6, '(A, I0)') '    [suite%groups(i)%subcycles(j)%schemes(k)%functions_max] = ', &
+                                                      suite%groups(i)%subcycles(j)%schemes(k)%functions_max
+                    do l=1, suite%groups(i)%subcycles(j)%schemes(k)%functions_max
+                        write(6, '(*(A))') &
+                              '        <function>', &
+                              trim(suite%groups(i)%subcycles(j)%schemes(k)%functions(l)%name), &
+                              '</function>'
+                    end do
+                    write(6, '(A)') '      </scheme>'
                 end do
                 write(6, '(A)') '    </subcycle>'
             end do
@@ -241,6 +277,8 @@ module ccpp_suite
         do i=1, suite%groups_max
             do j=1, suite%groups(i)%subcycles_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
+                    call ccpp_scheme_finalize(suite%groups(i)%subcycles(j)%schemes(k), ierr)
+                    if (ierr /= 0) return
                     if (allocated(suite%groups(i)%subcycles(j)%schemes(k)%name)) then
                         deallocate(suite%groups(i)%subcycles(j)%schemes(k)%name)
                     end if
@@ -266,28 +304,34 @@ module ccpp_suite
             deallocate(suite%groups)
         end if
 
-        ! Clean up the init
+        ! Clean up the init scheme
+        call ccpp_scheme_finalize(suite%init, ierr)
+        if (ierr /=0) return
+
         if (allocated(suite%init%name)) then
             deallocate(suite%init%name)
         end if
-
+        
         if (allocated(suite%init%library)) then
             deallocate(suite%init%library)
         end if
-
+        
         if (allocated(suite%init%version)) then
             deallocate(suite%init%version)
         end if
+        
+        ! Clean up the finalize scheme
+        call ccpp_scheme_finalize(suite%finalize, ierr)
+        if (ierr /=0) return
 
-        ! Clean up the finalize
         if (allocated(suite%finalize%name)) then
             deallocate(suite%finalize%name)
         end if
-
+        
         if (allocated(suite%finalize%library)) then
             deallocate(suite%finalize%library)
         end if
-
+        
         if (allocated(suite%finalize%version)) then
             deallocate(suite%finalize%version)
         end if
@@ -328,48 +372,20 @@ module ccpp_suite
         call ccpp_debug('Called ccpp_suite_load')
 
         if (allocated(suite%init%name)) then
-            ierr = ccpp_dl_open(ccpp_cstr(suite%init%name),    &
-                                ccpp_cstr(suite%init%library), &
-                                ccpp_cstr(suite%init%version), &
-                                suite%init%scheme_hdl,         &
-                                suite%init%library_hdl)
-            if (ierr /= 0) then
-                call ccpp_error('A problem occured loading '         &
-                                // trim(suite%init%name) // ' from ' &
-                                // trim(suite%init%library))
-            end if
+            call ccpp_scheme_load(suite%init, ierr)
+            if (ierr /= 0) return
         end if
-
+        
         if (allocated(suite%finalize%name)) then
-            ierr = ccpp_dl_open(ccpp_cstr(suite%finalize%name),    &
-                                ccpp_cstr(suite%finalize%library), &
-                                ccpp_cstr(suite%finalize%version), &
-                                suite%finalize%scheme_hdl,         &
-                                suite%finalize%library_hdl)
-            if (ierr /= 0) then
-                call ccpp_error('A problem occured loading '         &
-                                // trim(suite%finalize%name) // ' from ' &
-                                // trim(suite%finalize%library))
-                return
-            end if
+            call ccpp_scheme_load(suite%finalize, ierr)
+            if (ierr /= 0) return
         end if
 
         do i=1, suite%groups_max
             do j=1, suite%groups(i)%subcycles_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
-                    associate (s => suite%groups(i)%subcycles(j)%schemes(k))
-                    ierr = ccpp_dl_open(ccpp_cstr(s%name),    &
-                                        ccpp_cstr(s%library), &
-                                        ccpp_cstr(s%version), &
-                                        s%scheme_hdl,         &
-                                        s%library_hdl)
-                    if (ierr /= 0) then
-                        call ccpp_error('A problem occured loading ' &
-                                        // trim(s%name) // ' from '  &
-                                        // trim(s%library))
-                        return
-                    end if
-                    end associate
+                    call ccpp_scheme_load(suite%groups(i)%subcycles(j)%schemes(k), ierr)
+                    if (ierr /= 0) return
                 end do
             end do
         end do
@@ -399,34 +415,20 @@ module ccpp_suite
         call ccpp_debug('Called ccpp_suite_unload')
 
         if (allocated(suite%init%name)) then
-            ierr = ccpp_dl_close(suite%init%library_hdl)
-            if (ierr /= 0) then
-                call ccpp_error('A problem occured closing '         &
-                                // trim(suite%init%library))
-                return
-            end if
+            call ccpp_scheme_unload(suite%init, ierr)
+            if (ierr /= 0) return
         end if
 
         if (allocated(suite%finalize%name)) then
-            ierr = ccpp_dl_close(suite%finalize%library_hdl)
-            if (ierr /= 0) then
-                call ccpp_error('A problem occured closing '         &
-                                // trim(suite%finalize%library))
-                return
-            end if
+            call ccpp_scheme_unload(suite%finalize, ierr)
+            if (ierr /= 0) return
         end if
 
         do i=1, suite%groups_max
             do j=1, suite%groups(i)%subcycles_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
-                    associate (s => suite%groups(i)%subcycles(j)%schemes(k))
-                    ierr = ccpp_dl_close(s%library_hdl)
-                    if (ierr /= 0) then
-                        call ccpp_error('A problem occured closing ' &
-                                        // trim(s%library))
-                        return
-                    end if
-                    end associate
+                    call ccpp_scheme_unload(suite%groups(i)%subcycles(j)%schemes(k), ierr)
+                    if (ierr /= 0) return
                 end do
             end do
         end do

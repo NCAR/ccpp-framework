@@ -10,7 +10,8 @@ module ccpp_fcall
                       only: c_int32_t, c_char, c_ptr, c_loc, c_funptr
     use            :: ccpp_types,                                      &
                       only: ccpp_t, ccpp_suite_t, ccpp_group_t,        &
-                            ccpp_subcycle_t, ccpp_scheme_t
+                            ccpp_subcycle_t, ccpp_scheme_t,            &
+                            CCPP_STAGES, CCPP_DEFAULT_STAGE
     use            :: ccpp_errors,                                     &
                       only: ccpp_error, ccpp_debug
     use            :: ccpp_strings,                                    &
@@ -46,8 +47,13 @@ module ccpp_fcall
         ierr = 0
         call ccpp_debug('Called ccpp_physics_init')
 
-        scheme = cdata%suite%init
-        call ccpp_run_scheme(scheme, cdata, ierr)
+        ! Run the suite init scheme before the individual init schemes
+        if (allocated(cdata%suite%init%name)) then
+            scheme = cdata%suite%init
+            call ccpp_run_scheme(scheme, cdata, stage='init', ierr=ierr)
+        end if
+
+        call ccpp_run_suite(cdata%suite, cdata, stage='init', ierr=ierr)
 
     end subroutine ccpp_physics_init
 
@@ -99,24 +105,24 @@ module ccpp_fcall
 
         if (present(group_name)) then
             ! Find the group to run from the suite
-            group => ccpp_find_group(suite, group_name, ierr)
+            group => ccpp_find_group(suite, group_name, ierr=ierr)
             if (ierr/=0) return
             if (present(subcycle_count)) then
                 ! Find the subcycle to run in the current group
-                subcycle => ccpp_find_subcycle(group, subcycle_count, ierr)
+                subcycle => ccpp_find_subcycle(group, subcycle_count, ierr=ierr)
                 if (ierr/=0) return
-                call ccpp_run_subcycle(subcycle, cdata, ierr)
+                call ccpp_run_subcycle(subcycle, cdata, ierr=ierr)
             else
-                call ccpp_run_group(group, cdata, ierr)
+                call ccpp_run_group(group, cdata, ierr=ierr)
             end if
         else if (present(scheme_name)) then
             ! Find the scheme to run from the suite
-            scheme => ccpp_find_scheme(suite, scheme_name, ierr)
+            scheme => ccpp_find_scheme(suite, scheme_name, ierr=ierr)
             if (ierr/=0) return
-            call ccpp_run_scheme(scheme, cdata, ierr)
+            call ccpp_run_scheme(scheme, cdata, ierr=ierr)
         else
             ! If none of the optional arguments is present, run the entire suite
-            call ccpp_run_suite(suite, cdata, ierr)
+            call ccpp_run_suite(suite, cdata, ierr=ierr)
         end if
 
     end subroutine ccpp_physics_run
@@ -138,8 +144,13 @@ module ccpp_fcall
         ierr = 0
         call ccpp_debug('Called ccpp_physics_finalize')
 
-        scheme = cdata%suite%finalize
-        call ccpp_run_scheme(scheme, cdata, ierr)
+        call ccpp_run_suite(cdata%suite, cdata, stage='finalize', ierr=ierr)
+
+        ! Run the suite finalize scheme after the individual finalize schemes
+        if (allocated(cdata%suite%finalize%name)) then
+            scheme = cdata%suite%finalize
+            call ccpp_run_scheme(scheme, cdata, stage='finalize', ierr=ierr)
+        end if
 
     end subroutine ccpp_physics_finalize
 
@@ -153,13 +164,15 @@ module ccpp_fcall
     !!
     !! @param[in    ] suite    The suite to run
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
+    !! @param[in    ] stage    The stage for which to run the suite
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_run_suite(suite, cdata, ierr)
+    subroutine ccpp_run_suite(suite, cdata, stage, ierr)
 
-        type(ccpp_suite_t),    intent(inout)  :: suite
-        type(ccpp_t), target,  intent(inout)  :: cdata
-        integer,               intent(  out)  :: ierr
+        type(ccpp_suite_t),    intent(inout)          :: suite
+        type(ccpp_t), target,  intent(inout)          :: cdata
+        character(len=*),      intent(in),   optional :: stage
+        integer,               intent(  out)          :: ierr
 
         integer                               :: i
 
@@ -168,7 +181,7 @@ module ccpp_fcall
         call ccpp_debug('Called ccpp_run_suite')
 
         do i=1,suite%groups_max
-            call ccpp_run_group(suite%groups(i), cdata, ierr)
+            call ccpp_run_group(suite%groups(i), cdata, stage=stage, ierr=ierr)
             if (ierr /= 0) then
                 return
             end if
@@ -216,13 +229,15 @@ module ccpp_fcall
     !!
     !! @param[in    ] group    The group to run
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
+    !! @param[in    ] stage    The stage for which to run the group
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_run_group(group, cdata, ierr)
+    subroutine ccpp_run_group(group, cdata, stage, ierr)
 
-        type(ccpp_group_t),    intent(inout)  :: group
-        type(ccpp_t), target,  intent(inout)  :: cdata
-        integer,               intent(  out)  :: ierr
+        type(ccpp_group_t),    intent(inout)          :: group
+        type(ccpp_t), target,  intent(inout)          :: cdata
+        character(len=*),      intent(in),   optional :: stage
+        integer,               intent(  out)          :: ierr
 
         integer                               :: i
 
@@ -231,7 +246,7 @@ module ccpp_fcall
         call ccpp_debug('Called ccpp_run_group')
 
         do i=1,group%subcycles_max
-            call ccpp_run_subcycle(group%subcycles(i), cdata, ierr)
+            call ccpp_run_subcycle(group%subcycles(i), cdata, stage=stage, ierr=ierr)
             if (ierr /= 0) then
                 return
             end if
@@ -277,13 +292,15 @@ module ccpp_fcall
     !!
     !! @param[in    ] subcycle The subcycle to run
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
+    !! @param[in    ] stage    The stage for which to run the subcycle
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_run_subcycle(subcycle, cdata, ierr)
+    subroutine ccpp_run_subcycle(subcycle, cdata, stage, ierr)
 
-        type(ccpp_subcycle_t), intent(inout)  :: subcycle
-        type(ccpp_t), target,  intent(inout)  :: cdata
-        integer,               intent(  out)  :: ierr
+        type(ccpp_subcycle_t), intent(inout)          :: subcycle
+        type(ccpp_t), target,  intent(inout)          :: cdata
+        character(len=*),      intent(in),   optional :: stage
+        integer,               intent(  out)          :: ierr
 
         integer                               :: i
         integer                               :: j
@@ -294,7 +311,7 @@ module ccpp_fcall
 
         do i=1,subcycle%loop
             do j=1,subcycle%schemes_max
-                call ccpp_run_scheme(subcycle%schemes(j), cdata, ierr)
+                call ccpp_run_scheme(subcycle%schemes(j), cdata, stage=stage, ierr=ierr)
                 if (ierr /= 0) then
                     return
                 end if
@@ -348,23 +365,63 @@ module ccpp_fcall
     !!
     !! @param[in    ] scheme  The scheme to run
     !! @param[in,out] cdata   The CCPP data of type ccpp_t
+    !! @param[in    ] stage   The stage for which to run the scheme
     !! @param[   out] ierr    Integer error flag
     !
-    subroutine ccpp_run_scheme(scheme, cdata, ierr)
+    subroutine ccpp_run_scheme(scheme, cdata, stage, ierr)
 
-        type(ccpp_scheme_t),  intent(in   )  :: scheme
-        type(ccpp_t), target, intent(inout)  :: cdata
-        integer,              intent(  out)  :: ierr
+        type(ccpp_scheme_t),  intent(in   )          :: scheme
+        type(ccpp_t), target, intent(inout)          :: cdata
+        character(len=*),     intent(in),   optional :: stage
+        integer,              intent(  out)          :: ierr
+
+        character(:), allocatable      :: stage_local
+        character(:), allocatable      :: function_name
+        integer :: l
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_scheme for "' // trim(scheme%name) // '"')
-
-        ierr = ccpp_dl_call(scheme%scheme_hdl, c_loc(cdata))
-        if (ierr /= 0) then
-            call ccpp_error('A problem occured calling '// &
-                            trim(scheme%name) //' scheme')
+        if (present(stage)) then
+            stage_local = trim(stage)
+        else
+            stage_local = trim(CCPP_DEFAULT_STAGE)
         end if
+
+        call ccpp_debug('Called ccpp_run_scheme for ' // trim(scheme%name) &
+                        //' in stage ' // trim(stage_local))
+
+        function_name = trim(scheme%get_function_name(stage_local))
+
+        do l=1,scheme%functions_max
+            associate (f=>scheme%functions(l))
+            if (trim(function_name) == trim(f%name)) then
+                ierr = ccpp_dl_call(f%function_hdl, c_loc(cdata))
+                if (ierr /= 0) then
+                    call ccpp_error('A problem occured calling '// trim(f%name) &
+                                    //' of scheme ' // trim(scheme%name) &
+                                    //' in stage ' // trim(stage_local))
+                end if
+                ! Return after calling the scheme, with or without error
+                return
+            end if
+            end associate
+        end do
+
+        ! If we reach this point, the required function was not found
+        ierr = 1
+        do l=1,size(CCPP_STAGES)
+            if (trim(stage_local) == trim(CCPP_STAGES(l))) then
+                ! Stage is valid --> problem with the scheme
+                call ccpp_error('Function ' // trim(function_name)   &
+                                //' of scheme ' // trim(scheme%name) &
+                                //' for stage ' // trim(stage_local) &
+                                //' not found in suite')
+                return
+            end if
+        end do
+        ! Stage is invalid
+        call ccpp_error('Invalid stage ' // trim(stage_local) &
+                        //' requested in ccpp_run_scheme')
 
     end subroutine ccpp_run_scheme
 

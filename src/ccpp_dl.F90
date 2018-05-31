@@ -20,13 +20,13 @@ module ccpp_dl
     interface
         integer(c_int32_t)                                             &
         function ccpp_dl_open                                          &
-                   (name, library, version, shdl, lhdl)                &
+                   (name, library, version, fhdl, lhdl)                &
                    bind(c, name='ccpp_dl_open')
             import :: c_char, c_int32_t, c_ptr
             character(kind=c_char), dimension(*)  :: name
             character(kind=c_char), dimension(*)  :: library
             character(kind=c_char), dimension(*)  :: version
-            type(c_ptr)                           :: shdl
+            type(c_ptr)                           :: fhdl
             type(c_ptr)                           :: lhdl
         end function ccpp_dl_open
 
