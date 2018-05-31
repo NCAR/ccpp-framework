@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <suite name="GFS_operational_2017" lib="ccppphys" ver="1.0.0">
-  <init>GFS_initialize_scm</init>
+  <init>GFS_suite_setup_scm</init>
   <group name="time_vary">
     <subcycle loop="1">
       <scheme>GFS_phys_time_vary_1</scheme>
@@ -96,5 +96,5 @@
       <!-- <scheme>GFS_interstitialtoscreen</scheme> -->
     </subcycle>
   </group>
-  <finalize>GFS_finalize_scm</finalize>
+  <finalize>GFS_suite_setup_scm</finalize>
 </suite>
