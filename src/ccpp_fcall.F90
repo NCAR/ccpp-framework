@@ -344,7 +344,6 @@ module ccpp_fcall
         do i=1, suite%groups_max
             do j=1, suite%groups(i)%subcycles_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
-                    print *, i, j, k, suite%groups(i)%subcycles(j)%schemes(k)%name
                     if (trim(suite%groups(i)%subcycles(j)%schemes(k)%name) .eq. trim(scheme_name)) then
                         call ccpp_debug('Scheme ' // trim(scheme_name) // ' found in suite')
                         scheme => suite%groups(i)%subcycles(j)%schemes(k)
