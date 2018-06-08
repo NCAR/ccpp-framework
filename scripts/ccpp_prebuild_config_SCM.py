@@ -16,8 +16,7 @@ VARIABLE_DEFINITION_FILES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
-    'ccpp-physics/GFS_layer/GFS_initialize_scm.F90',
-    'ccpp-physics/GFS_layer/GFS_finalize_scm.F90',
+    'ccpp-physics/GFS_layer/GFS_suite_setup_scm.F90',
     'ccpp-physics/physics/GFS_DCNV_generic.f90',
     'ccpp-physics/physics/GFS_MP_generic_post.f90',
     'ccpp-physics/physics/GFS_MP_generic_pre.f90',
@@ -28,7 +27,7 @@ SCHEME_FILES = [
     'ccpp-physics/physics/GFS_rad_time_vary.scm.f90',
     'ccpp-physics/physics/GFS_rrtmg_post.F90',
     'ccpp-physics/physics/GFS_rrtmg_pre.F90',
-    'ccpp-physics/physics/GFS_suite_interstitial.ccpp.f90',
+    'ccpp-physics/physics/GFS_suite_interstitial.ccpp.F90',
     'ccpp-physics/physics/GFS_surface_generic.f90',
     'ccpp-physics/physics/GFS_surface_loop_control.f',
     'ccpp-physics/physics/GFS_zhao_carr_pre.f90',
@@ -55,7 +54,11 @@ SCHEME_FILES = [
     'ccpp-physics/physics/sfc_drv.f',
     'ccpp-physics/physics/sfc_nst.f',
     'ccpp-physics/physics/sfc_sice.f',
+<<<<<<< HEAD
 #    'ccpp-physics/physics/sfc_drv_ruc.F90',
+=======
+    'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.f90'
+>>>>>>> 47d1347ed5b14f0eb758359ae421b30c90cf592c
     ]
 
 # Auto-generated makefile snippet that contains all schemes

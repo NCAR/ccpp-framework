@@ -23,7 +23,7 @@ from mkdoc import metadata_to_html, metadata_to_latex
 ###############################################################################
 
 # List of configured host models
-HOST_MODELS = ["FV3v0", "FV3v1", "SCM"]
+HOST_MODELS = ["FV3", "SCM"]
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
