@@ -22,44 +22,6 @@ SCHEME_FILES_DEPENDENCIES = []
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'ccpp-physics/GFS_layer/GFS_suite_setup_scm.F90',
-    'ccpp-physics/physics/GFS_DCNV_generic.f90',
-    'ccpp-physics/physics/GFS_MP_generic_post.f90',
-    'ccpp-physics/physics/GFS_MP_generic_pre.f90',
-    'ccpp-physics/physics/GFS_PBL_generic.f90',
-    'ccpp-physics/physics/GFS_SCNV_generic.f90',
-    'ccpp-physics/physics/GFS_calpreciptype.f90',
-    'ccpp-physics/physics/GFS_phys_time_vary.scm.f90',
-    'ccpp-physics/physics/GFS_rad_time_vary.scm.f90',
-    'ccpp-physics/physics/GFS_rrtmg_post.F90',
-    'ccpp-physics/physics/GFS_rrtmg_pre.F90',
-    'ccpp-physics/physics/GFS_suite_interstitial.ccpp.F90',
-    'ccpp-physics/physics/GFS_surface_generic.f90',
-    'ccpp-physics/physics/GFS_surface_loop_control.f',
-    'ccpp-physics/physics/GFS_zhao_carr_pre.f90',
-    'ccpp-physics/physics/cnvc90.f',
-    'ccpp-physics/physics/dcyc2.f',
-    'ccpp-physics/physics/get_prs_fv3.f90',
-    'ccpp-physics/physics/gscond.f',
-    'ccpp-physics/physics/gwdc.f',
-    'ccpp-physics/physics/gwdps.f',
-    'ccpp-physics/physics/mfdeepcnv.f',
-    'ccpp-physics/physics/mfshalcnv.f',
-    'ccpp-physics/physics/moninedmf.f',
-    'ccpp-physics/physics/ozphys.f',
-    'ccpp-physics/physics/precpd.f',
-    'ccpp-physics/physics/radlw_main.f',
-    'ccpp-physics/physics/radsw_main.f',
-    'ccpp-physics/physics/rayleigh_damp.f',
-    'ccpp-physics/physics/rrtmg_lw_post.F90',
-    'ccpp-physics/physics/rrtmg_lw_pre.F90',
-    'ccpp-physics/physics/rrtmg_sw_post.F90',
-    'ccpp-physics/physics/rrtmg_sw_pre.F90',
-    'ccpp-physics/physics/sfc_diag.f',
-    'ccpp-physics/physics/sfc_diff.f',
-    'ccpp-physics/physics/sfc_drv.f',
-    'ccpp-physics/physics/sfc_nst.f',
-    'ccpp-physics/physics/sfc_sice.f',
-    'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.f90',
     'ccpp-physics/physics/chemistry.F90'
     ]
 
@@ -150,8 +112,6 @@ use ccpp_errors, only: ccpp_error
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
        use machine, only: kind_phys
-       use module_radlw_parameters, only: sfcflw_type, topflw_type
-       use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
        use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
                                GFS_sfcprop_type,                        &
                                GFS_coupling_type, GFS_control_type,     &
