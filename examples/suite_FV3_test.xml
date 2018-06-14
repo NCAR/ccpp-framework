@@ -9,7 +9,7 @@
   </group>
   <group name="physics">
     <subcycle loop="1">
-      <scheme>cnvc90</scheme>
+      <scheme>rrtmg_sw</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->
