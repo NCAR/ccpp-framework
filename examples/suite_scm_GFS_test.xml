@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <suite name="GFS_operational_2017" lib="ccppphys" ver="1.0.0">
   <group name="time_vary">
     <subcycle loop="1">
