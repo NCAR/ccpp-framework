@@ -6,5 +6,5 @@
       <scheme>chemistry</scheme>
     </subcycle>
   </group>
-  <finalize>GFS_suite_setup_scm</finalize>
+  <finalize>chemistry</finalize>
 </suite>
