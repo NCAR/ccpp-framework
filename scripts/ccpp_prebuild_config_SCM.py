@@ -21,7 +21,6 @@ SCHEME_FILES_DEPENDENCIES = []
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
-    'ccpp-physics/GFS_layer/GFS_suite_setup_scm.F90',
     'ccpp-physics/physics/chemistry.F90'
     ]
 
@@ -32,7 +31,7 @@ SCHEMES_CMAKEFILE = 'ccpp-physics/CCPP_SCHEMES.cmake'
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
 TARGET_FILES = [
-    'scm/src/gmtb_scm.f90',
+    'scm/src/micm.f90',
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all caps

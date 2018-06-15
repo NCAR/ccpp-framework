@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <suite name="GFS_operational_2017" lib="ccppphys" ver="1.0.0">
-  <init>GFS_suite_setup_scm</init>
   <group name="time_vary">
     <subcycle loop="1">
       <scheme>chemistry</scheme>
