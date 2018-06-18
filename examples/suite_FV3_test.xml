@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="FV3_test" lib="ccppphys" ver="1">
+  <!-- <init></init> -->
+  <group name="fast_physics">
+    <subcycle loop="1">
+      <scheme>FV3_test</scheme>
+    </subcycle>
+  </group>
+  <group name="physics">
+    <subcycle loop="1">
+      <scheme>cnvc90</scheme>
+      <scheme>mp_thompson_hrrr</scheme>
+    </subcycle>
+  </group>
+  <!-- <finalize></finalize> -->
+</suite>

@@ -15,8 +15,7 @@
 !! @brief Type definitions module.
 !!
 !! @details The types module provides definitions for
-!!          atmospheic driver to call the IPD and
-!!          the CCPP.
+!!          atmospheric driver to call the CCPP.
 !
 module ccpp_types
 
@@ -27,18 +26,29 @@ module ccpp_types
 
     private
     public :: CCPP_STR_LEN,                                            &
+              CCPP_STAGES,                                             &
+              CCPP_DEFAULT_STAGE,                                      &
               ccpp_t,                                                  &
               ccpp_field_t,                                            &
               ccpp_scheme_t,                                           &
               ccpp_suite_t,                                            &
-              ccpp_ipd_t,                                              &
+              ccpp_group_t,                                            &
               ccpp_subcycle_t
 
     !> @var CCPP_STR_LEN Parameter defined for string lengths.
-    integer, parameter                          :: CCPP_STR_LEN = 256
+    integer, parameter   :: CCPP_STR_LEN = 256
+    
+    !> @var The stages=functions that are defined for each scheme.
+    character(len=*), dimension(1:3), parameter :: CCPP_STAGES =       &
+                                                    & (/ 'init    ',   &
+                                                    &    'run     ',   &
+                                                    &    'finalize' /)
+
+    !> @var The default stage if not specified
+    character(len=*), parameter :: CCPP_DEFAULT_STAGE = 'run'
 
     !>
-    !! @breif CCPP field type
+    !! @brief CCPP field type
     !!
     !! The field type contains all the information/meta-data and data
     !! for fields that need to be passed between the atmosphere driver
@@ -53,7 +63,18 @@ module ccpp_types
     end type ccpp_field_t
 
     !>
-    !! @breif CCPP scheme type
+    !! @brief CCPP scheme function type
+    !!
+    !! The scheme function type contains one function of a scheme.
+    !
+    type :: ccpp_function_t
+            character(:), allocatable                         :: name
+            type(c_ptr)                                       :: function_hdl
+            type(c_ptr)                                       :: library_hdl
+    end type ccpp_function_t
+
+    !>
+    !! @brief CCPP scheme type
     !!
     !! The scheme type contains all the scheme information.
     !
@@ -61,44 +82,43 @@ module ccpp_types
             character(:), allocatable                         :: name
             character(:), allocatable                         :: library
             character(:), allocatable                         :: version
-            type(c_ptr)                                       :: scheme_hdl
-            type(c_ptr)                                       :: library_hdl
+            integer                                           :: functions_max
+            type(ccpp_function_t), allocatable, dimension(:)  :: functions
+        contains
+            procedure :: get_function_name => scheme_get_function_name
     end type ccpp_scheme_t
 
     !>
-    !! @breif CCPP subcycle type
+    !! @brief CCPP subcycle type
     !!
     !! The subcycle type contains all the scheme names and the number of
-    !! times the subcycle will loop. It is a direct mapping to the IPD
+    !! times the subcycle will loop. It is a direct mapping to the group
     !! suite subcycle XML.
     !
     type :: ccpp_subcycle_t
             integer                                           :: loop
             integer                                           :: schemes_max
-            integer                                           :: scheme_n
             type(ccpp_scheme_t), allocatable, dimension(:)    :: schemes
     end type ccpp_subcycle_t
 
     !>
-    !! @breif CCPP IPD type
+    !! @brief CCPP group type
     !!
-    !! The ipd type contains all the subcycles and part number of
-    !! the ipd call. It is a direct mapping to the IPD suite ipd 
-    !! element in XML.
+    !! The group type contains all the subcycles and the name of
+    !! the group call. It is a direct mapping to the group element in XML.
     !
-    type :: ccpp_ipd_t
-            integer                                             :: part
+    type :: ccpp_group_t
+            character(:), allocatable                           :: name
             integer                                             :: subcycles_max
-            integer                                             :: subcycle_n
             type(ccpp_subcycle_t), allocatable, dimension(:)    :: subcycles
-    end type ccpp_ipd_t
+    end type ccpp_group_t
 
     !>
-    !! @breif CCPP suite type
+    !! @brief CCPP suite type
     !!
-    !! The suite type contains all the ipd parts names and number of
+    !! The suite type contains all the group parts names and number of
     !! times the subcycle will loop. It is a direct mapping to the
-    !! IPD suite subcycle XML.
+    !! suite element in XML.
     !
     type :: ccpp_suite_t
             character(:), allocatable                           :: name
@@ -106,18 +126,17 @@ module ccpp_types
             character(:), allocatable                           :: version
             type(ccpp_scheme_t)                                 :: init
             type(ccpp_scheme_t)                                 :: finalize
-            integer                                             :: ipds_max
-            integer                                             :: ipd_n
-            type(ccpp_ipd_t), allocatable, dimension(:)         :: ipds
+            integer                                             :: groups_max
+            type(ccpp_group_t), allocatable, dimension(:)       :: groups
             logical                                             :: iscopy
     end type ccpp_suite_t
 
     !>
-    !! @breif CCPP Atmosphere/IPD/Physics type.
+    !! @brief CCPP physics type.
     !!
     !! Generic type that contains all components to run the CCPP.
     !!
-    !! - Array of fields to all the atmospheric data needing to go
+    !! - Array of fields to all the data needing to go
     !!   the physics drivers.
     !! - The suite definitions in a ccpp_suite_t type.
     !
@@ -125,6 +144,30 @@ module ccpp_types
             type(c_ptr)                                         :: fields_idx
             type(ccpp_field_t), allocatable, dimension(:)       :: fields
             type(ccpp_suite_t)                                  :: suite
+            logical                                             :: initialized = .false.
     end type ccpp_t
+
+contains
+
+    !>
+    !! @brief Internal routine that returns the name of
+    !!        a function for a given scheme and stage
+    !!
+    !! @param[in   ] scheme         The ccpp_scheme_t type
+    !! @param[in   ] stage          The current stage
+    !! @return       function_name  The name of the function
+    !
+    pure function scheme_get_function_name(s, stage) result(function_name)
+
+        implicit none
+
+        class(ccpp_scheme_t), intent(in) :: s
+        character(len=*),     intent(in) :: stage
+
+        character(:), allocatable        :: function_name
+
+        function_name = trim(s%name) // '_' // trim(stage)
+
+    end function scheme_get_function_name
 
 end module ccpp_types

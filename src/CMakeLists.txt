@@ -1,24 +1,42 @@
+# Set default project to unknown
+if(NOT PROJECT)
+  message(STATUS "Setting CCPP project to 'unknown' as none was specified.")
+  set(PROJECT "Unknown")
+endif (NOT PROJECT)
+
 #------------------------------------------------------------------------------
 # Set the sources
-set(SOURCES
-    ccpp.F90
+set(SOURCES_C
     ccpp_dl.h
     ccpp_dl.c
+    ccpp_fields_idx.h
+    ccpp_fields_idx.c
+    ccpp_memory.h
+    ccpp_memory.c
+    ccpp_utils.h
+    ccpp_utils.c
+    ccpp_xml.h
+    ccpp_xml.c
+)
+set(SOURCES_F90
+    ccpp.F90
     ccpp_dl.F90
     ccpp_errors.F90
     ccpp_fcall.F90
     ccpp_fields.F90
-    ccpp_fields_idx.h
-    ccpp_fields_idx.c
+    ccpp_memory.F90
     ccpp_strings.F90
+    ccpp_scheme.F90
     ccpp_suite.F90
     ccpp_types.F90
-    ccpp_utils.h
-    ccpp_utils.c
     ccpp_xml.F90
-    ccpp_xml.h
-    ccpp_xml.c
+    ccpp_api.F90
 )
+# Generate list of Fortran modules from defined sources
+foreach(source_f90 ${SOURCES_F90})
+    string(REGEX REPLACE ".F90" ".mod" module_f90 ${source_f90})
+    list(APPEND MODULES_F90 ${CMAKE_CURRENT_BINARY_DIR}/${module_f90})
+endforeach()
 
 #------------------------------------------------------------------------------
 # Find libXML2
@@ -86,11 +104,10 @@ add_subdirectory(tests)
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
-add_library(ccpp ${SOURCES})
+add_library(ccpp ${SOURCES_C} ${SOURCES_F90})
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}
-                                      COMPILE_FLAGS ${CMAKE_Fortran_FLAGS}
                                       LINK_FLAGS ${CMAKE_Fortran_FLAGS})
 
 #------------------------------------------------------------------------------
@@ -98,15 +115,21 @@ set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
 #
 
 # Find all the C headers and Fortran modules
-file(GLOB headers
+file(GLOB HEADERS_C
      "${CMAKE_CURRENT_SOURCE_DIR}/ccpp*.h"
-     "${CMAKE_CURRENT_BINARY_DIR}/ccpp*.mod"
 )
 
-target_include_directories(ccpp PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-)
+if (PROJECT STREQUAL "CCPP-FV3")
+  target_include_directories(ccpp PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+      $<INSTALL_INTERFACE:include>
+  )
+else (PROJECT STREQUAL "CCPP-FV3")
+  target_include_directories(ccpp PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+      $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+  )
+endif (PROJECT STREQUAL "CCPP-FV3")
 
 # Define where to install the library
 install(TARGETS ccpp
@@ -122,6 +145,12 @@ install(EXPORT ccpp-targets
         DESTINATION lib/cmake
 )
 
-# Define where to install the modules
-install(FILES ${headers} DESTINATION include/${PROJECT_NAME})
-
+if (PROJECT STREQUAL "CCPP-FV3")
+  # Define where to install the C headers and Fortran modules
+  install(FILES ${HEADERS_C} DESTINATION include)
+  install(FILES ${MODULES_F90} DESTINATION include)
+else (PROJECT STREQUAL "CCPP-FV3")
+  # Define where to install the C headers and Fortran modules
+  install(FILES ${HEADERS_C} DESTINATION include/${PROJECT_NAME})
+  install(FILES ${MODULES_F90} DESTINATION include/${PROJECT_NAME})
+endif (PROJECT STREQUAL "CCPP-FV3")

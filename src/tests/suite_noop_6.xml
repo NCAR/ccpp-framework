@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <suite name="TEST_6" lib="check">
-  <ipd part="1">
+  <group name="noopgroup">
     <subcycle loop="1">
       <scheme>noop</scheme>
     </subcycle>
-  </ipd>
+  </group>
 </suite>
 
