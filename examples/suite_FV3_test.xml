@@ -11,6 +11,7 @@
     <subcycle loop="1">
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
+      <scheme>gwdc_post</scheme>
       <scheme>cnvc90</scheme>
       <scheme>mp_thompson_hrrr</scheme>
     </subcycle>
