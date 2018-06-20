@@ -74,7 +74,7 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/dcyc2.f',
 #    'ccpp/physics/physics/get_prs_fv3.f90',
 #    'ccpp/physics/physics/gscond.f',
-#    'ccpp/physics/physics/gwdc.f',
+    'ccpp/physics/physics/gwdc.f',
 #    'ccpp/physics/physics/gwdps.f',
 #    'ccpp/physics/physics/mfdeepcnv.f',
 #    'ccpp/physics/physics/mfshalcnv.f',

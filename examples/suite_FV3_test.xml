@@ -9,6 +9,7 @@
   </group>
   <group name="physics">
     <subcycle loop="1">
+      <scheme>gwdc</scheme>
       <scheme>cnvc90</scheme>
       <scheme>mp_thompson_hrrr</scheme>
     </subcycle>
