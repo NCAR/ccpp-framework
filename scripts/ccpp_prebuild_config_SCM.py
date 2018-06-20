@@ -14,11 +14,6 @@ VARIABLE_DEFINITION_FILES = [
     'scm/src/gmtb_scm_physical_constants.f90'
     ]
 
-# Can be empty, since all physics schemes and their
-# dependencies are hardcoded in CMakeLists in
-# ccpp-physics - to fix, c.f. FV3 v1
-SCHEME_FILES_DEPENDENCIES = []
-
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'ccpp-physics/GFS_layer/GFS_suite_setup_scm.F90',
@@ -59,12 +54,12 @@ SCHEME_FILES = [
     'ccpp-physics/physics/sfc_drv.f',
     'ccpp-physics/physics/sfc_nst.f',
     'ccpp-physics/physics/sfc_sice.f',
+    'ccpp-physics/physics/sfc_drv_ruc.F90',
     'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.f90'
     ]
 
-# Auto-generated makefile/cmakefile snippets that contain all schemes
+# Auto-generated makefile snippet that contains all schemes
 SCHEMES_MAKEFILE = 'ccpp-physics/CCPP_SCHEMES.mk'
-SCHEMES_CMAKEFILE = 'ccpp-physics/CCPP_SCHEMES.cmake'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
@@ -72,9 +67,8 @@ TARGET_FILES = [
     'scm/src/gmtb_scm.f90',
     ]
 
-# Auto-generated makefile/cmakefile snippets that contain all caps
+# Auto-generated makefile snippet that contains all caps
 CAPS_MAKEFILE = 'ccpp-physics/CCPP_CAPS.mk'
-CAPS_CMAKEFILE = 'ccpp-physics/CCPP_CAPS.cmake'
 
 # Directory where to put all auto-generated physics caps
 CAPS_DIR = 'ccpp-physics/physics'
