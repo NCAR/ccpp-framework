@@ -62,7 +62,7 @@
       <scheme>dcyc2t3_post</scheme>
       <!--<scheme>sfc_diag_run</scheme>-->
       <!--<scheme>GFS_surface_generic_post_run</scheme>-->
-      <scheme>edmf</scheme>
+      <scheme>hedmf</scheme>
       <scheme>GFS_PBL_generic_post</scheme>
       <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
