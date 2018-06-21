@@ -10,7 +10,7 @@
   <group name="physics">
     <subcycle loop="1">
       <scheme>cnvc90</scheme>
-      <scheme>mp_thompson_hrrr</scheme>
+      <scheme>gfdl_cloud_microphys</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->

@@ -30,8 +30,6 @@ SCHEME_FILES_DEPENDENCIES = [
 #    'ccpp/physics/physics/module_nst_model.f90',
 #    'ccpp/physics/physics/module_nst_parameters.f90',
 #    'ccpp/physics/physics/module_nst_water_prop.f90',
-    'ccpp/physics/physics/module_mp_thompson_hrrr_radar.F90',
-    'ccpp/physics/physics/module_mp_thompson_hrrr.F90',
 #    'ccpp/physics/physics/namelist_soilveg.f',
 #    'ccpp/physics/physics/ozne_def.f',
 #    'ccpp/physics/physics/physcons.f90',
@@ -56,6 +54,7 @@ SCHEME_FILES_DEPENDENCIES = [
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'ccpp/physics/physics/FV3_test.F90',
+#    'ccpp/physics/physics/gfdl_cloud_microphys.F90',
 #    'ccpp/physics/physics/GFS_DCNV_generic.f90',
 #    'ccpp/physics/physics/GFS_MP_generic_post.f90',
 #    'ccpp/physics/physics/GFS_MP_generic_pre.f90',
@@ -79,7 +78,6 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/mfdeepcnv.f',
 #    'ccpp/physics/physics/mfshalcnv.f',
 #    'ccpp/physics/physics/moninedmf.f',
-    'ccpp/physics/physics/mp_thompson_hrrr.F90',
 #    'ccpp/physics/physics/ozphys.f',
 #    'ccpp/physics/physics/precpd.f',
 #    'ccpp/physics/physics/radlw_main.f',
@@ -168,22 +166,6 @@ OPTIONAL_ARGUMENTS = {
             'cloud_rain_water_path',
             'mean_effective_radius_for_rain_drop',
             'cloud_snow_water_path',
-            'mean_effective_radius_for_snow_flake',
-            ],
-        },
-    'mp_thompson_hrrr' : {
-        'mp_thompson_hrrr_init' : [
-            'tendency_of_water_friendly_surface_aerosols_at_surface',
-            'water_friendly_aerosol_number_concentration',
-            'ice_friendly_aerosol_number_concentration',
-            ],
-        'mp_thompson_hrrr_run' : [
-            'cloud_droplet_number_concentration_updated_by_physics',
-            'water_friendly_aerosol_number_concentration_updated_by_physics',
-            'ice_friendly_aerosol_number_concentration_updated_by_physics',
-            'tendency_of_water_friendly_surface_aerosols_at_surface',
-            'mean_effective_radius_for_liquid_cloud',
-            'mean_effective_radius_for_ice_cloud',
             'mean_effective_radius_for_snow_flake',
             ],
         },
