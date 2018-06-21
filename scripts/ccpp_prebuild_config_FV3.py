@@ -16,12 +16,12 @@ VARIABLE_DEFINITION_FILES = [
 # Add all physics scheme dependencies relative to basedir - note that these are all violations
 # of the CCPP requirement to not use any external modules except Fortran standard modules!
 SCHEME_FILES_DEPENDENCIES = [
-#    'ccpp/physics/physics/GFDL_parse_tracers.F90',
+    'ccpp/physics/physics/GFDL_parse_tracers.F90',
 #    'ccpp/physics/physics/date_def.f',
     'ccpp/physics/physics/funcphys.f90',
     'ccpp/physics/physics/gfs_phy_tracer_config.f',
-#    'ccpp/physics/physics/gocart_tracer_config_stub.f',
-#    'ccpp/physics/physics/h2o_def.f',
+    'ccpp/physics/physics/gocart_tracer_config_stub.f',
+    'ccpp/physics/physics/h2o_def.f',
     'ccpp/physics/physics/iounitdef.f',
     'ccpp/physics/physics/machine.F', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
     'ccpp/physics/physics/mersenne_twister.f',
@@ -43,14 +43,15 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/radiation_gases.f',
     'ccpp/physics/physics/radiation_surface.f',
     'ccpp/physics/physics/radlw_datatb.f',
-    'ccpp/physics/physics/radlw_param.f', # DH should this be in FV3/gfsphysics/physics/radlw_param.f
+    'ccpp/physics/physics/radlw_param.f',
     'ccpp/physics/physics/radsw_datatb.f',
-    'ccpp/physics/physics/radsw_param.f', # DH should this be in FV3/gfsphysics/physics/radsw_param.f
-#    'ccpp/physics/physics/rascnvv2.f',
+    'ccpp/physics/physics/radsw_param.f',
+    'ccpp/physics/physics/rascnvv2.f',
 #    'ccpp/physics/physics/sflx.f',
+    'ccpp/physics/physics/surface_perturbation.F90',
 #    'ccpp/physics/physics/tridi.f',
-#    'ccpp/physics/physics/wam_f107_kp_mod.f90',
-#    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
+    'ccpp/physics/physics/wam_f107_kp_mod.f90',
+    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     ]
 
 # Add all physics scheme files relative to basedir
@@ -63,10 +64,11 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/GFS_SCNV_generic.f90',
 #    'ccpp/physics/physics/GFS_calpreciptype.f90',
 #    'ccpp/physics/physics/GFS_debug.F90',
-#    'ccpp/physics/physics/GFS_rrtmg_post.F90',
-#    'ccpp/physics/physics/GFS_rrtmg_pre.F90',
+    'ccpp/physics/physics/GFS_rrtmg_post.F90',
+    'ccpp/physics/physics/GFS_rrtmg_pre.F90',
+    'ccpp/physics/physics/GFS_rrtmg_setup.F90',
 #    'ccpp/physics/physics/GFS_stochastics.f90',
-#    'ccpp/physics/physics/GFS_suite_interstitial.ccpp.F90',
+    'ccpp/physics/physics/GFS_suite_interstitial.F90',
 #    'ccpp/physics/physics/GFS_surface_generic.f90',
 #    'ccpp/physics/physics/GFS_surface_loop_control.f',
 #    'ccpp/physics/physics/GFS_zhao_carr_pre.f90',
@@ -85,10 +87,10 @@ SCHEME_FILES = [
     'ccpp/physics/physics/radlw_main.f',
     'ccpp/physics/physics/radsw_main.f',
 #    'ccpp/physics/physics/rayleigh_damp.f',
-#    'ccpp/physics/physics/rrtmg_lw_post.F90',
-#    'ccpp/physics/physics/rrtmg_lw_pre.F90',
-#    'ccpp/physics/physics/rrtmg_sw_post.F90',
-#    'ccpp/physics/physics/rrtmg_sw_pre.F90',
+    'ccpp/physics/physics/rrtmg_lw_post.F90',
+    'ccpp/physics/physics/rrtmg_lw_pre.F90',
+    'ccpp/physics/physics/rrtmg_sw_post.F90',
+    'ccpp/physics/physics/rrtmg_sw_pre.F90',
 #    'ccpp/physics/physics/sfc_diag.f',
 #    'ccpp/physics/physics/sfc_diff.f',
 #    'ccpp/physics/physics/sfc_drv.f',
@@ -156,6 +158,8 @@ OPTIONAL_ARGUMENTS = {
             'mean_effective_radius_for_rain_drop',
             'cloud_snow_water_path',
             'mean_effective_radius_for_snow_flake',
+            'cloud_optical_depth_weighted',
+            'cloud_optical_depth_layers_678',
             ],
         },
     'rrtmg_lw' : {
@@ -169,6 +173,8 @@ OPTIONAL_ARGUMENTS = {
             'mean_effective_radius_for_rain_drop',
             'cloud_snow_water_path',
             'mean_effective_radius_for_snow_flake',
+            'cloud_optical_depth_weighted',
+            'cloud_optical_depth_layers_678',
             ],
         },
     'mp_thompson_hrrr' : {
@@ -222,24 +228,18 @@ MODULE_USE_TEMPLATE_HOST_CAP = \
 use ccpp_api, only: ccpp_error
 '''
 
-## Modules to load for auto-generated ccpp_field_get code
-## in the physics scheme cap (e.g. derived data types)
-#MODULE_USE_TEMPLATE_SCHEME_CAP = \
-#'''
-#       use machine, only: kind_phys
-#       use module_radlw_parameters, only: sfcflw_type, topflw_type
-#       use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
-#       use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
-#                               GFS_sfcprop_type,  GFS_coupling_type,    &
-#                               GFS_control_type,  GFS_grid_type,        &
-#                               GFS_tbd_type,      GFS_cldprop_type,     &
-#                               GFS_radtend_type,  GFS_diag_type,        &
-#                               GFS_interstitial_type
-#'''
-
 # Modules to load for auto-generated ccpp_field_get code
 # in the physics scheme cap (e.g. derived data types)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
        use machine, only: kind_phys
+       use machine, only: kind_phys
+       use module_radlw_parameters, only: sfcflw_type, topflw_type
+       use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
+       use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
+                               GFS_sfcprop_type,  GFS_coupling_type,    &
+                               GFS_control_type,  GFS_grid_type,        &
+                               GFS_tbd_type,      GFS_cldprop_type,     &
+                               GFS_radtend_type,  GFS_diag_type,        &
+                               GFS_interstitial_type
 '''
