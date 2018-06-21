@@ -74,19 +74,22 @@
       <scheme>get_phi_fv3</scheme>
       <scheme>GFS_suite_interstitial_3</scheme>
       <scheme>GFS_zhao_carr_pre</scheme>
-      <scheme>sasas_deep</scheme>
+      <!-- <scheme>sasas_deep</scheme> -->
+      <scheme>cu_gf_driver_pre</scheme>
+      <scheme>cu_gf_driver</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
       <scheme>gwdc_post</scheme>
       <scheme>GFS_SCNV_generic_pre</scheme>
-      <scheme>sasas_shal</scheme>
-      <scheme>sasas_shal_post</scheme>
+      <!-- <scheme>sasas_shal</scheme> -->
+      <!-- <scheme>sasas_shal_post</scheme> -->
       <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>cnvc90</scheme>
       <scheme>GFS_MP_generic_pre</scheme>
       <scheme>zhaocarr_gscond</scheme>
       <scheme>zhaocarr_precpd</scheme>
+      <scheme>cu_gf_driver_post</scheme>
       <scheme>GFS_calpreciptype</scheme>
       <scheme>GFS_MP_generic_post</scheme>
       <scheme>sfc_diag</scheme>
