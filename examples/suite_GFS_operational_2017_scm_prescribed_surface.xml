@@ -7,7 +7,6 @@
       <scheme>GFS_phys_time_vary_1</scheme>
       <scheme>GFS_rad_time_vary</scheme>
       <scheme>GFS_phys_time_vary_2</scheme>
-      <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
     </subcycle>
   </group>
   <group name="radiation">
@@ -21,8 +20,6 @@
       <scheme>rrtmg_lw</scheme>
       <scheme>rrtmg_lw_post</scheme>
       <scheme>GFS_rrtmg_post</scheme>
-      <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
-      <!-- <scheme>GFS_interstitialtoscreen_run</scheme> -->
     </subcycle>
   </group>
   <group name="physics">
@@ -37,7 +34,6 @@
       <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>lsm_noah_pre</scheme>
       <scheme>gmtb_scm_sfc_flux_spec</scheme>
-      <!-- DH* TODO - turn into a subsycle loop="2" construct? -->
       <!-- Surface iteration loop 1 -->
       <!--<scheme>GFS_surface_loop_control_part0_run</scheme>-->
       <!--<scheme>sfc_ex_coef_run</scheme>-->
@@ -60,8 +56,6 @@
       <!--<scheme>GFS_surface_loop_control_part2_run</scheme>-->
       <!-- End of surface iteration loop -->
       <scheme>dcyc2t3_post</scheme>
-      <!--<scheme>sfc_diag_run</scheme>-->
-      <!--<scheme>GFS_surface_generic_post_run</scheme>-->
       <scheme>edmf</scheme>
       <scheme>GFS_PBL_generic_post</scheme>
       <scheme>gwdps_pre</scheme>
@@ -93,9 +87,7 @@
       <scheme>sfc_diag</scheme>
       <scheme>lsm_noah_post</scheme>
       <scheme>sfc_sice_post</scheme>
-      <!-- <scheme>GFS_diagtoscreen_run</scheme> -->
-      <!-- <scheme>GFS_interstitialtoscreen_run</scheme> -->
     </subcycle>
   </group>
-  <finalize>GFS_suite_setup_scm</finalize> <!-- need to add this one? -->
+  <finalize>GFS_suite_setup_scm</finalize>
 </suite>
