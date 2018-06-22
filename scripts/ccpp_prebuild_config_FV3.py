@@ -18,7 +18,7 @@ VARIABLE_DEFINITION_FILES = [
 SCHEME_FILES_DEPENDENCIES = [
 #    'ccpp/physics/physics/GFDL_parse_tracers.F90',
 #    'ccpp/physics/physics/date_def.f',
-#    'ccpp/physics/physics/funcphys.f90',
+    'ccpp/physics/physics/funcphys.f90',
 #    'ccpp/physics/physics/gfs_phy_tracer_config.f',
 #    'ccpp/physics/physics/gocart_tracer_config_stub.f',
 #    'ccpp/physics/physics/h2o_def.f',
@@ -34,7 +34,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/module_mp_thompson_hrrr.F90',
 #    'ccpp/physics/physics/namelist_soilveg.f',
 #    'ccpp/physics/physics/ozne_def.f',
-#    'ccpp/physics/physics/physcons.f90',
+    'ccpp/physics/physics/physcons.f90',
     'ccpp/physics/physics/physparam.f', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
 #    'ccpp/physics/physics/radcons.f90',
 #    'ccpp/physics/physics/radiation_aerosols.f',
@@ -76,7 +76,7 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/gscond.f',
 #    'ccpp/physics/physics/gwdc.f',
 #    'ccpp/physics/physics/gwdps.f',
-#    'ccpp/physics/physics/mfdeepcnv.f',
+    'ccpp/physics/physics/samfdeepcnv.f',
 #    'ccpp/physics/physics/mfshalcnv.f',
 #    'ccpp/physics/physics/moninedmf.f',
     'ccpp/physics/physics/mp_thompson_hrrr.F90',
