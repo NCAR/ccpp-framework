@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="GFS_operational_2017" lib="ccppphys" ver="1.0.0">
+  <init>GFS_suite_setup_scm</init>
+  <group name="time_vary">
+    <subcycle loop="1">
+      <scheme>GFS_phys_time_vary_1</scheme>
+      <scheme>GFS_rad_time_vary</scheme>
+      <scheme>GFS_phys_time_vary_2</scheme>
+    </subcycle>
+  </group>
+  <group name="radiation">
+    <subcycle loop="1">
+      <scheme>GFS_suite_interstitial_rad_reset</scheme>
+      <scheme>GFS_rrtmg_pre</scheme>
+      <scheme>rrtmg_sw_pre</scheme>
+      <scheme>rrtmg_sw</scheme>
+      <scheme>rrtmg_sw_post</scheme>
+      <scheme>rrtmg_lw_pre</scheme>
+      <scheme>rrtmg_lw</scheme>
+      <scheme>rrtmg_lw_post</scheme>
+      <scheme>GFS_rrtmg_post</scheme>
+    </subcycle>
+  </group>
+  <group name="physics">
+    <subcycle loop="1">
+      <scheme>GFS_suite_interstitial_phys_reset</scheme>
+      <scheme>get_prs_fv3</scheme>
+      <scheme>GFS_suite_interstitial_1</scheme>
+      <scheme>sfc_sice_pre</scheme>
+      <scheme>dcyc2t3</scheme>
+      <scheme>GFS_suite_interstitial_2</scheme>
+      <scheme>GFS_surface_generic_pre</scheme>
+      <scheme>GFS_PBL_generic_pre</scheme>
+      <scheme>lsm_noah_pre</scheme>
+      <scheme>gmtb_scm_sfc_flux_spec</scheme>
+      <!-- Surface iteration loop 1 -->
+      <!--<scheme>GFS_surface_loop_control_part0_run</scheme>-->
+      <!--<scheme>sfc_ex_coef_run</scheme>-->
+      <!--<scheme>GFS_surface_loop_control_part1_run</scheme>-->
+      <!--<scheme>sfc_nst_pre_run</scheme>-->
+      <!--<scheme>sfc_nst_run</scheme>-->
+      <!--<scheme>sfc_nst_post_run</scheme>-->
+      <!--<scheme>lsm_noah_run</scheme>-->
+      <!--<scheme>sfc_sice_run</scheme>-->
+      <!--<scheme>GFS_surface_loop_control_part2_run</scheme>-->
+      <!-- Surface iteration loop 2 -->
+      <!--<scheme>GFS_surface_loop_control_part0_run</scheme>-->
+      <!--<scheme>sfc_ex_coef_run</scheme>-->
+      <!--<scheme>GFS_surface_loop_control_part1_run</scheme>-->
+      <!--<scheme>sfc_nst_pre_run</scheme>-->
+      <!--<scheme>sfc_nst_run</scheme>-->
+      <!--<scheme>sfc_nst_post_run</scheme>-->
+      <!--<scheme>lsm_noah_run</scheme>-->
+      <!--<scheme>sfc_sice_run</scheme>-->
+      <!--<scheme>GFS_surface_loop_control_part2_run</scheme>-->
+      <!-- End of surface iteration loop -->
+      <scheme>dcyc2t3_post</scheme>
+      <scheme>edmf</scheme>
+      <scheme>GFS_PBL_generic_post</scheme>
+      <scheme>gwdps_pre</scheme>
+      <scheme>gwdps</scheme>
+      <scheme>gwdps_post</scheme>
+      <scheme>rayleigh_damp</scheme>
+      <scheme>GFS_suite_update_stateout</scheme>
+      <scheme>ozphys</scheme>
+      <scheme>ozphys_post</scheme>
+      <scheme>GFS_DCNV_generic_pre</scheme>
+      <scheme>get_phi_fv3</scheme>
+      <scheme>GFS_suite_interstitial_3</scheme>
+      <scheme>GFS_zhao_carr_pre</scheme>
+      <scheme>sasas_deep</scheme>
+      <scheme>GFS_DCNV_generic_post</scheme>
+      <scheme>gwdc_pre</scheme>
+      <scheme>gwdc</scheme>
+      <scheme>gwdc_post</scheme>
+      <scheme>GFS_SCNV_generic_pre</scheme>
+      <scheme>sasas_shal</scheme>
+      <scheme>sasas_shal_post</scheme>
+      <scheme>GFS_SCNV_generic_post</scheme>
+      <scheme>cnvc90</scheme>
+      <scheme>GFS_MP_generic_pre</scheme>
+      <scheme>zhaocarr_gscond</scheme>
+      <scheme>zhaocarr_precpd</scheme>
+      <scheme>GFS_calpreciptype</scheme>
+      <scheme>GFS_MP_generic_post</scheme>
+      <scheme>sfc_diag</scheme>
+      <scheme>lsm_noah_post</scheme>
+      <scheme>sfc_sice_post</scheme>
+    </subcycle>
+  </group>
+  <finalize>GFS_suite_setup_scm</finalize>
+</suite>

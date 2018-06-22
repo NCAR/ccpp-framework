@@ -349,7 +349,7 @@ def parse_scheme_tables(filename):
     dictionary  contains only one element (variable = instance of class Var defined in
     mkcap.py). The metadata dictionaries of the individual schemes are merged afterwards
     (called from ccpp_prebuild.py) using merge_metadata_dicts, where multiple instances
-    of variables are compared for compatibility and collected in a list (entry in the 
+    of variables are compared for compatibility and collected in a list (entry in the
     merged metadata dictionary). The merged metadata dictionary of all schemes (which
     contains only compatible variable instances in the list referred to by standard_name)
     is then compared to the unique definition in the metadata dictionary of the variables
@@ -525,7 +525,7 @@ def parse_scheme_tables(filename):
                         line = lines[line_number]
                         words = line.split('|')
                         if len(words) == 1:
-                            if words[0] == '!!':
+                            if words[0].strip() == '!!':
                                 end_of_table = True
                             else:
                                 raise Exception('Encountered invalid line "{0}" in argument table {1}'.format(line, table_name))
