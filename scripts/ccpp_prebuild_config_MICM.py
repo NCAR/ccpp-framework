@@ -20,7 +20,7 @@ SCHEME_FILES_DEPENDENCIES = []
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
-    'ccpp-physics/physics/chemistry.F90'
+    'MICM_chemistry/src/chemistry.F90'
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
