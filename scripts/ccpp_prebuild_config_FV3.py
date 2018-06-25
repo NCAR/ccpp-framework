@@ -18,14 +18,14 @@ VARIABLE_DEFINITION_FILES = [
 SCHEME_FILES_DEPENDENCIES = [
 #    'ccpp/physics/physics/GFDL_parse_tracers.F90',
 #    'ccpp/physics/physics/date_def.f',
-#    'ccpp/physics/physics/funcphys.f90',
+    'ccpp/physics/physics/funcphys.f90',
 #    'ccpp/physics/physics/gfs_phy_tracer_config.f',
 #    'ccpp/physics/physics/gocart_tracer_config_stub.f',
 #    'ccpp/physics/physics/h2o_def.f',
 #    'ccpp/physics/physics/iounitdef.f',
     'ccpp/physics/physics/machine.F', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
 #    'ccpp/physics/physics/mersenne_twister.f',
-#    'ccpp/physics/physics/mfpbl.f',
+    'ccpp/physics/physics/mfpbl.f',
 #    'ccpp/physics/physics/module_bfmicrophysics.f',
 #    'ccpp/physics/physics/module_nst_model.f90',
 #    'ccpp/physics/physics/module_nst_parameters.f90',
@@ -34,7 +34,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/module_mp_thompson_hrrr.F90',
 #    'ccpp/physics/physics/namelist_soilveg.f',
 #    'ccpp/physics/physics/ozne_def.f',
-#    'ccpp/physics/physics/physcons.f90',
+    'ccpp/physics/physics/physcons.f90',
     'ccpp/physics/physics/physparam.f', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
 #    'ccpp/physics/physics/radcons.f90',
 #    'ccpp/physics/physics/radiation_aerosols.f',
@@ -48,7 +48,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/radsw_param.f', # DH should this be in FV3/gfsphysics/physics/radsw_param.f
 #    'ccpp/physics/physics/rascnvv2.f',
 #    'ccpp/physics/physics/sflx.f',
-#    'ccpp/physics/physics/tridi.f',
+    'ccpp/physics/physics/tridi.f',
 #    'ccpp/physics/physics/wam_f107_kp_mod.f90',
 #    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     ]
@@ -78,7 +78,7 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/gwdps.f',
 #    'ccpp/physics/physics/mfdeepcnv.f',
 #    'ccpp/physics/physics/mfshalcnv.f',
-#    'ccpp/physics/physics/moninedmf.f',
+    'ccpp/physics/physics/moninedmf.f',
     'ccpp/physics/physics/mp_thompson_hrrr.F90',
 #    'ccpp/physics/physics/ozphys.f',
 #    'ccpp/physics/physics/precpd.f',
