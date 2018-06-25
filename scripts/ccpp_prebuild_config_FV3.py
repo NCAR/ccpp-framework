@@ -63,7 +63,7 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/GFS_PBL_generic.f90',
 #    'ccpp/physics/physics/GFS_SCNV_generic.f90',
 #    'ccpp/physics/physics/GFS_calpreciptype.f90',
-#    'ccpp/physics/physics/GFS_debug.F90',
+    'ccpp/physics/physics/GFS_debug.F90',
     'ccpp/physics/physics/GFS_rrtmg_post.F90',
     'ccpp/physics/physics/GFS_rrtmg_pre.F90',
     'ccpp/physics/physics/GFS_rrtmg_setup.F90',
