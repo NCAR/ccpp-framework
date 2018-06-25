@@ -9,6 +9,7 @@
   </group>
   <group name="physics">
     <subcycle loop="1">
+      <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
