@@ -30,6 +30,7 @@
   </group>
   <group name="physics">
     <subcycle loop="1">
+      <scheme>GFS_suite_interstitial_phys_reset</scheme>
       <scheme>cnvc90</scheme>
     </subcycle>
   </group>
