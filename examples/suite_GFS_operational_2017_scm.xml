@@ -57,7 +57,7 @@
       <scheme>dcyc2t3_post</scheme>
       <scheme>sfc_diag</scheme>
       <scheme>GFS_surface_generic_post</scheme>
-      <scheme>edmf</scheme>
+      <scheme>hedmf</scheme>
       <scheme>GFS_PBL_generic_post</scheme>
       <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
@@ -70,7 +70,7 @@
       <scheme>get_phi_fv3</scheme>
       <scheme>GFS_suite_interstitial_3</scheme>
       <scheme>GFS_zhao_carr_pre</scheme>
-      <scheme>sasas_deep</scheme>
+      <scheme>samfdeepcnv</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
