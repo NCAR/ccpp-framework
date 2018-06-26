@@ -11,6 +11,7 @@
     <subcycle loop="1">
       <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
+      <scheme>gwdps_post</scheme>
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
       <scheme>gwdc_post</scheme>
