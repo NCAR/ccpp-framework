@@ -42,7 +42,7 @@ SCHEME_FILES = [
     'ccpp-physics/physics/gscond.f',
     'ccpp-physics/physics/gwdc.f',
     'ccpp-physics/physics/gwdps.f',
-    'ccpp-physics/physics/mfdeepcnv.f',
+    'ccpp-physics/physics/samfdeepcnv.f',
     'ccpp-physics/physics/mfshalcnv.f',
     'ccpp-physics/physics/moninedmf.f',
     'ccpp-physics/physics/ozphys.f',
