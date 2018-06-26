@@ -10,7 +10,7 @@
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
-    'micm/src/micm_type_defs.f90',
+    'ibox/src/micm_type_defs.f90',
     ]
 
 # Can be empty, since all physics schemes and their
@@ -20,7 +20,7 @@ SCHEME_FILES_DEPENDENCIES = []
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
-    'MICM_chemistry/src/chemistry.F90'
+    'MICM_chemistry/src/chem_solve.F90'
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
@@ -30,7 +30,7 @@ SCHEMES_CMAKEFILE = 'ccpp-physics/CCPP_SCHEMES.cmake'
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
 TARGET_FILES = [
-    'micm/src/micm.f90',
+    'ibox/src/ibox.f90',
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all caps
