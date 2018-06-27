@@ -178,7 +178,7 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_suite')
+        call ccpp_debug('Called ccpp_run_suite for stage ' // trim(stage))
 
         do i=1,suite%groups_max
             call ccpp_run_group(suite%groups(i), cdata, stage=stage, ierr=ierr)
@@ -243,7 +243,7 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_group')
+        call ccpp_debug('Called ccpp_run_group for stage ' // trim(stage))
 
         do i=1,group%subcycles_max
             call ccpp_run_subcycle(group%subcycles(i), cdata, stage=stage, ierr=ierr)
@@ -307,7 +307,7 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_subcycle')
+        call ccpp_debug('Called ccpp_run_subcycle for stage ' // trim(stage))
 
         do i=1,subcycle%loop
             do j=1,subcycle%schemes_max
