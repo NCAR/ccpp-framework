@@ -71,6 +71,7 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/GFS_surface_loop_control.f',
 #    'ccpp/physics/physics/GFS_zhao_carr_pre.f90',
     'ccpp/physics/physics/cnvc90.f',
+    'ccpp/physics/physics/cs_conv.F90',
 #    'ccpp/physics/physics/dcyc2.f',
 #    'ccpp/physics/physics/get_prs_fv3.f90',
 #    'ccpp/physics/physics/gscond.f',
