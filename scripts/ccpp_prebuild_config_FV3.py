@@ -54,7 +54,7 @@ SCHEME_FILES_DEPENDENCIES = [
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
     'ccpp/physics/physics/FV3_test.F90',
-#    'ccpp/physics/physics/gfdl_cloud_microphys.F90',
+    'ccpp/physics/physics/gfdl_cloud_microphys.F90',
 #    'ccpp/physics/physics/GFS_DCNV_generic.f90',
 #    'ccpp/physics/physics/GFS_MP_generic_post.f90',
 #    'ccpp/physics/physics/GFS_MP_generic_pre.f90',
