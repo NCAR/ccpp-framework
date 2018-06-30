@@ -124,7 +124,7 @@ if (PROJECT STREQUAL "CCPP-FV3")
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
       $<INSTALL_INTERFACE:include>
   )
-else (PROJECT STREQUAL "CCPP-FV3")
+elseif (PROJECT STREQUAL "CCPP-SCM")
   target_include_directories(ccpp PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
       $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
@@ -149,7 +149,7 @@ if (PROJECT STREQUAL "CCPP-FV3")
   # Define where to install the C headers and Fortran modules
   install(FILES ${HEADERS_C} DESTINATION include)
   install(FILES ${MODULES_F90} DESTINATION include)
-else (PROJECT STREQUAL "CCPP-FV3")
+else (PROJECT STREQUAL "CCPP-SCM")
   # Define where to install the C headers and Fortran modules
   install(FILES ${HEADERS_C} DESTINATION include/${PROJECT_NAME})
   install(FILES ${MODULES_F90} DESTINATION include/${PROJECT_NAME})
