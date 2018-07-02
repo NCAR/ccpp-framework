@@ -32,8 +32,15 @@
     <subcycle loop="1">
       <scheme>GFS_suite_interstitial_phys_reset</scheme>
       <scheme>hedmf</scheme>
+      <scheme>gwdps_pre</scheme>
+      <scheme>gwdps</scheme>
+      <scheme>gwdps_post</scheme>
       <scheme>samfdeepcnv</scheme>
+      <scheme>gwdc_pre</scheme>
+      <scheme>gwdc</scheme>
+      <scheme>gwdc_post</scheme>
       <scheme>cnvc90</scheme>
+      <scheme>zhaocarr_gscond</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->
