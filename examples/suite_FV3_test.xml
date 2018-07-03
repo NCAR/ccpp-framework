@@ -10,6 +10,9 @@
   <group name="time_vary">
     <subcycle loop="1">
       <scheme>GFS_rrtmg_setup</scheme>
+      <scheme>GFS_phys_time_vary_1_run</scheme>
+      <scheme>GFS_rad_time_vary_run</scheme>
+      <scheme>GFS_phys_time_vary_2_run</scheme>
     </subcycle>
   </group>
   <group name="radiation">
