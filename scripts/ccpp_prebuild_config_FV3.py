@@ -79,7 +79,7 @@ SCHEME_FILES = [
     'ccpp/physics/physics/gwdc.f',
     'ccpp/physics/physics/gwdps.f',
     'ccpp/physics/physics/samfdeepcnv.f',
-#    'ccpp/physics/physics/mfshalcnv.f',
+    'ccpp/physics/physics/samfshalcnv.f',
     'ccpp/physics/physics/moninedmf.f',
 #    'ccpp/physics/physics/mp_thompson_hrrr.F90',
 #    'ccpp/physics/physics/ozphys.f',
