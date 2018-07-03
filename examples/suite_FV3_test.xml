@@ -34,6 +34,7 @@
       <scheme>hedmf</scheme>
       <scheme>samfdeepcnv</scheme>
       <scheme>cnvc90</scheme>
+      <scheme>sfc_nst</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->
