@@ -11,6 +11,7 @@
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
     'ibox/src/micm_type_defs.f90',
+    'MICM_chemistry/src/kinetic_type_defs.f90',
     ]
 
 # Can be empty, since all physics schemes and their
@@ -20,7 +21,8 @@ SCHEME_FILES_DEPENDENCIES = []
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
-    'MICM_chemistry/src/chem_solve.F90'
+    'MICM_chemistry/src/chem_solve.F90',
+    'MICM_chemistry/src/kinetic.F90',
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
