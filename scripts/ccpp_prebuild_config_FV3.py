@@ -32,7 +32,7 @@ SCHEME_FILES_DEPENDENCIES = [
 #    'ccpp/physics/physics/module_nst_water_prop.f90',
     'ccpp/physics/physics/module_mp_thompson_hrrr_radar.F90',
     'ccpp/physics/physics/module_mp_thompson_hrrr.F90',
-#    'ccpp/physics/physics/namelist_soilveg.f',
+    'ccpp/physics/physics/namelist_soilveg.f',
     'ccpp/physics/physics/ozne_def.f',
     'ccpp/physics/physics/physcons.f90',
     'ccpp/physics/physics/physparam.f', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
@@ -47,7 +47,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/radsw_datatb.f',
     'ccpp/physics/physics/radsw_param.f',
     'ccpp/physics/physics/rascnvv2.f',
-#    'ccpp/physics/physics/sflx.f',
+    'ccpp/physics/physics/sflx.f',
     'ccpp/physics/physics/surface_perturbation.F90',
     'ccpp/physics/physics/tridi.f',
     'ccpp/physics/physics/wam_f107_kp_mod.f90',
@@ -92,8 +92,8 @@ SCHEME_FILES = [
     'ccpp/physics/physics/rrtmg_sw_post.F90',
     'ccpp/physics/physics/rrtmg_sw_pre.F90',
 #    'ccpp/physics/physics/sfc_diag.f',
-#    'ccpp/physics/physics/sfc_diff.f',
-#    'ccpp/physics/physics/sfc_drv.f',
+    'ccpp/physics/physics/sfc_diff.f',
+    'ccpp/physics/physics/sfc_drv.f',
 #    'ccpp/physics/physics/sfc_nst.f',
 #    'ccpp/physics/physics/sfc_sice.f',
     ]
