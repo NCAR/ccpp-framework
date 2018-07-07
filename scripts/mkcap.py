@@ -170,32 +170,62 @@ class Var(object):
 
     def print_get(self):
         '''Print the data retrieval line for the variable. Depends on the type and of variable'''
-        if self.type in STANDARD_VARIABLE_TYPES:
+        if self.type in STANDARD_VARIABLE_TYPES and self.rank == '':
             str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr)
+        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, kind=ckind)
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
-        end if'''
+        end if
+        if (kind({s.local_name}).ne.ckind) then
+            call ccpp_error('Kind mismatch for variable {s.standard_name}')
+            ierr = 1
+            return
+        end if
+        '''
+        elif self.type in STANDARD_VARIABLE_TYPES:
+            str='''
+        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, dims=cdims, kind=ckind)
+        if (ierr /= 0) then
+            call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
+            return
+        end if
+        if (kind({s.local_name}).ne.ckind) then
+            call ccpp_error('Kind mismatch for variable {s.standard_name}')
+            ierr = 1
+            return
+        end if
+        '''
         # Derived-type variables, scalar
         elif self.rank == '':
             str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr)
+        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, kind=ckind)
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
+            return
+        end if
+        if (ckind.ne.CCPP_GENERIC_KIND) then
+            call ccpp_error('Kind mismatch for variable {s.standard_name}')
+            ierr = 1
             return
         end if
         call c_f_pointer(cptr, {s.local_name})'''
         # Derived-type variables, array
         else:
             str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr, dims=cdims)
+        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, dims=cdims, kind=ckind)
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
         end if
+        if (ckind.ne.CCPP_GENERIC_KIND) then
+            call ccpp_error('Kind mismatch for variable {s.standard_name}')
+            ierr = 1
+            return
+        end if
         call c_f_pointer(cptr, {s.local_name}, cdims)
-        deallocate(cdims)'''
+        deallocate(cdims)
+        '''
         return str.format(s=self)
 
     def print_add(self, ccpp_data_structure):
@@ -304,7 +334,7 @@ module {module}_cap
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_f_pointer, c_ptr, c_int32_t
     use            :: ccpp_types,                                      &
-                      only: ccpp_t
+                      only: ccpp_t, CCPP_GENERIC_KIND
     use            :: ccpp_fields,                                     &
                       only: ccpp_field_get
     use            :: ccpp_errors,                                     &
@@ -332,6 +362,7 @@ module {module}_cap
         type(ccpp_t), pointer           :: cdata
         type(c_ptr)                     :: cptr
         integer, allocatable            :: cdims(:)
+        integer                         :: ckind
 {var_defs}
 
         ierr = 0
