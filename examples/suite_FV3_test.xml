@@ -31,6 +31,7 @@
   <group name="physics">
     <subcycle loop="1">
       <scheme>GFS_suite_interstitial_phys_reset</scheme>
+      <scheme>sfc_nst</scheme>
       <scheme>hedmf</scheme>
       <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
@@ -41,7 +42,6 @@
       <scheme>gwdc_post</scheme>
       <scheme>samfshalcnv</scheme>
       <scheme>cnvc90</scheme>
-      <scheme>sfc_nst</scheme>
       <scheme>zhaocarr_gscond</scheme>
     </subcycle>
   </group>
