@@ -34,8 +34,16 @@
       <scheme>sfc_ex_coef</scheme>
       <scheme>lsm_noah</scheme>
       <scheme>hedmf</scheme>
+      <scheme>gwdps_pre</scheme>
+      <scheme>gwdps</scheme>
+      <scheme>gwdps_post</scheme>
       <scheme>samfdeepcnv</scheme>
+      <scheme>gwdc_pre</scheme>
+      <scheme>gwdc</scheme>
+      <scheme>gwdc_post</scheme>
+      <scheme>samfshalcnv</scheme>
       <scheme>cnvc90</scheme>
+      <scheme>zhaocarr_gscond</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->

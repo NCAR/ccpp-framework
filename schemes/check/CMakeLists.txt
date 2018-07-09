@@ -50,7 +50,7 @@ if (PROJECT STREQUAL "CCPP-FV3")
   set(CCPP_LIB_DIRS "" CACHE FILEPATH "Path to ccpp library")
   link_directories(${CCPP_LIB_DIRS})
   list(APPEND LIBS "ccpp")
-else (PROJECT STREQUAL "CCPP-FV3")
+else (PROJECT STREQUAL "CCPP-SCM")
   # Add the CCPP include/module directory
   INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/../../../../src")
   # Add the CCPP library
