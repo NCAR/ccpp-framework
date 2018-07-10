@@ -28,6 +28,7 @@ module ccpp_types
     public :: CCPP_STR_LEN,                                            &
               CCPP_STAGES,                                             &
               CCPP_DEFAULT_STAGE,                                      &
+              CCPP_GENERIC_KIND,                                       &
               ccpp_t,                                                  &
               ccpp_field_t,                                            &
               ccpp_scheme_t,                                           &
@@ -47,6 +48,9 @@ module ccpp_types
     !> @var The default stage if not specified
     character(len=*), parameter :: CCPP_DEFAULT_STAGE = 'run'
 
+    !> @var The default "kind" for a generic pointer / derived data type
+    integer, parameter   :: CCPP_GENERIC_KIND = -999
+
     !>
     !! @brief CCPP field type
     !!
@@ -59,6 +63,7 @@ module ccpp_types
             character(len=CCPP_STR_LEN)                       :: units
             integer                                           :: rank
             integer, allocatable, dimension(:)                :: dims
+            integer                                           :: kind
             type(c_ptr)                                       :: ptr
     end type ccpp_field_t
 
@@ -84,6 +89,7 @@ module ccpp_types
             character(:), allocatable                         :: version
             integer                                           :: functions_max
             type(ccpp_function_t), allocatable, dimension(:)  :: functions
+            logical                                           :: initialized = .false.
         contains
             procedure :: get_function_name => scheme_get_function_name
     end type ccpp_scheme_t
@@ -128,7 +134,6 @@ module ccpp_types
             type(ccpp_scheme_t)                                 :: finalize
             integer                                             :: groups_max
             type(ccpp_group_t), allocatable, dimension(:)       :: groups
-            logical                                             :: iscopy
     end type ccpp_suite_t
 
     !>
@@ -143,7 +148,9 @@ module ccpp_types
     type :: ccpp_t
             type(c_ptr)                                         :: fields_idx
             type(ccpp_field_t), allocatable, dimension(:)       :: fields
-            type(ccpp_suite_t)                                  :: suite
+            type(ccpp_suite_t), pointer                         :: suite => null()
+            type(ccpp_suite_t)                                  :: suite_target
+            logical                                             :: suite_iscopy
             logical                                             :: initialized = .false.
     end type ccpp_t
 
