@@ -63,7 +63,7 @@ SCHEME_FILES_DEPENDENCIES = [
 ]
 
 # Add all physics scheme files relative to basedir
-SCHEME_FILES = [
+SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ] 
     'ccpp-physics/physics/GFS_DCNV_generic.f90'       : ['physics'],
     'ccpp-physics/physics/GFS_MP_generic_post.f90'    : ['physics'],
@@ -105,7 +105,7 @@ SCHEME_FILES = [
     'ccpp-physics/physics/sfc_nst.f'                  : ['physics'],
     'ccpp-physics/physics/sfc_sice.f'                 : ['physics'],
     'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.f90' : ['physics'],
-    ]
+    }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = 'ccpp-physics/CCPP_SCHEMES.mk'
