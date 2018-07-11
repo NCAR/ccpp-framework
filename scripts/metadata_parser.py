@@ -75,7 +75,7 @@ CCPP_MANDATORY_VARIABLES = {
                        ),
     }
 
-def merge_metadata_dicts(x, y):
+def merge_dictionaries(x, y):
     """Merges two metadata dictionaries. For each list of elements
     (variables = class Var in mkcap.py) in one dictionary, we know
     that all entries are compatible. If one or more elements exist
@@ -88,13 +88,20 @@ def merge_metadata_dicts(x, y):
     for key in z_keys:
         z[key] = {}
         if key in x_keys and key in y_keys:
-            # We know that all entries within each dictionary are comptable;
-            # we need to test compatibility of one of the items in each only.
-            if not x[key][0].compatible(y[key][0]):
-                raise Exception('Incompatible entries in metadata for variable {0}:\n'.format(key) +\
-                                '    {0}\n'.format(x[key][0].print_debug()) +\
-                                'vs. {0}'.format(y[key][0].print_debug()))
-            z[key] = x[key] + y[key]
+            # Metadata dictionaries containing lists of variables of type Var for each key=standard_name
+            if isinstance(x[key][0], Var):
+                # We know that all entries within each dictionary are compatible;
+                # we need to test compatibility of one of the items in each only.
+                if not x[key][0].compatible(y[key][0]):
+                    raise Exception('Incompatible entries in metadata for variable {0}:\n'.format(key) +\
+                                    '    {0}\n'.format(x[key][0].print_debug()) +\
+                                    'vs. {0}'.format(y[key][0].print_debug()))
+                z[key] = x[key] + y[key]
+            # Category dictionaries containing lists of categories of type string for each key=standard_name
+            elif type(x[key][0]) is str:
+                z[key] = list(set(x[key] + y[key]))
+            else:
+                raise Exception("x[key][0] is of unsupported type", type(x[key][0]))
         elif key in x_keys:
             z[key] = x[key]
         elif key in y_keys:
