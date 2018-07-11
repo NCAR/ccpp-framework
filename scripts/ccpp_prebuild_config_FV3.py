@@ -19,7 +19,7 @@ VARIABLE_DEFINITION_FILES = [
 # of the CCPP requirement to not use any external modules except Fortran standard modules!
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/GFDL_parse_tracers.F90',
-#    'ccpp/physics/physics/date_def.f',
+    'ccpp/physics/physics/date_def.f',
     'ccpp/physics/physics/funcphys.f90',
     'ccpp/physics/physics/gfdl_cloud_microphys.F90',
     'ccpp/physics/physics/gfs_phy_tracer_config.f',
@@ -30,9 +30,9 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/mersenne_twister.f',
     'ccpp/physics/physics/mfpbl.f',
     'ccpp/physics/physics/module_bfmicrophysics.f',
-#    'ccpp/physics/physics/module_nst_model.f90',
-#    'ccpp/physics/physics/module_nst_parameters.f90',
-#    'ccpp/physics/physics/module_nst_water_prop.f90',
+    'ccpp/physics/physics/module_nst_model.f90',
+    'ccpp/physics/physics/module_nst_parameters.f90',
+    'ccpp/physics/physics/module_nst_water_prop.f90',
 #    'ccpp/physics/physics/module_mp_thompson_hrrr_radar.F90',
 #    'ccpp/physics/physics/module_mp_thompson_hrrr.F90',
     'ccpp/physics/physics/namelist_soilveg.f',
@@ -100,7 +100,7 @@ SCHEME_FILES = {
 #    'ccpp/physics/physics/sfc_diag.f'                     : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_diff.f'                     : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_drv.f'                      : [ 'slow_physics' ],
-#    'ccpp/physics/physics/sfc_nst.f'                      : [ 'slow_physics' ],
+    'ccpp/physics/physics/sfc_nst.f'                      : [ 'slow_physics' ],
 #    'ccpp/physics/physics/sfc_sice.f'                     : [ 'slow_physics' ],
     }
 
