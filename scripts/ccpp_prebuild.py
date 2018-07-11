@@ -3,6 +3,7 @@
 # Standard modules
 import argparse
 import collections
+import itertools
 import logging
 import os
 import sys
@@ -14,7 +15,7 @@ import sys
 
 # Local modules
 from common import encode_container, execute
-from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_variable_tables
+from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
 from mkdoc import metadata_to_html, metadata_to_latex
 
@@ -104,7 +105,7 @@ def gather_variable_definitions(variable_definition_files):
         # Change to directory of variable_definition_file and parse it
         os.chdir(os.path.join(BASEDIR,filedir))
         metadata = parse_variable_tables(filename)
-        metadata_define = merge_metadata_dicts(metadata_define, metadata)
+        metadata_define = merge_dictionaries(metadata_define, metadata)
         # Return to BASEDIR
         os.chdir(BASEDIR)
     return (success, metadata_define)
@@ -116,17 +117,22 @@ def collect_physics_subroutines(scheme_files):
     # Parse all scheme files
     metadata_request = {}
     arguments_request = {}
-    for scheme_file in scheme_files:
+    category_request = {}
+    for scheme_file in scheme_files.keys():
         (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme_file))
         # Change to directory where scheme_file lives
         os.chdir(scheme_filepath)
         (metadata, arguments) = parse_scheme_tables(scheme_filename)
-        metadata_request = merge_metadata_dicts(metadata_request, metadata)
+        # The different categories for the scheme
+        category = { var : scheme_files[scheme_file] for var in metadata.keys() }
+        # Merge metadata and category, append to arguments
+        metadata_request = merge_dictionaries(metadata_request, metadata)
+        category_request = merge_dictionaries(category_request, category)
         arguments_request.update(arguments)
         os.chdir(BASEDIR)
     # Return to BASEDIR
     os.chdir(BASEDIR)
-    return (success, metadata_request, arguments_request)
+    return (success, metadata_request, category_request, arguments_request)
 
 def check_optional_arguments(metadata, arguments, optional_arguments):
     """Check if for each subroutine with optional arguments, an entry exists in the
@@ -181,7 +187,7 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
 
     return (success, metadata, arguments)
 
-def compare_metadata(metadata_define, metadata_request):
+def compare_metadata(metadata_define, metadata_request, category_request, categories_merged):
     """Compare the requested metadata to the defined one. For each requested entry, a
     single (i.e. non-ambiguous entry) must be present in the defined entries. All optional
     arguments that are still in the list of required variables for a scheme are needed,
@@ -189,7 +195,7 @@ def compare_metadata(metadata_define, metadata_request):
 
     logging.info('Comparing metadata for requested and provided variables ...')
     success = True
-    modules = []
+    modules = { x : [] for x in categories_merged }
     metadata = {}
     for var_name in sorted(metadata_request.keys()):
         # Check that variable is provided by the model
@@ -221,7 +227,9 @@ def compare_metadata(metadata_define, metadata_request):
         for item in var.container.split(' '):
             subitems = item.split('_')
             if subitems[0] == 'MODULE':
-                modules.append('_'.join(subitems[1:]))
+                # Add to list of required modules for each category the requested variable falls under
+                for category in category_request[var_name]:
+                    modules[category].append('_'.join(subitems[1:]))
             elif subitems[0] == 'TYPE':
                 pass
             else:
@@ -234,21 +242,23 @@ def compare_metadata(metadata_define, metadata_request):
         # Set target and kind (if applicable)
         for var in metadata[var_name]:
             var.target = target
-            logging.debug('Requested variable {0} in {1} matched to target {2} in module {3}'.format(var_name, var.container, target, modules[-1]))
+            logging.debug('Requested variable {0} in {1} matched to target {2} in module {3}'.format(
+                          var_name, var.container, target, modules[category_request[var_name][0]][-1]))
             # Update len=* for character variables
             if var.type == 'character' and var.kind == 'len=*':
                 logging.debug('Update kind information for requested variable {0} in {1} from {2} to {3}'.format(var_name, var.container, var.kind, kind))
                 var.kind = kind
 
     # Remove duplicated from list of modules
-    modules = sorted(list(set(modules)))
+    for category in categories_merged:
+        modules[category] = sorted(list(set(modules[category])))
     return (success, modules, metadata)
 
-def create_module_use_statements(modules, module_use_template_host_cap):
+def create_module_use_statements(modules, category, module_use_template_host_cap):
     """Create Fortran module use statements to be included in the host cap.
     The template module_use_template_host_cap must include the required
     modules for error handling of the ccpp_field_add statments."""
-    logging.info('Generating module use statements ...')
+    logging.info('Generating module use statements for category {0} ...'.format(category))
     success = True
     module_use_statements = module_use_template_host_cap
     cnt = 1
@@ -258,7 +268,7 @@ def create_module_use_statements(modules, module_use_template_host_cap):
     logging.info('Generated module use statements for {0} module(s)'.format(cnt))
     return (success, module_use_statements)
 
-def create_ccpp_field_add_statements(metadata, ccpp_data_structure):
+def create_ccpp_field_add_statements(metadata, category, ccpp_data_structure):
     """Create Fortran code to add host model variables to the cdata
     structure. The metadata container may contain multiple entries
     of a variable with the same standard_name, but for different
@@ -266,7 +276,7 @@ def create_ccpp_field_add_statements(metadata, ccpp_data_structure):
     different local_name. We only need to add it once to
     the add_field statement, since the target (i.e. the
     original variable defined by the model) is the same."""
-    logging.info('Generating ccpp_field_add statements ...')
+    logging.info('Generating ccpp_field_add statements for category {0} ...'.format(category))
     success = True
     ccpp_field_add_statements = ''
     cnt = 0
@@ -400,7 +410,7 @@ def main():
         raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
-    (success, metadata_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
+    (success, metadata_request, category_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
@@ -411,30 +421,38 @@ def main():
         raise Exception('Call to check_optional_arguments failed.')
 
     # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
-    success = metadata_to_latex(metadata_define, metadata_request, host_model, config['latex_vartable_file'])
+    success = metadata_to_latex(metadata_define, metadata_request, category_request, host_model, config['latex_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_latex failed.')
 
+    # Flatten list of list of categories for all variables
+    categories_merged = list(set(itertools.chain(*category_request.values())))
+
     # Check requested against defined arguments to generate metadata (list/dict of variables for CCPP)
-    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request)
+    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request, category_request, categories_merged)
     if not success:
         raise Exception('Call to compare_metadata failed.')
 
-    # Crate module use statements to inject into the host model cap
-    (success, module_use_statements) = create_module_use_statements(modules, config['module_use_template_host_cap'])
-    if not success:
-        raise Exception('Call to create_module_use_statements failed.')
+    for category in categories_merged:
+        # Create module use statements to inject into the host model cap
+        (success, module_use_statements) = create_module_use_statements(modules[category], category, config['module_use_template_host_cap'])
+        if not success:
+            raise Exception('Call to create_module_use_statements failed.')
 
-    # Crate ccpp_fiels_add statements to inject into the host model cap
-    (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata, config['ccpp_data_structure'])
-    if not success:
-        raise Exception('Call to create_ccpp_field_add_statements failed.')
+        # Only process variables that fall into this category
+        metadata_filtered = { key : value for (key, value) in metadata.items() if category in category_request[key] }
 
-    # Generate include files for module_use_statements and ccpp_field_add_statements
-    success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
-                                     config['module_include_file'], config['fields_include_file'])
-    if not success:
-        raise Exception('Call to generate_include_files failed.')
+        # Create ccpp_fiels_add statements to inject into the host model cap
+        (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata_filtered, category, config['ccpp_data_structure'])
+        if not success:
+            raise Exception('Call to create_ccpp_field_add_statements failed.')
+
+        # Generate include files for module_use_statements and ccpp_field_add_statements
+        success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
+                                                          config['module_include_file'].format(category=category),
+                                                          config['fields_include_file'].format(category=category))
+        if not success:
+            raise Exception('Call to generate_include_files failed.')
 
     # Generate scheme caps
     (success, scheme_caps) = generate_scheme_caps(metadata_request, arguments_request, config['caps_dir'],
@@ -443,7 +461,7 @@ def main():
         raise Exception('Call to generate_scheme_caps failed.')
 
     # Add filenames of schemes to makefile - add dependencies for schemes
-    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'],
+    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
                                              config['schemes_makefile'], config['schemes_cmakefile'])
     if not success:
         raise Exception('Call to generate_schemes_makefile failed.')

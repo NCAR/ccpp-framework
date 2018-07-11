@@ -4,7 +4,8 @@
   <!-- <init></init> -->
   <group name="fast_physics">
     <subcycle loop="1">
-      <scheme>FV3_test</scheme>
+      <scheme>fv_sat_adj_pre</scheme>
+      <scheme>fv_sat_adj</scheme>
     </subcycle>
   </group>
   <group name="time_vary">
@@ -31,9 +32,22 @@
   <group name="physics">
     <subcycle loop="1">
       <scheme>GFS_suite_interstitial_phys_reset</scheme>
+      <scheme>sfc_nst_pre</scheme>
+      <scheme>sfc_nst</scheme>
+      <scheme>sfc_nst_post</scheme>
+      <scheme>sfc_ex_coef</scheme>
+      <scheme>lsm_noah</scheme>
       <scheme>hedmf</scheme>
+      <scheme>gwdps_pre</scheme>
+      <scheme>gwdps</scheme>
+      <scheme>gwdps_post</scheme>
       <scheme>samfdeepcnv</scheme>
+      <scheme>gwdc_pre</scheme>
+      <scheme>gwdc</scheme>
+      <scheme>gwdc_post</scheme>
+      <scheme>samfshalcnv</scheme>
       <scheme>cnvc90</scheme>
+      <scheme>zhaocarr_gscond</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->

@@ -44,22 +44,23 @@ module ccpp
     !! @param[in,out] cdata    The ccpp_t type data.
     !! @param[  out]  ierr     Integer error flag.
     !
-    subroutine ccpp_init(filename, cdata, ierr, suite)
-        character(len=*),   intent(in)           :: filename
-        type(ccpp_t),       intent(inout)        :: cdata
-        integer,            intent(  out)        :: ierr
-        type(ccpp_suite_t), intent(in), optional :: suite
+    subroutine ccpp_init(filename, cdata, ierr, cdata_target)
+        character(len=*),     intent(in)           :: filename
+        type(ccpp_t), target, intent(inout)        :: cdata
+        integer,              intent(  out)        :: ierr
+        type(ccpp_t), target, intent(in), optional :: cdata_target
 
         ierr = 0
 
         call ccpp_debug('Called ccpp_init')
 
-        if (present(suite)) then
-            ! Makes a copy of the suite to avoid multiple
-            ! reads/parses of the suite definiton file
-            cdata%suite = suite
-            cdata%suite%iscopy = .True.
+
+        if (present(cdata_target)) then
+            cdata%suite => cdata_target%suite
+            cdata%suite_iscopy = .True.
         else
+            cdata%suite => cdata%suite_target
+            cdata%suite_iscopy = .False.
             ! Initialize the suite
             call ccpp_suite_init(filename, cdata%suite, ierr)
             if (ierr /= 0) then
@@ -87,12 +88,18 @@ module ccpp
     !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_finalize(cdata, ierr)
-        type(ccpp_t),           intent(inout) :: cdata
-        integer,                intent(  out) :: ierr
+        type(ccpp_t), target, intent(inout) :: cdata
+        integer,              intent(  out) :: ierr
 
         ierr = 0
 
         call ccpp_debug('Called ccpp_finalize')
+
+        if (cdata%suite_iscopy) then
+           nullify(cdata%suite)
+           cdata%suite_iscopy = .False.
+           return
+        end if
 
         ! Finalize the suite
         call ccpp_suite_finalize(cdata%suite, ierr)
@@ -111,6 +118,8 @@ module ccpp
         ! Set flag indicating initialization state of cdata
         cdata%initialized = .false.
 
+        nullify(cdata%suite)
+
     end subroutine ccpp_finalize
 
     !>
@@ -120,8 +129,8 @@ module ccpp
     !! @return        initialized  .true. or .false.
     !
     function ccpp_initialized(cdata) result(initialized)
-        type(ccpp_t), intent(in) :: cdata
-        logical                  :: initialized
+        type(ccpp_t), target, intent(in) :: cdata
+        logical                          :: initialized
 
         call ccpp_debug('Called ccpp_initialized')
 

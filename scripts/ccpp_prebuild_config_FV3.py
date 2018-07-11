@@ -10,6 +10,8 @@
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
+    'FV3/atmos_cubed_sphere/model/fv_arrays.F90',
+    'FV3/gfsphysics/CCPP_layer/CCPP_typedefs.F90',
     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     ]
 
@@ -17,8 +19,9 @@ VARIABLE_DEFINITION_FILES = [
 # of the CCPP requirement to not use any external modules except Fortran standard modules!
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/GFDL_parse_tracers.F90',
-#    'ccpp/physics/physics/date_def.f',
+    'ccpp/physics/physics/date_def.f',
     'ccpp/physics/physics/funcphys.f90',
+    'ccpp/physics/physics/gfdl_cloud_microphys.F90',
     'ccpp/physics/physics/gfs_phy_tracer_config.f',
     'ccpp/physics/physics/gocart_tracer_config_stub.f',
     'ccpp/physics/physics/h2o_def.f',
@@ -27,12 +30,12 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/mersenne_twister.f',
     'ccpp/physics/physics/mfpbl.f',
     'ccpp/physics/physics/module_bfmicrophysics.f',
-#    'ccpp/physics/physics/module_nst_model.f90',
-#    'ccpp/physics/physics/module_nst_parameters.f90',
-#    'ccpp/physics/physics/module_nst_water_prop.f90',
-    'ccpp/physics/physics/module_mp_thompson_hrrr_radar.F90',
-    'ccpp/physics/physics/module_mp_thompson_hrrr.F90',
-#    'ccpp/physics/physics/namelist_soilveg.f',
+    'ccpp/physics/physics/module_nst_model.f90',
+    'ccpp/physics/physics/module_nst_parameters.f90',
+    'ccpp/physics/physics/module_nst_water_prop.f90',
+#    'ccpp/physics/physics/module_mp_thompson_hrrr_radar.F90',
+#    'ccpp/physics/physics/module_mp_thompson_hrrr.F90',
+    'ccpp/physics/physics/namelist_soilveg.f',
     'ccpp/physics/physics/ozne_def.f',
     'ccpp/physics/physics/physcons.f90',
     'ccpp/physics/physics/physparam.f', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
@@ -47,78 +50,60 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/radsw_datatb.f',
     'ccpp/physics/physics/radsw_param.f',
     'ccpp/physics/physics/rascnvv2.f',
-#    'ccpp/physics/physics/sflx.f',
+    'ccpp/physics/physics/sflx.f',
     'ccpp/physics/physics/surface_perturbation.F90',
     'ccpp/physics/physics/tridi.f',
     'ccpp/physics/physics/wam_f107_kp_mod.f90',
     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
+    'FV3/gfsphysics/CCPP_layer/CCPP_typedefs.F90',
     ]
 
 # Add all physics scheme files relative to basedir
-SCHEME_FILES = [
-    'ccpp/physics/physics/FV3_test.F90',
-#    'ccpp/physics/physics/GFS_DCNV_generic.f90',
-#    'ccpp/physics/physics/GFS_MP_generic_post.f90',
-#    'ccpp/physics/physics/GFS_MP_generic_pre.f90',
-#    'ccpp/physics/physics/GFS_PBL_generic.f90',
-#    'ccpp/physics/physics/GFS_SCNV_generic.f90',
-#    'ccpp/physics/physics/GFS_calpreciptype.f90',
-    'ccpp/physics/physics/GFS_debug.F90',
-    'ccpp/physics/physics/GFS_rrtmg_post.F90',
-    'ccpp/physics/physics/GFS_rrtmg_pre.F90',
-    'ccpp/physics/physics/GFS_rrtmg_setup.F90',
-#    'ccpp/physics/physics/GFS_stochastics.f90',
-    'ccpp/physics/physics/GFS_suite_interstitial.F90',
-#    'ccpp/physics/physics/GFS_surface_generic.f90',
-#    'ccpp/physics/physics/GFS_surface_loop_control.f',
-#    'ccpp/physics/physics/GFS_zhao_carr_pre.f90',
-    'ccpp/physics/physics/cnvc90.f',
-    'ccpp/physics/physics/cs_conv.F90',
-#    'ccpp/physics/physics/dcyc2.f',
-#    'ccpp/physics/physics/get_prs_fv3.f90',
-#    'ccpp/physics/physics/gscond.f',
-#    'ccpp/physics/physics/gwdc.f',
-#    'ccpp/physics/physics/gwdps.f',
-    'ccpp/physics/physics/samfdeepcnv.f',
-#    'ccpp/physics/physics/mfshalcnv.f',
-    'ccpp/physics/physics/moninedmf.f',
-    'ccpp/physics/physics/mp_thompson_hrrr.F90',
-#    'ccpp/physics/physics/ozphys.f',
-#    'ccpp/physics/physics/precpd.f',
-    'ccpp/physics/physics/radlw_main.f',
-    'ccpp/physics/physics/radsw_main.f',
-#    'ccpp/physics/physics/rayleigh_damp.f',
-    'ccpp/physics/physics/rrtmg_lw_post.F90',
-    'ccpp/physics/physics/rrtmg_lw_pre.F90',
-    'ccpp/physics/physics/rrtmg_sw_post.F90',
-    'ccpp/physics/physics/rrtmg_sw_pre.F90',
-#    'ccpp/physics/physics/sfc_diag.f',
-#    'ccpp/physics/physics/sfc_diff.f',
-#    'ccpp/physics/physics/sfc_drv.f',
-#    'ccpp/physics/physics/sfc_nst.f',
-#    'ccpp/physics/physics/sfc_sice.f',
-    ]
-
-## Add all files with metadata tables on the host model side,
-## relative to basedir = top-level directory of host model
-#VARIABLE_DEFINITION_FILES = [
-#    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
-#    ]
-#
-## Add all physics scheme dependencies relative to basedir - note that these are all violations
-## of the CCPP requirement to not use any external modules except Fortran standard modules!
-#SCHEME_FILES_DEPENDENCIES = [
-#    'ccpp/physics/physics/machine.F',
-#    'ccpp/physics/physics/radlw_param.f',
-#    'ccpp/physics/physics/radsw_param.f',
-#    'ccpp/physics/physics/physparam.f',
-#    ]
-#
-## Add all physics scheme files relative to basedir
-#SCHEME_FILES = [
-#    'ccpp/physics/physics/FV3_test.F90',
-#    ]
-## *DH
+SCHEME_FILES = {
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ] 
+#    'ccpp/physics/physics/GFS_DCNV_generic.f90'           : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_MP_generic_post.f90'        : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_MP_generic_pre.f90'         : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_PBL_generic.f90'            : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_SCNV_generic.f90'           : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_calpreciptype.f90'          : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_debug.F90'                  : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_rrtmg_post.F90'             : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_rrtmg_pre.F90'              : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_rrtmg_setup.F90'            : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_stochastics.f90'            : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_suite_interstitial.F90'     : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_surface_generic.f90'        : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_surface_loop_control.f'     : [ 'slow_physics' ],
+#    'ccpp/physics/physics/GFS_zhao_carr_pre.f90'          : [ 'slow_physics' ],
+    'ccpp/physics/physics/cnvc90.f'                       : [ 'slow_physics' ],
+    'ccpp/physics/physics/cs_conv.F90'                     : [ 'slow_physics' ],
+#    'ccpp/physics/physics/dcyc2.f'                        : [ 'slow_physics' ],
+#    'ccpp/physics/physics/get_prs_fv3.f90'                : [ 'slow_physics' ],
+    'ccpp/physics/physics/gfdl_fv_sat_adj.F90'             : [ 'fast_physics' ],
+    'ccpp/physics/physics/gfdl_fv_sat_adj_pre.F90'         : [ 'fast_physics' ],
+    'ccpp/physics/physics/gscond.f'                       : [ 'slow_physics' ],
+    'ccpp/physics/physics/gwdc.f'                         : [ 'slow_physics' ],
+    'ccpp/physics/physics/gwdps.f'                        : [ 'slow_physics' ],
+    'ccpp/physics/physics/samfdeepcnv.f'                  : [ 'slow_physics' ],
+    'ccpp/physics/physics/samfshalcnv.f'                  : [ 'slow_physics' ],
+    'ccpp/physics/physics/moninedmf.f'                    : [ 'slow_physics' ],
+#    'ccpp/physics/physics/mp_thompson_hrrr.F90'           : [ 'slow_physics' ],
+#    'ccpp/physics/physics/ozphys.f'                       : [ 'slow_physics' ],
+#    'ccpp/physics/physics/precpd.f'                       : [ 'slow_physics' ],
+    'ccpp/physics/physics/radlw_main.f'                   : [ 'slow_physics' ],
+    'ccpp/physics/physics/radsw_main.f'                   : [ 'slow_physics' ],
+#    'ccpp/physics/physics/rayleigh_damp.f'                : [ 'slow_physics' ],
+    'ccpp/physics/physics/rrtmg_lw_post.F90'              : [ 'slow_physics' ],
+    'ccpp/physics/physics/rrtmg_lw_pre.F90'               : [ 'slow_physics' ],
+    'ccpp/physics/physics/rrtmg_sw_post.F90'              : [ 'slow_physics' ],
+    'ccpp/physics/physics/rrtmg_sw_pre.F90'               : [ 'slow_physics' ],
+#    'ccpp/physics/physics/sfc_diag.f'                     : [ 'slow_physics' ],
+    'ccpp/physics/physics/sfc_diff.f'                     : [ 'slow_physics' ],
+    'ccpp/physics/physics/sfc_drv.f'                      : [ 'slow_physics' ],
+    'ccpp/physics/physics/sfc_nst.f'                      : [ 'slow_physics' ],
+#    'ccpp/physics/physics/sfc_sice.f'                     : [ 'slow_physics' ],
+    }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = 'ccpp/physics/CCPP_SCHEMES.mk'
@@ -127,8 +112,8 @@ SCHEMES_CMAKEFILE = 'ccpp/physics/CCPP_SCHEMES.cmake'
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
 TARGET_FILES = [
+    'FV3/atmos_cubed_sphere/driver/fvGFS/atmosphere.F90',
     'FV3/ipd/IPD_CCPP_Driver.F90',
-    #'ccpp/physics/physics/IPD_layer/IPD_CCPP_Driver.F90',
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all caps
@@ -143,9 +128,6 @@ CAPS_DIR = 'ccpp/physics/physics'
 # if it encounters a scheme subroutine with optional arguments
 # if no entry is made here. Possible values are: 'all', 'none',
 # or a list of standard_names: [ 'var1', 'var3' ].
-#
-# DH check if this is still correct
-#
 OPTIONAL_ARGUMENTS = {
     'rrtmg_sw' : {
         'rrtmg_sw_run' : [
@@ -201,8 +183,8 @@ OPTIONAL_ARGUMENTS = {
 
 # Names of Fortran include files in the host model cap (do not change);
 # both files will be written to the directory of each target file
-MODULE_INCLUDE_FILE = 'ccpp_modules.inc'
-FIELDS_INCLUDE_FILE = 'ccpp_fields.inc'
+MODULE_INCLUDE_FILE = 'ccpp_modules_{category}.inc'
+FIELDS_INCLUDE_FILE = 'ccpp_fields_{category}.inc'
 
 # HTML document containing the model-defined CCPP variables
 HTML_VARTABLE_FILE = 'ccpp/physics/CCPP_VARIABLES_FV3.html'
@@ -233,10 +215,10 @@ use ccpp_api, only: ccpp_error
 # in the physics scheme cap (e.g. derived data types)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
-       use machine, only: kind_phys
-       use machine, only: kind_phys
+       use machine, only: kind_grid, kind_phys
        use module_radlw_parameters, only: sfcflw_type, topflw_type
        use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
+       use CCPP_typedefs, only: CCPP_interstitial_type
        use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
                                GFS_sfcprop_type,  GFS_coupling_type,    &
                                GFS_control_type,  GFS_grid_type,        &
