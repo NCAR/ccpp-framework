@@ -49,6 +49,10 @@ SCHEME_FILES_DEPENDENCIES = [
 #    'ccpp/physics/physics/tridi.f',
 #    'ccpp/physics/physics/wam_f107_kp_mod.f90',
 #    'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
+    'ccpp/physics/physics/module_sf_ruclsm.F90',
+    'ccpp/physics/physics/namelist_soilveg_ruc.F90',
+    'ccpp/physics/physics/set_soilveg_ruc.F90',
+    'ccpp/physics/physics/module_soil_pre.F90',
     ]
 
 # Add all physics scheme files relative to basedir
@@ -89,6 +93,7 @@ SCHEME_FILES = [
 #    'ccpp/physics/physics/sfc_diag.f',
 #    'ccpp/physics/physics/sfc_diff.f',
 #    'ccpp/physics/physics/sfc_drv.f',
+    'ccpp/physics/physics/sfc_drv_ruc.F90'
 #    'ccpp/physics/physics/sfc_nst.f',
 #    'ccpp/physics/physics/sfc_sice.f',
     ]
