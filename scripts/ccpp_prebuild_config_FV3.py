@@ -59,8 +59,8 @@ SCHEME_FILES_DEPENDENCIES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ] 
-#    'ccpp/physics/physics/GFS_DCNV_generic.f90'              : [ 'slow_physics' ],
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
+    'ccpp/physics/physics/GFS_DCNV_generic.f90'              : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_MP_generic_post.f90'           : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_MP_generic_pre.f90'            : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_PBL_generic.f90'               : [ 'slow_physics' ],
