@@ -77,8 +77,6 @@ class Var(object):
 
     @type.setter
     def type(self, value):
-        if value == 'character' and self._rank:
-            raise Exception('Arrays of Fortran strings not implemented in CCPP')
         self._type = value
 
     @property
