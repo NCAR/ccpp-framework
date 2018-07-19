@@ -45,6 +45,7 @@
       <scheme>samfshalcnv</scheme>
       <scheme>cnvc90</scheme>
       <scheme>zhaocarr_gscond</scheme>
+      <scheme>GFS_calpreciptype</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->
