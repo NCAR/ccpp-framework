@@ -48,7 +48,10 @@
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
       <scheme>gwdc_post</scheme>
+      <scheme>GFS_SCNV_generic_pre</scheme>
       <scheme>samfshalcnv</scheme>
+      <scheme>samfshalcnv_post</scheme>
+      <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>cnvc90</scheme>
       <scheme>gfdl_cloud_microphys_pre</scheme>
       <scheme>gfdl_cloud_microphys</scheme>
