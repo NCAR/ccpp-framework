@@ -70,7 +70,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/GFS_rrtmg_post.F90'                : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_rrtmg_pre.F90'                 : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_rrtmg_setup.F90'               : [ 'slow_physics' ],
-#    'ccpp/physics/physics/GFS_stochastics.f90'               : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_stochastics.F90'               : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_suite_interstitial.F90'        : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_surface_generic.f90'           : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_surface_loop_control.f'        : [ 'slow_physics' ],

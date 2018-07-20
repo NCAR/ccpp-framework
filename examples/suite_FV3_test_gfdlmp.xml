@@ -56,5 +56,10 @@
       <scheme>GFS_calpreciptype</scheme>
     </subcycle>
   </group>
+  <group name="stochastics">
+    <subcycle loop="1">
+      <scheme>GFS_stochastics</scheme>
+    </subcycle>
+  </group>
   <!-- <finalize></finalize> -->
 </suite>
