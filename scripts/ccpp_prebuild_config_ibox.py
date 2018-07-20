@@ -26,8 +26,8 @@ SCHEME_FILES = [
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
-SCHEMES_MAKEFILE = 'ccpp-physics/CCPP_SCHEMES.mk'
-SCHEMES_CMAKEFILE = 'ccpp-physics/CCPP_SCHEMES.cmake'
+SCHEMES_MAKEFILE = 'MICM_chemistry/CCPP_SCHEMES.mk'
+SCHEMES_CMAKEFILE = 'MICM_chemistry/CCPP_SCHEMES.cmake'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
@@ -36,11 +36,11 @@ TARGET_FILES = [
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all caps
-CAPS_MAKEFILE = 'ccpp-physics/CCPP_CAPS.mk'
-CAPS_CMAKEFILE = 'ccpp-physics/CCPP_CAPS.cmake'
+CAPS_MAKEFILE = 'MICM_chemistry/CCPP_CAPS.mk'
+CAPS_CMAKEFILE = 'MICM_chemistry/CCPP_CAPS.cmake'
 
 # Directory where to put all auto-generated physics caps
-CAPS_DIR = 'ccpp-physics/physics'
+CAPS_DIR = 'MICM_chemistry/physics'
 
 # Optional arguments - only required for schemes that use
 # optional arguments. ccpp_prebuild.py will throw an exception
@@ -86,7 +86,7 @@ MODULE_INCLUDE_FILE = 'ccpp_modules.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields.inc'
 
 # HTML document containing the model-defined CCPP variables
-HTML_VARTABLE_FILE = 'ccpp-physics/CCPP_VARIABLES_MICM.html'
+HTML_VARTABLE_FILE = 'MICM_chemistry/CCPP_VARIABLES_MICM.html'
 
 # LaTeX document containing the provided vs requested CCPP variables
 LATEX_VARTABLE_FILE = 'ccpp-framework/doc/DevelopersGuide/CCPP_VARIABLES_MICM.tex'
@@ -111,12 +111,5 @@ use ccpp_errors, only: ccpp_error
 # in the physics scheme cap (e.g. derived data types)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
-       use machine, only: kind_phys
-       use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
-                               GFS_sfcprop_type,                        &
-                               GFS_coupling_type, GFS_control_type,     &
-                               GFS_grid_type,     GFS_tbd_type,         &
-                               GFS_cldprop_type,  GFS_radtend_type,     &
-                               GFS_diag_type,     GFS_interstitial_type,&
-                               GFS_init_type
+   use machine, only: kind_phys
 '''
