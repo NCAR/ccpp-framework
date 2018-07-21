@@ -77,7 +77,7 @@
       <scheme>gwdc_post</scheme>
       <scheme>GFS_SCNV_generic_pre</scheme>
       <scheme>samfshalcnv</scheme>
-      <scheme>sasas_shal_post</scheme>
+      <scheme>samfshalcnv_post</scheme>
       <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>cnvc90</scheme>
       <scheme>GFS_MP_generic_pre</scheme>
