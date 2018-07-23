@@ -7,7 +7,7 @@
     </subcycle>
   </group>
   <group name="noopgroup2">
-    <subcycle loop="1">
+    <subcycle loop="2">
       <scheme lib="check">noop</scheme>
     </subcycle>
   </group>
