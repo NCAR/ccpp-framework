@@ -37,6 +37,8 @@ parser.add_argument('--debug', action='store_true', help='enable debugging outpu
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
 
+CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(os.path.abspath(os.path.split(__file__)[0]), '../src', 'ccpp_types.F90')
+
 ###############################################################################
 # Functions and subroutines                                                   #
 ###############################################################################
@@ -80,7 +82,7 @@ def import_config(host_model):
     config['module_use_template_scheme_cap'] = ccpp_prebuild_config.MODULE_USE_TEMPLATE_SCHEME_CAP
 
     # Add model-intependent, CCPP-internal variable definition files
-    config['variable_definition_files'].append(os.path.abspath(os.path.join(os.path.split(__file__)[0], '../src', 'ccpp_types.F90')))
+    config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
 
     return(success, config)
 
