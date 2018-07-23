@@ -41,7 +41,7 @@ set_tests_properties(XML_1
                      CHECK_1
                      CHECK_2
                      CHECK_3
-                     PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}/../../schemes/check/src/check-build")
+                     PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}/../../schemes/check/src/check-build:$ENV{LD_LIBRARY_PATH}")
 
 #------------------------------------------------------------------------------
 # Coverage tests
