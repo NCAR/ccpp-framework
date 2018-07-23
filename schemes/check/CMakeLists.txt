@@ -65,18 +65,15 @@ set(SOURCES
     check_noop.f90
 )
 
-# DH the mechanism to create caps from XML is no longer supported; todo:
-# replace with a test that parses a simple metadata table in check_test.f90
-# and creates check_test_cap.f90 - also needs a variable definition file.
-##------------------------------------------------------------------------------
-## Add the auto-generated caps
-#add_custom_command(
-#    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
-#    DEPENDS ${CCPP_MKCAP}
-#    COMMAND ${CCPP_MKCAP} -o ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90
-#                             ${CMAKE_CURRENT_SOURCE_DIR}/scheme.xml
-#)
-#list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/check_test_cap.f90)
+#------------------------------------------------------------------------------
+# Add the auto-generated caps
+set (CCPP_MKCAP "${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/ccpp_prebuild.py")
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test_cap.F90
+    DEPENDS ${CCPP_MKCAP}
+    COMMAND ${CCPP_MKCAP} --model=TEST --debug
+)
+list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/test_cap.F90)
 
 #------------------------------------------------------------------------------
 # The Fortran compiler/linker flag inserted by cmake to create shared libraries
