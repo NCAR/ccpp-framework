@@ -11,7 +11,8 @@ module ccpp_fcall
     use            :: ccpp_types,                                      &
                       only: ccpp_t, ccpp_suite_t, ccpp_group_t,        &
                             ccpp_subcycle_t, ccpp_scheme_t,            &
-                            CCPP_STAGES, CCPP_DEFAULT_STAGE
+                            CCPP_STAGES, CCPP_DEFAULT_STAGE,           &
+                            CCPP_DEFAULT_LOOP_CNT
     use            :: ccpp_errors,                                     &
                       only: ccpp_error, ccpp_debug
     use            :: ccpp_strings,                                    &
@@ -81,31 +82,26 @@ module ccpp_fcall
     !>
     !! Single entry point for running ccpp physics.
     !! Optional arguments specify whether to run one
-    !! group, subcycle or an individual scheme of the
-    !! suite. If no optional arguments are provided,
-    !! the entire suite attached to cdata is run.
-    !!
-    !! The optional argument subcycle requires group;
+    !! group or an individual scheme of the suite.
+    !! If no optional arguments are provided, the
+    !! entire suite attached to cdata is run.
     !! group and scheme are mutually exclusive.
     !!
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
     !! @param[in    ] group    The group of physics to run (optional)
-    !! @param[in    ] subcycle The subcycle of a group of physics to run (optional)
     !! @param[in    ] scheme   The name of a single scheme to run (optional)
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_physics_run(cdata, group_name, subcycle_count, scheme_name, ierr)
+    subroutine ccpp_physics_run(cdata, group_name, scheme_name, ierr)
 
         type(ccpp_t),     target,   intent(inout) :: cdata
         character(len=*), optional, intent(in)    :: group_name
-        integer,          optional, intent(in)    :: subcycle_count
         character(len=*), optional, intent(in)    :: scheme_name
         integer,                    intent(out)   :: ierr
 
         ! Local variables
         type(ccpp_suite_t)   , pointer :: suite
         type(ccpp_group_t)   , pointer :: group
-        type(ccpp_subcycle_t), pointer :: subcycle
         type(ccpp_scheme_t)  , pointer :: scheme
 
         ierr = 0
@@ -116,10 +112,6 @@ module ccpp_fcall
             call ccpp_error('Logic error in ccpp_physics_run: group_name and scheme_name are mutually exclusive')
             ierr = 1
             return
-        else if (present(subcycle_count) .and. .not. present(group_name)) then
-            call ccpp_error('Logic error in ccpp_physics_run: subcycle_count requires optional argument group_name')
-            ierr = 1
-            return
         end if
 
         suite => cdata%suite
@@ -128,14 +120,7 @@ module ccpp_fcall
             ! Find the group to run from the suite
             group => ccpp_find_group(suite, group_name, ierr=ierr)
             if (ierr/=0) return
-            if (present(subcycle_count)) then
-                ! Find the subcycle to run in the current group
-                subcycle => ccpp_find_subcycle(group, subcycle_count, ierr=ierr)
-                if (ierr/=0) return
-                call ccpp_run_subcycle(subcycle, cdata, ierr=ierr)
-            else
-                call ccpp_run_group(group, cdata, ierr=ierr)
-            end if
+            call ccpp_run_group(group, cdata, ierr=ierr)
         else if (present(scheme_name)) then
             ! Find the scheme to run from the suite
             scheme => ccpp_find_scheme(suite, scheme_name, ierr=ierr)
@@ -297,37 +282,6 @@ module ccpp_fcall
     end subroutine ccpp_run_group
 
     !>
-    !! The find subroutine for a subcycle. This will return
-    !! the subcycle that matches subcycle_count in the group
-    !! and ierr==0, or ierr==1 if no such subcycle is found.
-    !!
-    !! @param[in   ] group          The group in which to find the subcycle
-    !! @param[in   ] subcycle_count The name of the subcycle to run
-    !! @param[  out] ierr           Integer error flag
-    !
-    function ccpp_find_subcycle(group, subcycle_count, ierr) result(subcycle)
-
-        type(ccpp_group_t),    target, intent(in   ) :: group
-        integer,                       intent(in   ) :: subcycle_count
-        integer,                       intent(  out) :: ierr
-        type(ccpp_subcycle_t), pointer               :: subcycle
-
-        call ccpp_debug('Called ccpp_find_subcycle')
-
-        ierr = 0
-
-        if (subcycle_count <= group%subcycles_max) then
-            call ccpp_debug('Subcycle found in group ' // trim(group%name))
-            subcycle => group%subcycles(subcycle_count)
-            return
-        end if
-
-        call ccpp_error('Subcycle not found in group ' // trim(group%name))
-        ierr = 1
-
-    end function ccpp_find_subcycle
-
-    !>
     !! The run subroutine for a subcycle. This will call
     !! the all schemes within a subcycle. It will also
     !! loop if the loop attribut is greater than 1.
@@ -344,14 +298,14 @@ module ccpp_fcall
         character(len=*),      intent(in),   optional :: stage
         integer,               intent(  out)          :: ierr
 
-        integer                               :: i
         integer                               :: j
 
         ierr = 0
 
         call ccpp_debug('Called ccpp_run_subcycle for stage ' // trim(stage))
 
-        do i=1,subcycle%loop
+        associate(i=>cdata%loop_cnt)
+        do i=1,subcycle%loops_max
             do j=1,subcycle%schemes_max
                 call ccpp_run_scheme(subcycle%schemes(j), cdata, stage=stage, ierr=ierr)
                 if (ierr /= 0) then
@@ -359,6 +313,9 @@ module ccpp_fcall
                 end if
             end do
         end do
+        end associate
+
+        cdata%loop_cnt = CCPP_DEFAULT_LOOP_CNT
 
     end subroutine ccpp_run_subcycle
 
