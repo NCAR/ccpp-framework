@@ -42,7 +42,10 @@
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
       <scheme>gwdc_post</scheme>
+      <scheme>GFS_SCNV_generic_pre</scheme>
       <scheme>samfshalcnv</scheme>
+      <scheme>samfshalcnv_post</scheme>
+      <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>cnvc90</scheme>
       <scheme>zhaocarr_gscond</scheme>
       <scheme>GFS_calpreciptype</scheme>
