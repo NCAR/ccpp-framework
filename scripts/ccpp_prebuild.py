@@ -24,7 +24,7 @@ from mkdoc import metadata_to_html, metadata_to_latex
 ###############################################################################
 
 # List of configured host models
-HOST_MODELS = ["FV3", "SCM"]
+HOST_MODELS = ["FV3", "SCM", "TEST"]
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -36,6 +36,8 @@ parser.add_argument('--debug', action='store_true', help='enable debugging outpu
 
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
+
+CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(os.path.abspath(os.path.split(__file__)[0]), '../src', 'ccpp_types.F90')
 
 ###############################################################################
 # Functions and subroutines                                                   #
@@ -78,6 +80,9 @@ def import_config(host_model):
     config['module_use_template_host_cap']   = ccpp_prebuild_config.MODULE_USE_TEMPLATE_HOST_CAP
     config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
     config['module_use_template_scheme_cap'] = ccpp_prebuild_config.MODULE_USE_TEMPLATE_SCHEME_CAP
+
+    # Add model-intependent, CCPP-internal variable definition files
+    config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
 
     return(success, config)
 
@@ -281,7 +286,12 @@ def create_ccpp_field_add_statements(metadata, category, ccpp_data_structure):
     ccpp_field_add_statements = ''
     cnt = 0
     for var_name in sorted(metadata.keys()):
+        # Skip CCPP-internal variables (these are added manually in ccpp_fields.F90 -> ccpp_fields_init)
+        if var_name.startswith("ccpp_"):
+            logging.debug('Skip CCPP-internal variable {0}'.format(var_name))
+            continue
         # Add variable with var_name = standard_name once
+        logging.debug('Generating ccpp_field_add statement for variable {0}'.format(var_name))
         var = metadata[var_name][0]
         ccpp_field_add_statements += var.print_add(ccpp_data_structure)
         cnt += 1
