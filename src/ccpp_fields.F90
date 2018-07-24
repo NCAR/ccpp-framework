@@ -121,6 +121,7 @@ module ccpp_fields
             ccpp_field_add_l_7,   &
 
             ccpp_field_add_c_0,   &
+            ccpp_field_add_c_1,   &
 
             ccpp_field_add_ptr
     end interface ccpp_field_add
@@ -176,6 +177,7 @@ module ccpp_fields
             ccpp_field_get_l_7,   &
 
             ccpp_field_get_c_0,   &
+            ccpp_field_get_c_1,   &
 
             ccpp_field_get_ptr
     end interface ccpp_field_get
@@ -237,7 +239,7 @@ module ccpp_fields
     !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_fields_init(cdata, ierr)
-        type(ccpp_t),           intent(inout) :: cdata
+        type(ccpp_t), target,   intent(inout) :: cdata
         integer,                intent(  out) :: ierr
 
         integer                               :: fields_max
@@ -255,6 +257,24 @@ module ccpp_fields
         allocate(cdata%fields(fields_max), stat=ierr)
         if (ierr /= 0) then
             call ccpp_warn('Unable to allocate cdata fields')
+            return
+        end if
+
+        ! Add CCPP-internal fields to data structure, harcoded
+
+        call ccpp_field_add(cdata, 'ccpp_error_flag', cdata%errflg, ierr, 'flag')
+        if (ierr /= 0) then
+            call ccpp_error('Unable to add CCPP-internal field "error_flag" to CCPP data structure')
+        end if
+
+        call ccpp_field_add(cdata, 'ccpp_error_message', cdata%errmsg, ierr, 'none')
+        if (ierr /= 0) then
+            call ccpp_error('Unable to add CCPP-internal field "error_message" to CCPP data structure')
+        end if
+
+        call ccpp_field_add(cdata, 'ccpp_loop_counter', cdata%loop_cnt, ierr, 'index')
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to add CCPP-internal field "ccpp_loop_counter" to CCPP data structure')
             return
         end if
 
@@ -1026,6 +1046,19 @@ module ccpp_fields
                                 c_loc(ptr), kind=kind(ptr), ierr=ierr)
 
     end subroutine ccpp_field_add_c_0
+
+    subroutine ccpp_field_add_c_1(cdata, standard_name, ptr, ierr, units)
+        type(ccpp_t),                intent(inout) :: cdata
+        character(len=*),            intent(in)    :: standard_name
+        character(len=*), target,    intent(in)    :: ptr(:)
+        integer,                     intent(  out) :: ierr
+        character(len=*), optional,  intent(in)    :: units
+
+        ierr = 0
+        call ccpp_field_add_ptr(cdata, standard_name, units, &
+                                c_loc(ptr), size(shape(ptr)), shape(ptr), kind=kind(ptr), ierr=ierr)
+
+    end subroutine ccpp_field_add_c_1
 
     !------------------------------------------------------------------!
     !>
@@ -1992,6 +2025,29 @@ module ccpp_fields
         call c_f_pointer(cptr, ptr)
 
     end subroutine ccpp_field_get_c_0
+
+    subroutine ccpp_field_get_c_1(cdata, standard_name, ptr, ierr, units, rank, dims, kind)
+        type(ccpp_t),                   intent(in)    :: cdata
+        character(len=*),               intent(in)    :: standard_name
+        character(len=*),     pointer,  intent(  out) :: ptr(:)
+        integer,                        intent(  out) :: ierr
+        character(len=*),     optional, intent(  out) :: units
+        integer,              optional, intent(  out) :: rank
+        integer, allocatable, optional, intent(  out) :: dims(:)
+        integer,              optional, intent(  out) :: kind
+
+        integer     :: idx
+        type(c_ptr) :: cptr
+
+        ierr = 0
+        call ccpp_field_get_ptr(cdata, standard_name, cptr, ierr=ierr, &
+                                units=units, rank=rank, dims=dims, kind=kind)
+
+        if (ierr /=0) return
+
+        call c_f_pointer(cptr, ptr, dims)
+
+    end subroutine ccpp_field_get_c_1
 
     !------------------------------------------------------------------!
 

@@ -53,26 +53,26 @@ VALID_ITEMS = {
 
 # Mandatory variables that every scheme needs to have
 CCPP_MANDATORY_VARIABLES = {
-    'error_message' : Var(local_name    = 'errmsg',
-                          standard_name = 'error_message',
-                          long_name     = 'error message for error handling in CCPP',
-                          units         = 'none',
-                          type          = 'character',
-                          rank          = '',
-                          kind          = 'len=*',
-                          intent        = 'out',
-                          optional      = 'F'
-                          ),
-    'error_flag' : Var(local_name    = 'ierr',
-                       standard_name = 'error_flag',
-                       long_name     = 'error flag for error handling in CCPP',
-                       units         = 'flag',
-                       type          = 'integer',
-                       rank          = '',
-                       kind          = '',
-                       intent        = 'out',
-                       optional      = 'F'
-                       ),
+    'ccpp_error_message' : Var(local_name    = 'errmsg',
+                               standard_name = 'ccpp_error_message',
+                               long_name     = 'error message for error handling in CCPP',
+                               units         = 'none',
+                               type          = 'character',
+                               rank          = '',
+                               kind          = 'len=*',
+                               intent        = 'out',
+                               optional      = 'F'
+                               ),
+    'ccpp_error_flag' : Var(local_name    = 'ierr',
+                            standard_name = 'ccpp_error_flag',
+                            long_name     = 'error flag for error handling in CCPP',
+                            units         = 'flag',
+                            type          = 'integer',
+                            rank          = '',
+                            kind          = '',
+                            intent        = 'out',
+                            optional      = 'F'
+                            ),
     }
 
 def merge_dictionaries(x, y):
@@ -150,13 +150,13 @@ def parse_variable_tables(filename):
     line_counter = 0
     for line in lines:
         words = line.split()
-        if len(words) > 1 and words[0].lower() == 'module' and not words[1].lower() == 'procedure':
+        if len(words) > 1 and words[0].lower() in ['module', 'program'] and not words[1].lower() == 'procedure':
             module_name = words[1].strip()
             if module_name in registry.keys():
                 raise Exception('Duplicate module name {0}'.format(module_name))
             registry[module_name] = {}
             module_lines[module_name] = { 'startline' : line_counter }
-        elif len(words) > 1 and words[0].lower() == 'end' and words[1].lower() == 'module':
+        elif len(words) > 1 and words[0].lower() == 'end' and words[1].lower() in ['module', 'program']:
             try:
                 test_module_name = words[2]
             except IndexError:
@@ -184,7 +184,11 @@ def parse_variable_tables(filename):
                     if in_type:
                         raise Exception('Nested definitions of derived types not supported')
                     in_type = True
-                    type_name = words[j+1].split('(')[0].strip()
+                    # Allow parsing "type my_type" and "type :: mytype"
+                    if words[j+1].strip() == '::':
+                        type_name = words[j+2].split('(')[0].strip()
+                    else:
+                        type_name = words[j+1].split('(')[0].strip()
                     if type_name in registry[module_name].keys():
                         raise Exception('Duplicate derived type name {0} in module {1}'.format(
                                                                        type_name, module_name))
