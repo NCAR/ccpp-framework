@@ -10,8 +10,8 @@
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
-    'ibox/src/micm_type_defs.f90',
-    'MICM_chemistry/src/kinetic_type_defs.f90',
+    'ibox/src/ibox_type_defs.f90',
+    'MICM_chemistry/src/micm_type_defs.f90',
     ]
 
 # Can be empty, since all physics schemes and their
