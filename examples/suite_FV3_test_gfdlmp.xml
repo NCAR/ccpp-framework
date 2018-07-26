@@ -48,7 +48,9 @@
     <!-- End of surface iteration loop -->
     <subcycle loop="1">
       <scheme>dcyc2t3_post</scheme>
+      <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>
+      <scheme>GFS_PBL_generic_post</scheme>
       <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>

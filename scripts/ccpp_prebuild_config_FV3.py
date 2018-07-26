@@ -63,7 +63,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/GFS_DCNV_generic.f90'              : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_MP_generic_post.f90'           : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_MP_generic_pre.f90'            : [ 'slow_physics' ],
-#    'ccpp/physics/physics/GFS_PBL_generic.f90'               : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_PBL_generic.f90'               : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_SCNV_generic.f90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_calpreciptype.f90'             : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_debug.F90'                     : [ 'slow_physics' ],
