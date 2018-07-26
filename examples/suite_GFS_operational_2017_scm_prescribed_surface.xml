@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <suite name="GFS_operational_2017" lib="ccppphys" ver="1.0.0">
-  <init>GFS_suite_setup_scm</init>
+  <!-- <init></init> -->
   <group name="time_vary">
     <subcycle loop="1">
-      <scheme>GFS_phys_time_vary_1</scheme>
+      <scheme>GFS_time_vary_pre</scheme>
+      <scheme>GFS_rrtmg_setup</scheme>
       <scheme>GFS_rad_time_vary</scheme>
-      <scheme>GFS_phys_time_vary_2</scheme>
+      <scheme>GFS_phys_time_vary</scheme>
     </subcycle>
   </group>
   <group name="radiation">
@@ -68,5 +69,5 @@
       <scheme>sfc_sice_post</scheme>
     </subcycle>
   </group>
-  <finalize>GFS_suite_setup_scm</finalize>
+  <!-- <finalize></finalize> -->
 </suite>
