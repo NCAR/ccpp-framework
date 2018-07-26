@@ -25,6 +25,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/gfs_phy_tracer_config.f',
     'ccpp/physics/physics/gocart_tracer_config_stub.f',
     'ccpp/physics/physics/h2o_def.f',
+    'ccpp/physics/physics/h2ointerp.f90',
     'ccpp/physics/physics/iounitdef.f',
     'ccpp/physics/physics/machine.F', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
     'ccpp/physics/physics/mersenne_twister.f',
@@ -38,6 +39,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/namelist_soilveg.f',
     'ccpp/physics/physics/num_parthds.F',
     'ccpp/physics/physics/ozne_def.f',
+    'ccpp/physics/physics/ozinterp.f90',
     'ccpp/physics/physics/physcons.f90',
     'ccpp/physics/physics/physparam.f', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
     'ccpp/physics/physics/radcons.f90',
@@ -50,13 +52,13 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/radlw_param.f',
     'ccpp/physics/physics/radsw_datatb.f',
     'ccpp/physics/physics/radsw_param.f',
-    'ccpp/physics/physics/GFS_radupdate.f90',
     'ccpp/physics/physics/rascnvv2.f',
     'ccpp/physics/physics/sfcsub.F',
     'ccpp/physics/physics/sflx.f',
     'ccpp/physics/physics/surface_perturbation.F90',
     'ccpp/physics/physics/tridi.f',
     'ccpp/physics/physics/wam_f107_kp_mod.f90',
+    # derived data type definitions
     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     'FV3/gfsphysics/CCPP_layer/CCPP_typedefs.F90',
     ]
@@ -71,8 +73,8 @@ SCHEME_FILES = {
     'ccpp/physics/physics/GFS_SCNV_generic.f90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_calpreciptype.f90'             : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_debug.F90'                     : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_phys_time_vary.fv3.f90'     : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_rad_time_vary.fv3.f90'      : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_phys_time_vary.fv3.f90'        : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_rad_time_vary.fv3.f90'         : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_rrtmg_post.F90'                : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_rrtmg_pre.F90'                 : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_rrtmg_setup.F90'               : [ 'slow_physics' ],
@@ -80,6 +82,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/GFS_suite_interstitial.F90'        : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_surface_generic.f90'           : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_surface_loop_control.F90'      : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_time_vary_pre.fv3.f90'         : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_zhao_carr_pre.f90'             : [ 'slow_physics' ],
     'ccpp/physics/physics/cnvc90.f'                          : [ 'slow_physics' ],
     'ccpp/physics/physics/dcyc2.f'                           : [ 'slow_physics' ],
@@ -230,5 +233,5 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
                                GFS_control_type,  GFS_grid_type,        &
                                GFS_tbd_type,      GFS_cldprop_type,     &
                                GFS_radtend_type,  GFS_diag_type,        &
-                               GFS_interstitial_type
+                               GFS_data_type,     GFS_interstitial_type
 '''
