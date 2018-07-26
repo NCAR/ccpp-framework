@@ -47,36 +47,6 @@ CAPS_DIR = 'MICM_chemistry/physics'
 # if no entry is made here. Possible values are: 'all', 'none',
 # or a list of standard_names: [ 'var1', 'var3' ].
 OPTIONAL_ARGUMENTS = {
-    'rrtmg_sw' : {
-        'rrtmg_sw_run' : [
-            'tendency_of_air_temperature_due_to_shortwave_heating_assuming_clear_sky_on_radiation_time_step',
-            'components_of_surface_downward_shortwave_fluxes',
-            'cloud_liquid_water_path',
-            'mean_effective_radius_for_liquid_cloud',
-            'cloud_ice_water_path',
-            'mean_effective_radius_for_ice_cloud',
-            'cloud_rain_water_path',
-            'mean_effective_radius_for_rain_drop',
-            'cloud_snow_water_path',
-            'mean_effective_radius_for_snow_flake',
-            ],
-        },
-    'rrtmg_lw' : {
-        'rrtmg_lw_run' : [
-            'tendency_of_air_temperature_due_to_longwave_heating_assuming_clear_sky_on_radiation_time_step',
-            'cloud_liquid_water_path',
-            'mean_effective_radius_for_liquid_cloud',
-            'cloud_ice_water_path',
-            'mean_effective_radius_for_ice_cloud',
-            'cloud_rain_water_path',
-            'mean_effective_radius_for_rain_drop',
-            'cloud_snow_water_path',
-            'mean_effective_radius_for_snow_flake',
-            ],
-        },
-    #'subroutine_name_1' : 'all',
-    #'subroutine_name_2' : 'none',
-    #'subroutine_name_2' : [ 'var1', 'var3'],
     }
 
 # Names of Fortran include files in the host model cap (do not change);
