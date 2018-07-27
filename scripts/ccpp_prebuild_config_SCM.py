@@ -19,8 +19,6 @@ VARIABLE_DEFINITION_FILES = [
 # ccpp-physics - to fix, c.f. FV3 v1
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp-physics/physics/GFDL_parse_tracers.F90',
-    'ccpp-physics/physics/GFS_radupdate.f90',
-    'ccpp-physics/physics/GFS_rrtmg_setup.F90',
     'ccpp-physics/physics/aer_cloud.F',
     'ccpp-physics/physics/cldwat2m_micro.F',
     'ccpp-physics/physics/date_def.f',
@@ -75,10 +73,11 @@ SCHEME_FILES = {
     'ccpp-physics/physics/GFS_rad_time_vary.scm.f90'    : ['physics'],
     'ccpp-physics/physics/GFS_rrtmg_post.F90'           : ['physics'],
     'ccpp-physics/physics/GFS_rrtmg_pre.F90'            : ['physics'],
+    'ccpp-physics/physics/GFS_rrtmg_setup.F90'          : ['physics'],
     'ccpp-physics/physics/GFS_suite_interstitial.F90'   : ['physics'],
-    'ccpp-physics/physics/GFS_suite_setup_scm.F90'      : ['physics'],
     'ccpp-physics/physics/GFS_surface_generic.f90'      : ['physics'],
     'ccpp-physics/physics/GFS_surface_loop_control.F90' : ['physics'],
+    'ccpp-physics/physics/GFS_time_vary_pre.scm.f90'    : ['physics'],
     'ccpp-physics/physics/GFS_zhao_carr_pre.f90'        : ['physics'],
     'ccpp-physics/physics/cnvc90.f'                     : ['physics'],
     'ccpp-physics/physics/dcyc2.f'                      : ['physics'],
