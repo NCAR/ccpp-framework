@@ -15,25 +15,46 @@
 !! @brief A checking physics modules.
 !!
 !
-module check_test
+module test
 
     implicit none
 
     private
-    public :: test_run
+    public :: test_init, test_run, test_finalize
 
     contains
 
-    subroutine test_run(gravity, u, v, surf_t)
+    subroutine test_init()
+    end subroutine test_init
+
+    subroutine test_finalize()
+    end subroutine test_finalize
+
+!! \section arg_table_test_run
+!! | local_name   | standard_name              | long_name                                | units   | rank | type      |   kind   | intent | optional |
+!! |-------------------------------------------|------------------------------------------|---------|------|-----------|----------|--------|----------|
+!! | gravity      | gravitational_acceleration | gravitational acceleration               | m s-2   |    0 | real      |          | in     | F        |
+!! | u            | x_wind                     | zonal wind                               | m s-1   |    2 | real      |          | inout  | F        |
+!! | v            | y_wind                     | meridional wind                          | m s-1   |    2 | real      |          | inout  | F        |
+!! | tsfc         | surface_skin_temperature   | surface skin temperature                 | K       |    1 | real      |          | in     | T        |
+!! | errflg       | ccpp_error_flag            | error flag for error handling in CCPP    | flag    |    0 | integer   |          | out    | F        |
+!! | errmsg       | ccpp_error_message         | error message for error handling in CCPP | none    |    0 | character | len=*    | out    | F        |
+!!
+    subroutine test_run(gravity, u, v, tsfc, errflg, errmsg)
         implicit none
-        real, intent(inout) :: gravity
-        real, intent(inout) :: surf_t(:)
-        real, intent(inout) :: u(:,:,:)
-        real, intent(inout) :: v(:,:,:)
+        real,             intent(inout) :: gravity
+        real,             intent(inout) :: u(:,:)
+        real,             intent(inout) :: v(:,:)
+        real,             intent(in)    :: tsfc(:)
+        integer,          intent(out)   :: errflg
+        character(len=*), intent(out)   :: errmsg
+
+        errflg = 0
+        errmsg = ''
 
         print *, 'In physics test_run'
         print *, 'gravity: ', gravity
-        print *, 'surf_t:  ', surf_t
+        print *, 'tsfc:    ', tsfc
         print *, 'updating u to be 10m/s'
         u = 10.0
         print *, 'updating v to be -10m/s'
@@ -41,4 +62,4 @@ module check_test
 
     end subroutine test_run
 
-end module check_test
+end module test

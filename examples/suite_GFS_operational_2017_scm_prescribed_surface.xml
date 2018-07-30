@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <suite name="GFS_operational_2017" lib="ccppphys" ver="1.0.0">
-  <init>GFS_suite_setup_scm</init>
+  <!-- <init></init> -->
   <group name="time_vary">
     <subcycle loop="1">
-      <scheme>GFS_phys_time_vary_1</scheme>
+      <scheme>GFS_time_vary_pre</scheme>
+      <scheme>GFS_rrtmg_setup</scheme>
       <scheme>GFS_rad_time_vary</scheme>
-      <scheme>GFS_phys_time_vary_2</scheme>
+      <scheme>GFS_phys_time_vary</scheme>
     </subcycle>
   </group>
   <group name="radiation">
@@ -31,31 +32,10 @@
       <scheme>dcyc2t3</scheme>
       <scheme>GFS_suite_interstitial_2</scheme>
       <scheme>GFS_surface_generic_pre</scheme>
-      <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>lsm_noah_pre</scheme>
       <scheme>gmtb_scm_sfc_flux_spec</scheme>
-      <!-- Surface iteration loop 1 -->
-      <!--<scheme>GFS_surface_loop_control_part0_run</scheme>-->
-      <!--<scheme>sfc_ex_coef_run</scheme>-->
-      <!--<scheme>GFS_surface_loop_control_part1_run</scheme>-->
-      <!--<scheme>sfc_nst_pre_run</scheme>-->
-      <!--<scheme>sfc_nst_run</scheme>-->
-      <!--<scheme>sfc_nst_post_run</scheme>-->
-      <!--<scheme>lsm_noah_run</scheme>-->
-      <!--<scheme>sfc_sice_run</scheme>-->
-      <!--<scheme>GFS_surface_loop_control_part2_run</scheme>-->
-      <!-- Surface iteration loop 2 -->
-      <!--<scheme>GFS_surface_loop_control_part0_run</scheme>-->
-      <!--<scheme>sfc_ex_coef_run</scheme>-->
-      <!--<scheme>GFS_surface_loop_control_part1_run</scheme>-->
-      <!--<scheme>sfc_nst_pre_run</scheme>-->
-      <!--<scheme>sfc_nst_run</scheme>-->
-      <!--<scheme>sfc_nst_post_run</scheme>-->
-      <!--<scheme>lsm_noah_run</scheme>-->
-      <!--<scheme>sfc_sice_run</scheme>-->
-      <!--<scheme>GFS_surface_loop_control_part2_run</scheme>-->
-      <!-- End of surface iteration loop -->
       <scheme>dcyc2t3_post</scheme>
+      <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>
       <scheme>GFS_PBL_generic_post</scheme>
       <scheme>gwdps_pre</scheme>
@@ -76,7 +56,7 @@
       <scheme>gwdc_post</scheme>
       <scheme>GFS_SCNV_generic_pre</scheme>
       <scheme>samfshalcnv</scheme>
-      <scheme>sasas_shal_post</scheme>
+      <scheme>samfshalcnv_post</scheme>
       <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>cnvc90</scheme>
       <scheme>GFS_MP_generic_pre</scheme>
@@ -89,5 +69,5 @@
       <scheme>sfc_sice_post</scheme>
     </subcycle>
   </group>
-  <finalize>GFS_suite_setup_scm</finalize>
+  <!-- <finalize></finalize> -->
 </suite>

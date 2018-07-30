@@ -31,6 +31,7 @@ class Var(object):
         self._kind          = None
         self._intent        = None
         self._optional      = None
+        self._target        = None
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -125,6 +126,15 @@ class Var(object):
         if not value in ['T', 'F']:
             raise ValueError('Invalid value {0} for variable property optional'.format(value))
         self._optional = value
+
+    @property
+    def target(self):
+        '''Get the target of the variable.'''
+        return self._target
+
+    @target.setter
+    def target(self, value):
+        self._target = value
 
     @property
     def container(self):
@@ -267,6 +277,7 @@ class Var(object):
         kind          = {s.kind} *
         intent        = {s.intent}
         optional      = {s.optional}
+        target        = {s.target}
         container     = {s.container}'''
         return str.format(s=self)
     

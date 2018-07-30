@@ -239,7 +239,7 @@ module ccpp_fields
     !! @param[  out]  ierr     Integer error flag.
     !
     subroutine ccpp_fields_init(cdata, ierr)
-        type(ccpp_t),           intent(inout) :: cdata
+        type(ccpp_t), target,   intent(inout) :: cdata
         integer,                intent(  out) :: ierr
 
         integer                               :: fields_max
@@ -257,6 +257,24 @@ module ccpp_fields
         allocate(cdata%fields(fields_max), stat=ierr)
         if (ierr /= 0) then
             call ccpp_warn('Unable to allocate cdata fields')
+            return
+        end if
+
+        ! Add CCPP-internal fields to data structure, harcoded
+
+        call ccpp_field_add(cdata, 'ccpp_error_flag', cdata%errflg, ierr, 'flag')
+        if (ierr /= 0) then
+            call ccpp_error('Unable to add CCPP-internal field "error_flag" to CCPP data structure')
+        end if
+
+        call ccpp_field_add(cdata, 'ccpp_error_message', cdata%errmsg, ierr, 'none')
+        if (ierr /= 0) then
+            call ccpp_error('Unable to add CCPP-internal field "error_message" to CCPP data structure')
+        end if
+
+        call ccpp_field_add(cdata, 'ccpp_loop_counter', cdata%loop_cnt, ierr, 'index')
+        if (ierr /= 0) then
+            call ccpp_warn('Unable to add CCPP-internal field "ccpp_loop_counter" to CCPP data structure')
             return
         end if
 

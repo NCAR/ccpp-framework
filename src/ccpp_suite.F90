@@ -215,7 +215,7 @@ module ccpp_suite
             write(6, '(A, A, A)') '  <group name="', trim(suite%groups(i)%name), '">'
             write(6, '(A, I0)') '  [suite%groups(i)%subcycles_max] = ', suite%groups(i)%subcycles_max
             do j=1, suite%groups(i)%subcycles_max
-                write(6, '(A, I0, A)') '    <subcycle loop="', suite%groups(i)%subcycles(j)%loop, '">'
+                write(6, '(A, I0, A)') '    <subcycle loops_max="', suite%groups(i)%subcycles(j)%loops_max, '">'
                 write(6, '(A, I0)') '    [suite%groups(i)%subcycles(j)%schemes_max] = ', &
                                                   suite%groups(i)%subcycles(j)%schemes_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
