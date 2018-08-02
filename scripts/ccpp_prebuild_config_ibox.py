@@ -10,7 +10,8 @@
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
-    'ibox/src/ibox_var_defs.f90',
+    'ibox/src/micm_type_defs.f90',
+    'MICM_chemistry/src/kinetics_module.f90',
     ]
 
 # Can be empty, since all physics schemes and their
@@ -20,8 +21,8 @@ SCHEME_FILES_DEPENDENCIES = []
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = [
-    'MICM_chemistry/src/chem_solve.F90',
-    'MICM_chemistry/src/kinetic.F90',
+    'MICM_chemistry/src/kinetics.F90',
+    'MICM_chemistry/src/chem_solve.F90'
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
@@ -39,7 +40,7 @@ CAPS_MAKEFILE = 'MICM_chemistry/CCPP_CAPS.mk'
 CAPS_CMAKEFILE = 'MICM_chemistry/CCPP_CAPS.cmake'
 
 # Directory where to put all auto-generated physics caps
-CAPS_DIR = 'MICM_chemistry/physics'
+CAPS_DIR = 'MICM_chemistry/caps'
 
 # Optional arguments - only required for schemes that use
 # optional arguments. ccpp_prebuild.py will throw an exception
@@ -80,5 +81,7 @@ use ccpp_errors, only: ccpp_error
 # in the physics scheme cap (e.g. derived data types)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
-   use machine, only: kind_phys
+       use machine,          only: kind_phys
+       use micm_type_defs,   only: Solver_type
+       use kinetics_module,  only: kinetics_type
 '''
