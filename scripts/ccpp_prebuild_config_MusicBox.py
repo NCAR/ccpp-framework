@@ -10,7 +10,7 @@
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
-    'ibox/src/micm_type_defs.f90',
+    'MusicBox/src/micm_type_defs.f90',
     'MICM_chemistry/src/kinetics_module.f90',
     ]
 
@@ -32,7 +32,7 @@ SCHEMES_CMAKEFILE = 'MICM_chemistry/CCPP_SCHEMES.cmake'
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
 TARGET_FILES = [
-    'ibox/src/ibox.f90',
+    'MusicBox/src/MusicBox.f90',
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all caps
