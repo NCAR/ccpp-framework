@@ -58,7 +58,7 @@
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
-      <scheme>GFS_zhao_carr_pre</scheme>
+      <scheme>GFS_gfdlmp_pre</scheme>
       <scheme>samfdeepcnv</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
       <scheme>gwdc_pre</scheme>
@@ -73,6 +73,7 @@
       <scheme>gfdl_cloud_microphys</scheme>
       <scheme>gfdl_cloud_microphys_post</scheme>
       <scheme>GFS_calpreciptype</scheme>
+      <scheme>GFS_MP_generic_post</scheme>
     </subcycle>
   </group>
   <group name="stochastics">

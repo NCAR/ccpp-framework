@@ -67,7 +67,7 @@ SCHEME_FILES_DEPENDENCIES = [
 SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
     'ccpp/physics/physics/GFS_DCNV_generic.f90'              : [ 'slow_physics' ],
-#    'ccpp/physics/physics/GFS_MP_generic_post.f90'           : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_MP_generic_post.f90'           : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_MP_generic_pre.f90'            : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_PBL_generic.f90'               : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_SCNV_generic.f90'              : [ 'slow_physics' ],
@@ -84,6 +84,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/GFS_surface_loop_control.F90'      : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_time_vary_pre.fv3.f90'         : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_zhao_carr_pre.f90'             : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_gfdlmp_pre.f90'             : [ 'slow_physics' ],
     'ccpp/physics/physics/cnvc90.f'                          : [ 'slow_physics' ],
     'ccpp/physics/physics/dcyc2.f'                           : [ 'slow_physics' ],
 #    'ccpp/physics/physics/get_prs_fv3.f90'                   : [ 'slow_physics' ],
