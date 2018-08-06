@@ -33,6 +33,7 @@
       <scheme>GFS_suite_interstitial_phys_reset</scheme>
       <scheme>GFS_suite_interstitial_1</scheme>
       <scheme>dcyc2t3</scheme>
+      <scheme>GFS_surface_generic_pre</scheme>
     </subcycle>
     <!-- Surface iteration loop -->
     <subcycle loop="2">
