@@ -48,6 +48,7 @@
     <!-- End of surface iteration loop -->
     <subcycle loop="1">
       <scheme>dcyc2t3_post</scheme>
+      <scheme>GFS_surface_generic_post</scheme>
       <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>
       <scheme>GFS_PBL_generic_post</scheme>
