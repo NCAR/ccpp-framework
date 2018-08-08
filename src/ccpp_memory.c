@@ -161,7 +161,6 @@ int ccpp_memory_usage_c(const int mpicomm, char* str, int lstr){
 	int pid = (int)getpid();
 
 	// Retrieve memory statistics
-
 	struct sysinfo memInfo;
 	sysinfo (&memInfo);
 

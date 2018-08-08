@@ -58,6 +58,33 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/surface_perturbation.F90',
     'ccpp/physics/physics/tridi.f',
     'ccpp/physics/physics/wam_f107_kp_mod.f90',
+    # stochastic physics
+    'ccpp/physics/stochastic_physics/spectral_layout.f',
+    'ccpp/physics/stochastic_physics/stochy_gg_def.f',
+    'ccpp/physics/stochastic_physics/stochy_resol_def.f',
+    'ccpp/physics/stochastic_physics/stochy_layout_lag.f',
+    'ccpp/physics/stochastic_physics/four_to_grid_stochy.F',
+    'ccpp/physics/stochastic_physics/glats_stochy.f',
+    'ccpp/physics/stochastic_physics/sumfln_stochy.f',
+    'ccpp/physics/stochastic_physics/gozrineo_stochy.f',
+    'ccpp/physics/stochastic_physics/get_ls_node_stochy.f',
+    'ccpp/physics/stochastic_physics/get_lats_node_a_stochy.f',
+    'ccpp/physics/stochastic_physics/setlats_a_stochy.f',
+    'ccpp/physics/stochastic_physics/setlats_lag_stochy.f',
+    'ccpp/physics/stochastic_physics/epslon_stochy.f',
+    'ccpp/physics/stochastic_physics/getcon_lag_stochy.f',
+    'ccpp/physics/stochastic_physics/pln2eo_stochy.f',
+    'ccpp/physics/stochastic_physics/dozeuv_stochy.f',
+    'ccpp/physics/stochastic_physics/dezouv_stochy.f',
+    'ccpp/physics/stochastic_physics/getcon_spectral.F90',
+    'ccpp/physics/stochastic_physics/stochy_namelist_def.F90',
+    'ccpp/physics/stochastic_physics/compns_stochy.F90',
+    'ccpp/physics/stochastic_physics/stochy_internal_state_mod.F90',
+    'ccpp/physics/stochastic_physics/stochy_patterngenerator.F90',
+    'ccpp/physics/stochastic_physics/stochy_data_mod.F90',
+    'ccpp/physics/stochastic_physics/get_stochy_pattern.F90',
+    'ccpp/physics/stochastic_physics/initialize_spectral_mod.F90',
+    'ccpp/physics/stochastic_physics/stochy_ccpp.F90',
     # derived data type definitions
     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     'FV3/gfsphysics/CCPP_layer/CCPP_typedefs.F90',
@@ -113,6 +140,8 @@ SCHEME_FILES = {
     'ccpp/physics/physics/sfc_drv.f'                         : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_nst.f'                         : [ 'slow_physics' ],
 #    'ccpp/physics/physics/sfc_sice.f'                        : [ 'slow_physics' ],
+    # stochastic physics
+    'ccpp/physics/stochastic_physics/stochastic_physics.F90' : [ 'slow_physics' ],
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
