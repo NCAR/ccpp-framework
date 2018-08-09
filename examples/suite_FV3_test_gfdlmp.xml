@@ -14,6 +14,8 @@
       <scheme>GFS_rrtmg_setup</scheme>
       <scheme>GFS_rad_time_vary</scheme>
       <scheme>GFS_phys_time_vary</scheme>
+      <scheme>stochastic_physics</scheme>
+      <scheme>stochastic_physics_sfc</scheme>
     </subcycle>
   </group>
   <group name="radiation">
