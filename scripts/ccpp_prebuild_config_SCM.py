@@ -38,7 +38,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp-physics/physics/namelist_soilveg.f',
     'ccpp-physics/physics/ozinterp.f90',
     'ccpp-physics/physics/ozne_def.f',
-    'ccpp-physics/physics/physcons.f90',
+    'ccpp-physics/physics/physcons.F90',
     'ccpp-physics/physics/physparam.f',
     'ccpp-physics/physics/radcons.f90',
     'ccpp-physics/physics/radiation_aerosols.f',
