@@ -85,6 +85,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/gscond.f'                     : ['physics'],
     'ccpp-physics/physics/gwdc.f'                       : ['physics'],
     'ccpp-physics/physics/gwdps.f'                      : ['physics'],
+    'ccpp-physics/physics/h2ophys.f'                    : ['physics'],
     'ccpp-physics/physics/samfdeepcnv.f'                : ['physics'],
     'ccpp-physics/physics/samfshalcnv.f'                : ['physics'],
     'ccpp-physics/physics/moninedmf.f'                  : ['physics'],

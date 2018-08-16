@@ -55,6 +55,8 @@
       <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>
+      <scheme>ozphys</scheme>
+      <scheme>ozphys_post</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
       <scheme>samfdeepcnv</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
