@@ -58,7 +58,6 @@
       <scheme>ozphys</scheme>
       <scheme>ozphys_post</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
-      <scheme>GFS_zhao_carr_pre</scheme>
       <scheme>samfdeepcnv</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
       <scheme>gwdc_pre</scheme>
@@ -69,9 +68,7 @@
       <scheme>samfshalcnv_post</scheme>
       <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>cnvc90</scheme>
-      <scheme>zhaocarr_gscond</scheme>
       <scheme>GFS_calpreciptype</scheme>
-      <scheme>GFS_zhao_carr_pwat</scheme>
     </subcycle>
   </group>
   <group name="stochastics">
