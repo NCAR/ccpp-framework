@@ -64,8 +64,8 @@ SCHEME_FILES_DEPENDENCIES = [
 SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
     'ccpp-physics/physics/GFS_DCNV_generic.f90'         : ['physics'],
-    'ccpp-physics/physics/GFS_MP_generic_post.f90'      : ['physics'],
     'ccpp-physics/physics/GFS_MP_generic_pre.f90'       : ['physics'],
+    'ccpp-physics/physics/GFS_zhao_carr_pwat.f90'       : ['physics'],
     'ccpp-physics/physics/GFS_PBL_generic.f90'          : ['physics'],
     'ccpp-physics/physics/GFS_SCNV_generic.f90'         : ['physics'],
     'ccpp-physics/physics/GFS_calpreciptype.f90'        : ['physics'],
