@@ -38,7 +38,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp-physics/physics/namelist_soilveg.f',
     'ccpp-physics/physics/ozinterp.f90',
     'ccpp-physics/physics/ozne_def.f',
-    'ccpp-physics/physics/physcons.f90',
+    'ccpp-physics/physics/physcons.F90',
     'ccpp-physics/physics/physparam.f',
     'ccpp-physics/physics/radcons.f90',
     'ccpp-physics/physics/radiation_aerosols.f',
@@ -64,8 +64,8 @@ SCHEME_FILES_DEPENDENCIES = [
 SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
     'ccpp-physics/physics/GFS_DCNV_generic.f90'         : ['physics'],
-    'ccpp-physics/physics/GFS_MP_generic_post.f90'      : ['physics'],
     'ccpp-physics/physics/GFS_MP_generic_pre.f90'       : ['physics'],
+    'ccpp-physics/physics/GFS_zhao_carr_pwat.f90'       : ['physics'],
     'ccpp-physics/physics/GFS_PBL_generic.f90'          : ['physics'],
     'ccpp-physics/physics/GFS_SCNV_generic.f90'         : ['physics'],
     'ccpp-physics/physics/GFS_calpreciptype.f90'        : ['physics'],
@@ -85,6 +85,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/gscond.f'                     : ['physics'],
     'ccpp-physics/physics/gwdc.f'                       : ['physics'],
     'ccpp-physics/physics/gwdps.f'                      : ['physics'],
+    'ccpp-physics/physics/h2ophys.f'                    : ['physics'],
     'ccpp-physics/physics/samfdeepcnv.f'                : ['physics'],
     'ccpp-physics/physics/samfshalcnv.f'                : ['physics'],
     'ccpp-physics/physics/moninedmf.f'                  : ['physics'],
