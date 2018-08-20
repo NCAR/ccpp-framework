@@ -14,9 +14,8 @@ VARIABLE_DEFINITION_FILES = [
     'scm/src/gmtb_scm_physical_constants.f90'
     ]
 
-# Can be empty, since all physics schemes and their
-# dependencies are hardcoded in CMakeLists in
-# ccpp-physics - to fix, c.f. FV3 v1
+# Add all physics scheme dependencies relative to basedir - note that the CCPP
+# rules stipulate that dependencies are not shared between the schemes!
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp-physics/physics/GFDL_parse_tracers.F90',
     'ccpp-physics/physics/aer_cloud.F',

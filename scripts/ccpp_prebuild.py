@@ -6,6 +6,7 @@ import collections
 import itertools
 import logging
 import os
+import re
 import sys
 
 # DH* TODO
@@ -20,11 +21,21 @@ from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMak
 from mkdoc import metadata_to_html, metadata_to_latex
 
 ###############################################################################
-# User definitions                                                            #
+# List of configured host models                                              #
 ###############################################################################
 
-# List of configured host models
-HOST_MODELS = ["FV3", "SCM", "TEST"]
+CCPP_PREBUILD_CONFIG_PATTERN = re.compile("ccpp_prebuild_config_(.*).py")
+
+def get_host_models_list():
+    host_models = []
+    for infile in os.listdir(os.path.split(__file__)[0]):
+        match = CCPP_PREBUILD_CONFIG_PATTERN.match(infile)
+        print infile, match
+        if match:
+            host_models.append(match.group(1))
+    return host_models
+
+HOST_MODELS = get_host_models_list()
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -37,6 +48,7 @@ parser.add_argument('--debug', action='store_true', help='enable debugging outpu
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
 
+# Definition of variables (metadata tables) that are  provided by CCPP
 CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(os.path.abspath(os.path.split(__file__)[0]), '../src', 'ccpp_types.F90')
 
 ###############################################################################
@@ -372,7 +384,7 @@ def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile):
         schemes_with_path.append(os.path.join(relative_path, scheme_filename))
     makefile.write(schemes_with_path)
     cmakefile.write(schemes_with_path)
-    logging.info('Added {0} schemes to makefile/cmakefile {1}/{2}'.format(
+    logging.info('Added {0} schemes to {1} and {2}'.format(
            len(schemes_with_path), makefile.filename, cmakefile.filename))
     return success
 
@@ -390,7 +402,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
     caps_with_path = [ os.path.join(relative_path, cap) for cap in caps]
     makefile.write(caps_with_path)
     cmakefile.write(caps_with_path)
-    logging.info('Added {0} auto-generated caps to makefile/cmakefile {1}/{2}'.format(
+    logging.info('Added {0} auto-generated caps to {1} and {2}'.format(
                           len(caps_with_path), makefile.filename, cmakefile.filename))
     return success
 
