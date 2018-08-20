@@ -26,9 +26,9 @@
   <group name="physics">
     <subcycle loop="1">
       <scheme>GFS_suite_interstitial_phys_reset</scheme>
+      <scheme>GFS_suite_stateout_reset</scheme>
       <scheme>get_prs_fv3</scheme>
       <scheme>GFS_suite_interstitial_1</scheme>
-      <scheme>sfc_sice_pre</scheme>
       <scheme>dcyc2t3</scheme>
       <scheme>GFS_suite_interstitial_2</scheme>
       <scheme>GFS_surface_generic_pre</scheme>
@@ -42,9 +42,8 @@
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>
       <scheme>rayleigh_damp</scheme>
-      <scheme>GFS_suite_update_stateout</scheme>
+      <scheme>GFS_suite_stateout_update</scheme>
       <scheme>ozphys</scheme>
-      <scheme>ozphys_post</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
       <scheme>get_phi_fv3</scheme>
       <scheme>GFS_suite_interstitial_3</scheme>
@@ -64,7 +63,7 @@
       <scheme>zhaocarr_precpd</scheme>
       <scheme>GFS_calpreciptype</scheme>
       <scheme>GFS_zhao_carr_pwat</scheme>
-      <scheme>sfc_diag</scheme>
+      <!-- <scheme>sfc_diag</scheme> -->
       <scheme>lsm_noah_post</scheme>
       <scheme>sfc_sice_post</scheme>
     </subcycle>

@@ -37,6 +37,8 @@
   <group name="physics">
     <subcycle loop="1">
       <scheme>GFS_suite_interstitial_phys_reset</scheme>
+      <scheme>GFS_suite_stateout_reset</scheme>
+      <scheme>get_prs_fv3</scheme>
       <scheme>GFS_suite_interstitial_1</scheme>
       <scheme>dcyc2t3</scheme>
       <scheme>GFS_surface_generic_pre</scheme>
@@ -49,11 +51,13 @@
       <scheme>sfc_nst</scheme>
       <scheme>sfc_nst_post</scheme>
       <scheme>lsm_noah</scheme>
+      <scheme>sfc_sice</scheme>
       <scheme>GFS_surface_loop_control_part2</scheme>
     </subcycle>
     <!-- End of surface iteration loop -->
     <subcycle loop="1">
       <scheme>dcyc2t3_post</scheme>
+      <scheme>sfc_diag</scheme>
       <scheme>GFS_surface_generic_post</scheme>
       <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>
@@ -61,9 +65,10 @@
       <scheme>gwdps_pre</scheme>
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>
+      <scheme>rayleigh_damp</scheme>
       <scheme>ozphys</scheme>
-      <scheme>ozphys_post</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
+      <scheme>get_phi_fv3</scheme>
       <scheme>GFS_gfdlmp_pre</scheme>
       <scheme>samfdeepcnv</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
@@ -80,6 +85,7 @@
       <scheme>gfdl_cloud_microphys_post</scheme>
       <scheme>GFS_calpreciptype</scheme>
       <scheme>GFS_gfdlmp_pwat</scheme>
+      <scheme>sfc_sice_post</scheme>
     </subcycle>
   </group>
   <group name="stochastics">
