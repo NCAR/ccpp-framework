@@ -20,6 +20,7 @@ VARIABLE_DEFINITION_FILES = [
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp-physics/physics/GFDL_parse_tracers.F90',
     'ccpp-physics/physics/aer_cloud.F',
+    'ccpp-physics/physics/calpreciptype.f90',
     'ccpp-physics/physics/cldwat2m_micro.F',
     'ccpp-physics/physics/date_def.f',
     'ccpp-physics/physics/funcphys.f90',
@@ -65,10 +66,9 @@ SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
     'ccpp-physics/physics/GFS_DCNV_generic.f90'         : ['physics'],
     'ccpp-physics/physics/GFS_MP_generic_pre.f90'       : ['physics'],
-    'ccpp-physics/physics/GFS_zhao_carr_pwat.f90'       : ['physics'],
+    'ccpp-physics/physics/GFS_MP_generic_post.F90'      : ['physics'],
     'ccpp-physics/physics/GFS_PBL_generic.f90'          : ['physics'],
     'ccpp-physics/physics/GFS_SCNV_generic.f90'         : ['physics'],
-    'ccpp-physics/physics/GFS_calpreciptype.f90'        : ['physics'],
     'ccpp-physics/physics/GFS_phys_time_vary.scm.f90'   : ['physics'],
     'ccpp-physics/physics/GFS_rad_time_vary.scm.f90'    : ['physics'],
     'ccpp-physics/physics/GFS_rrtmg_post.F90'           : ['physics'],

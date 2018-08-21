@@ -76,8 +76,7 @@
       <scheme>cnvc90</scheme>
       <scheme>zhaocarr_gscond</scheme>
       <scheme>zhaocarr_precpd</scheme>
-      <scheme>GFS_calpreciptype</scheme>
-      <scheme>GFS_zhao_carr_pwat</scheme>
+      <scheme>GFS_MP_generic_post</scheme>
       <scheme>sfc_sice_post</scheme>
     </subcycle>
   </group>
