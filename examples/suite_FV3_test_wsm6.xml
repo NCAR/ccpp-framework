@@ -74,7 +74,7 @@
       <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>GFS_suite_interstitial_4</scheme>
       <scheme>cnvc90</scheme>
-      <scheme>GFS_calpreciptype</scheme>
+      <scheme>GFS_MP_generic_post</scheme>
       <scheme>sfc_sice_post</scheme>
     </subcycle>
   </group>

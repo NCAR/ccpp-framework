@@ -19,6 +19,7 @@ VARIABLE_DEFINITION_FILES = [
 # of the CCPP requirement to not use any external modules except Fortran standard modules!
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/GFDL_parse_tracers.F90',
+    'ccpp/physics/physics/calpreciptype.f90',
     'ccpp/physics/physics/date_def.f',
     'ccpp/physics/physics/funcphys.f90',
     'ccpp/physics/physics/gcycle.F90',
@@ -96,11 +97,9 @@ SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
     'ccpp/physics/physics/GFS_DCNV_generic.f90'              : [ 'slow_physics' ],
 #    'ccpp/physics/physics/GFS_MP_generic_pre.f90'            : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_zhao_carr_pwat.f90'            : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_gfdlmp_pwat.f90'               : [ 'slow_physics' ],
+    'ccpp/physics/physics/GFS_MP_generic_post.F90'           : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_PBL_generic.f90'               : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_SCNV_generic.f90'              : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_calpreciptype.f90'             : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_debug.F90'                     : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_phys_time_vary.fv3.f90'        : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_rad_time_vary.fv3.f90'         : [ 'slow_physics' ],
