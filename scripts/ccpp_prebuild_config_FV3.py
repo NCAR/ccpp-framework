@@ -144,6 +144,8 @@ SCHEME_FILES = {
     'ccpp/physics/physics/sfc_sice.f'                        : [ 'slow_physics' ],
     # stochastic physics
     'ccpp/physics/stochastic_physics/stochastic_physics.F90' : [ 'slow_physics' ],
+    # memcheck utility
+    'ccpp/physics/physics/memcheck.F90'                      : [ 'slow_physics' ],
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
@@ -216,6 +218,9 @@ OPTIONAL_ARGUMENTS = {
             'mean_effective_radius_for_ice_cloud',
             'mean_effective_radius_for_snow_flake',
             ],
+        },
+    'memcheck' : {
+        'memcheck_run' : [ 'mpi_root' ],
         },
     #'subroutine_name_1' : 'all',
     #'subroutine_name_2' : 'none',
