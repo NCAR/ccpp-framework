@@ -78,7 +78,6 @@ SCHEME_FILES = {
     'ccpp-physics/physics/GFS_surface_generic.f90'      : ['physics'],
     'ccpp-physics/physics/GFS_surface_loop_control.F90' : ['physics'],
     'ccpp-physics/physics/GFS_time_vary_pre.scm.f90'    : ['physics'],
-    'ccpp-physics/physics/GFS_zhao_carr_pre.f90'        : ['physics'],
     'ccpp-physics/physics/cnvc90.f'                     : ['physics'],
     'ccpp-physics/physics/dcyc2.f'                      : ['physics'],
     'ccpp-physics/physics/get_prs_fv3.f90'              : ['physics'],
