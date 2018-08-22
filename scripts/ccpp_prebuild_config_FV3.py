@@ -111,8 +111,6 @@ SCHEME_FILES = {
     'ccpp/physics/physics/GFS_surface_generic.f90'           : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_surface_loop_control.F90'      : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_time_vary_pre.fv3.f90'         : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_zhao_carr_pre.f90'             : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_gfdlmp_pre.f90'                : [ 'slow_physics' ],
     'ccpp/physics/physics/cnvc90.f'                          : [ 'slow_physics' ],
     'ccpp/physics/physics/dcyc2.f'                           : [ 'slow_physics' ],
     'ccpp/physics/physics/get_prs_fv3.f90'                   : [ 'slow_physics' ],
