@@ -97,7 +97,6 @@ SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
     'ccpp/physics/physics/GFS_DCNV_generic.F90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_MP_generic.F90'                : [ 'slow_physics' ],
-    'ccpp/physics/physics/GFS_MP_generic_post.F90'           : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_PBL_generic.F90'               : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_SCNV_generic.F90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_debug.F90'                     : [ 'slow_physics' ],
