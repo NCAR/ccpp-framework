@@ -64,22 +64,22 @@ SCHEME_FILES_DEPENDENCIES = [
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
-    'ccpp-physics/physics/GFS_DCNV_generic.f90'         : ['physics'],
+    'ccpp-physics/physics/GFS_DCNV_generic.F90'         : ['physics'],
     'ccpp-physics/physics/GFS_MP_generic.F90'           : ['physics'],
-    'ccpp-physics/physics/GFS_PBL_generic.f90'          : ['physics'],
-    'ccpp-physics/physics/GFS_SCNV_generic.f90'         : ['physics'],
-    'ccpp-physics/physics/GFS_phys_time_vary.scm.f90'   : ['physics'],
-    'ccpp-physics/physics/GFS_rad_time_vary.scm.f90'    : ['physics'],
+    'ccpp-physics/physics/GFS_PBL_generic.F90'          : ['physics'],
+    'ccpp-physics/physics/GFS_SCNV_generic.F90'         : ['physics'],
+    'ccpp-physics/physics/GFS_phys_time_vary.scm.F90'   : ['physics'],
+    'ccpp-physics/physics/GFS_rad_time_vary.scm.F90'    : ['physics'],
     'ccpp-physics/physics/GFS_rrtmg_post.F90'           : ['physics'],
     'ccpp-physics/physics/GFS_rrtmg_pre.F90'            : ['physics'],
     'ccpp-physics/physics/GFS_rrtmg_setup.F90'          : ['physics'],
     'ccpp-physics/physics/GFS_suite_interstitial.F90'   : ['physics'],
-    'ccpp-physics/physics/GFS_surface_generic.f90'      : ['physics'],
+    'ccpp-physics/physics/GFS_surface_generic.F90'      : ['physics'],
     'ccpp-physics/physics/GFS_surface_loop_control.F90' : ['physics'],
-    'ccpp-physics/physics/GFS_time_vary_pre.scm.f90'    : ['physics'],
+    'ccpp-physics/physics/GFS_time_vary_pre.scm.F90'    : ['physics'],
     'ccpp-physics/physics/cnvc90.f'                     : ['physics'],
     'ccpp-physics/physics/dcyc2.f'                      : ['physics'],
-    'ccpp-physics/physics/get_prs_fv3.f90'              : ['physics'],
+    'ccpp-physics/physics/get_prs_fv3.F90'              : ['physics'],
     'ccpp-physics/physics/gscond.f'                     : ['physics'],
     'ccpp-physics/physics/gwdc.f'                       : ['physics'],
     'ccpp-physics/physics/gwdps.f'                      : ['physics'],
@@ -101,7 +101,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/sfc_drv.f'                    : ['physics'],
     'ccpp-physics/physics/sfc_nst.f'                    : ['physics'],
     'ccpp-physics/physics/sfc_sice.f'                   : ['physics'],
-    'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.f90'   : ['physics'],
+    'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.F90'   : ['physics'],
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes

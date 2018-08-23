@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="FV3_test" lib="ccppphys" ver="1">
+<suite name="FV3_GFS_2017_updated_gfdlmp" lib="ccppphys" ver="1">
   <!-- <init></init> -->
   <group name="fast_physics">
     <subcycle loop="1">
@@ -82,9 +82,7 @@
       <scheme>GFS_suite_interstitial_4</scheme>
       <scheme>cnvc90</scheme>
       <scheme>GFS_MP_generic_pre</scheme>
-      <scheme>gfdl_cloud_microphys_pre</scheme>
       <scheme>gfdl_cloud_microphys</scheme>
-      <scheme>gfdl_cloud_microphys_post</scheme>
       <scheme>GFS_MP_generic_post</scheme>
       <scheme>sfc_sice_post</scheme>
     </subcycle>

@@ -154,13 +154,13 @@ Total Test time (real) =   0.08 sec
 ## Validating XML
 A suite is defined in XML. There are several test suites defined within
 the `ccpp/src/tests` directory (which are able to test the build and
-installation of the standalone CCPP). In the `ccpp/examples` directory
+installation of the standalone CCPP). In the `ccpp-framework/suites` directory
 there are the XML files that call physical parameterization schemes.
 There is also the XML Schema Definition in
 that directory too. To validate a new test suite, you can use
 `xmllint`. For example to validate `suite_RAP.xml`:
 ~~~~{.sh}
-cd ccpp/examples
+cd ccpp-framework/suites
 xmllint --schema suite.xsd --noout suite_RAP.xml
 suite_RAP.xml validates
 ~~~~
@@ -181,11 +181,11 @@ src/tests/test_init_finalize my_suite.xml
 For this to work, the library that is referenced in the xml file
 must be added to the LD_LIBRARY_PATH (see above). To test the
 correct functionality of CCPP itself, the suite suite_EXAMPLE.xml
-in gmtb-ccp/sr/examples can be used.
+in ccpp-framework/suites can be used.
 
 There are two general types of XML files for the CCPP. The first is the
 definition file for a suite. This has been mapped out, is fairly short,
-and examples exist. Below is `examples/suite_RAP.xml`
+and examples exist. Below is `ccpp-framework/suites/suite_RAP.xml`
 
 ~~~~{.xml}
 <?xml version="1.0" encoding="UTF-8"?>
