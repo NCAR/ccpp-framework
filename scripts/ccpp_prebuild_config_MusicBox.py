@@ -11,7 +11,7 @@
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
     'MusicBox_host/src/micm_type_defs.f90',
-    'MICM_chemistry/src/kinetics_module.f90',
+    'MICM_chemistry/src/kinetics_module.F90',
     ]
 
 # Can be empty, since all physics schemes and their
