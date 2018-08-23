@@ -8,7 +8,7 @@ import re
 from parse_tools import ParseSyntaxError, ParseInternalError
 from parse_tools import ParseContext, ParseSource, context_string
 from parse_tools import check_fortran_intrinsic, check_fortran_type
-from parse_tools import check_balanced_paren
+from parse_tools import check_balanced_paren, unique_standard_name
 from metavar import Var
 
 # A collection of types and tools for parsing Fortran code to support
@@ -34,7 +34,7 @@ _var_id_re_ = re.compile(r"("+_fortran_id_+r")\s*(\(\s*"+_dims_list_+r"\s*\))?$"
 class Ftype(object):
     """Ftype is the base class for all Fortran types
     It is also the final type for intrinsic types except for character
-    >>> Ftype('integer').typestr
+    >>> Ftype('integer').typestr()
     'integer'
     >>> Ftype('integer', kind_in='( kind= I8').__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
@@ -72,8 +72,6 @@ class Ftype(object):
                      'intent', 'intrinsic', 'bind', 'optional', 'parameter',
                      'pointer', 'private', 'protected', 'public', 'save',
                      'target', 'value', 'volatile']
-
-    __sname_num__ = 0 # Counter for unique standard names
 
     def __init__(self, typestr_in=None, kind_in=None, line_in=None, context=None):
         if context is None:
@@ -218,16 +216,9 @@ class Ftype(object):
         # End for
         return properties
 
-    @classmethod
-    def unique_standard_name(cls):
-        cls.__sname_num__ = cls.__sname_num__ + 1
-        return 'enter_standard_name_{}'.format(cls.__sname_num__)
-
-    @property
     def typestr(self):
         return self._typestr
 
-    @property
     def kind(self):
         return self._kind
 
@@ -238,12 +229,12 @@ class Ftype(object):
     def __str__(self):
         """Return a string of the declaration of the type"""
         if self.default_kind:
-            return self.typestr
-        elif check_fortran_intrinsic(self.typestr):
-            return "{}(kind={})".format(self.typestr, self._kind)
+            return self.typestr()
+        elif check_fortran_intrinsic(self.typestr()):
+            return "{}(kind={})".format(self.typestr(), self._kind)
         else:
             # Derived type
-            return "{}({})".format(self.typestr, self._kind)
+            return "{}({})".format(self.typestr(), self._kind)
 
 ########################################################################
 
@@ -266,6 +257,8 @@ class Ftype_character(Ftype):
     'CHARACTER(len=*)'
     >>> Ftype_character('CHARACTER(len=:)', None).__str__()
     'CHARACTER(len=:)'
+    >>> Ftype_character('Character(len=512)', None).__str__()
+    'Character(len=512)'
     >>> Ftype_character('character(*)', None).__str__()
     'character(len=*)'
     >>> Ftype_character('character*7', None).__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -381,16 +374,19 @@ class Ftype_character(Ftype):
         else:
             raise ParseSyntaxError("length_selector when len= is required", token=lenselect, context=context)
 
+    def kind(self):
+        if self.default_kind:
+            kind_str = ""
+        else:
+            kind_str = ", kind={}".format(super(Ftype_character, self).kind())
+        # End if
+        return "len={}{}".format(self.lenstr, kind_str)
+
     def __str__(self):
         """Return a string of the declaration of the type
         For characters, we will always print an explicit len modifier
         """
-        if self.default_kind:
-            kind_str = ""
-        else:
-            kind_str = ", kind={}".format(self.kind)
-        # End if
-        return "{}(len={}{})".format(self.typestr, self.lenstr, kind_str)
+        return "{}({})".format(self.typestr(), self.kind())
 
 ########################################################################
 
@@ -424,7 +420,7 @@ class Ftype_type_decl(Ftype):
             self._match_len = len(match.group(0))
             self._class = match.group(1)
             self._typestr = match.group(2)
-            self._kind = self.typestr
+            self._kind = self.typestr()
         # End if
 
     @classmethod
@@ -464,7 +460,7 @@ class Ftype_type_decl(Ftype):
         return type_def
 
     def __str__(self):
-        return '{}({})'.format(self._class, self.typestr)
+        return '{}({})'.format(self._class, self.typestr())
 
 ########################################################################
 def Ftype_factory(line, context):
@@ -557,28 +553,33 @@ def parse_fortran_var_decl(line, source, logger=None):
     '(8)'
     >>> _var_id_re_.match("foo(::,a:b,a:,:b)").group(2)
     '(::,a:b,a:,:b)'
-    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('local_name')
+    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('local_name')
     'foo'
-    >>> parse_fortran_var_decl("integer :: foo = 0", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('local_name')
+    >>> parse_fortran_var_decl("integer :: foo = 0", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('local_name')
     'foo'
-    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('optional')
+    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('optional')
     False
-    >>> parse_fortran_var_decl("integer, optional :: foo", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('optional')
+    >>> parse_fortran_var_decl("integer, optional :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('optional')
     'True'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('dimensions')
     '(:)'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(bar)", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(bar)", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('dimensions')
     '(bar)'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('dimensions')
     '(:,:)'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'MODULE', ParseContext()))[1].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'module', ParseContext()))[1].get_prop_value('dimensions')
     '(:)'
-    >>> parse_fortran_var_decl("real (kind=kind_phys), pointer :: phii  (:,:) => null()   !< interface geopotential height", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("real (kind=kind_phys), pointer :: phii  (:,:) => null()   !< interface geopotential height", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('dimensions')
     '(:,:)'
-    >>> parse_fortran_var_decl("real(kind=kind_phys), dimension(im, levs, ntrac), intent(in) :: qgrs", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("real(kind=kind_phys), dimension(im, levs, ntrac), intent(in) :: qgrs", ParseSource('foo.F90', 'scheme', ParseContext()))[0].get_prop_value('dimensions')
     '(im, levs, ntrac)'
-    >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'MODULE', ParseContext()))[0].get_prop_value('local_name')
+    >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'scheme', ParseContext()))[0].get_prop_value('local_name')
     'errmsg'
+    >>> parse_fortran_var_decl("character(len=512), intent(out) :: errmsg", ParseSource('foo.F90', 'scheme', ParseContext()))[0].get_prop_value('kind')
+    'len=512'
+    >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('local_name') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid variable declaration, character(len=*), intent(out) :: errmsg, intent not allowed in module variable, in <standard input>
     """
     context = source.context
     sline = line.strip()
@@ -599,7 +600,21 @@ def parse_fortran_var_decl(line, source, logger=None):
             varprops = Ftype.parse_attr_specs(elements[0].strip(), context)
             for prop in varprops:
                 if prop[0:6] == 'intent':
-                    intent = prop[6:].strip()[1:-1].strip()
+                    if source.type != 'scheme':
+                        typ = source.type
+                        errmsg = 'Invalid variable declaration, {}, intent'
+                        errmsg = errmsg + ' not allowed in {} variable'
+                        if logger is not None:
+                            ctx = context_string(context)
+                            errmsg = "WARNING: " + errmsg + "{}"
+                            logger.warning(errmsg.format(var, typ, ctx))
+                        else:
+                            raise ParseSyntaxError(errmsg.format(sline, typ),
+                                                   context=context)
+                        # End if
+                    else:
+                        intent = prop[6:].strip()[1:-1].strip()
+                    # End if
                 elif prop[0:9:] == 'dimension':
                     dimensions = prop[9:].strip()
                 # End if
@@ -631,20 +646,26 @@ def parse_fortran_var_decl(line, source, logger=None):
                 if (begin < 0) or (end < 0):
                     if logger is not None:
                         ctx = context_string(context)
-                        logger.warning("WARNING: Invalid variable declaration, {}{}".format(var, ctx))
+                        errmsg = "WARNING: Invalid variable declaration, {}{}"
+                        logger.warning(errmsg.format(var, ctx))
                     else:
-                        raise ParseSyntaxError('variable declaration', token=var, context=context)
+                        raise ParseSyntaxError('variable declaration',
+                                               token=var, context=context)
                     # End if
                 else:
                     dimspec = var[begin:end+1]
                 # End if
             # End if
             prop_dict['local_name'] = varname
-            prop_dict['standard_name'] = Ftype.unique_standard_name()
+            prop_dict['standard_name'] = unique_standard_name()
             prop_dict['units'] = ''
-            prop_dict['type'] = tobject.typestr
-            if tobject.kind is not None:
-                prop_dict['kind'] = tobject.kind
+            if isinstance(tobject, Ftype_type_decl):
+                prop_dict['ddt_type'] = tobject.typestr()
+            else:
+                prop_dict['type'] = tobject.typestr()
+            # End if
+            if tobject.kind() is not None:
+                prop_dict['kind'] = tobject.kind()
             # End if
             if 'optional' in varprops:
                 prop_dict['optional'] = 'True'

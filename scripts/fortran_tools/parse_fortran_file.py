@@ -6,15 +6,18 @@ At the file level, we allow only PROGRAM blocks and MODULE blocks.
 Subroutines, functions, or data are not supported outside a MODULE.
 """
 
+# Python library imports
 import os.path
 if __name__ == '__main__' and __package__ is None:
     import sys
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
+from collections import OrderedDict
+# CCPP framework imports
 from parse_tools import CCPPError, ParseInternalError, ParseSyntaxError
 from parse_tools import ParseContext, ParseObject, ParseSource, PreprocStack
-from parse_tools import FORTRAN_ID
-from metadata_table import MetadataHeader
+from parse_tools import FORTRAN_ID, context_string
+from metadata_table import MetadataTable
 from parse_fortran import parse_fortran_var_decl, fortran_type_definition
 from metavar import VarDictionary
 
@@ -28,7 +31,7 @@ contains_re = re.compile(r"(?i)\s*contains")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 fixed_continue_re = re.compile(r"(?i)     [^0 ]")
 blank_re = re.compile(r"\s+")
-arg_table_start_re = re.compile(r"(?i)![!>]\s*(?:\\section)?\s*arg_table_"+FORTRAN_ID)
+arg_table_start_re = re.compile(r"(?i)\s*![!>]\s*(?:\\section)?\s*arg_table_"+FORTRAN_ID)
 arg_table_end_re = re.compile(r"(?i)![!>]\s*end_arg_table_"+FORTRAN_ID)
 prefix_specs = [r"(?:recursive)", r"(?:pure)", r"(?:elemental)"]
 prefix_spec_re = r"(?:{})?\s*".format('|'.join(prefix_specs))
@@ -37,7 +40,7 @@ arglist_re = r"\s*(?:[(]\s*([^)]*)[)])?"
 subroutine_re = re.compile(r"(?i)\s*"+prefix_spec_re+subname_re+FORTRAN_ID+arglist_re)
 end_subroutine_re = re.compile(r"(?i)\s*end\s*"+subname_re+FORTRAN_ID+r"?")
 use_re = re.compile(r"(?i)\s*use\s(?:,\s*intrinsic\s*::)?\s*only\s*:([^!]+)")
-end_type_re = re.compile(r"(?i)\s*end\s*type\s+"+FORTRAN_ID+r"?")
+end_type_re = re.compile(r"(?i)\s*end\s*type(?:\s+"+FORTRAN_ID+r")?")
 
 ########################################################################
 
@@ -314,14 +317,17 @@ def scan_free_line(line, in_continue, in_single_char, in_double_char, context):
             if match is not None:
                 continue_out_col = index
             else:
-                raise ParseSyntaxError("Invalid continue, ampersand not followed by comment character", context=context)
+                errmsg = ("Invalid continue, ampersand not followed by "
+                          "comment character")
+                raise ParseSyntaxError(errmsg, context=context)
             # End if
         # End if
         index = index + 1
     # End while
     # A final check
     if (in_single_char or in_double_char) and (continue_out_col < 0):
-        raise ParseSyntaxError("Cannot end non-continued line in a character context", context=context)
+        errmsg = "Cannot end non-continued line in a character context"
+        raise ParseSyntaxError(errmsg, context=context)
 
     return continue_in_col, continue_out_col, in_single_char, in_double_char, comment_col
 
@@ -342,7 +348,7 @@ def read_file(filename, preproc_defs=None, logger=None):
         # Read all lines of the file at once
         with open(filename, 'r') as file:
             file_lines = file.readlines()
-            for index in xrange(len(file_lines)):
+            for index in range(len(file_lines)):
                 file_lines[index] = file_lines[index].rstrip('\n').rstrip()
             # End for
         # End with
@@ -461,7 +467,7 @@ def is_comment_statement(statement, logger):
 ########################################################################
 
 def parse_type_def(statements, type_def, mod_name, pobj, logger):
-    psrc = ParseSource(mod_name, 'DDT', pobj)
+    psrc = ParseSource(mod_name, 'ddt', pobj)
     seen_contains = False
     mheader = None
     var_dict = VarDictionary(type_def[0])
@@ -473,9 +479,9 @@ def parse_type_def(statements, type_def, mod_name, pobj, logger):
             pmatch = end_type_re.match(statement)
             if pmatch is not None:
                 # We hit the end of the type, make a header
-                mheader = MetadataHeader(title=type_def[0], type_in='DDT',
-                                         module=mod_name, var_dict=var_dict,
-                                         logger=logger)
+                mheader = MetadataTable(title=type_def[0], type_in='ddt',
+                                        module=mod_name, var_dict=var_dict,
+                                        logger=logger)
                 inspec = False
             elif is_contains_statement(statement, inspec):
                 seen_contains = True
@@ -510,6 +516,11 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
     var_dict = VarDictionary(spec_name)
     psrc = ParseSource(spec_name, 'MODULE', pobj)
     active_table = None
+    if logger is not None:
+        ctx = context_string(pobj, nodir=True)
+        msg = "Parsing preamble variables of {}{}"
+        logger.debug(msg.format(spec_name, ctx))
+    # End if
     while inspec and (statements is not None):
         while len(statements) > 0:
             statement = statements.pop(0)
@@ -522,17 +533,34 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
             elif (pmatch is not None) or is_contains_statement(statement, inspec):
                 # We are done with the specification
                 inspec = False
-                if len(var_dict.variable_list()) > 0:
-                    mheader = MetadataHeader(title=spec_name, type_in='MODULE',
-                                             module=spec_name,
-                                             var_dict=var_dict, logger=logger)
-                    mheaders.append(mheader)
-                # End if
+                # Put statement back so caller knows where we are
+                statements.insert(0, statement)
+                # Add the header (even if we found no variables)
+                mheader = MetadataTable(title=spec_name, type_in='module',
+                                        module=spec_name,
+                                        var_dict=var_dict, logger=logger)
+                mheaders.append(mheader)
+                if logger is not None:
+                    ctx = context_string(pobj, nodir=True)
+                    msg = 'Adding header {}{}'
+                    logger.debug(msg.format(mheader.title, ctx))
                 break
             elif (type_def is not None) and (type_def[0].lower() == active_table):
+                # Put statement back so caller knows where we are
+                statements.insert(0, statement)
                 statements, ddt = parse_type_def(statements, type_def,
                                                  spec_name, pobj, logger)
+                if ddt is None:
+                    ctx = context_string(pobj, nodir=True)
+                    msg = "No DDT found at '{}'{}"
+                    raise CCPPError(msg.format(statement, ctx))
+                # End if
                 mheaders.append(ddt)
+                if logger is not None:
+                    ctx = context_string(pobj, nodir=True)
+                    msg = 'Adding DDT {}{}'
+                    logger.debug(msg.format(ddt.title, ctx))
+                # End if
                 active_table = None
             else:
                 # We should have a variable definition to add
@@ -563,8 +591,15 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
     # Find the subroutine line, should be first executable statement
     inpreamble = False
     insub = True
+    if logger is not None:
+        ctx = context_string(pobj, nodir=True)
+        msg = "Parsing specification of {}{}"
+        logger.debug(msg.format(table_name, ctx))
+    # End if
+    ctx = context_string(pobj) # Save initial context with directory
+    vdict = None # Initialized when we parse the subroutine arguments
     while insub and (statements is not None):
-        while len(statements) > 0:
+        while statements:
             statement = statements.pop(0)
             smatch = subroutine_re.match(statement)
             esmatch = end_subroutine_re.match(statement)
@@ -586,13 +621,31 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
                 inpreamble = scheme_name == table_name
                 if inpreamble:
                     if smatch.group(2) is not None:
-                        scheme_args = [x.strip().lower() for x in smatch.group(2).split(',')]
+                        smstr = smatch.group(2).strip()
+                        if len(smstr) > 0:
+                            smlist = smstr.strip().split(',')
+                        else:
+                            smlist = list()
+                        # End if
+                        scheme_args = [x.strip().lower() for x in smlist]
                     else:
                         scheme_args = list()
                     # End if
-                    scheme_set = set(scheme_args)
-                    var_dict = VarDictionary(scheme_name)
-                    psrc = ParseSource(scheme_name, 'SCHEME', pobj)
+                    # Create a dict template with all the scheme's arguments
+                    # in the correct order
+                    vdict = OrderedDict()
+                    for arg in scheme_args:
+                        if len(arg) == 0:
+                            errmsg = 'Empty argument{}'
+                            raise ParseInternalError(errmsg.format(pobj))
+                        elif arg in vdict:
+                            errmsg = 'Duplicate dummy argument, {}'
+                            raise ParseSyntaxError(errmsg.format(arg),
+                                                   context=pobj)
+                        # End if
+                        vdict[arg] = None
+                    # End for
+                    psrc = ParseSource(scheme_name, 'scheme', pobj)
                 # End if
             elif inpreamble:
                 # Process a preamble statement (use or argument declaration)
@@ -602,16 +655,22 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
                 elif ((not is_comment_statement(statement, logger)) and
                       (not parse_use_statement({}, statement, pobj, logger)) and
                       ('intent' in statement.lower())):
-                    vars = parse_fortran_var_decl(statement, psrc, logger=logger)
+                    vars = parse_fortran_var_decl(statement, psrc,
+                                                  logger=logger)
                     for var in vars:
                         lname = var.get_prop_value('local_name').lower()
-                        if lname in scheme_set:
-                            scheme_set.remove(lname)
+                        if lname in vdict:
+                            if vdict[lname] is not None:
+                                emsg = "Error: duplicate dummy argument, {}"
+                                raise ParseSyntaxError(emsg.format(lname),
+                                                       context=pobj)
+                            else:
+                                vdict[lname] = var
+                            # End if
                         else:
                             raise ParseSyntaxError('dummy argument',
                                                    token=lname, context=pobj)
                         # End if
-                        var_dict.add_variable(var)
                     # End for
                 # End if
             # End if
@@ -620,10 +679,26 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
             statements = read_statements(pobj)
         # End if
     # End while
+    # Check for missing declarations
+    missing = list()
+    if vdict is None:
+        errmsg = 'Subroutine, {}, not found{}'
+        raise CCPPError(errmsg.format(scheme_name, ctx))
+    # End if
+    for lname in vdict.keys():
+        if vdict[lname] is None:
+            missing.append(lname)
+        # End if
+    # End for
+    if len(missing) > 0:
+        errmsg = 'Missing local_variables, {} in {}'
+        raise CCPPError(errmsg.format(missing, scheme_name))
+    # End if
+    var_dict = VarDictionary(scheme_name, variables=vdict)
     if (scheme_name is not None) and (var_dict is not None):
-        mheader = MetadataHeader(title=scheme_name, type_in='SCHEME',
-                                 module=spec_name, var_dict=var_dict,
-                                 logger=logger)
+        mheader = MetadataTable(title=scheme_name, type_in='scheme',
+                                module=spec_name, var_dict=var_dict,
+                                logger=logger)
     # End if
     return statements, mheader
 
@@ -637,6 +712,17 @@ def is_contains_statement(statement, in_module):
     else:
         return False
     # End if
+
+########################################################################
+
+def duplicate_header(header, duplicate):
+    ctx = duplicate.start_context()
+    octx = header.start_context()
+    errmsg = 'Duplicate header, {}{}'
+    if len(octx) > 0:
+        errmsg = errmsg + ', original{}'
+    # End if
+    return errmsg
 
 ########################################################################
 
@@ -655,6 +741,12 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
     else:
         raise ParseInternalError("One of <mod_name> or <prog_name> must be used")
     # End if
+    if logger is not None:
+        ctx = context_string(pobj, nodir=True)
+        msg = "Parsing specification of {}{}"
+        logger.debug(msg.format(spec_name, ctx))
+    # End if
+
     inspec = True
     mheaders = list()
     while inspec and (statements is not None):
@@ -674,6 +766,16 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
                                                            pobj, spec_name,
                                                            endmatch, logger)
                 for hdr in new_hdrs:
+                    title = hdr.title
+                    if title in mheaders:
+                        errmsg = duplicate_header(mheaders[title], hdr)
+                        raise CCPPError(errmsg)
+                    elif logger is not None:
+                        ctx = hdr.start_context()
+                        mtype = hdr.header_type
+                        msg = "Adding metadata from {}, {}{}"
+                        logger.debug(msg.format(mtype, title, ctx))
+                    # End if
                     mheaders.append(hdr)
                 # End if
                 inspec = pobj.in_region('MODULE', region_name=mod_name)
@@ -699,6 +801,11 @@ def parse_program(pobj, statements, logger=None):
     # End if
     prog_name = pmatch.group(1)
     pobj.enter_region('PROGRAM', region_name=prog_name, nested_ok=False)
+    if logger is not None:
+        ctx = context_string(pobj, nodir=True)
+        msg = "Parsing Fortran program, {}{}"
+        logger.debug(msg.format(prog_name, ctx))
+    # End if
     # After the program name is the specification part
     statements, mheaders = parse_specification(pobj, statements[1:], prog_name=prog_name, logger=logger)
     # We really cannot have tables inside a program's executable section
@@ -709,7 +816,7 @@ def parse_program(pobj, statements, logger=None):
         while len(statements) > 0:
             statement = statements.pop(0)
             # End program
-            pmatch = endprogram_re.match(statements)
+            pmatch = endprogram_re.match(statement)
             if pmatch is not None:
                 prog_name = pmatch.group(1)
                 pobj.leave_region('PROGRAM', region_name=prog_name)
@@ -732,6 +839,11 @@ def parse_module(pobj, statements, logger=None):
     # End if
     mod_name = pmatch.group(1)
     pobj.enter_region('MODULE', region_name=mod_name, nested_ok=False)
+    if logger is not None:
+        ctx = context_string(pobj, nodir=True)
+        msg = "Parsing Fortran module, {}{}"
+        logger.debug(msg.format(mod_name, ctx))
+    # End if
     # After the module name is the specification part
     statements, mheaders = parse_specification(pobj, statements[1:], mod_name=mod_name, logger=logger)
     # Look for metadata tables
@@ -756,6 +868,16 @@ def parse_module(pobj, statements, logger=None):
                                                             mod_name, active_table,
                                                             logger)
                 if mheader is not None:
+                    title = mheader.title
+                    if title in mheaders:
+                        errmsg = duplicate_header(mheaders[title], mheader)
+                        raise CCPPError(errmsg)
+                    elif logger is not None:
+                        mtype = mheader.header_type
+                        ctx = mheader.start_context()
+                        msg = "Adding metadata from {}, {}{}"
+                        logger.debug(msg.format(mtype, title, ctx))
+                    # End if
                     mheaders.append(mheader)
                 # End if
                 active_table = None

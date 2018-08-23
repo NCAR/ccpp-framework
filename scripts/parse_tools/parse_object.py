@@ -51,6 +51,11 @@ class ParseObject(ParseContext):
         'Return the last line parsed'
         return self._line_end
 
+    @property
+    def file_name(self):
+        "Return this object's filename"
+        return self._filename
+
     def curr_line(self):
         valid_line = self.line_num < len(self._lines)
         _curr_line = None

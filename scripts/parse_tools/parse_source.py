@@ -5,10 +5,21 @@
 # Python library imports
 import collections
 import copy
+import os.path
+import logging
 # CCPP framework imports
 
+__sname_num__ = 0 # Counter for unique standard names
+
 ###############################################################################
-def context_string(context=None, with_comma=True):
+def unique_standard_name():
+###############################################################################
+    global __sname_num__
+    __sname_num__ = __sname_num__ + 1
+    return 'enter_standard_name_{}'.format(__sname_num__)
+
+###############################################################################
+def context_string(context=None, with_comma=True, nodir=False):
 ###############################################################################
     """Return a context string if <context> is not None otherwise, return
     an empty string.
@@ -17,36 +28,67 @@ def context_string(context=None, with_comma=True):
     ''
     >>> context_string(with_comma=True)
     ''
-    >>> context_string(context= ParseContext(linenum=32, filename="source.F90"), with_comma=False)
+    >>> context_string(context= ParseContext(linenum=32, filename="dir/source.F90"), with_comma=False)
+    'dir/source.F90:33'
+    >>> context_string(context= ParseContext(linenum=32, filename="dir/source.F90"), with_comma=True)
+    ', at dir/source.F90:33'
+    >>> context_string(context= ParseContext(linenum=32, filename="dir/source.F90"))
+    ', at dir/source.F90:33'
+    >>> context_string(context= ParseContext(filename="dir/source.F90"), with_comma=False)
+    'dir/source.F90'
+    >>> context_string(context= ParseContext(filename="dir/source.F90"), with_comma=True)
+    ', in dir/source.F90'
+    >>> context_string(context= ParseContext(filename="dir/source.F90"))
+    ', in dir/source.F90'
+    >>> context_string(nodir=True)
+    ''
+    >>> context_string(with_comma=True, nodir=True)
+    ''
+    >>> context_string(context= ParseContext(linenum=32, filename="dir/source.F90"), with_comma=False, nodir=True)
     'source.F90:33'
-    >>> context_string(context= ParseContext(linenum=32, filename="source.F90"), with_comma=True)
+    >>> context_string(context= ParseContext(linenum=32, filename="dir/source.F90"), with_comma=True, nodir=True)
     ', at source.F90:33'
-    >>> context_string(context= ParseContext(linenum=32, filename="source.F90"))
+    >>> context_string(context= ParseContext(linenum=32, filename="dir/source.F90"), nodir=True)
     ', at source.F90:33'
-    >>> context_string(context= ParseContext(filename="source.F90"), with_comma=False)
+    >>> context_string(context= ParseContext(filename="dir/source.F90"), with_comma=False, nodir=True)
     'source.F90'
-    >>> context_string(context= ParseContext(filename="source.F90"), with_comma=True)
+    >>> context_string(context= ParseContext(filename="dir/source.F90"), with_comma=True, nodir=True)
     ', in source.F90'
-    >>> context_string(context= ParseContext(filename="source.F90"))
+    >>> context_string(context= ParseContext(filename="dir/source.F90"), nodir=True)
     ', in source.F90'
     """
     if context is None:
-        cstr = ""
-    elif with_comma:
-        if context.line_num < 0:
-            cstr = ", in {}".format(context)
-        else:
-            cstr = ", at {}".format(context)
-        # End if
+        where_str = ''
+    elif context.line_num < 0:
+        where_str = 'in '
     else:
-        cstr = "{}".format(context)
+        where_str = 'at '
     # End if
-    return cstr
+    if (context is not None) and with_comma:
+        comma = ', '
+    else:
+        comma = ''
+        where_str = '' # Override previous setting
+    # End if
+    if context is None:
+        spec = ''
+    elif nodir:
+        spec = '{ctx:nodir}'
+    else:
+        spec = '{ctx}'
+    # End if
+    if context is None:
+        cstr = ""
+    else:
+        cstr = '{comma}{where_str}' + spec
+    # End if
+    return cstr.format(comma=comma, where_str=where_str, ctx=context)
 
 ###############################################################################
 class CCPPError(ValueError):
     "Class so programs can log user errors without backtrace"
     def __init__(self, message):
+        logging.shutdown()
         super(CCPPError, self).__init__(message)
 
 ########################################################################
@@ -54,6 +96,7 @@ class CCPPError(ValueError):
 class ParseSyntaxError(CCPPError):
     """Exception that is aware of parsing context"""
     def __init__(self, token_type, token=None, context=None):
+        logging.shutdown()
         cstr = context_string(context)
         if token is None:
             message = "{}{}".format(token_type, cstr)
@@ -69,6 +112,7 @@ class ParseInternalError(Exception):
     Note that this error will not be trapped by programs such as ccpp_capgen
     """
     def __init__(self, errmsg, context=None):
+        logging.shutdown()
         message = "{}{}".format(errmsg, context_string(context))
         super(ParseInternalError, self).__init__(message)
 
@@ -77,6 +121,7 @@ class ParseInternalError(Exception):
 class ParseContextError(CCPPError):
     """Exception for errors using ParseContext"""
     def __init__(self, errmsg, context):
+        logging.shutdown()
         message = "{}{}".format(errmsg, context_string(context))
         super(ParseContextError, self).__init__(message)
 
@@ -178,6 +223,25 @@ class ParseContext(object):
     def filename(self):
         "'Return the object's filename"
         return self._filename
+
+    def __format__(self, spec):
+        """Return a string representing the location in a file
+        Note that self._linenum is zero based.
+        <spec> can be 'dir' (show filename directory) or 'nodir' filename only.
+        Any other spec entry is ignored.
+        """
+        if spec == 'dir':
+            fname = self._filename
+        elif spec == 'nodir':
+            fname = os.path.basename(self._filename)
+        else:
+            fname = self._filename
+        # End if
+        if self._linenum >= 0:
+            return "{}:{}".format(fname, self._linenum+1)
+        else:
+            return "{}".format(fname)
+        # End if
 
     def __str__(self):
         """Return a string representing the location in a file

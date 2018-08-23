@@ -131,7 +131,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
     # Read all lines of the file at once
     with open(filename_in, 'r') as file:
         fin_lines = file.readlines()
-        for index in xrange(len(fin_lines)):
+        for index in range(len(fin_lines)):
             fin_lines[index] = fin_lines[index].rstrip('\n')
         # End for
     # End with
@@ -176,7 +176,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                 # Do not work on a blank table
                 if len(words) > 1:
                     table_header = [x.strip() for x in words[1:-1]]
-                    for ind in xrange(len(table_header)):
+                    for ind in range(len(table_header)):
                         header_locs[table_header[ind]] = ind
                     # End for
                     # Find the local_name index (exception if not found)
@@ -205,7 +205,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                         mdobj = MetadataEntry(var_name)
                         mdtable[var_name] = mdobj
                         # Now, create the rest of the entries
-                        for ind in xrange(len(entries)):
+                        for ind in range(len(entries)):
                             attr_name = table_header[ind]
                             entry = entries[ind]
                             if attr_name == 'local_name':
@@ -309,7 +309,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                         fdlist = fdim.split(':')
                         fdlen = len(fdlist)
                         dlist = ['']*fdlen
-                        for index in xrange(fdlen):
+                        for index in range(fdlen):
                             # For each dimension component, find the standard_name
                             # First, see if it is blank, then integer, then var
                             fd = fdlist[index]
@@ -387,7 +387,7 @@ if __name__ == "__main__":
         if os.path.isdir(sys.argv[-1]):
             target_dir = os.path.abspath(sys.argv[-1])
             num_args = num_args - 1
-            for index in xrange(1, num_args):
+            for index in range(1, num_args):
                 source_file = os.path.abspath(sys.argv[index])
                 filename = os.path.basename(source_file)
                 mdfilename = "{}.meta".format('.'.join(filename.split('.')[:-1]))

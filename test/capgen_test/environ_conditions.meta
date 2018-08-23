@@ -1,0 +1,107 @@
+[ccpp-arg-table]
+  name = environ_conditions_run
+  type = scheme
+[ psurf ]
+  standard_name = surface_air_pressure
+  state_variable = true
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_loop_extent)
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = environ_conditions_init
+  type = scheme
+[ nbox ]
+  standard_name = horizontal_dimension
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ o3 ]
+  standard_name = ozone
+  units = ppmv
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+[ hno3 ]
+  standard_name = nitric_acid
+  units = ppmv
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+[ ntimes ]
+  standard_name = number_of_model_times
+  type = integer
+  units = count
+  dimensions = ()
+  intent = out
+[ model_times ]
+  standard_name = model_times
+  units = seconds
+  dimensions = (number_of_model_times)
+  type = integer
+  intent = out
+  allocatable = True
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = environ_conditions_finalize
+  type = scheme
+[ ntimes ]
+  standard_name = number_of_model_times
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ model_times ]
+  standard_name = model_times
+  units = seconds
+  dimensions = (number_of_model_times)
+  type = integer
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out

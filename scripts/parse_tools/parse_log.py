@@ -34,3 +34,7 @@ def set_log_to_null(logger):
 def set_log_to_file(logger, filename):
     remove_handlers(logger)
     logger.addHandler(logging.StreamHandler())
+
+def flush_log(logger):
+    for handler in list(logger.handlers):
+        handler.flush()

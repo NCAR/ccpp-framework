@@ -83,7 +83,7 @@ def preproc_item_value(item, preproc_defs):
     elif isinstance(item, ast.Compare):
         left_val = preproc_item_value(item.left, preproc_defs)
         value = True
-        for index in xrange(len(item.ops)):
+        for index in range(len(item.ops)):
             op = item.ops[index]
             rcomp = item.comparators[index]
             right_val = preproc_item_value(rcomp, preproc_defs)
