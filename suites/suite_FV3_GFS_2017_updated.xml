@@ -75,6 +75,7 @@
       <scheme>GFS_SCNV_generic_post</scheme>
       <scheme>GFS_suite_interstitial_4</scheme>
       <scheme>cnvc90</scheme>
+      <scheme>GFS_MP_generic_pre</scheme>
       <scheme>zhaocarr_gscond</scheme>
       <scheme>zhaocarr_precpd</scheme>
       <scheme>GFS_MP_generic_post</scheme>
