@@ -12,6 +12,9 @@ import sys
 # DH* TODO
 # CONSISTENCY CHECK BETWEEN OPTIONAL ARGUMENTS IN THE METADATA TABLE AND IN
 # THE ACTUAL ARGUMENT LIST / FORTRAN VARIABLE DECLARATIONS (RANKS, TYPE, INTENT).
+#
+# 08/23/2018 - In the developer's guide, we are now talking about sets rather than
+# categories. This should be reflected here and in all the other scripts (and configs).
 # *DH
 
 # Local modules

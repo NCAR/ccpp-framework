@@ -32,7 +32,7 @@ This chapter describes the process of connecting a host model with the pool of C
 !! | nthreads   | omp_threads        | number of threads for use by physics | count |    0 | integer   |         | none   | F        |
 \end{lstlisting}
 \end{sidewaysfigure}
-The first step consists of making sure that the necessary variables for running the CCPP physics schemes are provided by the host model. A list of all variables required for the current pool of physics can be found in \TODO{\execout{ccpp-framework/doc/DevelopersGuide/CCPP\_VARIABLES\_XYZ.pdf} (\execout{XYZ}: SCM, FV3)}. While most of the variable requirements come from the CCPP physics schemes, a small number of variables are required for correct operation of the CCPP and for compliance with its standards. These variables are described in Listings~\ref{lst_mandatory_variables_by_ccpp} and~\ref{lst_mandatory_variables_by_hostmodel}. In case a required variable (that is not mandatory for CCPP) is not provided by the host model, there are several options:
+The first step consists of making sure that the necessary variables for running the CCPP physics schemes are provided by the host model. A list of all variables required for the current pool of physics can be found in \execout{ccpp\{-,/\}framework/doc/DevelopersGuide/CCPP\_VARIABLES\_XYZ.pdf (\execout{XYZ}: SCM, FV3)}. While most of the variable requirements come from the CCPP physics schemes, a small number of variables are required for correct operation of the CCPP and for compliance with its standards. These variables are described in Listings~\ref{lst_mandatory_variables_by_ccpp} and~\ref{lst_mandatory_variables_by_hostmodel}. In case a required variable (that is not mandatory for CCPP) is not provided by the host model, there are several options:
 \begin{itemize}
 \item If a particular variable is only required by schemes in the pool that will not get used, these schemes can be commented out in the ccpp prebuild config (see Sect.~\ref{sec_addscheme}).
 \item If a variable can be calculated from existing variables in the model, an interstitial scheme (usually called \execsub{scheme\_name\_pre}) can be created that calculates the missing variable. However, the memory for this variable must be allocated on the host model side (i.\,e. the variable must be defined but not initialized in the host model). Another interstitial scheme (usually called \execsub{scheme\_name\_post}) might be required to update variables used by the host model with the results from the new scheme. At present, adding interstitial schemes should be done in cooperation with the GMTB Help Desk (\url{gmtb-help@ucar.edu}).
@@ -123,7 +123,7 @@ at the top of the cap (before \execout{implicit none}) to load the required modu
 \end{lstlisting}
 after the \execout{cdata} variable and the variables required by the physics schemes are allocated.
 
-\emph{Note.} The CCPP framework supports splitting physics schemes into different categories that are used in different parts of the host model. An example therefore is the separation between slow and fast physics processes for the GFDL microphysics implemented in FV3GFS: while the slow physics are called as part of the usual model physics, the fast physics are integrated in the dynamical core. The separation of physics into different categories is part of the CCPP prebuild configuration (see Sect.~\ref{sec_ccpp_prebuild_config}) and allows to create multiple include files (e.g. \execout{ccpp\_fields\_slow\_physics.inc} and \execout{ccpp\_fields\_fast\_physics.inc} that can be used by different \execout{cdata} structures in different parts of the model). Please contact the GMTB Help Desk (\url{gmtb-help@ucar.edu}) if you would like to use this feature.
+\emph{Note.} The CCPP framework supports splitting physics schemes into different sets that are used in different parts of the host model. An example therefore is the separation between slow and fast physics processes for the GFDL microphysics implemented in FV3GFS: while the slow physics are called as part of the usual model physics, the fast physics are integrated in the dynamical core. The separation of physics into different sets is part of the CCPP prebuild configuration (see Sect.~\ref{sec_ccpp_prebuild_config}), which allows to create multiple include files (e.g. \execout{ccpp\_fields\_slow\_physics.inc} and \execout{ccpp\_fields\_fast\_physics.inc} that can be used by different \execout{cdata} structures in different parts of the model). Please contact the GMTB Help Desk (\url{gmtb-help@ucar.edu}) if you would like to use this feature.
 \item[\textbf{Providing interfaces to call CCPP for the host model.}] The cap must provide functions or subroutines that can be called at the appropriate places in the host model time integration loop and that internally call \execout{ccpp\_init}, \execout{ccpp\_physics\_init}, \execout{ccpp\_physics\_run}, \execout{ccpp\_physics\_finalize} and \execout{ccpp\_finalize}, and handle any errors returned.
 \end{description}
 Listing~\ref{lst_host_cap_template} contains a simple template of a host model cap for CCPP, which can also be found in \execout{ccpp-framework/doc/DevelopersGuide/host\_cap\_template.F90}.
@@ -150,7 +150,7 @@ The CCPP prebuild script \execout{ccpp-framework/scripts/ccpp\_prebuild.py} is t
 \item Populates makefiles with schemes and caps.
 \end{itemize}
 
-In order to connect the CCPP with a host model \execsub{XYZ}, a Python-based configuration file for this model must be created in the directory \execout{ccpp-framework/scripts}. The easiest way is to copying an existing configuration file in this directory, for example
+In order to connect the CCPP with a host model \execsub{XYZ}, a Python-based configuration file for this model must be created in the directory \execout{ccpp-framework/scripts}. The easiest way is to copy an existing configuration file in this directory, for example
 \begin{lstlisting}[language=bash]
 cp ccpp_prebuild_config_SCM.py ccpp_prebuild_config_XYZ.py
 \end{lstlisting}
@@ -175,7 +175,7 @@ SCHEME_FILES_DEPENDENCIES = [] # can be empty
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path : [ list of categories in which scheme may be called ]
+    # Relative path : [ list of sets in which scheme may be called ]
     'ccpp-physics/physics/GFS_DCNV_generic.f90' : ['physics'],
     'ccpp-physics/physics/sfc_sice.f'           : ['physics'],
     }
@@ -255,9 +255,9 @@ INFO: Parsed tables in scheme rrtmg_lw
 INFO: Checking optional arguments in physics schemes ...
 INFO: Metadata table for model SCM written to ccpp-framework/doc/DevelopersGuide/CCPP_VARIABLES_SCM.tex
 INFO: Comparing metadata for requested and provided variables ...
-INFO: Generating module use statements for category physics ...
+INFO: Generating module use statements for set physics ...
 INFO: Generated module use statements for 4 module(s)
-INFO: Generating ccpp_field_add statements for category physics ...
+INFO: Generating ccpp_field_add statements for set physics ...
 INFO: Generated ccpp_field_add statements for 606 variable(s)
 INFO: Generating include files for host model cap scm/src/gmtb_scm.f90 ...
 INFO: Generated module-use include file scm/src/ccpp_modules.inc
@@ -276,7 +276,7 @@ It is highly recommended to build the CCPP physics library and software framewor
 
 \emph{Note.} It is possible to build the CCPP framework standalone, for example for testing purposes. It is generally not possible to build the CCPP physics library without running the CCPP prebuild script, since the build system relies on the auto-generated cmake code snippets that define the physics schemes and caps to compile. Further, any thirdparty libraries required by the physics schemes must be compiled and installed separately and the appropriate compiler and linker flags must be set manually. For example, the CCPP physics used by GMTB's SCM require several of NCEP's libraries (bacio, sp, w3nco); FV3GFS in addition requires the ESMF libraries and, depending on the operating system, also the Intel Math Kernel Library MKL (currently MacOSX only).
 \subsection{Standalone ccpp-framework build}\label{sec_ccpp_framework_standalone_build}
-The instructions laid out below demonstrate how to build the CCPP software framework independently of the host model. It is assumed that the github repository is checked out into a local directory \execout{ccpp-framework}.
+The instructions laid out below demonstrate how to build the CCPP framework independently of the host model. It is assumed that the Github repository is checked out into a local directory \execout{ccpp-framework}.
 \begin{description}
 \item[\textbf{Set environment variables.}] In general, CCPP requires the \execout{CC} and \execout{FC} variables to point to the correct compilers. If threading (OpenMP) will be used inside the CCPP physics or the host model calling the CCPP physics, OpenMP-capable compilers must be used.
 \item[\textbf{Build the CCPP framework.}] Use the following steps to build the CCPP framework.

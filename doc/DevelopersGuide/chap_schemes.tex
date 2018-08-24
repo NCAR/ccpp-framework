@@ -70,7 +70,7 @@ Parallel programming rules:
     \item The MPI communicator to use must be received from the host model through the subroutine's argument table (Listings~\ref{lst_mandatory_variables_by_ccpp} and~\ref{lst_mandatory_variables_by_hostmodel}).
     \item The use of MPI is restricted to global communications, for example \execout{barrier}, \execout{broadcast}, \execout{gather}, \execout{scatter}, \execout{reduce}.
 \end{itemize}
-\item Calls to MPI and OpenMP functions and the import of the MPI and OpenMP libraries must be guarded by CPP preprocessor directives as illustrated in the following listing. OpenMP pragmas can be inserted without CPP guards, since they are ignored by the compiler if the OpenMP compiler flag is omitted.
+\item Calls to MPI and OpenMP functions, and the import of the MPI and OpenMP libraries, must be guarded by CPP preprocessor directives as illustrated in the following listing. OpenMP pragmas can be inserted without CPP guards, since they are ignored by the compiler if the OpenMP compiler flag is omitted.
 \begin{lstlisting}[language=Fortran]
 ...
 
@@ -101,7 +101,7 @@ Scientific Documentation rules:
 \begin{itemize}
 \item Technically, scientific documentation is not needed for a parameterization to work with the CCPP. However, inclusion of inline scientific documentation is highly recommended and necessary before a parameterization is submitted for inclusion in the CCPP. 
 \item Scientific documentation for CCPP parameterizations should be inline within the Fortran code using markups according to the Doxygen software. Reviewing the documentation for CCPP v2.0 parameterizations is a good way of getting started in writing documentation for a new scheme.
-\item The CCPP Scientific Documentation can be converted to html format (see \url{https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc/}.
+\item The CCPP Scientific Documentation can be converted to html format (see \url{https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/}.
 \item For precise instructions on creating the scientific documentation, contact the GMTB helpdesk at \url{gmtb-help@ucar.edu}.
 \end{itemize}
 \begin{sidewaysfigure}
@@ -148,10 +148,10 @@ OPTIONAL_ARGUMENTS = {
     }
 \end{lstlisting}
 \item Place new scheme in the same location as existing schemes in the CCPP directory structure, e.\,g. \execout{../some\_relative\_path/new\_scheme.F90}.
-\item Edit the runtime suite definition file and add the new scheme at the place it should be run. SDFs are located \TODO{in}
+\item Edit the runtime suite definition file and add the new scheme at the place it should be run. SDFs are located in
 \begin{lstlisting}[language=Python]
-ccpp/framework/shared/suite_GFS_operational_2017_FV3_*.xml # FV3
-ccpp-framework/shared/suite_GFS_operational_2017_SCM_*.xml # SCM
+ccpp/framework/suites/suite_FV3_GFS_2017_updated*.xml # FV3
+ccpp-framework/suites/suite_SCM_GFS_2017_updated*.xml # SCM
 \end{lstlisting}
 \item Done. Note that no further modifications of the build system are required, since the CCPP framework will auto-generate the necessary makefiles that allow the host model to compile the scheme.
 \end{enumerate}
