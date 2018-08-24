@@ -23,9 +23,6 @@
       <scheme>rrtmg_lw</scheme>
       <scheme>rrtmg_lw_post</scheme>
       <scheme>GFS_rrtmg_post</scheme>
-      <!-- <scheme>memcheck</scheme> -->
-      <!-- <scheme>GFS_diagtoscreen</scheme> -->
-      <!-- <scheme>GFS_interstitialtoscreen</scheme> -->
     </subcycle>
   </group>
   <group name="physics">
@@ -60,6 +57,7 @@
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>
       <scheme>rayleigh_damp</scheme>
+      <scheme>GFS_suite_stateout_update</scheme>
       <scheme>ozphys</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
       <scheme>get_phi_fv3</scheme>
