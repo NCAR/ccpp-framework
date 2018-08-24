@@ -12,9 +12,6 @@ import sys
 # DH* TODO
 # CONSISTENCY CHECK BETWEEN OPTIONAL ARGUMENTS IN THE METADATA TABLE AND IN
 # THE ACTUAL ARGUMENT LIST / FORTRAN VARIABLE DECLARATIONS (RANKS, TYPE, INTENT).
-#
-# 08/23/2018 - In the developer's guide, we are now talking about sets rather than
-# categories. This should be reflected here and in all the other scripts (and configs).
 # *DH
 
 # Local modules
@@ -33,7 +30,6 @@ def get_host_models_list():
     host_models = []
     for infile in os.listdir(os.path.split(__file__)[0]):
         match = CCPP_PREBUILD_CONFIG_PATTERN.match(infile)
-        print infile, match
         if match:
             host_models.append(match.group(1))
     return host_models
@@ -137,22 +133,22 @@ def collect_physics_subroutines(scheme_files):
     # Parse all scheme files
     metadata_request = {}
     arguments_request = {}
-    category_request = {}
+    pset_request = {}
     for scheme_file in scheme_files.keys():
         (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme_file))
         # Change to directory where scheme_file lives
         os.chdir(scheme_filepath)
         (metadata, arguments) = parse_scheme_tables(scheme_filename)
-        # The different categories for the scheme
-        category = { var : scheme_files[scheme_file] for var in metadata.keys() }
-        # Merge metadata and category, append to arguments
+        # The different psets for the scheme
+        pset = { var : scheme_files[scheme_file] for var in metadata.keys() }
+        # Merge metadata and pset, append to arguments
         metadata_request = merge_dictionaries(metadata_request, metadata)
-        category_request = merge_dictionaries(category_request, category)
+        pset_request = merge_dictionaries(pset_request, pset)
         arguments_request.update(arguments)
         os.chdir(BASEDIR)
     # Return to BASEDIR
     os.chdir(BASEDIR)
-    return (success, metadata_request, category_request, arguments_request)
+    return (success, metadata_request, pset_request, arguments_request)
 
 def check_optional_arguments(metadata, arguments, optional_arguments):
     """Check if for each subroutine with optional arguments, an entry exists in the
@@ -207,7 +203,7 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
 
     return (success, metadata, arguments)
 
-def compare_metadata(metadata_define, metadata_request, category_request, categories_merged):
+def compare_metadata(metadata_define, metadata_request, pset_request, psets_merged):
     """Compare the requested metadata to the defined one. For each requested entry, a
     single (i.e. non-ambiguous entry) must be present in the defined entries. All optional
     arguments that are still in the list of required variables for a scheme are needed,
@@ -215,7 +211,7 @@ def compare_metadata(metadata_define, metadata_request, category_request, catego
 
     logging.info('Comparing metadata for requested and provided variables ...')
     success = True
-    modules = { x : [] for x in categories_merged }
+    modules = { x : [] for x in psets_merged }
     metadata = {}
     for var_name in sorted(metadata_request.keys()):
         # Check that variable is provided by the model
@@ -247,9 +243,9 @@ def compare_metadata(metadata_define, metadata_request, category_request, catego
         for item in var.container.split(' '):
             subitems = item.split('_')
             if subitems[0] == 'MODULE':
-                # Add to list of required modules for each category the requested variable falls under
-                for category in category_request[var_name]:
-                    modules[category].append('_'.join(subitems[1:]))
+                # Add to list of required modules for each pset the requested variable falls under
+                for pset in pset_request[var_name]:
+                    modules[pset].append('_'.join(subitems[1:]))
             elif subitems[0] == 'TYPE':
                 pass
             else:
@@ -263,22 +259,22 @@ def compare_metadata(metadata_define, metadata_request, category_request, catego
         for var in metadata[var_name]:
             var.target = target
             logging.debug('Requested variable {0} in {1} matched to target {2} in module {3}'.format(
-                          var_name, var.container, target, modules[category_request[var_name][0]][-1]))
+                          var_name, var.container, target, modules[pset_request[var_name][0]][-1]))
             # Update len=* for character variables
             if var.type == 'character' and var.kind == 'len=*':
                 logging.debug('Update kind information for requested variable {0} in {1} from {2} to {3}'.format(var_name, var.container, var.kind, kind))
                 var.kind = kind
 
     # Remove duplicated from list of modules
-    for category in categories_merged:
-        modules[category] = sorted(list(set(modules[category])))
+    for pset in psets_merged:
+        modules[pset] = sorted(list(set(modules[pset])))
     return (success, modules, metadata)
 
-def create_module_use_statements(modules, category, module_use_template_host_cap):
+def create_module_use_statements(modules, pset, module_use_template_host_cap):
     """Create Fortran module use statements to be included in the host cap.
     The template module_use_template_host_cap must include the required
     modules for error handling of the ccpp_field_add statments."""
-    logging.info('Generating module use statements for category {0} ...'.format(category))
+    logging.info('Generating module use statements for physics set {0} ...'.format(pset))
     success = True
     module_use_statements = module_use_template_host_cap
     cnt = 1
@@ -288,7 +284,7 @@ def create_module_use_statements(modules, category, module_use_template_host_cap
     logging.info('Generated module use statements for {0} module(s)'.format(cnt))
     return (success, module_use_statements)
 
-def create_ccpp_field_add_statements(metadata, category, ccpp_data_structure):
+def create_ccpp_field_add_statements(metadata, pset, ccpp_data_structure):
     """Create Fortran code to add host model variables to the cdata
     structure. The metadata container may contain multiple entries
     of a variable with the same standard_name, but for different
@@ -296,7 +292,7 @@ def create_ccpp_field_add_statements(metadata, category, ccpp_data_structure):
     different local_name. We only need to add it once to
     the add_field statement, since the target (i.e. the
     original variable defined by the model) is the same."""
-    logging.info('Generating ccpp_field_add statements for category {0} ...'.format(category))
+    logging.info('Generating ccpp_field_add statements for physics set {0} ...'.format(pset))
     success = True
     ccpp_field_add_statements = ''
     cnt = 0
@@ -435,7 +431,7 @@ def main():
         raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
-    (success, metadata_request, category_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
+    (success, metadata_request, pset_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
@@ -446,36 +442,36 @@ def main():
         raise Exception('Call to check_optional_arguments failed.')
 
     # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
-    success = metadata_to_latex(metadata_define, metadata_request, category_request, host_model, config['latex_vartable_file'])
+    success = metadata_to_latex(metadata_define, metadata_request, pset_request, host_model, config['latex_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_latex failed.')
 
-    # Flatten list of list of categories for all variables
-    categories_merged = list(set(itertools.chain(*category_request.values())))
+    # Flatten list of list of psets for all variables
+    psets_merged = list(set(itertools.chain(*pset_request.values())))
 
     # Check requested against defined arguments to generate metadata (list/dict of variables for CCPP)
-    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request, category_request, categories_merged)
+    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request, pset_request, psets_merged)
     if not success:
         raise Exception('Call to compare_metadata failed.')
 
-    for category in categories_merged:
+    for pset in psets_merged:
         # Create module use statements to inject into the host model cap
-        (success, module_use_statements) = create_module_use_statements(modules[category], category, config['module_use_template_host_cap'])
+        (success, module_use_statements) = create_module_use_statements(modules[pset], pset, config['module_use_template_host_cap'])
         if not success:
             raise Exception('Call to create_module_use_statements failed.')
 
-        # Only process variables that fall into this category
-        metadata_filtered = { key : value for (key, value) in metadata.items() if category in category_request[key] }
+        # Only process variables that fall into this pset
+        metadata_filtered = { key : value for (key, value) in metadata.items() if pset in pset_request[key] }
 
         # Create ccpp_fiels_add statements to inject into the host model cap
-        (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata_filtered, category, config['ccpp_data_structure'])
+        (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata_filtered, pset, config['ccpp_data_structure'])
         if not success:
             raise Exception('Call to create_ccpp_field_add_statements failed.')
 
         # Generate include files for module_use_statements and ccpp_field_add_statements
         success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
-                                                          config['module_include_file'].format(category=category),
-                                                          config['fields_include_file'].format(category=category))
+                                                          config['module_include_file'].format(set=pset),
+                                                          config['fields_include_file'].format(set=pset))
         if not success:
             raise Exception('Call to generate_include_files failed.')
 

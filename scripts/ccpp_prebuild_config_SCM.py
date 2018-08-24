@@ -62,7 +62,7 @@ SCHEME_FILES_DEPENDENCIES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ]
     'ccpp-physics/physics/GFS_DCNV_generic.F90'         : ['physics'],
     'ccpp-physics/physics/GFS_MP_generic.F90'           : ['physics'],
     'ccpp-physics/physics/GFS_PBL_generic.F90'          : ['physics'],
@@ -79,7 +79,6 @@ SCHEME_FILES = {
     'ccpp-physics/physics/cnvc90.f'                     : ['physics'],
     'ccpp-physics/physics/dcyc2.f'                      : ['physics'],
     'ccpp-physics/physics/get_prs_fv3.F90'              : ['physics'],
-    'ccpp-physics/physics/gfdl_cloud_microphys.F90'     : ['physics'],
     'ccpp-physics/physics/gscond.f'                     : ['physics'],
     'ccpp-physics/physics/gwdc.f'                       : ['physics'],
     'ccpp-physics/physics/gwdps.f'                      : ['physics'],

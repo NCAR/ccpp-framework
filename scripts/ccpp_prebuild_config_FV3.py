@@ -94,7 +94,7 @@ SCHEME_FILES_DEPENDENCIES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ]
     'ccpp/physics/physics/GFS_DCNV_generic.F90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_MP_generic.F90'                : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_PBL_generic.F90'               : [ 'slow_physics' ],
@@ -225,8 +225,8 @@ OPTIONAL_ARGUMENTS = {
 
 # Names of Fortran include files in the host model cap (do not change);
 # both files will be written to the directory of each target file
-MODULE_INCLUDE_FILE = 'ccpp_modules_{category}.inc'
-FIELDS_INCLUDE_FILE = 'ccpp_fields_{category}.inc'
+MODULE_INCLUDE_FILE = 'ccpp_modules_{set}.inc'
+FIELDS_INCLUDE_FILE = 'ccpp_fields_{set}.inc'
 
 # HTML document containing the model-defined CCPP variables
 HTML_VARTABLE_FILE = 'ccpp/physics/CCPP_VARIABLES_FV3.html'
