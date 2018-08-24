@@ -15,8 +15,8 @@ VARIABLE_DEFINITION_FILES = [
     'FV3/gfsphysics/GFS_layer/GFS_typedefs.F90',
     ]
 
-# Add all physics scheme dependencies relative to basedir - note that these are all violations
-# of the CCPP requirement to not use any external modules except Fortran standard modules!
+# Add all physics scheme dependencies relative to basedir - note that the CCPP
+# rules stipulate that dependencies are not shared between the schemes!
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/GFDL_parse_tracers.F90',
     'ccpp/physics/physics/calpreciptype.f90',

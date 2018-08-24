@@ -81,7 +81,7 @@ def metadata_to_latex(metadata_define, metadata_request, category_request, model
 
     var_names = sorted(list(set(metadata_define.keys() + metadata_request.keys())))
 
-    latex = '''\\documentclass[12pt,letterpaper,oneside]{{scrbook}}
+    latex = '''\\documentclass[12pt,letterpaper,oneside,landscape]{{scrbook}}
 
 \\usepackage{{import}}
 \\import{{../common/}}{{gmtb.sty}}
@@ -129,7 +129,8 @@ def metadata_to_latex(metadata_define, metadata_request, category_request, model
         else:
             requested = 'NOT REQUESTED'
         if var_name in category_request.keys():
-            category = '\\newline '.join(sorted(category_request[var_name]))
+            category_list = [ escape_tex(c) for c in category_request[var_name] ]
+            category = '\\newline '.join(sorted(category_list))
         else:
             category = ''
 
