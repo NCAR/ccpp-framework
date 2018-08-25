@@ -96,6 +96,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/rrtmg_sw_post.F90'            : ['physics'],
     'ccpp-physics/physics/rrtmg_sw_pre.F90'             : ['physics'],
     'ccpp-physics/physics/sfc_diag.f'                   : ['physics'],
+    'ccpp/physics/physics/sfc_diag_post.F90'            : ['physics'],
     'ccpp-physics/physics/sfc_diff.f'                   : ['physics'],
     'ccpp-physics/physics/sfc_drv.f'                    : ['physics'],
     'ccpp-physics/physics/sfc_nst.f'                    : ['physics'],
