@@ -49,6 +49,7 @@
     <subcycle loop="1">
       <scheme>dcyc2t3_post</scheme>
       <scheme>sfc_diag</scheme>
+      <scheme>sfc_diag_post</scheme>
       <scheme>GFS_surface_generic_post</scheme>
       <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>
@@ -76,7 +77,6 @@
       <scheme>GFS_MP_generic_pre</scheme>
       <scheme>gfdl_cloud_microphys</scheme>
       <scheme>GFS_MP_generic_post</scheme>
-      <!-- <scheme>sfc_diag</scheme> -->
       <scheme>lsm_noah_post</scheme>
       <scheme>sfc_sice_post</scheme>
     </subcycle>
