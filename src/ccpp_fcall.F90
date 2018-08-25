@@ -367,7 +367,12 @@ module ccpp_fcall
     !! @param[   out] ierr    Integer error flag
     !
     subroutine ccpp_run_scheme(scheme, cdata, stage, ierr)
-
+! DH* temporary, to be removed as soon as possible
+#ifdef TEMPLOG
+        use mpi
+        use omp_lib
+#endif
+! *DH
         type(ccpp_scheme_t),  intent(inout)          :: scheme
         type(ccpp_t), target, intent(inout)          :: cdata
         character(len=*),     intent(in),   optional :: stage
@@ -376,6 +381,11 @@ module ccpp_fcall
         character(:), allocatable      :: stage_local
         character(:), allocatable      :: function_name
         integer :: l
+! DH*
+#ifdef TEMPLOG
+        integer :: mpirank, ompthread, mierr
+#endif
+! *DH
 
         ierr = 0
 
@@ -385,6 +395,14 @@ module ccpp_fcall
             stage_local = trim(CCPP_DEFAULT_STAGE)
         end if
 
+! DH*
+#ifdef TEMPLOG
+        call MPI_COMM_RANK(MPI_COMM_WORLD, mpirank, mierr)
+        ompthread = OMP_GET_THREAD_NUM()
+        if (mpirank==0 .and. ompthread==0 .and. trim(stage_local) == trim(CCPP_DEFAULT_STAGE)) &
+                   write(0,*) 'CCPP DEBUG: calling ' // trim(scheme%name) // ' through option B'
+#endif
+! *DH
         call ccpp_debug('Called ccpp_run_scheme for ' // trim(scheme%name) &
                         //' in stage ' // trim(stage_local))
 
