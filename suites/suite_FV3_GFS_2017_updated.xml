@@ -33,6 +33,7 @@
       <scheme>GFS_suite_interstitial_1</scheme>
       <scheme>dcyc2t3</scheme>
       <scheme>GFS_surface_generic_pre</scheme>
+      <scheme>GFS_suite_interstitial_2</scheme>
     </subcycle>
     <!-- Surface iteration loop -->
     <subcycle loop="2">
@@ -49,6 +50,7 @@
     <subcycle loop="1">
       <scheme>dcyc2t3_post</scheme>
       <scheme>sfc_diag</scheme>
+      <scheme>sfc_diag_post</scheme>
       <scheme>GFS_surface_generic_post</scheme>
       <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>

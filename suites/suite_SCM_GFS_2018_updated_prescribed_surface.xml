@@ -61,7 +61,6 @@
       <scheme>GFS_MP_generic_pre</scheme>
       <scheme>gfdl_cloud_microphys</scheme>
       <scheme>GFS_MP_generic_post</scheme>
-      <!-- <scheme>sfc_diag</scheme> -->
       <scheme>lsm_noah_post</scheme>
       <scheme>sfc_sice_post</scheme>
     </subcycle>
