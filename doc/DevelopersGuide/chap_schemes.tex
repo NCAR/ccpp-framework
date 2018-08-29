@@ -43,7 +43,7 @@ Input/output variable (argument) rules:
 \item Standard Fortran variables (\execout{character}, \execout{integer}, \execout{logical}, \execout{real}). For \execout{character} variables, the length should be specified as $\ast$. All others can have a \execout{kind} attribute of a kind type defined by the host model.
 \item Derived data types (DDTs). While the use of DDTs is discouraged in general, some use cases may justify their application (e.g. DDTs for chemistry that contain tracer arrays, information on whether tracers are advected, \dots).
 \end{itemize}
-\item If a scheme is to make use of CCPP's subcycling capability in the runtime suite definition file \TODO{(SDF; see also GMTB Single Column Model Technical Guide v2.0, chapter 6.1.3, \url{https://dtcenter.org/gmtb/users/ccpp/docs})}, the loop counter can be obtained from CCPP as an \execout{intent(in)} variable (see Listings~\ref{lst_mandatory_variables_by_ccpp} and~\ref{lst_mandatory_variables_by_hostmodel} for a mandatory list of variables that are provided by the CCPP framework and/or the host model for this and other purposes).
+\item If a scheme is to make use of CCPP's subcycling capability in the runtime suite definition file (SDF; see also GMTB Single Column Model Technical Guide v2.1, chapter 6.1.3, \url{https://dtcenter.org/gmtb/users/ccpp/docs}), the loop counter can be obtained from CCPP as an \execout{intent(in)} variable (see Listings~\ref{lst_mandatory_variables_by_ccpp} and~\ref{lst_mandatory_variables_by_hostmodel} for a mandatory list of variables that are provided by the CCPP framework and/or the host model for this and other purposes).
 \end{itemize}
 
 Coding rules:
@@ -117,7 +117,7 @@ Scientific Documentation rules:
 \label{sec_addscheme}
 This section describes briefly how to add a new scheme to the CCPP pool and use it with a host model that already supports the CCPP.
 \begin{enumerate}
-\item Identify the required variables for your target host model: for a list of variables available for host model \execsub{XYZ} (currently \execout{SCM} and \execout{FV3}), see \TODO{\execout{ccpp-framework/doc/DevelopersGuide/CCPP\_VARIABLES\_XYZ.pdf}}. Contact the GMTB helpdesk at \url{gmtb-help@ucar.edu} if you need additional variables that you believe should be provided by the host model or as part of a pre-/post-scheme (interstitial scheme) instead of being calculated from existing variables inside your scheme.
+\item Identify the required variables for your target host model: for a list of variables available for host model \execsub{XYZ} (currently \execout{SCM} and \execout{FV3}), see \execout{ccpp-framework/doc/DevelopersGuide/CCPP\_VARIABLES\_XYZ.pdf}. Contact the GMTB helpdesk at \url{gmtb-help@ucar.edu} if you need additional variables that you believe should be provided by the host model or as part of a pre-/post-scheme (interstitial scheme) instead of being calculated from existing variables inside your scheme.
 \item Identify if your new scheme requires additional interstitial code that must be run before/after the scheme and that cannot be part of the scheme itself, for example because of dependencies on other schemes and/or the order the scheme is run in the suite definition file. As of now, interstitial schemes should be created in cooperation with the GMTB helpdesk.
 \item Follow the guidelines outlined in the previous section to make your scheme CCPP-compliant. Make sure to use an uppercase suffix \execout{.F90} to enable CPP preprocessing.
 \item Locate the CCPP prebuild configuration files for the target host model, for example:
