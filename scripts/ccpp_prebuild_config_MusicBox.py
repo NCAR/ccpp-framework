@@ -10,7 +10,7 @@
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
-    'MusicBox_host/src/micm_type_defs.f90',
+    'MusicBox_host/src/MusicBox_var_defs.f90',
     'MICM_chemistry/src/kinetics_module.F90',
     ]
 
@@ -82,6 +82,6 @@ use ccpp_errors, only: ccpp_error
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
        use machine,          only: kind_phys
-       use micm_type_defs,   only: Solver_type
+       use solver_var_defs,  only: Solver_type
        use kinetics_module,  only: kinetics_type
 '''
