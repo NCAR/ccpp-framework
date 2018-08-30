@@ -23,7 +23,7 @@ from mkdoc import metadata_to_html, metadata_to_latex
 ###############################################################################
 
 # List of configured host models
-HOST_MODELS = ["MusicBox"]
+HOST_MODELS = ["cam_kessler","ibox","MusicBox"]
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
