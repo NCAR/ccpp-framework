@@ -97,7 +97,7 @@ def merge_dictionaries(x, y):
                                     '    {0}\n'.format(x[key][0].print_debug()) +\
                                     'vs. {0}'.format(y[key][0].print_debug()))
                 z[key] = x[key] + y[key]
-            # Category dictionaries containing lists of categories of type string for each key=standard_name
+            # Physics set dictionaries containing lists of physics sets of type string for each key=standard_name
             elif type(x[key][0]) is str:
                 z[key] = list(set(x[key] + y[key]))
             else:

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="FV3_GFS_2017_updated" lib="ccppphys" ver="1">
+<suite name="FV3_GFS_2017_updated" lib="ccppphys" ver="2">
   <!-- <init></init> -->
   <group name="time_vary">
     <subcycle loop="1">
@@ -23,9 +23,6 @@
       <scheme>rrtmg_lw</scheme>
       <scheme>rrtmg_lw_post</scheme>
       <scheme>GFS_rrtmg_post</scheme>
-      <!-- <scheme>memcheck</scheme> -->
-      <!-- <scheme>GFS_diagtoscreen</scheme> -->
-      <!-- <scheme>GFS_interstitialtoscreen</scheme> -->
     </subcycle>
   </group>
   <group name="physics">
@@ -36,6 +33,7 @@
       <scheme>GFS_suite_interstitial_1</scheme>
       <scheme>dcyc2t3</scheme>
       <scheme>GFS_surface_generic_pre</scheme>
+      <scheme>GFS_suite_interstitial_2</scheme>
     </subcycle>
     <!-- Surface iteration loop -->
     <subcycle loop="2">
@@ -52,6 +50,7 @@
     <subcycle loop="1">
       <scheme>dcyc2t3_post</scheme>
       <scheme>sfc_diag</scheme>
+      <scheme>sfc_diag_post</scheme>
       <scheme>GFS_surface_generic_post</scheme>
       <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>
@@ -60,6 +59,7 @@
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>
       <scheme>rayleigh_damp</scheme>
+      <scheme>GFS_suite_stateout_update</scheme>
       <scheme>ozphys</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
       <scheme>get_phi_fv3</scheme>

@@ -14,9 +14,8 @@ VARIABLE_DEFINITION_FILES = [
     'scm/src/gmtb_scm_physical_constants.f90'
     ]
 
-# Can be empty, since all physics schemes and their
-# dependencies are hardcoded in CMakeLists in
-# ccpp-physics - to fix, c.f. FV3 v1
+# Add all physics scheme dependencies relative to basedir - note that the CCPP
+# rules stipulate that dependencies are not shared between the schemes!
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp-physics/physics/GFDL_parse_tracers.F90',
     'ccpp-physics/physics/aer_cloud.F',
@@ -63,7 +62,7 @@ SCHEME_FILES_DEPENDENCIES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of categories in which scheme may be called ]
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ]
     'ccpp-physics/physics/GFS_DCNV_generic.F90'         : ['physics'],
     'ccpp-physics/physics/GFS_MP_generic.F90'           : ['physics'],
     'ccpp-physics/physics/GFS_PBL_generic.F90'          : ['physics'],
@@ -80,6 +79,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/cnvc90.f'                     : ['physics'],
     'ccpp-physics/physics/dcyc2.f'                      : ['physics'],
     'ccpp-physics/physics/get_prs_fv3.F90'              : ['physics'],
+    'ccpp-physics/physics/gfdl_cloud_microphys.F90'     : ['physics'],
     'ccpp-physics/physics/gscond.f'                     : ['physics'],
     'ccpp-physics/physics/gwdc.f'                       : ['physics'],
     'ccpp-physics/physics/gwdps.f'                      : ['physics'],
@@ -97,6 +97,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/rrtmg_sw_post.F90'            : ['physics'],
     'ccpp-physics/physics/rrtmg_sw_pre.F90'             : ['physics'],
     'ccpp-physics/physics/sfc_diag.f'                   : ['physics'],
+    'ccpp-physics/physics/sfc_diag_post.F90'            : ['physics'],
     'ccpp-physics/physics/sfc_diff.f'                   : ['physics'],
     'ccpp-physics/physics/sfc_drv.f'                    : ['physics'],
     'ccpp-physics/physics/sfc_nst.f'                    : ['physics'],
