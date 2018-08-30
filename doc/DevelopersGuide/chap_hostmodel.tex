@@ -47,9 +47,9 @@ At present, only two types of variable definitions are supported by the CCPP fra
 With the CCPP, it is possible to not only refer to components of derived types, but also to slices of arrays in the metadata table as long as these are contiguous in memory (see Listing~\ref{lst_metadata_table_hostmodel} in the following section for an example).
 
 \section{Adding metadata variable tables for the host model}
-In order to establish the link between host model variables and physics scheme variables, the host model must provide metadata tables similar to those presented in Sect.~\ref{sec_writescheme}. The host model can have multiple metadata tables or just one, but for each variable required by the pool of CCPP physics schemes, one and only one entry must exist on the host model side. The connection between a variable in the host model and in the physics scheme is made through its \execout{standard\_name}.
+To establish the link between host model variables and physics scheme variables, the host model must provide metadata tables similar to those presented in Sect.~\ref{sec_writescheme}. The host model can have multiple metadata tables or just one. For each variable required by the pool of CCPP physics schemes, one and only one entry must exist on the host model side. The connection between a variable in the host model and in the physics scheme is made through its \execout{standard\_name}.
 
-The following requirements must be met when defining variables in the host model metadata tables:
+The following requirements must be met when defining variables in the host model metadata tables (see also listing~\ref{lst_metadata_table_hostmodel} for examples of host model metadata tables).
 \begin{itemize}
 \item The \execout{standard\_name} must match that of the target variable in the physics scheme.
 \item The type, kind, shape and size of the variable (as defined in the host model Fortran code) must match that of the target variable.
@@ -57,10 +57,9 @@ The following requirements must be met when defining variables in the host model
 \item The attributes \execout{optional} and \execout{intent} must be set to \execout{F} and \execout{none}, respectively.
 \item The \execout{local\_name} of the variable must be set to the name the host model cap (see Sect.~\ref{sec_hostmodel_cap}) uses to refer to the variable.
 \item The name of the metadata table must match the name of the module or program in which the variable is defined, or the name of the derived data type if the variable is a component of this type.
-\item For metadata tables describing module variables, the table must be placed inside the module.
-\item For metadata tables describing components of derived data types, the table must be placed immediately before the type definition.
+\item Metadata tables describing module variables must be placed inside the module.
+\item Metadata tables describing components of derived data types must be placed immediately before the type definition.
 \end{itemize}
-Listing~\ref{lst_metadata_table_hostmodel} provides examples for host model metadata tables.
 \begin{sidewaysfigure}
 \begin{lstlisting}[language=Fortran,
                  %basicstyle=\scriptsize\fontfamily{qcr}\fontshape{n}\fontseries{l}\selectfont
@@ -137,8 +136,8 @@ Listing~\ref{lst_host_cap_template} contains a simple template of a host model c
 \section{Configuring and running the CCPP prebuild script}
 \label{sec_ccpp_prebuild_config}
 \begin{figure}
-\centerline{\includegraphics[width=0.95\textwidth]{./images/ccpp_design_with_ccpp_prebuild.pdf}}
-\caption{Role and position of the CCPP prebuild script and the \execout{cdata} structure in the software architecture of an atmospheric modeling system.}\label{fig_ccpp_design_with_ccpp_prebuild}
+\centerline{\includegraphics[width=0.85\textwidth]{./images/ccpp_design_with_ccpp_prebuild.pdf}}
+\caption{Role of the CCPP prebuild script and the \execout{cdata} structure in the software architecture of an atmospheric modeling system.}\label{fig_ccpp_design_with_ccpp_prebuild}
 \end{figure}
 The CCPP prebuild script \execout{ccpp-framework/scripts/ccpp\_prebuild.py} is the central piece of code that connects the host model with the CCPP physics schemes (see Figure~\ref{fig_ccpp_design_with_ccpp_prebuild}). This script must be run before compiling the CCPP physics library and the host model cap. The CCPP prebuild script automates several tasks based on the information collected from the metadata tables on the host model side and from the individual physics schemes:
 \begin{itemize}
@@ -156,7 +155,7 @@ cp ccpp_prebuild_config_SCM.py ccpp_prebuild_config_XYZ.py
 \end{lstlisting}
 The configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} depends largely on (a) the directory structure of the host model itself, (b) where the \execout{ccpp-framework} and the \execout{ccpp-physics} directories are located relative to the directory structure of the host model, and (c) from which directory the \execout{ccpp\_prebuild.py} script is executed before/during the build process (this is referred to as \execout{basedir} in \execout{ccpp\_prebuild\_config\_XYZ.py}).
 
-Listing~\ref{lst_ccpp_prebuild_config} contains an example for the SCM CCPP prebuild config. Here, it is assumed that both \execout{ccpp-framework} and \execout{ccpp-physics} are located in the top-level directory of the host model, and that \execout{ccpp\_prebuild.py} is executed from the same top-level directory (recommended setup).
+Listing~\ref{lst_ccpp_prebuild_config} contains an example for the SCM CCPP prebuild config. Here, it is assumed that both \execout{ccpp-framework} and \execout{ccpp-physics} are located in the top-level directory of the host model, and that \execout{ccpp\_prebuild.py} is executed from the same top-level directory.
 \begin{lstlisting}[language=python,
                  basicstyle=\scriptsize\ttfamily,
                  label=lst_ccpp_prebuild_config,
@@ -324,6 +323,6 @@ make
 # add VERBOSE=1 after install for verbose output
 \end{lstlisting}
 \end{description}
-Following these steps, the include files and the library \execout{libccpp.so} that the host model needs to be compiled and linked against are located in \execout{ccpp-framework/build/include} and \execout{ccpp-framework/build/lib}. Note that there is no need to link the host model to the CCPP physics library in \execout{ccpp-physics/build}, as long as it is in the search path of the dynamic loader of the OS (for example by adding the directory \execout{ccpp-physics/build} to the \execout{LD\_LIBRARY\_PATH} environment variable). This is because the CCPP physics library is loaded dynamically by the CCPP framework using the library name specified in the runtime suite definition file \TODO{(see the GMTB Single Column Model Technical Guide v2.0, Chapter 6.1.3, (\url{https://dtcenter.org/gmtb/users/ccpp/docs/}) for further information)}. Setting the environment variables \execout{FFLAGS} and \execout{LDFLAGS} as described for the CCPP framework standalone build in Sect.~\ref{sec_ccpp_framework_standalone_build} should be sufficient to compile the host model with its newly created host model cap (Sect.~\ref{sec_hostmodel_cap}) and connect to the CCPP library and framework.
+Following these steps, the include files and the library \execout{libccpp.so} that the host model needs to be compiled and linked against are located in \execout{ccpp-framework/build/include} and \execout{ccpp-framework/build/lib}. Note that there is no need to link the host model to the CCPP physics library in \execout{ccpp-physics/build}, as long as it is in the search path of the dynamic loader of the OS (for example by adding the directory \execout{ccpp-physics/build} to the \execout{LD\_LIBRARY\_PATH} environment variable). This is because the CCPP physics library is loaded dynamically by the CCPP framework using the library name specified in the runtime suite definition file (see the GMTB Single Column Model Technical Guide v2.1, Chapter 6.1.3, (\url{https://dtcenter.org/gmtb/users/ccpp/docs/}) for further information). Setting the environment variables \execout{FFLAGS} and \execout{LDFLAGS} as described for the CCPP framework standalone build in Sect.~\ref{sec_ccpp_framework_standalone_build} should be sufficient to compile the host model with its newly created host model cap (Sect.~\ref{sec_hostmodel_cap}) and connect to the CCPP library and framework.
 
 For a complete integration of the CCPP infrastructure and physics library build systems in the host model build system, users are referred to the existing implementations in GMTB SCM and FV3GFS.
