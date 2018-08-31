@@ -3,8 +3,10 @@
 # Standard modules
 import argparse
 import collections
+import itertools
 import logging
 import os
+import re
 import sys
 
 # DH* TODO
@@ -14,16 +16,25 @@ import sys
 
 # Local modules
 from common import encode_container, execute
-from metadata_parser import merge_metadata_dicts, parse_scheme_tables, parse_variable_tables
+from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
 from mkdoc import metadata_to_html, metadata_to_latex
 
 ###############################################################################
-# User definitions                                                            #
+# List of configured host models                                              #
 ###############################################################################
 
-# List of configured host models
-HOST_MODELS = ["cam_kessler","ibox","MusicBox"]
+CCPP_PREBUILD_CONFIG_PATTERN = re.compile("ccpp_prebuild_config_(.*).py")
+
+def get_host_models_list():
+    host_models = []
+    for infile in os.listdir(os.path.split(__file__)[0]):
+        match = CCPP_PREBUILD_CONFIG_PATTERN.match(infile)
+        if match:
+            host_models.append(match.group(1))
+    return host_models
+
+HOST_MODELS = get_host_models_list()
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -35,6 +46,9 @@ parser.add_argument('--debug', action='store_true', help='enable debugging outpu
 
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
+
+# Definition of variables (metadata tables) that are  provided by CCPP
+CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(os.path.abspath(os.path.split(__file__)[0]), '../src', 'ccpp_types.F90')
 
 ###############################################################################
 # Functions and subroutines                                                   #
@@ -78,6 +92,9 @@ def import_config(host_model):
     config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
     config['module_use_template_scheme_cap'] = ccpp_prebuild_config.MODULE_USE_TEMPLATE_SCHEME_CAP
 
+    # Add model-intependent, CCPP-internal variable definition files
+    config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
+
     return(success, config)
 
 def setup_logging(debug):
@@ -104,7 +121,7 @@ def gather_variable_definitions(variable_definition_files):
         # Change to directory of variable_definition_file and parse it
         os.chdir(os.path.join(BASEDIR,filedir))
         metadata = parse_variable_tables(filename)
-        metadata_define = merge_metadata_dicts(metadata_define, metadata)
+        metadata_define = merge_dictionaries(metadata_define, metadata)
         # Return to BASEDIR
         os.chdir(BASEDIR)
     return (success, metadata_define)
@@ -116,17 +133,22 @@ def collect_physics_subroutines(scheme_files):
     # Parse all scheme files
     metadata_request = {}
     arguments_request = {}
-    for scheme_file in scheme_files:
+    pset_request = {}
+    for scheme_file in scheme_files.keys():
         (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme_file))
         # Change to directory where scheme_file lives
         os.chdir(scheme_filepath)
         (metadata, arguments) = parse_scheme_tables(scheme_filename)
-        metadata_request = merge_metadata_dicts(metadata_request, metadata)
+        # The different psets for the scheme
+        pset = { var : scheme_files[scheme_file] for var in metadata.keys() }
+        # Merge metadata and pset, append to arguments
+        metadata_request = merge_dictionaries(metadata_request, metadata)
+        pset_request = merge_dictionaries(pset_request, pset)
         arguments_request.update(arguments)
         os.chdir(BASEDIR)
     # Return to BASEDIR
     os.chdir(BASEDIR)
-    return (success, metadata_request, arguments_request)
+    return (success, metadata_request, pset_request, arguments_request)
 
 def check_optional_arguments(metadata, arguments, optional_arguments):
     """Check if for each subroutine with optional arguments, an entry exists in the
@@ -181,7 +203,7 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
 
     return (success, metadata, arguments)
 
-def compare_metadata(metadata_define, metadata_request):
+def compare_metadata(metadata_define, metadata_request, pset_request, psets_merged):
     """Compare the requested metadata to the defined one. For each requested entry, a
     single (i.e. non-ambiguous entry) must be present in the defined entries. All optional
     arguments that are still in the list of required variables for a scheme are needed,
@@ -189,7 +211,7 @@ def compare_metadata(metadata_define, metadata_request):
 
     logging.info('Comparing metadata for requested and provided variables ...')
     success = True
-    modules = []
+    modules = { x : [] for x in psets_merged }
     metadata = {}
     for var_name in sorted(metadata_request.keys()):
         # Check that variable is provided by the model
@@ -221,7 +243,9 @@ def compare_metadata(metadata_define, metadata_request):
         for item in var.container.split(' '):
             subitems = item.split('_')
             if subitems[0] == 'MODULE':
-                modules.append('_'.join(subitems[1:]))
+                # Add to list of required modules for each pset the requested variable falls under
+                for pset in pset_request[var_name]:
+                    modules[pset].append('_'.join(subitems[1:]))
             elif subitems[0] == 'TYPE':
                 pass
             else:
@@ -234,21 +258,23 @@ def compare_metadata(metadata_define, metadata_request):
         # Set target and kind (if applicable)
         for var in metadata[var_name]:
             var.target = target
-            logging.debug('Requested variable {0} in {1} matched to target {2} in module {3}'.format(var_name, var.container, target, modules[-1]))
+            logging.debug('Requested variable {0} in {1} matched to target {2} in module {3}'.format(
+                          var_name, var.container, target, modules[pset_request[var_name][0]][-1]))
             # Update len=* for character variables
             if var.type == 'character' and var.kind == 'len=*':
                 logging.debug('Update kind information for requested variable {0} in {1} from {2} to {3}'.format(var_name, var.container, var.kind, kind))
                 var.kind = kind
 
     # Remove duplicated from list of modules
-    modules = sorted(list(set(modules)))
+    for pset in psets_merged:
+        modules[pset] = sorted(list(set(modules[pset])))
     return (success, modules, metadata)
 
-def create_module_use_statements(modules, module_use_template_host_cap):
+def create_module_use_statements(modules, pset, module_use_template_host_cap):
     """Create Fortran module use statements to be included in the host cap.
     The template module_use_template_host_cap must include the required
     modules for error handling of the ccpp_field_add statments."""
-    logging.info('Generating module use statements ...')
+    logging.info('Generating module use statements for physics set {0} ...'.format(pset))
     success = True
     module_use_statements = module_use_template_host_cap
     cnt = 1
@@ -258,7 +284,7 @@ def create_module_use_statements(modules, module_use_template_host_cap):
     logging.info('Generated module use statements for {0} module(s)'.format(cnt))
     return (success, module_use_statements)
 
-def create_ccpp_field_add_statements(metadata, ccpp_data_structure):
+def create_ccpp_field_add_statements(metadata, pset, ccpp_data_structure):
     """Create Fortran code to add host model variables to the cdata
     structure. The metadata container may contain multiple entries
     of a variable with the same standard_name, but for different
@@ -266,12 +292,17 @@ def create_ccpp_field_add_statements(metadata, ccpp_data_structure):
     different local_name. We only need to add it once to
     the add_field statement, since the target (i.e. the
     original variable defined by the model) is the same."""
-    logging.info('Generating ccpp_field_add statements ...')
+    logging.info('Generating ccpp_field_add statements for physics set {0} ...'.format(pset))
     success = True
     ccpp_field_add_statements = ''
     cnt = 0
     for var_name in sorted(metadata.keys()):
+        # Skip CCPP-internal variables (these are added manually in ccpp_fields.F90 -> ccpp_fields_init)
+        if var_name.startswith("ccpp_"):
+            logging.debug('Skip CCPP-internal variable {0}'.format(var_name))
+            continue
         # Add variable with var_name = standard_name once
+        logging.debug('Generating ccpp_field_add statement for variable {0}'.format(var_name))
         var = metadata[var_name][0]
         ccpp_field_add_statements += var.print_add(ccpp_data_structure)
         cnt += 1
@@ -352,7 +383,7 @@ def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile):
         schemes_with_path.append(os.path.join(relative_path, scheme_filename))
     makefile.write(schemes_with_path)
     cmakefile.write(schemes_with_path)
-    logging.info('Added {0} schemes to makefile/cmakefile {1}/{2}'.format(
+    logging.info('Added {0} schemes to {1} and {2}'.format(
            len(schemes_with_path), makefile.filename, cmakefile.filename))
     return success
 
@@ -370,7 +401,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
     caps_with_path = [ os.path.join(relative_path, cap) for cap in caps]
     makefile.write(caps_with_path)
     cmakefile.write(caps_with_path)
-    logging.info('Added {0} auto-generated caps to makefile/cmakefile {1}/{2}'.format(
+    logging.info('Added {0} auto-generated caps to {1} and {2}'.format(
                           len(caps_with_path), makefile.filename, cmakefile.filename))
     return success
 
@@ -400,7 +431,7 @@ def main():
         raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
-    (success, metadata_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
+    (success, metadata_request, pset_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
@@ -411,30 +442,38 @@ def main():
         raise Exception('Call to check_optional_arguments failed.')
 
     # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
-    success = metadata_to_latex(metadata_define, metadata_request, host_model, config['latex_vartable_file'])
+    success = metadata_to_latex(metadata_define, metadata_request, pset_request, host_model, config['latex_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_latex failed.')
 
+    # Flatten list of list of psets for all variables
+    psets_merged = list(set(itertools.chain(*pset_request.values())))
+
     # Check requested against defined arguments to generate metadata (list/dict of variables for CCPP)
-    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request)
+    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request, pset_request, psets_merged)
     if not success:
         raise Exception('Call to compare_metadata failed.')
 
-    # Crate module use statements to inject into the host model cap
-    (success, module_use_statements) = create_module_use_statements(modules, config['module_use_template_host_cap'])
-    if not success:
-        raise Exception('Call to create_module_use_statements failed.')
+    for pset in psets_merged:
+        # Create module use statements to inject into the host model cap
+        (success, module_use_statements) = create_module_use_statements(modules[pset], pset, config['module_use_template_host_cap'])
+        if not success:
+            raise Exception('Call to create_module_use_statements failed.')
 
-    # Crate ccpp_fiels_add statements to inject into the host model cap
-    (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata, config['ccpp_data_structure'])
-    if not success:
-        raise Exception('Call to create_ccpp_field_add_statements failed.')
+        # Only process variables that fall into this pset
+        metadata_filtered = { key : value for (key, value) in metadata.items() if pset in pset_request[key] }
 
-    # Generate include files for module_use_statements and ccpp_field_add_statements
-    success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
-                                     config['module_include_file'], config['fields_include_file'])
-    if not success:
-        raise Exception('Call to generate_include_files failed.')
+        # Create ccpp_fiels_add statements to inject into the host model cap
+        (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata_filtered, pset, config['ccpp_data_structure'])
+        if not success:
+            raise Exception('Call to create_ccpp_field_add_statements failed.')
+
+        # Generate include files for module_use_statements and ccpp_field_add_statements
+        success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
+                                                          config['module_include_file'].format(set=pset),
+                                                          config['fields_include_file'].format(set=pset))
+        if not success:
+            raise Exception('Call to generate_include_files failed.')
 
     # Generate scheme caps
     (success, scheme_caps) = generate_scheme_caps(metadata_request, arguments_request, config['caps_dir'],
@@ -443,7 +482,7 @@ def main():
         raise Exception('Call to generate_scheme_caps failed.')
 
     # Add filenames of schemes to makefile - add dependencies for schemes
-    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'],
+    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
                                              config['schemes_makefile'], config['schemes_cmakefile'])
     if not success:
         raise Exception('Call to generate_schemes_makefile failed.')

@@ -12,11 +12,11 @@ set(CMAKE_MACOSX_RPATH 1)
 
 if(POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
-    project(ccpp VERSION 1.0.0)
+    project(ccpp VERSION 2.0.0)
 else(POLICY CMP0048)
     project(ccpp)
-    set(PROJECT_VERSION 1.0.0)
-    set(PROJECT_VERSION_MAJOR 1)
+    set(PROJECT_VERSION 2.0.0)
+    set(PROJECT_VERSION_MAJOR 2)
     set(PROJECT_VERSION_MINOR 0)
     set(PROJECT_VERSION_PATCH 0)
 endif(POLICY CMP0048)
@@ -41,12 +41,6 @@ string(TIMESTAMP YEAR "%Y")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 #------------------------------------------------------------------------------
-# Set MPI preprocessor flag for legacy CCPP-FV3v0
-if (PROJECT STREQUAL "CCPP-FV3v0")
-    add_definitions("-DMPI")
-endif (PROJECT STREQUAL "CCPP-FV3v0")
-
-#------------------------------------------------------------------------------
 # Set OpenMP flags for C/C++/Fortran
 if (OPENMP)
   include(detect_openmp)
@@ -54,10 +48,6 @@ if (OPENMP)
   set (CMAKE_Fortran_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set (CMAKE_Fortran_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
-  # Set OpenMP preprocessor flag for legacy CCPP-FV3v0
-  if (PROJECT STREQUAL "CCPP-FV3v0")
-      add_definitions("-DOPENMP")
-  endif (PROJECT STREQUAL "CCPP-FV3v0")
   message(STATUS "Enable OpenMP support for C/C++/Fortran compiler")
 else (OPENMP)
   message (STATUS "Disable OpenMP support for C/C++/Fortran compiler")

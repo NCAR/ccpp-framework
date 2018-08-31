@@ -72,7 +72,7 @@ def metadata_to_html(metadata, model, filename):
     return success
 
 
-def metadata_to_latex(metadata_define, metadata_request, model, filename):
+def metadata_to_latex(metadata_define, metadata_request, pset_request, model, filename):
     """Create a LaTeX document with a table that lists  each variable provided
     and/or requested. Uses the GMTB LaTeX templates and style definitons in gmtb.sty."""
 
@@ -81,7 +81,7 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
 
     var_names = sorted(list(set(metadata_define.keys() + metadata_request.keys())))
 
-    latex = '''\\documentclass[12pt,letterpaper,oneside]{{scrbook}}
+    latex = '''\\documentclass[12pt,letterpaper,oneside,landscape]{{scrbook}}
 
 \\usepackage{{import}}
 \\import{{../common/}}{{gmtb.sty}}
@@ -128,6 +128,11 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
             requested = '\\newline '.join(sorted(requested_list))
         else:
             requested = 'NOT REQUESTED'
+        if var_name in pset_request.keys():
+            pset_list = [ escape_tex(c) for c in pset_request[var_name] ]
+            pset = '\\newline '.join(sorted(pset_list))
+        else:
+            pset = ''
 
         # Create output
         text = '''
@@ -142,6 +147,7 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
 \\execout{{source     }} & \\execout{{{target}             }} \\\\
 \\execout{{local\_name}} & \\execout{{{local_name}         }} \\\\
 \\execout{{requested  }} & \\execout{{\\vtop{{{requested}}}}} \\\\
+\\execout{{physics set}} & \\execout{{\\vtop{{{set} }}}}      \\\\
 \\end{{tabular}}
 \\vspace{{4pt}}
 \\end{{samepage}}'''.format(standard_name=escape_tex(var.standard_name), standard_name_ref=var.standard_name,
@@ -152,7 +158,8 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
                           kind=escape_tex(var.kind),
                           target=target,
                           local_name=local_name,
-                          requested=requested)
+                          requested=requested,
+                          set=pset)
         latex += text
     # Footer
     latex += '''

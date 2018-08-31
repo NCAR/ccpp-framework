@@ -11,7 +11,8 @@ module ccpp_fcall
     use            :: ccpp_types,                                      &
                       only: ccpp_t, ccpp_suite_t, ccpp_group_t,        &
                             ccpp_subcycle_t, ccpp_scheme_t,            &
-                            CCPP_STAGES, CCPP_DEFAULT_STAGE
+                            CCPP_STAGES, CCPP_DEFAULT_STAGE,           &
+                            CCPP_DEFAULT_LOOP_CNT
     use            :: ccpp_errors,                                     &
                       only: ccpp_error, ccpp_debug
     use            :: ccpp_strings,                                    &
@@ -36,55 +37,71 @@ module ccpp_fcall
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_physics_init(cdata, ierr)
+    subroutine ccpp_physics_init(cdata, group_name, scheme_name, ierr)
 
         type(ccpp_t),     target,   intent(inout) :: cdata
+        character(len=*), optional, intent(in)    :: group_name
+        character(len=*), optional, intent(in)    :: scheme_name
         integer,                    intent(out)   :: ierr
 
         ! Local variables
-        type(ccpp_scheme_t)   :: scheme
+        type(ccpp_group_t) , pointer :: group
+        type(ccpp_scheme_t), pointer :: scheme
 
         ierr = 0
         call ccpp_debug('Called ccpp_physics_init')
 
-        ! Run the suite init scheme before the individual init schemes
-        if (allocated(cdata%suite%init%name)) then
-            scheme = cdata%suite%init
-            call ccpp_run_scheme(scheme, cdata, stage='init', ierr=ierr)
+        if (present(group_name) .and. present(scheme_name)) then
+            call ccpp_error('Logic error in ccpp_physics_init: group_name and scheme_name are mutually exclusive')
+            ierr = 1
+            return
         end if
 
-        call ccpp_run_suite(cdata%suite, cdata, stage='init', ierr=ierr)
+        if (present(group_name)) then
+            ! Find the group to initialize from the suite
+            group => ccpp_find_group(cdata%suite, group_name, ierr=ierr)
+            if (ierr/=0) return
+            call ccpp_run_group(group, cdata, stage='init', ierr=ierr)
+        else if (present(scheme_name)) then
+            ! Find the scheme to initialize from the suite
+            scheme => ccpp_find_scheme(cdata%suite, scheme_name, ierr=ierr)
+            if (ierr/=0) return
+            call ccpp_run_scheme(scheme, cdata, stage='init', ierr=ierr)
+        else
+            ! Run the suite init scheme before the individual init schemes
+            if (allocated(cdata%suite%init%name)) then
+                scheme => cdata%suite%init
+                call ccpp_run_scheme(scheme, cdata, stage='init', ierr=ierr)
+            end if
+            ! Initialize all schemes
+            call ccpp_run_suite(cdata%suite, cdata, stage='init', ierr=ierr)
+        end if
 
     end subroutine ccpp_physics_init
 
     !>
     !! Single entry point for running ccpp physics.
     !! Optional arguments specify whether to run one
-    !! group, subcycle or an individual scheme of the
-    !! suite. If no optional arguments are provided,
-    !! the entire suite attached to cdata is run.
-    !!
-    !! The optional argument subcycle requires group;
+    !! group or an individual scheme of the suite.
+    !! If no optional arguments are provided, the
+    !! entire suite attached to cdata is run.
     !! group and scheme are mutually exclusive.
     !!
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
     !! @param[in    ] group    The group of physics to run (optional)
-    !! @param[in    ] subcycle The subcycle of a group of physics to run (optional)
     !! @param[in    ] scheme   The name of a single scheme to run (optional)
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_physics_run(cdata, group_name, subcycle_count, scheme_name, ierr)
+    subroutine ccpp_physics_run(cdata, group_name, scheme_name, ierr)
 
         type(ccpp_t),     target,   intent(inout) :: cdata
         character(len=*), optional, intent(in)    :: group_name
-        integer,          optional, intent(in)    :: subcycle_count
         character(len=*), optional, intent(in)    :: scheme_name
         integer,                    intent(out)   :: ierr
 
         ! Local variables
         type(ccpp_suite_t)   , pointer :: suite
         type(ccpp_group_t)   , pointer :: group
-        type(ccpp_subcycle_t), pointer :: subcycle
         type(ccpp_scheme_t)  , pointer :: scheme
 
         ierr = 0
@@ -95,10 +112,6 @@ module ccpp_fcall
             call ccpp_error('Logic error in ccpp_physics_run: group_name and scheme_name are mutually exclusive')
             ierr = 1
             return
-        else if (present(subcycle_count) .and. .not. present(group_name)) then
-            call ccpp_error('Logic error in ccpp_physics_run: subcycle_count requires optional argument group_name')
-            ierr = 1
-            return
         end if
 
         suite => cdata%suite
@@ -107,14 +120,7 @@ module ccpp_fcall
             ! Find the group to run from the suite
             group => ccpp_find_group(suite, group_name, ierr=ierr)
             if (ierr/=0) return
-            if (present(subcycle_count)) then
-                ! Find the subcycle to run in the current group
-                subcycle => ccpp_find_subcycle(group, subcycle_count, ierr=ierr)
-                if (ierr/=0) return
-                call ccpp_run_subcycle(subcycle, cdata, ierr=ierr)
-            else
-                call ccpp_run_group(group, cdata, ierr=ierr)
-            end if
+            call ccpp_run_group(group, cdata, ierr=ierr)
         else if (present(scheme_name)) then
             ! Find the scheme to run from the suite
             scheme => ccpp_find_scheme(suite, scheme_name, ierr=ierr)
@@ -133,23 +139,44 @@ module ccpp_fcall
     !! @param[in,out] cdata    The CCPP data of type ccpp_t
     !! @param[   out] ierr     Integer error flag
     !
-    subroutine ccpp_physics_finalize(cdata, ierr)
+    subroutine ccpp_physics_finalize(cdata, group_name, scheme_name, ierr)
 
         type(ccpp_t),     target,   intent(inout) :: cdata
+        character(len=*), optional, intent(in)    :: group_name
+        character(len=*), optional, intent(in)    :: scheme_name
         integer,                    intent(out)   :: ierr
 
         ! Local variables
-        type(ccpp_scheme_t)   :: scheme
+        type(ccpp_group_t) , pointer :: group
+        type(ccpp_scheme_t), pointer :: scheme
 
         ierr = 0
         call ccpp_debug('Called ccpp_physics_finalize')
 
-        call ccpp_run_suite(cdata%suite, cdata, stage='finalize', ierr=ierr)
+        if (present(group_name) .and. present(scheme_name)) then
+            call ccpp_error('Logic error in ccpp_physics_finalize: group_name and scheme_name are mutually exclusive')
+            ierr = 1
+            return
+        end if
 
-        ! Run the suite finalize scheme after the individual finalize schemes
-        if (allocated(cdata%suite%finalize%name)) then
-            scheme = cdata%suite%finalize
+        if (present(group_name)) then
+            ! Find the group to finalize from the suite
+            group => ccpp_find_group(cdata%suite, group_name, ierr=ierr)
+            if (ierr/=0) return
+            call ccpp_run_group(group, cdata, stage='finalize', ierr=ierr)
+        else if (present(scheme_name)) then
+            ! Find the scheme to finalize from the suite
+            scheme => ccpp_find_scheme(cdata%suite, scheme_name, ierr=ierr)
+            if (ierr/=0) return
             call ccpp_run_scheme(scheme, cdata, stage='finalize', ierr=ierr)
+        else
+            ! Finalize all schemes
+            call ccpp_run_suite(cdata%suite, cdata, stage='finalize', ierr=ierr)
+            ! Run the suite finalize scheme after the individual finalize schemes
+            if (allocated(cdata%suite%finalize%name)) then
+                scheme => cdata%suite%finalize
+                call ccpp_run_scheme(scheme, cdata, stage='finalize', ierr=ierr)
+            end if
         end if
 
     end subroutine ccpp_physics_finalize
@@ -178,7 +205,7 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_suite')
+        call ccpp_debug('Called ccpp_run_suite for stage ' // trim(stage))
 
         do i=1,suite%groups_max
             call ccpp_run_group(suite%groups(i), cdata, stage=stage, ierr=ierr)
@@ -243,7 +270,7 @@ module ccpp_fcall
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_group')
+        call ccpp_debug('Called ccpp_run_group for stage ' // trim(stage))
 
         do i=1,group%subcycles_max
             call ccpp_run_subcycle(group%subcycles(i), cdata, stage=stage, ierr=ierr)
@@ -253,37 +280,6 @@ module ccpp_fcall
         end do
 
     end subroutine ccpp_run_group
-
-    !>
-    !! The find subroutine for a subcycle. This will return
-    !! the subcycle that matches subcycle_count in the group
-    !! and ierr==0, or ierr==1 if no such subcycle is found.
-    !!
-    !! @param[in   ] group          The group in which to find the subcycle
-    !! @param[in   ] subcycle_count The name of the subcycle to run
-    !! @param[  out] ierr           Integer error flag
-    !
-    function ccpp_find_subcycle(group, subcycle_count, ierr) result(subcycle)
-
-        type(ccpp_group_t),    target, intent(in   ) :: group
-        integer,                       intent(in   ) :: subcycle_count
-        integer,                       intent(  out) :: ierr
-        type(ccpp_subcycle_t), pointer               :: subcycle
-
-        call ccpp_debug('Called ccpp_find_subcycle')
-
-        ierr = 0
-
-        if (subcycle_count <= group%subcycles_max) then
-            call ccpp_debug('Subcycle found in group ' // trim(group%name))
-            subcycle => group%subcycles(subcycle_count)
-            return
-        end if
-
-        call ccpp_error('Subcycle not found in group ' // trim(group%name))
-        ierr = 1
-
-    end function ccpp_find_subcycle
 
     !>
     !! The run subroutine for a subcycle. This will call
@@ -302,14 +298,14 @@ module ccpp_fcall
         character(len=*),      intent(in),   optional :: stage
         integer,               intent(  out)          :: ierr
 
-        integer                               :: i
         integer                               :: j
 
         ierr = 0
 
-        call ccpp_debug('Called ccpp_run_subcycle')
+        call ccpp_debug('Called ccpp_run_subcycle for stage ' // trim(stage))
 
-        do i=1,subcycle%loop
+        associate(i=>cdata%loop_cnt)
+        do i=1,subcycle%loops_max
             do j=1,subcycle%schemes_max
                 call ccpp_run_scheme(subcycle%schemes(j), cdata, stage=stage, ierr=ierr)
                 if (ierr /= 0) then
@@ -317,6 +313,9 @@ module ccpp_fcall
                 end if
             end do
         end do
+        end associate
+
+        cdata%loop_cnt = CCPP_DEFAULT_LOOP_CNT
 
     end subroutine ccpp_run_subcycle
 
@@ -344,7 +343,6 @@ module ccpp_fcall
         do i=1, suite%groups_max
             do j=1, suite%groups(i)%subcycles_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
-                    print *, i, j, k, suite%groups(i)%subcycles(j)%schemes(k)%name
                     if (trim(suite%groups(i)%subcycles(j)%schemes(k)%name) .eq. trim(scheme_name)) then
                         call ccpp_debug('Scheme ' // trim(scheme_name) // ' found in suite')
                         scheme => suite%groups(i)%subcycles(j)%schemes(k)
@@ -369,8 +367,13 @@ module ccpp_fcall
     !! @param[   out] ierr    Integer error flag
     !
     subroutine ccpp_run_scheme(scheme, cdata, stage, ierr)
-
-        type(ccpp_scheme_t),  intent(in   )          :: scheme
+! DH* temporary, to be removed as soon as possible
+#ifdef TEMPLOG
+        use mpi
+        use omp_lib
+#endif
+! *DH
+        type(ccpp_scheme_t),  intent(inout)          :: scheme
         type(ccpp_t), target, intent(inout)          :: cdata
         character(len=*),     intent(in),   optional :: stage
         integer,              intent(  out)          :: ierr
@@ -378,6 +381,11 @@ module ccpp_fcall
         character(:), allocatable      :: stage_local
         character(:), allocatable      :: function_name
         integer :: l
+! DH*
+#ifdef TEMPLOG
+        integer :: mpirank, ompthread, mierr
+#endif
+! *DH
 
         ierr = 0
 
@@ -387,8 +395,30 @@ module ccpp_fcall
             stage_local = trim(CCPP_DEFAULT_STAGE)
         end if
 
+! DH*
+#ifdef TEMPLOG
+        call MPI_COMM_RANK(MPI_COMM_WORLD, mpirank, mierr)
+        ompthread = OMP_GET_THREAD_NUM()
+        if (mpirank==0 .and. ompthread==0 .and. trim(stage_local) == trim(CCPP_DEFAULT_STAGE)) &
+                   write(0,*) 'CCPP DEBUG: calling ' // trim(scheme%name) // ' through option B'
+#endif
+! *DH
         call ccpp_debug('Called ccpp_run_scheme for ' // trim(scheme%name) &
                         //' in stage ' // trim(stage_local))
+
+        if (trim(stage_local) == 'init' .and. scheme%initialized) then
+           call ccpp_debug('Scheme ' // trim(scheme%name) // ' already initialized, skip.')
+           return
+        else if (trim(stage_local) == 'finalize' .and. .not.scheme%initialized) then
+           call ccpp_debug('Scheme ' // trim(scheme%name) // ' not initialized, skip.')
+           return
+        ! Check for default run stage that scheme is initialized
+        else if (trim(stage_local) == trim(CCPP_DEFAULT_STAGE) .and. .not.scheme%initialized) then
+           call ccpp_error('Error in ccpp_run_scheme, stage ' // trim(stage_local) // &
+                           ': ' // trim(scheme%name) // ' not initialized.')
+           ierr = 1
+           return
+        end if
 
         function_name = trim(scheme%get_function_name(stage_local))
 
@@ -400,6 +430,10 @@ module ccpp_fcall
                     call ccpp_error('A problem occured calling '// trim(f%name) &
                                     //' of scheme ' // trim(scheme%name) &
                                     //' in stage ' // trim(stage_local))
+                else if (trim(stage_local) == 'init') then
+                   scheme%initialized = .true.
+                else if (trim(stage_local) == 'finalize') then
+                   scheme%initialized = .false.
                 end if
                 ! Return after calling the scheme, with or without error
                 return

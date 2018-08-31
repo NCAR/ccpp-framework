@@ -53,29 +53,29 @@ VALID_ITEMS = {
 
 # Mandatory variables that every scheme needs to have
 CCPP_MANDATORY_VARIABLES = {
-    'error_message' : Var(local_name    = 'errmsg',
-                          standard_name = 'error_message',
-                          long_name     = 'error message for error handling in CCPP',
-                          units         = 'none',
-                          type          = 'character',
-                          rank          = '',
-                          kind          = 'len=*',
-                          intent        = 'out',
-                          optional      = 'F'
-                          ),
-    'error_flag' : Var(local_name    = 'ierr',
-                       standard_name = 'error_flag',
-                       long_name     = 'error flag for error handling in CCPP',
-                       units         = 'flag',
-                       type          = 'integer',
-                       rank          = '',
-                       kind          = '',
-                       intent        = 'out',
-                       optional      = 'F'
-                       ),
+    'ccpp_error_message' : Var(local_name    = 'errmsg',
+                               standard_name = 'ccpp_error_message',
+                               long_name     = 'error message for error handling in CCPP',
+                               units         = 'none',
+                               type          = 'character',
+                               rank          = '',
+                               kind          = 'len=*',
+                               intent        = 'out',
+                               optional      = 'F'
+                               ),
+    'ccpp_error_flag' : Var(local_name    = 'ierr',
+                            standard_name = 'ccpp_error_flag',
+                            long_name     = 'error flag for error handling in CCPP',
+                            units         = 'flag',
+                            type          = 'integer',
+                            rank          = '',
+                            kind          = '',
+                            intent        = 'out',
+                            optional      = 'F'
+                            ),
     }
 
-def merge_metadata_dicts(x, y):
+def merge_dictionaries(x, y):
     """Merges two metadata dictionaries. For each list of elements
     (variables = class Var in mkcap.py) in one dictionary, we know
     that all entries are compatible. If one or more elements exist
@@ -88,13 +88,20 @@ def merge_metadata_dicts(x, y):
     for key in z_keys:
         z[key] = {}
         if key in x_keys and key in y_keys:
-            # We know that all entries within each dictionary are comptable;
-            # we need to test compatibility of one of the items in each only.
-            if not x[key][0].compatible(y[key][0]):
-                raise Exception('Incompatible entries in metadata for variable {0}:\n'.format(key) +\
-                                '    {0}\n'.format(x[key][0].print_debug()) +\
-                                'vs. {0}'.format(y[key][0].print_debug()))
-            z[key] = x[key] + y[key]
+            # Metadata dictionaries containing lists of variables of type Var for each key=standard_name
+            if isinstance(x[key][0], Var):
+                # We know that all entries within each dictionary are compatible;
+                # we need to test compatibility of one of the items in each only.
+                if not x[key][0].compatible(y[key][0]):
+                    raise Exception('Incompatible entries in metadata for variable {0}:\n'.format(key) +\
+                                    '    {0}\n'.format(x[key][0].print_debug()) +\
+                                    'vs. {0}'.format(y[key][0].print_debug()))
+                z[key] = x[key] + y[key]
+            # Physics set dictionaries containing lists of physics sets of type string for each key=standard_name
+            elif type(x[key][0]) is str:
+                z[key] = list(set(x[key] + y[key]))
+            else:
+                raise Exception("x[key][0] is of unsupported type", type(x[key][0]))
         elif key in x_keys:
             z[key] = x[key]
         elif key in y_keys:
@@ -143,13 +150,13 @@ def parse_variable_tables(filename):
     line_counter = 0
     for line in lines:
         words = line.split()
-        if len(words) > 1 and words[0].lower() == 'module' and not words[1].lower() == 'procedure':
+        if len(words) > 1 and words[0].lower() in ['module', 'program'] and not words[1].lower() == 'procedure':
             module_name = words[1].strip()
             if module_name in registry.keys():
                 raise Exception('Duplicate module name {0}'.format(module_name))
             registry[module_name] = {}
             module_lines[module_name] = { 'startline' : line_counter }
-        elif len(words) > 1 and words[0].lower() == 'end' and words[1].lower() == 'module':
+        elif len(words) > 1 and words[0].lower() == 'end' and words[1].lower() in ['module', 'program']:
             try:
                 test_module_name = words[2]
             except IndexError:
@@ -177,7 +184,11 @@ def parse_variable_tables(filename):
                     if in_type:
                         raise Exception('Nested definitions of derived types not supported')
                     in_type = True
-                    type_name = words[j+1].split('(')[0].strip()
+                    # Allow parsing "type my_type" and "type :: mytype"
+                    if words[j+1].strip() == '::':
+                        type_name = words[j+2].split('(')[0].strip()
+                    else:
+                        type_name = words[j+1].split('(')[0].strip()
                     if type_name in registry[module_name].keys():
                         raise Exception('Duplicate derived type name {0} in module {1}'.format(
                                                                        type_name, module_name))
@@ -349,7 +360,7 @@ def parse_scheme_tables(filename):
     dictionary  contains only one element (variable = instance of class Var defined in
     mkcap.py). The metadata dictionaries of the individual schemes are merged afterwards
     (called from ccpp_prebuild.py) using merge_metadata_dicts, where multiple instances
-    of variables are compared for compatibility and collected in a list (entry in the 
+    of variables are compared for compatibility and collected in a list (entry in the
     merged metadata dictionary). The merged metadata dictionary of all schemes (which
     contains only compatible variable instances in the list referred to by standard_name)
     is then compared to the unique definition in the metadata dictionary of the variables
@@ -525,7 +536,7 @@ def parse_scheme_tables(filename):
                         line = lines[line_number]
                         words = line.split('|')
                         if len(words) == 1:
-                            if words[0] == '!!':
+                            if words[0].strip() == '!!':
                                 end_of_table = True
                             else:
                                 raise Exception('Encountered invalid line "{0}" in argument table {1}'.format(line, table_name))

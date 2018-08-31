@@ -19,6 +19,16 @@
 !
 module ccpp_types
 
+#if 0
+!! \section arg_table_ccpp_types
+!! | local_name                                              | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
+!! |---------------------------------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
+!! | cdata%errflg (local_name not used)                      | ccpp_error_flag           | error flag for error handling in CCPP                 | flag    |    0 | integer   |          | none   | F        |
+!! | cdata%errmsg (local_name not used)                      | ccpp_error_message        | error message for error handling in CCPP              | none    |    0 | character | len=512  | none   | F        |
+!! | cdata%loop_cnt (local_name not used)                    | ccpp_loop_counter         | loop counter for subcycling loops in CCPP             | index   |    0 | integer   |          | none   | F        |
+!!
+#endif
+
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_ptr, c_funptr
 
@@ -28,6 +38,8 @@ module ccpp_types
     public :: CCPP_STR_LEN,                                            &
               CCPP_STAGES,                                             &
               CCPP_DEFAULT_STAGE,                                      &
+              CCPP_DEFAULT_LOOP_CNT,                                   &
+              CCPP_GENERIC_KIND,                                       &
               ccpp_t,                                                  &
               ccpp_field_t,                                            &
               ccpp_scheme_t,                                           &
@@ -47,6 +59,12 @@ module ccpp_types
     !> @var The default stage if not specified
     character(len=*), parameter :: CCPP_DEFAULT_STAGE = 'run'
 
+    !> @var The default "kind" for a generic pointer / derived data type
+    integer, parameter :: CCPP_GENERIC_KIND = -999
+
+    !> @var The default loop counter indicating outside of a subcycle loop
+    integer, parameter :: CCPP_DEFAULT_LOOP_CNT = -999
+
     !>
     !! @brief CCPP field type
     !!
@@ -59,6 +77,7 @@ module ccpp_types
             character(len=CCPP_STR_LEN)                       :: units
             integer                                           :: rank
             integer, allocatable, dimension(:)                :: dims
+            integer                                           :: kind
             type(c_ptr)                                       :: ptr
     end type ccpp_field_t
 
@@ -84,6 +103,7 @@ module ccpp_types
             character(:), allocatable                         :: version
             integer                                           :: functions_max
             type(ccpp_function_t), allocatable, dimension(:)  :: functions
+            logical                                           :: initialized = .false.
         contains
             procedure :: get_function_name => scheme_get_function_name
     end type ccpp_scheme_t
@@ -96,7 +116,7 @@ module ccpp_types
     !! suite subcycle XML.
     !
     type :: ccpp_subcycle_t
-            integer                                           :: loop
+            integer                                           :: loops_max
             integer                                           :: schemes_max
             type(ccpp_scheme_t), allocatable, dimension(:)    :: schemes
     end type ccpp_subcycle_t
@@ -128,7 +148,6 @@ module ccpp_types
             type(ccpp_scheme_t)                                 :: finalize
             integer                                             :: groups_max
             type(ccpp_group_t), allocatable, dimension(:)       :: groups
-            logical                                             :: iscopy
     end type ccpp_suite_t
 
     !>
@@ -143,8 +162,14 @@ module ccpp_types
     type :: ccpp_t
             type(c_ptr)                                         :: fields_idx
             type(ccpp_field_t), allocatable, dimension(:)       :: fields
-            type(ccpp_suite_t)                                  :: suite
+            type(ccpp_suite_t), pointer                         :: suite => null()
+            type(ccpp_suite_t)                                  :: suite_target
+            logical                                             :: suite_iscopy
             logical                                             :: initialized = .false.
+            ! CCPP-internal variables for physics schemes
+            integer                                             :: errflg = 0
+            character(len=512)                                  :: errmsg = ''
+            integer                                             :: loop_cnt = CCPP_DEFAULT_LOOP_CNT
     end type ccpp_t
 
 contains

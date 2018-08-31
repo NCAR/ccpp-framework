@@ -1,17 +1,14 @@
 module example_ccpp_host_cap
 
-  use ccpp_types,         only: ccpp_t
-  use ccpp,               only: ccpp_init, ccpp_finalize
-  use ccpp_fcall,         only: ccpp_run
-  use ccpp_fields,        only: ccpp_field_add
-  use iso_c_binding,      only: c_loc
-
+  use ccpp_api, only: ccpp_t, ccpp_field_add, ccpp_init, ccpp_finalize, &
+               ccpp_physics_init, ccpp_physics_run, ccpp_physics_finalize
+  use iso_c_binding, only: c_loc
 ! Include auto-generated list of modules for ccpp
 #include "ccpp_modules.inc"
 
   implicit none
 
-!  CCPP data structure
+! CCPP data structure
   type(ccpp_t), save, target :: cdata
 
   public :: physics_init, physics_run, physics_finalize
@@ -23,32 +20,38 @@ contains
     integer :: ierr
     ierr = 0
 
-    call ccpp_init(ccpp_suite_name, cdata, ierr)
+    ! Initialize the CCPP framework, parse SDF
+    call ccpp_init(ccpp_suite_name, cdata, ierr=ierr)
     if (ierr/=0) then
       write(*,'(a)') "An error occurred in ccpp_init"
       stop
     end if
-
 ! Include auto-generated list of calls to ccpp_field_add
 #include "ccpp_fields.inc"
+    ! Initialize CCPP physics (run all _init routines)
+    call ccpp_physics_init(cdata, ierr=ierr)
+    ! error handling as above
 
   end subroutine physics_init
 
-  subroutine physics_run(step)
-    ! the step (currently called IPD step) to run as
-    ! defined in the runtime suite definition file
-    integer, intent(in) :: step
+  subroutine physics_run(group, scheme)
+    ! Optional arguments group and scheme can be used
+    ! to run a group of schemes or an individual scheme
+    ! defined in the SDF. Otherwise, run entire suite.
+    character(len=*), optional, intent(in) :: group
+    character(len=*), optional, intent(in) :: scheme
+
     integer :: ierr
     ierr = 0
 
-    call ccpp_run(cdata%suite%ipds(step), cdata, ierr)
-    ! future versions: call ccpp_run(cdata, step=step, ierr=ierr)
-    if (ierr/=0) then
-      ! errmsg is known because of #include ccpp_modules.inc
-      write(*,'(a,i0,a)') "An error occurred in physics step ", step, &
-                          "; error message: '" // trim(errmsg) // "'"
-      stop
+    if (present(scheme)) then
+       call ccpp_physics_run(cdata, scheme_name=scheme, ierr=ierr)
+    else if (present(group)) then
+       call ccpp_physics_run(cdata, group_name=group, ierr=ierr)
+    else
+       call ccpp_physics_run(cdata, ierr=ierr)
     end if
+    ! error handling as above
 
   end subroutine physics_run
 
@@ -56,11 +59,11 @@ contains
     integer :: ierr
     ierr = 0
 
-    call ccpp_finalize(cdata, ierr)
-    if (ierr/=0) then
-      write(*,'(a)') "An error occurred in ccpp_finalize"
-      stop
-    end if
+    ! Finalize CCPP physics (run all _finalize routines)
+    call ccpp_physics_finalize(cdata, ierr=ierr)
+    ! error handling as above
+    call ccpp_finalize(cdata, ierr=ierr)
+    ! error handling as above
 
   end subroutine physics_finalize
 

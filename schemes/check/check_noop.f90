@@ -26,11 +26,11 @@ module check_noop
     implicit none
 
     private
-    public :: noop_cap
+    public :: noop_init_cap, noop_run_cap, noop_finalize_cap
 
     contains
 
-    subroutine noop_cap(ptr) bind(c)
+    subroutine noop_init_cap(ptr) bind(c)
         implicit none
         type(c_ptr), intent(inout) :: ptr
 
@@ -38,9 +38,35 @@ module check_noop
 
         call c_f_pointer(ptr, cdata)
 
-        print *, 'In noop_cap'
+        print *, 'In noop_init_cap'
         print *, cdata%suite%groups(1)%subcycles(1)%schemes(1)%name
 
-    end subroutine noop_cap
+    end subroutine noop_init_cap
+
+    subroutine noop_run_cap(ptr) bind(c)
+        implicit none
+        type(c_ptr), intent(inout) :: ptr
+
+        type(ccpp_t), pointer      :: cdata
+
+        call c_f_pointer(ptr, cdata)
+
+        print *, 'In noop_run_cap'
+        print *, cdata%suite%groups(1)%subcycles(1)%schemes(1)%name
+
+    end subroutine noop_run_cap
+
+    subroutine noop_finalize_cap(ptr) bind(c)
+        implicit none
+        type(c_ptr), intent(inout) :: ptr
+
+        type(ccpp_t), pointer      :: cdata
+
+        call c_f_pointer(ptr, cdata)
+
+        print *, 'In noop_finalize_cap'
+        print *, cdata%suite%groups(1)%subcycles(1)%schemes(1)%name
+
+    end subroutine noop_finalize_cap
 
 end module check_noop
