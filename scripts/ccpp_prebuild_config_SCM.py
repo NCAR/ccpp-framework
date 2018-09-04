@@ -87,6 +87,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/samfdeepcnv.f'                : ['physics'],
     'ccpp-physics/physics/samfshalcnv.f'                : ['physics'],
     'ccpp-physics/physics/moninedmf.f'                  : ['physics'],
+    'ccpp-physics/physics/moninshoc.f'                  : ['physics'],
     'ccpp-physics/physics/ozphys.f'                     : ['physics'],
     'ccpp-physics/physics/precpd.f'                     : ['physics'],
     'ccpp-physics/physics/radlw_main.f'                 : ['physics'],
