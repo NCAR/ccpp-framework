@@ -10,11 +10,11 @@ import sys
 import getopt
 import xml.etree.ElementTree as ET
 
+from common import CCPP_ERROR_FLAG_VARIABLE
+
 ###############################################################################
 
 STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
-
-CCPP_ERROR_FLAG_VARIABLE = 'error_flag'
 
 ###############################################################################
 
@@ -181,19 +181,24 @@ class Var(object):
         if self.type in STANDARD_VARIABLE_TYPES and self.rank == '':
             str='''
         call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, kind=ckind)
+#ifdef DEBUG
         if (ierr /= 0) then
-            call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
+            write(cdata%errmsg,'(a)') 'Unable to retrieve {s.standard_name} from CCPP data structure'
+            !call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
         end if
         if (kind({s.local_name}).ne.ckind) then
-            call ccpp_error('Kind mismatch for variable {s.standard_name}')
+            !call ccpp_error('Kind mismatch for variable {s.standard_name}')
+            write(cdata%errmsg,'(a)') 'Kind mismatch for variable {s.standard_name}'
             ierr = 1
             return
         end if
+#endif
         '''
         elif self.type in STANDARD_VARIABLE_TYPES:
             str='''
         call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, dims=cdims, kind=ckind)
+#ifdef DEBUG
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
@@ -203,11 +208,13 @@ class Var(object):
             ierr = 1
             return
         end if
+#endif
         '''
         # Derived-type variables, scalar
         elif self.rank == '':
             str='''
         call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, kind=ckind)
+#ifdef DEBUG
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
@@ -217,11 +224,13 @@ class Var(object):
             ierr = 1
             return
         end if
+#endif
         call c_f_pointer(cptr, {s.local_name})'''
         # Derived-type variables, array
         else:
             str='''
         call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, dims=cdims, kind=ckind)
+#ifdef DEBUG
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
@@ -231,6 +240,7 @@ class Var(object):
             ierr = 1
             return
         end if
+#endif
         call c_f_pointer(cptr, {s.local_name}, cdims)
         deallocate(cdims)
         '''
