@@ -86,8 +86,12 @@ if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
 endif()
 
 #------------------------------------------------------------------------------
-# By default we want a shared library
-option(BUILD_SHARED_LIBS "Build a shared library" ON)
+# By default we want a shared library (unless a static build is requested)
+if(STATIC)
+  option(BUILD_SHARED_LIBS "Build a static library" OFF)
+else(STATIC)
+  option(BUILD_SHARED_LIBS "Build a shared library" ON)
+endif(STATIC)
 
 #------------------------------------------------------------------------------
 # Enable code coverage
