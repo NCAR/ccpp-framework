@@ -21,7 +21,7 @@ module ccpp_suite
     use            :: ccpp_types,                                      &
                       only: ccpp_suite_t
     use            :: ccpp_errors,                                     &
-                      only: ccpp_error, ccpp_debug
+                      only: ccpp_error, ccpp_info, ccpp_debug
     use            :: ccpp_strings,                                    &
                       only: ccpp_cstr
     use            :: ccpp_xml
@@ -68,6 +68,12 @@ module ccpp_suite
         character(len=*), parameter           :: err_msg =             &
             'Please validate the suite xml file: '
 
+#ifdef STATIC
+! Include code snippet that contains the name of the
+! suite that was used for the static build of CCPP.
+#include "ccpp_suite_static.inc"
+#endif
+
         ierr = 0
         tmp = c_null_ptr
 
@@ -87,6 +93,17 @@ module ccpp_suite
             return
         end if
 
+#ifdef STATIC
+        if (trim(suite%name).ne.trim(ccpp_suite_static_name)) then
+            call ccpp_error('Suite used for static build ' // trim(ccpp_suite_static_name) // &
+                            ' does not match runtime choice ' // trim(suite%name))
+            ierr = 1
+        else
+            call ccpp_info('Using suite ' //trim(suite%name))
+        end if
+        return
+#else
+        call ccpp_info('Parsing suite ' //trim(suite%name))
         ! Find the init subroutine
         call ccpp_xml_ele_find(root, ccpp_cstr(CCPP_XML_ELE_INIT), tmp, ierr)
         if (ierr == 0) then
@@ -246,6 +263,7 @@ module ccpp_suite
 
         ierr = ccpp_xml_unload(xml)
         call ccpp_suite_load(suite, ierr)
+#endif
 
     end subroutine ccpp_suite_init
 
