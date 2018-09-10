@@ -20,10 +20,10 @@ VARIABLE_DEFINITION_FILES = [
 SCHEME_FILES_DEPENDENCIES = []
 
 # Add all physics scheme files relative to basedir
-SCHEME_FILES = [
-    'MICM_chemistry/src/kinetics.F90',
-    'MICM_chemistry/src/chem_solve.F90'
-    ]
+SCHEME_FILES = {
+    'MICM_chemistry/src/kinetics.F90'   : ['physics'],
+    'MICM_chemistry/src/chem_solve.F90' : ['physics']
+    }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = 'MICM_chemistry/CCPP_SCHEMES.mk'
