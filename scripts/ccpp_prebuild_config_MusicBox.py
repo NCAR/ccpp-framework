@@ -22,6 +22,7 @@ SCHEME_FILES_DEPENDENCIES = []
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
     'MICM_chemistry/src/kinetics.F90'   : ['physics'],
+    'MICM_chemistry/src/k_rateConst_terminator.F90'   : ['physics'],
     'MICM_chemistry/src/chem_solve.F90' : ['physics']
     }
 
