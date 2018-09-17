@@ -285,6 +285,7 @@ module ccpp_suite
 
         call ccpp_debug('Called ccpp_suite_finalize')
 
+#ifndef STATIC
         do i=1, suite%groups_max
             do j=1, suite%groups(i)%subcycles_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
@@ -310,14 +311,17 @@ module ccpp_suite
                 deallocate(suite%groups(i)%subcycles)
             end if
         end do
+#endif
 
         if (allocated(suite%groups)) then
             deallocate(suite%groups)
         end if
 
+#ifndef STATIC
         ! Clean up the init scheme
         call ccpp_scheme_finalize(suite%init, ierr)
         if (ierr /=0) return
+#endif
 
         if (allocated(suite%init%name)) then
             deallocate(suite%init%name)
@@ -330,10 +334,12 @@ module ccpp_suite
         if (allocated(suite%init%version)) then
             deallocate(suite%init%version)
         end if
-        
+
+#ifndef STATIC
         ! Clean up the finalize scheme
         call ccpp_scheme_finalize(suite%finalize, ierr)
         if (ierr /=0) return
+#endif
 
         if (allocated(suite%finalize%name)) then
             deallocate(suite%finalize%name)
