@@ -134,9 +134,13 @@
 % Squeeze all the space out of lists
 \setlist{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
 
-
 % Shorthand degree symbol
 \newcommand{\dgr}{$^{\circ}$}
+
+% Additional space between a horizontal line in a table and the next line
+\newcommand{\hlinesep}{\rule[1ex]{0pt}{1.25ex}}
+
+\newcommand{\TODO}[1]{\marginpar{\textbf{\red !}}\textbf{\red #1}}
 
 % Change the default font to be Sans Serif
 %\renewcommand{\familydefault}{\sfdefault}

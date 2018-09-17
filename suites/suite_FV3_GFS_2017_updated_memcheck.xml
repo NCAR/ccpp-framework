@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="GFS_operational_2017" lib="ccppphys" ver="1.0.0">
+<suite name="FV3_GFS_2017_updated_memcheck" lib="ccppphys" ver="2">
   <!-- <init></init> -->
   <group name="time_vary">
     <subcycle loop="1">
@@ -8,6 +8,8 @@
       <scheme>GFS_rrtmg_setup</scheme>
       <scheme>GFS_rad_time_vary</scheme>
       <scheme>GFS_phys_time_vary</scheme>
+      <scheme>stochastic_physics</scheme>
+      <scheme>stochastic_physics_sfc</scheme>
     </subcycle>
   </group>
   <group name="radiation">
@@ -26,15 +28,30 @@
   <group name="physics">
     <subcycle loop="1">
       <scheme>GFS_suite_interstitial_phys_reset</scheme>
+      <scheme>GFS_suite_stateout_reset</scheme>
       <scheme>get_prs_fv3</scheme>
       <scheme>GFS_suite_interstitial_1</scheme>
-      <scheme>sfc_sice_pre</scheme>
       <scheme>dcyc2t3</scheme>
-      <scheme>GFS_suite_interstitial_2</scheme>
       <scheme>GFS_surface_generic_pre</scheme>
-      <scheme>lsm_noah_pre</scheme>
-      <scheme>gmtb_scm_sfc_flux_spec</scheme>
+      <scheme>GFS_suite_interstitial_2</scheme>
+    </subcycle>
+    <!-- Surface iteration loop -->
+    <subcycle loop="2">
+      <scheme>sfc_ex_coef</scheme>
+      <scheme>GFS_surface_loop_control_part1</scheme>
+      <scheme>sfc_nst_pre</scheme>
+      <scheme>sfc_nst</scheme>
+      <scheme>sfc_nst_post</scheme>
+      <scheme>lsm_noah</scheme>
+      <scheme>sfc_sice</scheme>
+      <scheme>GFS_surface_loop_control_part2</scheme>
+    </subcycle>
+    <!-- End of surface iteration loop -->
+    <subcycle loop="1">
       <scheme>dcyc2t3_post</scheme>
+      <scheme>sfc_diag</scheme>
+      <scheme>sfc_diag_post</scheme>
+      <scheme>GFS_surface_generic_post</scheme>
       <scheme>GFS_PBL_generic_pre</scheme>
       <scheme>hedmf</scheme>
       <scheme>GFS_PBL_generic_post</scheme>
@@ -42,15 +59,14 @@
       <scheme>gwdps</scheme>
       <scheme>gwdps_post</scheme>
       <scheme>rayleigh_damp</scheme>
-      <scheme>GFS_suite_update_stateout</scheme>
+      <scheme>GFS_suite_stateout_update</scheme>
       <scheme>ozphys</scheme>
-      <scheme>ozphys_post</scheme>
       <scheme>GFS_DCNV_generic_pre</scheme>
       <scheme>get_phi_fv3</scheme>
       <scheme>GFS_suite_interstitial_3</scheme>
-      <scheme>GFS_zhao_carr_pre</scheme>
       <scheme>samfdeepcnv</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
+      <scheme>memcheck</scheme>
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
       <scheme>gwdc_post</scheme>
@@ -58,15 +74,18 @@
       <scheme>samfshalcnv</scheme>
       <scheme>samfshalcnv_post</scheme>
       <scheme>GFS_SCNV_generic_post</scheme>
+      <scheme>GFS_suite_interstitial_4</scheme>
       <scheme>cnvc90</scheme>
       <scheme>GFS_MP_generic_pre</scheme>
       <scheme>zhaocarr_gscond</scheme>
       <scheme>zhaocarr_precpd</scheme>
-      <scheme>GFS_calpreciptype</scheme>
       <scheme>GFS_MP_generic_post</scheme>
-      <scheme>sfc_diag</scheme>
-      <scheme>lsm_noah_post</scheme>
       <scheme>sfc_sice_post</scheme>
+    </subcycle>
+  </group>
+  <group name="stochastics">
+    <subcycle loop="1">
+      <scheme>GFS_stochastics</scheme>
     </subcycle>
   </group>
   <!-- <finalize></finalize> -->
