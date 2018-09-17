@@ -94,7 +94,9 @@ SCHEME_FILES_DEPENDENCIES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ]
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ];
+    # current restrictions are that each scheme can only belong to one physics set, and all schemes within one group in the
+    # suite definition file have to belong to the same physics set
     'ccpp/physics/physics/GFS_DCNV_generic.F90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_MP_generic.F90'                : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_PBL_generic.F90'               : [ 'slow_physics' ],
