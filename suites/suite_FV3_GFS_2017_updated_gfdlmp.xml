@@ -4,7 +4,6 @@
   <!-- <init></init> -->
   <group name="fast_physics">
     <subcycle loop="1">
-      <scheme>fv_sat_adj_pre</scheme>
       <scheme>fv_sat_adj</scheme>
     </subcycle>
   </group>

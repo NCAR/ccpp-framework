@@ -116,7 +116,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/get_prs_fv3.F90'                   : [ 'slow_physics' ],
     'ccpp/physics/physics/gfdl_cloud_microphys.F90'          : [ 'slow_physics' ],
     'ccpp/physics/physics/gfdl_fv_sat_adj.F90'               : [ 'fast_physics' ],
-    'ccpp/physics/physics/gfdl_fv_sat_adj_pre.F90'           : [ 'fast_physics' ],
+    #'ccpp/physics/physics/gfdl_fv_sat_adj_pre.F90'           : [ 'fast_physics' ],
     'ccpp/physics/physics/gscond.f'                          : [ 'slow_physics' ],
     'ccpp/physics/physics/gwdc.f'                            : [ 'slow_physics' ],
     'ccpp/physics/physics/gwdps.f'                           : [ 'slow_physics' ],
