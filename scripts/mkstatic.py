@@ -356,8 +356,9 @@ end module {module}
     #        raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
     #    self._caps = value
 
-    def write(self, metadata_request, metadata_define, arguments, module_use_cap):
-        """DH* HOW TO WRITE SUITE CAP? INIT? FINALIZE?"""
+    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
+        """Create caps for all groups in the suite and for the entire suite
+        (calling the group caps one after another)"""
         # Set name of module and filename of cap
         self._module = 'ccpp_suite_cap'
         self._filename = '{module_name}.F90'.format(module_name=self._module)
@@ -366,7 +367,7 @@ end module {module}
         module_use = module_use_cap
         # Write group caps and generate module use statements
         for group in self._groups:
-            group.write(metadata_request, metadata_define, arguments, module_use_cap)
+            group.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap)
             module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
         subs = ''
         for ccpp_stage in CCPP_STAGES:
@@ -441,8 +442,11 @@ module {module}
                      only: ccpp_t, CCPP_GENERIC_KIND
    use            :: ccpp_fields,                                     &
                      only: ccpp_field_get
-   !use            :: ccpp_errors,                                     &
-   !                  only: ccpp_error, ccpp_debug
+#ifdef DEBUG
+   use            :: ccpp_errors,                                     &
+                     only: ccpp_error, ccpp_debug
+#endif
+
    ! Other modules required, e.g. type definitions
    {module_use}
 
@@ -450,6 +454,8 @@ module {module}
 
    private
    public :: {subroutines}
+
+   logical, save :: initialized = .false.
 
    contains
 '''
@@ -467,9 +473,13 @@ module {module}
 
       ierr = 0
 
+{initialized_test_block}
+
 {var_gets}
 
 {body}
+
+{initialized_set_block}
 
    end function {subroutine}
 '''
@@ -478,6 +488,32 @@ module {module}
 end module {module}
 '''
 
+    initialized_test_blocks = {
+        'init' : '''
+      if (initialized) return
+''',
+        'run' : '''
+      if (.not.initialized) then
+         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
+         {target_name_flag} = 1
+         return
+      end if
+''',
+        'finalize' : '''
+      if (.not.initialized) return
+''',
+    }
+
+    initialized_set_blocks = {
+        'init' : '''
+      initialized = .true.
+''',
+        'run' : '',
+        'finalize' : '''
+      initialized = .false.
+''',
+    }
+
     def __init__(self, **kwargs):
         self._name = ''
         self._filename = 'sys.stdout'
@@ -485,10 +521,11 @@ end module {module}
         self._finalize = False
         self._module = None
         self._subroutines = None
+        self._pset = None
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, metadata_request, metadata_define, arguments, module_use_cap):
+    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
         # First get target names of standard CCPP variables for subcycling and error handling
         ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
         ccpp_error_flag_target_name = metadata_request[CCPP_ERROR_FLAG_VARIABLE][0].target
@@ -514,7 +551,6 @@ end module {module}
             local_vars[CCPP_LOOP_COUNTER] = ccpp_loop_counter_target_name
             local_vars[CCPP_ERROR_FLAG_VARIABLE] = ccpp_error_flag_target_name
             local_vars[CCPP_ERROR_MSG_VARIABLE] = ccpp_error_msg_target_name
-            local_var_cnt += 3
             #
             body = ''
             var_defs = ''
@@ -545,7 +581,10 @@ end module {module}
                             tmpvar = copy.deepcopy(var)
                             tmpvar.local_name = local_var_template.format(x=local_var_cnt) #var_name.replace('-','_')
                             var_defs += '      ' + tmpvar.print_def() + '\n'
-                            var_gets += tmpvar.print_get() + '\n'
+                            # Use the index lookup from ccpp_field_maps for the group's
+                            # physics set and given variable name (standard name)
+                            var_gets += tmpvar.print_get(index=ccpp_field_maps[self._pset][var_name]) + '\n'
+                            # Add to list of local variables with the auto-generated local variable name
                             local_vars[var_name] = tmpvar.local_name
                             del tmpvar
 
@@ -581,7 +620,19 @@ end module {module}
 
             subroutine = self._name + '_' + ccpp_stage + '_cap'
             self._subroutines.append(subroutine)
+            # Test and set blocks for initialization status
+            initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
+                                        target_name_flag=ccpp_error_flag_target_name,
+                                        target_name_msg=ccpp_error_msg_target_name,
+                                        name=self._name)
+            initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
+                                        target_name_flag=ccpp_error_flag_target_name,
+                                        target_name_msg=ccpp_error_msg_target_name,
+                                        name=self._name)
+            # Create subroutine
             local_subs += Group.sub.format(subroutine=subroutine,
+                                           initialized_test_block=initialized_test_block,
+                                           initialized_set_block=initialized_set_block,
                                            var_defs=var_defs,
                                            var_gets=var_gets,
                                            body=body)
@@ -648,6 +699,11 @@ end module {module}
         return self._module
 
     @property
+    def subcycles(self):
+        '''Get the subcycles.'''
+        return self._subcycles
+
+    @property
     def subroutines(self):
         '''Get the subroutine names.'''
         return self._subroutines
@@ -657,6 +713,15 @@ end module {module}
         print self._name
         for subcycle in self._subcycles:
             subcycle.print_debug()
+
+    @property
+    def pset(self):
+        '''Get the unique physics set of this group.'''
+        return self._pset
+
+    @pset.setter
+    def pset(self, value):
+        self._pset = value
 
 
 class Subcycle(object):
