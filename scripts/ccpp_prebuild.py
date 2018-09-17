@@ -112,7 +112,6 @@ def import_config(host_model):
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
     config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
     config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
-    config['module_include_file_static']= ccpp_prebuild_config.MODULE_INCLUDE_FILE_STATIC_BUILD
     config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE
     config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
 
@@ -142,6 +141,15 @@ def setup_logging(debug):
         logging.info('Logging level set to INFO')
     return success
 
+def check_unique_pset_per_scheme(scheme_files):
+    """Check that each scheme belongs to one and only one physics set"""
+    success = True
+    for scheme_file in scheme_files.keys():
+        if len(scheme_files[scheme_file])>1:
+            logging.error("Scheme file {0} belongs to multiple physics sets: {1}".format(scheme_file, ','.join(scheme_files[scheme_file])))
+            success = False
+    return success
+
 def gather_variable_definitions(variable_definition_files):
     """Scan all Fortran source files with variable definitions on the host model side."""
     logging.info('Parsing metadata tables for variables provided by host model ...')
@@ -165,13 +173,17 @@ def collect_physics_subroutines(scheme_files):
     metadata_request = {}
     arguments_request = {}
     pset_request = {}
+    pset_schemes = {}
     for scheme_file in scheme_files.keys():
         (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme_file))
         # Change to directory where scheme_file lives
         os.chdir(scheme_filepath)
         (metadata, arguments) = parse_scheme_tables(scheme_filename)
-        # The different psets for the scheme
+        # The different psets for the variables used by schemes in scheme_file
         pset = { var_name : scheme_files[scheme_file] for var_name in metadata.keys() }
+        # The different psets for the schemes in scheme_file
+        for scheme_name in arguments.keys():
+            pset_schemes[scheme_name] = scheme_files[scheme_file]
         # Merge metadata and pset, append to arguments
         metadata_request = merge_dictionaries(metadata_request, metadata)
         pset_request = merge_dictionaries(pset_request, pset)
@@ -179,7 +191,24 @@ def collect_physics_subroutines(scheme_files):
         os.chdir(BASEDIR)
     # Return to BASEDIR
     os.chdir(BASEDIR)
-    return (success, metadata_request, pset_request, arguments_request)
+    return (success, metadata_request, pset_request, arguments_request, pset_schemes)
+
+def check_unique_pset_per_group(suite, pset_schemes):
+    """Check that all schemes in a group belongs to the same physics set"""
+    success = True
+    # For each group, scan all schemes in all subcycles for the physics sets they belong to
+    for group in suite.groups:
+        psets = []
+        for subcycle in group.subcycles:
+            for scheme in subcycle.schemes:
+                psets += pset_schemes[scheme]
+        # Remove duplicates
+        psets = list(set(psets))
+        if len(psets)>1:
+            logging.error("Group {0} contains schemes that belong to multiple physics sets: {1}".format(group.name, ','.join(psets)))
+            success = False
+        group.pset = psets[0]
+    return success
 
 def filter_metadata(metadata, pset, arguments, suite):
     """Remove all variables from metadata that are not used in the given suite"""
@@ -354,18 +383,21 @@ def create_ccpp_field_add_statements(metadata, pset, ccpp_data_structure):
     success = True
     ccpp_field_add_statements = ''
     cnt = 0
+    # Record the index for each variable added to cdata via ccpp_add_field()
+    ccpp_field_map = {}
+    # Important - adding the variables sorted is key to using hard-coded
+    # indices for faster retrieval of variables from cdata via ccpp_field_get
     for var_name in sorted(metadata.keys()):
-        # Skip CCPP-internal variables (these are added manually in ccpp_fields.F90 -> ccpp_fields_init)
-        if var_name.startswith("ccpp_"):
-            logging.debug('Skip CCPP-internal variable {0}'.format(var_name))
-            continue
         # Add variable with var_name = standard_name once
         logging.debug('Generating ccpp_field_add statement for variable {0}'.format(var_name))
         var = metadata[var_name][0]
-        ccpp_field_add_statements += var.print_add(ccpp_data_structure)
+        # Use print add with specified index number and register the index in ccpp_field_map;
+        # note: Python counters run from 0 to X, Fortran counters from 1 to X+1
+        ccpp_field_add_statements += var.print_add(ccpp_data_structure, cnt+1)
+        ccpp_field_map[var_name] = cnt+1
         cnt += 1
     logging.info('Generated ccpp_field_add statements for {0} variable(s)'.format(cnt))
-    return (success, ccpp_field_add_statements)
+    return (success, ccpp_field_add_statements, ccpp_field_map)
 
 def generate_include_files(module_use_statements, ccpp_field_add_statements,
                            target_files, module_include_file, fields_include_file):
@@ -389,7 +421,7 @@ def generate_include_files(module_use_statements, ccpp_field_add_statements,
             f.write(ccpp_field_add_statements)
     return success
 
-def generate_scheme_caps(metadata, arguments, caps_dir, module_use_template_scheme_cap):
+def generate_scheme_caps(metadata, arguments, pset_schemes, ccpp_field_maps, caps_dir, module_use_template_scheme_cap):
     """Generate scheme caps for all schemes parsed."""
     success = True
     # Change to caps directory
@@ -398,12 +430,10 @@ def generate_scheme_caps(metadata, arguments, caps_dir, module_use_template_sche
     scheme_caps = []
     for module_name in arguments.keys():
         for scheme_name in arguments[module_name].keys():
-            # DH* is this block doing anything???
             for subroutine_name in arguments[module_name][scheme_name].keys():
                 # Skip subroutines without argument table or with empty argument table
                 if not arguments[module_name][scheme_name][subroutine_name]:
                     continue
-            # *DH
             # Create cap
             cap = Cap()
             cap.filename = "{0}_cap.F90".format(scheme_name)
@@ -421,20 +451,21 @@ def generate_scheme_caps(metadata, arguments, caps_dir, module_use_template_sche
                             break
             # If required (not at the moment), add module use statements to module_use_template_scheme_cap
             module_use_statement = module_use_template_scheme_cap
-            # Write cap
-            cap.write(module_name, module_use_statement, capdata)
+            # Write cap using the unique physics set for the scheme
+            pset = pset_schemes[scheme_name][0]
+            cap.write(module_name, module_use_statement, capdata, ccpp_field_maps[pset])
     #
     os.chdir(BASEDIR)
     return (success, scheme_caps)
 
 def generate_suite_and_group_caps(suite, metadata_request, metadata_define, arguments,
-                                             caps_dir, module_use_template_group_cap):
+                                  ccpp_field_maps, caps_dir, module_use_template_group_cap):
     """Generate for the suite and for all groups parsed."""
     success = True
     # Change to caps directory
     os.chdir(caps_dir)
     # Write caps for suite and groups in suite
-    suite.write(metadata_request, metadata_define, arguments, module_use_template_group_cap)
+    suite.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_template_group_cap)
     os.chdir(BASEDIR)
     # Create include file for CCPP framework that defines name of SDF used in static build
     suite.create_sdf_name_include_file(CCPP_STATIC_SDF_NAME_INCLUDE_FILE)
@@ -449,21 +480,6 @@ def generate_static_api(suite, caps_dir):
     api.write()
     os.chdir(BASEDIR)
     return (success, api)
-
-def generate_static_api_include_files(api, pset, target_files, module_include_file_static):
-    logging.info('Generating module-use include files for static build for host model caps {0} ...'.format(', '.join(target_files)))
-    success = True
-    target_dirs = []
-    for target_file in target_files:
-        target_dirs.append(os.path.split(target_file)[0])
-    target_dirs = sorted(list(set(target_dirs)))
-    for target_dir in target_dirs:
-        includefile = os.path.join(target_dir, module_include_file_static.format(set=pset))
-        logging.info('Generated module-use include file {0}'.format(includefile))
-        with open(includefile, "w") as f:
-            module_use_statement = 'use {0}, only: {1}\n'.format(api.module, ','.join(api.subroutines))
-            f.write(module_use_statement)
-    return success
 
 def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile):
     """Generate makefile/cmakefile snippets for all schemes."""
@@ -525,8 +541,13 @@ def main():
         success = suite.parse()
         if not success:
             raise Exception('Parsing suite definition file {0} failed.'.format(sdf))
-        # DH*
-        suite.print_debug()
+
+    # Check that each scheme only belongs to one set of physics
+    # this is required for using the optimized version of ccpp_field_get
+    # that supplies the build-time derived index in the array
+    success = check_unique_pset_per_scheme(config['scheme_files'])
+    if not success:
+        raise Exception('Call to check_unique_pset_per_scheme failed.')
 
     # Variables defined by the host model
     (success, metadata_define) = gather_variable_definitions(config['variable_definition_files'])
@@ -539,12 +560,20 @@ def main():
         raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
-    (success, metadata_request, pset_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
+    (success, metadata_request, pset_request, arguments_request, pset_schemes) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
-    # DH* FILTER METADATA FOR STATIC BUILD (REMOVE STUFF NOT IN SDF?) for requested variables
-    # do we also need to filter pset_request, arguments_request ???
+    # For static build, also check that each group only contains scheme that
+    # belong to one set of physics; this is required for using the optimized
+    # version of ccpp_field_get that supplies the build-time derived index
+    # of the variable in the cdata structure
+    if static:
+        success = check_unique_pset_per_group(suite, pset_schemes)
+        if not success:
+            raise Exception('Call to check_unique_pset_per_group failed.')
+
+    # Filter metadata/pset/arguments for static build - remove whatever is not included in suite definition file
     if static:
         (success, metadata_request, pset_request, arguments_request) = filter_metadata(metadata_request, pset_request, arguments_request, suite)
         if not success:
@@ -569,20 +598,9 @@ def main():
     if not success:
         raise Exception('Call to compare_metadata failed.')
 
-    # Static build: generate caps for entire suite and groups in the specified suite; generate API
-    if static:
-        (success, suite_and_group_caps) = generate_suite_and_group_caps(suite, metadata_request, metadata_define,
-                                                                        arguments_request, config['caps_dir'],
-                                                                        config['module_use_template_scheme_cap'])
-        if not success:
-            raise Exception('Call to generate_suite_and_group_caps failed.')
-
-        (success, api) = generate_static_api(suite, config['caps_dir'])
-        if not success: 
-            raise Exception('Call to generate_static_api failed.')
-
+    # Dictionary of indices of variables in the cdata structure, per pset
+    ccpp_field_maps = {}
     for pset in psets_merged:
-        # DH* NOT FOR STATIC BUILD - NEED A DIFFERENT MODULE USE STATEMENT FOR STATIC BUILD, BUT SAME FILE?
         # Create module use statements to inject into the host model cap
         (success, module_use_statements) = create_module_use_statements(modules[pset], pset, config['module_use_template_host_cap'])
         if not success:
@@ -591,13 +609,14 @@ def main():
         # Only process variables that fall into this pset
         metadata_filtered = { key : value for (key, value) in metadata.items() if pset in pset_request[key] }
 
-        # DH* NOT FOR STATIC BUILD?
-        # Create ccpp_fiels_add statements to inject into the host model cap
-        (success, ccpp_field_add_statements) = create_ccpp_field_add_statements(metadata_filtered, pset, config['ccpp_data_structure'])
+        # Create ccpp_fiels_add statements to inject into the host model cap;
+        # this returns a ccpp_field_map that contains indices of variables in
+        # the cdata structure for the given pset
+        (success, ccpp_field_add_statements, ccpp_field_map) = create_ccpp_field_add_statements(metadata_filtered, pset, config['ccpp_data_structure'])
         if not success:
             raise Exception('Call to create_ccpp_field_add_statements failed.')
+        ccpp_field_maps[pset] = ccpp_field_map
 
-        # DH* NOT FOR STATIC BUILD - at least ccpp_field_add_statements; still want to use module_use_statements with different content?
         # Generate include files for module_use_statements and ccpp_field_add_statements
         success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
                                                                    config['module_include_file'].format(set=pset),
@@ -605,15 +624,23 @@ def main():
         if not success:
             raise Exception('Call to generate_include_files failed.')
 
-        if static:
-            success = generate_static_api_include_files(api, pset, config['target_files'], config['module_include_file_static'])
-            if not success: 
-                raise Exception('Call to generate_static_api failed.')
+    # Static build: generate caps for entire suite and groups in the specified suite; generate API
+    if static:
+        (success, suite_and_group_caps) = generate_suite_and_group_caps(suite, metadata_request, metadata_define,
+                                                                        arguments_request, 
+                                                                        ccpp_field_maps,
+                                                                        config['caps_dir'],
+                                                                        config['module_use_template_scheme_cap'])
+        if not success:
+            raise Exception('Call to generate_suite_and_group_caps failed.')
 
-    # DH* NOT FOR STATIC BUILD? How to do fast physics?
+        (success, api) = generate_static_api(suite, config['caps_dir'])
+        if not success: 
+            raise Exception('Call to generate_static_api failed.')
+
     # Generate scheme caps
-    (success, scheme_caps) = generate_scheme_caps(metadata_request, arguments_request, config['caps_dir'],
-                                                  config['module_use_template_scheme_cap'])
+    (success, scheme_caps) = generate_scheme_caps(metadata_request, arguments_request, pset_schemes, ccpp_field_maps,
+                                                  config['caps_dir'], config['module_use_template_scheme_cap'])
     if not success:
         raise Exception('Call to generate_scheme_caps failed.')
 
