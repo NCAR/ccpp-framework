@@ -63,17 +63,6 @@ CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(SRCDIR, 'ccpp_types.F90')
 CCPP_STATIC_SDF_NAME_INCLUDE_FILE = os.path.join(SRCDIR, 'ccpp_suite_static.inc')
 
 ###############################################################################
-# Configure logging to exit for levels 'error' and 'critical'                 #
-###############################################################################
-
-# DH* This doesn't seem to work
-class ExitOnExceptionHandler(logging.StreamHandler):
-    def emit(self, record):
-        super().emit(record)
-        if record.levelno in (logging.ERROR, logging.CRITICAL):
-            raise SystemExit(-1)
-
-###############################################################################
 # Functions and subroutines                                                   #
 ###############################################################################
 
@@ -132,9 +121,7 @@ def setup_logging(debug):
         level = logging.DEBUG
     else:
         level = logging.INFO
-    logging.basicConfig(handlers=[ExitOnExceptionHandler()],
-                        format='%(levelname)s: %(message)s',
-                        level=level)
+    logging.basicConfig(format='%(levelname)s: %(message)s', level=level)
     if debug:
         logging.info('Logging level set to DEBUG')
     else:
