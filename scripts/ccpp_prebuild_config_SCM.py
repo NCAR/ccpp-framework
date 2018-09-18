@@ -78,7 +78,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/GFS_time_vary_pre.scm.F90'    : ['physics'],
     'ccpp-physics/physics/cnvc90.f'                     : ['physics'],
     'ccpp-physics/physics/dcyc2.f'                      : ['physics'],
-    'ccpp-physics/physics/gcm_shoc.f90'                 : ['physics'],
+    'ccpp-physics/physics/gcm_shoc.F90'                 : ['physics'],
     'ccpp-physics/physics/get_prs_fv3.F90'              : ['physics'],
     'ccpp-physics/physics/gfdl_cloud_microphys.F90'     : ['physics'],
     'ccpp-physics/physics/gscond.f'                     : ['physics'],
