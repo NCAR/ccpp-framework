@@ -88,6 +88,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/samfshalcnv.f'                : ['physics'],
     'ccpp-physics/physics/moninedmf.f'                  : ['physics'],
     'ccpp-physics/physics/ozphys.f'                     : ['physics'],
+    'ccpp-physics/physics/ozphys_2015.f'                     : ['physics'],
     'ccpp-physics/physics/precpd.f'                     : ['physics'],
     'ccpp-physics/physics/radlw_main.f'                 : ['physics'],
     'ccpp-physics/physics/radsw_main.f'                 : ['physics'],
