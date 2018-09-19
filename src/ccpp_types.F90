@@ -21,11 +21,11 @@ module ccpp_types
 
 #if 0
 !! \section arg_table_ccpp_types
-!! | local_name                                              | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
-!! |---------------------------------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
-!! | cdata%errflg (local_name not used)                      | ccpp_error_flag           | error flag for error handling in CCPP                 | flag    |    0 | integer   |          | none   | F        |
-!! | cdata%errmsg (local_name not used)                      | ccpp_error_message        | error message for error handling in CCPP              | none    |    0 | character | len=512  | none   | F        |
-!! | cdata%loop_cnt (local_name not used)                    | ccpp_loop_counter         | loop counter for subcycling loops in CCPP             | index   |    0 | integer   |          | none   | F        |
+!! | local_name                        | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
+!! |-----------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
+!! | cdata%errflg                      | ccpp_error_flag           | error flag for error handling in CCPP                 | flag    |    0 | integer   |          | none   | F        |
+!! | cdata%errmsg                      | ccpp_error_message        | error message for error handling in CCPP              | none    |    0 | character | len=512  | none   | F        |
+!! | cdata%loop_cnt                    | ccpp_loop_counter         | loop counter for subcycling loops in CCPP             | index   |    0 | integer   |          | none   | F        |
 !!
 #endif
 

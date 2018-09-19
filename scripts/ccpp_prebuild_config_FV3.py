@@ -94,7 +94,9 @@ SCHEME_FILES_DEPENDENCIES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ]
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ];
+    # current restrictions are that each scheme can only belong to one physics set, and all schemes within one group in the
+    # suite definition file have to belong to the same physics set
     'ccpp/physics/physics/GFS_DCNV_generic.F90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_MP_generic.F90'                : [ 'slow_physics' ],
     'ccpp/physics/physics/GFS_PBL_generic.F90'               : [ 'slow_physics' ],
@@ -115,7 +117,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/get_prs_fv3.F90'                   : [ 'slow_physics' ],
     'ccpp/physics/physics/gfdl_cloud_microphys.F90'          : [ 'slow_physics' ],
     'ccpp/physics/physics/gfdl_fv_sat_adj.F90'               : [ 'fast_physics' ],
-    'ccpp/physics/physics/gfdl_fv_sat_adj_pre.F90'           : [ 'fast_physics' ],
+    #'ccpp/physics/physics/gfdl_fv_sat_adj_pre.F90'           : [ 'fast_physics' ],
     'ccpp/physics/physics/gscond.f'                          : [ 'slow_physics' ],
     'ccpp/physics/physics/gwdc.f'                            : [ 'slow_physics' ],
     'ccpp/physics/physics/gwdps.f'                           : [ 'slow_physics' ],
@@ -144,6 +146,8 @@ SCHEME_FILES = {
     'ccpp/physics/stochastic_physics/stochastic_physics.F90' : [ 'slow_physics' ],
     # memcheck utility
     'ccpp/physics/physics/memcheck.F90'                      : [ 'slow_physics' ],
+    # for testing the <init> and <finalize> sections
+    'ccpp/physics/physics/GFS_suite_init_finalize_test.F90'  : [ 'slow_physics' ],
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
@@ -230,6 +234,10 @@ OPTIONAL_ARGUMENTS = {
 MODULE_INCLUDE_FILE = 'ccpp_modules_{set}.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields_{set}.inc'
 
+# Names of Fortran include files in the host model cap for static
+# build (do not change); will be written to the directory of each target file
+MODULE_INCLUDE_FILE_STATIC_BUILD = 'ccpp_modules_static_{set}.inc'
+
 # HTML document containing the model-defined CCPP variables
 HTML_VARTABLE_FILE = 'ccpp/physics/CCPP_VARIABLES_FV3.html'
 
@@ -245,7 +253,9 @@ LATEX_VARTABLE_FILE = 'ccpp/framework/doc/DevelopersGuide/CCPP_VARIABLES_FV3.tex
 # in the case of FV3, this is a 2-dimensional array with
 # the number of blocks as the first and the number of
 # OpenMP threads as the second dimension; nb is the loop
-# index for the current block, nt for the current thread
+# index for the current block, nt for the current thread.
+# Internally, the model uses an associate construct to
+# reference cdata(nb,nt) with cdata.
 CCPP_DATA_STRUCTURE = 'cdata'
 
 # Modules to load for auto-generated ccpp_field_add code
@@ -259,14 +269,14 @@ use ccpp_api, only: ccpp_error
 # in the physics scheme cap (e.g. derived data types)
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
-       use machine, only: kind_grid, kind_phys
-       use module_radlw_parameters, only: sfcflw_type, topflw_type
-       use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
-       use CCPP_typedefs, only: CCPP_interstitial_type
-       use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
-                               GFS_sfcprop_type,  GFS_coupling_type,    &
-                               GFS_control_type,  GFS_grid_type,        &
-                               GFS_tbd_type,      GFS_cldprop_type,     &
-                               GFS_radtend_type,  GFS_diag_type,        &
-                               GFS_data_type,     GFS_interstitial_type
+   use machine, only: kind_grid, kind_phys
+   use module_radlw_parameters, only: sfcflw_type, topflw_type
+   use module_radsw_parameters, only: cmpfsw_type, sfcfsw_type, topfsw_type
+   use CCPP_typedefs, only: CCPP_interstitial_type
+   use GFS_typedefs, only: GFS_statein_type,  GFS_stateout_type,    &
+                           GFS_sfcprop_type,  GFS_coupling_type,    &
+                           GFS_control_type,  GFS_grid_type,        &
+                           GFS_tbd_type,      GFS_cldprop_type,     &
+                           GFS_radtend_type,  GFS_diag_type,        &
+                           GFS_data_type,     GFS_interstitial_type
 '''
