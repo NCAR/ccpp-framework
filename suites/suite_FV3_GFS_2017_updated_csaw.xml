@@ -65,9 +65,9 @@
       <scheme>GFS_DCNV_generic_pre</scheme>
       <scheme>get_phi_fv3</scheme>
       <scheme>GFS_suite_interstitial_3</scheme>
-      <scheme>cs_conv_pre_run</scheme>
-      <scheme>cs_conv_run</scheme>
-      <scheme>cs_conv_post_run</scheme>
+      <scheme>cs_conv_pre</scheme>
+      <scheme>cs_conv</scheme>
+      <scheme>cs_conv_post</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
