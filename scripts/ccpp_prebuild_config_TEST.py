@@ -20,7 +20,9 @@ SCHEME_FILES_DEPENDENCIES = [
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physic sets in which scheme may be called ]
+    # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ];
+    # current restrictions are that each scheme can only belong to one physics set, and all schemes within one group in the
+    # suite definition file have to belong to the same physics set
     '../../../../../schemes/check/check_test.f90' : [ 'test' ],
     }
 
