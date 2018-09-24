@@ -88,6 +88,21 @@ program test_check
         call exit(1)
     end if
 
+    call ccpp_field_add(cdata, 'ccpp_error_flag', cdata%errflg, ierr, 'flag')
+    if (ierr /= 0) then
+        call exit(1)
+    end if
+
+    call ccpp_field_add(cdata, 'ccpp_error_message', cdata%errmsg, ierr, 'none')
+    if (ierr /= 0) then
+        call exit(1)
+    end if
+
+    call ccpp_field_add(cdata, 'ccpp_loop_counter', cdata%loop_cnt, ierr, 'index')
+    if (ierr /= 0) then
+        call exit(1)
+    end if
+
     ! Add all the fields we want to expose to the physics driver.
     call ccpp_field_add(cdata, 'gravitational_acceleration', gravity, ierr, 'm s-2')
     if (ierr /= 0) then
