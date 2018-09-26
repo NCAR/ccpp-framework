@@ -2,7 +2,6 @@
 
 # CCPP prebuild config for MICM 
 
-
 ###############################################################################
 # Definitions                                                                 #
 ###############################################################################
@@ -11,7 +10,7 @@
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
     'MusicBox_host/src/MusicBox_var_defs.f90',
-    'MICM_chemistry/src/kinetics_module.F90',
+    'MICM_chemistry/src/terminator/kinetics_module.F90',
     ]
 
 # Can be empty, since all physics schemes and their
@@ -19,10 +18,12 @@ VARIABLE_DEFINITION_FILES = [
 # ccpp-physics - to fix, c.f. FV3 v1
 SCHEME_FILES_DEPENDENCIES = []
 
+PROJECT="terminator"
+
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    'MICM_chemistry/src/kinetics.F90'   : ['physics'],
-    'MICM_chemistry/src/k_rateConst_terminator.F90'   : ['physics'],
+    'MICM_chemistry/src/terminator/kinetics.F90'   : ['physics'],
+    'MICM_chemistry/src/terminator/k_rateConst.F90'   : ['physics'],
     'MICM_chemistry/src/chem_solve.F90' : ['physics']
     }
 
@@ -85,4 +86,5 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
        use machine,          only: kind_phys
        use solver_var_defs,  only: Solver_type
        use kinetics_module,  only: kinetics_type
+
 '''
