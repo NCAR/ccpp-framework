@@ -129,6 +129,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/moninshoc.f'                       : [ 'slow_physics' ],
 #    'ccpp/physics/physics/mp_thompson_hrrr.F90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/ozphys.f'                          : [ 'slow_physics' ],
+    'ccpp/physics/physics/ozphys_2015.f'                          : [ 'slow_physics' ],
     'ccpp/physics/physics/precpd.f'                          : [ 'slow_physics' ],
     'ccpp/physics/physics/radlw_main.f'                      : [ 'slow_physics' ],
     'ccpp/physics/physics/radsw_main.f'                      : [ 'slow_physics' ],
