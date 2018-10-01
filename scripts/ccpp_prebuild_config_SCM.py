@@ -103,6 +103,7 @@ SCHEME_FILES = {
     'ccpp-physics/physics/sfc_diag_post.F90'            : ['physics'],
     'ccpp-physics/physics/sfc_diff.f'                   : ['physics'],
     'ccpp-physics/physics/sfc_drv.f'                    : ['physics'],
+    'ccpp-physics/physics/sfc_drv_ruc.F90'            : ['physics'],
     'ccpp-physics/physics/sfc_nst.f'                    : ['physics'],
     'ccpp-physics/physics/sfc_sice.f'                   : ['physics'],
     'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.F90'   : ['physics'],
