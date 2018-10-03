@@ -15,7 +15,7 @@ import sys
 # *DH
 
 # Local modules
-from common import encode_container, decode_container, execute
+from common import encode_container, decode_container, execute, CCPP_INTERNAL_VARIABLES
 from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
 from mkdoc import metadata_to_html, metadata_to_latex
@@ -375,6 +375,9 @@ def create_ccpp_field_add_statements(metadata, pset, ccpp_data_structure):
     # Important - adding the variables sorted is key to using hard-coded
     # indices for faster retrieval of variables from cdata via ccpp_field_get
     for var_name in sorted(metadata.keys()):
+        # Skip CCPP internal variables, these are treated differently
+        if var_name in CCPP_INTERNAL_VARIABLES.keys():
+            continue
         # Add variable with var_name = standard_name once
         logging.debug('Generating ccpp_field_add statement for variable {0}'.format(var_name))
         var = metadata[var_name][0]

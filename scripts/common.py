@@ -4,8 +4,14 @@ import logging
 import subprocess
 
 CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
-CCPP_ERROR_MSG_VARIABLE = 'ccpp_error_message'
-CCPP_LOOP_COUNTER = 'ccpp_loop_counter'
+CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
+CCPP_LOOP_COUNTER        = 'ccpp_loop_counter'
+
+CCPP_INTERNAL_VARIABLES = {
+    CCPP_ERROR_FLAG_VARIABLE : 'cdata%errflg',
+    CCPP_ERROR_MSG_VARIABLE  : 'cdata%errmsg',
+    CCPP_LOOP_COUNTER        : 'cdata%loop_cnt',
+    }
 
 def execute(cmd, abort = True):
     """Runs a local command in a shell. Waits for completion and
