@@ -35,6 +35,9 @@
 #ifdef MPI
 #include <mpi.h>
 #endif
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 #include "ccpp_memory.h"
 
@@ -153,6 +156,17 @@ int ccpp_memory_usage_c(const int mpicomm, char* str, int lstr){
 	mpisize = 1;
 #endif
 
+	// Get OpenMP thread number and total number of threads
+	int ompthread;
+	int ompthreads;
+#ifdef OPENMP
+	ompthread = omp_get_thread_num();
+	ompthreads = omp_get_num_threads();
+#else
+	ompthread = 0;
+	ompthreads = 1;
+#endif
+
 	// Retrieve hostname
 	char hostname[128];
 	gethostname(hostname, sizeof(hostname));
@@ -161,7 +175,6 @@ int ccpp_memory_usage_c(const int mpicomm, char* str, int lstr){
 	int pid = (int)getpid();
 
 	// Retrieve memory statistics
-
 	struct sysinfo memInfo;
 	sysinfo (&memInfo);
 
@@ -212,7 +225,7 @@ int ccpp_memory_usage_c(const int mpicomm, char* str, int lstr){
 #ifndef MPI
 	snprintf(strtmp, sizeof(strtmp), 
 "--------------------------------------------------------------------------------\n\
-Memory usage - MPI rank %d/%d\n\
+Memory usage - MPI rank %d/%d - OMP thread %d/%d\n\
 \n\
 Statistics for node %s:\n\
 Total virtual  memory:      %lld MB\n\
@@ -225,12 +238,13 @@ Virtual    memory this process: %d MB\n\
 Physical   memory this process: %d MB\n\
 Max. phys. memory this process: %d MB\n\
 --------------------------------------------------------------------------------\n\
-", mpirank, mpisize, hostname, totalVirtMem, virtMemUsed, totalPhysMem, physMemUsed,
+", mpirank, mpisize, ompthread, ompthreads,
+hostname, totalVirtMem, virtMemUsed, totalPhysMem, physMemUsed,
 pid, virtMemPerProcess, physMemPerProcess, physMemPerProcessMax);
 #else
 	snprintf(strtmp, sizeof(strtmp), 
 "--------------------------------------------------------------------------------\n\
-Memory usage - MPI rank %d/%d\n\
+Memory usage - MPI rank %d/%d - OMP thread %d/%d\n\
 \n\
 Statistics for node %s:\n\
 Total virtual  memory:      %lld MB\n\
@@ -248,7 +262,8 @@ Virtual    memory average: %d MB\n\
 Physical   memory average: %d MB\n\
 Max. phys. memory average: %d MB\n\
 --------------------------------------------------------------------------------\n\
-", mpirank, mpisize, hostname, totalVirtMem, virtMemUsed, totalPhysMem, physMemUsed,
+", mpirank, mpisize, ompthread, ompthreads,
+hostname, totalVirtMem, virtMemUsed, totalPhysMem, physMemUsed,
 pid, virtMemPerProcess, physMemPerProcess, physMemPerProcessMax, virtMemPerProcessAvg,
 physMemPerProcessAvg, physMemPerProcessMaxAvg);
 #endif
@@ -295,7 +310,16 @@ int ccpp_memory_usage_c(const int mpicomm, char* str, int lstr){
 	mpisize = 1;
 #endif
 
-	// Retrieve memory statistics
+	// Get OpenMP thread number and total number of threads
+	int ompthread;
+	int ompthreads;
+#ifdef OPENMP
+	ompthread = omp_get_thread_num();
+	ompthreads = omp_get_num_threads();
+#else
+	ompthread = 0;
+	ompthreads = 1;
+#endif
 
 	// Available physical memory - in Byte
 	unsigned long long totalPhysMem;
@@ -339,7 +363,7 @@ int ccpp_memory_usage_c(const int mpicomm, char* str, int lstr){
 #ifndef MPI
 	snprintf(strtmp, sizeof(strtmp), 
 "--------------------------------------------------------------------------------\n\
-Memory usage - MPI rank %d/%d\n\
+Memory usage - MPI rank %d/%d - OMP thread %d/%d\n\
 \n\
 Size of physical memory: %llu MB\n\
 \n\
@@ -347,11 +371,12 @@ Virtual    memory this process: %d MB\n\
 Physical   memory this process: %d MB\n\
 Max. phys. memory this process: %d MB\n\
 --------------------------------------------------------------------------------\n\
-", mpirank, mpisize, totalPhysMem, virtMemPerProcess, physMemPerProcess, physMemPerProcessMax);
+", mpirank, mpisize, ompthread, ompthreads, 
+totalPhysMem, virtMemPerProcess, physMemPerProcess, physMemPerProcessMax);
 #else
 	snprintf(strtmp, sizeof(strtmp), 
 "--------------------------------------------------------------------------------\n\
-Memory usage - MPI rank %d/%d\n\
+Memory usage - MPI rank %d/%d - OMP thread %d/%d\n\
 \n\
 Size of physical memory: %llu MB\n\
 \n\
@@ -364,7 +389,8 @@ Virtual    memory average: %d MB\n\
 Physical   memory average: %d MB\n\
 Max. phys. memory average: %d MB\n\
 --------------------------------------------------------------------------------\n\
-", mpirank, mpisize, totalPhysMem, virtMemPerProcess, physMemPerProcess, physMemPerProcessMax,
+", mpirank, mpisize, ompthread, ompthreads, 
+totalPhysMem, virtMemPerProcess, physMemPerProcess, physMemPerProcessMax,
 virtMemPerProcessAvg, physMemPerProcessAvg, physMemPerProcessMaxAvg);
 #endif
 

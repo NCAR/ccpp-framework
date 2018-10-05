@@ -21,7 +21,7 @@ module ccpp_suite
     use            :: ccpp_types,                                      &
                       only: ccpp_suite_t
     use            :: ccpp_errors,                                     &
-                      only: ccpp_error, ccpp_debug
+                      only: ccpp_error, ccpp_info, ccpp_debug
     use            :: ccpp_strings,                                    &
                       only: ccpp_cstr
     use            :: ccpp_xml
@@ -68,6 +68,12 @@ module ccpp_suite
         character(len=*), parameter           :: err_msg =             &
             'Please validate the suite xml file: '
 
+#ifdef STATIC
+! Include code snippet that contains the name of the
+! suite that was used for the static build of CCPP.
+#include "ccpp_suite_static.inc"
+#endif
+
         ierr = 0
         tmp = c_null_ptr
 
@@ -87,6 +93,17 @@ module ccpp_suite
             return
         end if
 
+#ifdef STATIC
+        if (trim(suite%name).ne.trim(ccpp_suite_static_name)) then
+            call ccpp_error('Suite used for static build ' // trim(ccpp_suite_static_name) // &
+                            ' does not match runtime choice ' // trim(suite%name))
+            ierr = 1
+        else
+            call ccpp_info('Using suite ' //trim(suite%name))
+        end if
+        return
+#else
+        call ccpp_info('Parsing suite ' //trim(suite%name))
         ! Find the init subroutine
         call ccpp_xml_ele_find(root, ccpp_cstr(CCPP_XML_ELE_INIT), tmp, ierr)
         if (ierr == 0) then
@@ -215,7 +232,7 @@ module ccpp_suite
             write(6, '(A, A, A)') '  <group name="', trim(suite%groups(i)%name), '">'
             write(6, '(A, I0)') '  [suite%groups(i)%subcycles_max] = ', suite%groups(i)%subcycles_max
             do j=1, suite%groups(i)%subcycles_max
-                write(6, '(A, I0, A)') '    <subcycle loop="', suite%groups(i)%subcycles(j)%loop, '">'
+                write(6, '(A, I0, A)') '    <subcycle loops_max="', suite%groups(i)%subcycles(j)%loops_max, '">'
                 write(6, '(A, I0)') '    [suite%groups(i)%subcycles(j)%schemes_max] = ', &
                                                   suite%groups(i)%subcycles(j)%schemes_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
@@ -246,6 +263,7 @@ module ccpp_suite
 
         ierr = ccpp_xml_unload(xml)
         call ccpp_suite_load(suite, ierr)
+#endif
 
     end subroutine ccpp_suite_init
 
@@ -267,6 +285,7 @@ module ccpp_suite
 
         call ccpp_debug('Called ccpp_suite_finalize')
 
+#ifndef STATIC
         do i=1, suite%groups_max
             do j=1, suite%groups(i)%subcycles_max
                 do k=1, suite%groups(i)%subcycles(j)%schemes_max
@@ -292,14 +311,17 @@ module ccpp_suite
                 deallocate(suite%groups(i)%subcycles)
             end if
         end do
+#endif
 
         if (allocated(suite%groups)) then
             deallocate(suite%groups)
         end if
 
+#ifndef STATIC
         ! Clean up the init scheme
         call ccpp_scheme_finalize(suite%init, ierr)
         if (ierr /=0) return
+#endif
 
         if (allocated(suite%init%name)) then
             deallocate(suite%init%name)
@@ -312,10 +334,12 @@ module ccpp_suite
         if (allocated(suite%init%version)) then
             deallocate(suite%init%version)
         end if
-        
+
+#ifndef STATIC
         ! Clean up the finalize scheme
         call ccpp_scheme_finalize(suite%finalize, ierr)
         if (ierr /=0) return
+#endif
 
         if (allocated(suite%finalize%name)) then
             deallocate(suite%finalize%name)

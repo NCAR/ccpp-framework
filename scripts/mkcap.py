@@ -10,11 +10,12 @@ import sys
 import getopt
 import xml.etree.ElementTree as ET
 
+from common import CCPP_ERROR_FLAG_VARIABLE
+from common import CCPP_INTERNAL_VARIABLES
+
 ###############################################################################
 
 STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
-
-CCPP_ERROR_FLAG_VARIABLE = 'error_flag'
 
 ###############################################################################
 
@@ -31,6 +32,7 @@ class Var(object):
         self._kind          = None
         self._intent        = None
         self._optional      = None
+        self._target        = None
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -77,8 +79,6 @@ class Var(object):
 
     @type.setter
     def type(self, value):
-        if value == 'character' and self._rank:
-            raise Exception('Arrays of Fortran strings not implemented in CCPP')
         self._type = value
 
     @property
@@ -129,6 +129,15 @@ class Var(object):
         self._optional = value
 
     @property
+    def target(self):
+        '''Get the target of the variable.'''
+        return self._target
+
+    @target.setter
+    def target(self, value):
+        self._target = value
+
+    @property
     def container(self):
         '''Get the container of the variable.'''
         return self._container
@@ -168,11 +177,17 @@ class Var(object):
                 str = "type({s.type}), pointer     :: {s.local_name}{s.rank}"
         return str.format(s=self)
 
-    def print_get(self):
-        '''Print the data retrieval line for the variable. Depends on the type and of variable'''
+    def print_get(self, index=0):
+        '''Print the data retrieval line for the variable. Depends on the type and of variable.
+        If index (= location of variable in cdata structure) is supplied, pass to Fortran call.'''
+        if index==0:
+            index_string = ''
+        else:
+            index_string = ', index={index}'.format(index=index)
         if self.type in STANDARD_VARIABLE_TYPES and self.rank == '':
             str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, kind=ckind)
+        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, kind=ckind{index_string})
+#ifdef DEBUG
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
@@ -182,10 +197,12 @@ class Var(object):
             ierr = 1
             return
         end if
+#endif
         '''
         elif self.type in STANDARD_VARIABLE_TYPES:
             str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, dims=cdims, kind=ckind)
+        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, dims=cdims, kind=ckind{index_string})
+#ifdef DEBUG
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
@@ -195,11 +212,13 @@ class Var(object):
             ierr = 1
             return
         end if
+#endif
         '''
         # Derived-type variables, scalar
         elif self.rank == '':
             str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, kind=ckind)
+        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, kind=ckind{index_string})
+#ifdef DEBUG
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
@@ -209,11 +228,13 @@ class Var(object):
             ierr = 1
             return
         end if
+#endif
         call c_f_pointer(cptr, {s.local_name})'''
         # Derived-type variables, array
         else:
             str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, dims=cdims, kind=ckind)
+        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, dims=cdims, kind=ckind{index_string})
+#ifdef DEBUG
         if (ierr /= 0) then
             call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
             return
@@ -223,39 +244,47 @@ class Var(object):
             ierr = 1
             return
         end if
+#endif
         call c_f_pointer(cptr, {s.local_name}, cdims)
         deallocate(cdims)
         '''
-        return str.format(s=self)
+        return str.format(s=self, index_string=index_string)
 
-    def print_add(self, ccpp_data_structure):
+    def print_add(self, ccpp_data_structure, index=0):
         '''Print the data addition line for the variable. Depends on the type of variable.
         Since the name of the ccpp data structure is not known, this needs to be filled later.
         In case of errors a message is printed to screen; using 'return' statements as above
         for ccpp_field_get is not possible, since the ccpp_field_add statements may be placed
-        inside OpenMP parallel regions.'''
+        inside OpenMP parallel regions.
+        If index (= location of variable in cdata structure) is supplied, pass to Fortran call.'''
+        # Index string to test that index generated by CCPP prebuild matches
+        # the actual index in the cdata lookup table
+        if index==0:
+            index_string = ''
+        else:
+            index_string = ', index={index}'.format(index=index)
         # Standard-type variables, scalar and array
         if self.type in STANDARD_VARIABLE_TYPES:
             str='''
-            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', {s.target}, ierr, '{s.units}')
+            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', {s.target}, ierr=ierr, units='{s.units}'{index_string})
             if (ierr /= 0) then
                 call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
             end if'''
         # Derived-type variables, scalar
         elif self.rank == '':
             str='''
-            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), ierr)
+            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), ierr=ierr{index_string})
             if (ierr /= 0) then
                 call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
             end if'''
         # Derived-type variables, array
         else:
             str='''
-            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), rank=size(shape({s.target})), dims=shape({s.target}), ierr=ierr)
+            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), rank=size(shape({s.target})), dims=shape({s.target}), ierr=ierr{index_string})
             if (ierr /= 0) then
                 call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
             end if'''
-        return str.format(ccpp_data_structure=ccpp_data_structure, s=self)
+        return str.format(ccpp_data_structure=ccpp_data_structure, s=self, index_string=index_string)
 
     def print_debug(self):
         '''Print the data retrieval line for the variable.'''
@@ -269,6 +298,7 @@ class Var(object):
         kind          = {s.kind} *
         intent        = {s.intent}
         optional      = {s.optional}
+        target        = {s.target}
         container     = {s.container}'''
         return str.format(s=self)
     
@@ -382,7 +412,7 @@ module {module}_cap
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, module, module_use, data):
+    def write(self, module, module_use, data, ccpp_field_map):
         if (self.filename is not sys.stdout):
             f = open(self.filename, 'w')
         else:
@@ -397,13 +427,20 @@ module {module}_cap
                                   subroutine_caps = sub_caps))
 
         for sub in data.keys():
-            var_defs = "\n".join([" "*8 + x.print_def() for x in data[sub]])
-            var_gets = "\n".join([x.print_get() for x in data[sub]])
+            # Treat CCPP internal variables differently: do not retrieve
+            # via ccpp_field_get, use them directly via cdata%...
+            # (configured in common.py, needs to match what is is ccpp_types.F90)
+            var_defs = "\n".join([" "*8 + x.print_def() for x in data[sub] if x.standard_name not in CCPP_INTERNAL_VARIABLES.keys()])
+            # Use lookup index in cdata from build time for faster retrieval
+            var_gets = "\n".join([x.print_get(ccpp_field_map[x.standard_name]) for x in data[sub]if x.standard_name not in CCPP_INTERNAL_VARIABLES.keys()])
             # Split args so that lines don't exceed 260 characters (for PGI)
             args = ''
             length = 0
             for x in data[sub]:
-                arg = "{0}={0},".format(x.local_name)
+                if x.standard_name in CCPP_INTERNAL_VARIABLES.keys():
+                    arg = "{0}={1},".format(x.local_name, CCPP_INTERNAL_VARIABLES[x.standard_name])
+                else:
+                    arg = "{0}={0},".format(x.local_name)
                 args += arg
                 length += len(arg)
                 if length > 70 and not x == data[sub][-1]:
@@ -414,7 +451,7 @@ module {module}_cap
             ierr_assign = ''
             for x in data[sub]:
                 if x.standard_name == CCPP_ERROR_FLAG_VARIABLE:
-                    ierr_assign = 'ierr={x.local_name}'.format(x=x)
+                    ierr_assign = 'ierr={0}'.format(CCPP_INTERNAL_VARIABLES[CCPP_ERROR_FLAG_VARIABLE])
                     break
             # Write to scheme cap
             f.write(Cap.sub.format(subroutine=sub,

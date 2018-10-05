@@ -104,7 +104,11 @@ add_subdirectory(tests)
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
-add_library(ccpp ${SOURCES_C} ${SOURCES_F90})
+if(STATIC)
+  add_library(ccpp STATIC ${SOURCES_C} ${SOURCES_F90})
+else(STATIC)
+  add_library(ccpp ${SOURCES_C} ${SOURCES_F90})
+endif(STATIC)
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}

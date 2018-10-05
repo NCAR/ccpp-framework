@@ -319,7 +319,7 @@ module ccpp_xml
             return
         else
             stmp = ccpp_fstr(tmp)
-            read(stmp, *, iostat=ierr) subcycle%loop
+            read(stmp, *, iostat=ierr) subcycle%loops_max
             call ccpp_free(tmp)
             tmp = c_null_ptr
             if (ierr /= 0) then
