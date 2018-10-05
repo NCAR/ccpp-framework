@@ -66,13 +66,14 @@
       <scheme>GFS_suite_interstitial_3</scheme>
       <scheme>cu_gf_driver_pre</scheme>
       <scheme>cu_gf_driver</scheme>
-      <scheme>cu_gf_driver_post</scheme>
       <scheme>GFS_DCNV_generic_post</scheme>
       <scheme>gwdc_pre</scheme>
       <scheme>gwdc</scheme>
       <scheme>gwdc_post</scheme>
+      <!-- DH* do we need to run these two? are they run at all? -->
       <scheme>GFS_SCNV_generic_pre</scheme>
       <scheme>GFS_SCNV_generic_post</scheme>
+      <!-- *DH -->
       <scheme>GFS_suite_interstitial_4</scheme>
       <scheme>cnvc90</scheme>
       <scheme>GFS_MP_generic_pre</scheme>
@@ -80,6 +81,7 @@
       <scheme>zhaocarr_precpd</scheme>
       <scheme>GFS_MP_generic_post</scheme>
       <scheme>sfc_sice_post</scheme>
+      <scheme>cu_gf_driver_post</scheme>
     </subcycle>
   </group>
   <group name="stochastics">
