@@ -66,6 +66,7 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/surface_perturbation.F90',
     'ccpp/physics/physics/tridi.f',
     'ccpp/physics/physics/wam_f107_kp_mod.f90',
+    'ccpp/physics/physics/wv_saturation.F',
     # stochastic physics
     'ccpp/physics/stochastic_physics/spectral_layout.f',
     'ccpp/physics/stochastic_physics/stochy_gg_def.f',
