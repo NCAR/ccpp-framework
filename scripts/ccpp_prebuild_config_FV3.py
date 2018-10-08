@@ -19,7 +19,10 @@ VARIABLE_DEFINITION_FILES = [
 # rules stipulate that dependencies are not shared between the schemes!
 SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/GFDL_parse_tracers.F90',
+    'ccpp-physics/physics/aer_cloud.F',
     'ccpp/physics/physics/calpreciptype.f90',
+    'ccpp-physics/physics/cldwat2m_micro.F',
+    'ccpp-physics/physics/cldmacro.F',
     'ccpp/physics/physics/date_def.f',
     'ccpp/physics/physics/funcphys.f90',
     'ccpp/physics/physics/gcycle.F90',
@@ -31,6 +34,9 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/machine.F', # DH should this be in FV3/gfsphysics/physics/physparam.f ?
     'ccpp/physics/physics/mersenne_twister.f',
     'ccpp/physics/physics/mfpbl.f',
+    'ccpp-physics/physics/micro_mg_utils.F90',
+    'ccpp-physics/physics/micro_mg2_0.F90',
+    'ccpp-physics/physics/micro_mg3_0.F90',
     'ccpp/physics/physics/module_bfmicrophysics.f',
     'ccpp/physics/physics/module_nst_model.f90',
     'ccpp/physics/physics/module_nst_parameters.f90',
@@ -125,6 +131,8 @@ SCHEME_FILES = {
     'ccpp/physics/physics/h2ophys.f'                         : [ 'slow_physics' ],
     'ccpp/physics/physics/samfdeepcnv.f'                     : [ 'slow_physics' ],
     'ccpp/physics/physics/samfshalcnv.f'                     : [ 'slow_physics' ],
+    'ccpp-physics/physics/m_micro.F90'                       : [ 'slow_physics' ],
+    'ccpp-physics/physics/m_micro_interstitial.F90'          : [ 'slow_physics' ],
     'ccpp/physics/physics/moninedmf.f'                       : [ 'slow_physics' ],
     'ccpp/physics/physics/moninshoc.f'                       : [ 'slow_physics' ],
     'ccpp/physics/physics/mp_thompson_hrrr_pre.F90'          : [ 'slow_physics' ],
