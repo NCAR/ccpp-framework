@@ -58,6 +58,8 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/sflx.f',
     'ccpp/physics/physics/set_soilveg.f',
     'ccpp/physics/physics/surface_perturbation.F90',
+    'ccpp/physics/physics/cu_gf_deep.F90',
+    'ccpp/physics/physics/cu_gf_sh.F90',
     'ccpp/physics/physics/tridi.f',
     'ccpp/physics/physics/wam_f107_kp_mod.f90',
     # stochastic physics
@@ -125,6 +127,9 @@ SCHEME_FILES = {
     'ccpp/physics/physics/h2ophys.f'                         : [ 'slow_physics' ],
     'ccpp/physics/physics/samfdeepcnv.f'                     : [ 'slow_physics' ],
     'ccpp/physics/physics/samfshalcnv.f'                     : [ 'slow_physics' ],
+    'ccpp/physics/physics/cu_gf_driver_pre.F90'              : [ 'slow_physics' ],
+    'ccpp/physics/physics/cu_gf_driver.F90'                  : [ 'slow_physics' ],
+    'ccpp/physics/physics/cu_gf_driver_post.F90'             : [ 'slow_physics' ],
     'ccpp/physics/physics/moninedmf.f'                       : [ 'slow_physics' ],
     'ccpp/physics/physics/moninshoc.f'                       : [ 'slow_physics' ],
     'ccpp/physics/physics/mp_thompson_hrrr_pre.F90'          : [ 'slow_physics' ],
