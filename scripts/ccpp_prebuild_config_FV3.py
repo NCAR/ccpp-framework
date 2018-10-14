@@ -62,6 +62,10 @@ SCHEME_FILES_DEPENDENCIES = [
     'ccpp/physics/physics/cu_gf_sh.F90',
     'ccpp/physics/physics/tridi.f',
     'ccpp/physics/physics/wam_f107_kp_mod.f90',
+    'ccpp/physics/physics/module_sf_ruclsm.F90',
+    'ccpp/physics/physics/namelist_soilveg_ruc.F90',
+    'ccpp/physics/physics/set_soilveg_ruc.F90',
+    'ccpp/physics/physics/module_soil_pre.F90',
     # stochastic physics
     'ccpp/physics/stochastic_physics/spectral_layout.f',
     'ccpp/physics/stochastic_physics/stochy_gg_def.f',
@@ -147,6 +151,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/rrtmg_sw_pre.F90'                  : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_diag.f'                        : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_diag_post.F90'                 : [ 'slow_physics' ],
+    'ccpp/physics/physics/sfc_drv_ruc.F90'                   : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_diff.f'                        : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_drv.f'                         : [ 'slow_physics' ],
     'ccpp/physics/physics/sfc_nst.f'                         : [ 'slow_physics' ],
