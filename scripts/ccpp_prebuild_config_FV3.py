@@ -137,6 +137,7 @@ SCHEME_FILES = {
     'ccpp/physics/physics/cu_gf_driver_post.F90'             : [ 'slow_physics' ],
     'ccpp/physics/physics/moninedmf.f'                       : [ 'slow_physics' ],
     'ccpp/physics/physics/moninshoc.f'                       : [ 'slow_physics' ],
+    'ccpp/physics/physics/satmedmfvdif.F90'                  : [ 'slow_physics' ],
     'ccpp/physics/physics/mp_thompson_hrrr_pre.F90'          : [ 'slow_physics' ],
     'ccpp/physics/physics/mp_thompson_hrrr.F90'              : [ 'slow_physics' ],
     'ccpp/physics/physics/mp_thompson_hrrr_post.F90'         : [ 'slow_physics' ],
