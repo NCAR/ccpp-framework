@@ -156,8 +156,6 @@ OPTIONAL_ARGUMENTS = {
             'mean_effective_radius_for_rain_drop',
             'cloud_snow_water_path',
             'mean_effective_radius_for_snow_flake',
-            'cloud_optical_depth_weighted',
-            'cloud_optical_depth_layers_678',
             ],
         },
     'rrtmg_lw' : {
@@ -171,8 +169,6 @@ OPTIONAL_ARGUMENTS = {
             'mean_effective_radius_for_rain_drop',
             'cloud_snow_water_path',
             'mean_effective_radius_for_snow_flake',
-            'cloud_optical_depth_weighted',
-            'cloud_optical_depth_layers_678',
             ],
         },
     #'subroutine_name_1' : 'all',
