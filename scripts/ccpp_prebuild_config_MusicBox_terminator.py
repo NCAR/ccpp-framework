@@ -22,9 +22,7 @@ PROJECT="terminator"
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    'MICM_chemistry/src/terminator/kinetics.F90'   : ['physics'],
-    'MICM_chemistry/src/terminator/k_rateConst.F90'   : ['physics'],
-    'MICM_chemistry/src/chem_solve.F90' : ['physics']
+    'MICM_chemistry/src/chemistry_driver.F90'   : ['physics'],
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
