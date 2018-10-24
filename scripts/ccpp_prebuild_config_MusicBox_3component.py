@@ -11,7 +11,7 @@
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
     'MusicBox_host/src/MusicBox_var_defs.f90',
-    'MICM_chemistry/src/3component/kinetics_module.F90',
+    'MICM_chemistry/src/3component/kinetics_module.F90'
     ]
 
 # Can be empty, since all physics schemes and their
@@ -85,4 +85,6 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
        use machine,          only: kind_phys
        use solver_var_defs,  only: Solver_type
        use kinetics_module,  only: kinetics_type
+       use const_props_mod,  only: const_props_type
+
 '''
