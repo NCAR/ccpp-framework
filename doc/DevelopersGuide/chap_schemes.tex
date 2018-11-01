@@ -150,8 +150,8 @@ OPTIONAL_ARGUMENTS = {
 \item Place new scheme in the same location as existing schemes in the CCPP directory structure, e.\,g. \execout{../some\_relative\_path/new\_scheme.F90}.
 \item Edit the runtime suite definition file and add the new scheme at the place it should be run. SDFs are located in
 \begin{lstlisting}[language=Python]
-ccpp/framework/suites/suite_FV3_GFS_2017_updated*.xml # FV3
-ccpp-framework/suites/suite_SCM_GFS_2017_updated*.xml # SCM
+ccpp/suites/suite_FV3_GFS_2017_updated*.xml # FV3
+ccpp/suites/suite_SCM_GFS_2017_updated*.xml # SCM
 \end{lstlisting}
 \item Done. Note that no further modifications of the build system are required, since the CCPP framework will auto-generate the necessary makefiles that allow the host model to compile the scheme.
 \end{enumerate}
