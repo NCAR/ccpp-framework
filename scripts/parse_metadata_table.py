@@ -93,8 +93,8 @@ import re
 import collections
 import logging
 from metavar import VariableProps, Var
-from parse_tools import ParseSyntaxError, MetadataSyntax, FortranMetadataSyntax
-from parse_object import ParseObject
+from parse_tools import ParseSyntaxError, ParseObject
+from metadata_syntax import MetadataSyntax, FortranMetadataSyntax
 
 logger = logging.getLogger(__name__)
 

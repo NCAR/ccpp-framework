@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 import re
+if __name__ == '__main__' and __package__ is None:
+    import sys
+    import os.path
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
 
 # A collection of types and tools for parsing Fortran code to support
@@ -35,20 +39,20 @@ class Ftype(object):
     <_sre.SRE_Match object at 0x...>
     >>> Ftype('integer').typestr
     'integer'
-    >>> Ftype('integer', kind_in='( kind= I8').print_decl()
+    >>> Ftype('integer', kind_in='( kind= I8').print_decl() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Illegal kind_selector, '( kind= I8', at <standard input>:1
+    ParseSyntaxError: Invalid kind_selector, '( kind= I8', at <standard input>:1
     >>> Ftype('integer', kind_in='(kind=I8)').print_decl()
     'integer(kind=I8)'
     >>> Ftype('integer', kind_in='(I8)').print_decl()
     'integer(kind=I8)'
-    >>> Ftype('real', kind_in='(len=*,R8)').print_decl()
+    >>> Ftype('real', kind_in='(len=*,R8)').print_decl() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Illegal kind_selector, '(len=*,R8)', at <standard input>:1
-    >>> Ftype(typestr_in='real', line_in='real(kind=kind_phys)')
+    ParseSyntaxError: Invalid kind_selector, '(len=*,R8)', at <standard input>:1
+    >>> Ftype(typestr_in='real', line_in='real(kind=kind_phys)') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseInternalError: typestr_in and line_in cannot both be used in a single call, at <standard input>:1
-    >>> Ftype(typestr_in='real', line_in='real(kind=kind_phys)', context=ParseContext(37, "foo.F90"))
+    >>> Ftype(typestr_in='real', line_in='real(kind=kind_phys)', context=ParseContext(linenum=37, filename="foo.F90")) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseInternalError: typestr_in and line_in cannot both be used in a single call, at foo.F90:37
     >>> Ftype(line_in='real(kind=kind_phys)').print_decl()
@@ -87,9 +91,9 @@ class Ftype(object):
 
     def __init__(self, typestr_in=None, kind_in=None, line_in=None, context=None):
         if context is None:
-            self.context = ParseContext(context)
+            self.context = None
         else:
-            self.context = ParseContext(context)
+            self.context = ParseContext(context=context)
         # We have to distinguish which type of initialization we have
         if typestr_in is not None:
             if line_in is not None:
@@ -128,6 +132,7 @@ class Ftype(object):
     def parse_kind_selector(self, kind_selector, context=None):
         if context is None:
             context = self.context
+        # End if
         kind = None
         if (kind_selector[0] == '(') and (kind_selector[-1] == ')'):
             args = kind_selector[1:-1].split('=')
@@ -175,15 +180,6 @@ class Ftype(object):
             # Derived type
             return "{}({})".format(self.typestr, self.kind)
 
-    def to_xml(self, element, include_context=False):
-        """Output a variable's basic type information to an XML element"""
-        sub_element = ET.SubElement(element, 'type')
-        sub_element.text = self.typestr
-        sub_element = ET.SubElement(element, 'kind')
-        sub_element.text = self.kind
-        if include_context:
-
-
 ########################################################################
 
 class Ftype_character(Ftype):
@@ -198,7 +194,7 @@ class Ftype_character(Ftype):
 
     >>> Ftype_character('character', ParseContext(169, 'foo.F90')).print_decl()
     Traceback (most recent call last):
-    ParseSyntaxError: Illegal character declaration, 'character', at foo.F90:169
+    ParseSyntaxError: Invalid character declaration, 'character', at foo.F90:169
     >>> Ftype_character('character ::', ParseContext(171, 'foo.F90')).print_decl()
     'character(len=1)'
     >>> Ftype_character('CHARACTER(len=*)', ParseContext(174, 'foo.F90')).print_decl()
@@ -207,14 +203,14 @@ class Ftype_character(Ftype):
     'CHARACTER(len=:)'
     >>> Ftype_character('character(*)', None).print_decl()
     'character(len=*)'
-    >>> Ftype_character('character*7', None).print_decl()
+    >>> Ftype_character('character*7', None).print_decl() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Illegal character declaration, 'character*7', at <standard input>:1
+    ParseSyntaxError: Invalid character declaration, 'character*7', at <standard input>:1
     >>> Ftype_character('character*7,', None).print_decl()
     'character(len=7)'
-    >>> Ftype_character("character (kind=kind('a')", None).print_decl()
+    >>> Ftype_character("character (kind=kind('a')", None).print_decl() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Illegal kind_selector, 'kind=kind('a'', at <standard input>:1
+    ParseSyntaxError: Invalid kind_selector, 'kind=kind('a'', at <standard input>:1
     >>> Ftype_character("character (kind=kind('a'))", None).print_decl()
     "character(len=1, kind=kind('a'))"
     >>> Ftype_character("character  (13, kind=kind('a'))", None).print_decl()
@@ -268,7 +264,7 @@ class Ftype_character(Ftype):
                 raise ParseSyntaxError("char_selector", match.group(2), context)
             elif attrs[0][0:4].lower() == "kind":
                 # The first arg is kind, try to parse it
-                kind = self.parse_kind_selector(attrs[0], context)
+                kind = self.parse_kind_selector(attrs[0], context=context)
                 # If there is a second arg, it must be of form len=<length_selector>
                 if len(attrs) == 2:
                     clen = self.parse_len_select(attrs[1], context, len_optional=False)

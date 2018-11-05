@@ -2,7 +2,6 @@
 
 import logging
 import re
-import fortran_parser
 
 ## Classes to aid the parsing process
 
@@ -87,21 +86,25 @@ class MetadataSyntax():
     It uses the most common comment type used by Python and shell languages.
     Note that this is not a complete class (missing functions).
     >>> MetadataSyntax.line_start("## Hi mom")
-    True
+    '## '
     >>> MetadataSyntax.line_start("##Hi mom")
-    False
+
     >>> MetadataSyntax.line_start("#> Hi mom")
-    False
-    >>> MetadataSyntax.table_start("#>\")
-    True
+
+    >>> MetadataSyntax.table_start("#> ")
+    '#> '
     >>> MetadataSyntax.table_start("#>Hi mom")
-    True
+
+    >>> MetadataSyntax.table_start("#> Hi mom")
+    '#> '
     >>> MetadataSyntax.table_start("## Hi mom")
-    False
+    '## '
+    >>> MetadataSyntax.table_start("##Hi mom")
+
     >>> MetadataSyntax.line_start("!! Hi mom")
-    False
+
     >>> MetadataSyntax.table_start("!> Hi mom")
-    False
+
     >>> MetadataSyntax.blank_line("##")
     True
     >>> MetadataSyntax.blank_line("##   ")
@@ -115,18 +118,27 @@ class MetadataSyntax():
     >>> MetadataSyntax.strip("##  Hi mom")
     'Hi mom'
     >>> MetadataSyntax.strip("#>\defgroup")
-    '\\\\defgroup'
-    >>> MetadataSyntax.strip("#  Hi mom") #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ValueError: Line, '#  Hi mom', is not a valid metadata line
+
+    >>> MetadataSyntax.strip("#  Hi mom")
+
     >>> foo = MetadataSyntax() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     NotImplementedError: Cannot create MetadataSyntax instances
-    >>> MetadataSyntax.is_variable_name('hi_mom') #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    NotImplementedError: MetadataSyntax.is_variable_name is not implemented
+    >>> MetadataSyntax.is_variable_name('V_123')
+    True
+    >>> MetadataSyntax.is_variable_name('v_v_a2')
+    True
+    >>> MetadataSyntax.is_variable_name('i')
+    True
+    >>> MetadataSyntax.is_variable_name('')
+    False
+    >>> MetadataSyntax.is_variable_name('_hi_mom')
+    True
+    >>> MetadataSyntax.is_variable_name('2i')
+    False
     """
     _blank_line = re.compile(r"^##\s*$")
+    _variable_name = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
     _table_start = re.compile(r"^(#[#>]\s+)")
     _line_start  = re.compile(r"^(##\s+)")
 
@@ -170,33 +182,33 @@ class MetadataSyntax():
         return sline
 
     @classmethod
-    def __init__(cls):
-        raise NotImplementedError("Cannot create {} instances".format(cls.__name__))
+    def is_variable_name(cls, name):
+        return cls._variable_name.match(name) is not None
 
     @classmethod
-    def is_variable_name(cls, name):
-        raise NotImplementedError('{}.is_variable_name is not implemented'.format(cls.__name__))
+    def __init__(cls):
+        raise NotImplementedError("Cannot create {} instances".format(cls.__name__))
 
 ########################################################################
 
 class FortranMetadataSyntax(MetadataSyntax):
     """FortranMetadataSyntax is a class for Fortran metadata syntax checking.
     >>> FortranMetadataSyntax.line_start("!! Hi mom")
-    True
+    '!! '
     >>> FortranMetadataSyntax.line_start("!!Hi mom")
-    False
+
     >>> FortranMetadataSyntax.line_start("!> Hi mom")
-    False
+
     >>> FortranMetadataSyntax.table_start("!>Hi mom")
-    True
+
     >>> FortranMetadataSyntax.table_start("#>Hi mom")
-    False
+
     >>> FortranMetadataSyntax.table_start("!! Hi mom")
-    False
+    '!! '
     >>> FortranMetadataSyntax.line_start("## Hi mom")
-    False
+
     >>> FortranMetadataSyntax.table_start("#>Hi mom")
-    False
+
     >>> FortranMetadataSyntax.blank_line("!!")
     True
     >>> FortranMetadataSyntax.blank_line("!!   ")
@@ -210,10 +222,9 @@ class FortranMetadataSyntax(MetadataSyntax):
     >>> FortranMetadataSyntax.strip("!!  Hi mom")
     'Hi mom'
     >>> FortranMetadataSyntax.strip("!>\defgroup")
-    '\\\\defgroup'
-    >>> FortranMetadataSyntax.strip("!  Hi mom") #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ValueError: Line, '!  Hi mom', is not a valid metadata line
+
+    >>> FortranMetadataSyntax.strip("!  Hi mom")
+
     >>> foo = FortranMetadataSyntax() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     NotImplementedError: Cannot create FortranMetadataSyntax instances
@@ -234,74 +245,7 @@ class FortranMetadataSyntax(MetadataSyntax):
     _blank_line = re.compile(r"^!!\s*$")
     _table_start = re.compile(r"(![!>]\s+)")
     _line_start  = re.compile(r"(!!\s+)")
-
-    @classmethod
-    def is_variable_name(cls, name):
-        return fortran_parser.is_variable_name(name)
-
-########################################################################
-
-class PythonMetadataSyntax(MetadataSyntax):
-    """PythonMetadataSyntax is a class for Python metadata syntax checking.
-    >>> PythonMetadataSyntax.line_start("!! Hi mom")
-    True
-    >>> PythonMetadataSyntax.line_start("!!Hi mom")
-    False
-    >>> PythonMetadataSyntax.line_start("!> Hi mom")
-    False
-    >>> PythonMetadataSyntax.table_start("!>Hi mom")
-    True
-    >>> PythonMetadataSyntax.table_start("#>Hi mom")
-    False
-    >>> PythonMetadataSyntax.table_start("!! Hi mom")
-    False
-    >>> PythonMetadataSyntax.line_start("## Hi mom")
-    False
-    >>> PythonMetadataSyntax.table_start("#>Hi mom")
-    False
-    >>> PythonMetadataSyntax.blank_line("!!")
-    True
-    >>> PythonMetadataSyntax.blank_line("!!   ")
-    True
-    >>> PythonMetadataSyntax.blank_line("!! Hi mom")
-    False
-    >>> PythonMetadataSyntax.blank_line("##")
-    False
-    >>> PythonMetadataSyntax.strip("!!   ")
-    ''
-    >>> PythonMetadataSyntax.strip("!!  Hi mom")
-    'Hi mom'
-    >>> PythonMetadataSyntax.strip("!>\defgroup")
-    '\\\\defgroup'
-    >>> PythonMetadataSyntax.strip("!  Hi mom") #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ValueError: Line, '!  Hi mom', is not a valid metadata line
-    >>> foo = PythonMetadataSyntax() #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    NotImplementedError: Cannot create PythonMetadataSyntax instances
-    >>> PythonMetadataSyntax.is_variable_name('V_123')
-    True
-    >>> PythonMetadataSyntax.is_variable_name('v_v_a2')
-    True
-    >>> PythonMetadataSyntax.is_variable_name('i')
-    True
-    >>> PythonMetadataSyntax.is_variable_name('')
-    False
-    >>> PythonMetadataSyntax.is_variable_name('_hi_mom')
-    True
-    >>> PythonMetadataSyntax.is_variable_name('2i')
-    False
-    """
-
-    _blank_line = re.compile(r"^!!\s*$")
-    _variable_name = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-    _table_start = re.compile(r"(#[#>]\s+)")
-    _line_start  = re.compile(r"(##\s+)")
-
-    @classmethod
-    def is_variable_name(cls, name):
-        # In python 3, we would just use isidentifier
-        return PythonMetadataSyntax._variable_name.match(name) is not None
+    _variable_name = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
 ########################################################################
 

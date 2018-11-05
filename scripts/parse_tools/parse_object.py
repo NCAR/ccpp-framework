@@ -16,19 +16,19 @@ class ParseObject(object):
     >>> ParseObject('foobar.F90', 1).curr_line(["##hi mom",])
 
     >>> ParseObject('foobar.F90', 1).curr_line(["first line","## hi mom"])
-    'hi mom'
+    '## hi mom'
     >>> ParseObject('foobar.F90', 1).next_line(["##hi mom",])
 
     >>> ParseObject('foobar.F90', 1).next_line(["##first line","## hi mom"])
-    'hi mom'
+    '## hi mom'
     >>> ParseObject('foobar.F90', 0).next_line(["## hi \\\\","## mom"])
-    'hi mom'
+    '## hi mom'
     >>> ParseObject('foobar.F90', 2).next_line(["line1","##line2","## hi mom"])
-    'hi mom'
+    '## hi mom'
     >>> ParseObject('foobar.F90', 0).next_line(["## hi \\\\","## there \\\\","## mom"])
-    'hi there mom'
+    '## hi there mom'
     >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).next_line(["!! line1","!! hi mom"])
-    'hi mom'
+    '!! hi mom'
     >>> ParseObject('foobar.F90', 2).syntax
     'MetadataSyntax'
     >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).syntax
