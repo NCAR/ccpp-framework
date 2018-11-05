@@ -2,9 +2,181 @@
 """A module for the base, ParseObject class"""
 
 import logging
-from parse_tools import MetadataSyntax, FortranMetadataSyntax, ParseContext
+import re
+from parse_tools import ParseContext
 
 logger = logging.getLogger(__name__)
+
+########################################################################
+
+## classes to check language-dependent metadata syntax
+class MetadataSyntax():
+    """MetadataSyntax serves as a base class for metadata syntax checking.
+    It uses the most common comment type used by Python and shell languages.
+    Note that this is not a complete class (missing functions).
+    >>> MetadataSyntax.line_start("## Hi mom")
+    '## '
+    >>> MetadataSyntax.line_start("##Hi mom")
+
+    >>> MetadataSyntax.line_start("#> Hi mom")
+
+    >>> MetadataSyntax.table_start("#> ")
+    '#> '
+    >>> MetadataSyntax.table_start("#>Hi mom")
+
+    >>> MetadataSyntax.table_start("#> Hi mom")
+    '#> '
+    >>> MetadataSyntax.table_start("## Hi mom")
+    '## '
+    >>> MetadataSyntax.table_start("##Hi mom")
+
+    >>> MetadataSyntax.line_start("!! Hi mom")
+
+    >>> MetadataSyntax.table_start("!> Hi mom")
+
+    >>> MetadataSyntax.blank_line("##")
+    True
+    >>> MetadataSyntax.blank_line("##   ")
+    True
+    >>> MetadataSyntax.blank_line("## Hi mom")
+    False
+    >>> MetadataSyntax.blank_line("!!")
+    False
+    >>> MetadataSyntax.strip("##   ")
+    ''
+    >>> MetadataSyntax.strip("##  Hi mom")
+    'Hi mom'
+    >>> MetadataSyntax.strip("#>\defgroup")
+
+    >>> MetadataSyntax.strip("#  Hi mom")
+
+    >>> foo = MetadataSyntax() #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    NotImplementedError: Cannot create MetadataSyntax instances
+    >>> MetadataSyntax.is_variable_name('V_123')
+    True
+    >>> MetadataSyntax.is_variable_name('v_v_a2')
+    True
+    >>> MetadataSyntax.is_variable_name('i')
+    True
+    >>> MetadataSyntax.is_variable_name('')
+    False
+    >>> MetadataSyntax.is_variable_name('_hi_mom')
+    True
+    >>> MetadataSyntax.is_variable_name('2i')
+    False
+    """
+    _blank_line = re.compile(r"^##\s*$")
+    _variable_name = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+    _table_start = re.compile(r"^(#[#>]\s+)")
+    _line_start  = re.compile(r"^(##\s+)")
+
+    @classmethod
+    def line_start(cls, line):
+        """Return True iff line begins with the proper metadata syntax"""
+        match = cls._line_start.match(line)
+        if match is not None:
+            return match.group(1)
+        else:
+            return None
+
+    @classmethod
+    def table_start(cls, line):
+        """Return True iff line begins with the proper metadata table syntax"""
+        match = cls._table_start.match(line)
+        if match is not None:
+            return match.group(1)
+        else:
+            return None
+
+    @classmethod
+    def blank_line(cls, line):
+        """Return True iff line is the proper metadata blank format"""
+        return (len(line) == 0) or (cls._blank_line.match(line) is not None)
+
+    @classmethod
+    def strip(cls, line):
+        """Strip line-beginning syntax from line"""
+        sline = None
+        ls = cls.line_start(line)
+        if ls is not None:
+            sline = line[len(ls):].strip()
+        # End if
+        if sline is None:
+            ts = cls.table_start(line)
+            if ts is not None:
+                sline = line[len(ts):].strip()
+            # End if
+        # End if
+        return sline
+
+    @classmethod
+    def is_variable_name(cls, name):
+        return cls._variable_name.match(name) is not None
+
+    @classmethod
+    def __init__(cls):
+        raise NotImplementedError("Cannot create {} instances".format(cls.__name__))
+
+########################################################################
+
+class FortranMetadataSyntax(MetadataSyntax):
+    """FortranMetadataSyntax is a class for Fortran metadata syntax checking.
+    >>> FortranMetadataSyntax.line_start("!! Hi mom")
+    '!! '
+    >>> FortranMetadataSyntax.line_start("!!Hi mom")
+
+    >>> FortranMetadataSyntax.line_start("!> Hi mom")
+
+    >>> FortranMetadataSyntax.table_start("!>Hi mom")
+
+    >>> FortranMetadataSyntax.table_start("#>Hi mom")
+
+    >>> FortranMetadataSyntax.table_start("!! Hi mom")
+    '!! '
+    >>> FortranMetadataSyntax.line_start("## Hi mom")
+
+    >>> FortranMetadataSyntax.table_start("#>Hi mom")
+
+    >>> FortranMetadataSyntax.blank_line("!!")
+    True
+    >>> FortranMetadataSyntax.blank_line("!!   ")
+    True
+    >>> FortranMetadataSyntax.blank_line("!! Hi mom")
+    False
+    >>> FortranMetadataSyntax.blank_line("##")
+    False
+    >>> FortranMetadataSyntax.strip("!!   ")
+    ''
+    >>> FortranMetadataSyntax.strip("!!  Hi mom")
+    'Hi mom'
+    >>> FortranMetadataSyntax.strip("!>\defgroup")
+
+    >>> FortranMetadataSyntax.strip("!  Hi mom")
+
+    >>> foo = FortranMetadataSyntax() #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    NotImplementedError: Cannot create FortranMetadataSyntax instances
+    >>> FortranMetadataSyntax.is_variable_name('V_123')
+    True
+    >>> FortranMetadataSyntax.is_variable_name('v_v_a2')
+    True
+    >>> FortranMetadataSyntax.is_variable_name('i')
+    True
+    >>> FortranMetadataSyntax.is_variable_name('')
+    False
+    >>> FortranMetadataSyntax.is_variable_name('_hi_mom')
+    False
+    >>> FortranMetadataSyntax.is_variable_name('2i')
+    False
+    """
+
+    _blank_line = re.compile(r"^!!\s*$")
+    _table_start = re.compile(r"(![!>]\s+)")
+    _line_start  = re.compile(r"(!!\s+)")
+    _variable_name = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+
+########################################################################
 
 class ParseObject(object):
     """ParseObject is a simple class that keeps track of an object's

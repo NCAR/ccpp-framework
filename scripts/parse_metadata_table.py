@@ -94,7 +94,7 @@ import collections
 import logging
 from metavar import VariableProps, Var
 from parse_tools import ParseSyntaxError, ParseObject
-from metadata_syntax import MetadataSyntax, FortranMetadataSyntax
+from parse_tools import MetadataSyntax, FortranMetadataSyntax
 
 logger = logging.getLogger(__name__)
 

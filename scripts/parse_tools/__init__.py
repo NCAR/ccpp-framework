@@ -2,8 +2,7 @@
 """
 
 from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
-from parse_tools import MetadataSyntax, FortranMetadataSyntax
-from parse_object import ParseObject
+from parse_object import MetadataSyntax, FortranMetadataSyntax, ParseObject
 
 __all__ = [
     'ParseContext',

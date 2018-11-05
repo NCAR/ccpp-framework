@@ -91,7 +91,7 @@ class Ftype(object):
 
     def __init__(self, typestr_in=None, kind_in=None, line_in=None, context=None):
         if context is None:
-            self.context = None
+            self.context = ParseContext()
         else:
             self.context = ParseContext(context=context)
         # We have to distinguish which type of initialization we have
@@ -131,8 +131,11 @@ class Ftype(object):
 
     def parse_kind_selector(self, kind_selector, context=None):
         if context is None:
-            context = self.context
-        # End if
+            if hasattr(self, 'context'):
+                context = self.context
+            else:
+                context = ParseContext()
+            # End if
         kind = None
         if (kind_selector[0] == '(') and (kind_selector[-1] == ')'):
             args = kind_selector[1:-1].split('=')
@@ -239,6 +242,7 @@ class Ftype_character(Ftype):
 
     def __init__(self, line, context):
         """Initialize a character type from a declaration line"""
+
         clen = None
         kind = None # This will be interpreted as default kind
         match = Ftype_character.type_match(line)
@@ -336,7 +340,7 @@ class Ftype_type_decl(Ftype):
     declarations.
     >>> Ftype_type_decl.type_match('character')
 
-    >>> Ftype_character.type_match('type') #doctest: +ELLIPSIS
+    >>> Ftype_type_decl.type_match('type') #doctest: +ELLIPSIS
     <_sre.SRE_Match object at 0x...>
     """
 
