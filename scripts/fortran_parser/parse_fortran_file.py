@@ -141,31 +141,50 @@ def read_file(filename, preproc_defs=None):
     if not os.path.exists(filename):
         raise IOError("read_file: file, '{}', does not exist".format(filename))
     else:
+        # create a parse object and context for this file
+        pobj = ParseObject(filename, 0, syntax=None)
         # Read all lines of the file at once
         with (open(filename, 'r')) as file:
             file_lines = file.readlines()
-            continue_col = -1
-            in_single_char = False # Single quote character context
-            in_double_char = False # Double quote character context
-            for index in xrange(len(file_lines)):
-                file_lines[index] = file_lines[index].rstrip('\n').strip()
+            continue_col = -1 # Active continue column
+            in_schar = False # Single quote character context
+            in_dchar = False # Double quote character context
+            prev_line = None
+            curr_line = pobj.curr_line(file_lines)
+            while curr_line is not None:
                 # Skip empty lines and comment-only lines
-                if file_lines[index] == '' or (file_lines[index][0] == '!'):
+                if pobj.blank_line(curr_line) or (curr_line.lstrip()[0] == '!'):
                     continue
                 # End if
-                # Note if this line has a continuation and strip if true
-                curr_continue = continue_re.search(file_lines[index])
+                # scan the line for properties
+                res = scan_line(curr_line, (continue_col >= 0),
+                                in_schar, in_dchar, context)
+                cont_in_col, cont_out_col, in_schar, in_dchar, comment_col = res
                 # If in a continuation context, move this line to previos
                 if continue_col >= 0:
-                    pass
-                # Remove line continuations: concatenate with following lines
+                    if prev_line is None:
+                        raise ParseInternalError("No prev_line to continue",
+                                                 pobj.context)
+                    # End if
+                    sindex = max(0, cont_in_col)
+                    if cont_out_col > 0:
+                        eindex = cont_out_col
+                    else:
+                        eindex = len(curr_line)
+                    # End if
+# Need a way to reset lines
+                    prev_line = prev_line + curr_line[sindex, eindex]
+                    curr_line = ""
+                    continue_col = cont_out_col
+                    # Remove line continuations: concatenate with following lines
                 if line.endswith('&'):
                     buffer += file_lines[i].rstrip('\n').replace('&', ' ')
                     continue
                 # Write out line with buffer and reset buffer
                 lines.append(buffer + file_lines[i].rstrip('\n').replace('&', ' '))
                 buffer = ''
-            # End for
+                curr_line = pobj.next_line(file_lines)
+            # End while
         # End with
         return file_lines
 

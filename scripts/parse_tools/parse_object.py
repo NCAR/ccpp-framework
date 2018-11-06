@@ -205,6 +205,22 @@ class ParseObject(object):
     'MetadataSyntax'
     >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).syntax
     'FortranMetadataSyntax'
+    >>> ParseObject('foobar.F90', 1, syntax=None).syntax
+    'None'
+    >>> ParseObject('foobar.F90', 1, syntax=None).blank_line("")
+    True
+    >>> ParseObject('foobar.F90', 1, syntax=None).blank_line("    ")
+    True
+    >>> ParseObject('foobar.F90', 1, syntax=None).blank_line("  int :: foo")
+    False
+    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("")
+    True
+    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("   ")
+    False
+    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("!! int :; foo")
+    False
+    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("!!  ")
+    True
     """
 
     def __init__(self, filename, line_start, syntax=MetadataSyntax):
@@ -253,16 +269,32 @@ class ParseObject(object):
 
     @property
     def syntax(self):
-        'Return the syntax class for this HeaderVariable'
-        return self._syntax.__name__
+        'Return the syntax class for this ParseObject'
+        if self._syntax is None:
+            return "None"
+        else:
+            return self._syntax.__name__
 
     @syntax.setter
     def syntax(self):
         'Do not allow the syntax to be set'
         logger.warning('Cannot set value of syntax')
 
+    @property
+    def context(self):
+        'Return the context for this object'
+        return self._context
+
+    @context.setter
+    def context(self):
+        'Do not allow the context to be set'
+        logger.warning('Cannot set value of context')
+
     def blank_line(self, line):
-        return self._syntax.blank_line(line)
+        if self._syntax is None:
+            return len(line.strip()) == 0
+        else:
+            return self._syntax.blank_line(line)
 
     def curr_line(self, lines):
         valid_line = self._line_curr < len(lines)
@@ -279,7 +311,11 @@ class ParseObject(object):
         # End if
         # We allow continuation lines (ending with a single backslash)
         if valid_line and _curr_line.endswith('\\'):
-            next_line = self._syntax.strip(self.next_line(lines))
+            if self._syntax is None:
+                next_line = self.next_line(lines)
+            else:
+                next_line = self._syntax.strip(self.next_line(lines))
+            # End if
             if next_line is None:
                 # We ran out of lines, just strip the backslash
                 _curr_line = _curr_line[0:len(_curr_line)-1]
