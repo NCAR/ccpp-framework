@@ -10,11 +10,17 @@ import copy
 
 class ParseSyntaxError(ValueError):
     """Exception that is aware of parsing context"""
-    def __init__(self, token_type, token, context):
+    def __init__(self, token_type, token=None, context=None):
         if context is None:
-            message = "Invalid {}, '{}'".format(token_type, token)
+            if token is None:
+                message = "{}".format(token_type)
+            else:
+                message = "Invalid {}, '{}'".format(token_type, token)
         else:
-            message = "Invalid {}, '{}', at {}".format(token_type, token, context.ctx_str())
+            if token is None:
+                message = "{}, at {}".format(token_type, context)
+            else:
+                message = "Invalid {}, '{}', at {}".format(token_type, token, context)
         # End if
         super(ParseSyntaxError, self).__init__(message)
 
@@ -26,7 +32,7 @@ class ParseInternalError(StandardError):
         if context is None:
             message = errmsg
         else:
-            message = "{}, at {}".format(errmsg, context.ctx_str())
+            message = "{}, at {}".format(errmsg, context)
         # End if
         super(ParseInternalError, self).__init__(message)
 
@@ -38,7 +44,7 @@ class ParseContextError(ValueError):
         if context is None:
             message = "{}".format(errmsg)
         else:
-            message = "{}, at {}".format(errmsg, context.ctx_str())
+            message = "{}, at {}".format(errmsg, context)
         # End if
         super(ParseContextError, self).__init__(message)
 
@@ -80,9 +86,9 @@ class ParseContext(object):
     >>> ParseContext(32, 90) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ValueError: ParseContext filenum must be a string
-    >>> ParseContext(32, "source.F90").ctx_str()
+    >>> "{}".format(ParseContext(32, "source.F90"))
     'source.F90:32'
-    >>> ParseContext().ctx_str()
+    >>> "{}".format(ParseContext())
     '<standard input>:1'
     >>> ParseContext(32, "source.F90").increment(13)
 
@@ -122,7 +128,7 @@ class ParseContext(object):
     def line_num(self, newnum):
         self.linenum = newnum
 
-    def ctx_str(self):
+    def __str__(self):
         "Return a string representing the location in a file"
         return "{}:{}".format(self.filename, self.linenum)
 

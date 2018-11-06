@@ -117,7 +117,7 @@ class Ftype(object):
         elif line_in is not None:
             match = Ftype.itype_re.match(line_in.strip())
             if match is None:
-                raise ParseSyntaxError("type declaration", line_in, self.context)
+                raise ParseSyntaxError("type declaration", token=line_in, context=self.context)
             elif Ftype.is_intrinsic(match.group(1)):
                 self.typestr = match.group(1)
                 if match.group(2) is not None:
@@ -128,7 +128,7 @@ class Ftype(object):
                 # End if
                 self.default_kind = self.kind is None
             else:
-                raise ParseSyntaxError("type declaration", line_in, self.context)
+                raise ParseSyntaxError("type declaration", token=line_in, context=self.context)
         else:
             raise ParseInternalError("At least one of typestr_in or line must be passed", self.context)
 
@@ -146,12 +146,12 @@ class Ftype(object):
             args = kind_selector.split('=')
         # End if
         if (len(args) > 2) or (len(args) < 1):
-            raise ParseSyntaxError("kind_selector", kind_selector, context)
+            raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
         elif len(args) == 1:
             kind = args[0].strip()
         elif args[0].strip().lower() != 'kind':
             # We have two args, the first better be kind
-            raise ParseSyntaxError("kind_selector", kind_selector, context)
+            raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
         else:
             # We have two args and the second is our kind string
             kind = args[1].strip()
@@ -161,17 +161,17 @@ class Ftype(object):
         if match is not None:
             if match.group(2) is not None:
                 if match.group(2) != match.group(4):
-                    raise ParseSyntaxError("kind_selector", kind_selector, context)
+                    raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
                 elif (match.group(1) is None) and (match.group(5) is not None):
-                    raise ParseSyntaxError("kind_selector", kind_selector, context)
+                    raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
                 elif (match.group(1) is not None) and (match.group(5) is None):
-                    raise ParseSyntaxError("kind_selector", kind_selector, context)
+                    raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
                 else:
                     pass
             else:
                 pass
         elif kind[0:4].lower() == "kind":
-            raise ParseSyntaxError("kind_selector", kind_selector, context)
+            raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
         else:
             pass
         return kind
@@ -250,13 +250,13 @@ class Ftype_character(Ftype):
         kind = None # This will be interpreted as default kind
         match = Ftype_character.type_match(line)
         if match is None:
-            raise ParseSyntaxError("character declaration", line, context)
+            raise ParseSyntaxError("character declaration", token=line, context=context)
         elif len(match.groups()) == 3:
             # We have an old style character declaration
             if match.group(2) != '*':
-                raise ParseSyntaxError("character declaration", line, context)
+                raise ParseSyntaxError("character declaration", token=line, context=context)
             elif Ftype_character.oldchartrail_re.match(line.strip()[len(match.group(0)):]) is None:
-                raise ParseSyntaxError("character declaration", line, context)
+                raise ParseSyntaxError("character declaration", token=line, context=context)
             else:
                 clen = match.group(3)
             # End if
@@ -265,10 +265,10 @@ class Ftype_character(Ftype):
             attrs = [ x.strip() for x in match.group(2)[1:-1].split(',') ]
             if len(attrs) == 0:
                 # Empty parentheses is not allowed
-                raise ParseSyntaxError("char_selector", match.group(2), context)
+                raise ParseSyntaxError("char_selector", token=match.group(2), context=context)
             if len(attrs) > 2:
                 # Too many attributes!
-                raise ParseSyntaxError("char_selector", match.group(2), context)
+                raise ParseSyntaxError("char_selector", token=match.group(2), context=context)
             elif attrs[0][0:4].lower() == "kind":
                 # The first arg is kind, try to parse it
                 kind = self.parse_kind_selector(attrs[0], context=context)
@@ -286,7 +286,7 @@ class Ftype_character(Ftype):
         else:
             # We had better check the training characters
             if Ftype_character.chartrail_re.match(line.strip()[len(match.group(0)):]) is None:
-                raise ParseSyntaxError("character declaration", line, context)
+                raise ParseSyntaxError("character declaration", token=line, context=context)
         # End if
         if clen is None:
             clen = 1
@@ -300,24 +300,24 @@ class Ftype_character(Ftype):
         if match is not None:
             return match.group(1)
         else:
-            raise ParseSyntaxError("length type-param-value", token, context)
+            raise ParseSyntaxError("length type-param-value", token=token, context=context)
 
     def parse_len_select(self, lenselect, context, len_optional=True):
         """Parse a character type length_selector"""
         largs = [ x.strip() for x in lenselect.split('=') ]
         if len(largs) > 2:
-            raise ParseSyntaxError("length_selector", lenselect, context)
+            raise ParseSyntaxError("length_selector", token=lenselect, context=context)
         elif (not len_optional) and ((len(largs) != 2) or (largs[0].lower() != 'len')):
-            raise ParseSyntaxError("length_selector when len= is required", lenselect, context)
+            raise ParseSyntaxError("length_selector when len= is required", token=lenselect, context=context)
         elif len(largs) == 2:
             if largs[0].lower() != 'len':
-                raise ParseSyntaxError("length_selector", lenselect, context)
+                raise ParseSyntaxError("length_selector", token=lenselect, context=context)
             else:
                 return self.parse_len_token(largs[1], context)
         elif len_optional:
             return self.parse_len_token(largs[0], context)
         else:
-            raise ParseSyntaxError("length_selector when len= is required", lenselect, context)
+            raise ParseSyntaxError("length_selector when len= is required", token=lenselect, context=context)
 
     def print_decl(self):
         """Return a string of the declaration of the type
@@ -360,13 +360,13 @@ class Ftype_type_decl(Ftype):
         """Initialize an extended type from a declaration line"""
         match = Ftype_character.type_match(line)
         if match is None:
-            raise ParseSyntaxError("character declaration", line, context)
+            raise ParseSyntaxError("character declaration", token=line, context=context)
         elif len(match.groups()) == 3:
             # We have an old style character declaration
             if match.group(2) != '*':
-                raise ParseSyntaxError("character declaration", line, context)
+                raise ParseSyntaxError("character declaration", token=line, context=context)
             elif Ftype_character.oldchartrail_re.match(line.strip()[len(match.group(0)):]) is None:
-                raise ParseSyntaxError("character declaration", line, context)
+                raise ParseSyntaxError("character declaration", token=line, context=context)
             else:
                 clen = match.group(3)
             # End if

@@ -131,7 +131,7 @@ class MetadataHeader(ParseObject):
         self._table_title = MetadataHeader.metadata_table_start(curr_line, syntax=self._syntax)
         if self._table_title is None:
             raise ParseSyntaxError("metadata header start",
-                                   curr_line, self._context)
+                                   token=curr_line, context=self._context)
         # End if
         curr_line = self.next_line(lines)
         # Skip past any 'blank' lines
@@ -148,7 +148,8 @@ class MetadataHeader(ParseObject):
                 new_sn = newvar.get_prop_value('standard_name')
                 if new_sn in self._variables:
                     raise ParseSyntaxError("Duplicate standard name",
-                                           newvar.standard_name, self._context)
+                                           token=newvar.standard_name,
+                                           context=self._context)
                 else:
                     self._variables[new_sn] = newvar
                 # End if
@@ -169,7 +170,8 @@ class MetadataHeader(ParseObject):
             self._local_name = None
         # End if
         if valid_line and (self._local_name is None):
-            raise ParseSyntaxError("invalid metadata variable start", curr_line, self._context)
+            raise ParseSyntaxError("invalid metadata variable start",
+                                   token=curr_line, context=self._context)
         # End if
         # Parse lines until invalid line is found
         # NB: Header variables cannot have embedded blank lines
@@ -189,7 +191,8 @@ class MetadataHeader(ParseObject):
                     pitems = property.split('=')
                     if len(pitems) != 2:
                         raise ParseSyntaxError("variable property syntax",
-                                               property, self._context)
+                                               token=property,
+                                               context=self._context)
                     # End if
                     try:
                         pname = pitems[0].strip()
@@ -200,11 +203,13 @@ class MetadataHeader(ParseObject):
                             pval = hp.valid_value(pval_str)
                         else:
                             raise ParseSyntaxError("variable property name",
-                                                   pname, self._context)
+                                                   token=pname,
+                                                   context=self._context)
                         # End if
                         if pval is None:
                             raise ParseSyntaxError("variable property value",
-                                                   pval_str, self._context)
+                                                   token=pval_str,
+                                                   context=self._context)
                         # End if
                     except ParseSyntaxError as p:
                         raise p
@@ -232,7 +237,7 @@ class MetadataHeader(ParseObject):
             name = match.group(1)
             if not self._syntax.is_variable_name(name):
                 raise ParseSyntaxError("Invalid local variable name",
-                                       name, self._context)
+                                       token=name, context=self._context)
             # End if
         else:
             name = None
@@ -249,7 +254,8 @@ class MetadataHeader(ParseObject):
             if match is not None:
                 name = match.group(1)
                 if not syntax.is_variable_name(name):
-                    raise ParseSyntaxError("Invalid arg_table name", name, context)
+                    raise ParseSyntaxError("Invalid arg_table name",
+                                           token=name, context=context)
                 # End if
             else:
                 name = None
