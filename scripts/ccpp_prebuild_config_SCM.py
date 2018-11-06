@@ -17,52 +17,56 @@ VARIABLE_DEFINITION_FILES = [
 # Add all physics scheme dependencies relative to basedir - note that the CCPP
 # rules stipulate that dependencies are not shared between the schemes!
 SCHEME_FILES_DEPENDENCIES = [
-    'ccpp-physics/physics/GFDL_parse_tracers.F90',
-    'ccpp-physics/physics/aer_cloud.F',
-    'ccpp-physics/physics/calpreciptype.f90',
-    'ccpp-physics/physics/cldwat2m_micro.F',
-    'ccpp-physics/physics/date_def.f',
-    'ccpp-physics/physics/funcphys.f90',
-    'ccpp-physics/physics/gfs_phy_tracer_config.f',
-    'ccpp-physics/physics/gocart_tracer_config_stub.f',
-    'ccpp-physics/physics/h2o_def.f',
-    'ccpp-physics/physics/h2ointerp.f90',
-    'ccpp-physics/physics/iounitdef.f',
-    'ccpp-physics/physics/machine.F',
-    'ccpp-physics/physics/mersenne_twister.f',
-    'ccpp-physics/physics/mfpbl.f',
-    'ccpp-physics/physics/module_bfmicrophysics.f',
-    'ccpp-physics/physics/module_nst_model.f90',
-    'ccpp-physics/physics/module_nst_parameters.f90',
-    'ccpp-physics/physics/module_nst_water_prop.f90',
-    'ccpp-physics/physics/namelist_soilveg.f',
-    'ccpp-physics/physics/ozinterp.f90',
-    'ccpp-physics/physics/ozne_def.f',
-    'ccpp-physics/physics/physcons.F90',
-    'ccpp-physics/physics/physparam.f',
-    'ccpp-physics/physics/radcons.f90',
-    'ccpp-physics/physics/radiation_aerosols.f',
-    'ccpp-physics/physics/radiation_astronomy.f',
-    'ccpp-physics/physics/radiation_clouds.f',
-    'ccpp-physics/physics/radiation_gases.f',
-    'ccpp-physics/physics/radiation_surface.f',
-    'ccpp-physics/physics/radlw_datatb.f',
-    'ccpp-physics/physics/radlw_param.f',
-    'ccpp-physics/physics/radsw_datatb.f',
-    'ccpp-physics/physics/radsw_param.f',
-    'ccpp-physics/physics/rascnvv2.f',
-    'ccpp-physics/physics/set_soilveg.f',
-    'ccpp-physics/physics/sflx.f',
-    'ccpp-physics/physics/surface_perturbation.F90',
-    'ccpp-physics/physics/cu_gf_deep.F90',
-    'ccpp-physics/physics/cu_gf_sh.F90',
-    'ccpp-physics/physics/tridi.f',
-    'ccpp-physics/physics/wam_f107_kp_mod.f90',
-    'ccpp-physics/physics/module_sf_ruclsm.F90',
-    'ccpp-physics/physics/namelist_soilveg_ruc.F90',
-    'ccpp-physics/physics/set_soilveg_ruc.F90',
-    'ccpp-physics/physics/module_soil_pre.F90',
-    'ccpp-physics/physics/wv_saturation.F',
+    'ccpp/physics/physics/GFDL_parse_tracers.F90',
+    'ccpp/physics/physics/aer_cloud.F',
+    'ccpp/physics/physics/calpreciptype.f90',
+    'ccpp/physics/physics/cldwat2m_micro.F',
+    'ccpp/physics/physics/cldmacro.F',
+    'ccpp/physics/physics/date_def.f',
+    'ccpp/physics/physics/funcphys.f90',
+    'ccpp/physics/physics/gfs_phy_tracer_config.f',
+    'ccpp/physics/physics/gocart_tracer_config_stub.f',
+    'ccpp/physics/physics/h2o_def.f',
+    'ccpp/physics/physics/h2ointerp.f90',
+    'ccpp/physics/physics/iounitdef.f',
+    'ccpp/physics/physics/machine.F',
+    'ccpp/physics/physics/mersenne_twister.f',
+    'ccpp/physics/physics/mfpbl.f',
+    'ccpp/physics/physics/micro_mg_utils.F90',
+    'ccpp/physics/physics/micro_mg2_0.F90',
+    'ccpp/physics/physics/micro_mg3_0.F90',
+    'ccpp/physics/physics/module_bfmicrophysics.f',
+    'ccpp/physics/physics/module_nst_model.f90',
+    'ccpp/physics/physics/module_nst_parameters.f90',
+    'ccpp/physics/physics/module_nst_water_prop.f90',
+    'ccpp/physics/physics/namelist_soilveg.f',
+    'ccpp/physics/physics/ozinterp.f90',
+    'ccpp/physics/physics/ozne_def.f',
+    'ccpp/physics/physics/physcons.F90',
+    'ccpp/physics/physics/physparam.f',
+    'ccpp/physics/physics/radcons.f90',
+    'ccpp/physics/physics/radiation_aerosols.f',
+    'ccpp/physics/physics/radiation_astronomy.f',
+    'ccpp/physics/physics/radiation_clouds.f',
+    'ccpp/physics/physics/radiation_gases.f',
+    'ccpp/physics/physics/radiation_surface.f',
+    'ccpp/physics/physics/radlw_datatb.f',
+    'ccpp/physics/physics/radlw_param.f',
+    'ccpp/physics/physics/radsw_datatb.f',
+    'ccpp/physics/physics/radsw_param.f',
+    'ccpp/physics/physics/rascnvv2.f',
+    'ccpp/physics/physics/set_soilveg.f',
+    'ccpp/physics/physics/sflx.f',
+    'ccpp/physics/physics/surface_perturbation.F90',
+    'ccpp/physics/physics/cu_gf_deep.F90',
+    'ccpp/physics/physics/cu_gf_sh.F90',
+    'ccpp/physics/physics/tridi.f',
+    'ccpp/physics/physics/wam_f107_kp_mod.f90',
+    'ccpp/physics/physics/module_sf_ruclsm.F90',
+    'ccpp/physics/physics/namelist_soilveg_ruc.F90',
+    'ccpp/physics/physics/set_soilveg_ruc.F90',
+    'ccpp/physics/physics/module_soil_pre.F90',
+    'ccpp/physics/physics/wv_saturation.F',
     'scm/src/GFS_typedefs.F90',
 ]
 
@@ -71,59 +75,62 @@ SCHEME_FILES = {
     # Relative path to source (from where ccpp_prebuild.py is called) : [ list of physics sets in which scheme may be called ];
     # current restrictions are that each scheme can only belong to one physics set, and all schemes within one group in the
     # suite definition file have to belong to the same physics set
-    'ccpp-physics/physics/GFS_DCNV_generic.F90'         : ['physics'],
-    'ccpp-physics/physics/GFS_MP_generic.F90'           : ['physics'],
-    'ccpp-physics/physics/GFS_PBL_generic.F90'          : ['physics'],
-    'ccpp-physics/physics/GFS_SCNV_generic.F90'         : ['physics'],
-    'ccpp-physics/physics/GFS_phys_time_vary.scm.F90'   : ['physics'],
-    'ccpp-physics/physics/GFS_rad_time_vary.scm.F90'    : ['physics'],
-    'ccpp-physics/physics/GFS_rrtmg_post.F90'           : ['physics'],
-    'ccpp-physics/physics/GFS_rrtmg_pre.F90'            : ['physics'],
-    'ccpp-physics/physics/GFS_rrtmg_setup.F90'          : ['physics'],
-    'ccpp-physics/physics/GFS_suite_interstitial.F90'   : ['physics'],
-    'ccpp-physics/physics/GFS_surface_generic.F90'      : ['physics'],
-    'ccpp-physics/physics/GFS_surface_loop_control.F90' : ['physics'],
-    'ccpp-physics/physics/GFS_time_vary_pre.scm.F90'    : ['physics'],
-    'ccpp-physics/physics/cnvc90.f'                     : ['physics'],
-    'ccpp-physics/physics/cs_conv.F90'                  : ['physics'],
-    'ccpp-physics/physics/dcyc2.f'                      : ['physics'],
-    'ccpp-physics/physics/gcm_shoc.F90'                 : ['physics'],
-    'ccpp-physics/physics/get_prs_fv3.F90'              : ['physics'],
-    'ccpp-physics/physics/gfdl_cloud_microphys.F90'     : ['physics'],
-    'ccpp-physics/physics/gscond.f'                     : ['physics'],
-    'ccpp-physics/physics/gwdc.f'                       : ['physics'],
-    'ccpp-physics/physics/gwdps.f'                      : ['physics'],
-    'ccpp-physics/physics/h2ophys.f'                    : ['physics'],
-    'ccpp-physics/physics/samfdeepcnv.f'                : ['physics'],
-    'ccpp-physics/physics/samfshalcnv.f'                : ['physics'],
-    'ccpp-physics/physics/cu_gf_driver_pre.F90'         : ['physics'],
-    'ccpp-physics/physics/cu_gf_driver.F90'             : ['physics'],
-    'ccpp-physics/physics/cu_gf_driver_post.F90'        : ['physics'],
-    'ccpp-physics/physics/moninedmf.f'                  : ['physics'],
-    'ccpp-physics/physics/moninshoc.f'                  : ['physics'],
-    'ccpp-physics/physics/ozphys.f'                     : ['physics'],
-    'ccpp-physics/physics/ozphys_2015.f'                : ['physics'],
-    'ccpp-physics/physics/precpd.f'                     : ['physics'],
-    'ccpp-physics/physics/radlw_main.f'                 : ['physics'],
-    'ccpp-physics/physics/radsw_main.f'                 : ['physics'],
-    'ccpp-physics/physics/rayleigh_damp.f'              : ['physics'],
-    'ccpp-physics/physics/rrtmg_lw_post.F90'            : ['physics'],
-    'ccpp-physics/physics/rrtmg_lw_pre.F90'             : ['physics'],
-    'ccpp-physics/physics/rrtmg_sw_post.F90'            : ['physics'],
-    'ccpp-physics/physics/rrtmg_sw_pre.F90'             : ['physics'],
-    'ccpp-physics/physics/sfc_diag.f'                   : ['physics'],
-    'ccpp-physics/physics/sfc_diag_post.F90'            : ['physics'],
-    'ccpp-physics/physics/sfc_diff.f'                   : ['physics'],
-    'ccpp-physics/physics/sfc_drv.f'                    : ['physics'],
-    'ccpp-physics/physics/sfc_drv_ruc.F90'              : ['physics'],
-    'ccpp-physics/physics/sfc_nst.f'                    : ['physics'],
-    'ccpp-physics/physics/sfc_sice.f'                   : ['physics'],
-    'ccpp-physics/physics/gmtb_scm_sfc_flux_spec.F90'   : ['physics'],
+    'ccpp/physics/physics/GFS_DCNV_generic.F90'         : ['physics'],
+    'ccpp/physics/physics/GFS_MP_generic.F90'           : ['physics'],
+    'ccpp/physics/physics/GFS_PBL_generic.F90'          : ['physics'],
+    'ccpp/physics/physics/GFS_SCNV_generic.F90'         : ['physics'],
+    'ccpp/physics/physics/GFS_phys_time_vary.scm.F90'   : ['physics'],
+    'ccpp/physics/physics/GFS_rad_time_vary.scm.F90'    : ['physics'],
+    'ccpp/physics/physics/GFS_rrtmg_post.F90'           : ['physics'],
+    'ccpp/physics/physics/GFS_rrtmg_pre.F90'            : ['physics'],
+    'ccpp/physics/physics/GFS_rrtmg_setup.F90'          : ['physics'],
+    'ccpp/physics/physics/GFS_suite_interstitial.F90'   : ['physics'],
+    'ccpp/physics/physics/GFS_surface_generic.F90'      : ['physics'],
+    'ccpp/physics/physics/GFS_surface_loop_control.F90' : ['physics'],
+    'ccpp/physics/physics/GFS_time_vary_pre.scm.F90'    : ['physics'],
+    'ccpp/physics/physics/cnvc90.f'                     : ['physics'],
+    'ccpp/physics/physics/cs_conv.F90'                  : ['physics'],
+    'ccpp/physics/physics/cs_conv_aw_adj.F90'           : ['physics'],
+    'ccpp/physics/physics/dcyc2.f'                      : ['physics'],
+    'ccpp/physics/physics/gcm_shoc.F90'                 : ['physics'],
+    'ccpp/physics/physics/get_prs_fv3.F90'              : ['physics'],
+    'ccpp/physics/physics/gfdl_cloud_microphys.F90'     : ['physics'],
+    'ccpp/physics/physics/gscond.f'                     : ['physics'],
+    'ccpp/physics/physics/gwdc.f'                       : ['physics'],
+    'ccpp/physics/physics/gwdps.f'                      : ['physics'],
+    'ccpp/physics/physics/h2ophys.f'                    : ['physics'],
+    'ccpp/physics/physics/samfdeepcnv.f'                : ['physics'],
+    'ccpp/physics/physics/samfshalcnv.f'                : ['physics'],
+    'ccpp/physics/physics/m_micro.F90'                  : ['physics'],
+    'ccpp/physics/physics/m_micro_interstitial.F90'     : ['physics'],
+    'ccpp/physics/physics/cu_gf_driver_pre.F90'         : ['physics'],
+    'ccpp/physics/physics/cu_gf_driver.F90'             : ['physics'],
+    'ccpp/physics/physics/cu_gf_driver_post.F90'        : ['physics'],
+    'ccpp/physics/physics/moninedmf.f'                  : ['physics'],
+    'ccpp/physics/physics/moninshoc.f'                  : ['physics'],
+    'ccpp/physics/physics/ozphys.f'                     : ['physics'],
+    'ccpp/physics/physics/ozphys_2015.f'                : ['physics'],
+    'ccpp/physics/physics/precpd.f'                     : ['physics'],
+    'ccpp/physics/physics/radlw_main.f'                 : ['physics'],
+    'ccpp/physics/physics/radsw_main.f'                 : ['physics'],
+    'ccpp/physics/physics/rayleigh_damp.f'              : ['physics'],
+    'ccpp/physics/physics/rrtmg_lw_post.F90'            : ['physics'],
+    'ccpp/physics/physics/rrtmg_lw_pre.F90'             : ['physics'],
+    'ccpp/physics/physics/rrtmg_sw_post.F90'            : ['physics'],
+    'ccpp/physics/physics/rrtmg_sw_pre.F90'             : ['physics'],
+    'ccpp/physics/physics/sfc_diag.f'                   : ['physics'],
+    'ccpp/physics/physics/sfc_diag_post.F90'            : ['physics'],
+    'ccpp/physics/physics/sfc_diff.f'                   : ['physics'],
+    'ccpp/physics/physics/sfc_drv.f'                    : ['physics'],
+    'ccpp/physics/physics/sfc_drv_ruc.F90'              : ['physics'],
+    'ccpp/physics/physics/sfc_nst.f'                    : ['physics'],
+    'ccpp/physics/physics/sfc_sice.f'                   : ['physics'],
+    'ccpp/physics/physics/gmtb_scm_sfc_flux_spec.F90'   : ['physics'],
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
-SCHEMES_MAKEFILE = 'ccpp-physics/CCPP_SCHEMES.mk'
-SCHEMES_CMAKEFILE = 'ccpp-physics/CCPP_SCHEMES.cmake'
+SCHEMES_MAKEFILE = 'ccpp/physics/CCPP_SCHEMES.mk'
+SCHEMES_CMAKEFILE = 'ccpp/physics/CCPP_SCHEMES.cmake'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
@@ -132,11 +139,11 @@ TARGET_FILES = [
     ]
 
 # Auto-generated makefile/cmakefile snippets that contain all caps
-CAPS_MAKEFILE = 'ccpp-physics/CCPP_CAPS.mk'
-CAPS_CMAKEFILE = 'ccpp-physics/CCPP_CAPS.cmake'
+CAPS_MAKEFILE = 'ccpp/physics/CCPP_CAPS.mk'
+CAPS_CMAKEFILE = 'ccpp/physics/CCPP_CAPS.cmake'
 
 # Directory where to put all auto-generated physics caps
-CAPS_DIR = 'ccpp-physics/physics'
+CAPS_DIR = 'ccpp/physics/physics'
 
 # Optional arguments - only required for schemes that use
 # optional arguments. ccpp_prebuild.py will throw an exception
@@ -182,10 +189,10 @@ MODULE_INCLUDE_FILE = 'ccpp_modules.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields.inc'
 
 # HTML document containing the model-defined CCPP variables
-HTML_VARTABLE_FILE = 'ccpp-physics/CCPP_VARIABLES_SCM.html'
+HTML_VARTABLE_FILE = 'ccpp/physics/CCPP_VARIABLES_SCM.html'
 
 # LaTeX document containing the provided vs requested CCPP variables
-LATEX_VARTABLE_FILE = 'ccpp-framework/doc/DevelopersGuide/CCPP_VARIABLES_SCM.tex'
+LATEX_VARTABLE_FILE = 'ccpp/framework/doc/DevelopersGuide/CCPP_VARIABLES_SCM.tex'
 
 
 ###############################################################################

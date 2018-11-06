@@ -125,7 +125,7 @@ after the \execout{cdata} variable and the variables required by the physics sch
 \emph{Note.} The CCPP framework supports splitting physics schemes into different sets that are used in different parts of the host model. An example therefore is the separation between slow and fast physics processes for the GFDL microphysics implemented in FV3GFS: while the slow physics are called as part of the usual model physics, the fast physics are integrated in the dynamical core. The separation of physics into different sets is part of the CCPP prebuild configuration (see Sect.~\ref{sec_ccpp_prebuild_config}), which allows to create multiple include files (e.g. \execout{ccpp\_fields\_slow\_physics.inc} and \execout{ccpp\_fields\_fast\_physics.inc} that can be used by different \execout{cdata} structures in different parts of the model). Please contact the GMTB Help Desk (\url{gmtb-help@ucar.edu}) if you would like to use this feature.
 \item[\textbf{Providing interfaces to call CCPP for the host model.}] The cap must provide functions or subroutines that can be called at the appropriate places in the host model time integration loop and that internally call \execout{ccpp\_init}, \execout{ccpp\_physics\_init}, \execout{ccpp\_physics\_run}, \execout{ccpp\_physics\_finalize} and \execout{ccpp\_finalize}, and handle any errors returned.
 \end{description}
-Listing~\ref{lst_host_cap_template} contains a simple template of a host model cap for CCPP, which can also be found in \execout{ccpp-framework/doc/DevelopersGuide/host\_cap\_template.F90}.
+Listing~\ref{lst_host_cap_template} contains a simple template of a host model cap for CCPP, which can also be found in \execout{ccpp/framework/doc/DevelopersGuide/host\_cap\_template.F90}.
 \begin{figure}
 \lstinputlisting[language=Fortran,
                  %basicstyle=\scriptsize\fontfamily{qcr}\fontshape{n}\fontseries{l}\selectfont
@@ -139,7 +139,7 @@ Listing~\ref{lst_host_cap_template} contains a simple template of a host model c
 \centerline{\includegraphics[width=0.85\textwidth]{./images/ccpp_design_with_ccpp_prebuild.pdf}}
 \caption{Role of the CCPP prebuild script and the \execout{cdata} structure in the software architecture of an atmospheric modeling system.}\label{fig_ccpp_design_with_ccpp_prebuild}
 \end{figure}
-The CCPP prebuild script \execout{ccpp-framework/scripts/ccpp\_prebuild.py} is the central piece of code that connects the host model with the CCPP physics schemes (see Figure~\ref{fig_ccpp_design_with_ccpp_prebuild}). This script must be run before compiling the CCPP physics library and the host model cap. The CCPP prebuild script automates several tasks based on the information collected from the metadata tables on the host model side and from the individual physics schemes:
+The CCPP prebuild script \execout{ccpp/framework/scripts/ccpp\_prebuild.py} is the central piece of code that connects the host model with the CCPP physics schemes (see Figure~\ref{fig_ccpp_design_with_ccpp_prebuild}). This script must be run before compiling the CCPP physics library and the host model cap. The CCPP prebuild script automates several tasks based on the information collected from the metadata tables on the host model side and from the individual physics schemes:
 \begin{itemize}
 \item Compiles a list of variables required to run all schemes in the CCPP physics pool.
 \item Compiles a list of variables provided by the host model.
@@ -149,13 +149,13 @@ The CCPP prebuild script \execout{ccpp-framework/scripts/ccpp\_prebuild.py} is t
 \item Populates makefiles with schemes and caps.
 \end{itemize}
 
-In order to connect the CCPP with a host model \execsub{XYZ}, a Python-based configuration file for this model must be created in the directory \execout{ccpp-framework/scripts}. The easiest way is to copy an existing configuration file in this directory, for example
+In order to connect the CCPP with a host model \execsub{XYZ}, a Python-based configuration file for this model must be created in the directory \execout{ccpp/framework/scripts}. The easiest way is to copy an existing configuration file in this directory, for example
 \begin{lstlisting}[language=bash]
 cp ccpp_prebuild_config_SCM.py ccpp_prebuild_config_XYZ.py
 \end{lstlisting}
-The configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} depends largely on (a) the directory structure of the host model itself, (b) where the \execout{ccpp-framework} and the \execout{ccpp-physics} directories are located relative to the directory structure of the host model, and (c) from which directory the \execout{ccpp\_prebuild.py} script is executed before/during the build process (this is referred to as \execout{basedir} in \execout{ccpp\_prebuild\_config\_XYZ.py}).
+The configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} depends largely on (a) the directory structure of the host model itself, (b) where the \execout{ccpp/framework} and the \execout{ccpp/physics} directories are located relative to the directory structure of the host model, and (c) from which directory the \execout{ccpp\_prebuild.py} script is executed before/during the build process (this is referred to as \execout{basedir} in \execout{ccpp\_prebuild\_config\_XYZ.py}).
 
-Listing~\ref{lst_ccpp_prebuild_config} contains an example for the SCM CCPP prebuild config. Here, it is assumed that both \execout{ccpp-framework} and \execout{ccpp-physics} are located in the top-level directory of the host model, and that \execout{ccpp\_prebuild.py} is executed from the same top-level directory.
+Listing~\ref{lst_ccpp_prebuild_config} contains an example for the SCM CCPP prebuild config. Here, it is assumed that both \execout{ccpp/framework} and \execout{ccpp/physics} are located in the top-level directory of the host model, and that \execout{ccpp\_prebuild.py} is executed from the same top-level directory.
 \begin{lstlisting}[language=python,
                  basicstyle=\scriptsize\ttfamily,
                  label=lst_ccpp_prebuild_config,
@@ -175,13 +175,13 @@ SCHEME_FILES_DEPENDENCIES = [] # can be empty
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
     # Relative path : [ list of sets in which scheme may be called ]
-    'ccpp-physics/physics/GFS_DCNV_generic.f90' : ['physics'],
-    'ccpp-physics/physics/sfc_sice.f'           : ['physics'],
+    'ccpp/physics/physics/GFS_DCNV_generic.f90' : ['physics'],
+    'ccpp/physics/physics/sfc_sice.f'           : ['physics'],
     }
 
 # Auto-generated makefile/cmakefile snippets that contains all schemes
-SCHEMES_MAKEFILE = 'ccpp-physics/CCPP_SCHEMES.mk'
-SCHEMES_CMAKEFILE = 'ccpp-physics/CCPP_SCHEMES.cmake'
+SCHEMES_MAKEFILE = 'ccpp/physics/CCPP_SCHEMES.mk'
+SCHEMES_CMAKEFILE = 'ccpp/physics/CCPP_SCHEMES.cmake'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
@@ -190,11 +190,11 @@ TARGET_FILES = [
     ]
 
 # Auto-generated makefile/cmakefile snippets that contains all caps
-CAPS_MAKEFILE = 'ccpp-physics/CCPP_CAPS.mk'
-CAPS_CMAKEFILE = 'ccpp-physics/CCPP_CAPS.cmake'
+CAPS_MAKEFILE = 'ccpp/physics/CCPP_CAPS.mk'
+CAPS_CMAKEFILE = 'ccpp/physics/CCPP_CAPS.cmake'
 
 # Directory where to put all auto-generated physics caps
-CAPS_DIR = 'ccpp-physics/physics'
+CAPS_DIR = 'ccpp/physics/physics'
 
 # Optional arguments - only required for schemes that use optional arguments.
 # ccpp_prebuild.py will throw an exception if it encounters a scheme subroutine
@@ -206,10 +206,10 @@ OPTIONAL_ARGUMENTS = {
     }
 
 # HTML document containing the model-defined CCPP variables
-HTML_VARTABLE_FILE = 'ccpp-physics/CCPP_VARIABLES.html'
+HTML_VARTABLE_FILE = 'ccpp/physics/CCPP_VARIABLES.html'
 
 # LaTeX document containing the provided vs requested CCPP variables
-LATEX_VARTABLE_FILE = 'ccpp-framework/doc/DevelopersGuide/CCPP_VARIABLES.tex'
+LATEX_VARTABLE_FILE = 'ccpp/framework/doc/DevelopersGuide/CCPP_VARIABLES.tex'
 
 ######## Template code to generate include files ########
 
@@ -238,7 +238,7 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
 
 Once the configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} is complete, run
 \begin{lstlisting}[language=bash]
-./ccpp-framework/scripts/ccpp_prebuild.py --model=XYZ [--debug]
+./ccpp/framework/scripts/ccpp_prebuild.py --model=XYZ [--debug]
 \end{lstlisting}
 from the top-level directory. Without the debugging flag, the output should look like
 \begin{lstlisting}[language=bash,basicstyle=\scriptsize\ttfamily]
@@ -247,12 +247,12 @@ INFO: Parsing metadata tables for variables provided by host model ...
 INFO: Parsed variable definition tables in module gmtb_scm_type_defs
 INFO: Parsed variable definition tables in module gmtb_scm_physical_constants
 INFO: Parsed variable definition tables in module ccpp_types
-INFO: Metadata table for model SCM written to ccpp-physics/CCPP_VARIABLES_SCM.html
+INFO: Metadata table for model SCM written to ccpp/physics/CCPP_VARIABLES_SCM.html
 INFO: Parsing metadata tables in physics scheme files ...
 INFO: Parsed tables in scheme rrtmg_lw
 ...
 INFO: Checking optional arguments in physics schemes ...
-INFO: Metadata table for model SCM written to ccpp-framework/doc/DevelopersGuide/CCPP_VARIABLES_SCM.tex
+INFO: Metadata table for model SCM written to ccpp/framework/doc/DevelopersGuide/CCPP_VARIABLES_SCM.tex
 INFO: Comparing metadata for requested and provided variables ...
 INFO: Generating module use statements for set physics ...
 INFO: Generated module use statements for 4 module(s)
@@ -262,9 +262,9 @@ INFO: Generating include files for host model cap scm/src/gmtb_scm.f90 ...
 INFO: Generated module-use include file scm/src/ccpp_modules.inc
 INFO: Generated fields-add include file scm/src/ccpp_fields.inc
 INFO: Generating schemes makefile/cmakefile snippet ...
-INFO: Added 81 schemes to ccpp-physics/CCPP_SCHEMES.mk and ccpp-physics/CCPP_SCHEMES.cmake
+INFO: Added 81 schemes to ccpp/physics/CCPP_SCHEMES.mk and ccpp/physics/CCPP_SCHEMES.cmake
 INFO: Generating caps makefile/cmakefile snippet ...
-INFO: Added 64 auto-generated caps to ccpp-physics/CCPP_CAPS.mk and ccpp-physics/CCPP_CAPS.cmake
+INFO: Added 64 auto-generated caps to ccpp/physics/CCPP_CAPS.mk and ccpp/physics/CCPP_CAPS.cmake
 INFO: CCPP prebuild step completed successfully.
 \end{lstlisting}
 
@@ -306,23 +306,23 @@ To allow for a flexible configuration of the CCPP framework and physics with mul
 
 The basic steps to build the CCPP framework and physics for a specific host model are outlined in the following.
 \begin{description}
-\item[\textbf{Recommended directory structure.}] As mentioned in Section~\ref{sec_ccpp_prebuild_config}, we recommend placing the two directories (repositories) \execout{ccpp-framework} and \execout{ccpp-physics} in the top-level directory of the host model, and to adapt the CCPP prebuild config such that it can be run from the top-level directory. For FV3GFS, a slightly different directory structure is used that places \execout{ccpp-framework} in \execout{ccpp/framework} and \execout{ccpp-physics} in \execout{ccpp/physics}, and uses a shell script \execout{ccpp/build\_ccpp.sh} and a top-level cmake configuration \execout{ccpp/CMakeLists.txt} for the build process.
+\item[\textbf{Recommended directory structure.}] As mentioned in Section~\ref{sec_ccpp_prebuild_config}, we recommend placing the two repositories \execout{ccpp-framework} and \execout{ccpp-physics} into directories \execout{ccpp/framework} and \execout{ccpp/physics} relative to the top-level directory of the host model, and to adapt the CCPP prebuild config such that it can be run from the top-level directory.
 \item[\textbf{Set environment variables.}] In addition to the compiler variables \execout{CC} and \execout{FC}, the CCPP physics require further enviroment variables for thirdparty libraries used by the physics schemes. The setup scripts for SCM (in \execout{scm/etc}) or FV3GFS (in \execout{conf} or \execout{modulefiles}) provide useful examples for the correct environment settings.
-\item[\textbf{Build the CCPP framework.}] See previous section on how to build the CCPP framework. The cmake variable \execout{PROJECT} can be set to customize the build using \execout{ccpp-framework/CMakeLists.txt}. This includes preprocessor flags such as \execout{-DMPI}.
+\item[\textbf{Build the CCPP framework.}] See previous section on how to build the CCPP framework. The cmake variable \execout{PROJECT} can be set to customize the build using \execout{ccpp/framework/CMakeLists.txt}. This includes preprocessor flags such as \execout{-DMPI}.
 \item[\textbf{Update environment variables.}] See previous section on how to update the compiler and linker flags.
-\item[\textbf{Build CCPP physics library.}] Before building \execout{ccpp-physics}, its top-level cmake configuration \execout{ccpp-physics/CMakeLists.txt} must be customized for the host model. This includes compiler flags, preprocessor flags etc. The user is referred to the existing configurations. The CCPP physics library is built starting from the build directory \execout{ccpp-framework/build}:
+\item[\textbf{Build CCPP physics library.}] Before building \execout{ccpp-physics}, its top-level cmake configuration \execout{ccpp/physics/CMakeLists.txt} must be customized for the host model. This includes compiler flags, preprocessor flags etc. The user is referred to the existing configurations. The CCPP physics library is built starting from the build directory \execout{ccpp/framework/build}:
 \begin{lstlisting}[language=bash]
 cd ../.. # back to top-level directory
-cd ccpp-physics
+cd ccpp/physics
 mkdir build && cd build
 cmake ..
 # add -DOPENMP=ON before .. for OpenMP build
 # note that OpenMP build requires finding
-# detect_openmp.cmake from ccpp-framework/cmake
+# detect_openmp.cmake from ccpp/framework/cmake
 make
 # add VERBOSE=1 after install for verbose output
 \end{lstlisting}
 \end{description}
-Following these steps, the include files and the library \execout{libccpp.so} that the host model needs to be compiled and linked against are located in \execout{ccpp-framework/build/include} and \execout{ccpp-framework/build/lib}. Note that there is no need to link the host model to the CCPP physics library in \execout{ccpp-physics/build}, as long as it is in the search path of the dynamic loader of the OS (for example by adding the directory \execout{ccpp-physics/build} to the \execout{LD\_LIBRARY\_PATH} environment variable). This is because the CCPP physics library is loaded dynamically by the CCPP framework using the library name specified in the runtime suite definition file (see the GMTB Single Column Model Technical Guide v2.1, Chapter 6.1.3, (\url{https://dtcenter.org/gmtb/users/ccpp/docs/}) for further information). Setting the environment variables \execout{FFLAGS} and \execout{LDFLAGS} as described for the CCPP framework standalone build in Sect.~\ref{sec_ccpp_framework_standalone_build} should be sufficient to compile the host model with its newly created host model cap (Sect.~\ref{sec_hostmodel_cap}) and connect to the CCPP library and framework.
+Following these steps, the include files and the library \execout{libccpp.so} that the host model needs to be compiled and linked against are located in \execout{ccpp/framework/build/include} and \execout{ccpp/framework/build/lib}. Note that there is no need to link the host model to the CCPP physics library in \execout{ccpp/physics/build}, as long as it is in the search path of the dynamic loader of the OS (for example by adding the directory \execout{ccpp/physics/build} to the \execout{LD\_LIBRARY\_PATH} environment variable). This is because the CCPP physics library is loaded dynamically by the CCPP framework using the library name specified in the runtime suite definition file (see the GMTB Single Column Model Technical Guide v2.1, Chapter 6.1.3, (\url{https://dtcenter.org/gmtb/users/ccpp/docs/}) for further information). Setting the environment variables \execout{FFLAGS} and \execout{LDFLAGS} as described for the CCPP framework standalone build in Sect.~\ref{sec_ccpp_framework_standalone_build} should be sufficient to compile the host model with its newly created host model cap (Sect.~\ref{sec_hostmodel_cap}) and connect to the CCPP library and framework.
 
 For a complete integration of the CCPP infrastructure and physics library build systems in the host model build system, users are referred to the existing implementations in GMTB SCM and FV3GFS.
