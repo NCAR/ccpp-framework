@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 
-import re
 if __name__ == '__main__' and __package__ is None:
     import sys
     import os.path
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import re
 from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
 
 # A collection of types and tools for parsing Fortran code to support
 # CCPP metadata parsing. The purpose of this code is limited to type
 # checking of routines with CCPP metadata caps, therefore full routines are
 # not parsed and a full Fortran syntax tree is not warranted.
+
+# FNAME is a string representing the regular expression for Fortran names
+FNAME = r"[A-Za-z][A-Za-z0-9_]*"
 
 class Ftype(object):
     """Ftype is the base class for all Fortran types
