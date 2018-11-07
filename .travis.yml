@@ -46,7 +46,6 @@ matrix:
 before_install:
   - |
       if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
-          sudo softwareupdate -i "Command Line Tools (macOS High Sierra version 10.13) for Xcode-9.4"
           brew install gcc@7 || true;
           brew link --overwrite gcc@7;
       fi
@@ -58,7 +57,7 @@ before_install:
 before_script:
   - |
       if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
-          export CC="gcc-7" FC="gfortran-7" CXX="g++-7" ;
+          export CC="clang" FC="gfortran-7" CXX="clang++" ;
       fi
   - |
       if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
