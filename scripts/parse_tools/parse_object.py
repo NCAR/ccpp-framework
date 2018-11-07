@@ -186,21 +186,21 @@ class ParseObject(object):
     >>> ParseObject('foobar.F90', 1).filename
     'foobar.F90'
     >>> ParseObject('foobar.F90', 1).curr_line(["##hi mom",])
-
+    (None, 1)
     >>> ParseObject('foobar.F90', 1).curr_line(["first line","## hi mom"])
-    '## hi mom'
+    ('## hi mom', 1)
     >>> ParseObject('foobar.F90', 1).next_line(["##hi mom",])
-
+    (None, 1)
     >>> ParseObject('foobar.F90', 1).next_line(["##first line","## hi mom"])
-    '## hi mom'
+    ('## hi mom', 1)
     >>> ParseObject('foobar.F90', 0).next_line(["## hi \\\\","## mom"])
-    '## hi mom'
+    ('## hi mom', 0)
     >>> ParseObject('foobar.F90', 2).next_line(["line1","##line2","## hi mom"])
-    '## hi mom'
+    ('## hi mom', 2)
     >>> ParseObject('foobar.F90', 0).next_line(["## hi \\\\","## there \\\\","## mom"])
-    '## hi there mom'
+    ('## hi there mom', 0)
     >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).next_line(["!! line1","!! hi mom"])
-    '!! hi mom'
+    ('!! hi mom', 1)
     >>> ParseObject('foobar.F90', 2).syntax
     'MetadataSyntax'
     >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).syntax
@@ -312,9 +312,11 @@ class ParseObject(object):
         # We allow continuation lines (ending with a single backslash)
         if valid_line and _curr_line.endswith('\\'):
             if self._syntax is None:
-                next_line = self.next_line(lines)
+                next_line, lnum = self.next_line(lines)
             else:
-                next_line = self._syntax.strip(self.next_line(lines))
+                next_line, nlnum = self.next_line(lines)
+                if next_line is not None:
+                    next_line = self._syntax.strip(next_line)
             # End if
             if next_line is None:
                 # We ran out of lines, just strip the backslash
@@ -325,7 +327,7 @@ class ParseObject(object):
         # End if
         # curr_line should not change the line number
         self._line_curr = _my_curr_lineno
-        return _curr_line
+        return _curr_line, self._line_curr
 
     def next_line(self, lines):
         self._line_curr = self._line_next

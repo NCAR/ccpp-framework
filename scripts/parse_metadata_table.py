@@ -127,16 +127,16 @@ class MetadataHeader(ParseObject):
         self._variables = {}
         # Read the table preamble, assume the caller already figured out
         #  the first line of the header using the metadata_table_start method.
-        curr_line = self.curr_line(lines)
+        curr_line, curr_line_num = self.curr_line(lines)
         self._table_title = MetadataHeader.metadata_table_start(curr_line, syntax=self._syntax)
         if self._table_title is None:
             raise ParseSyntaxError("metadata header start",
                                    token=curr_line, context=self._context)
         # End if
-        curr_line = self.next_line(lines)
+        curr_line, curr_line_num = self.next_line(lines)
         # Skip past any 'blank' lines
         while syntax.blank_line(curr_line):
-            curr_line = self.next_line(lines)
+            curr_line, curr_line_num = self.next_line(lines)
         # End while
         # Read the variables
         valid_lines = True
@@ -160,7 +160,7 @@ class MetadataHeader(ParseObject):
 
     def parse_variable(self, lines):
         # Make sure first_line is a valid variable start
-        curr_line = self.curr_line(lines)
+        curr_line, curr_line_num = self.curr_line(lines)
         # The header line has the format [ <valid_fortran_symbol> ]
         # Parse header
         valid_line = curr_line is not None
@@ -182,7 +182,7 @@ class MetadataHeader(ParseObject):
             var_props = None
         # End if
         while valid_line:
-            curr_line = self.next_line(lines)
+            curr_line, curr_line_num = self.next_line(lines)
             valid_line = (curr_line is not None) and (not self.blank_line(curr_line))
             # A valid line may have multiple properties (separated by '|')
             if valid_line:
