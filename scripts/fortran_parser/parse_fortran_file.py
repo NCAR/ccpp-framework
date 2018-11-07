@@ -145,60 +145,60 @@ def read_file(filename, preproc_defs=None):
         # create a parse object and context for this file
         pobj = ParseObject(filename, 0, syntax=None)
         # Read all lines of the file at once
-        with (open(filename, 'r')) as file:
+        with open(filename, 'r') as file:
             file_lines = file.readlines()
             for index in xrange(len(file_lines)):
                 file_lines[index] = file_lines[index].rstrip('\n')
             # End for
-            continue_col = -1 # Active continue column
-            in_schar = False # Single quote character context
-            in_dchar = False # Double quote character context
-            prev_line = None
-            curr_line, curr_line_num = pobj.curr_line(file_lines)
-            while curr_line is not None:
-                # Skip empty lines and comment-only lines
-                if pobj.blank_line(curr_line) or (curr_line.lstrip()[0] == '!'):
-                    curr_line, curr_line_num = pobj.next_line(file_lines)
-                    continue
-                # End if
-                # scan the line for properties
-                res = scan_line(curr_line, (continue_col >= 0),
-                                in_schar, in_dchar, pobj.context)
-                cont_in_col, cont_out_col, in_schar, in_dchar, comment_col = res
-                # If in a continuation context, move this line to previos
-                if continue_col >= 0:
-                    if prev_line is None:
-                        raise ParseInternalError("No prev_line to continue",
-                                                 pobj.context)
-                    # End if
-                    sindex = max(0, cont_in_col)
-                    if cont_out_col > 0:
-                        eindex = cont_out_col
-                    else:
-                        eindex = len(curr_line)
-                    # End if
-                    prev_line = prev_line + curr_line[sindex:eindex]
-                    # Rewrite the file's lines
-                    file_lines[prev_line_num] = prev_line
-                    file_lines[curr_line_num] = ""
-                    if cont_out_col < 0:
-                        # We are done with this line, reset prev_line
-                        prev_line = None
-                        prev_line_num = -1
-                    # End if
-                # End if
-                continue_col = cont_out_col
-                if (continue_col >= 0) and (prev_line is None):
-                    # We need to set up prev_line as it is continued
-                    prev_line = curr_line[0:continue_col]
-                    if not (in_schar or in_dchar):
-                        prev_line = prev_line.rstrip()
-                    # End if
-                    prev_line_num = curr_line_num
-                # End if
-                curr_line, curr_line_num = pobj.next_line(file_lines)
-            # End while
         # End with
+        continue_col = -1 # Active continue column
+        in_schar = False # Single quote character context
+        in_dchar = False # Double quote character context
+        prev_line = None
+        curr_line, curr_line_num = pobj.curr_line(file_lines)
+        while curr_line is not None:
+            # Skip empty lines and comment-only lines
+            if pobj.blank_line(curr_line) or (curr_line.lstrip()[0] == '!'):
+                curr_line, curr_line_num = pobj.next_line(file_lines)
+                continue
+            # End if
+            # scan the line for properties
+            res = scan_line(curr_line, (continue_col >= 0),
+                            in_schar, in_dchar, pobj.context)
+            cont_in_col, cont_out_col, in_schar, in_dchar, comment_col = res
+            # If in a continuation context, move this line to previos
+            if continue_col >= 0:
+                if prev_line is None:
+                    raise ParseInternalError("No prev_line to continue",
+                                             pobj.context)
+                # End if
+                sindex = max(0, cont_in_col)
+                if cont_out_col > 0:
+                    eindex = cont_out_col
+                else:
+                    eindex = len(curr_line)
+                # End if
+                prev_line = prev_line + curr_line[sindex:eindex]
+                # Rewrite the file's lines
+                file_lines[prev_line_num] = prev_line
+                file_lines[curr_line_num] = ""
+                if cont_out_col < 0:
+                    # We are done with this line, reset prev_line
+                    prev_line = None
+                    prev_line_num = -1
+                # End if
+            # End if
+            continue_col = cont_out_col
+            if (continue_col >= 0) and (prev_line is None):
+                # We need to set up prev_line as it is continued
+                prev_line = curr_line[0:continue_col]
+                if not (in_schar or in_dchar):
+                    prev_line = prev_line.rstrip()
+                # End if
+                prev_line_num = curr_line_num
+            # End if
+            curr_line, curr_line_num = pobj.next_line(file_lines)
+        # End while
         return file_lines
 
 def parse_program(lines, line_start, filename):
@@ -215,5 +215,6 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod()
 # XXgoldyXX: v debug only
-    parse_fortran_file("/Users/goldy/Coding/ccpp-framework/schemes/check/nan.f90")
+    pdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    parse_fortran_file(os.path.join(pdir, 'schemes', 'check', 'nan.f90'))
 # XXgoldyXX: ^ debug only

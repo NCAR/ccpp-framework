@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import logging
+"""Classes to aid the parsing process"""
+
 import collections
 import copy
-
-## Classes to aid the parsing process
 
 ########################################################################
 

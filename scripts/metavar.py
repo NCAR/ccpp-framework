@@ -7,6 +7,7 @@ from __future__ import print_function
 import logging
 import ast
 import xml.etree.ElementTree as ET
+from parse_tools import check_dimensions, check_fortran_id
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class VariableProperty(object):
     False
     """
 
-    def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None):
+    def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, check_fn_in=None):
         _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
         self._name = name_in
@@ -62,6 +63,7 @@ class VariableProperty(object):
             self._default = default_in
         elif default_in is not None:
             raise ValueError('default is not a valid property for {} because it is not optional'.format(name_in))
+        self._check_fn = check_fn_in
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
@@ -148,6 +150,10 @@ class VariableProperty(object):
             else:
                 pass
         # End if
+        # Call a check function?
+        if valid_val and (self._check_fn is not None):
+            valid_val = self._check_fn(valid_val)
+        # End if
         return valid_val
 
     @property
@@ -189,12 +195,15 @@ class Var(object):
     ['Bob', 'Ray']
     """
 
-    __var_props = [ VariableProperty('local_name', str),
-                    VariableProperty('standard_name', str),
+    __var_props = [ VariableProperty('local_name', str,
+                                     check_fn_in=check_fortran_id),
+                    VariableProperty('standard_name', str,
+                                     check_fn_in=check_fortran_id),
                     VariableProperty('description', str),
                     VariableProperty('units', str),
-                    VariableProperty('dimensions', list),
-                    VariableProperty('type', str,
+                    VariableProperty('dimensions', list,
+                                     check_fn_in=check_dimensions),
+                    VariableProperty('type', str, check_fn_in=check_fortran_id,
                                      valid_values_in=['character', 'integer',
                                                       'logical',   'real']),
                     VariableProperty('kind', str,

@@ -104,14 +104,31 @@ logger = logging.getLogger(__name__)
 
 class MetadataHeader(ParseObject):
     """Class to hold all information from a metadata header
-        >>> MetadataHeader("foobar.txt",                                      \
+    >>> MetadataHeader("foobar.txt",                                      \
+                      ["!> \section arg_table_foobar", "!! [ im ]",           \
+                       "!! standard_name = horizontal_loop_extent",           \
+                       "!! description = horizontal loop extent, start at 1", \
+                       "!! units = index | type = integer",                   \
+                       "!! dimensions = () |  intent = in"], 0,               \
+                       syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent') #doctest: +ELLIPSIS
+    <metavar.Var object at 0x...>
+    >>> MetadataHeader("foobar.txt",                                      \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
                        "!! description = horizontal loop extent, start at 1", \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in"], 0,               \
                        syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent').get_prop_value('local_name')
-        'im'
+    'im'
+    >>> MetadataHeader("foobar.txt",                                      \
+                      ["!> \section arg_table_foobar", "!! [ im ]",           \
+                       "!! standard_name = horizontal loop extent",           \
+                       "!! description = horizontal loop extent, start at 1", \
+                       "!! units = index | type = integer",                   \
+                       "!! dimensions = () |  intent = in"], 0,               \
+                       syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid variable property value, 'horizontal loop extent', at foobar.txt:2
 """
 
     _header_start = re.compile(r"\\section\s+arg_table_([A-Za-z][A-Za-z0-9_]*)")
