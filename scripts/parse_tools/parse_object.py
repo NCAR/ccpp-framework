@@ -185,49 +185,50 @@ class ParseObject(object):
     <__main__.ParseObject object at 0x...>
     >>> ParseObject('foobar.F90', 1).filename
     'foobar.F90'
-    >>> ParseObject('foobar.F90', 1).curr_line(["##hi mom",])
+    >>> ParseObject('foobar.F90', ["##hi mom",], line_start=1).curr_line()
     (None, 1)
-    >>> ParseObject('foobar.F90', 1).curr_line(["first line","## hi mom"])
+    >>> ParseObject('foobar.F90', ["first line","## hi mom"], line_start=1).curr_line()
     ('## hi mom', 1)
-    >>> ParseObject('foobar.F90', 1).next_line(["##hi mom",])
+    >>> ParseObject('foobar.F90', ["##hi mom",], line_start=1).next_line()
     (None, 1)
-    >>> ParseObject('foobar.F90', 1).next_line(["##first line","## hi mom"])
+    >>> ParseObject('foobar.F90', ["##first line","## hi mom"], line_start=1).next_line()
     ('## hi mom', 1)
-    >>> ParseObject('foobar.F90', 0).next_line(["## hi \\\\","## mom"])
+    >>> ParseObject('foobar.F90', ["## hi \\\\","## mom"], line_start=0).next_line()
     ('## hi mom', 0)
-    >>> ParseObject('foobar.F90', 2).next_line(["line1","##line2","## hi mom"])
+    >>> ParseObject('foobar.F90', ["line1","##line2","## hi mom"], line_start=2).next_line()
     ('## hi mom', 2)
-    >>> ParseObject('foobar.F90', 0).next_line(["## hi \\\\","## there \\\\","## mom"])
+    >>> ParseObject('foobar.F90', ["## hi \\\\","## there \\\\","## mom"], line_start=0).next_line()
     ('## hi there mom', 0)
-    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).next_line(["!! line1","!! hi mom"])
+    >>> ParseObject('foobar.F90', ["!! line1","!! hi mom"], line_start=1, syntax=FortranMetadataSyntax).next_line()
     ('!! hi mom', 1)
-    >>> ParseObject('foobar.F90', 2).syntax
+    >>> ParseObject('foobar.F90', [], line_start=2).syntax
     'MetadataSyntax'
-    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).syntax
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).syntax
     'FortranMetadataSyntax'
-    >>> ParseObject('foobar.F90', 1, syntax=None).syntax
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).syntax
     'None'
-    >>> ParseObject('foobar.F90', 1, syntax=None).blank_line("")
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).blank_line("")
     True
-    >>> ParseObject('foobar.F90', 1, syntax=None).blank_line("    ")
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).blank_line("    ")
     True
-    >>> ParseObject('foobar.F90', 1, syntax=None).blank_line("  int :: foo")
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).blank_line("  int :: foo")
     False
-    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("")
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("")
     True
-    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("   ")
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("   ")
     False
-    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("!! int :; foo")
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("!! int :; foo")
     False
-    >>> ParseObject('foobar.F90', 1, syntax=FortranMetadataSyntax).blank_line("!!  ")
+    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("!!  ")
     True
     """
 
-    def __init__(self, filename, line_start, syntax=MetadataSyntax):
+    def __init__(self, filename, lines_in, line_start=0, syntax=MetadataSyntax):
         _llevel = logger.getEffectiveLevel()
         # Turn off property warnings
         logger.setLevel(logging.ERROR)
         self._filename = filename
+        self._lines = lines_in
         self._line_start = line_start
         self._line_end = line_start
         self._line_curr = line_start
@@ -296,25 +297,25 @@ class ParseObject(object):
         else:
             return self._syntax.blank_line(line)
 
-    def curr_line(self, lines):
-        valid_line = self._line_curr < len(lines)
+    def curr_line(self):
+        valid_line = self._line_curr < len(self._lines)
         _curr_line = None
         _my_curr_lineno = self._line_curr
         if valid_line:
             try:
                 # Do not strip the comment syntax from first line
-                _curr_line = lines[self._line_curr].rstrip()
+                _curr_line = self._lines[self._line_curr].rstrip()
                 self._line_next = self._line_curr + 1
                 self._line_end = self._line_next
             except ValueError as exc:
                 valid_line = False
         # End if
-        # We allow continuation lines (ending with a single backslash)
+        # We allow continuation self._lines (ending with a single backslash)
         if valid_line and _curr_line.endswith('\\'):
             if self._syntax is None:
-                next_line, lnum = self.next_line(lines)
+                next_line, lnum = self.next_line()
             else:
-                next_line, nlnum = self.next_line(lines)
+                next_line, nlnum = self.next_line()
                 if next_line is not None:
                     next_line = self._syntax.strip(next_line)
             # End if
@@ -329,11 +330,20 @@ class ParseObject(object):
         self._line_curr = _my_curr_lineno
         return _curr_line, self._line_curr
 
-    def next_line(self, lines):
+    def next_line(self):
         self._line_curr = self._line_next
         # For now, just reset the context
         self._context.line_num = self._line_curr
-        return self.curr_line(lines)
+        return self.curr_line()
+
+    def reset_pos(self, line_start=0):
+        self._line_curr = line_start
+        self._line_next = line_start
+
+    def write_line(self, line_num, line):
+        "Overwrite line, <line_num> with <line>"
+        self._lines[line_num] = line
+
 
 ########################################################################
 

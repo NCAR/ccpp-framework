@@ -22,6 +22,64 @@ endprogram_re = re.compile(r"(?i)program\s+("+FNAME+r")?")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 blank_re = re.compile(r"\s+")
 
+########################################################################
+
+def line_statements(line):
+    """Break up line into a list of component Fortran statements
+    Note, because this is a simple script, we can cheat on the
+    interpretation of two consecutive quote marks.
+    >>> line_statements('integer :: i, j')
+    ['integer :: i, j']
+    >>> line_statements('integer :: i; real :: j')
+    ['integer :: i', ' real :: j']
+    >>> line_statements('integer :: i ! Do not break; here')
+    ['integer :: i ! Do not break; here']
+    >>> line_statements("write(6, *) 'This is all one statement; y''all;'")
+    ["write(6, *) 'This is all one statement; y''all;'"]
+    >>> line_statements('write(6, *) "This is all one statement; y""all;"')
+    ['write(6, *) "This is all one statement; y""all;"']
+    """
+    statements = list()
+    ind_start = 0
+    ind_end = 0
+    line_len = len(line)
+    in_single_char = False
+    in_double_char = False
+    while ind_end < line_len:
+        if in_single_char:
+            if line[ind_end] == "'":
+                in_single_char = False
+            # End if (no else, just copy stuff in string)
+        elif in_double_char:
+            if line[ind_end] == '"':
+                in_double_char = False
+            # End if (no else, just copy stuff in string)
+        elif line[ind_end] == "'":
+            in_single_char = True
+        elif line[ind_end] == '"':
+            in_double_char = True
+        elif line[ind_end] == '!':
+            # Commend in non-character context, suck in rest of line
+            ind_end = line_len - 1
+        elif line[ind_end] == ';':
+            # The whole reason for this routine, the statement separator
+            if ind_end > ind_start:
+                statements.append(line[ind_start:ind_end])
+            # End if
+            ind_start = ind_end + 1
+            ind_end = ind_start - 1
+        # End if (no else, other characters will be copied)
+        ind_end = ind_end + 1
+    # End while
+    # Cleanup
+    if ind_end > ind_start:
+        statements.append(line[ind_start:ind_end])
+    # End if
+    return statements
+
+
+########################################################################
+
 def scan_line(line, in_continue, in_single_char, in_double_char, context):
     """Scan a line for continue indicators, continued quotes, and comments
     Return continue_in_col, continue_out_col, in_single_char, in_double_char,
@@ -133,6 +191,8 @@ def scan_line(line, in_continue, in_single_char, in_double_char, context):
 
     return continue_in_col, continue_out_col, in_single_char, in_double_char, comment_col
 
+########################################################################
+
 def read_file(filename, preproc_defs=None):
     """Read a file into an array of lines.
     Preprocess lines to consolidate continuation lines.
@@ -142,8 +202,6 @@ def read_file(filename, preproc_defs=None):
     if not os.path.exists(filename):
         raise IOError("read_file: file, '{}', does not exist".format(filename))
     else:
-        # create a parse object and context for this file
-        pobj = ParseObject(filename, 0, syntax=None)
         # Read all lines of the file at once
         with open(filename, 'r') as file:
             file_lines = file.readlines()
@@ -151,15 +209,17 @@ def read_file(filename, preproc_defs=None):
                 file_lines[index] = file_lines[index].rstrip('\n')
             # End for
         # End with
+        # create a parse object and context for this file
+        pobj = ParseObject(filename, file_lines, syntax=None)
         continue_col = -1 # Active continue column
         in_schar = False # Single quote character context
         in_dchar = False # Double quote character context
         prev_line = None
-        curr_line, curr_line_num = pobj.curr_line(file_lines)
+        curr_line, curr_line_num = pobj.curr_line()
         while curr_line is not None:
             # Skip empty lines and comment-only lines
             if pobj.blank_line(curr_line) or (curr_line.lstrip()[0] == '!'):
-                curr_line, curr_line_num = pobj.next_line(file_lines)
+                curr_line, curr_line_num = pobj.next_line()
                 continue
             # End if
             # scan the line for properties
@@ -180,8 +240,8 @@ def read_file(filename, preproc_defs=None):
                 # End if
                 prev_line = prev_line + curr_line[sindex:eindex]
                 # Rewrite the file's lines
-                file_lines[prev_line_num] = prev_line
-                file_lines[curr_line_num] = ""
+                pobj.write_line(prev_line_num, prev_line)
+                pobj.write_line(curr_line_num, "")
                 if cont_out_col < 0:
                     # We are done with this line, reset prev_line
                     prev_line = None
@@ -197,17 +257,24 @@ def read_file(filename, preproc_defs=None):
                 # End if
                 prev_line_num = curr_line_num
             # End if
-            curr_line, curr_line_num = pobj.next_line(file_lines)
+            curr_line, curr_line_num = pobj.next_line()
         # End while
-        return file_lines
+        return pobj
 
 def parse_program(lines, line_start, filename):
     pass
 
 def parse_fortran_file(filename):
-    file_lines = read_file(filename, preproc_defs=None)
-    for index in xrange(len(file_lines)):
-        print("{}: {}".format(index, file_lines[index]))
+    pobj = read_file(filename, preproc_defs=None)
+    pobj.reset_pos()
+    curr_line, clo = pobj.curr_line()
+    while curr_line is not None:
+        statements = line_statements(curr_line)
+        for statement in statements:
+            if program_re.match(statement) is not None:
+                parse_program(pobj) # returns what?
+            # What else? modules?
+        curr_line, clo = pobj.next_line()
 
 ########################################################################
 
@@ -215,6 +282,6 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod()
 # XXgoldyXX: v debug only
-    pdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    parse_fortran_file(os.path.join(pdir, 'schemes', 'check', 'nan.f90'))
+#    pdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+#    parse_fortran_file(os.path.join(pdir, 'schemes', 'check', 'nan.f90'))
 # XXgoldyXX: ^ debug only

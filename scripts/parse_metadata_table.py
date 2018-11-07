@@ -137,23 +137,23 @@ class MetadataHeader(ParseObject):
 
     def __init__(self, filename, lines, first_line,
                  syntax=FortranMetadataSyntax):
-        super(MetadataHeader, self).__init__(filename, first_line, syntax)
+        super(MetadataHeader, self).__init__(filename, lines, line_start=first_line, syntax=syntax)
         "Initialize from the <lines> of <filename> beginning at <first_line>"
         _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
         self._variables = {}
         # Read the table preamble, assume the caller already figured out
         #  the first line of the header using the metadata_table_start method.
-        curr_line, curr_line_num = self.curr_line(lines)
+        curr_line, curr_line_num = self.curr_line()
         self._table_title = MetadataHeader.metadata_table_start(curr_line, syntax=self._syntax)
         if self._table_title is None:
             raise ParseSyntaxError("metadata header start",
                                    token=curr_line, context=self._context)
         # End if
-        curr_line, curr_line_num = self.next_line(lines)
+        curr_line, curr_line_num = self.next_line()
         # Skip past any 'blank' lines
         while syntax.blank_line(curr_line):
-            curr_line, curr_line_num = self.next_line(lines)
+            curr_line, curr_line_num = self.next_line()
         # End while
         # Read the variables
         valid_lines = True
@@ -177,7 +177,7 @@ class MetadataHeader(ParseObject):
 
     def parse_variable(self, lines):
         # Make sure first_line is a valid variable start
-        curr_line, curr_line_num = self.curr_line(lines)
+        curr_line, curr_line_num = self.curr_line()
         # The header line has the format [ <valid_fortran_symbol> ]
         # Parse header
         valid_line = curr_line is not None
@@ -199,7 +199,7 @@ class MetadataHeader(ParseObject):
             var_props = None
         # End if
         while valid_line:
-            curr_line, curr_line_num = self.next_line(lines)
+            curr_line, curr_line_num = self.next_line()
             valid_line = (curr_line is not None) and (not self.blank_line(curr_line))
             # A valid line may have multiple properties (separated by '|')
             if valid_line:
