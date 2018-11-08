@@ -16,8 +16,10 @@ from parse_tools import ParseContext, ParseInternalError, ParseSyntaxError
 from parse_tools import ParseObject, FORTRAN_ID
 
 comment_re = re.compile(r"!.*$")
-program_re = re.compile(r"(?i)program\s+("+FORTRAN_ID+r")")
-endprogram_re = re.compile(r"(?i)program\s+("+FORTRAN_ID+r")?")
+program_re = re.compile(r"(?i)\s*program\s+("+FORTRAN_ID+r")")
+endprogram_re = re.compile(r"(?i)\s*end\s*program\s+("+FORTRAN_ID+r")?")
+module_re = re.compile(r"(?i)\s*module\s+("+FORTRAN_ID+r")")
+endmodule_re = re.compile(r"(?i)\s*end\s*module\s+("+FORTRAN_ID+r")?")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 blank_re = re.compile(r"\s+")
 
@@ -263,16 +265,16 @@ def parse_specification(pobj, statements):
     pass
 
 def parse_program(pobj, statements):
-    curr_line, curr_line_num = pobj.curr_line()
-    statements = line_statements(curr_line)
     # The first statement should be a program statement, grab the name
     pmatch = program_re.match(statement[0])
     if pmatch is None:
         raise ParseSyntaxError('PROGRAM statement', statement[0])
     # End if
     prog_name = pmatch.group(1)
+    pobj.enter_region('PROGRAM', region_name=prog_name, nested_ok=False)
     # After the program name is the specification part
     parse_specification(pobj, statements[1:])
+    # Look for metadata tables
 
 
 def parse_fortran_file(filename):
