@@ -2,8 +2,11 @@
 
 """Classes to aid the parsing process"""
 
+import logging
 import collections
 import copy
+
+logger = logging.getLogger(__name__)
 
 ########################################################################
 
@@ -94,9 +97,12 @@ class ParseContext(object):
     """
 
     def __init__(self, linenum=None, filename=None, context=None):
+        _llevel = logger.getEffectiveLevel()
+        # Turn off property warnings
+        logger.setLevel(logging.ERROR)
         if context is not None:
             # If context is passed, ignore linenum
-            linenum = context.linenum
+            linenum = context.line_num
         elif linenum is None:
             linenum = 1
         elif type(linenum) != int:
@@ -108,32 +114,44 @@ class ParseContext(object):
         elif filename is None:
             filename = "<standard input>"
         elif type(filename) != str:
-            raise ValueError('ParseContext filenum must be a string')
+            raise ValueError('ParseContext filename must be a string')
         # End if
-        self.linenum = linenum
-        self.filename = filename
+        self._linenum = linenum
+        self._filename = filename
         if context is not None:
             self.regions = copy.deepcopy(context.regions)
         else:
             self.regions = ContextRegion()
         # End if
+        # Turn logging back on
+        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
     def line_num(self):
         'Return the current line'
-        return self.linenum
+        return self._linenum
 
     @line_num.setter
     def line_num(self, newnum):
-        self.linenum = newnum
+        self._linenum = newnum
+
+    @property
+    def filename(self):
+        "'Return the object's filename"
+        return self._filename
+
+    @filename.setter
+    def filename(self):
+        'Do not allow the filename to be set'
+        logger.warning('Cannot set value of filename')
 
     def __str__(self):
         "Return a string representing the location in a file"
-        return "{}:{}".format(self.filename, self.linenum)
+        return "{}:{}".format(self._filename, self._linenum)
 
     def increment(self, inc=1):
         "Increment the location within a file"
-        self.linenum = self.linenum + inc
+        self._linenum = self._linenum + inc
 
     def enter_region(self, region_type, region_name=None, nested_ok=True):
         """Mark the entry of a region (e.g., DDT, module, function).

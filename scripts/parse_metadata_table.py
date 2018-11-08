@@ -226,7 +226,7 @@ class MetadataHeader(ParseObject):
                         if pval is None:
                             raise ParseSyntaxError("variable property value",
                                                    token=pval_str,
-                                                   context=self._context)
+                                                   context=self)
                         # End if
                     except ParseSyntaxError as p:
                         raise p

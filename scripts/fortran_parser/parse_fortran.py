@@ -6,7 +6,6 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
 from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
-from parse_tools import FORTRAN_ID as FNAME
 
 # A collection of types and tools for parsing Fortran code to support
 # CCPP metadata parsing. The purpose of this code is limited to type

@@ -13,12 +13,11 @@ if __name__ == '__main__' and __package__ is None:
 import re
 import logging
 from parse_tools import ParseContext, ParseInternalError, ParseSyntaxError
-from parse_tools import ParseObject
-from parse_fortran import FNAME
+from parse_tools import ParseObject, FORTRAN_ID
 
 comment_re = re.compile(r"!.*$")
-program_re = re.compile(r"(?i)program\s+("+FNAME+r")")
-endprogram_re = re.compile(r"(?i)program\s+("+FNAME+r")?")
+program_re = re.compile(r"(?i)program\s+("+FORTRAN_ID+r")")
+endprogram_re = re.compile(r"(?i)program\s+("+FORTRAN_ID+r")?")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 blank_re = re.compile(r"\s+")
 
@@ -224,13 +223,12 @@ def read_file(filename, preproc_defs=None):
             # End if
             # scan the line for properties
             res = scan_line(curr_line, (continue_col >= 0),
-                            in_schar, in_dchar, pobj.context)
+                            in_schar, in_dchar, pobj)
             cont_in_col, cont_out_col, in_schar, in_dchar, comment_col = res
             # If in a continuation context, move this line to previos
             if continue_col >= 0:
                 if prev_line is None:
-                    raise ParseInternalError("No prev_line to continue",
-                                             pobj.context)
+                    raise ParseInternalError("No prev_line to continue", pobj)
                 # End if
                 sindex = max(0, cont_in_col)
                 if cont_out_col > 0:
@@ -261,8 +259,21 @@ def read_file(filename, preproc_defs=None):
         # End while
         return pobj
 
-def parse_program(lines, line_start, filename):
+def parse_specification(pobj, statements):
     pass
+
+def parse_program(pobj, statements):
+    curr_line, curr_line_num = pobj.curr_line()
+    statements = line_statements(curr_line)
+    # The first statement should be a program statement, grab the name
+    pmatch = program_re.match(statement[0])
+    if pmatch is None:
+        raise ParseSyntaxError('PROGRAM statement', statement[0])
+    # End if
+    prog_name = pmatch.group(1)
+    # After the program name is the specification part
+    parse_specification(pobj, statements[1:])
+
 
 def parse_fortran_file(filename):
     pobj = read_file(filename, preproc_defs=None)
@@ -270,9 +281,10 @@ def parse_fortran_file(filename):
     curr_line, clo = pobj.curr_line()
     while curr_line is not None:
         statements = line_statements(curr_line)
-        for statement in statements:
+        for index in xrange(len(statements)):
+            statement = statements[index]
             if program_re.match(statement) is not None:
-                parse_program(pobj) # returns what?
+                parse_program(pobj, statements[index+1:]) # returns what?
             # What else? modules?
         curr_line, clo = pobj.next_line()
 

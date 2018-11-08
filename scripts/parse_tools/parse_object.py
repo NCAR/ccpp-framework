@@ -178,7 +178,7 @@ class FortranMetadataSyntax(MetadataSyntax):
 
 ########################################################################
 
-class ParseObject(object):
+class ParseObject(ParseContext):
     """ParseObject is a simple class that keeps track of an object's
     place in a file and safely produces lines from an array of lines
     >>> ParseObject('foobar.F90', 1) #doctest: +ELLIPSIS
@@ -231,22 +231,11 @@ class ParseObject(object):
         self._lines = lines_in
         self._line_start = line_start
         self._line_end = line_start
-        self._line_curr = line_start
         self._line_next = line_start
         self._syntax = syntax
-        self._context = ParseContext(linenum=line_start, filename=filename)
+        super(ParseObject, self).__init__(linenum=line_start, filename=filename)
         # Turn logging back on
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
-
-    @property
-    def filename(self):
-        "'Return the object's filename"
-        return self._filename
-
-    @filename.setter
-    def filename(self):
-        'Do not allow the filename to be set'
-        logger.warning('Cannot set value of filename')
 
     @property
     def first_line_num(self):
@@ -281,16 +270,6 @@ class ParseObject(object):
         'Do not allow the syntax to be set'
         logger.warning('Cannot set value of syntax')
 
-    @property
-    def context(self):
-        'Return the context for this object'
-        return self._context
-
-    @context.setter
-    def context(self):
-        'Do not allow the context to be set'
-        logger.warning('Cannot set value of context')
-
     def blank_line(self, line):
         if self._syntax is None:
             return len(line.strip()) == 0
@@ -298,14 +277,14 @@ class ParseObject(object):
             return self._syntax.blank_line(line)
 
     def curr_line(self):
-        valid_line = self._line_curr < len(self._lines)
+        valid_line = self.line_num < len(self._lines)
         _curr_line = None
-        _my_curr_lineno = self._line_curr
+        _my_curr_lineno = self.line_num
         if valid_line:
             try:
                 # Do not strip the comment syntax from first line
-                _curr_line = self._lines[self._line_curr].rstrip()
-                self._line_next = self._line_curr + 1
+                _curr_line = self._lines[self.line_num].rstrip()
+                self._line_next = self.line_num + 1
                 self._line_end = self._line_next
             except ValueError as exc:
                 valid_line = False
@@ -327,17 +306,17 @@ class ParseObject(object):
             # End if
         # End if
         # curr_line should not change the line number
-        self._line_curr = _my_curr_lineno
-        return _curr_line, self._line_curr
+        self.line_num = _my_curr_lineno
+        return _curr_line, self.line_num
 
     def next_line(self):
-        self._line_curr = self._line_next
+        self.line_num = self._line_next
         # For now, just reset the context
-        self._context.line_num = self._line_curr
+        self.line_num = self.line_num
         return self.curr_line()
 
     def reset_pos(self, line_start=0):
-        self._line_curr = line_start
+        self.line_num = line_start
         self._line_next = line_start
 
     def write_line(self, line_num, line):
