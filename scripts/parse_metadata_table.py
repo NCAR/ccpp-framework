@@ -93,7 +93,7 @@ import re
 import collections
 import logging
 from metavar import VariableProps, Var
-from parse_tools import ParseSyntaxError, ParseObject
+from parse_tools import ParseInternalError, ParseSyntaxError, ParseObject
 from parse_tools import MetadataSyntax, FortranMetadataSyntax
 
 logger = logging.getLogger(__name__)
@@ -102,31 +102,29 @@ logger = logging.getLogger(__name__)
 
 ########################################################################
 
-class MetadataHeader(ParseObject):
+class MetadataHeader(object):
     """Class to hold all information from a metadata header
-    >>> MetadataHeader("foobar.txt",                                      \
+    >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
                        "!! description = horizontal loop extent, start at 1", \
                        "!! units = index | type = integer",                   \
-                       "!! dimensions = () |  intent = in"], 0,               \
-                       syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent') #doctest: +ELLIPSIS
+                       "!! dimensions = () |  intent = in"], 0)).get_var('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var object at 0x...>
-    >>> MetadataHeader("foobar.txt",                                      \
+    >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
                        "!! description = horizontal loop extent, start at 1", \
                        "!! units = index | type = integer",                   \
-                       "!! dimensions = () |  intent = in"], 0,               \
+                       "!! dimensions = () |  intent = in"], 0),              \
                        syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent').get_prop_value('local_name')
     'im'
-    >>> MetadataHeader("foobar.txt",                                      \
+    >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal loop extent",           \
                        "!! description = horizontal loop extent, start at 1", \
                        "!! units = index | type = integer",                   \
-                       "!! dimensions = () |  intent = in"], 0,               \
-                       syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+                       "!! dimensions = () |  intent = in"], 0)).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid variable property value, 'horizontal loop extent', at foobar.txt:2
 """
@@ -135,38 +133,41 @@ class MetadataHeader(ParseObject):
 
     _var_start = re.compile(r"^\[\s*(\w+)\s*\]$")
 
-    def __init__(self, filename, lines, first_line,
-                 syntax=FortranMetadataSyntax):
-        super(MetadataHeader, self).__init__(filename, lines, line_start=first_line, syntax=syntax)
+    def __init__(self, parse_object, syntax=FortranMetadataSyntax):
+        self._pobj = parse_object
+        if syntax is None:
+            raise ValueError('syntax may not be None')
+        # End if
+        self._syntax = syntax
         "Initialize from the <lines> of <filename> beginning at <first_line>"
         _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
         self._variables = {}
         # Read the table preamble, assume the caller already figured out
         #  the first line of the header using the metadata_table_start method.
-        curr_line, curr_line_num = self.curr_line()
-        self._table_title = MetadataHeader.metadata_table_start(curr_line, syntax=self._syntax)
+        curr_line, curr_line_num = self._pobj.curr_line()
+        self._table_title = MetadataHeader.metadata_table_start(curr_line, context=self._pobj, syntax=self._syntax)
         if self._table_title is None:
             raise ParseSyntaxError("metadata header start",
-                                   token=curr_line, context=self._context)
+                                   token=curr_line, context=self._pobj)
         # End if
-        curr_line, curr_line_num = self.next_line()
+        curr_line, curr_line_num = self._pobj.next_line()
         # Skip past any 'blank' lines
-        while syntax.blank_line(curr_line):
-            curr_line, curr_line_num = self.next_line()
+        while self._syntax.blank_line(curr_line):
+            curr_line, curr_line_num = self._pobj.next_line()
         # End while
         # Read the variables
-        valid_lines = True
+        valid_lines =  True
         self._variables = {}
         while valid_lines:
-            newvar = self.parse_variable(lines)
+            newvar = self.parse_variable(curr_line)
             valid_lines = newvar is not None
             if valid_lines:
                 new_sn = newvar.get_prop_value('standard_name')
                 if new_sn in self._variables:
                     raise ParseSyntaxError("Duplicate standard name",
                                            token=newvar.standard_name,
-                                           context=self._context)
+                                           context=self._pobj)
                 else:
                     self._variables[new_sn] = newvar
                 # End if
@@ -175,9 +176,7 @@ class MetadataHeader(ParseObject):
 
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
-    def parse_variable(self, lines):
-        # Make sure first_line is a valid variable start
-        curr_line, curr_line_num = self.curr_line()
+    def parse_variable(self, curr_line):
         # The header line has the format [ <valid_fortran_symbol> ]
         # Parse header
         valid_line = curr_line is not None
@@ -188,7 +187,7 @@ class MetadataHeader(ParseObject):
         # End if
         if valid_line and (self._local_name is None):
             raise ParseSyntaxError("invalid metadata variable start",
-                                   token=curr_line, context=self._context)
+                                   token=curr_line, context=self._pobj)
         # End if
         # Parse lines until invalid line is found
         # NB: Header variables cannot have embedded blank lines
@@ -199,17 +198,19 @@ class MetadataHeader(ParseObject):
             var_props = None
         # End if
         while valid_line:
-            curr_line, curr_line_num = self.next_line()
-            valid_line = (curr_line is not None) and (not self.blank_line(curr_line))
+            curr_line, curr_line_num = self._pobj.next_line()
+            valid_line = ((curr_line is not None) and
+                          (not self._syntax.blank_line(curr_line)) and
+                          (self.variable_start(curr_line) is None))
             # A valid line may have multiple properties (separated by '|')
             if valid_line:
                 properties = self._syntax.strip(curr_line).split('|')
                 for property in properties:
                     pitems = property.split('=')
-                    if len(pitems) != 2:
+                    if len(pitems) < 2:
                         raise ParseSyntaxError("variable property syntax",
                                                token=property,
-                                               context=self._context)
+                                               context=self._pobj)
                     # End if
                     try:
                         pname = pitems[0].strip()
@@ -221,12 +222,12 @@ class MetadataHeader(ParseObject):
                         else:
                             raise ParseSyntaxError("variable property name",
                                                    token=pname,
-                                                   context=self._context)
+                                                   context=self._pobj)
                         # End if
                         if pval is None:
-                            raise ParseSyntaxError("variable property value",
+                            raise ParseSyntaxError("'{}' property value".format(pname),
                                                    token=pval_str,
-                                                   context=self)
+                                                   context=self._pobj)
                         # End if
                     except ParseSyntaxError as p:
                         raise p
@@ -254,7 +255,7 @@ class MetadataHeader(ParseObject):
             name = match.group(1)
             if not self._syntax.is_variable_name(name):
                 raise ParseSyntaxError("Invalid local variable name",
-                                       token=name, context=self._context)
+                                       token=name, context=self._pobj)
             # End if
         else:
             name = None
@@ -276,11 +277,9 @@ class MetadataHeader(ParseObject):
                 # End if
             else:
                 name = None
-                raise ValueError("Match is none")
             # End if
         else:
             name = None
-            raise ValueError(line)
         # End if
         return name
 

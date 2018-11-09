@@ -52,7 +52,7 @@ class VariableProperty(object):
         logger.setLevel(logging.ERROR)
         self._name = name_in
         self._type = type_in
-        if self._type not in [ str, int, list ]:
+        if self._type not in [ bool, int, list, str ]:
             raise ValueError("{} has illegal VariableProperty type, '{}'".format(name_in, type_in))
         # End if
         self._valid_values = valid_values_in
@@ -95,6 +95,15 @@ class VariableProperty(object):
         'Do not allow default to be reset'
         logger.warning('Cannot set value of default')
 
+    @property
+    def optional(self):
+        return self._optional
+
+    @optional.setter
+    def optional(self, value):
+        'Do not allow optional to be reset'
+        logger.warning('Cannot set value of optional')
+
     def is_match(self, test_name):
         "Return True iff <test_name> is the name of this property"
         return self.name.lower() == test_name.lower()
@@ -102,7 +111,7 @@ class VariableProperty(object):
     def valid_value(self, test_value):
         'Return True iff test_value is valid'
         valid_val = None
-        if self.type == int:
+        if self.type is int:
             try:
                 tv = int(test_value)
                 if self._valid_values is not None:
@@ -114,17 +123,8 @@ class VariableProperty(object):
                     valid_val = tv
             except ValueError:
                 valid_val = None # Redundant but more expressive than pass
-        elif self.type == str:
-            if type(test_value) == str:
-                if self._valid_values is not None:
-                    if test_value in self._valid_values:
-                        valid_val = test_value
-                    else:
-                        valid_val = None # i.e., pass
-                else:
-                    valid_val = test_value
-        elif self.type == list:
-            if type(test_value) == str:
+        elif self.type is list:
+            if type(test_value) is str:
                 try:
                     tv = ast.literal_eval(test_value)
                 except SyntaxError as se:
@@ -132,9 +132,9 @@ class VariableProperty(object):
             else:
                 tv = test_value
             # End if
-            if type(tv) == list:
+            if type(tv) is list:
                 valid_val = tv
-            elif type(tv) == tuple:
+            elif type(tv) is tuple:
                 valid_val = list(tv)
             else:
                 valid_val = None
@@ -149,21 +149,28 @@ class VariableProperty(object):
                 # End for
             else:
                 pass
+        elif self.type is bool:
+            if type(test_value) is str:
+                valid_val = (test_value in ['True', 'False']) or (test_value.lower() in ['t', 'f', '.true.', '.false.'])
+            else:
+                valid_val = not not test_value
+        elif self.type is str:
+            if type(test_value) is str:
+                if self._valid_values is not None:
+                    if test_value in self._valid_values:
+                        valid_val = test_value
+                    else:
+                        valid_val = None # i.e., pass
+                else:
+                    valid_val = test_value
+                # End if
+            # End if
         # End if
         # Call a check function?
         if valid_val and (self._check_fn is not None):
             valid_val = self._check_fn(valid_val)
         # End if
         return valid_val
-
-    @property
-    def optional(self):
-        return self._optional
-
-    @optional.setter
-    def optional(self, value):
-        'Do not allow optional to be reset'
-        logger.warning('Cannot set value of optional')
 
 ########################################################################
 
@@ -203,20 +210,15 @@ class Var(object):
                     VariableProperty('units', str),
                     VariableProperty('dimensions', list,
                                      check_fn_in=check_dimensions),
-                    VariableProperty('type', str, check_fn_in=check_fortran_id,
-                                     valid_values_in=['character', 'integer',
-                                                      'logical',   'real']),
+                    VariableProperty('type', str,
+                                     check_fn_in=check_fortran_id),
                     VariableProperty('kind', str,
                                      optional_in=True, default_in='kind_phys'),
-                    VariableProperty('state_variable', str,
-                                     valid_values_in=['True',   'False',
-                                                      '.true.', '.false.' ],
+                    VariableProperty('state_variable', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('intent', str,
                                      valid_values_in=['in', 'out', 'inout']),
-                    VariableProperty('optional', str,
-                                     valid_values_in=['True',   'False',
-                                                      '.true.', '.false.' ],
+                    VariableProperty('optional', bool,
                                      optional_in=True, default_in=False) ]
 
     __var_propdict = {}

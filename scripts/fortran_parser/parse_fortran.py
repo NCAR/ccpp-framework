@@ -199,7 +199,7 @@ class Ftype_character(Ftype):
 
     >>> Ftype_character('character', ParseContext(169, 'foo.F90')).print_decl()
     Traceback (most recent call last):
-    ParseSyntaxError: Invalid character declaration, 'character', at foo.F90:169
+    ParseSyntaxError: Invalid character declaration, 'character', at foo.F90:170
     >>> Ftype_character('character ::', ParseContext(171, 'foo.F90')).print_decl()
     'character(len=1)'
     >>> Ftype_character('CHARACTER(len=*)', ParseContext(174, 'foo.F90')).print_decl()

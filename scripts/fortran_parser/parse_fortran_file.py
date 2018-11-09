@@ -13,7 +13,8 @@ if __name__ == '__main__' and __package__ is None:
 import re
 import logging
 from parse_tools import ParseContext, ParseInternalError, ParseSyntaxError
-from parse_tools import ParseObject, FORTRAN_ID
+from parse_tools import ParseObject, FortranMetadataSyntax, FORTRAN_ID
+from parse_metadata_table import MetadataHeader
 
 comment_re = re.compile(r"!.*$")
 program_re = re.compile(r"(?i)\s*program\s+("+FORTRAN_ID+r")")
@@ -78,6 +79,20 @@ def line_statements(line):
     # End if
     return statements
 
+########################################################################
+
+def read_statements(pobj, statements=None):
+    """Retrieve the next line and break it into statements"""
+    while (statements is None) or (sum([len(x) for x in statements]) == 0):
+        nline, nline_num = pobj.next_line()
+        if nline is None:
+            statements = None
+            break
+        else:
+            statements = line_statements(nline)
+        # End if
+    # End while
+    return statements
 
 ########################################################################
 
@@ -219,7 +234,7 @@ def read_file(filename, preproc_defs=None):
         curr_line, curr_line_num = pobj.curr_line()
         while curr_line is not None:
             # Skip empty lines and comment-only lines
-            if pobj.blank_line(curr_line) or (curr_line.lstrip()[0] == '!'):
+            if (len(curr_line.strip()) == 0) or (curr_line.lstrip()[0] == '!'):
                 curr_line, curr_line_num = pobj.next_line()
                 continue
             # End if
@@ -262,33 +277,83 @@ def read_file(filename, preproc_defs=None):
         return pobj
 
 def parse_specification(pobj, statements):
-    pass
+    # Fill this in someday if useful
+    return statements
 
 def parse_program(pobj, statements):
     # The first statement should be a program statement, grab the name
-    pmatch = program_re.match(statement[0])
+    mheaders = list()
+    pmatch = program_re.match(statements[0])
     if pmatch is None:
-        raise ParseSyntaxError('PROGRAM statement', statement[0])
+        raise ParseSyntaxError('PROGRAM statement', statements[0])
     # End if
     prog_name = pmatch.group(1)
     pobj.enter_region('PROGRAM', region_name=prog_name, nested_ok=False)
     # After the program name is the specification part
-    parse_specification(pobj, statements[1:])
+    statements = parse_specification(pobj, statements[1:])
     # Look for metadata tables
+    statements = read_statements(pobj, statements)
+    while statements is not None:
+        for statement in statements:
+            # End program
+            pmatch = endprogram_re.match(statement)
+            if pmatch is not None:
+                prog_name = pmatch.group(1)
+                pobj.leave_region('PROGRAM', region_name=prog_name)
+            elif MetadataHeader.metadata_table_start(statement, context=pobj, syntax=FortranMetadataSyntax):
+                mheaders.append(MetadataHeader(pobj))
+            # End if
+        # End for
+        statements = read_statements(pobj)
+    # End while
+    return mheaders
 
+def parse_module(pobj, statements):
+    # The first statement should be a program statement, grab the name
+    mheaders = list()
+    pmatch = module_re.match(statements[0])
+    if pmatch is None:
+        raise ParseSyntaxError('MODULE statement', statements[0])
+    # End if
+    mod_name = pmatch.group(1)
+    pobj.enter_region('MODULE', region_name=mod_name, nested_ok=False)
+    # After the module name is the specification part
+    statements = parse_specification(pobj, statements[1:])
+    # Look for metadata tables
+    statements = read_statements(pobj, statements)
+    while statements is not None:
+        for statement in statements:
+            # End program
+            pmatch = endmodule_re.match(statement)
+            if pmatch is not None:
+                mod_name = pmatch.group(1)
+                pobj.leave_region('MODULE', region_name=mod_name)
+            elif MetadataHeader.metadata_table_start(statement, context=pobj, syntax=FortranMetadataSyntax):
+                mheaders.append(MetadataHeader(pobj))
+            # End if
+        # End for
+        statements = read_statements(pobj)
+    # End while
+    return mheaders
 
 def parse_fortran_file(filename):
+    mheaders = list()
     pobj = read_file(filename, preproc_defs=None)
     pobj.reset_pos()
     curr_line, clo = pobj.curr_line()
-    while curr_line is not None:
-        statements = line_statements(curr_line)
+    statements = line_statements(curr_line)
+    while statements is not None:
         for index in xrange(len(statements)):
             statement = statements[index]
             if program_re.match(statement) is not None:
-                parse_program(pobj, statements[index+1:]) # returns what?
-            # What else? modules?
-        curr_line, clo = pobj.next_line()
+                mheaders.extend(parse_program(pobj, statements[index:]))
+            elif module_re.match(statement) is not None:
+                mheaders.extend(parse_module(pobj, statements[index:]))
+            # End if
+        # End for
+        statements = read_statements(pobj)
+    # End while
+    return mheaders
 
 ########################################################################
 
@@ -296,6 +361,11 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod()
 # XXgoldyXX: v debug only
-#    pdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-#    parse_fortran_file(os.path.join(pdir, 'schemes', 'check', 'nan.f90'))
+    pdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    tfiles = [os.path.join(pdir, 'tests', 'cap_tests',
+                           'gfdl_cloud_microphys.F90')]
+    for file in tfiles:
+        mh = parse_fortran_file(file)
+        print("metadata headers from {}".format(file))
+        print mh
 # XXgoldyXX: ^ debug only

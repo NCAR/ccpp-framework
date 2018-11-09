@@ -89,7 +89,7 @@ class ParseContext(object):
     Traceback (most recent call last):
     ValueError: ParseContext filenum must be a string
     >>> "{}".format(ParseContext(32, "source.F90"))
-    'source.F90:32'
+    'source.F90:33'
     >>> "{}".format(ParseContext())
     '<standard input>:1'
     >>> ParseContext(32, "source.F90").increment(13)
@@ -104,7 +104,7 @@ class ParseContext(object):
             # If context is passed, ignore linenum
             linenum = context.line_num
         elif linenum is None:
-            linenum = 1
+            linenum = 0
         elif type(linenum) != int:
             raise ValueError('ParseContext linenum must be an int')
         # End if
@@ -146,8 +146,10 @@ class ParseContext(object):
         logger.warning('Cannot set value of filename')
 
     def __str__(self):
-        "Return a string representing the location in a file"
-        return "{}:{}".format(self._filename, self._linenum)
+        """Return a string representing the location in a file
+        Note that self._linenum is zero based.
+        """
+        return "{}:{}".format(self._filename, self._linenum+1)
 
     def increment(self, inc=1):
         "Increment the location within a file"
@@ -158,26 +160,30 @@ class ParseContext(object):
         If nested_ok == False, throw an exception if the context is already
         inside a region with the same type."""
         if (not nested_ok) and (region_type in self.regions):
-            raise ParseContextException("Cannot enter a nested {} region".format(region_type), self)
+            raise ParseContextError("Cannot enter a nested {} region".format(region_type), self)
         else:
             self.regions.push(region_type, region_name)
 
     def leave_region(self, region_type, region_name=None):
         """Mark the exit from a region. Check region name if possible"""
         if len(self.regions) == 0:
-            raise ParseContextException("Cannot exit, not currently in any region", self)
+            raise ParseContextError("Cannot exit, not currently in any region", self)
         else:
             curr_type, curr_name = self.regions.pop()
             if curr_type != region_type:
-                raise ParseContextException("Trying to exit {} region while currently in {} region".format(region_type, curr_type), self)
+                raise ParseContextError("Trying to exit {} region while currently in {} region".format(region_type, curr_type), self)
             elif (region_name is not None) and (curr_name is not None):
                 if region_name != curr_name:
-                    raise ParseContextException("Trying to exit {} {} while currently in {} {}".format(region_type, region_name, curr_type, curr_name), self)
+                    raise ParseContextError("Trying to exit {} {} while currently in {} {}".format(region_type, region_name, curr_type, curr_name), self)
                 # End if
             elif (region_name is not None) and (curr_name is None):
-                raise ParseContextException("Trying to exit {} {} while currently in unnamed {} region".format(region_type, region_name, curr_type), self)
+                raise ParseContextError("Trying to exit {} {} while currently in unnamed {} region".format(region_type, region_name, curr_type), self)
             # End if
         # End if
+
+    def curr_region(self):
+        """Return the innermost current region"""
+        return self.regions[-1]
 
     def region_str(self):
         """Create a string describing the current region"""

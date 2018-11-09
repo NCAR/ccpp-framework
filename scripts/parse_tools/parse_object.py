@@ -199,28 +199,8 @@ class ParseObject(ParseContext):
     ('## hi mom', 2)
     >>> ParseObject('foobar.F90', ["## hi \\\\","## there \\\\","## mom"], line_start=0).next_line()
     ('## hi there mom', 0)
-    >>> ParseObject('foobar.F90', ["!! line1","!! hi mom"], line_start=1, syntax=FortranMetadataSyntax).next_line()
+    >>> ParseObject('foobar.F90', ["!! line1","!! hi mom"], line_start=1).next_line()
     ('!! hi mom', 1)
-    >>> ParseObject('foobar.F90', [], line_start=2).syntax
-    'MetadataSyntax'
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).syntax
-    'FortranMetadataSyntax'
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).syntax
-    'None'
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).blank_line("")
-    True
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).blank_line("    ")
-    True
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=None).blank_line("  int :: foo")
-    False
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("")
-    True
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("   ")
-    False
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("!! int :; foo")
-    False
-    >>> ParseObject('foobar.F90', [], line_start=1, syntax=FortranMetadataSyntax).blank_line("!!  ")
-    True
     """
 
     def __init__(self, filename, lines_in, line_start=0, syntax=MetadataSyntax):
@@ -269,12 +249,6 @@ class ParseObject(ParseContext):
     def syntax(self):
         'Do not allow the syntax to be set'
         logger.warning('Cannot set value of syntax')
-
-    def blank_line(self, line):
-        if self._syntax is None:
-            return len(line.strip()) == 0
-        else:
-            return self._syntax.blank_line(line)
 
     def curr_line(self):
         valid_line = self.line_num < len(self._lines)
