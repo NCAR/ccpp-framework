@@ -78,7 +78,7 @@ class Ftype(object):
             match = Ftype.itype_re.match(line_in.strip())
             if match is None:
                 raise ParseSyntaxError("type declaration", token=line_in, context=self.context)
-            elif is_fortran_intrinsic(match.group(1)):
+            elif check_fortran_intrinsic(match.group(1)):
                 self.typestr = match.group(1)
                 if match.group(2) is not None:
                     # Parse kind section
@@ -140,7 +140,7 @@ class Ftype(object):
         """Return a string of the declaration of the type"""
         if self.default_kind:
             return self.typestr
-        elif is_fortran_intrinsic(self.typestr):
+        elif check_fortran_intrinsic(self.typestr):
             return "{}(kind={})".format(self.typestr, self.kind)
         else:
             # Derived type
