@@ -24,7 +24,7 @@ def convert_file(filename_in, filename_out):
     if not os.path.exists(filename_in):
         raise IOError("convert_file: file, '{}', does not exist".format(filename_in))
     # End if
-    if os.path.exists(dest_file):
+    if os.path.exists(filename_out):
         yes = raw_input("Overwrite '{}' (Yes/No)? ".format(filename_out))
         if yes_re.match(yes) is None:
             return
@@ -111,7 +111,7 @@ def convert_file(filename_in, filename_out):
                                     if dind > 0:
                                         entry = entry + ", "
                                     # End if
-                                    entry = entry + dim_names[dind]
+                                    entry = "{}'{}'".format(entry, dim_names[dind])
                                 # End for
                                 entry = entry + ")"
                             # End if

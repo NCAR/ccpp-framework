@@ -109,14 +109,33 @@ class MetadataHeader(object):
                        "!! standard_name = horizontal_loop_extent",           \
                        "!! description = horizontal loop extent, start at 1", \
                        "!! units = index | type = integer",                   \
-                       "!! dimensions = () |  intent = in"], 0)).get_var('horizontal_loop_extent') #doctest: +ELLIPSIS
+                       "!! dimensions = () |  intent = in"])).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: End of file parsing Metadata table, at foobar.txt:7
+    >>> MetadataHeader(ParseObject("foobar.txt",                              \
+                      ["!> \section arg_table_foobar", "!! [ im ]",           \
+                       "!! standard_name = horizontal_loop_extent",           \
+                       "!! description = horizontal loop extent, start at 1", \
+                       "!! units = index | type = integer",                   \
+                       "!! dimensions = () |  intent = in",                   \
+                       "  subroutine foo()"])).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid Metadata table ending, '  subroutine foo()', at foobar.txt:7
+    >>> MetadataHeader(ParseObject("foobar.txt",                              \
+                      ["!> \section arg_table_foobar", "!! [ im ]",           \
+                       "!! standard_name = horizontal_loop_extent",           \
+                       "!! description = horizontal loop extent, start at 1", \
+                       "!! units = index | type = integer",                   \
+                       "!! dimensions = () |  intent = in",                   \
+                       "!! "])).get_var('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var object at 0x...>
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
                        "!! description = horizontal loop extent, start at 1", \
                        "!! units = index | type = integer",                   \
-                       "!! dimensions = () |  intent = in"], 0),              \
+                       "!! dimensions = () |  intent = in",                   \
+                       "!! "], line_start=0),                                 \
                        syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent').get_prop_value('local_name')
     'im'
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
@@ -124,7 +143,8 @@ class MetadataHeader(object):
                        "!! standard_name = horizontal loop extent",           \
                        "!! description = horizontal loop extent, start at 1", \
                        "!! units = index | type = integer",                   \
-                       "!! dimensions = () |  intent = in"], 0)).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+                       "!! dimensions = () |  intent = in",                   \
+                       "!! "], line_start=0)).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid variable property value, 'horizontal loop extent', at foobar.txt:2
 """
@@ -160,7 +180,7 @@ class MetadataHeader(object):
         valid_lines =  True
         self._variables = {}
         while valid_lines:
-            newvar = self.parse_variable(curr_line)
+            newvar, curr_line = self.parse_variable(curr_line)
             valid_lines = newvar is not None
             if valid_lines:
                 new_sn = newvar.get_prop_value('standard_name')
@@ -170,6 +190,15 @@ class MetadataHeader(object):
                                            context=self._pobj)
                 else:
                     self._variables[new_sn] = newvar
+                # End if
+            else:
+                # We have hit the end of the table, check for blank line
+                if curr_line is None:
+                    raise ParseSyntaxError("End of file parsing Metadata table",
+                                           context=self._pobj)
+                elif not self._syntax.blank_line(curr_line):
+                    raise ParseSyntaxError("Metadata table ending", curr_line,
+                                           context=self._pobj)
                 # End if
             # End if
         # End while
@@ -181,19 +210,19 @@ class MetadataHeader(object):
         # Parse header
         valid_line = curr_line is not None
         if valid_line:
-            self._local_name = self.variable_start(curr_line) # caller handles exception
+            local_name = self.variable_start(curr_line) # caller handles exception
         else:
-            self._local_name = None
+            local_name = None
         # End if
-        if valid_line and (self._local_name is None):
-            raise ParseSyntaxError("invalid metadata variable start",
-                                   token=curr_line, context=self._pobj)
+        if valid_line and (local_name is None):
+            # This is not a valid variable line, punt (should be end of table)
+            valid_line = False
         # End if
         # Parse lines until invalid line is found
         # NB: Header variables cannot have embedded blank lines
         if valid_line:
             var_props = {}
-            var_props['local_name'] = self._local_name
+            var_props['local_name'] = local_name
         else:
             var_props = None
         # End if
@@ -201,6 +230,7 @@ class MetadataHeader(object):
             curr_line, curr_line_num = self._pobj.next_line()
             valid_line = ((curr_line is not None) and
                           (not self._syntax.blank_line(curr_line)) and
+                          (self._syntax.strip(curr_line) is not None) and
                           (self.variable_start(curr_line) is None))
             # A valid line may have multiple properties (separated by '|')
             if valid_line:
@@ -237,9 +267,14 @@ class MetadataHeader(object):
             # End if
         # End while
         if var_props is None:
-            return None
+            return None, curr_line
         else:
-            return Var(var_props)
+            try:
+                newvar = Var(var_props)
+            except ValueError as ve:
+                raise ParseSyntaxError(ve, context=self._pobj)
+            return newvar, curr_line
+        # End if
 
     def get_var(self, standard_name):
         if standard_name in self._variables:
@@ -250,7 +285,12 @@ class MetadataHeader(object):
     def variable_start(self, line):
         """Return variable name if <line> is an interface metadata table header
         """
-        match = MetadataHeader._var_start.match(self._syntax.strip(line))
+        sline = self._syntax.strip(line)
+        if sline is None:
+            match = None
+        else:
+            match = MetadataHeader._var_start.match(sline)
+        # End if
         if match is not None:
             name = match.group(1)
             if not self._syntax.is_variable_name(name):

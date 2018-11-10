@@ -360,12 +360,3 @@ def parse_fortran_file(filename):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-# XXgoldyXX: v debug only
-    pdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    tfiles = [os.path.join(pdir, 'tests', 'cap_tests',
-                           'gfdl_cloud_microphys.F90')]
-    for file in tfiles:
-        mh = parse_fortran_file(file)
-        print("metadata headers from {}".format(file))
-        print mh
-# XXgoldyXX: ^ debug only

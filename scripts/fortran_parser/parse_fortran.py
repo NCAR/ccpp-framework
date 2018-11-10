@@ -6,6 +6,7 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
 from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
+from parse_tools import check_fortran_intrinsic, check_fortran_type
 
 # A collection of types and tools for parsing Fortran code to support
 # CCPP metadata parsing. The purpose of this code is limited to type
@@ -17,28 +18,6 @@ from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
 class Ftype(object):
     """Ftype is the base class for all Fortran types
     It is also the final type for intrinsic types except for character
-    >>> Ftype.is_intrinsic("integer")
-    True
-    >>> Ftype.is_intrinsic("inTegER")
-    True
-    >>> Ftype.is_intrinsic("double  precision")
-    True
-    >>> Ftype.is_intrinsic("doubleprecision")
-    True
-    >>> Ftype.is_intrinsic("type")
-    False
-    >>> Ftype.type_match("character")
-
-    >>> Ftype.type_match("type")
-
-    >>> Ftype.type_match("real") #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
-    >>> Ftype.type_match("InteGer") #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
-    >>> Ftype.type_match("complex(kind=r8)") #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
-    >>> Ftype.type_match("double precision") #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
     >>> Ftype('integer').typestr
     'integer'
     >>> Ftype('integer', kind_in='( kind= I8').print_decl() #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -70,26 +49,8 @@ class Ftype(object):
     intrinsic_types = [ r"integer", r"real", r"logical",
                         r"double\s*precision", r"complex" ]
 
-    re_dp = re.compile(r"(?i)double\s*precision")
     itype_re = re.compile(r"(?i)({})\s*(\([A-Za-z0-9,=_\s]+\))?".format(r"|".join(intrinsic_types)))
     kind_re = re.compile(r"(?i)kind\s*(\()?\s*([\'\"])?(.+?)([\'\"])?\s*(\))?")
-
-    @classmethod
-    def is_intrinsic(cls, typestr):
-        if typestr.strip().lower() in Ftype.intrinsic_types:
-            return True
-        elif typestr.lower()[0:6] == 'double':
-            # Special case for double precision
-            return Ftype.re_dp.match(typestr.strip()) is not None
-        else:
-            return False
-
-    @classmethod
-    def type_match(cls, line):
-        """Return an RE match if <line> represents an Ftype declaration"""
-        match = Ftype.itype_re.match(line.strip())
-        if match is not None:
-            return match
 
     def __init__(self, typestr_in=None, kind_in=None, line_in=None, context=None):
         if context is None:
@@ -117,7 +78,7 @@ class Ftype(object):
             match = Ftype.itype_re.match(line_in.strip())
             if match is None:
                 raise ParseSyntaxError("type declaration", token=line_in, context=self.context)
-            elif Ftype.is_intrinsic(match.group(1)):
+            elif is_fortran_intrinsic(match.group(1)):
                 self.typestr = match.group(1)
                 if match.group(2) is not None:
                     # Parse kind section
@@ -179,7 +140,7 @@ class Ftype(object):
         """Return a string of the declaration of the type"""
         if self.default_kind:
             return self.typestr
-        elif Ftype.is_intrinsic(self.typestr):
+        elif is_fortran_intrinsic(self.typestr):
             return "{}(kind={})".format(self.typestr, self.kind)
         else:
             # Derived type
@@ -357,7 +318,7 @@ class Ftype_type_decl(Ftype):
 
     def __init__(self, line, context):
         """Initialize an extended type from a declaration line"""
-        match = Ftype_character.type_match(line)
+        match = Ftype_type_decl.type_match(line)
         if match is None:
             raise ParseSyntaxError("character declaration", token=line, context=context)
         elif len(match.groups()) == 3:
@@ -388,6 +349,8 @@ class Ftype_type_decl(Ftype):
 #class Fmodule_subprog(object) # routines from a module subprogram part
 #class Fmodule(object) # Info about and parsing for a Fortran module
 #Fmodule will contain an Fmodule_spec and a Fmodule_subprog
+########################################################################
+
 ########################################################################
 
 if __name__ == "__main__":

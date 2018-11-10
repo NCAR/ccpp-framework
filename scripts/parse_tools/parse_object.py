@@ -171,7 +171,7 @@ class FortranMetadataSyntax(MetadataSyntax):
     False
     """
 
-    _blank_line = re.compile(r"^!!\s*$")
+    _blank_line = re.compile(r"!!\s*$")
     _table_start = re.compile(r"(![!>]\s+)")
     _line_start  = re.compile(r"(!!\s+)")
     _variable_name = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")

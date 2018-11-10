@@ -7,7 +7,7 @@ from __future__ import print_function
 import logging
 import ast
 import xml.etree.ElementTree as ET
-from parse_tools import check_dimensions, check_fortran_id
+from parse_tools import check_dimensions, check_fortran_id, check_fortran_type
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +129,8 @@ class VariableProperty(object):
                     tv = ast.literal_eval(test_value)
                 except SyntaxError as se:
                     tv = None
+                except ValueError as ve:
+                    tv = None
             else:
                 tv = test_value
             # End if
@@ -211,7 +213,7 @@ class Var(object):
                     VariableProperty('dimensions', list,
                                      check_fn_in=check_dimensions),
                     VariableProperty('type', str,
-                                     check_fn_in=check_fortran_id),
+                                     check_fn_in=check_fortran_type),
                     VariableProperty('kind', str,
                                      optional_in=True, default_in='kind_phys'),
                     VariableProperty('state_variable', bool,
@@ -237,11 +239,10 @@ class Var(object):
                 raise ValueError("Invalid metadata variable property, '{}'".format(key))
             # End if
         # End for
-        self._prop_dict = prop_dict
         # Make sure required properties are present
         for propname in Var.__required_props:
             if propname not in prop_dict:
-                raise ValueError("Required property, {}, missing".format(propname))
+                raise ValueError("Required property, '{}', missing".format(propname))
             # End if
         # End for
         self._prop_dict = prop_dict # Stealing dict from caller
