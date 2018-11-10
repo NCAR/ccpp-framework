@@ -32,7 +32,11 @@ def check_dimensions(test_val, max_len=0, error=False):
         for item in test_val:
             tv = check_fortran_id(item, max_len=max_len, error=error)
             if tv is None:
-                test_val = None
+                if error:
+                    raise ValueError("'{}' is an invalid dimension name".format(item))
+                else:
+                    test_val = None
+                # End if
                 break
             # End if
         # End for

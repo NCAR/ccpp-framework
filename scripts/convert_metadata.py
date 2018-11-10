@@ -113,6 +113,10 @@ def convert_file(filename_in, filename_out):
                                     # End if
                                     entry = "{}'{}'".format(entry, dim_names[dind])
                                 # End for
+                                if rank == 1:
+                                    # Need to interpret as a tuple
+                                    entry = entry + ", "
+                                # End if
                                 entry = entry + ")"
                             # End if
                             # Output attribute
