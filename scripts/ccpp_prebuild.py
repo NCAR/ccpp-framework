@@ -22,27 +22,11 @@ from mkdoc import metadata_to_html, metadata_to_latex
 from mkstatic import API, Suite, Group
 
 ###############################################################################
-# List of configured host models                                              #
-###############################################################################
-
-CCPP_PREBUILD_CONFIG_PATTERN = re.compile("ccpp_prebuild_config_(.*).py")
-
-def get_host_models_list():
-    host_models = []
-    for infile in os.listdir(os.path.split(__file__)[0]):
-        match = CCPP_PREBUILD_CONFIG_PATTERN.match(infile)
-        if match:
-            host_models.append(match.group(1))
-    return host_models
-
-HOST_MODELS = get_host_models_list()
-
-###############################################################################
 # Set up the command line argument parser and other global variables          #
 ###############################################################################
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model',  action='store', choices=HOST_MODELS, help='host model (case-sensitive)', required=True)
+parser.add_argument('--config', action='store', help='path to CCPP prebuild configuration file', required=True)
 parser.add_argument('--debug',  action='store_true', help='enable debugging output', default=False)
 parser.add_argument('--static', action='store_true', help='enable a static build for a given suite definition file', default=False)
 parser.add_argument('--suite',  action='store', help='suite definition file to use (for static build only)', default='')
@@ -70,23 +54,31 @@ def parse_arguments():
     """Parse command line arguments."""
     success = True
     args = parser.parse_args()
-    host_model = args.model
+    configfile = args.config
     debug = args.debug
     static = args.static
     if static and not args.suite:
         parser.print_help()
         sys.exit(-1)
     sdf = args.suite
-    return (success, host_model, debug, static, sdf)
+    return (success, configfile, debug, static, sdf)
 
-def import_config(host_model):
-    """Import the configuration file for a given host model"""
+def import_config(configfile):
+    """Import the configuration from a given configuration file"""
     success = True
     config = {}
 
-    # Import the host-model specific CCPP prebuild config
-    ccpp_prebuild_config_name = "ccpp_prebuild_config_{0}".format(host_model)
-    ccpp_prebuild_config = __import__(ccpp_prebuild_config_name)
+    if not os.path.isfile(configfile):
+        logging.error("Configuration file {0} not found".format(configfile))
+        success = False
+        return
+
+    # Import the host-model specific CCPP prebuild config;
+    # split into path and module name for import
+    configpath = os.path.abspath(os.path.split(configfile)[0])
+    configmodule = os.path.split(configfile)[1].rstrip('.py')
+    sys.path.append(configpath)
+    ccpp_prebuild_config = __import__(configmodule)
 
     # Definitions in host-model dependent CCPP prebuild config script
     config['variable_definition_files'] = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
@@ -101,6 +93,7 @@ def import_config(host_model):
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
     config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
     config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
+    config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
     config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE
     config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
 
@@ -513,7 +506,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
 def main():
     """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
-    (success, host_model, debug, static, sdf) = parse_arguments()
+    (success, configfile, debug, static, sdf) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -521,7 +514,7 @@ def main():
     if not success:
         raise Exception('Call to setup_logging failed.')
 
-    (success, config) = import_config(host_model)
+    (success, config) = import_config(configfile)
     if not success:
         raise Exception('Call to import_config failed.')
 
@@ -545,7 +538,7 @@ def main():
         raise Exception('Call to gather_variable_definitions failed.')
 
     # Create an HTML table with all variables provided by the model
-    success = metadata_to_html(metadata_define, host_model, config['html_vartable_file'])
+    success = metadata_to_html(metadata_define, config['host_model'], config['html_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_html failed.')
 
@@ -576,7 +569,7 @@ def main():
         raise Exception('Call to check_optional_arguments failed.')
 
     # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
-    success = metadata_to_latex(metadata_define, metadata_request, pset_request, host_model, config['latex_vartable_file'])
+    success = metadata_to_latex(metadata_define, metadata_request, pset_request, config['host_model'], config['latex_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_latex failed.')
 
