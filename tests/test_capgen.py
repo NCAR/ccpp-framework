@@ -15,12 +15,27 @@ if __name__ == '__main__' and __package__ is None:
 # End if
 import convert_metadata
 from fortran_parser import parse_fortran_file
+from parse_tools import register_fortran_ddt_name
 
 ########################################################################
 
 if __name__ == "__main__":
     pdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     sdir = os.path.join(os.path.dirname(pdir), 'ccpp-physics')
+# XXgoldyXX: v debug only
+    # Temporary DDT registration
+    register_fortran_ddt_name('GFS_control_type')
+    register_fortran_ddt_name('GFS_statein_type')
+    register_fortran_ddt_name('GFS_stateout_type')
+    register_fortran_ddt_name('GFS_sfcprop_type')
+    register_fortran_ddt_name('GFS_coupling_type')
+    register_fortran_ddt_name('GFS_grid_type')
+    register_fortran_ddt_name('GFS_tbd_type')
+    register_fortran_ddt_name('GFS_cldprop_type')
+    register_fortran_ddt_name('GFS_radtend_type')
+    register_fortran_ddt_name('GFS_diag_type')
+    register_fortran_ddt_name('GFS_interstitial_type')
+# XXgoldyXX: ^ debug only
     tfilenames = [os.path.join('physics', 'GFS_DCNV_generic.F90'),
     os.path.join('physics', 'GFS_MP_generic.F90'),
     os.path.join('physics', 'GFS_PBL_generic.F90'),

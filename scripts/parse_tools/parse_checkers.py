@@ -3,6 +3,7 @@
 """Helper functions to validate parsed input"""
 
 import re
+import copy
 
 ########################################################################
 
@@ -94,6 +95,8 @@ FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
                             "double precision", "character" ]
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
 FORTRAN_TYPE_RE = re.compile(r"(?i)type\s*\(\s*("+FORTRAN_ID+r")\s*\)")
+
+_REGISTERED_FORTRAN_DDT_NAMES = []
 
 ########################################################################
 
@@ -218,18 +221,14 @@ def check_fortran_type(typestr, error=False):
     >>> check_fortran_type("type", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ValueError: 'char' is not a valid derived Fortran type
-    >>> check_fortran_type("type(foo)")
-    'type(foo)'
-    >>> check_fortran_type("type ( foo )")
-    'type ( foo )'
     >>> check_fortran_type("type(hi mom)", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ValueError: 'type(hi mom)' is not a valid derived Fortran type
     """
     dt = ""
     match = check_fortran_intrinsic(typestr, error)
-    if (match is None) and (typestr.lower()[0:4] == 'type'):
-        match = FORTRAN_TYPE_RE.match(typestr)
+    if match is None:
+        match = registered_fortran_ddt_name(typestr)
         dt = " derived"
     # End if
     if match is None:
@@ -240,6 +239,20 @@ def check_fortran_type(typestr, error=False):
         # End if
     # End if
     return typestr
+
+########################################################################
+
+def registered_fortran_ddt_name(name):
+    if name in _REGISTERED_FORTRAN_DDT_NAMES:
+        return name
+    else:
+        return None
+
+########################################################################
+
+def register_fortran_ddt_name(name):
+    if name not in _REGISTERED_FORTRAN_DDT_NAMES:
+        _REGISTERED_FORTRAN_DDT_NAMES.append(name)
 
 ########################################################################
 
