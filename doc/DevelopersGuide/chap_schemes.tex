@@ -120,11 +120,11 @@ This section describes briefly how to add a new scheme to the CCPP pool and use 
 \item Identify the required variables for your target host model: for a list of variables available for host model \execsub{XYZ} (currently \execout{SCM} and \execout{FV3}), see \execout{ccpp/framework/doc/DevelopersGuide/CCPP\_VARIABLES\_XYZ.pdf}. Contact the GMTB helpdesk at \url{gmtb-help@ucar.edu} if you need additional variables that you believe should be provided by the host model or as part of a pre-/post-scheme (interstitial scheme) instead of being calculated from existing variables inside your scheme.
 \item Identify if your new scheme requires additional interstitial code that must be run before/after the scheme and that cannot be part of the scheme itself, for example because of dependencies on other schemes and/or the order the scheme is run in the suite definition file. As of now, interstitial schemes should be created in cooperation with the GMTB helpdesk.
 \item Follow the guidelines outlined in the previous section to make your scheme CCPP-compliant. Make sure to use an uppercase suffix \execout{.F90} to enable CPP preprocessing.
-\item Locate the CCPP prebuild configuration files for the target host model, for example:
+\item Locate the CCPP prebuild configuration files for the target host model, for GFDL FV3 and GMTB SCM:
 \begin{lstlisting}[language=Python]
-ccpp/framework/scripts/ccpp_prebuild_config_FV3.py # for GFDL FV3
-ccpp/framework/scripts/ccpp_prebuild_config_SCM.py # FOR GMTB SCM
+ccpp/config/ccpp_prebuild_config.py
 \end{lstlisting}
+in the host model's main repository (NEMSfv3gfs or gmtb-scm, respectively).
 \item Add the new scheme to the list of schemes using the same path as the existing schemes:
 \begin{samepage}
 \begin{lstlisting}[language=Python]

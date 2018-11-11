@@ -149,11 +149,8 @@ The CCPP prebuild script \execout{ccpp/framework/scripts/ccpp\_prebuild.py} is t
 \item Populates makefiles with schemes and caps.
 \end{itemize}
 
-In order to connect the CCPP with a host model \execsub{XYZ}, a Python-based configuration file for this model must be created in the directory \execout{ccpp/framework/scripts}. The easiest way is to copy an existing configuration file in this directory, for example
-\begin{lstlisting}[language=bash]
-cp ccpp_prebuild_config_SCM.py ccpp_prebuild_config_XYZ.py
-\end{lstlisting}
-The configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} depends largely on (a) the directory structure of the host model itself, (b) where the \execout{ccpp/framework} and the \execout{ccpp/physics} directories are located relative to the directory structure of the host model, and (c) from which directory the \execout{ccpp\_prebuild.py} script is executed before/during the build process (this is referred to as \execout{basedir} in \execout{ccpp\_prebuild\_config\_XYZ.py}).
+In order to connect the CCPP with a host model \execsub{XYZ}, a Python-based configuration file for this model must be created in the host model's repository. The easiest way is to copy an the existing configuration file for the TEST model in sub-directory \execout{schemes/check} of the \execout{ccpp-framework} repository.
+The configuration in \execout{ccpp\_prebuild\_config.py} depends largely on (a) the directory structure of the host model itself, (b) where the \execout{ccpp/framework} and the \execout{ccpp/physics} directories are located relative to the directory structure of the host model, and (c) from which directory the \execout{ccpp\_prebuild.py} script is executed before/during the build process (this is referred to as \execout{basedir} in \execout{ccpp\_prebuild\_config\_XYZ.py}).
 
 Listing~\ref{lst_ccpp_prebuild_config} contains an example for the SCM CCPP prebuild config. Here, it is assumed that both \execout{ccpp/framework} and \execout{ccpp/physics} are located in the top-level directory of the host model, and that \execout{ccpp\_prebuild.py} is executed from the same top-level directory.
 \begin{lstlisting}[language=python,
@@ -161,6 +158,9 @@ Listing~\ref{lst_ccpp_prebuild_config} contains an example for the SCM CCPP preb
                  label=lst_ccpp_prebuild_config,
                  float=p,
                  caption=CCPP prebuild config for SCM (shortened)]
+# Host model identifier
+HOST_MODEL_IDENTIFIER = "TEST"
+
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
@@ -236,9 +236,9 @@ MODULE_USE_TEMPLATE_SCHEME_CAP = \
 \end{lstlisting}
 \clearpage
 
-Once the configuration in \execout{ccpp\_prebuild\_config\_XYZ.py} is complete, run
+Once the configuration in \execout{ccpp\_prebuild\_config.py} is complete, run
 \begin{lstlisting}[language=bash]
-./ccpp/framework/scripts/ccpp_prebuild.py --model=XYZ [--debug]
+./ccpp/framework/scripts/ccpp_prebuild.py --config=full_path_of_config_file [--debug]
 \end{lstlisting}
 from the top-level directory. Without the debugging flag, the output should look like
 \begin{lstlisting}[language=bash,basicstyle=\scriptsize\ttfamily]
