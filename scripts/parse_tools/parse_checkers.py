@@ -45,6 +45,44 @@ def check_dimensions(test_val, max_len=0, error=False):
 
 ########################################################################
 
+# CF_ID is a string representing the regular expression for CF Standard Names
+CF_ID = r"[a-z][a-z0-9_]*"
+__CFID_RE = re.compile(CF_ID+r"$")
+
+def check_cf_standard_name(test_val, error=False):
+    """Return <test_val> if a valid CF Standard Name, otherwise, None
+    http://cfconventions.org/Data/cf-standard-names/docs/guidelines.html
+    if <error> is True, raise an Exception if <test_val> is not valid.
+    >>> check_cf_standard_name("hi_mom")
+    'hi_mom'
+    >>> check_cf_standard_name("hi mom")
+
+    >>> check_cf_standard_name("hi mom", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: 'hi_mom' is not a valid CF Standard Name
+    >>> check_cf_standard_name("")
+
+    >>> check_cf_standard_name("_hi_mom")
+
+    >>> check_cf_standard_name("2pac")
+
+    >>> check_cf_standard_name("Agood4tranID")
+
+    >>> check_cf_standard_name("agoodcfid")
+    'agoodcfid'
+    """
+    match = __CFID_RE.match(test_val)
+    if match is None:
+        if error:
+            raise ValueError("'{}' is not a valid CF Standard Name".format(test_val))
+        else:
+            test_val = None
+        # End if
+    # End if
+    return test_val
+
+########################################################################
+
 ### Fortran-specific parsing helper variables and functions
 
 ########################################################################

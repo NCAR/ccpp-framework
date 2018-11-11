@@ -102,6 +102,13 @@ def convert_file(filename_in, filename_out):
                             elif std_name == 'horizontal_loop_extent':
                                 if len(dim_names[0]) == 0:
                                     dim_names[0] = std_name
+                                # End if
+                            elif std_name == 'number_of_tracers':
+                                dim_names[2] = std_name
+                            elif std_name[0:18] == 'number_of_tracers_':
+                                if len(dim_names[2]) == 0:
+                                    dim_names[2] = std_name
+                                # End if
                             # End if
                             # Fix dimensions entry
                             if attr_name == 'dimensions':
@@ -125,6 +132,12 @@ def convert_file(filename_in, filename_out):
                             # End if
                         # End for (done with entry)
                     # End while (done with table)
+                else:
+                    # Just write the line (should be a table ending)
+                    if line.strip() != '!!':
+                        raise ValueError("All tables must end with !! line")
+                    # End if
+                    file.write(line+'\n')
                 # End if (blank table)
             else:
                 # Not a table, just write and continue

@@ -285,8 +285,6 @@ class ParseObject(ParseContext):
 
     def next_line(self):
         self.line_num = self._line_next
-        # For now, just reset the context
-        self.line_num = self.line_num
         return self.curr_line()
 
     def reset_pos(self, line_start=0):

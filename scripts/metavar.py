@@ -7,7 +7,8 @@ from __future__ import print_function
 import logging
 import ast
 import xml.etree.ElementTree as ET
-from parse_tools import check_dimensions, check_fortran_id, check_fortran_type
+from parse_tools import check_fortran_id, check_fortran_type
+from parse_tools import check_dimensions, check_cf_standard_name
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ class Var(object):
     __var_props = [ VariableProperty('local_name', str,
                                      check_fn_in=check_fortran_id),
                     VariableProperty('standard_name', str,
-                                     check_fn_in=check_fortran_id),
+                                     check_fn_in=check_cf_standard_name),
                     VariableProperty('description', str),
                     VariableProperty('units', str),
                     VariableProperty('dimensions', list,

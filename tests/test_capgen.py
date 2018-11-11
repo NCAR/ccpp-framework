@@ -20,7 +20,7 @@ from fortran_parser import parse_fortran_file
 
 if __name__ == "__main__":
     pdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sdir = os.path.join(os.path.dirname(pdir), 'gmtb-scm', 'ccpp', 'physics')
+    sdir = os.path.join(os.path.dirname(pdir), 'ccpp-physics')
     tfilenames = [os.path.join('physics', 'GFS_DCNV_generic.F90'),
     os.path.join('physics', 'GFS_MP_generic.F90'),
     os.path.join('physics', 'GFS_PBL_generic.F90'),

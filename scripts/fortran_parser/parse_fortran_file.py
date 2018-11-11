@@ -40,6 +40,10 @@ def line_statements(line):
     ["write(6, *) 'This is all one statement; y''all;'"]
     >>> line_statements('write(6, *) "This is all one statement; y""all;"')
     ['write(6, *) "This is all one statement; y""all;"']
+    >>> line_statements(" ! This is a comment statement; y'all;")
+    [" ! This is a comment statement; y'all;"]
+    >>> line_statements("!! ")
+    ['!! ']
     """
     statements = list()
     ind_start = 0
@@ -101,6 +105,8 @@ def scan_line(line, in_continue, in_single_char, in_double_char, context):
     Return continue_in_col, continue_out_col, in_single_char, in_double_char,
            comment_col
     >>> scan_line("! Comment line", False, False, False, ParseContext())
+    (-1, -1, False, False, 0)
+    >>> scan_line("!! ", False, False, False, ParseContext())
     (-1, -1, False, False, 0)
     >>> scan_line("int :: index", False, False, False, ParseContext())
     (-1, -1, False, False, -1)
@@ -293,20 +299,28 @@ def parse_program(pobj, statements):
     statements = parse_specification(pobj, statements[1:])
     # Look for metadata tables
     statements = read_statements(pobj, statements)
+    inprogram = True
     while statements is not None:
-        for statement in statements:
+        for index in xrange(len(statements)):
             # End program
-            pmatch = endprogram_re.match(statement)
+            pmatch = endprogram_re.match(statements[index])
             if pmatch is not None:
                 prog_name = pmatch.group(1)
                 pobj.leave_region('PROGRAM', region_name=prog_name)
-            elif MetadataHeader.metadata_table_start(statement, context=pobj, syntax=FortranMetadataSyntax):
+                inprogram = False
+            elif MetadataHeader.metadata_table_start(statements[index],
+                                                     context=pobj,
+                                                     syntax=FortranMetadataSyntax):
                 mheaders.append(MetadataHeader(pobj))
             # End if
         # End for
-        statements = read_statements(pobj)
+        if not inprogram:
+            break
+        else:
+            statements = read_statements(pobj)
+        # End if
     # End while
-    return mheaders
+    return statements[index+1:], mheaders
 
 def parse_module(pobj, statements):
     # The first statement should be a program statement, grab the name
@@ -321,20 +335,29 @@ def parse_module(pobj, statements):
     statements = parse_specification(pobj, statements[1:])
     # Look for metadata tables
     statements = read_statements(pobj, statements)
-    while statements is not None:
-        for statement in statements:
-            # End program
-            pmatch = endmodule_re.match(statement)
+    inmodule = True
+    while inmodule and (statements is not None):
+        for index in xrange(len(statements)):
+            # End module
+            pmatch = endmodule_re.match(statements[index])
             if pmatch is not None:
                 mod_name = pmatch.group(1)
                 pobj.leave_region('MODULE', region_name=mod_name)
-            elif MetadataHeader.metadata_table_start(statement, context=pobj, syntax=FortranMetadataSyntax):
+                inmodule = False
+                break
+            elif MetadataHeader.metadata_table_start(statements[index],
+                                                     context=pobj,
+                                                     syntax=FortranMetadataSyntax):
                 mheaders.append(MetadataHeader(pobj))
             # End if
         # End for
-        statements = read_statements(pobj)
+        if not inmodule:
+            break
+        else:
+            statements = read_statements(pobj)
+        # End if
     # End while
-    return mheaders
+    return statements[index+1:], mheaders
 
 def parse_fortran_file(filename):
     mheaders = list()
@@ -342,16 +365,22 @@ def parse_fortran_file(filename):
     pobj.reset_pos()
     curr_line, clo = pobj.curr_line()
     statements = line_statements(curr_line)
+    newstatements = True
     while statements is not None:
         for index in xrange(len(statements)):
             statement = statements[index]
             if program_re.match(statement) is not None:
-                mheaders.extend(parse_program(pobj, statements[index:]))
+                statements, pheaders = parse_program(pobj, statements[index:])
+                mheaders.extend(pheaders)
+                newstatements = len(statements) == 0
             elif module_re.match(statement) is not None:
-                mheaders.extend(parse_module(pobj, statements[index:]))
+                statements, mheaders = parse_module(pobj, statements[index:])
+                mheaders.extend(mheaders)
+                newstatements = len(statements) == 0
             # End if
         # End for
-        statements = read_statements(pobj)
+        if newstatements:
+            statements = read_statements(pobj)
     # End while
     return mheaders
 

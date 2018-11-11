@@ -173,7 +173,9 @@ class MetadataHeader(object):
         # End if
         curr_line, curr_line_num = self._pobj.next_line()
         # Skip past any 'blank' lines
+        blanks_found = False
         while self._syntax.blank_line(curr_line):
+            blanks_found = True
             curr_line, curr_line_num = self._pobj.next_line()
         # End while
         # Read the variables
@@ -197,8 +199,11 @@ class MetadataHeader(object):
                     raise ParseSyntaxError("End of file parsing Metadata table",
                                            context=self._pobj)
                 elif not self._syntax.blank_line(curr_line):
-                    raise ParseSyntaxError("Metadata table ending", curr_line,
-                                           context=self._pobj)
+                    # First check if we have a valid empty table
+                    if (not blanks_found) or (len(self._variables) > 0):
+                        raise ParseSyntaxError("Metadata table ending",
+                                               curr_line, context=self._pobj)
+                    # End if
                 # End if
             # End if
         # End while
@@ -214,7 +219,7 @@ class MetadataHeader(object):
         else:
             local_name = None
         # End if
-        if valid_line and (local_name is None):
+        if local_name is None:
             # This is not a valid variable line, punt (should be end of table)
             valid_line = False
         # End if
