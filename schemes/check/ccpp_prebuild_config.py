@@ -7,6 +7,8 @@
 # Definitions                                                                 #
 ###############################################################################
 
+HOST_MODEL_IDENTIFIER = 'TEST'
+
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
