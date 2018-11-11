@@ -14,6 +14,12 @@ def check_dimensions(test_val, max_len=0, error=False):
     if <error> is True, raise an Exception if <test_val> is not valid.
     >>> check_dimensions(["dim1", "dim2name"])
     ['dim1', 'dim2name']
+    >>> check_dimensions([":", ":"])
+    [':', ':']
+    >>> check_dimensions([":", "dim2"])
+    [':', 'dim2']
+    >>> check_dimensions(["dim1", ":"])
+    ['dim1', ':']
     >>> check_dimensions(["dim1", "dim2name"], max_len=5)
 
     >>> check_dimensions(["dim1", "dim2name"], error=True, max_len=5)
@@ -32,7 +38,7 @@ def check_dimensions(test_val, max_len=0, error=False):
     else:
         for item in test_val:
             tv = check_fortran_id(item, max_len=max_len, error=error)
-            if tv is None:
+            if (tv is None) and (item != ':'):
                 if error:
                     raise ValueError("'{}' is an invalid dimension name".format(item))
                 else:

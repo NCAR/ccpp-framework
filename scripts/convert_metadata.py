@@ -52,7 +52,7 @@ def convert_file(filename_in, filename_out):
                 line, lindex = next_line(fin_lines, max_line, cindex=lindex)
                 words = line.split('|')
                 header_locs = {}
-                dim_names = ['']*15
+                dim_names = [':']*15
                 # Do not work on a blank table
                 if len(words) > 1:
                     table_header = [x.strip() for x in words[1:-1]]

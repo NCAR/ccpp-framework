@@ -35,6 +35,7 @@ if __name__ == "__main__":
     register_fortran_ddt_name('GFS_radtend_type')
     register_fortran_ddt_name('GFS_diag_type')
     register_fortran_ddt_name('GFS_interstitial_type')
+    register_fortran_ddt_name('GFS_data_type')
 # XXgoldyXX: ^ debug only
     tfilenames = [os.path.join('physics', 'GFS_DCNV_generic.F90'),
     os.path.join('physics', 'GFS_MP_generic.F90'),
