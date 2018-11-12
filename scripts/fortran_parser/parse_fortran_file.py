@@ -17,7 +17,7 @@ from parse_tools import ParseObject, FortranMetadataSyntax, FORTRAN_ID
 from parse_metadata_table import MetadataHeader
 
 comment_re = re.compile(r"!.*$")
-fixed_comment_re = re.compile(r"(?i)[C*]|(?:[ ]{0,4}!)")
+fixed_comment_re = re.compile(r"(?i)([C*]|(?:[ ]{0,4}!))")
 program_re = re.compile(r"(?i)\s*program\s+("+FORTRAN_ID+r")")
 endprogram_re = re.compile(r"(?i)\s*end\s*program\s+("+FORTRAN_ID+r")?")
 module_re = re.compile(r"(?i)\s*module\s+("+FORTRAN_ID+r")")
@@ -133,7 +133,8 @@ def scan_fixed_line(line, in_single_char, in_double_char, context):
     """
 
     # Check if comment or continue statement
-    is_comment = fixed_comment_re.match(line) is not None
+    cmatch = fixed_comment_re.match(line)
+    is_comment =  cmatch is not None
     is_continue = fixed_continue_re.match(line) is not None
     # A few sanity checks
     if (in_single_char or in_double_char) and (not is_continue):
@@ -147,7 +148,7 @@ def scan_fixed_line(line, in_single_char, in_double_char, context):
         comment_col = -1
         index = 6
     elif is_comment:
-        comment_col = 0
+        comment_col = len(cmatch.group(1)) - 1
         continue_in_col = -1
         index = 6
     else:
