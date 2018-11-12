@@ -26,6 +26,8 @@ continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 fixed_continue_re = re.compile(r"(?i)     [^0 ]")
 blank_re = re.compile(r"\s+")
 
+logger = logging.getLogger(__name__)
+
 ########################################################################
 
 def line_statements(line):
@@ -150,7 +152,7 @@ def scan_fixed_line(line, in_single_char, in_double_char, context):
     elif is_comment:
         comment_col = len(cmatch.group(1)) - 1
         continue_in_col = -1
-        index = 6
+        index = len(line.rstrip())
     else:
         continue_in_col = -1
         comment_col = -1
@@ -338,6 +340,7 @@ def read_file(filename, preproc_defs=None):
         in_schar = False # Single quote character context
         in_dchar = False # Double quote character context
         prev_line = None
+        prev_line_num = -1
         curr_line, curr_line_num = pobj.curr_line()
         while curr_line is not None:
             # Skip empty lines and comment-only lines
@@ -351,6 +354,10 @@ def read_file(filename, preproc_defs=None):
                 cont_in_col, in_schar, in_dchar, comment_col = res
                 continue_col = cont_in_col # No warning in fixed form
                 cont_out_col = -1
+                if (comment_col < 0) and (prev_line is None):
+                    # Real statement, grab the line # in case is is continued
+                    prev_line_num = curr_line_num
+                # End if
             else:
                 res = scan_free_line(curr_line, (continue_col >= 0),
                                      in_schar, in_dchar, pobj)
@@ -358,6 +365,9 @@ def read_file(filename, preproc_defs=None):
             # End if
             # If in a continuation context, move this line to previous
             if continue_col >= 0:
+                if fixed_form and (prev_line is None):
+                    prev_line = pobj.peek_line(prev_line_num)
+                # End if
                 if prev_line is None:
                     raise ParseInternalError("No prev_line to continue", pobj)
                 # End if
@@ -374,23 +384,13 @@ def read_file(filename, preproc_defs=None):
                 if cont_out_col < 0:
                     # We are done with this line, reset prev_line
                     prev_line = None
-                    prev_line_num = -1
+                    if not fixed_form:
+                        prev_line_num = -1
+                    # End if
                 # End if
             # End if
             continue_col = cont_out_col
-            if fixed_form and (prev_line is None):
-                # Peek ahead to see if we need to set up a prev_line
-                peek_line_num = curr_line_num + 1
-                peek_line = pobj.peek_line(peek_line_num)
-                while (peek_line is not None) and (fixed_comment_re.match(peek_line) is not None):
-                    peek_line_num = peek_line_num + 1
-                    peek_line = pobj.peek_line(peek_line_num)
-                # End while
-                if (peek_line is not None) and (fixed_continue_re.match(peek_line) is not None):
-                    prev_line = curr_line
-                    prev_line_num = curr_line_num
-                # End if
-            elif (continue_col >= 0) and (prev_line is None):
+            if (continue_col >= 0) and (prev_line is None):
                 # We need to set up prev_line as it is continued
                 prev_line = curr_line[0:continue_col]
                 if not (in_schar or in_dchar):

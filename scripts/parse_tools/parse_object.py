@@ -288,20 +288,27 @@ class ParseObject(ParseContext):
         return self.curr_line()
 
     def peek_line(self, line_num):
-        if line_num < len(self._lines):
+        if (line_num >= 0) and (line_num < len(self._lines)):
             return self._lines[line_num]
         else:
             return None
         # End if
 
     def reset_pos(self, line_start=0):
-        self.line_num = line_start
-        self._line_next = line_start
+        if (line_start < 0) or (line_start >= len(self._lines)):
+            raise ValueError('Attempt to reset_pos to non-existent line, {}'.format(line_start))
+        else:
+            self.line_num = line_start
+            self._line_next = line_start
+        # End if
 
     def write_line(self, line_num, line):
         "Overwrite line, <line_num> with <line>"
-        self._lines[line_num] = line
-
+        if (line_num < 0) or (line_num >= len(self._lines)):
+            raise ValueError('Attempt to write non-existent line, {}'.format(line_num))
+        else:
+            self._lines[line_num] = line
+        # End if
 
 ########################################################################
 
