@@ -17,11 +17,13 @@ from parse_tools import ParseObject, FortranMetadataSyntax, FORTRAN_ID
 from parse_metadata_table import MetadataHeader
 
 comment_re = re.compile(r"!.*$")
+fixed_comment_re = re.compile(r"(?i)[C*]|(?:[ ]{0,4}!)")
 program_re = re.compile(r"(?i)\s*program\s+("+FORTRAN_ID+r")")
 endprogram_re = re.compile(r"(?i)\s*end\s*program\s+("+FORTRAN_ID+r")?")
 module_re = re.compile(r"(?i)\s*module\s+("+FORTRAN_ID+r")")
 endmodule_re = re.compile(r"(?i)\s*end\s*module\s+("+FORTRAN_ID+r")?")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
+fixed_continue_re = re.compile(r"(?i)     [^0 ]")
 blank_re = re.compile(r"\s+")
 
 ########################################################################
@@ -99,41 +101,136 @@ def read_statements(pobj, statements=None):
     return statements
 
 ########################################################################
+def scan_fixed_line(line, in_single_char, in_double_char, context):
+    """Scan a fixed-format FORTRAN line for continue indicators, continued
+    quotes, and comments
+    Return continue_in_col, in_single_char, in_double_char,
+           comment_col
+    >>> scan_fixed_line('     & line continued', False, False, ParseContext())
+    (5, False, False, -1)
+    >>> scan_fixed_line('     & line continued"', False, True, ParseContext())
+    (5, False, False, -1)
+    >>> scan_fixed_line('     * line continued', False, False, ParseContext())
+    (5, False, False, -1)
+    >>> scan_fixed_line('     1 line continued', False, False, ParseContext())
+    (5, False, False, -1)
+    >>> scan_fixed_line('C     comment line', False, False, ParseContext())
+    (-1, False, False, 0)
+    >>> scan_fixed_line('*     comment line', False, False, ParseContext())
+    (-1, False, False, 0)
+    >>> scan_fixed_line('!     comment line', False, False, ParseContext())
+    (-1, False, False, 0)
+    >>> scan_fixed_line(' !    comment line', False, False, ParseContext())
+    (-1, False, False, 1)
+    >>> scan_fixed_line('    ! comment line', False, False, ParseContext())
+    (-1, False, False, 4)
+    >>> scan_fixed_line('     ! not comment line', False, False, ParseContext())
+    (5, False, False, -1)
+    >>> scan_fixed_line('!...................................', False, False, ParseContext())
+    (-1, False, False, 0)
+    >>> scan_fixed_line('123   x = x + 1', False, False, ParseContext())
+    (-1, False, False, -1)
+    """
 
-def scan_line(line, in_continue, in_single_char, in_double_char, context):
-    """Scan a line for continue indicators, continued quotes, and comments
+    # Check if comment or continue statement
+    is_comment = fixed_comment_re.match(line) is not None
+    is_continue = fixed_continue_re.match(line) is not None
+    # A few sanity checks
+    if (in_single_char or in_double_char) and (not is_continue):
+        raise ParseSyntaxError("Cannot start line in character context if not a continued line", context=context)
+    # Endif
+    if in_single_char and in_double_char:
+        raise ParseSyntaxError("Cannot be both in an apostrophe character context and a quote character context", context=context)
+
+    if is_continue:
+        continue_in_col = 5
+        comment_col = -1
+        index = 6
+    elif is_comment:
+        comment_col = 0
+        continue_in_col = -1
+        index = 6
+    else:
+        continue_in_col = -1
+        comment_col = -1
+        index = 0
+    # End if
+
+    last_ind = len(line.rstrip()) - 1
+    # Process the line
+    while index <= last_ind:
+        blank = blank_re.match(line[index:])
+        if blank is not None:
+            index = index + len(blank.group(0)) - 1 # +1 at end of loop
+        elif in_single_char:
+            if line[index:min(index+1,last_ind)] == "''":
+                # Embedded single quote
+                index = index + 1 # +1 and end of loop
+            elif line[index] == "'":
+                in_single_char = False
+                # End if
+            # End if (just ignore any other character)
+        elif in_double_char:
+            if line[index:min(index+1,last_ind)] == '""':
+                # Embedded double quote
+                index = index + 1 # +1 and end of loop
+            elif line[index] == '"':
+                in_double_char = False
+                # End if
+            # End if (just ignore any other character)
+        elif line[index] == "'":
+            # If we got here, we are not in a character context, start single
+            in_single_char = True
+        elif line[index] == '"':
+            # If we got here, we are not in a character context, start double
+            in_double_char = True
+        elif line[index] == '!':
+            # If we got here, we are not in a character context, done with line
+            comment_col = index
+            index = last_ind
+        # End if
+        index = index + 1
+    # End while
+
+    return continue_in_col, in_single_char, in_double_char, comment_col
+
+########################################################################
+
+def scan_free_line(line, in_continue, in_single_char, in_double_char, context):
+    """Scan a Fortran line for continue indicators, continued quotes, and
+    comments
     Return continue_in_col, continue_out_col, in_single_char, in_double_char,
            comment_col
-    >>> scan_line("! Comment line", False, False, False, ParseContext())
+    >>> scan_free_line("! Comment line", False, False, False, ParseContext())
     (-1, -1, False, False, 0)
-    >>> scan_line("!! ", False, False, False, ParseContext())
+    >>> scan_free_line("!! ", False, False, False, ParseContext())
     (-1, -1, False, False, 0)
-    >>> scan_line("int :: index", False, False, False, ParseContext())
+    >>> scan_free_line("int :: index", False, False, False, ParseContext())
     (-1, -1, False, False, -1)
-    >>> scan_line("int :: inde& ! oops", False, False, False, ParseContext())
+    >>> scan_free_line("int :: inde& ! oops", False, False, False, ParseContext())
     (-1, 11, False, False, 13)
-    >>> scan_line("int :: inde&", False, False, False, ParseContext())
+    >>> scan_free_line("int :: inde&", False, False, False, ParseContext())
     (-1, 11, False, False, -1)
-    >>> scan_line("character(len=*), parameter :: foo = 'This line & not continued'", False, False, False, ParseContext())
+    >>> scan_free_line("character(len=*), parameter :: foo = 'This line & not continued'", False, False, False, ParseContext())
     (-1, -1, False, False, -1)
-    >>> scan_line("character(len=*), parameter :: foo = 'This is continue line& ", False, False, False, ParseContext())
+    >>> scan_free_line("character(len=*), parameter :: foo = 'This is continue line& ", False, False, False, ParseContext())
     (-1, 59, True, False, -1)
-    >>> scan_line('character(len=*), parameter :: foo = "This line & not continued"', False, False, False, ParseContext())
+    >>> scan_free_line('character(len=*), parameter :: foo = "This line & not continued"', False, False, False, ParseContext())
     (-1, -1, False, False, -1)
-    >>> scan_line('character(len=*), parameter :: foo = "This is continue line& ', False, False, False, ParseContext())
+    >>> scan_free_line('character(len=*), parameter :: foo = "This is continue line& ', False, False, False, ParseContext())
     (-1, 59, False, True, -1)
-    >>> scan_line('  & line continued"', True, False, True, ParseContext())
+    >>> scan_free_line('  & line continued"', True, False, True, ParseContext())
     (2, -1, False, False, -1)
-    >>> scan_line('  & line continued"', True, True, False, ParseContext()) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> scan_free_line('  & line continued"', True, True, False, ParseContext()) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Cannot end non-continued line in a character context, at <standard input>:1
-    >>> scan_line("  & line continued'", True, False, True, ParseContext()) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> scan_free_line("  & line continued'", True, False, True, ParseContext()) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Cannot end non-continued line in a character context, at <standard input>:1
-    >>> scan_line("int :: inde&", False, True, False, ParseContext())
+    >>> scan_free_line("int :: inde&", False, True, False, ParseContext())
     Traceback (most recent call last):
     ParseSyntaxError: Cannot start line in character context if not a continued line, at <standard input>:1
-    >>> scan_line("int :: inde&", True, True, True, ParseContext())
+    >>> scan_free_line("int :: inde&", True, True, True, ParseContext())
     Traceback (most recent call last):
     ParseSyntaxError: Cannot be both in an apostrophe character context and a quote character context, at <standard input>:1
     """
@@ -205,6 +302,7 @@ def scan_line(line, in_continue, in_single_char, in_double_char, context):
             else:
                 raise ParseSyntaxError("Invalid continue, ampersand not followed by comment character", context=context)
             # End if
+        # End if
         index = index + 1
     # End while
     # A final check
@@ -224,6 +322,8 @@ def read_file(filename, preproc_defs=None):
     if not os.path.exists(filename):
         raise IOError("read_file: file, '{}', does not exist".format(filename))
     else:
+        # We need special rules for fixed-form source
+        fixed_form = filename[-2:] == '.f'
         # Read all lines of the file at once
         with open(filename, 'r') as file:
             file_lines = file.readlines()
@@ -245,10 +345,17 @@ def read_file(filename, preproc_defs=None):
                 continue
             # End if
             # scan the line for properties
-            res = scan_line(curr_line, (continue_col >= 0),
-                            in_schar, in_dchar, pobj)
-            cont_in_col, cont_out_col, in_schar, in_dchar, comment_col = res
-            # If in a continuation context, move this line to previos
+            if fixed_form:
+                res = scan_fixed_line(curr_line, in_schar, in_dchar, pobj)
+                cont_in_col, in_schar, in_dchar, comment_col = res
+                continue_col = cont_in_col # No warning in fixed form
+                cont_out_col = -1
+            else:
+                res = scan_free_line(curr_line, (continue_col >= 0),
+                                     in_schar, in_dchar, pobj)
+                cont_in_col, cont_out_col, in_schar, in_dchar, comment_col = res
+            # End if
+            # If in a continuation context, move this line to previous
             if continue_col >= 0:
                 if prev_line is None:
                     raise ParseInternalError("No prev_line to continue", pobj)
@@ -270,7 +377,19 @@ def read_file(filename, preproc_defs=None):
                 # End if
             # End if
             continue_col = cont_out_col
-            if (continue_col >= 0) and (prev_line is None):
+            if fixed_form and (prev_line is None):
+                # Peek ahead to see if we need to set up a prev_line
+                peek_line_num = curr_line_num + 1
+                peek_line = pobj.peek_line(peek_line_num)
+                while (peek_line is not None) and (fixed_comment_re.match(peek_line) is not None):
+                    peek_line_num = peek_line_num + 1
+                    peek_line = pobj.peek_line(peek_line_num)
+                # End while
+                if (peek_line is not None) and (fixed_continue_re.match(peek_line) is not None):
+                    prev_line = curr_line
+                    prev_line_num = curr_line_num
+                # End if
+            elif (continue_col >= 0) and (prev_line is None):
                 # We need to set up prev_line as it is continued
                 prev_line = curr_line[0:continue_col]
                 if not (in_schar or in_dchar):

@@ -287,6 +287,13 @@ class ParseObject(ParseContext):
         self.line_num = self._line_next
         return self.curr_line()
 
+    def peek_line(self, line_num):
+        if line_num < len(self._lines):
+            return self._lines[line_num]
+        else:
+            return None
+        # End if
+
     def reset_pos(self, line_start=0):
         self.line_num = line_start
         self._line_next = line_start
