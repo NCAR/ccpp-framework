@@ -100,7 +100,7 @@ def convert_file(filename_in, filename_out):
                             elif std_name == 'horizontal_dimension':
                                 dim_names[0] = std_name
                             elif std_name == 'horizontal_loop_extent':
-                                if len(dim_names[0]) == 0:
+                                if dim_names[0] == ':':
                                     dim_names[0] = std_name
                                 # End if
                             elif std_name == 'number_of_tracers':
@@ -120,10 +120,6 @@ def convert_file(filename_in, filename_out):
                                     # End if
                                     entry = "{}'{}'".format(entry, dim_names[dind])
                                 # End for
-                                if rank == 1:
-                                    # Need to interpret as a tuple
-                                    entry = entry + ", "
-                                # End if
                                 entry = entry + ")"
                             # End if
                             # Output attribute

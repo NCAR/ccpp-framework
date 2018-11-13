@@ -127,7 +127,13 @@ class VariableProperty(object):
         elif self.type is list:
             if type(test_value) is str:
                 try:
-                    tv = ast.literal_eval(test_value)
+                    tvv = ast.literal_eval(test_value)
+                    if type(tvv) is str:
+                        # There was only one dimension, convert to list
+                        tv = list()
+                        tv.append(tvv)
+                    else:
+                        tv = tvv
                 except SyntaxError as se:
                     tv = None
                 except ValueError as ve:
