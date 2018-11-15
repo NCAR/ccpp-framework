@@ -15,6 +15,11 @@
   <var name="rho_zz"        type="real" dimensions="nVertLevels nCells Time"/>
   <var name="theta_m"       type="real" dimensions="nVertLevels nCells Time"/>
 
+  Need a way to access a field
+
+  <var name="state(im)%rho_zz(ivs:ive, ies:iee:, t)" type="text" dimensions="Time"/>
+
+
   <var_array name="scalars" type="real" dimensions="nVertLevels nCells Time">
     <var name="qv"      array_group="moist"/>
     <var name="qc"      array_group="moist"/>
