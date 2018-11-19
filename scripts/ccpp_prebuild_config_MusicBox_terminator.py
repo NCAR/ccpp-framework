@@ -23,6 +23,7 @@ PROJECT="terminator"
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
     'MICM_chemistry/src/chemistry_driver.F90'   : ['physics'],
+    'MICM_chemistry/src/terminator/k_rateConst.F90' : ['physics'],
     'MICM_chemistry/src/photolysis_interstitial.F90' : ['physics'],
     'MICM_chemistry/src/tuv/tuv_photolysis.F90' : ['physics']
     }
@@ -84,7 +85,6 @@ use ccpp_errors, only: ccpp_error
 MODULE_USE_TEMPLATE_SCHEME_CAP = \
 '''
        use machine,          only: kind_phys
-       use solver_var_defs,  only: Solver_type
        use kinetics_module,  only: kinetics_type
        use const_props_mod,  only: const_props_type
 
