@@ -1,0 +1,32 @@
+<model>
+  <dimensions>
+    <dim name="pcols" standard_name="horizontal_dimension"/>
+    <dim name="pver"  standard_name="vertical_layer_dimension"/>
+    <dim name="pverp" standard_name="vertical_level_dimension"/>
+  </dimensions>
+
+<var_struct name="state" time_levs="1">
+  <var name="initial_time" type="text" dimensions="" units="YYYY-MM-DD_hh:mm:ss"
+       description="Model initialization time"/>
+  <var name="xtime"         type="text" dimensions="Time"/>
+  <var name="u"             type="real" dimensions="nVertLevels nEdges Time"/>
+  <var name="w"             type="real" dimensions="nVertLevelsP1 nCells Time"/>
+  <var name="rho_zz"        type="real" dimensions="nVertLevels nCells Time"/>
+  <var name="theta_m"       type="real" dimensions="nVertLevels nCells Time"/>
+
+  Need a way to access a field
+
+  <var name="state(im)%rho_zz(ivs:ive, ies:iee:, t)" type="text" dimensions="Time"/>
+
+
+  <var_array name="scalars" type="real" dimensions="nVertLevels nCells Time">
+    <var name="qv"      array_group="moist"/>
+    <var name="qc"      array_group="moist"/>
+    <var name="qr"      array_group="moist"/>
+  </var_array>
+
+  <!-- Climatology for ocean mixed-layer depth -->
+  <var name="h_oml_initial" type="real" dimensions="nCells Time"/>
+</var_struct>
+
+</model>
