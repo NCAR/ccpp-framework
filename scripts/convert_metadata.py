@@ -88,8 +88,6 @@ def convert_file(filename_in, filename_out):
                             if attr_name == 'local_name':
                                 # Already handled this
                                 continue
-                            elif attr_name == 'long_name':
-                                attr_name = 'description'
                             elif attr_name == 'rank':
                                 attr_name = 'dimensions'
                             # End if

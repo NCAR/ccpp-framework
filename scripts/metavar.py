@@ -5,12 +5,33 @@
 
 from __future__ import print_function
 import logging
+import re
 import ast
 import xml.etree.ElementTree as ET
 from parse_tools import check_fortran_id, check_fortran_type
 from parse_tools import check_dimensions, check_cf_standard_name
 
 logger = logging.getLogger(__name__)
+
+real_subst_re = re.compile(r"(.*\d)p(\d.*)")
+
+########################################################################
+
+def standard_name_to_long_name(standard_name):
+    """Translate a standard_name to its default long_name
+    >>> standard_name_to_long_name('cloud_optical_depth_layers_from_0p55mu_to_0p99mu')
+    'Cloud optical depth layers from 0.55mu to 0.99mu'
+    """
+    # We assume that standar_name has been checked for validity
+    # Make the first char uppercase and replace each underscore with a space
+    long_name = standard_name[0].upper() + re.sub("_", " ", standard_name[1:])
+    # Next, substitute a decimal point for the p in [:digit]p[:digit]
+    match = real_subst_re.match(long_name)
+    while match is not None:
+        long_name = match.group(1) + '.' + match.group(2)
+        match = real_subst_re.match(long_name)
+    # End while
+    return long_name
 
 ########################################################################
 
@@ -20,7 +41,7 @@ class VariableProperty(object):
     <__main__.VariableProperty object at ...>
     >>> VariableProperty('standard_name', str) #doctest: +ELLIPSIS
     <__main__.VariableProperty object at ...>
-    >>> VariableProperty('description', str) #doctest: +ELLIPSIS
+    >>> VariableProperty('long_name', str) #doctest: +ELLIPSIS
     <__main__.VariableProperty object at ...>
     >>> VariableProperty('units', str) #doctest: +ELLIPSIS
     <__main__.VariableProperty object at ...>
@@ -48,7 +69,7 @@ class VariableProperty(object):
     False
     """
 
-    def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, check_fn_in=None):
+    def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, default_fn_in=None, check_fn_in=None):
         _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
         self._name = name_in
@@ -59,11 +80,16 @@ class VariableProperty(object):
         self._valid_values = valid_values_in
         self._optional = optional_in
         if self.optional:
-            if default_in is None:
-                raise ValueError('default is a required property for {} because it is optional'.format(name_in))
+            if (default_in is None) and (default_fn_in is None):
+                raise ValueError('default_in or default_fn_in is a required property for {} because it is optional'.format(name_in))
+            if (default_in is not None) and (default_fn_in is not None):
+                raise ValueError('default_in and default_fn_in cannot both be provided')
             self._default = default_in
+            self._default_fn = default_fn_in
         elif default_in is not None:
-            raise ValueError('default is not a valid property for {} because it is not optional'.format(name_in))
+            raise ValueError('default_in is not a valid property for {} because it is not optional'.format(name_in))
+        elif default_in is not None:
+            raise ValueError('default_fn_in is not a valid property for {} because it is not optional'.format(name_in))
         self._check_fn = check_fn_in
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
@@ -88,8 +114,16 @@ class VariableProperty(object):
         logger.warning('Cannot set value of type')
 
     @property
-    def default(self):
-        return self._default
+    def default(self, arg=None):
+        if self._default is not None:
+            return self._default
+        else:
+            if arg is not None:
+                return self._default_fn(arg)
+            else:
+                return self._default_fn
+            # End if
+        # End if
 
     @default.setter
     def default(self, value):
@@ -181,12 +215,6 @@ class VariableProperty(object):
         # End if
         return valid_val
 
-########################################################################
-
-class VariableProps(object):
-    """VariableProps is used to validate property inputs
-    """
-
 ###############################################################################
 
 class Var(object):
@@ -197,25 +225,28 @@ class Var(object):
 
     >>> Var.get_prop('type').is_match('type')
     True
-    >>> Var.get_prop('type').is_match('description')
+    >>> Var.get_prop('type').is_match('long_name')
     False
     >>> Var.get_prop('type').valid_value('character')
     'character'
     >>> Var.get_prop('type').valid_value('char')
 
-    >>> Var.get_prop('description').valid_value('hi mom')
+    >>> Var.get_prop('long_name').valid_value('hi mom')
     'hi mom'
     >>> Var.get_prop('dimensions').valid_value('hi mom')
 
     >>> Var.get_prop('dimensions').valid_value(['Bob', 'Ray'])
     ['Bob', 'Ray']
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}).get_prop_value('long_name')
+    'Hi mom'
     """
 
     __var_props = [ VariableProperty('local_name', str,
                                      check_fn_in=check_fortran_id),
                     VariableProperty('standard_name', str,
                                      check_fn_in=check_cf_standard_name),
-                    VariableProperty('description', str),
+                    VariableProperty('long_name', str, optional_in=True,
+                                     default_fn_in=standard_name_to_long_name),
                     VariableProperty('units', str),
                     VariableProperty('dimensions', list,
                                      check_fn_in=check_dimensions),
@@ -256,7 +287,12 @@ class Var(object):
         # Fill in default values for missing properties
         for propname in Var.__var_propdict:
             if (propname not in prop_dict) and Var.__var_propdict[propname].optional:
-                self._prop_dict[propname] = Var.__var_propdict[propname].default
+                default_val = Var.__var_propdict[propname].default
+                if (propname == 'long_name') and callable(default_val):
+                    self._prop_dict[propname] = default_val(prop_dict['standard_name'])
+                else:
+                    self._prop_dict[propname] = default_val
+                # End if
             # End if
         # End for
 
@@ -395,19 +431,20 @@ class Var(object):
 
     def print_debug(self):
         '''Print the data retrieval line for the variable.'''
-        str='''Contents of {s} (* = mandatory for compatibility):
-        standard_name = {s.standard_name} *
-        long_name     = {s.long_name}
-        units         = {s.units} *
-        local_name    = {s.local_name}
-        type          = {s.type} *
-        rank          = {s.rank} *
-        kind          = {s.kind} *
-        intent        = {s.intent}
-        optional      = {s.optional}
-        target        = {s.target}
-        container     = {s.container}'''
-        return str.format(s=self)
+        str='''Contents of {local_name} (* = mandatory for compatibility):
+        standard_name = {standard_name} *
+        long_name     = {long_name}
+        units         = {units} *
+        local_name    = {local_name}
+        type          = {type} *
+        dimensions    = {dimensions} *
+        kind          = {kind} *
+        intent        = {intent}
+        optional      = {optional}
+        '''
+#        target        = {'target'}
+#        container     = {'container'}
+        return str.format(**self._prop_dict)
 
 ###############################################################################
 
