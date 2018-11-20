@@ -3,6 +3,7 @@
     <dim name="pcols" standard_name="horizontal_dimension"/>
     <dim name="pver"  standard_name="vertical_layer_dimension"/>
     <dim name="pverp" standard_name="vertical_level_dimension"/>
+    <dim name="pcnst" standard_name="number_of_tracers"/>
   </dimensions>
 
 <derived_data_type name="physics_state" module="physics_types">
@@ -31,101 +32,101 @@
             dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
             type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="u" standard_name="zonal wind" units="m/s"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="v" standard_name="meridional wind" units="m/s"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="s" standard_name="dry static energy" units=""
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="omega" standard_name="vertical pressure velocity" units="Pa/s"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="pmid" standard_name="midpoint pressure" units="Pa"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="pmiddry" standard_name="midpoint pressure dry" units="Pa"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="pdel" standard_name="layer thickness" units="Pa"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="pdeldry" standard_name="layer thickness dry" units="Pa"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="rpdel" standard_name="reciprocal of layer thickness" units="Pa"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="rpdeldry" standard_name="recipricol layer thickness dry" units="Pa"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="lnpmid" standard_name="ln" units="pmid"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="lnpmiddry" standard_name="log midpoint pressure dry" units="Pa"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
-  <variable local_name="exner" standard_name="inverse exner function w.r.t. surface pressure_ps/p^[R/cp]" units=""
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
+  <variable local_name="exner"
+            standard_name="inverse exner function w.r.t. surface pressure_ps/p^[R/cp]"
+            units=""
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
   <variable local_name="zm" standard_name="geopotential height above surface at midpoints" units="m"
-            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')" type="real"
-            kind="kind_phys" state_variable="TRUE" />
-
-     real(r8), dimension(:,:,:),allocatable      :: &
-     <variable local_name="q" standard_name="constituent mixing ratio" units="kg/kg moist or dry air depending on type"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
-
-     real(r8), dimension(:,:),allocatable        :: &
-     <variable local_name="pint" standard_name="interface pressure" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
-     <variable local_name="pintdry" standard_name="interface pressure dry" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
-     <variable local_name="lnpint" standard_name="ln" units="pint"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
-     <variable local_name="lnpintdry" standard_name="log interface pressure dry" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
-     <variable local_name="zi" standard_name="geopotential height above surface at interfaces" units="m"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+            dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
+  <variable local_name="q" standard_name="constituent_mixing_ratio"
+            units="kg/kg moist or dry air depending on type"
+            dimensions="('horizontal_loop_extent', 'vertical_level_dimension', 'number_of_tracers')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
+  <variable local_name="pint" standard_name="interface pressure" units="Pa"
+            dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
+  <variable local_name="pintdry" standard_name="interface pressure dry" units="Pa"
+            dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
+  <variable local_name="lnpint" standard_name="ln" units="pint"
+            dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
+  <variable local_name="lnpintdry" standard_name="log interface pressure dry" units="Pa"
+            dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
+  <variable local_name="zi" standard_name="geopotential height above surface at interfaces" units="m"
+            dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
+            type="real" kind="kind_phys" state_variable="TRUE" />
 
      real(r8), dimension(:),allocatable          :: &
-     <variable local_name="te_ini" standard_name="vertically_integrated_total_kinetic_and_static_energy of initial state" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+     <variable local_name="te_ini"
+               standard_name="vertically_integrated_total_kinetic_and_static_energy of initial state"
+               units="" dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      <variable local_name="te_cur" standard_name="vertically integrated total_kinetic_and_static_energy of current state" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      <variable local_name="tw_ini" standard_name="vertically integrated total water of initial state" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      <variable local_name="tw_cur" standard_name="vertically integrated total water of new state" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      integer ::
      <variable local_name="count" standard_name="count of values with significant energy or water imbalances" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      integer, dimension(:),allocatable           :: &
      <variable local_name="latmapback" standard_name="map from column to unique lat for that column" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      <variable local_name="lonmapback" standard_name="map from column to unique lon for that column" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      <variable local_name="cid" standard_name="unique column id" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="('horizontal_loop_extent')"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      integer ::
      <variable local_name="ulatcnt" standard_name="number of unique lats in chunk" units=""
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+               dimensions="()"
+               type="real" kind="kind_phys" state_variable="TRUE" />
      <variable local_name="uloncnt"
                standard_name="number_of_unique_lons_in_chunk" units=""
                dimensions="()" type="integer" state_variable="TRUE" />
