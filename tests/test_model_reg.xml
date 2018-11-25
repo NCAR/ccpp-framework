@@ -1,0 +1,22 @@
+<model name="CAM" version="1.0">
+
+  <variable local_name="u" standard_name="eastward_wind"
+            long_name="Zonal wind"
+            state_variable="true" pointer="true">
+    <type kind="kind_phys" units="m s-1">real</type>
+    <dimensions>
+      horizontal_loop_extent vertical_layer_dimension
+    </dimensions>
+    <access>gimmie_a_u()</access>
+  </variable>
+
+  <variable local_name="timestep"
+            standard_name="time_step_for_physics"
+            long_name="Model time step"
+            state_variable="false">
+    <type kind="kind_phys" units="s">real</type>
+    <dimensions>
+    </dimensions>
+  </variable>
+
+</model>

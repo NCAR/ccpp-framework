@@ -7,10 +7,6 @@
 
   <dimension name="pverp"    standard_name="vertical_level_dimension" module="ppgrid"/>
 
-  <dimension name="begchunk" standard_name="starting_thread_block"    module="ppgrid"/>
-
-  <dimension name="endchunk" standard_name="ending_thread_block"      module="ppgrid"/>
-
   <dimension name="pcnst"    standard_name="number_of_tracers"        module="constituents"/>
 
   <!-- Derived Data Types -->
@@ -335,7 +331,6 @@
             state_variable="true">
     <ddt_type>physics_state</ddt_type>
     <dimensions>
-      begchunk:endchunk
     </dimensions>
   </variable>
 
@@ -345,7 +340,6 @@
             state_variable="false">
     <ddt_type>physics_tend</ddt_type>
     <dimensions>
-      begchunk:endchunk
     </dimensions>
   </variable>
 

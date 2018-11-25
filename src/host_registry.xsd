@@ -41,6 +41,12 @@
     </xs:restriction>
   </xs:simpleType>
 
+  <xs:simpleType name="fortran_func_type">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Za-z][A-Za-z0-9_]{0,63}[ ]*[(].*[)]"/>
+    </xs:restriction>
+  </xs:simpleType>
+
   <!-- attributes -->
 
   <xs:attribute name="long_name"      type="xs:string"/>
@@ -48,8 +54,9 @@
   <xs:attribute name="kind"           type="xs:string"/>
   <xs:attribute name="module"         type="fortran_id_type"/>
   <xs:attribute name="name"           type="fortran_id_type"/>
+  <xs:attribute name="pointer"        type="xs:boolean" default="false"/>
   <xs:attribute name="standard_name"  type="standard_name_type"/>
-  <xs:attribute name="state_variable" type="xs:boolean"/>
+  <xs:attribute name="state_variable" type="xs:boolean" default="false"/>
   <xs:attribute name="units"          type="xs:string"/>
   <xs:attribute name="version"        type="version_type"/>
 
@@ -61,6 +68,10 @@
 
   <xs:simpleType name="ddt_type">
     <xs:restriction base="fortran_id_type"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="func_call_type">
+    <xs:restriction base="fortran_func_type"/>
   </xs:simpleType>
 
   <!-- definition of complex types -->
@@ -81,10 +92,13 @@
         <xs:element name="ddt_type" type="ddt_type"/>
       </xs:choice>
       <xs:element name="dimensions" type="dimensions" />
+      <xs:element name="access"     type="func_call_type"
+                  minOccurs="0" maxOccurs="1"/>
     </xs:sequence>
     <xs:attribute ref="local_name"     use="required"/>
     <xs:attribute ref="standard_name"  use="required"/>
     <xs:attribute ref="long_name"      use="optional"/>
+    <xs:attribute ref="pointer"        use="optional"/>
     <xs:attribute ref="state_variable" use="optional"/>
   </xs:complexType>
 
