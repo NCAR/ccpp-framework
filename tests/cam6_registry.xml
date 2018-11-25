@@ -1,180 +1,330 @@
 <model name="CAM" version="1.0">
 
   <!-- Dimensions -->
-  <dimension name="pcols" standard_name="horizontal_dimension"     module="ppgrid"/>
+  <dimension name="pcols"    standard_name="horizontal_dimension"     module="ppgrid"/>
 
-  <dimension name="pver"  standard_name="vertical_layer_dimension" module="ppgrid"/>
+  <dimension name="pver"     standard_name="vertical_layer_dimension" module="ppgrid"/>
 
-  <dimension name="pverp" standard_name="vertical_level_dimension" module="ppgrid"/>
+  <dimension name="pverp"    standard_name="vertical_level_dimension" module="ppgrid"/>
 
-  <dimension name="pcnst" standard_name="number_of_tracers"        module="constituents"/>
+  <dimension name="begchunk" standard_name="starting_thread_block"    module="ppgrid"/>
+
+  <dimension name="endchunk" standard_name="ending_thread_block"      module="ppgrid"/>
+
+  <dimension name="pcnst"    standard_name="number_of_tracers"        module="constituents"/>
 
   <!-- Derived Data Types -->
 
   <derived_data_type name="physics_state" module="physics_types">
-    <variable local_name="lat" standard_name="latitude" units="radians"
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
-    <variable local_name="lon" standard_name="longitude" units="radians"
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
-    <variable local_name="ps" standard_name="surface_air_pressure" units="Pa"
-               dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+    <variable local_name="lat" standard_name="latitude"
+              state_variable="true">
+      <type kind="kind_phys" units="radians">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
+    <variable local_name="lon" standard_name="longitude"
+              state_variable="true">
+      <type kind="kind_phys" units="radians">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
+    <variable local_name="ps" standard_name="surface_air_pressure"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="psdry" standard_name="dry_surface_pressure"
-               units="Pa" dimensions="('horizontal_loop_extent')" type="real"
-               kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="phis" standard_name="surface_geopotential"
-               units="m2 s-2" dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="m2 s-2">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="ulat" standard_name="unique_latitudes"
-               units="radians" dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="radians">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="ulon" standard_name="unique_longitudes"
-               units="radians" dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
-    <variable local_name="t" standard_name="temperature" units="K"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
-    <variable local_name="u" standard_name="eastward_wind" units="m s-1"
-               long_name="Zonal wind"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="radians">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
+    <variable local_name="t" standard_name="temperature"
+              state_variable="true">
+      <type kind="kind_phys" units="K">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
+    <variable local_name="u" standard_name="eastward_wind"
+              long_name="Zonal wind"
+              state_variable="true">
+      <type kind="kind_phys" units="m s-1">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="v" standard_name="northward_wind"
-               long_name="Meridional wind" units="m s-1"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              long_name="Meridional wind"
+              state_variable="true">
+      <type kind="kind_phys" units="m s-1">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="s"
-               standard_name="dry_static_energy_content_of_atmosphere_layer"
-               long_name="Dry static energy" units="J m-2"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="dry_static_energy_content_of_atmosphere_layer"
+              long_name="Dry static energy"
+              state_variable="true">
+      <type kind="kind_phys" units="J m-2">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="omega"
-               standard_name="lagrangian_tendency_of_air_pressure"
-               long_name="Vertical pressure velocity" units="Pa s-1"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="lagrangian_tendency_of_air_pressure"
+              long_name="Vertical pressure velocity"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa s-1">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="pmid" standard_name="air_pressure"
-               long_name="Midpoint air pressure" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              long_name="Midpoint air pressure"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="pmiddry"
-               standard_name="air_pressure_of_dry_air"
-               long_name="Dry midpoint pressure" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="air_pressure_of_dry_air"
+              long_name="Dry midpoint pressure"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="pdel"
-               standard_name="pressure_thickness" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="pressure_thickness"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="pdeldry"
-               standard_name="pressure_thickness_of_dry_air" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="pressure_thickness_of_dry_air"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="rpdel"
-               standard_name="reciprocal_of_pressure_thickness" units="Pa-1"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="reciprocal_of_pressure_thickness"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa-1">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="rpdeldry"
-               standard_name="reciprocal_of_pressure_thickness_of_dry_air"
-               units="Pa-1"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="reciprocal_of_pressure_thickness_of_dry_air"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa-1">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="lnpmid"
-               standard_name="natural_log_of_air_pressure" units="pmid"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="natural_log_of_air_pressure"
+              state_variable="true">
+      <type kind="kind_phys" units="pmid">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="lnpmiddry"
-               standard_name="log_of_air_pressure_of_dry_air" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="log_of_air_pressure_of_dry_air"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="exner"
-               standard_name="inverse_exner_function_wrt_surface_pressure"
-               long_name="inverse exner function w.r.t. surface pressure, (ps/p)^(R/cp)"
-               units="1"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="inverse_exner_function_wrt_surface_pressure"
+              long_name="inverse exner function w.r.t. surface pressure, (ps/p)^(R/cp)"
+              state_variable="true">
+      <type kind="kind_phys" units="1">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="zm"
-               standard_name="geopotential_height_above_surface_at_midpoints"
-               units="m"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="geopotential_height_above_surface_at_midpoints"
+              state_variable="true">
+      <type kind="kind_phys" units="m">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="q" standard_name="constituent_mixing_ratio"
-               units="kg/kg moist or dry air depending on type"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension', 'number_of_tracers')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="kg/kg moist or dry air depending on type">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_level_dimension number_of_tracers
+      </dimensions>
+    </variable>
     <variable local_name="pint"
-               standard_name="air_pressure_at_interface" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
-    <variable local_name="pintdry" standard_name="interface_pressure_dry" units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="air_pressure_at_interface"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_level_dimension
+      </dimensions>
+    </variable>
+    <variable local_name="pintdry" standard_name="interface_pressure_dry"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_level_dimension
+      </dimensions>
+    </variable>
     <variable local_name="lnpint" standard_name="ln_air_pressure_at_interface"
-               units="pint"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="ln(Pa)">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_level_dimension
+      </dimensions>
+    </variable>
     <variable local_name="lnpintdry" standard_name="ln_interface_pressure_dry"
-               units="Pa"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="ln(Pa)">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_level_dimension
+      </dimensions>
+    </variable>
     <variable local_name="zi"
-               standard_name="geopotential_height_above_surface_at_interfaces"
-               units="m"
-               dimensions="('horizontal_loop_extent', 'vertical_level_dimension')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="geopotential_height_above_surface_at_interfaces"
+              state_variable="true">
+      <type kind="kind_phys" units="m">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_level_dimension
+      </dimensions>
+    </variable>
     <variable local_name="te_ini"
-               standard_name="vertically_integrated_total_kinetic_and_static_energy_of_initial_state"
-               units="J m-2" dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="vertically_integrated_total_kinetic_and_static_energy_of_initial_state"
+              state_variable="true">
+      <type kind="kind_phys" units="J m-2">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="te_cur"
-               standard_name="vertically_integrated_total_kinetic_and_static_energy_of_current_state"
-               units="J m-2"
-               dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="vertically_integrated_total_kinetic_and_static_energy_of_current_state"
+              state_variable="true">
+      <type kind="kind_phys" units="J m-2">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="tw_ini"
-               standard_name="vertically_integrated_total_water_of_initial_state"
-               units="Pa s2 m-1"
-               dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="vertically_integrated_total_water_of_initial_state"
+              state_variable="true">
+      <type kind="kind_phys" units="Pa s2 m-1">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="tw_cur" standard_name="vertically_integrated_total_water_of_new_state"
-               units="Pa s2 m-1"
-               dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="Pa s2 m-1">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="count"
-               standard_name="count_of_values_with_significant_energy_or_water_imbalances"
-               units="1" dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              standard_name="count_of_values_with_significant_energy_or_water_imbalances"
+              state_variable="true">
+      <type kind="kind_phys" units="1">integer</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="cid" standard_name="unique_column_id"
-               units="1" dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="TRUE" />
+              state_variable="true">
+      <type kind="kind_phys" units="1">integer</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
   </derived_data_type>
 
   <derived_data_type name="physics_tend" module="physics_types">
-    <variable local_name="dtdt" standard_name="tendency_of_temperature" units="K s-1"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="FALSE" />
+    <variable local_name="dtdt" standard_name="tendency_of_temperature"
+              state_variable="false">
+      <type kind="kind_phys" units="K s-1">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="dudt" standard_name="tendency_of_eastward_wind"
-               units="m s-2"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="FALSE" />
+              state_variable="false">
+      <type kind="kind_phys" units="m s-2">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
     <variable local_name="dvdt" standard_name="tendency_of_northward_wind"
-               units="m s-2"
-               dimensions="('horizontal_loop_extent', 'vertical_layer_dimension')"
-               type="real" kind="kind_phys" state_variable="FALSE" />
-    <variable local_name="flx_net" standard_name="surface_energy_flux" units="W m-2"
-               dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="FALSE" />
+              state_variable="false">
+      <type kind="kind_phys" units="m s-2">real</type>
+      <dimensions>
+        horizontal_loop_extent vertical_layer_dimension
+      </dimensions>
+    </variable>
+    <variable local_name="flx_net" standard_name="surface_energy_flux"
+              state_variable="false">
+      <type kind="kind_phys" units="W m-2">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="te_tnd"
-               standard_name="cumulative_boundary_flux_of_total_energy"
-               units="W m-2"
-               dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="FALSE" />
+              standard_name="cumulative_boundary_flux_of_total_energy"
+              state_variable="false">
+      <type kind="kind_phys" units="W m-2">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
     <variable local_name="tw_tnd"
-               standard_name="cumulative_boundary_flux_of_total_water"
-               units="W m-2"
-               dimensions="('horizontal_loop_extent')"
-               type="real" kind="kind_phys" state_variable="FALSE" />
+              standard_name="cumulative_boundary_flux_of_total_water"
+              state_variable="false">
+      <type kind="kind_phys" units="W m-2">real</type>
+      <dimensions>
+        horizontal_loop_extent
+      </dimensions>
+    </variable>
   </derived_data_type>
 
   <!-- Model Variables -->
@@ -182,13 +332,21 @@
   <variable local_name="state"
             standard_name="cam_state_derived_type"
             long_name="CAM state derived type"
-            ddt_type="physics_state" state_variable="TRUE">
+            state_variable="true">
+    <ddt_type>physics_state</ddt_type>
+    <dimensions>
+      begchunk:endchunk
+    </dimensions>
   </variable>
 
   <variable local_name="tend"
             standard_name="cam_physics_tendency_derived_type"
             long_name="CAM physics tendency derived type"
-            ddt_type="physics_state" state_variable="FALSE">
+            state_variable="false">
+    <ddt_type>physics_tend</ddt_type>
+    <dimensions>
+      begchunk:endchunk
+    </dimensions>
   </variable>
 
   <!--  Need a way to access a field -->
