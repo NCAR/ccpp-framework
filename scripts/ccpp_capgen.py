@@ -13,20 +13,31 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+class CapgenAbort(ValueError):
+    "Class so main can log user errors without backtrace"
+    def __init__(self, message):
+        super(CapgenAbort, self).__init__(message)
+
+###############################################################################
+def abort(message):
+###############################################################################
+    logger.error(message)
+    raise CapgenAbort(message)
+
 ###############################################################################
 def check_for_existing_file(filename, description):
 ###############################################################################
     if not os.path.exists(filename):
-        logger.error("{}, '{}', must exist".format(description, filename))
+        abort("{}, '{}', must exist".format(description, filename))
     # End if (else just return)
 
 ###############################################################################
 def check_for_writeable_file(filename, description):
 ###############################################################################
     if os.path.exists(filename) and not os.access(filename, os.W_OK):
-        logger.error("Cannot write {}, '{}'".format(description, filename))
+        abort("Cannot write {}, '{}'".format(description, filename))
     elif not os.access(os.path.dirname(filename), os.W_OK):
-        logger.error("Cannot write {}, '{}'".format(description, filename))
+        abort("Cannot write {}, '{}'".format(description, filename))
     # End if (else just return)
 
 ###############################################################################
@@ -42,7 +53,7 @@ def parse_command_line(args, description):
                         type=str, help="File with scheme filenames to process")
 
     parser.add_argument("--sdf-pathlist", metavar='<sdf file(s)>',
-                        type=str,
+                        type=str, default='',
                         help="File with names of suite definition fileames to process or name of single XML SDF file")
 
     parser.add_argument("--host-model-def", metavar='<host model def filename>',
@@ -84,7 +95,7 @@ def _main_func():
     verbosity = args.verbose
     host_pathsfile = args.host_pathnames
     schemes_pathsfile = args.scheme_pathnames
-    sdf_pathsfile = args.sdf_pathlist
+    sdf_pathsfile = args.sdf_pathlist if len(args.sdf_pathlist) > 0 else None
     cap_output_file = args.cap_pathlist
     host_output_file = args.host_pathlist
     output_dir = os.path.abspath(args.output_root)
@@ -93,12 +104,13 @@ def _main_func():
     # Check required arguments
     check_for_existing_file(host_pathsfile, 'Host pathnames file')
     check_for_existing_file(schemes_pathsfile, 'Schemes pathnames file')
+    check_for_existing_file(schemes_pathsfile, 'SDF pathnames or file')
     ## Make sure output directory is legit
     if os.path.exists(output_dir):
         if not os.path.isdir(output_dir):
-            logger.error("output-root, '{}', is not a directory".format(args.output_root))
+            abort("output-root, '{}', is not a directory".format(args.output_root))
         elif not os.access(output_dir, os.W_OK):
-            logger.error("Cannot write files to output-root ({})".format(args.output_root))
+            abort("Cannot write files to output-root ({})".format(args.output_root))
         # End if (output_dir is okay)
     else:
         # Try to create output_dir (let it crash if it fails)
@@ -113,8 +125,20 @@ def _main_func():
         host_output_file = os.path.join(output_dir, host_output_file)
     # End if
     check_for_writeable_file(host_output_file, "Host output file")
+    # Did we get an SDF input?
+    if sdf_pathsfile is not None:
+        parts = sdf_pathsfile.split('.')
+        sdf_is_xml = (len(parts) > 1) and (parts[-1].lower() == 'xml')
+        if sdf_is_xml:
+            check_for_existing_file(sdf_pathsfile, 'SDF file')
+        else:
+            check_for_existing_file(sdf_pathsfile, 'SDF pathnames file')
+        # End if
 
 ###############################################################################
 
 if __name__ == "__main__":
-    _main_func()
+    try:
+        _main_func()
+    except CapgenAbort as ca:
+        pass # abort already logged the message
