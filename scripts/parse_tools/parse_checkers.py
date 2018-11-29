@@ -20,6 +20,10 @@ def check_dimensions(test_val, max_len=0, error=False):
     [':', 'dim2']
     >>> check_dimensions(["dim1", ":"])
     ['dim1', ':']
+    >>> check_dimensions(['start1:end1', 'start2:end2'])
+    ['start1:end1', 'start2:end2']
+    >>> check_dimensions(['start1:', 'start2:end2'])
+    ['start1:', 'start2:end2']
     >>> check_dimensions(["dim1", "dim2name"], max_len=5)
 
     >>> check_dimensions(["dim1", "dim2name"], error=True, max_len=5)
@@ -37,8 +41,10 @@ def check_dimensions(test_val, max_len=0, error=False):
         # End if
     else:
         for item in test_val:
-            tv = check_fortran_id(item, max_len=max_len, error=error)
-            if (tv is None) and (item != ':'):
+            # Check possible dim styles (a, a:b, a:, :b, :)
+            tdims = [x for x in item.split(':') if len(x) > 0]
+            tvs = [check_fortran_id(x, max_len=max_len, error=error) for x in tdims]
+            if None in tvs:
                 if error:
                     raise ValueError("'{}' is an invalid dimension name".format(item))
                 else:

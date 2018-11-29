@@ -6,7 +6,6 @@
 from __future__ import print_function
 import logging
 import re
-import ast
 import xml.etree.ElementTree as ET
 from parse_tools import check_fortran_id, check_fortran_type
 from parse_tools import check_dimensions, check_cf_standard_name
@@ -14,6 +13,7 @@ from parse_tools import check_dimensions, check_cf_standard_name
 logger = logging.getLogger(__name__)
 
 real_subst_re = re.compile(r"(.*\d)p(\d.*)")
+list_re = re.compile(r"[(]([^)]*)[)]\s*$")
 
 ########################################################################
 
@@ -160,18 +160,16 @@ class VariableProperty(object):
                 valid_val = None # Redundant but more expressive than pass
         elif self.type is list:
             if type(test_value) is str:
-                try:
-                    tvv = ast.literal_eval(test_value)
-                    if type(tvv) is str:
-                        # There was only one dimension, convert to list
+                match = list_re.match(test_value)
+                if match is None:
+                    tv = None
+                else:
+                    tv = [x.strip() for x in match.group(1).split(',')]
+                    if (len(tv) == 1) and (len(tv[0]) == 0):
+                        # Scalar
                         tv = list()
-                        tv.append(tvv)
-                    else:
-                        tv = tvv
-                except SyntaxError as se:
-                    tv = None
-                except ValueError as ve:
-                    tv = None
+                    # End if
+                # End if
             else:
                 tv = test_value
             # End if

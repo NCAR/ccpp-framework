@@ -116,7 +116,7 @@ def convert_file(filename_in, filename_out):
                                     if dind > 0:
                                         entry = entry + ", "
                                     # End if
-                                    entry = "{}'{}'".format(entry, dim_names[dind])
+                                    entry = "{}{}".format(entry, dim_names[dind])
                                 # End for
                                 entry = entry + ")"
                             # End if
