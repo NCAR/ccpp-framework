@@ -10,6 +10,7 @@ import sys
 import os
 import os.path
 import logging
+from fortran_parser import parse_fortran_file
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,12 @@ def abort(message):
 ###############################################################################
     logger.error(message)
     raise CapgenAbort(message)
+
+###############################################################################
+def is_xml_file(filename):
+###############################################################################
+    parts = os.path.basename(filename).split('.')
+    return (len(parts) > 1) and (parts[-1].lower() == 'xml')
 
 ###############################################################################
 def check_for_existing_file(filename, description):
@@ -61,7 +68,7 @@ def parse_command_line(args, description):
                         help="XML filename with host model definition")
 
     parser.add_argument("--preproc-directives",
-                        metavar='VARDEF1[,VARDEF2 ...]', type=str,
+                        metavar='VARDEF1[,VARDEF2 ...]', type=str, default=None,
                         help="Proprocessor directives used to correctly parse source files")
 
     parser.add_argument("--cap-pathlist", type=str,
@@ -89,16 +96,55 @@ def parse_command_line(args, description):
     return pargs
 
 ###############################################################################
+def parse_host_model_files(host_pathsfile, preproc_defs):
+###############################################################################
+    """
+    Gather information from host files (e.g., DDTs, registry) and
+    return resulting dictionary.
+    """
+    host_pdir = os.path.dirname(host_pathsfile)
+    xml_files = list()
+    with open(host_pathsfile, 'r') as infile:
+        filenames = [x.strip() for x in infile.readlines()]
+    # End with
+    for filename in filenames:
+        if not os.path.isabs(filename):
+            # The filename should be relative to host_pathsfile
+            filename = os.path.join(host_pdir, filename)
+        # End if
+        if is_xml_file(filename):
+            # We have to process XML files after processing Fortran files
+            # since the Fortran files may define DDTs used by registry files.
+            xml_files.append(filename)
+        else:
+# XXgoldyXX: v debug only
+            print("Calling parse_fortran_file with '{}'".format(filename))
+# XXgoldyXX: ^ debug only
+            mheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
+# XXgoldyXX: v debug only
+            print("results from {}:".format(os.path.basename(filename)))
+            print("{}".format(mheaders))
+# XXgoldyXX: ^ debug only
+        # End if
+    # End for
+
+###############################################################################
 def _main_func():
+###############################################################################
     logger.addHandler(logging.StreamHandler())
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
-    host_pathsfile = args.host_pathnames
-    schemes_pathsfile = args.scheme_pathnames
-    sdf_pathsfile = args.sdf_pathlist if len(args.sdf_pathlist) > 0 else None
-    cap_output_file = args.cap_pathlist
-    host_output_file = args.host_pathlist
+    host_pathsfile = os.path.abspath(args.host_pathnames)
+    schemes_pathsfile = os.path.abspath(args.scheme_pathnames)
+    if len(args.sdf_pathlist) > 0:
+        sdf_pathsfile = os.path.abspath(args.sdf_pathlist)
+    else:
+        sdf_pathsfile = None
+    # End if
+    cap_output_file = os.path.abspath(args.cap_pathlist)
+    host_output_file = os.path.abspath(args.host_pathlist)
     output_dir = os.path.abspath(args.output_root)
+    preproc_defs = args.preproc_directives
     gen_docfiles = args.generate_docfiles
     ## A few sanity checks
     # Check required arguments
@@ -127,13 +173,19 @@ def _main_func():
     check_for_writeable_file(host_output_file, "Host output file")
     # Did we get an SDF input?
     if sdf_pathsfile is not None:
-        parts = sdf_pathsfile.split('.')
-        sdf_is_xml = (len(parts) > 1) and (parts[-1].lower() == 'xml')
+        sdf_is_xml = is_xml_file(sdf_pathsfile)
         if sdf_is_xml:
             check_for_existing_file(sdf_pathsfile, 'SDF file')
         else:
             check_for_existing_file(sdf_pathsfile, 'SDF pathnames file')
         # End if
+    # End if
+    ##XXgoldyXX: Temporary warning
+    if gen_docfiles:
+        abort("--gen-docfiles not yet supported")
+    # End if
+    # First up, handle the host files
+    parse_host_model_files(host_pathsfile, preproc_defs)
 
 ###############################################################################
 

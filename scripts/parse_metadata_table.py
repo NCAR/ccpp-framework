@@ -92,7 +92,7 @@ from __future__ import print_function
 import re
 import collections
 import logging
-from metavar import VariableProps, Var
+from metavar import Var
 from parse_tools import ParseInternalError, ParseSyntaxError, ParseObject
 from parse_tools import MetadataSyntax, FortranMetadataSyntax
 

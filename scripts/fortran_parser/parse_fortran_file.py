@@ -479,9 +479,9 @@ def parse_module(pobj, statements):
     # End while
     return statements[index+1:], mheaders
 
-def parse_fortran_file(filename):
+def parse_fortran_file(filename, preproc_defs=None):
     mheaders = list()
-    pobj = read_file(filename, preproc_defs=None)
+    pobj = read_file(filename, preproc_defs=preproc_defs)
     pobj.reset_pos()
     curr_line, clo = pobj.curr_line()
     statements = line_statements(curr_line)
@@ -494,8 +494,8 @@ def parse_fortran_file(filename):
                 mheaders.extend(pheaders)
                 newstatements = len(statements) == 0
             elif module_re.match(statement) is not None:
-                statements, mheaders = parse_module(pobj, statements[index:])
-                mheaders.extend(mheaders)
+                statements, pheaders = parse_module(pobj, statements[index:])
+                mheaders.extend(pheaders)
                 newstatements = len(statements) == 0
             # End if
         # End for
