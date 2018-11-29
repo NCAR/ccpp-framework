@@ -22,6 +22,7 @@ program_re = re.compile(r"(?i)\s*program\s+("+FORTRAN_ID+r")")
 endprogram_re = re.compile(r"(?i)\s*end\s*program\s+("+FORTRAN_ID+r")?")
 module_re = re.compile(r"(?i)\s*module\s+("+FORTRAN_ID+r")")
 endmodule_re = re.compile(r"(?i)\s*end\s*module\s+("+FORTRAN_ID+r")?")
+contains_re = re.compile(r"(?i)\s*contains")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 fixed_continue_re = re.compile(r"(?i)     [^0 ]")
 blank_re = re.compile(r"\s+")
@@ -402,13 +403,49 @@ def read_file(filename, preproc_defs=None):
         # End while
         return pobj
 
-def parse_specification(pobj, statements):
-    # Fill this in someday if useful
-    return statements
+def is_executable_statement(statement):
+    "Return True iff <statement> is an executable Fortran statement"
+    # Fill this in when we need to parse programs or subroutines
+    return False
+
+def parse_specification(pobj, statements, inmodule):
+    "Parse specification part of a module or (sub)program"
+    inspec = True
+    mheaders = list()
+    while inspec and (statements is not None):
+    # End while
+        for index in xrange(len(statements)):
+            # End program or module
+            if inmodule:
+                # End module
+                pmatch = endmodule_re.match(statements[index])
+                if pmatch is not None:
+                    mod_name = pmatch.group(1)
+                    pobj.leave_region('MODULE', region_name=mod_name)
+                    inspec = False
+                    break
+                # End if
+            else:
+                pmatch = endprogram_re.match(statements[index])
+                if pmatch is not None:
+                    prog_name = pmatch.group(1)
+                    pobj.leave_region('PROGRAM', region_name=prog_name)
+                    inspec = False
+                    break
+                # End if
+            # End if
+            if inspec and MetadataHeader.metadata_table_start(statements[index],
+                                                              context=pobj,
+                                                              syntax=FortranMetadataSyntax):
+                mheaders.append(MetadataHeader(pobj))
+            # End if
+        # End for
+        statements = read_statements(pobj, statements)
+    # End while
+   return statements, mheaders
 
 def parse_program(pobj, statements):
     # The first statement should be a program statement, grab the name
-    mheaders = list()
     pmatch = program_re.match(statements[0])
     if pmatch is None:
         raise ParseSyntaxError('PROGRAM statement', statements[0])
@@ -416,7 +453,7 @@ def parse_program(pobj, statements):
     prog_name = pmatch.group(1)
     pobj.enter_region('PROGRAM', region_name=prog_name, nested_ok=False)
     # After the program name is the specification part
-    statements = parse_specification(pobj, statements[1:])
+    statements, mheaders = parse_specification(pobj, statements[1:], False)
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inprogram = True
@@ -444,7 +481,6 @@ def parse_program(pobj, statements):
 
 def parse_module(pobj, statements):
     # The first statement should be a program statement, grab the name
-    mheaders = list()
     pmatch = module_re.match(statements[0])
     if pmatch is None:
         raise ParseSyntaxError('MODULE statement', statements[0])
@@ -452,7 +488,7 @@ def parse_module(pobj, statements):
     mod_name = pmatch.group(1)
     pobj.enter_region('MODULE', region_name=mod_name, nested_ok=False)
     # After the module name is the specification part
-    statements = parse_specification(pobj, statements[1:])
+    statements, mheaders = parse_specification(pobj, statements[1:], True)
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inmodule = True
