@@ -239,7 +239,8 @@ class Var(object):
     'Hi mom'
     """
 
-    __var_props = [ VariableProperty('local_name', str,
+    # __spec_props are for variables defined in a specification
+    __spec_props = [VariableProperty('local_name', str,
                                      check_fn_in=check_fortran_id),
                     VariableProperty('standard_name', str,
                                      check_fn_in=check_cf_standard_name),
@@ -254,21 +255,41 @@ class Var(object):
                                      optional_in=True, default_in='kind_phys'),
                     VariableProperty('state_variable', bool,
                                      optional_in=True, default_in=False),
-                    VariableProperty('intent', str,
-                                     valid_values_in=['in', 'out', 'inout']),
                     VariableProperty('optional', bool,
                                      optional_in=True, default_in=False) ]
 
+    # __var_props contains properties which are not in __spec_props
+    __var_props = [VariableProperty('intent', str,
+                                    valid_values_in=['in', 'out', 'inout'])]
+
+
+    __spec_propdict = {}
     __var_propdict = {}
-    __required_props = list()
+    __required_spec_props = list()
+    __required_var_props = list()
+    for p in __spec_props:
+        __spec_propdict[p.name] = p
+        __var_propdict[p.name] = p
+        if not p.optional:
+            __required_spec_props.append(p.name)
+            __required_var_props.append(p.name)
+        # End if
+    # End for
     for p in __var_props:
         __var_propdict[p.name] = p
         if not p.optional:
-            __required_props.append(p.name)
+            __required_var_props.append(p.name)
         # End if
     # End for
 
-    def __init__(self, prop_dict):
+    def __init__(self, prop_dict, spec_type=None):
+        if spec_type is None:
+            required_props = Var.__required_var_props
+            master_propdict = Var.__var_propdict
+        else:
+            required_props = Var.__required_spec_props
+            master_propdict = Var.__spec_propdict
+        # End if
         # First, check the input
         for key in prop_dict:
             if Var.get_prop(key) is None:
@@ -276,16 +297,16 @@ class Var(object):
             # End if
         # End for
         # Make sure required properties are present
-        for propname in Var.__required_props:
+        for propname in required_props:
             if propname not in prop_dict:
                 raise ValueError("Required property, '{}', missing".format(propname))
             # End if
         # End for
         self._prop_dict = prop_dict # Stealing dict from caller
         # Fill in default values for missing properties
-        for propname in Var.__var_propdict:
-            if (propname not in prop_dict) and Var.__var_propdict[propname].optional:
-                default_val = Var.__var_propdict[propname].default
+        for propname in master_propdict:
+            if (propname not in prop_dict) and master_propdict[propname].optional:
+                default_val = master_propdict[propname].default
                 if (propname == 'long_name') and callable(default_val):
                     self._prop_dict[propname] = default_val(prop_dict['standard_name'])
                 else:
@@ -310,9 +331,11 @@ class Var(object):
             and self.rank == other.rank
 
     @classmethod
-    def get_prop(cls, name):
-        if name in Var.__var_propdict:
+    def get_prop(cls, name, spec_type=None):
+        if (spec_type is None) and (name in Var.__var_propdict):
             return Var.__var_propdict[name]
+        elif (spec_type is not None) and (name in Var.__spec_propdict):
+            return Var.__spec_propdict[name]
         else:
             return None
 

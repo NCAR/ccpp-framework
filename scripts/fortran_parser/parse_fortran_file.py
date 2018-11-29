@@ -31,6 +31,13 @@ logger = logging.getLogger(__name__)
 
 ########################################################################
 
+class PFFAbort(ValueError):
+    "Internal error abort -- noone should be catching this exception"
+    def __init__(self, message):
+        super(PFFAbort, self).__init__(message)
+
+########################################################################
+
 def line_statements(line):
     """Break up line into a list of component Fortran statements
     Note, because this is a simple script, we can cheat on the
@@ -403,46 +410,67 @@ def read_file(filename, preproc_defs=None):
         # End while
         return pobj
 
-def is_executable_statement(statement):
+########################################################################
+
+def is_executable_statement(statement, in_module):
     "Return True iff <statement> is an executable Fortran statement"
     # Fill this in when we need to parse programs or subroutines
-    return False
+    if in_module and (contains_re.match(statement) is not None):
+        return True
+    else:
+        return False
+    # End if
 
-def parse_specification(pobj, statements, inmodule):
+########################################################################
+
+def parse_specification(pobj, statements, mod_name=None, prog_name=None):
     "Parse specification part of a module or (sub)program"
+    if (mod_name is not None) and (prog_name is not None):
+        PFFAbort("<mod_name> and <prog_name> cannot both be used")
+    elif mod_name is not None:
+        spec_name = mod_name
+        endmatch = endmodule_re
+        endname = 'MODULE'
+        inmod = True
+    elif prog_name is not None:
+        spec_name = prog_name
+        endmatch = endprogram_re
+        endname = 'PROGRAM'
+        inmod = False
+    else:
+        PFFAbort("One of <mod_name> or <prog_name> must be used")
+    # End if
     inspec = True
     mheaders = list()
     while inspec and (statements is not None):
-    # End while
         for index in xrange(len(statements)):
             # End program or module
-            if inmodule:
-                # End module
-                pmatch = endmodule_re.match(statements[index])
-                if pmatch is not None:
-                    mod_name = pmatch.group(1)
-                    pobj.leave_region('MODULE', region_name=mod_name)
-                    inspec = False
-                    break
-                # End if
-            else:
-                pmatch = endprogram_re.match(statements[index])
-                if pmatch is not None:
-                    prog_name = pmatch.group(1)
-                    pobj.leave_region('PROGRAM', region_name=prog_name)
-                    inspec = False
-                    break
-                # End if
-            # End if
-            if inspec and MetadataHeader.metadata_table_start(statements[index],
-                                                              context=pobj,
-                                                              syntax=FortranMetadataSyntax):
-                mheaders.append(MetadataHeader(pobj))
+            pmatch = endmatch.match(statements[index])
+            if pmatch is not None:
+                emod_name = pmatch.group(1)
+                pobj.leave_region(endname, region_name=emod_name)
+                inspec = False
+                break
+            elif MetadataHeader.metadata_table_start(statements[index],
+                                                     context=pobj,
+                                                     syntax=FortranMetadataSyntax):
+                mheaders.append(MetadataHeader(pobj, spec_name=spec_name))
+            elif is_executable_statement(statement, inmod):
+                inspec = False
+                break
             # End if
         # End for
-        statements = read_statements(pobj, statements)
+        if inspec:
+            statements = read_statements(pobj, statements)
+# XXgoldyXX: v debug only
+        else:
+            print("{}".format(statements[0] if len(statements) > 0 else "empty"))
+# XXgoldyXX: ^ debug only
+        # End if
     # End while
-   return statements, mheaders
+    return statements, mheaders
+
+########################################################################
 
 def parse_program(pobj, statements):
     # The first statement should be a program statement, grab the name
@@ -479,6 +507,8 @@ def parse_program(pobj, statements):
     # End while
     return statements[index+1:], mheaders
 
+########################################################################
+
 def parse_module(pobj, statements):
     # The first statement should be a program statement, grab the name
     pmatch = module_re.match(statements[0])
@@ -514,6 +544,8 @@ def parse_module(pobj, statements):
         # End if
     # End while
     return statements[index+1:], mheaders
+
+########################################################################
 
 def parse_fortran_file(filename, preproc_defs=None):
     mheaders = list()

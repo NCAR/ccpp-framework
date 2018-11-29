@@ -153,8 +153,9 @@ class MetadataHeader(object):
 
     _var_start = re.compile(r"^\[\s*(\w+)\s*\]$")
 
-    def __init__(self, parse_object, syntax=FortranMetadataSyntax):
+    def __init__(self, parse_object, syntax=FortranMetadataSyntax, spec_name=None):
         self._pobj = parse_object
+        self._spec_name = spec_name
         if syntax is None:
             raise ValueError('syntax may not be None')
         # End if
@@ -170,6 +171,19 @@ class MetadataHeader(object):
         if self._table_title is None:
             raise ParseSyntaxError("metadata header start",
                                    token=curr_line, context=self._pobj)
+        # End if
+        # Figure out the header type
+        if self._spec_name is not None:
+            if self._spec_name.lower() == self._table_title.lower():
+                # This is a module or program data header
+                self._header_type = 'MODULE'
+            else:
+                # This should be a derived data type
+                self._header_type = 'DDT'
+            # End if
+        else:
+            # This has to be a scheme name
+            self._header_type = 'SCHEME'
         # End if
         curr_line, curr_line_num = self._pobj.next_line()
         # Skip past any 'blank' lines
