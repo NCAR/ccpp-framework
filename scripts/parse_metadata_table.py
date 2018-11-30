@@ -196,7 +196,7 @@ class MetadataHeader(object):
         valid_lines =  True
         self._variables = {}
         while valid_lines:
-            newvar, curr_line = self.parse_variable(curr_line)
+            newvar, curr_line = self.parse_variable(curr_line, spec_name)
             valid_lines = newvar is not None
             if valid_lines:
                 new_sn = newvar.get_prop_value('standard_name')
@@ -224,7 +224,7 @@ class MetadataHeader(object):
 
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
-    def parse_variable(self, curr_line):
+    def parse_variable(self, curr_line, spec_name):
         # The header line has the format [ <valid_fortran_symbol> ]
         # Parse header
         valid_line = curr_line is not None
@@ -289,7 +289,7 @@ class MetadataHeader(object):
             return None, curr_line
         else:
             try:
-                newvar = Var(var_props)
+                newvar = Var(var_props, spec_type=spec_name)
             except ValueError as ve:
                 raise ParseSyntaxError(ve, context=self._pobj)
             return newvar, curr_line

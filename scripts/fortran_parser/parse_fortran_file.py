@@ -477,7 +477,7 @@ def parse_program(pobj, statements):
     prog_name = pmatch.group(1)
     pobj.enter_region('PROGRAM', region_name=prog_name, nested_ok=False)
     # After the program name is the specification part
-    statements, mheaders = parse_specification(pobj, statements[1:], False)
+    statements, mheaders = parse_specification(pobj, statements[1:], prog_name=prog_name)
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inprogram = True
@@ -514,7 +514,7 @@ def parse_module(pobj, statements):
     mod_name = pmatch.group(1)
     pobj.enter_region('MODULE', region_name=mod_name, nested_ok=False)
     # After the module name is the specification part
-    statements, mheaders = parse_specification(pobj, statements[1:], True)
+    statements, mheaders = parse_specification(pobj, statements[1:], mod_name=mod_name)
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inmodule = True

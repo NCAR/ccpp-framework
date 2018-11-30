@@ -108,6 +108,10 @@ def parse_host_model_files(host_pathsfile, preproc_defs):
         filenames = [x.strip() for x in infile.readlines()]
     # End with
     for filename in filenames:
+        if len(filename) == 0:
+            # Allow for blank lines
+            continue
+        # End if
         if not os.path.isabs(filename):
             # The filename should be relative to host_pathsfile
             filename = os.path.join(host_pdir, filename)
@@ -117,14 +121,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs):
             # since the Fortran files may define DDTs used by registry files.
             xml_files.append(filename)
         else:
-# XXgoldyXX: v debug only
-            print("Calling parse_fortran_file with '{}'".format(filename))
-# XXgoldyXX: ^ debug only
             mheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
-# XXgoldyXX: v debug only
-            print("results from {}:".format(os.path.basename(filename)))
-            print("{}".format(mheaders))
-# XXgoldyXX: ^ debug only
         # End if
     # End for
 
