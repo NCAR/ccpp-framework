@@ -455,17 +455,13 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None):
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
                 mheaders.append(MetadataHeader(pobj, spec_name=spec_name))
-            elif is_executable_statement(statement, inmod):
+            elif is_executable_statement(statements[index], inmod):
                 inspec = False
                 break
             # End if
         # End for
         if inspec:
-            statements = read_statements(pobj, statements)
-# XXgoldyXX: v debug only
-        else:
-            print("{}".format(statements[0] if len(statements) > 0 else "empty"))
-# XXgoldyXX: ^ debug only
+            statements = read_statements(pobj)
         # End if
     # End while
     return statements, mheaders
