@@ -455,6 +455,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None):
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
                 mheaders.append(MetadataHeader(pobj, spec_name=spec_name))
+                break
             elif is_executable_statement(statements[index], inmod):
                 inspec = False
                 break
@@ -493,6 +494,7 @@ def parse_program(pobj, statements):
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
                 mheaders.append(MetadataHeader(pobj))
+                break
             # End if
         # End for
         if not inprogram:
@@ -531,6 +533,7 @@ def parse_module(pobj, statements):
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
                 mheaders.append(MetadataHeader(pobj))
+                break
             # End if
         # End for
         if not inmodule:

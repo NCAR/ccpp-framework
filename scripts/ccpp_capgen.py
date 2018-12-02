@@ -103,6 +103,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs):
     return resulting dictionary.
     """
     host_pdir = os.path.dirname(host_pathsfile)
+    mheaders = list()
     xml_files = list()
     with open(host_pathsfile, 'r') as infile:
         filenames = [x.strip() for x in infile.readlines()]
@@ -121,9 +122,11 @@ def parse_host_model_files(host_pathsfile, preproc_defs):
             # since the Fortran files may define DDTs used by registry files.
             xml_files.append(filename)
         else:
-            mheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
+            hheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
+            mheaders.extend(hheaders)
         # End if
     # End for
+    return mheaders
 
 ###############################################################################
 def _main_func():
@@ -182,7 +185,7 @@ def _main_func():
         abort("--gen-docfiles not yet supported")
     # End if
     # First up, handle the host files
-    parse_host_model_files(host_pathsfile, preproc_defs)
+    mheaders = parse_host_model_files(host_pathsfile, preproc_defs)
 
 ###############################################################################
 

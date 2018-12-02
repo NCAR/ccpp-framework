@@ -221,7 +221,6 @@ class MetadataHeader(object):
                 # End if
             # End if
         # End while
-
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     def parse_variable(self, curr_line, spec_name):
