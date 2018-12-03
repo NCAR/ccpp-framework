@@ -9,8 +9,10 @@ import re
 import xml.etree.ElementTree as ET
 from parse_tools import check_fortran_id, check_fortran_type
 from parse_tools import check_dimensions, check_cf_standard_name
+from parse_tools import ParseContext, ParseSource
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler())
 
 real_subst_re = re.compile(r"(.*\d)p(\d.*)")
 list_re = re.compile(r"[(]([^)]*)[)]\s*$")
@@ -235,7 +237,7 @@ class Var(object):
 
     >>> Var.get_prop('dimensions').valid_value(['Bob', 'Ray'])
     ['Bob', 'Ray']
-    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}).get_prop_value('long_name')
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())).get_prop_value('long_name')
     'Hi mom'
     """
 
@@ -282,14 +284,19 @@ class Var(object):
         # End if
     # End for
 
-    def __init__(self, prop_dict, spec_type=None):
-        if spec_type is None:
+    def __init__(self, prop_dict, source):
+        _llevel = logger.getEffectiveLevel()
+        logger.setLevel(logging.ERROR)
+        if source.type is 'SCHEME':
             required_props = Var.__required_var_props
             master_propdict = Var.__var_propdict
         else:
             required_props = Var.__required_spec_props
             master_propdict = Var.__spec_propdict
         # End if
+        self._source = source
+        # Grab a frozen copy of the context
+        self._context = ParseContext(context=source.context)
         # First, check the input
         for key in prop_dict:
             if Var.get_prop(key) is None:
@@ -314,6 +321,7 @@ class Var(object):
                 # End if
             # End if
         # End for
+        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     def compatible(self, other):
         # We accept character(len=*) as compatible with character(len=INTEGER_VALUE)
@@ -344,6 +352,15 @@ class Var(object):
             return self._prop_dict[name]
         else:
             return None
+
+    @property
+    def context(self):
+        return self._context
+
+    @context.setter
+    def context(self, value):
+        'Do not allow context to be reset'
+        logger.warning('Cannot set value of context')
 
     def print_def(self):
         '''Print the definition line for the variable.'''
@@ -463,9 +480,103 @@ class Var(object):
         intent        = {intent}
         optional      = {optional}
         '''
-#        target        = {'target'}
-#        container     = {'container'}
+        if self._context is not None:
+            str = str + '\n        context       = {}'.format(self._context)
+        # End if
         return str.format(**self._prop_dict)
+
+###############################################################################
+
+class VarDictionary(dict):
+    """
+    A class to store and cross-check variables from one or more metadata
+    headers.
+    The dictionary is organized by standard_name with each entry a list
+    containing all the known variables sharing that standard_name.
+    >>> VarDictionary()
+    {}
+    >>> VarDictionary({})
+    {}
+    >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))) #doctest: +ELLIPSIS
+    {'hi_mom': [<__main__.Var object at 0x...>]}
+    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))]) #doctest: +ELLIPSIS
+    {'hi_mom': [<__main__.Var object at 0x...>]}
+    >>> VarDictionary().add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())))
+
+    """
+
+    def __init__(self, variables=None):
+        "Unlike dict, VarDictionary only takes a Var or Var list"
+        super(VarDictionary, self).__init__()
+        if type(variables) is Var:
+            self.add_variable(variables)
+        elif variables is not None:
+            for var in variables:
+                self.add_variable(var)
+            # End for
+        # End if
+
+    def variable_list(self, standard_name=None):
+        "Retrieve variables matching <standard_name> (default all variables)"
+        if standard_name is None:
+            # Return a list of all variables in the system
+            vlist = list()
+            for sn in self.keys():
+                vlist.extend(self[sn])
+            # End for
+        elif standard_name in self:
+            # Return a list of all variables matching <standard_name>
+            vlist = self[standard_name]
+        else:
+            vlist = None
+        # End if
+        return vlist
+
+    def add_variable(self, newvar):
+        """Add a variable if it does not conflict with existing entries"""
+        standard_name = newvar.get_prop_value('standard_name')
+        if standard_name in self:
+            # We have a matching variable, is it legal?
+            currvars = self.variable_list(standard_name)
+            for cvar in currvars:
+                # Are we in the same context? Compare region info
+                if newvar.source == cvar.source:
+                    logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, source.name))
+                    raise ParseSyntaxError("Duplicate standard name",
+                                           token=standard_name,
+                                           context=cvar._context)
+                elif not cvar.compatible(newvar):
+                    errstr = "Standard name incompatible with {}"
+                    raise ParseSyntaxError(errstr.format(cvar._context),
+                                           token=standard_name,
+                                           context=newvar.source.context)
+                # End if
+            # End for
+        else:
+            self[standard_name] = list()
+        # End if
+        # If we make it to here without an exception, add the variable
+        self[standard_name].append(newvar)
+
+    def has_variable(self, other_var):
+        "Test wither <other_var> is already in our dictionary"
+        in_dict = False
+        standard_name = other_var.get_prop_value('standard_name')
+        for cvar in self.variable_list(standard_name):
+            if cvar.source == other_var.source:
+                in_dict = True
+                break
+            # End if
+        # End for
+        return in_dict
+
+    def merge(self, other_dict):
+        "Add new entries from <other_dict>"
+        for ovar in other_dict.variable_list():
+            if not self.has_variable(ovar):
+                self.add_variable(ovar)
+            # End if
+        # End for
 
 ###############################################################################
 

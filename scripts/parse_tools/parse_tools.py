@@ -7,6 +7,7 @@ import collections
 import copy
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler())
 
 ########################################################################
 
@@ -202,6 +203,63 @@ class ParseContext(object):
 
 ########################################################################
 
+class ParseSource(object):
+    """
+    A simple object for providing source information
+    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")) #doctest: +ELLIPSIS
+    <__main__.ParseSource object at 0x...>
+    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).type
+    'mytype'
+    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).name
+    'myname'
+    >>> print("{}".format(ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).context))
+    foo.F90:14
+    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).type = 3
+
+    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).context = 3
+
+    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).name = 3
+
+    """
+
+    def __init__(self, name_in, type_in, context_in):
+        _llevel = logger.getEffectiveLevel()
+        logger.setLevel(logging.ERROR)
+        self._name = name_in
+        self._type = type_in
+        self._context = context_in
+        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, type_in):
+        'Do not allow the type to be set'
+        logger.warning('Cannot set value of type')
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name_in):
+        'Do not allow the name to be set'
+        logger.warning('Cannot set value of name')
+
+    @property
+    def context(self):
+        return self._context
+
+    @context.setter
+    def context(self, ctx_in):
+        'Do not allow the context to be set'
+        logger.warning('Cannot set value of context')
+
+########################################################################
+
 if __name__ == "__main__":
     import doctest
+    logger.setLevel(logging.WARNING)
     doctest.testmod()

@@ -36,20 +36,20 @@ character at the start of each line).
 !> \section arg_table_<name>
 !! [ im ]
 !! standard_name = horizontal_loop_extent
-!! description = horizontal loop extent, start at 1
+!! long_name = horizontal loop extent, start at 1
 !! units = index
 !! type = integer
 !! dimensions = ()
 !! intent = in
 !! [ ix ]
 !! standard_name = horizontal_loop_dimension
-!! description = horizontal dimension
+!! long_name = horizontal dimension
 !! units = index | type = integer | dimensions = ()
 !! intent = in
 !! ...
 !! [ errmsg]
 !! standard_name = ccpp_error_message
-!! description = error message for error handling in CCPP
+!! long_name = error message for error handling in CCPP
 !! units = none
 !! type = character
 !! len = *
@@ -57,7 +57,7 @@ character at the start of each line).
 !! intent = out
 !! [ ierr ]
 !! standard_name = ccpp_error_flag
-!! description = error flag for error handling in CCPP
+!! long_name = error flag for error handling in CCPP
 !! type = integer
 !! dimensions = ()
 !! intent=out
@@ -92,22 +92,24 @@ from __future__ import print_function
 import re
 import collections
 import logging
-from metavar import Var
-from parse_tools import ParseInternalError, ParseSyntaxError, ParseObject
+from metavar import Var, VarDictionary
+from parse_tools import ParseObject, ParseSource
+from parse_tools import ParseInternalError, ParseSyntaxError
 from parse_tools import MetadataSyntax, FortranMetadataSyntax
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler())
 
 ########################################################################
 
 ########################################################################
 
-class MetadataHeader(object):
+class MetadataHeader(ParseSource):
     """Class to hold all information from a metadata header
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
-                       "!! description = horizontal loop extent, start at 1", \
+                       "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in"])).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
@@ -115,7 +117,7 @@ class MetadataHeader(object):
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
-                       "!! description = horizontal loop extent, start at 1", \
+                       "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
                        "  subroutine foo()"])).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -124,7 +126,7 @@ class MetadataHeader(object):
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
-                       "!! description = horizontal loop extent, start at 1", \
+                       "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
                        "!! "])).get_var('horizontal_loop_extent') #doctest: +ELLIPSIS
@@ -132,7 +134,7 @@ class MetadataHeader(object):
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal_loop_extent",           \
-                       "!! description = horizontal loop extent, start at 1", \
+                       "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
                        "!! "], line_start=0),                                 \
@@ -141,7 +143,7 @@ class MetadataHeader(object):
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
                        "!! standard_name = horizontal loop extent",           \
-                       "!! description = horizontal loop extent, start at 1", \
+                       "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
                        "!! "], line_start=0)).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -163,7 +165,6 @@ class MetadataHeader(object):
         "Initialize from the <lines> of <filename> beginning at <first_line>"
         _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
-        self._variables = {}
         # Read the table preamble, assume the caller already figured out
         #  the first line of the header using the metadata_table_start method.
         curr_line, curr_line_num = self._pobj.curr_line()
@@ -185,6 +186,9 @@ class MetadataHeader(object):
             # This has to be a scheme name
             self._header_type = 'SCHEME'
         # End if
+        # Tiem to initialize our ParseSource parent
+        super(MetadataHeader, self).__init__(self._table_title,
+                                             self._header_type, self._pobj)
         curr_line, curr_line_num = self._pobj.next_line()
         # Skip past any 'blank' lines
         blanks_found = False
@@ -194,19 +198,12 @@ class MetadataHeader(object):
         # End while
         # Read the variables
         valid_lines =  True
-        self._variables = {}
+        self._variables = VarDictionary()
         while valid_lines:
             newvar, curr_line = self.parse_variable(curr_line, spec_name)
             valid_lines = newvar is not None
             if valid_lines:
-                new_sn = newvar.get_prop_value('standard_name')
-                if new_sn in self._variables:
-                    raise ParseSyntaxError("Duplicate standard name",
-                                           token=newvar.standard_name,
-                                           context=self._pobj)
-                else:
-                    self._variables[new_sn] = newvar
-                # End if
+                self._variables.add_variable(newvar)
             else:
                 # We have hit the end of the table, check for blank line
                 if curr_line is None:
@@ -288,7 +285,7 @@ class MetadataHeader(object):
             return None, curr_line
         else:
             try:
-                newvar = Var(var_props, spec_type=spec_name)
+                newvar = Var(var_props, source=self)
             except ValueError as ve:
                 raise ParseSyntaxError(ve, context=self._pobj)
             return newvar, curr_line
