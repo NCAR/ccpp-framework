@@ -13,6 +13,7 @@ import logging
 from fortran_parser import parse_fortran_file
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler())
 
 class CapgenAbort(ValueError):
     "Class so main can log user errors without backtrace"
@@ -126,6 +127,9 @@ def parse_host_model_files(host_pathsfile, preproc_defs):
             mheaders.extend(hheaders)
         # End if
     # End for
+    for file in xml_files:
+        ? = parse_host_registry(file)
+    # End for
     return mheaders
 
 ###############################################################################
@@ -186,6 +190,9 @@ def _main_func():
     # End if
     # First up, handle the host files
     mheaders = parse_host_model_files(host_pathsfile, preproc_defs)
+# XXgoldyXX: v debug only
+    print("headers = {}".format([x._table_title for x in mheaders]))
+# XXgoldyXX: ^ debug only
 
 ###############################################################################
 
