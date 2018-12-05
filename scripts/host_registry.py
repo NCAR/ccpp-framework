@@ -50,13 +50,13 @@ def call_command(commands, silent=False):
     """
     result = False
     try:
-        cmd = ' '.join(commands)
-        outstr = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        outstr = subprocess.check_output(commands, stderr=subprocess.STDOUT)
         result = True
     except (OSError, ValueError, subprocess.CalledProcessError) as err:
         if silent:
             outstr = ""
         else:
+            cmd = ' '.join(commands)
             outstr = "Execution of '{}' failed:\n".format(cmd)
             outstr = outstr + "{}".format(err)
             abort(outstr)
@@ -139,7 +139,8 @@ def validate_xml_file(filename, version):
     # End if
     if xmllint is not None:
         logger.debug("Checking file {} against schema {}".format(filename, schema_file))
-        result = call_command([xmllint, '--noout', '--schema', schema_file, filename])
+        cmd = [xmllint, '--noout', '--schema', schema_file, filename]
+        result = call_command(cmd)
         return result
     else:
         logger.warning("xmllint not found, could not validate file {}".format(filename))
@@ -178,7 +179,6 @@ if __name__ == "__main__":
         if os.path.exists(cam7):
             tree, root = read_xml_file(cam7)
             version = find_host_version(root)
-            print("CAM7 registry version is {}".format(version))
             res = validate_xml_file(cam7, version)
             print("CAM7 registry {}".format("validates" if res else "does not validate"))
         else:
