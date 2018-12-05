@@ -5,12 +5,16 @@ Create CCPP parameterization caps, host-model interface code, optional
 physics suite runtime code, and documentation.
 """
 
+# Python library imports
 import argparse
 import sys
 import os
 import os.path
 import logging
+# CCPP framework imports
 from fortran_parser import parse_fortran_file
+from metavar import VarDictionary
+from host_registry import parse_host_registry
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
@@ -97,7 +101,7 @@ def parse_command_line(args, description):
     return pargs
 
 ###############################################################################
-def parse_host_model_files(host_pathsfile, preproc_defs):
+def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
 ###############################################################################
     """
     Gather information from host files (e.g., DDTs, registry) and
@@ -106,6 +110,8 @@ def parse_host_model_files(host_pathsfile, preproc_defs):
     host_pdir = os.path.dirname(host_pathsfile)
     mheaders = list()
     xml_files = list()
+    dimensions = list()
+    variables = VarDictionary()
     with open(host_pathsfile, 'r') as infile:
         filenames = [x.strip() for x in infile.readlines()]
     # End with
@@ -128,7 +134,14 @@ def parse_host_model_files(host_pathsfile, preproc_defs):
         # End if
     # End for
     for file in xml_files:
-        ? = parse_host_registry(file)
+        dims, vars, host_vars = parse_host_registry(file, verbosity)
+        dimensions.extend(dims)
+        variables.merge(vars)
+        if verbosity > 1:
+            for var in host_vars.keys():
+                logger.info("{} defined in {}".format(var, host_vars[var]))
+            # End for
+        # End if
     # End for
     return mheaders
 
@@ -138,6 +151,9 @@ def _main_func():
     logger.addHandler(logging.StreamHandler())
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
+    if verbosity > 0:
+        logger.setLevel(logging.INFO)
+    # End if
     host_pathsfile = os.path.abspath(args.host_pathnames)
     schemes_pathsfile = os.path.abspath(args.scheme_pathnames)
     if len(args.sdf_pathlist) > 0:
@@ -189,7 +205,7 @@ def _main_func():
         abort("--gen-docfiles not yet supported")
     # End if
     # First up, handle the host files
-    mheaders = parse_host_model_files(host_pathsfile, preproc_defs)
+    mheaders = parse_host_model_files(host_pathsfile, preproc_defs, verbosity)
 # XXgoldyXX: v debug only
     print("headers = {}".format([x._table_title for x in mheaders]))
 # XXgoldyXX: ^ debug only

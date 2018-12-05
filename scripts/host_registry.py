@@ -4,12 +4,12 @@
 Parse a host-model registry XML file and return the captured variables.
 """
 
+# Python library imports
 from __future__ import print_function
 import sys
 import os
 import os.path
 import logging
-import six
 import subprocess
 import xml.etree.ElementTree as ET
 try:
@@ -17,6 +17,11 @@ try:
     xmllint = find_executable('xmllint')
 except ImportError as ie:
     xmllint = None
+# End try
+# CCPP framework imports
+import six
+from metavar import Var, VarDictionary
+from parse_tools import ParseSource, ParseContext
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +169,53 @@ def read_xml_file(filename):
         abort("read_xml_file: Filename, '{}', does not exist".format(filename))
     # End if
     return tree, root
+
+###############################################################################
+def parse_host_registry(filename, verbosity):
+###############################################################################
+    variables = VarDictionary()
+    dimensions = list()
+    host_variables = {}
+    tree, root = read_xml_file(filename)
+    # We do not have line number information for the XML file
+    context = ParseContext(filename=filename)
+    version = find_host_version(root) # Only one version so far
+    res = validate_xml_file(filename, version)
+    if not res:
+        raise HostRegAbort("Invalid host registry file, '{}'".format(filename))
+    # End if
+    if verbosity > 0:
+        logger.info("Reading host model registry for {}".format(root.attrib['model']))
+    # End if
+    for child in root:
+        if child.tag == 'dimension':
+            # Just collect dimensions for now
+            dimensions.extend(child.attrib)
+        elif child.tag == 'variable':
+            prop_dict = child.attrib
+            vname = prop_dict['local_name']
+            for var_prop in child:
+                if var_prop.tag == 'type':
+                    prop_dict['type'] = var_prop.text
+                    prop_dict['kind'] = var_prop.attrib['kind']
+                    prop_dict['units'] = var_prop.attrib['units']
+                elif var_prop.tag == 'module':
+                    # We need to keep track of where host variables come from
+                    host_variables[vname] = var_prop.text
+                else:
+                    # These elements should just have text, no attributes
+                    if len(var_prop.attrib) > 0:
+                        abort("Bad variable property, {} for variable, {}".format(var_prop.tag, vname))
+                    else:
+                        prop_dict[var_prop.tag] = var_prop.text
+                    # End if
+                # End if
+            # End for
+            newvar = Var(prop_dict, ParseSource(vname, 'REGISTRY', context))
+            variables.add_variable(newvar)
+        # End if
+    # End for
+    return dimensions, variables, host_variables
 
 ###############################################################################
 
