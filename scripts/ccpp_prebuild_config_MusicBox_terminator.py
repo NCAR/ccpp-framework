@@ -25,7 +25,8 @@ SCHEME_FILES = {
     'MICM_chemistry/src/chemistry_driver.F90'   : ['physics'],
     'MICM_chemistry/src/terminator/k_rateConst.F90' : ['physics'],
     'MICM_chemistry/src/photolysis_interstitial.F90' : ['physics'],
-    'MICM_chemistry/src/tuv/tuv_photolysis.F90' : ['physics']
+    'MICM_chemistry/src/tuv/tuv_photolysis.F90' : ['physics'],
+    'MICM_chemistry/src/mass_quantities_util.F90' : ['physics']
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
