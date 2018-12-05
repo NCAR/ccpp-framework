@@ -298,6 +298,17 @@ class Var(object):
         # Grab a frozen copy of the context
         self._context = ParseContext(context=source.context)
         # First, check the input
+        if 'ddt_type' in prop_dict:
+            # Special case to bypass normal type rules
+            if 'type' not in prop_dict:
+                prop_dict['type'] = 'type'
+            # End if
+            if 'units' not in prop_dict:
+                prop_dict['units'] = ""
+            # End if
+            prop_dict['kind'] = prop_dict['ddt_type']
+            del prop_dict['ddt_type']
+        # End if
         for key in prop_dict:
             if Var.get_prop(key) is None:
                 raise ValueError("Invalid metadata variable property, '{}'".format(key))
