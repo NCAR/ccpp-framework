@@ -70,8 +70,8 @@
     <xs:restriction base="fortran_id_type"/>
   </xs:simpleType>
 
-  <xs:simpleType name="func_call_type">
-    <xs:restriction base="fortran_func_type"/>
+  <xs:simpleType name="module">
+    <xs:restriction base="fortran_id_type"/>
   </xs:simpleType>
 
   <!-- definition of complex types -->
@@ -79,8 +79,16 @@
   <xs:complexType name="md_type">
     <xs:simpleContent>
       <xs:extension base="type_type">
-        <xs:attribute ref="kind"           use="required"/>
-        <xs:attribute ref="units"          use="required"/>
+        <xs:attribute ref="kind"  use="required"/>
+        <xs:attribute ref="units" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="func_call_type">
+    <xs:simpleContent>
+      <xs:extension base="fortran_func_type">
+        <xs:attribute ref="module" use="required"/>
       </xs:extension>
     </xs:simpleContent>
   </xs:complexType>
@@ -92,8 +100,10 @@
         <xs:element name="ddt_type" type="ddt_type"/>
       </xs:choice>
       <xs:element name="dimensions" type="dimensions" />
-      <xs:element name="access"     type="func_call_type"
-                  minOccurs="0" maxOccurs="1"/>
+      <xs:choice>
+        <xs:element name="module" type="fortran_id_type"/>
+        <xs:element name="access" type="func_call_type"/>
+      </xs:choice>
     </xs:sequence>
     <xs:attribute ref="local_name"     use="required"/>
     <xs:attribute ref="standard_name"  use="required"/>
