@@ -9,7 +9,7 @@ import re
 import xml.etree.ElementTree as ET
 from parse_tools import check_fortran_id, check_fortran_type
 from parse_tools import check_dimensions, check_cf_standard_name
-from parse_tools import ParseContext, ParseSource
+from parse_tools import ParseContext, ParseSource, ParseSyntaxError
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
@@ -375,6 +375,15 @@ class Var(object):
         'Do not allow context to be reset'
         logger.warning('Cannot set value of context')
 
+    @property
+    def source(self):
+        return self._source
+
+    @source.setter
+    def source(self, value):
+        'Do not allow source to be reset'
+        logger.warning('Cannot set value of source')
+
     def print_def(self):
         '''Print the definition line for the variable.'''
         if self.type in STANDARD_VARIABLE_TYPES:
@@ -554,7 +563,7 @@ class VarDictionary(dict):
             for cvar in currvars:
                 # Are we in the same context? Compare region info
                 if newvar.source == cvar.source:
-                    logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, source.name))
+                    logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
                     raise ParseSyntaxError("Duplicate standard name",
                                            token=standard_name,
                                            context=cvar._context)

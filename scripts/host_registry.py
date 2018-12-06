@@ -238,7 +238,7 @@ def parse_host_registry(filename, verbosity):
             variables.add_variable(newvar)
         # End if
     # End for
-    return host_variables, variables
+    return variables, host_variables
 
 ###############################################################################
 

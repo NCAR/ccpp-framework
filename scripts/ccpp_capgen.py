@@ -19,6 +19,8 @@ from host_registry import HostModel, parse_host_registry
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 
+###############################################################################
+
 class CapgenAbort(ValueError):
     "Class so main can log user errors without backtrace"
     def __init__(self, message):
@@ -37,11 +39,18 @@ def is_xml_file(filename):
     return (len(parts) > 1) and (parts[-1].lower() == 'xml')
 
 ###############################################################################
-def check_for_existing_file(filename, description):
+def check_for_existing_file(filename, description, readable=True):
 ###############################################################################
-    if not os.path.exists(filename):
+    'Check for file existence and access, abort on error'
+    if os.path.exists(filename):
+        if readable:
+            if not os.access(filename, os.R_OK):
+                abort("No read access to {}, '{}'".format(description, filename))
+            # End if
+        # End if (no else needed, checks all done
+    else:
         abort("{}, '{}', must exist".format(description, filename))
-    # End if (else just return)
+    # End if
 
 ###############################################################################
 def check_for_writeable_file(filename, description):
@@ -101,29 +110,41 @@ def parse_command_line(args, description):
     return pargs
 
 ###############################################################################
+def read_pathnames_from_file(pathsfile):
+###############################################################################
+    'Read pathnames from <pathsfile> and return them as a list'
+    pathnames = list()
+    with open(pathsfile, 'r') as infile:
+        for line in infile.readlines():
+            path = line.strip()
+            # Skip blank lines and lines which appear to start with a comment.
+            if (len(path) > 0) and (path[0] != '#') and (path[0] != '!'):
+                # Check for an absolute path
+                if not os.path.isabs(path):
+                    # Assume relative pathnames are relative to pathsfile
+                    path = os.path.join(os.path.dirname(pathsfile), path)
+                # End if
+                pdesc = 'pathname in {}'.format(pathsfile)
+                check_for_existing_file(path, pdesc)
+                pathnames.append(path)
+            # End if (else skip blank or comment line)
+        # End for
+    # End with
+    return pathnames
+
+###############################################################################
 def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
 ###############################################################################
     """
     Gather information from host files (e.g., DDTs, registry) and
-    return resulting dictionary.
+    return a host model object with the information.
     """
-    host_pdir = os.path.dirname(host_pathsfile)
     mheaders = list()
     xml_files = list()
     host_variables = {}
     variables = VarDictionary()
-    with open(host_pathsfile, 'r') as infile:
-        filenames = [x.strip() for x in infile.readlines()]
-    # End with
+    filenames = read_pathnames_from_file(host_pathsfile)
     for filename in filenames:
-        if len(filename) == 0:
-            # Allow for blank lines
-            continue
-        # End if
-        if not os.path.isabs(filename):
-            # The filename should be relative to host_pathsfile
-            filename = os.path.join(host_pdir, filename)
-        # End if
         if is_xml_file(filename):
             # We have to process XML files after processing Fortran files
             # since the Fortran files may define DDTs used by registry files.
@@ -144,6 +165,23 @@ def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
         # End if
     # End for
     return HostModel(mheaders, host_variables, variables)
+
+###############################################################################
+def parse_scheme_files(scheme_pathsfile, preproc_defs, verbosity):
+###############################################################################
+    """
+    Gather information from scheme files (e.g., init, run, and finalize
+    methods) and return resulting dictionary.
+    """
+    scheme_pdir = os.path.dirname(scheme_pathsfile)
+    mheaders = list()
+    scheme_headers = {}
+    filenames = read_pathnames_from_file(scheme_pathsfile)
+    for filename in filenames:
+        sheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
+        mheaders.extend(sheaders)
+    # End for
+    return mheaders
 
 ###############################################################################
 def _main_func():
@@ -205,10 +243,13 @@ def _main_func():
         abort("--gen-docfiles not yet supported")
     # End if
     # First up, handle the host files
-    mheaders, variables = parse_host_model_files(host_pathsfile, preproc_defs, verbosity)
+    host_model = parse_host_model_files(host_pathsfile, preproc_defs, verbosity)
+    # Next, parse the scheme files
+    scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs, verbosity)
 # XXgoldyXX: v debug only
-    print("headers = {}".format([x._table_title for x in mheaders]))
-    print("variables = {}".format([x['local_name'] for x in variables.variable_list()]))
+    print("headers = {}".format([x._table_title for x in host_model._ddt_defs]))
+    print("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
+    print("schemes = {}".format([x._table_title for x in scheme_headers]))
 # XXgoldyXX: ^ debug only
 
 ###############################################################################
