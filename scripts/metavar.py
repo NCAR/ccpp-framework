@@ -258,7 +258,9 @@ class Var(object):
                     VariableProperty('state_variable', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('optional', bool,
-                                     optional_in=True, default_in=False) ]
+                                     optional_in=True, default_in=False),
+                    VariableProperty('module', str,
+                                     optional_in=True, default_in='')]
 
     # __var_props contains properties which are not in __spec_props
     __var_props = [VariableProperty('intent', str,

@@ -32,6 +32,15 @@ class HostRegAbort(ValueError):
         super(HostRegAbort, self).__init__(message)
 
 ###############################################################################
+class HostModel(object):
+    "Class to hold the data from a host model"
+
+    def __init__(self, ddt_defs, var_locations, variables):
+        self._ddt_defs = ddt_defs
+        self._var_locations = var_locations
+        self._variables = variables
+
+###############################################################################
 def abort(message, log_error=True):
 ###############################################################################
     if log_error:
@@ -174,7 +183,6 @@ def read_xml_file(filename):
 def parse_host_registry(filename, verbosity):
 ###############################################################################
     variables = VarDictionary()
-    dimensions = list()
     host_variables = {}
     tree, root = read_xml_file(filename)
     # We do not have line number information for the XML file
@@ -188,20 +196,22 @@ def parse_host_registry(filename, verbosity):
         logger.info("Reading host model registry for {}".format(root.attrib['model']))
     # End if
     for child in root:
-        if child.tag == 'dimension':
-            # Just collect dimensions for now
-            dimensions.extend(child.attrib)
-        elif child.tag == 'variable':
+        if (child.tag == 'dimension') or (child.tag == 'variable'):
             prop_dict = child.attrib
             vname = prop_dict['local_name']
             for var_prop in child:
-                if var_prop.tag == 'type':
-                    prop_dict['type'] = var_prop.text
-                    prop_dict['kind'] = var_prop.attrib['kind']
-                    prop_dict['units'] = var_prop.attrib['units']
-                elif var_prop.tag == 'module':
+                if var_prop.tag == 'module':
                     # We need to keep track of where host variables come from
                     host_variables[vname] = var_prop.text
+                # End if
+                if var_prop.tag == 'type':
+                    prop_dict['type'] = var_prop.text
+                    if 'kind' in var_prop.attrib:
+                        prop_dict['kind'] = var_prop.attrib['kind']
+                    # End if
+                    if 'units' in var_prop.attrib:
+                        prop_dict['units'] = var_prop.attrib['units']
+                    # End if
                 else:
                     # These elements should just have text, no attributes
                     if len(var_prop.attrib) > 0:
@@ -211,11 +221,24 @@ def parse_host_registry(filename, verbosity):
                     # End if
                 # End if
             # End for
+            ##XXgoldyXX: Try to make the XSD cough these up
+            if (child.tag == 'dimension') and ('type' not in prop_dict):
+                prop_dict['type'] = "integer"
+            # End if
+            if (child.tag == 'dimension') and ('units' not in prop_dict):
+                prop_dict['units'] = "1"
+            # End if
+            if (child.tag == 'dimension') and ('kind' not in prop_dict):
+                prop_dict['kind'] = ""
+            # End if
+            if (child.tag == 'dimension') and ('dimensions' not in prop_dict):
+                prop_dict['dimensions'] = "()"
+            # End if
             newvar = Var(prop_dict, ParseSource(vname, 'REGISTRY', context))
             variables.add_variable(newvar)
         # End if
     # End for
-    return dimensions, variables, host_variables
+    return host_variables, variables
 
 ###############################################################################
 

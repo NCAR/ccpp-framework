@@ -28,6 +28,12 @@
     </xs:restriction>
   </xs:simpleType>
 
+  <xs:simpleType name="int_type">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[iI][nN][tT][eE][gG][eE][rR]"/>
+    </xs:restriction>
+  </xs:simpleType>
+
   <xs:simpleType name="version_type">
     <xs:restriction base="xs:string">
       <xs:pattern value="[1-9][0-9]*[.][0-9]+"/>
@@ -76,6 +82,15 @@
 
   <!-- definition of complex types -->
 
+  <xs:complexType name="dim_type">
+    <xs:simpleContent>
+      <xs:extension base="int_type">
+        <xs:attribute ref="kind"  use="optional" default=""/>
+        <xs:attribute ref="units" use="optional" default="1"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
   <xs:complexType name="md_type">
     <xs:simpleContent>
       <xs:extension base="type_type">
@@ -91,6 +106,18 @@
         <xs:attribute ref="module" use="required"/>
       </xs:extension>
     </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="dimension_decl_type">
+    <xs:sequence>
+      <xs:element name="type"     type="dim_type"
+                  minOccurs="0" maxOccurs="1"
+                  default="integer"/>
+      <xs:element name="module" type="fortran_id_type"/>
+    </xs:sequence>
+    <xs:attribute ref="local_name"     use="required"/>
+    <xs:attribute ref="standard_name"  use="required"/>
+    <xs:attribute ref="long_name"      use="optional"/>
   </xs:complexType>
 
   <xs:complexType name="variable_type">
@@ -114,12 +141,7 @@
 
   <!-- definition of elements -->
 
-  <xs:element name="dimension">
-    <xs:complexType>
-      <xs:attribute ref="name"          use="required"/>
-      <xs:attribute ref="standard_name" use="required"/>
-      <xs:attribute ref="module"        use="required"/>
-    </xs:complexType>
+  <xs:element name="dimension" type="dimension_decl_type">
   </xs:element>
 
   <xs:element name="variable" type="variable_type">

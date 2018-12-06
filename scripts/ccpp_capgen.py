@@ -14,7 +14,7 @@ import logging
 # CCPP framework imports
 from fortran_parser import parse_fortran_file
 from metavar import VarDictionary
-from host_registry import parse_host_registry
+from host_registry import HostModel, parse_host_registry
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
@@ -110,7 +110,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
     host_pdir = os.path.dirname(host_pathsfile)
     mheaders = list()
     xml_files = list()
-    dimensions = list()
+    host_variables = {}
     variables = VarDictionary()
     with open(host_pathsfile, 'r') as infile:
         filenames = [x.strip() for x in infile.readlines()]
@@ -134,16 +134,16 @@ def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
         # End if
     # End for
     for file in xml_files:
-        dims, vars, host_vars = parse_host_registry(file, verbosity)
-        dimensions.extend(dims)
+        vars, host_vars = parse_host_registry(file, verbosity)
         variables.merge(vars)
         if verbosity > 1:
             for var in host_vars.keys():
+                host_variables[var] = host_vars[var]
                 logger.info("{} defined in {}".format(var, host_vars[var]))
             # End for
         # End if
     # End for
-    return mheaders
+    return HostModel(mheaders, host_variables, variables)
 
 ###############################################################################
 def _main_func():
@@ -205,9 +205,10 @@ def _main_func():
         abort("--gen-docfiles not yet supported")
     # End if
     # First up, handle the host files
-    mheaders = parse_host_model_files(host_pathsfile, preproc_defs, verbosity)
+    mheaders, variables = parse_host_model_files(host_pathsfile, preproc_defs, verbosity)
 # XXgoldyXX: v debug only
     print("headers = {}".format([x._table_title for x in mheaders]))
+    print("variables = {}".format([x['local_name'] for x in variables.variable_list()]))
 # XXgoldyXX: ^ debug only
 
 ###############################################################################
