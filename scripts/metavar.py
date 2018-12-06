@@ -573,12 +573,15 @@ class VarDictionary(dict):
         "Test wither <other_var> is already in our dictionary"
         in_dict = False
         standard_name = other_var.get_prop_value('standard_name')
-        for cvar in self.variable_list(standard_name):
-            if cvar.source == other_var.source:
-                in_dict = True
-                break
-            # End if
-        # End for
+        var_list = self.variable_list(standard_name)
+        if var_list is not None:
+            for cvar in var_list:
+                if cvar.source == other_var.source:
+                    in_dict = True
+                    break
+                # End if
+            # End for
+        # End if
         return in_dict
 
     def merge(self, other_dict):
