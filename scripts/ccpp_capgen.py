@@ -13,6 +13,7 @@ import os.path
 import logging
 # CCPP framework imports
 from fortran_parser import parse_fortran_file
+from parse_tools import read_xml_file
 from metavar import VarDictionary
 from host_registry import HostModel, parse_host_registry
 
@@ -173,7 +174,6 @@ def parse_scheme_files(scheme_pathsfile, preproc_defs, verbosity):
     Gather information from scheme files (e.g., init, run, and finalize
     methods) and return resulting dictionary.
     """
-    scheme_pdir = os.path.dirname(scheme_pathsfile)
     mheaders = list()
     scheme_headers = {}
     filenames = read_pathnames_from_file(scheme_pathsfile)
@@ -182,6 +182,29 @@ def parse_scheme_files(scheme_pathsfile, preproc_defs, verbosity):
         mheaders.extend(sheaders)
     # End for
     return mheaders
+
+###############################################################################
+def parse_sdf_file(sdf_file, verbosity):
+###############################################################################
+    """
+    Gather information from SDF file and return resulting suite object.
+    """
+    tree, root = read_xml_file(sdf_file)
+    return root
+
+###############################################################################
+def parse_sdf_files(sdf_pathsfile, verbosity):
+###############################################################################
+    """
+    Gather information from SDF files and return resulting suite objects.
+    """
+    suites = list()
+    filenames = read_pathnames_from_file(sdf_pathsfile)
+    for filename in filenames:
+        root = parse_sdf_file(filename, verbosity)
+        suites.append(root)
+    # End for
+    return suites
 
 ###############################################################################
 def _main_func():
@@ -246,6 +269,15 @@ def _main_func():
     host_model = parse_host_model_files(host_pathsfile, preproc_defs, verbosity)
     # Next, parse the scheme files
     scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs, verbosity)
+    # Last, parse the SDF file(s)
+    if sdf_pathsfile is not None:
+        if sdf_is_xml:
+            suite = parse_sdf_file(sdf_pathsfile, verbosity)
+            suites = [suite]
+        else:
+            suites = parse_sdf_files(sdf_pathsfile, verbosity)
+        # End if
+    # End if
 # XXgoldyXX: v debug only
     print("headers = {}".format([x._table_title for x in host_model._ddt_defs]))
     print("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
