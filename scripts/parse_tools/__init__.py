@@ -8,6 +8,7 @@ from parse_checkers import check_fortran_id, check_fortran_type, FORTRAN_ID
 from parse_checkers import check_fortran_intrinsic
 from parse_checkers import registered_fortran_ddt_name, register_fortran_ddt_name
 from parse_checkers import check_dimensions, check_cf_standard_name
+from xml_tools      import find_schema_version, validate_xml_file, read_xml_file
 
 __all__ = [
     'ParseContext',
@@ -24,5 +25,8 @@ __all__ = [
     'check_fortran_type',
     'registered_fortran_ddt_name',
     'register_fortran_ddt_name'
-    'FORTRAN_ID'
+    'FORTRAN_ID',
+    'find_schema_version',
+    'validate_xml_file',
+    'read_xml_file'
 ]
