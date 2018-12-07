@@ -193,17 +193,26 @@ def parse_sdf_file(sdf_file, verbosity):
     return root
 
 ###############################################################################
-def parse_sdf_files(sdf_pathsfile, verbosity):
+def parse_sdf_files(sdf_pathsfile=None, sdf_file=None, verbosity=0):
 ###############################################################################
     """
     Gather information from SDF files and return resulting suite objects.
     """
     suites = list()
-    filenames = read_pathnames_from_file(sdf_pathsfile)
-    for filename in filenames:
+    if sdf_pathsfile is not None:
+        filenames = read_pathnames_from_file(sdf_pathsfile)
+        for filename in filenames:
+            root = parse_sdf_file(filename, verbosity)
+            suites.append(root)
+        # End for
+    # End if
+    if sdf_file is not None:
         root = parse_sdf_file(filename, verbosity)
         suites.append(root)
-    # End for
+    # End if
+    if (sdf_pathsfile is None) and (sdf_file is None) and (verbosity > 0):
+        logger.warning("parse_sdf_files called with no files to parse")
+    # End if
     return suites
 
 ###############################################################################
@@ -272,10 +281,9 @@ def _main_func():
     # Last, parse the SDF file(s)
     if sdf_pathsfile is not None:
         if sdf_is_xml:
-            suite = parse_sdf_file(sdf_pathsfile, verbosity)
-            suites = [suite]
+            suites = parse_sdf_files(sdf_file=sdf_pathsfile, verbosity=verbosity)
         else:
-            suites = parse_sdf_files(sdf_pathsfile, verbosity)
+            suites = parse_sdf_files(sdf_pathsfile=sdf_pathsfile, verbosity=verbosity)
         # End if
     # End if
 # XXgoldyXX: v debug only
