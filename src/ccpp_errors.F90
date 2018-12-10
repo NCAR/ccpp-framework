@@ -82,7 +82,7 @@ module ccpp_errors
     subroutine ccpp_debug(message)
         character(len=*),        intent(in) :: message
 
-#ifdef DEBUG
+#if 0
         write(output_unit, *) 'DEBUG: ', trim(message)
 #endif
     end subroutine ccpp_debug
