@@ -204,8 +204,6 @@ class ParseObject(ParseContext):
     """
 
     def __init__(self, filename, lines_in, line_start=0, syntax=MetadataSyntax):
-        _llevel = logger.getEffectiveLevel()
-        # Turn off property warnings
         logger.setLevel(logging.ERROR)
         self._filename = filename
         self._lines = lines_in
@@ -214,7 +212,8 @@ class ParseObject(ParseContext):
         self._line_next = line_start
         self._syntax = syntax
         super(ParseObject, self).__init__(linenum=line_start, filename=filename)
-        # Turn logging back on
+        # Turn logging to WARNING if not set
+        _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
@@ -222,20 +221,10 @@ class ParseObject(ParseContext):
         'Return the first line parsed'
         return self._first_line
 
-    @first_line_num.setter
-    def first_line_num(self):
-        'Do not allow the first_line to be set'
-        logger.warning('Cannot set value of first_line')
-
     @property
     def last_line_num(self):
         'Return the last line parsed'
         return self._line_end
-
-    @last_line_num.setter
-    def last_line_num(self):
-        'Do not allow the last_line_num to be set'
-        logger.warning('Cannot set value of last_line_num')
 
     @property
     def syntax(self):
@@ -244,11 +233,6 @@ class ParseObject(ParseContext):
             return "None"
         else:
             return self._syntax.__name__
-
-    @syntax.setter
-    def syntax(self):
-        'Do not allow the syntax to be set'
-        logger.warning('Cannot set value of syntax')
 
     def curr_line(self):
         valid_line = self.line_num < len(self._lines)

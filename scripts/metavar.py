@@ -100,20 +100,10 @@ class VariableProperty(object):
         'Return the name of the property'
         return self._name
 
-    @name.setter
-    def name(self, value):
-        'Do not allow the name to be set'
-        logger.warning('Cannot set value of name')
-
     @property
     def type(self):
         'Return the type of the property'
         return self._type
-
-    @type.setter
-    def type(self, value):
-        'Do not allow the type to be set'
-        logger.warning('Cannot set value of type')
 
     @property
     def default(self, arg=None):
@@ -127,19 +117,9 @@ class VariableProperty(object):
             # End if
         # End if
 
-    @default.setter
-    def default(self, value):
-        'Do not allow default to be reset'
-        logger.warning('Cannot set value of default')
-
     @property
     def optional(self):
         return self._optional
-
-    @optional.setter
-    def optional(self, value):
-        'Do not allow optional to be reset'
-        logger.warning('Cannot set value of optional')
 
     def is_match(self, test_name):
         "Return True iff <test_name> is the name of this property"
@@ -287,8 +267,6 @@ class Var(object):
     # End for
 
     def __init__(self, prop_dict, source):
-        _llevel = logger.getEffectiveLevel()
-        logger.setLevel(logging.ERROR)
         if source.type is 'SCHEME':
             required_props = Var.__required_var_props
             master_propdict = Var.__var_propdict
@@ -334,6 +312,8 @@ class Var(object):
                 # End if
             # End if
         # End for
+        # Turn logging to WARNING if not set
+        _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     def compatible(self, other):
@@ -370,19 +350,9 @@ class Var(object):
     def context(self):
         return self._context
 
-    @context.setter
-    def context(self, value):
-        'Do not allow context to be reset'
-        logger.warning('Cannot set value of context')
-
     @property
     def source(self):
         return self._source
-
-    @source.setter
-    def source(self, value):
-        'Do not allow source to be reset'
-        logger.warning('Cannot set value of source')
 
     def print_def(self):
         '''Print the definition line for the variable.'''

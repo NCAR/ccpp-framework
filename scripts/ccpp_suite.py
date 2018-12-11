@@ -175,19 +175,6 @@ end module {module}
 class Suite(object):
 
     header='''
-!
-! This work (Common Community Physics Package), identified by NOAA, NCAR,
-! CU/CIRES, is free of known copyright restrictions and is placed in the
-! public domain.
-!
-! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-! THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-!
-
 !>
 !! @brief Auto-generated cap module for the CCPP suite
 !!
@@ -223,16 +210,12 @@ module {module}
 end module {module}
 '''
 
-    def __init__(self, xml_root):
+    def __init__(self, xml_root, filename):
         self._name = None
-        self._sdf_name = None
-        self._all_schemes_called = None
-        self._all_subroutines_called = None
-        self._caps = None
+        self._sdf_name = filename ##XXgoldyXX: Do we need this?
+        self._caps = None ##XXgoldyXX: Do we need this?
         self._module = None
         self._subroutines = None
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
 
     @property
     def name(self):
@@ -295,10 +278,6 @@ end module {module}
 
             self._groups.append(Group(name=group_xml.get('name'), subcycles=subcycles))
 
-        # Remove duplicates from list of all subroutines an schemes
-        self._all_schemes_called = list(set(self._all_schemes_called))
-        self._all_subroutines_called = list(set(self._all_subroutines_called))
-
         return success
 
     def print_debug(self):
@@ -315,22 +294,10 @@ end module {module}
         '''Get the list of all schemes.'''
         return self._all_schemes_called
 
-    #@all_schemes_called.setter
-    #def all_schemes_called(self, value):
-    #    if not type(value) is list:
-    #        raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
-    #    self._all_schemes_called = value
-
     @property
     def all_subroutines_called(self):
         '''Get the list of all subroutines.'''
         return self._all_subroutines_called
-
-    #@all_subroutines_called.setter
-    #def all_subroutines_called(self, value):
-    #    if not type(value) is list:
-    #        raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
-    #    self._all_subroutines_called = value
 
     @property
     def module(self):
@@ -343,20 +310,9 @@ end module {module}
         return self._subroutines
 
     @property
-    def caps(self):
-        '''Get the list of all caps.'''
-        return self._caps
-
-    @property
     def groups(self):
         '''Get the list of groups in this suite.'''
         return self._groups
-
-    #@caps.setter
-    #def caps(self, value):
-    #    if not type(value) is list:
-    #        raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
-    #    self._caps = value
 
     def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
         """Create caps for all groups in the suite and for the entire suite
@@ -419,19 +375,6 @@ end module {module}
 class Group(object):
 
     header='''
-!
-! This work (Common Community Physics Package), identified by NOAA, NCAR,
-! CU/CIRES, is free of known copyright restrictions and is placed in the
-! public domain.
-!
-! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-! THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-!
-
 !>
 !! @brief Auto-generated cap module for the CCPP {group} group
 !!

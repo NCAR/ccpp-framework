@@ -98,9 +98,6 @@ class ParseContext(object):
     """
 
     def __init__(self, linenum=None, filename=None, context=None):
-        _llevel = logger.getEffectiveLevel()
-        # Turn off property warnings
-        logger.setLevel(logging.ERROR)
         if context is not None:
             # If context is passed, ignore linenum
             linenum = context.line_num
@@ -124,7 +121,8 @@ class ParseContext(object):
         else:
             self.regions = ContextRegion()
         # End if
-        # Turn logging back on
+        # Turn logging to WARNING if not set
+        _llevel = logger.getEffectiveLevel()
         logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
@@ -140,11 +138,6 @@ class ParseContext(object):
     def filename(self):
         "'Return the object's filename"
         return self._filename
-
-    @filename.setter
-    def filename(self):
-        'Do not allow the filename to be set'
-        logger.warning('Cannot set value of filename')
 
     def __str__(self):
         """Return a string representing the location in a file
@@ -234,28 +227,13 @@ class ParseSource(object):
     def type(self):
         return self._type
 
-    @type.setter
-    def type(self, type_in):
-        'Do not allow the type to be set'
-        logger.warning('Cannot set value of type')
-
     @property
     def name(self):
         return self._name
 
-    @name.setter
-    def name(self, name_in):
-        'Do not allow the name to be set'
-        logger.warning('Cannot set value of name')
-
     @property
     def context(self):
         return self._context
-
-    @context.setter
-    def context(self, ctx_in):
-        'Do not allow the context to be set'
-        logger.warning('Cannot set value of context')
 
 ########################################################################
 
