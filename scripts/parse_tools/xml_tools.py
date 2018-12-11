@@ -129,7 +129,7 @@ def validate_xml_file(filename, schema_root, version):
     # Find the schema, based on the model version
     thispath = os.path.abspath(__file__)
     pdir = os.path.dirname(os.path.dirname(os.path.dirname(thispath)))
-    schema_path = os.path.join(pdir, 'src')
+    schema_path = os.path.join(pdir, 'schema')
     verstring = '_'.join([str(x) for x in version])
     schema_file = os.path.join(schema_path,
                                "{}_v{}.xsd".format(schema_root, verstring))

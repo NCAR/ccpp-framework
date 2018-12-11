@@ -16,6 +16,7 @@ from fortran_parser import parse_fortran_file
 from parse_tools import read_xml_file
 from metavar import VarDictionary
 from host_registry import HostModel, parse_host_registry
+from ccpp_suite import API, Suite
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
@@ -207,7 +208,7 @@ def parse_sdf_files(sdf_pathsfile=None, sdf_file=None, verbosity=0):
         # End for
     # End if
     if sdf_file is not None:
-        root = parse_sdf_file(filename, verbosity)
+        root = parse_sdf_file(sdf_file, verbosity)
         suites.append(root)
     # End if
     if (sdf_pathsfile is None) and (sdf_file is None) and (verbosity > 0):
@@ -281,16 +282,24 @@ def _main_func():
     # Last, parse the SDF file(s)
     if sdf_pathsfile is not None:
         if sdf_is_xml:
-            suites = parse_sdf_files(sdf_file=sdf_pathsfile, verbosity=verbosity)
+            sdfs = parse_sdf_files(sdf_file=sdf_pathsfile, verbosity=verbosity)
         else:
-            suites = parse_sdf_files(sdf_pathsfile=sdf_pathsfile, verbosity=verbosity)
+            sdfs = parse_sdf_files(sdf_pathsfile=sdf_pathsfile, verbosity=verbosity)
         # End if
     # End if
 # XXgoldyXX: v debug only
     print("headers = {}".format([x._table_title for x in host_model._ddt_defs]))
     print("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
     print("schemes = {}".format([x._table_title for x in scheme_headers]))
+    print("sdfs = {}".format([x.attrib['name'] for x in suites]))
 # XXgoldyXX: ^ debug only
+    # Turn the parsed SDF files into Suites
+    suites = list()
+    for sdf in sdfs:
+        suites.append(Suite(sdf, host_model, scheme_headers))
+    # End for
+    # Finally, we can get on with writing suites
+    API(suites, host_model, scheme_headers).write(output_dir)
 
 ###############################################################################
 

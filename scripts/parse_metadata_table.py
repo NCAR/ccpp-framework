@@ -293,7 +293,12 @@ class MetadataHeader(ParseSource):
 
     def get_var(self, standard_name):
         if standard_name in self._variables:
-            return self._variables[standard_name]
+            vlist = self._variables[standard_name]
+            # VarDictionary returns a list but there should only be one
+            if len(vlist) != 1:
+                raise ParseInternalError("Standard name, '{}', ERROR in {}".format(standard_name, self._table_title), self._pobj)
+            # End if
+            return vlist[0]
         else:
             return None
 
