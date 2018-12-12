@@ -56,7 +56,7 @@ def parse_host_registry(filename, verbosity):
         raise HostRegAbort("Invalid host registry file, '{}'".format(filename))
     # End if
     if verbosity > 0:
-        logger.info("Reading host model registry for {}".format(root.attrib['model']))
+        logger.info("Reading host model registry for {}".format(root.get('model')))
     # End if
     for child in root:
         if (child.tag == 'dimension') or (child.tag == 'variable'):
@@ -70,10 +70,10 @@ def parse_host_registry(filename, verbosity):
                 if var_prop.tag == 'type':
                     prop_dict['type'] = var_prop.text
                     if 'kind' in var_prop.attrib:
-                        prop_dict['kind'] = var_prop.attrib['kind']
+                        prop_dict['kind'] = var_prop.get('kind')
                     # End if
                     if 'units' in var_prop.attrib:
-                        prop_dict['units'] = var_prop.attrib['units']
+                        prop_dict['units'] = var_prop.get('units')
                     # End if
                 else:
                     # These elements should just have text, no attributes

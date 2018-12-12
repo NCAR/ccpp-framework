@@ -175,11 +175,10 @@ def parse_scheme_files(scheme_pathsfile, preproc_defs, verbosity):
     methods) and return resulting dictionary.
     """
     mheaders = list()
-    scheme_headers = {}
     filenames = read_pathnames_from_file(scheme_pathsfile)
     for filename in filenames:
         sheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
-        mheaders.extend(sheaders)
+        mheaders.append(sheaders)
     # End for
     return mheaders
 
@@ -256,17 +255,18 @@ def _main_func():
         # End if
         # Turn the SDF files into Suites
         for sdf in sdfs:
-            suites.append(Suite(sdf, host_model, scheme_headers, verbosity))
+            suite = Suite(sdf)
+            suite.analyze(host_model, scheme_headers, verbosity)
+            suites.append(suite)
         # End for
     # End if
 # XXgoldyXX: v debug only
     print("headers = {}".format([x._table_title for x in host_model._ddt_defs]))
     print("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
-    print("schemes = {}".format([x._table_title for x in scheme_headers]))
-    print("sdfs = {}".format([x.attrib['name'] for x in suites]))
+    print("schemes = {}".format([[x._table_title for x in y] for y in scheme_headers]))
 # XXgoldyXX: ^ debug only
     # Finally, we can get on with writing suites
-    API(suites, host_model, scheme_headers).write(output_dir)
+#    API(suites, host_model, scheme_headers).write(output_dir)
 
 ###############################################################################
 

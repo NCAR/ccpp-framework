@@ -322,6 +322,11 @@ class MetadataHeader(ParseSource):
         # End if
         return name
 
+    @property
+    def title(self):
+        'Return the name of the metadata arg_table'
+        return self._table_title
+
     @classmethod
     def metadata_table_start(cls, line, context=None, syntax=FortranMetadataSyntax):
         """Return variable name if <line> is an interface metadata table header

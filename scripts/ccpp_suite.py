@@ -10,13 +10,18 @@ import copy
 import logging
 import os.path
 import sys
+import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from parse_tools import ParseContext, ParseSyntaxError
+from parse_tools import ParseContext, ParseSyntaxError, FORTRAN_ID
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
 
 logger = logging.getLogger(__name__)
+
+init_re   = re.compile(FORTRAN_ID+r"_init$")
+run_re    = re.compile(FORTRAN_ID+r"_run$")
+final_re  = re.compile(FORTRAN_ID+r"_finalize$")
 
 ###############################################################################
 # Module (global) variables
@@ -46,21 +51,22 @@ class SuiteAbort(ValueError):
 
 ###############################################################################
 
-class SuiteScheme(object):
+class Scheme(object):
     "A single scheme in a suite (e.g., init method)"
 
-    def __init__(self, scheme_xml):
+    def __init__(self, scheme_xml, context):
         self._name = scheme_xml.text
-        if 'version' in scheme_xml.attrib:
-            self._version = scheme_xml.attrib['version']
-        else:
-            self._version = None
-        # End if
-        if 'lib' in scheme_xml.attrib:
-            self._lib = scheme_xml.attrib['lib']
-        else:
-            self._lib = None
-        # End if
+        self._version = scheme_xml.get('version', None)
+        self._lib = scheme_xml.get('lib', None)
+
+    @property
+    def name(self):
+        '''Return name of scheme'''
+        return self._name
+
+    def schemes(self):
+        'Return self as a list for consistency with subcycle'
+        return [self]
 
 ###############################################################################
 
@@ -68,14 +74,16 @@ class Subcycle(object):
     "Class to represent a subcycled group of schemes"
 
     def __init__(self, sub_xml, context):
-        if 'loop' in sub_xml.attrib:
-            self._loop = sub_xml.attrib['loop']
-        else:
-            self._loop = "1"
-        # End if
+        self._name = sub_xml.get('name', "subcycle")
+        self._loop = sub_xml.get('loop', "1")
         self._schemes = list()
         for scheme in sub_xml:
-            self._schemes.append(SuiteScheme(scheme))
+            self._schemes.append(Scheme(scheme, context))
+
+    @property
+    def name(self):
+        '''name property to be consistent with other classes'''
+        return self._name
 
     @property
     def loop(self):
@@ -95,212 +103,8 @@ class Subcycle(object):
 
 ###############################################################################
 
-class Suite(object):
-
-    header='''
-!>
-!! @brief Auto-generated cap module for the CCPP suite
-!!
-!
-module {module}
-
-   {module_use}
-
-   implicit none
-
-   private
-   public :: {subroutines}
-
-contains
-'''
-
-    sub = '''
-   function {subroutine}(cdata) result(ierr)
-
-      integer :: ierr
-      type(ccpp_t), intent(inout) :: cdata
-
-      ierr = 0
-
-{body}
-
-   end function {subroutine}
-'''
-
-    footer = '''
-end module {module}
-'''
-
-    def __init__(self, filename, host_model, scheme_headers, verbosity=0):
-        self._name = None
-        self._sdf_name = filename
-        self._groups = list()
-        self.parse(host_model, scheme_headers, verbosity)
-
-    @property
-    def name(self):
-        '''Get the name of the suite.'''
-        return self._name
-
-    @property
-    def sdf_name(self):
-        '''Get the name of the suite definition file.'''
-        return self._sdf_name
-
-    def parse(self, host_model, scheme_headers, verbosity=0):
-        '''Parse the suite definition file.'''
-        success = True
-
-        if not os.path.exists(self._sdf_name):
-            logging.critical("Suite definition file {0} not found.".format(self._sdf_name))
-            success = False
-            return success
-
-        tree, suite_xml = read_xml_file(self._sdf_name)
-        # We do not have line number information for the XML file
-        context = ParseContext(filename=self._sdf_name)
-        version = find_schema_version(suite_xml) # Only one version so far
-        res = validate_xml_file(self._sdf_name, 'suite', version)
-        if not res:
-            raise SuiteAbort("Invalid suite definition file, '{}'".format(self._sdf_name))
-        # End if
-        self._name = suite_xml.get('name')
-        if verbosity > 0:
-            logger.info("Reading suite definition file for {}".format(self._name))
-        # End if
-
-        # Flattened lists of all schemes and subroutines in SDF
-        self._all_schemes_called = list()
-        self._all_subroutines_called = list()
-
-        # Build hierarchical structure as in SDF
-        for suite_item in suite_xml:
-            schemes = list()
-            subcycles = list()
-            item_type = suite_item.tag.lower()
-            # Suite item is a group or a suite-wide init or final method
-            if item_type in [ 'init', 'initialize', 'final', 'finalize' ]:
-            # Add suite-wide init scheme to group 'init', similar for finalize
-            if group_xml.tag.lower() == 'init' or group_xml.tag.lower() == 'finalize':
-                self._all_schemes_called.append(group_xml.text)
-                self._all_subroutines_called.append(group_xml.text + '_' + group_xml.tag.lower())
-                schemes = [group_xml.text]
-                subcycles.append(Subcycle(loop=1, schemes=schemes))
-                if group_xml.tag.lower() == 'init':
-                    self._groups.append(Group(name=group_xml.tag.lower(), subcycles=subcycles, init=True))
-                elif group_xml.tag.lower() == 'finalize':
-                    self._groups.append(Group(name=group_xml.tag.lower(), subcycles=subcycles, finalize=True))
-                continue
-
-            # Parse subcycles of all regular groups
-            for subcycle_xml in group_xml:
-                schemes = []
-                for scheme_xml in subcycle_xml:
-                    self._all_schemes_called.append(scheme_xml.text)
-                    schemes.append(scheme_xml.text)
-                    loop=int(subcycle_xml.get('loop'))
-                    for ccpp_stage in CCPP_STAGES:
-                        self._all_subroutines_called.append(scheme_xml.text + '_' + ccpp_stage)
-                subcycles.append(Subcycle(loop=loop, schemes=schemes))
-
-            self._groups.append(Group(name=group_xml.get('name'), subcycles=subcycles))
-
-        return success
-
-    def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
-        print("ALL SUBROUTINES:")
-        print("{}".format(self._all_subroutines_called))
-        print("STRUCTURED:")
-        print("{}".format(self._groups))
-        for group in self._groups:
-            group.print_debug()
-
-    @property
-    def all_schemes_called(self):
-        '''Get the list of all schemes.'''
-        return self._all_schemes_called
-
-    @property
-    def all_subroutines_called(self):
-        '''Get the list of all subroutines.'''
-        return self._all_subroutines_called
-
-    @property
-    def module(self):
-        '''Get the list of the module generated for this suite.'''
-        return self._module
-
-    @property
-    def subroutines(self):
-        '''Get the list of all subroutines generated for this suite.'''
-        return self._subroutines
-
-    @property
-    def groups(self):
-        '''Get the list of groups in this suite.'''
-        return self._groups
-
-    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
-        """Create caps for all groups in the suite and for the entire suite
-        (calling the group caps one after another)"""
-        # Set name of module and filename of cap
-        self._module = 'ccpp_suite_cap'
-        self._filename = '{module_name}.F90'.format(module_name=self._module)
-        # Init
-        self._subroutines = []
-        module_use = module_use_cap
-        # Write group caps and generate module use statements
-        for group in self._groups:
-            group.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap)
-            module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
-        subs = ''
-        for ccpp_stage in CCPP_STAGES:
-            body = ''
-            for group in self._groups:
-                # Groups 'init'/'finalize' are only run in stages 'init'/'finalize'
-                if (group.init and not ccpp_stage == 'init') or \
-                    (group.finalize and not ccpp_stage == 'finalize'):
-                    continue
-                # Write to body that calls the groups for this stage
-                body += '''
-      ierr = {group_name}_{stage}_cap(cdata)
-      if (ierr/=0) return
-'''.format(group_name=group.name, stage=ccpp_stage)
-            # Add name of subroutine in the suite cap to list of subroutine names
-            subroutine = 'suite_{stage}_cap'.format(stage=ccpp_stage)
-            self._subroutines.append(subroutine)
-            # Add subroutine to output
-            subs += Suite.sub.format(subroutine=subroutine, body=body)
-
-        # Write cap to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
-        else:
-            f = sys.stdout
-        f.write(Suite.header.format(module=self._module,
-                                    module_use=module_use,
-                                    subroutines=','.join(self._subroutines)))
-        f.write(subs)
-        f.write(Suite.footer.format(module=self._module))
-        if (f is not sys.stdout):
-            f.close()
-
-        # Create list of all caps generated (for groups and suite)
-        self._caps = [ self._filename ]
-        for group in self._groups:
-            self._caps.append(group.filename)
-
-
-    def create_sdf_name_include_file(self, incfilename):
-        # Create include file for framework that contains the name of the sdf used for static build
-        f = open(incfilename, "w")
-        f.write('character(len=*), parameter :: ccpp_suite_static_name = "{suite_name}"\n'.format(suite_name = self._name))
-        f.close()
-
-###############################################################################
-
 class Group(object):
+    "Class to represent a grouping of schemes in a suite"
 
     header='''
 !>
@@ -387,16 +191,24 @@ end module {module}
 ''',
     }
 
-    def __init__(self, **kwargs):
-        self._name = ''
-        self._filename = 'sys.stdout'
-        self._init = False
-        self._finalize = False
-        self._module = None
-        self._subroutines = None
-        self._pset = None
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
+    def __init__(self, group_xml, context):
+        self._name = group_xml.get('name')
+        self._parts = list()
+        for item in group_xml:
+            if item.tag == 'subcycle':
+                self._parts.append(Subcycle(item, context))
+            else:
+                self._parts.append(Scheme(item, context))
+            # End if
+        # End for
+
+    def schemes(self):
+        "Return a flattened list of schemes for this group"
+        schemes = list()
+        for item in self._parts:
+            schemes.extend(item.schemes())
+        # End for
+        return schemes
 
     def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
         # First get target names of standard CCPP variables for subcycling and error handling
@@ -579,6 +391,240 @@ end module {module}
 
 ###############################################################################
 
+class Suite(object):
+
+    header='''
+!>
+!! @brief Auto-generated cap module for the CCPP suite
+!!
+!
+module {module}
+
+   {module_use}
+
+   implicit none
+
+   private
+   public :: {subroutines}
+
+contains
+'''
+
+    sub = '''
+   function {subroutine}(cdata) result(ierr)
+
+      integer :: ierr
+      type(ccpp_t), intent(inout) :: cdata
+
+      ierr = 0
+
+{body}
+
+   end function {subroutine}
+'''
+
+    footer = '''
+end module {module}
+'''
+
+    def __init__(self, filename):
+        self._name = None
+        self._sdf_name = filename
+        self._groups = list()
+        self._init_scheme = None
+        self._final_scheme = None
+        if not os.path.exists(self._sdf_name):
+            raise SuiteAbort("Suite definition file {0} not found.".format(self._sdf_name))
+        else:
+            self.parse()
+        # End if
+
+    @property
+    def name(self):
+        '''Get the name of the suite.'''
+        return self._name
+
+    @property
+    def sdf_name(self):
+        '''Get the name of the suite definition file.'''
+        return self._sdf_name
+
+    def parse(self):
+        '''Parse the suite definition file.'''
+        success = True
+
+        tree, suite_xml = read_xml_file(self._sdf_name)
+        # We do not have line number information for the XML file
+        context = ParseContext(filename=self._sdf_name)
+        # Validate the XML file
+        version = find_schema_version(suite_xml) # Only one version so far
+        res = validate_xml_file(self._sdf_name, 'suite', version)
+        if not res:
+            raise SuiteAbort("Invalid suite definition file, '{}'".format(self._sdf_name))
+        # End if
+        self._name = suite_xml.get('name')
+        logger.info("Reading suite definition file for {}".format(self._name))
+
+        # Flattened lists of all schemes and subroutines in SDF
+        self._all_schemes_called = list()
+        self._all_subroutines_called = list()
+
+        # Build hierarchical structure as in SDF
+        for suite_item in suite_xml:
+            schemes = list()
+            subcycles = list()
+            item_type = suite_item.tag.lower()
+            # Suite item is a group or a suite-wide init or final method
+            if item_type in ['init', 'initialize']:
+                # Parse a suite-wide initialization scheme
+                self._init_scheme = Scheme(suite_item, context)
+            elif item_type in ['final', 'finalize']:
+                # Parse a suite-wide finalization scheme
+                self._final_scheme = Scheme(suite_item, context)
+            else:
+                # Parse a group
+                self._groups.append(Group(suite_item, context))
+            # End if
+        # End for
+        return success
+
+    def print_debug(self):
+        # DH * TODO: create pretty output and return as string to calling function
+        print("ALL SUBROUTINES:")
+        print("{}".format(self._all_subroutines_called))
+        print("STRUCTURED:")
+        print("{}".format(self._groups))
+        for group in self._groups:
+            group.print_debug()
+
+    @property
+    def all_schemes_called(self):
+        '''Get the list of all schemes.'''
+        return self._all_schemes_called
+
+    @property
+    def all_subroutines_called(self):
+        '''Get the list of all subroutines.'''
+        return self._all_subroutines_called
+
+    @property
+    def module(self):
+        '''Get the list of the module generated for this suite.'''
+        return self._module
+
+    @property
+    def subroutines(self):
+        '''Get the list of all subroutines generated for this suite.'''
+        return self._subroutines
+
+    @property
+    def groups(self):
+        '''Get the list of groups in this suite.'''
+        return self._groups
+
+    def analyze(self, host_model, scheme_headers, verbosity=0):
+        'Collect all information needed to write a suite file'
+        # Collect all the available schemes
+        init_schemes = list()
+        run_schemes = list()
+        final_schemes = list()
+        for header_list in scheme_headers:
+            for header in header_list:
+                if init_re.match(header.title) is not None:
+                    init_schemes.append(header)
+                elif run_re.match(header.title) is not None:
+                    run_schemes.append(header)
+                elif final_re.match(header.title) is not None:
+                    final_schemes.append(header)
+                else:
+                    raise SuiteAbort('Unknown scheme metadata type, "{}"'.format(header.title))
+                # End if
+            # End for
+        # End for
+        # First pass, create init, run, and finalize sequences
+        init_seq = list()
+        run_seq = list()
+        final_seq = list()
+        for item in self.groups:
+            if (item.name == 'init') or (item.name == 'initialize'):
+                # This is an initial scheme
+                if not isinstance(item, Scheme):
+                    raise SuiteAbort("Bad Suite initial method, {}".format(type(item)))
+                else:
+                    init_seq.append(item)
+                # End if
+            elif (item.name == 'final') or (item.name == 'finalize'):
+                # This is an final scheme
+                if not isinstance(item, Scheme):
+                    raise SuiteAbort("Bad Suite final method, {}".format(type(item)))
+                else:
+                    final_seq.append(item)
+                # End if
+            else:
+                # Find out what sort of schemes are available
+                group_schemes = item.schemes()
+                print("Group {}, schemes = {}".format(item.name, [x.name for x in group_schemes]))
+#                run_seq.append(item)
+
+    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
+        """Create caps for all groups in the suite and for the entire suite
+        (calling the group caps one after another)"""
+        # Set name of module and filename of cap
+        self._module = 'ccpp_suite_cap'
+        self._filename = '{module_name}.F90'.format(module_name=self._module)
+        # Init
+        self._subroutines = []
+        module_use = module_use_cap
+        # Write group caps and generate module use statements
+        for group in self._groups:
+            group.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap)
+            module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
+        subs = ''
+        for ccpp_stage in CCPP_STAGES:
+            body = ''
+            for group in self._groups:
+                # Groups 'init'/'finalize' are only run in stages 'init'/'finalize'
+                if (group.init and not ccpp_stage == 'init') or \
+                    (group.finalize and not ccpp_stage == 'finalize'):
+                    continue
+                # Write to body that calls the groups for this stage
+                body += '''
+      ierr = {group_name}_{stage}_cap(cdata)
+      if (ierr/=0) return
+'''.format(group_name=group.name, stage=ccpp_stage)
+            # Add name of subroutine in the suite cap to list of subroutine names
+            subroutine = 'suite_{stage}_cap'.format(stage=ccpp_stage)
+            self._subroutines.append(subroutine)
+            # Add subroutine to output
+            subs += Suite.sub.format(subroutine=subroutine, body=body)
+
+        # Write cap to stdout or file
+        if (self._filename is not sys.stdout):
+            f = open(self._filename, 'w')
+        else:
+            f = sys.stdout
+        f.write(Suite.header.format(module=self._module,
+                                    module_use=module_use,
+                                    subroutines=','.join(self._subroutines)))
+        f.write(subs)
+        f.write(Suite.footer.format(module=self._module))
+        if (f is not sys.stdout):
+            f.close()
+
+        # Create list of all caps generated (for groups and suite)
+        self._caps = [ self._filename ]
+        for group in self._groups:
+            self._caps.append(group.filename)
+
+
+    def create_sdf_name_include_file(self, incfilename):
+        # Create include file for framework that contains the name of the sdf used for static build
+        f = open(incfilename, "w")
+        f.write('character(len=*), parameter :: ccpp_suite_static_name = "{suite_name}"\n'.format(suite_name = self._name))
+        f.close()
+
+###############################################################################
+
 class API(object):
 
     header='''
@@ -620,13 +666,10 @@ contains
 end module {module}
 '''
 
-    def __init__(self, suites, host_model, scheme_headers):
-        self._filename    = CCPP_STATIC_API_MODULE + '.F90'
-        self._module      = CCPP_STATIC_API_MODULE
-        self._subroutines = None
-        self._suite       = None
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
+    def __init__(self, suites):
+        self._module      = 'ccpp_physics_api'
+        self._filename    = self._module + '.F90'
+        self._suites      = suites
 
     @property
     def filename(self):
@@ -715,7 +758,7 @@ if __name__ == "__main__":
         kessler = os.path.join(cpf, 'cam_driver', 'suites',
                                'suite_cam_kessler_test_simple1.xml')
         if os.path.exists(kessler):
-            foo = Suite(kessler, None, None)
+            foo = Suite(kessler)
         else:
             raise SuiteAbort("Cannot find test file, '{}'".format(kessler))
     except SuiteAbort as sa:
