@@ -92,15 +92,11 @@ suitable to be used with mkcap.py (which generates the fortran code for the sche
 from __future__ import print_function
 import re
 import collections
-import logging
 # CCPP framework imports
 from metavar import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource
 from parse_tools import ParseInternalError, ParseSyntaxError
 from parse_tools import MetadataSyntax, FortranMetadataSyntax
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
 
 ########################################################################
 
@@ -157,7 +153,7 @@ class MetadataHeader(ParseSource):
 
     _var_start = re.compile(r"^\[\s*(\w+)\s*\]$")
 
-    def __init__(self, parse_object, syntax=FortranMetadataSyntax, spec_name=None):
+    def __init__(self, parse_object, syntax=FortranMetadataSyntax, spec_name=None, logger=None):
         self._pobj = parse_object
         self._spec_name = spec_name
         if syntax is None:
@@ -165,8 +161,6 @@ class MetadataHeader(ParseSource):
         # End if
         self._syntax = syntax
         "Initialize from the <lines> of <filename> beginning at <first_line>"
-        _llevel = logger.getEffectiveLevel()
-        logger.setLevel(logging.ERROR)
         # Read the table preamble, assume the caller already figured out
         #  the first line of the header using the metadata_table_start method.
         curr_line, curr_line_num = self._pobj.curr_line()
@@ -200,7 +194,7 @@ class MetadataHeader(ParseSource):
         # End while
         # Read the variables
         valid_lines =  True
-        self._variables = VarDictionary()
+        self._variables = VarDictionary(logger=logger)
         while valid_lines:
             newvar, curr_line = self.parse_variable(curr_line, spec_name)
             valid_lines = newvar is not None
@@ -220,7 +214,6 @@ class MetadataHeader(ParseSource):
                 # End if
             # End if
         # End while
-        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     def parse_variable(self, curr_line, spec_name):
         # The header line has the format [ <valid_fortran_symbol> ]

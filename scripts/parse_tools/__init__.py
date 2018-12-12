@@ -6,7 +6,7 @@ from parse_checkers import check_fortran_intrinsic
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
 from parse_checkers import check_dimensions, check_cf_standard_name
-from parse_log      import logger, initLog, setLogLevel
+from parse_log      import initLog, setLogLevel
 from parse_log      import setLogToStdout, setLogToNull, setLogToFile
 from parse_object   import MetadataSyntax, FortranMetadataSyntax, ParseObject
 from parse_tools    import ParseContext, ParseSource
@@ -23,7 +23,6 @@ __all__ = [
     'FortranMetadataSyntax',
     'FORTRAN_ID',
     'initLog',
-    'logger',
     'MetadataSyntax',
     'ParseContext',
     'ParseInternalError',

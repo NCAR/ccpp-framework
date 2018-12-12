@@ -6,7 +6,6 @@
 import collections
 import copy
 # CCPP framework imports
-from parse_log import logger, initLog
 
 ########################################################################
 
@@ -226,5 +225,4 @@ class ParseSource(object):
 
 if __name__ == "__main__":
     import doctest
-    logger = initLog('parse_tools')
     doctest.testmod()

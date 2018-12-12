@@ -9,15 +9,12 @@ from __future__ import print_function
 import sys
 import os
 import os.path
-import logging
 import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
 from metavar import Var, VarDictionary
 from parse_tools import ParseSource, ParseContext
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
-
-logger = logging.getLogger(__name__)
 
 ###############################################################################
 class HostRegAbort(ValueError):
@@ -35,28 +32,27 @@ class HostModel(object):
         self._variables = variables
 
 ###############################################################################
-def abort(message, log_error=True):
+def abort(message, logger=None):
 ###############################################################################
-    if log_error:
+    if logger is not None:
         logger.error(message)
     # End if (no else)
     raise HostRegAbort(message)
 
 ###############################################################################
-def parse_host_registry(filename, verbosity):
+def parse_host_registry(filename, logger):
 ###############################################################################
-    variables = VarDictionary()
+    variables = VarDictionary(logger=logger)
     host_variables = {}
-    tree, root = read_xml_file(filename)
+    tree, root = read_xml_file(filename, logger=logger)
     # We do not have line number information for the XML file
     context = ParseContext(filename=filename)
-    version = find_schema_version(root) # Only one version so far
-    res = validate_xml_file(filename, 'host_registry', version)
+    version = find_schema_version(root, logger=logger) # Only one version so far
+    res = validate_xml_file(filename, 'host_registry', version, logger=logger)
     if not res:
-        raise HostRegAbort("Invalid host registry file, '{}'".format(filename))
+        abort("Invalid host registry file, '{}'".format(filename), logger)
     # End if
-    if verbosity > 0:
-        logger.info("Reading host model registry for {}".format(root.get('model')))
+    logger.info("Reading host model registry for {}".format(root.get('model')))
     # End if
     for child in root:
         if (child.tag == 'dimension') or (child.tag == 'variable'):
@@ -78,7 +74,7 @@ def parse_host_registry(filename, verbosity):
                 else:
                     # These elements should just have text, no attributes
                     if len(var_prop.attrib) > 0:
-                        abort("Bad variable property, {} for variable, {}".format(var_prop.tag, vname))
+                        abort("Bad variable property, {} for variable, {}".format(var_prop.tag, vname), logger)
                     else:
                         prop_dict[var_prop.tag] = var_prop.text
                     # End if
@@ -106,9 +102,10 @@ def parse_host_registry(filename, verbosity):
 ###############################################################################
 
 if __name__ == "__main__":
-    logger.addHandler(logging.NullHandler())
+    from parse_tools import initLog, setLogToNull
+    logger = initLog('host_registry')
+    setLogToNull(logger)
     # First, run doctest
     import doctest
     doctest.testmod()
-else:
-    logger.addHandler(logging.StreamHandler())
+# No else:

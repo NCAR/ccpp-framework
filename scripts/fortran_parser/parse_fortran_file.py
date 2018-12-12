@@ -11,7 +11,6 @@ if __name__ == '__main__' and __package__ is None:
     import sys
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
-import logging
 from parse_tools import ParseContext, ParseInternalError, ParseSyntaxError
 from parse_tools import ParseObject, FortranMetadataSyntax, FORTRAN_ID
 from parse_metadata_table import MetadataHeader
@@ -26,8 +25,6 @@ contains_re = re.compile(r"(?i)\s*contains")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 fixed_continue_re = re.compile(r"(?i)     [^0 ]")
 blank_re = re.compile(r"\s+")
-
-logger = logging.getLogger(__name__)
 
 ########################################################################
 
@@ -423,7 +420,7 @@ def is_executable_statement(statement, in_module):
 
 ########################################################################
 
-def parse_specification(pobj, statements, mod_name=None, prog_name=None):
+def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=None):
     "Parse specification part of a module or (sub)program"
     if (mod_name is not None) and (prog_name is not None):
         PFFAbort("<mod_name> and <prog_name> cannot both be used")
@@ -454,7 +451,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None):
             elif MetadataHeader.metadata_table_start(statements[index],
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
-                mheaders.append(MetadataHeader(pobj, spec_name=spec_name))
+                mheaders.append(MetadataHeader(pobj, spec_name=spec_name, logger=logger))
                 break
             elif is_executable_statement(statements[index], inmod):
                 inspec = False
@@ -469,7 +466,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None):
 
 ########################################################################
 
-def parse_program(pobj, statements):
+def parse_program(pobj, statements, logger=None):
     # The first statement should be a program statement, grab the name
     pmatch = program_re.match(statements[0])
     if pmatch is None:
@@ -478,7 +475,7 @@ def parse_program(pobj, statements):
     prog_name = pmatch.group(1)
     pobj.enter_region('PROGRAM', region_name=prog_name, nested_ok=False)
     # After the program name is the specification part
-    statements, mheaders = parse_specification(pobj, statements[1:], prog_name=prog_name)
+    statements, mheaders = parse_specification(pobj, statements[1:], prog_name=prog_name, logger=logger)
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inprogram = True
@@ -507,7 +504,7 @@ def parse_program(pobj, statements):
 
 ########################################################################
 
-def parse_module(pobj, statements):
+def parse_module(pobj, statements, logger=None):
     # The first statement should be a program statement, grab the name
     pmatch = module_re.match(statements[0])
     if pmatch is None:
@@ -516,7 +513,7 @@ def parse_module(pobj, statements):
     mod_name = pmatch.group(1)
     pobj.enter_region('MODULE', region_name=mod_name, nested_ok=False)
     # After the module name is the specification part
-    statements, mheaders = parse_specification(pobj, statements[1:], mod_name=mod_name)
+    statements, mheaders = parse_specification(pobj, statements[1:], mod_name=mod_name, logger=logger)
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inmodule = True
@@ -532,7 +529,7 @@ def parse_module(pobj, statements):
             elif MetadataHeader.metadata_table_start(statements[index],
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
-                mheaders.append(MetadataHeader(pobj))
+                mheaders.append(MetadataHeader(pobj, logger=logger))
                 break
             # End if
         # End for
@@ -546,7 +543,7 @@ def parse_module(pobj, statements):
 
 ########################################################################
 
-def parse_fortran_file(filename, preproc_defs=None):
+def parse_fortran_file(filename, preproc_defs=None, logger=None):
     mheaders = list()
     pobj = read_file(filename, preproc_defs=preproc_defs)
     pobj.reset_pos()
@@ -557,11 +554,11 @@ def parse_fortran_file(filename, preproc_defs=None):
         for index in xrange(len(statements)):
             statement = statements[index]
             if program_re.match(statement) is not None:
-                statements, pheaders = parse_program(pobj, statements[index:])
+                statements, pheaders = parse_program(pobj, statements[index:], logger=logger)
                 mheaders.extend(pheaders)
                 newstatements = len(statements) == 0
             elif module_re.match(statement) is not None:
-                statements, pheaders = parse_module(pobj, statements[index:])
+                statements, pheaders = parse_module(pobj, statements[index:], logger=logger)
                 mheaders.extend(pheaders)
                 newstatements = len(statements) == 0
             # End if

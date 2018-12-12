@@ -4,15 +4,11 @@
 #
 
 from __future__ import print_function
-import logging
 import re
 import xml.etree.ElementTree as ET
 from parse_tools import check_fortran_id, check_fortran_type
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import ParseContext, ParseSource, ParseSyntaxError
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
 
 real_subst_re = re.compile(r"(.*\d)p(\d.*)")
 list_re = re.compile(r"[(]([^)]*)[)]\s*$")
@@ -72,8 +68,6 @@ class VariableProperty(object):
     """
 
     def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, default_fn_in=None, check_fn_in=None):
-        _llevel = logger.getEffectiveLevel()
-        logger.setLevel(logging.ERROR)
         self._name = name_in
         self._type = type_in
         if self._type not in [ bool, int, list, str ]:
@@ -93,7 +87,6 @@ class VariableProperty(object):
         elif default_in is not None:
             raise ValueError('default_fn_in is not a valid property for {} because it is not optional'.format(name_in))
         self._check_fn = check_fn_in
-        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
     def name(self):
@@ -314,9 +307,6 @@ class Var(object):
                 # End if
             # End if
         # End for
-        # Turn logging to WARNING if not set
-        _llevel = logger.getEffectiveLevel()
-        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     def compatible(self, other):
         # We accept character(len=*) as compatible with character(len=INTEGER_VALUE)
@@ -499,9 +489,10 @@ class VarDictionary(dict):
 
     """
 
-    def __init__(self, variables=None):
+    def __init__(self, variables=None, logger=None):
         "Unlike dict, VarDictionary only takes a Var or Var list"
         super(VarDictionary, self).__init__()
+        self._logger = logger
         if isinstance(variables, Var):
             self.add_variable(variables)
         elif variables is not None:
@@ -535,7 +526,9 @@ class VarDictionary(dict):
             for cvar in currvars:
                 # Are we in the same context? Compare region info
                 if newvar.source == cvar.source:
-                    logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
+                    if self._logger is not None:
+                        self._logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
+                    # End if
                     raise ParseSyntaxError("Duplicate standard name",
                                            token=standard_name,
                                            context=cvar._context)

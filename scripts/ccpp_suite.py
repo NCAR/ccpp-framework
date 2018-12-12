@@ -7,7 +7,6 @@ to implement calls to a set of suites for a given host model."""
 # Python library imports
 from __future__ import print_function
 import copy
-import logging
 import os.path
 import sys
 import re
@@ -15,7 +14,6 @@ import xml.etree.ElementTree as ET
 # CCPP framework imports
 from parse_tools import ParseContext, ParseSyntaxError, FORTRAN_ID
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
-from parse_tools import initLog, logger, setLogToNull
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
 
 init_re   = re.compile(FORTRAN_ID+r"_init$")
@@ -426,7 +424,8 @@ contains
 end module {module}
 '''
 
-    def __init__(self, filename):
+    def __init__(self, filename, logger):
+        self._logger = logger
         self._name = None
         self._sdf_name = filename
         self._groups = list()
@@ -452,17 +451,17 @@ end module {module}
         '''Parse the suite definition file.'''
         success = True
 
-        tree, suite_xml = read_xml_file(self._sdf_name)
+        tree, suite_xml = read_xml_file(self._sdf_name, self._logger)
         # We do not have line number information for the XML file
         context = ParseContext(filename=self._sdf_name)
         # Validate the XML file
-        version = find_schema_version(suite_xml) # Only one version so far
-        res = validate_xml_file(self._sdf_name, 'suite', version)
+        version = find_schema_version(suite_xml, self._logger)
+        res = validate_xml_file(self._sdf_name, 'suite', version, self._logger)
         if not res:
             raise SuiteAbort("Invalid suite definition file, '{}'".format(self._sdf_name))
         # End if
         self._name = suite_xml.get('name')
-        logger.info("Reading suite definition file for {}".format(self._name))
+        self._logger.info("Reading suite definition file for {}".format(self._name))
 
         # Flattened lists of all schemes and subroutines in SDF
         self._all_schemes_called = list()
@@ -521,7 +520,7 @@ end module {module}
         '''Get the list of groups in this suite.'''
         return self._groups
 
-    def analyze(self, host_model, scheme_headers, verbosity=0):
+    def analyze(self, host_model, scheme_headers, logger):
         'Collect all information needed to write a suite file'
         # Collect all the available schemes
         init_schemes = list()
@@ -747,8 +746,9 @@ end module {module}
 
 ###############################################################################
 if __name__ == "__main__":
+    from parse_tools import initLog, setLogToNull
     logger = initLog('ccpp_suite')
-    setLogToNull()
+    setLogToNull(logger)
     try:
         # First, run doctest
         import doctest
@@ -758,7 +758,7 @@ if __name__ == "__main__":
         kessler = os.path.join(cpf, 'cam_driver', 'suites',
                                'suite_cam_kessler_test_simple1.xml')
         if os.path.exists(kessler):
-            foo = Suite(kessler)
+            foo = Suite(kessler, logger)
         else:
             raise SuiteAbort("Cannot find test file, '{}'".format(kessler))
     except SuiteAbort as sa:

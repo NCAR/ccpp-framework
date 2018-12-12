@@ -16,9 +16,7 @@ from fortran_parser import parse_fortran_file
 from metavar import VarDictionary
 from host_registry import HostModel, parse_host_registry
 from ccpp_suite import API, Suite
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
+from parse_tools import initLog, setLogToStdout, setLogLevel
 
 ###############################################################################
 
@@ -134,7 +132,7 @@ def read_pathnames_from_file(pathsfile):
     return pathnames
 
 ###############################################################################
-def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
+def parse_host_model_files(host_pathsfile, preproc_defs, logger):
 ###############################################################################
     """
     Gather information from host files (e.g., DDTs, registry) and
@@ -143,7 +141,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
     mheaders = list()
     xml_files = list()
     host_variables = {}
-    variables = VarDictionary()
+    variables = VarDictionary(logger=logger)
     filenames = read_pathnames_from_file(host_pathsfile)
     for filename in filenames:
         if is_xml_file(filename):
@@ -151,12 +149,12 @@ def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
             # since the Fortran files may define DDTs used by registry files.
             xml_files.append(filename)
         else:
-            hheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
+            hheaders = parse_fortran_file(filename, preproc_defs==preproc_defs, logger=logger)
             mheaders.extend(hheaders)
         # End if
     # End for
     for file in xml_files:
-        vars, host_vars = parse_host_registry(file, verbosity)
+        vars, host_vars = parse_host_registry(file, logger)
         variables.merge(vars)
         if verbosity > 1:
             for var in host_vars.keys():
@@ -168,7 +166,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs, verbosity):
     return HostModel(mheaders, host_variables, variables)
 
 ###############################################################################
-def parse_scheme_files(scheme_pathsfile, preproc_defs, verbosity):
+def parse_scheme_files(scheme_pathsfile, preproc_defs):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -185,11 +183,13 @@ def parse_scheme_files(scheme_pathsfile, preproc_defs, verbosity):
 ###############################################################################
 def _main_func():
 ###############################################################################
-    logger.addHandler(logging.StreamHandler())
+    logger = initLog('ccpp_capgen')
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
+    if verbosity > 1:
+        logger.setLevel(logger, logging.DEBUG)
     if verbosity > 0:
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logger, logging.INFO)
     # End if
     host_pathsfile = os.path.abspath(args.host_pathnames)
     schemes_pathsfile = os.path.abspath(args.scheme_pathnames)
@@ -242,9 +242,9 @@ def _main_func():
         abort("--gen-docfiles not yet supported")
     # End if
     # First up, handle the host files
-    host_model = parse_host_model_files(host_pathsfile, preproc_defs, verbosity)
+    host_model = parse_host_model_files(host_pathsfile, preproc_defs, logger)
     # Next, parse the scheme files
-    scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs, verbosity)
+    scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs)
     # Last, parse the SDF file(s)
     suites = list()
     if sdf_pathsfile is not None:
@@ -255,8 +255,8 @@ def _main_func():
         # End if
         # Turn the SDF files into Suites
         for sdf in sdfs:
-            suite = Suite(sdf)
-            suite.analyze(host_model, scheme_headers, verbosity)
+            suite = Suite(sdf, logger)
+            suite.analyze(host_model, scheme_headers, logger)
             suites.append(suite)
         # End for
     # End if

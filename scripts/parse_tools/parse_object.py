@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 """A module for the base, ParseObject class"""
 
-import logging
 import re
 from parse_tools import ParseContext
-
-logger = logging.getLogger(__name__)
 
 ########################################################################
 
@@ -204,7 +201,6 @@ class ParseObject(ParseContext):
     """
 
     def __init__(self, filename, lines_in, line_start=0, syntax=MetadataSyntax):
-        logger.setLevel(logging.ERROR)
         self._filename = filename
         self._lines = lines_in
         self._line_start = line_start
@@ -212,9 +208,6 @@ class ParseObject(ParseContext):
         self._line_next = line_start
         self._syntax = syntax
         super(ParseObject, self).__init__(linenum=line_start, filename=filename)
-        # Turn logging to WARNING if not set
-        _llevel = logger.getEffectiveLevel()
-        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
     def first_line_num(self):
