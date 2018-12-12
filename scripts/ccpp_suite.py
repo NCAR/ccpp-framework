@@ -12,6 +12,8 @@ import os.path
 import sys
 import xml.etree.ElementTree as ET
 # CCPP framework imports
+from parse_tools import ParseContext, ParseSyntaxError
+from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
 
 logger = logging.getLogger(__name__)
@@ -36,6 +38,7 @@ COPYRIGHT = '''!
 '''
 
 ###############################################################################
+
 class SuiteAbort(ValueError):
     "Class so main can log user errors without backtrace"
     def __init__(self, message):
@@ -43,134 +46,54 @@ class SuiteAbort(ValueError):
 
 ###############################################################################
 
-class API(object):
+class SuiteScheme(object):
+    "A single scheme in a suite (e.g., init method)"
 
-    header='''
-!>
-!! @brief Auto-generated API for {host_model} calls to CCPP suites
-!!
-!
-module {module}
-
-{module_use}
-
-   implicit none
-
-   private
-   public :: {subroutines}
-
-contains
-'''
-
-    sub = '''
-   subroutine {subroutine}(cdata, group_name, ierr)
-
-      type(ccpp_t),               intent(inout) :: cdata
-      character(len=*), optional, intent(in)    :: group_name
-      integer,                    intent(out)   :: ierr
-
-      ierr = 0
-
-      if (present(group_name)) then
-{group_calls}
-      else
-{suite_call}
-      end if
-
-   end subroutine {subroutine}
-'''
-
-    footer = '''
-end module {module}
-'''
-
-    def __init__(self, suites, host_model, scheme_headers):
-        self._filename    = CCPP_STATIC_API_MODULE + '.F90'
-        self._module      = CCPP_STATIC_API_MODULE
-        self._subroutines = None
-        self._suite       = None
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
-
-    @property
-    def filename(self):
-        '''Get the filename to write API to.'''
-        return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        self._filename = value
-
-    @property
-    def module(self):
-        '''Get the module name of the API.'''
-        return self._module
-
-    @property
-    def subroutines(self):
-        '''Get the subroutines names of the API to.'''
-        return self._subroutines
-
-    def write(self):
-        """Write API for static build"""
-        if not self._suite:
-            raise Exception("No suite specified for generating API")
-        suite = self._suite
-        # Module use statements
-        module_use = '   use {module}, only: {subroutines}\n'.format(module=suite.module,
-                                                  subroutines=','.join(suite.subroutines))
-        for group in suite.groups:
-            module_use += '   use {module}, only: {subroutines}\n'.format(module=group.module,
-                                                      subroutines=','.join(group.subroutines))
-
-        # Create a subroutine for each stage
-        self._subroutines=[]
-        subs = ''
-        for ccpp_stage in CCPP_STAGES:
-            # Calls to groups of schemes for this stage
-            group_calls = ''
-            for group in suite.groups:
-                # The <init></init> and <finalize></finalize> groups require special treatment,
-                # since they can only be run in the respective stage (init/finalize)
-                if (group.init and not ccpp_stage == 'init') or \
-                    (group.finalize and not ccpp_stage == 'finalize'):
-                    continue
-                if not group_calls:
-                    clause = 'if'
-                else:
-                    clause = 'else if'
-                group_calls += '''
-         {clause} (trim(group_name)=="{group_name}") then
-            ierr = {group_name}_{stage}_cap(cdata)'''.format(clause=clause, group_name=group.name, stage=ccpp_stage)
-            group_calls += '''
-         else
-            call ccpp_error("Group " // trim(group_name) // " not found")
-            ierr = 1
-        end if
-'''.format(group_name=group.name)
-            suite_call = '''
-        ierr = suite_{stage}_cap(cdata)
-'''.format(stage=ccpp_stage)
-            subroutine = CCPP_STATIC_SUBROUTINE_NAME.format(stage=ccpp_stage)
-            self._subroutines.append(subroutine)
-            subs += API.sub.format(subroutine=subroutine,
-                                   group_calls=group_calls,
-                                   suite_call=suite_call)
-
-        # Write output to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
+    def __init__(self, scheme_xml):
+        self._name = scheme_xml.text
+        if 'version' in scheme_xml.attrib:
+            self._version = scheme_xml.attrib['version']
         else:
-            f = sys.stdout
-        f.write(API.header.format(module=self._module,
-                                  module_use=module_use,
-                                  subroutines=','.join(self._subroutines)))
-        f.write(subs)
-        f.write(Suite.footer.format(module=self._module))
-        if (f is not sys.stdout):
-            f.close()
-        return
+            self._version = None
+        # End if
+        if 'lib' in scheme_xml.attrib:
+            self._lib = scheme_xml.attrib['lib']
+        else:
+            self._lib = None
+        # End if
 
+###############################################################################
+
+class Subcycle(object):
+    "Class to represent a subcycled group of schemes"
+
+    def __init__(self, sub_xml, context):
+        if 'loop' in sub_xml.attrib:
+            self._loop = sub_xml.attrib['loop']
+        else:
+            self._loop = "1"
+        # End if
+        self._schemes = list()
+        for scheme in sub_xml:
+            self._schemes.append(SuiteScheme(scheme))
+
+    @property
+    def loop(self):
+        '''Get the loop value or variable standard_name'''
+        return self._loop
+
+    @property
+    def schemes(self):
+        '''Get the list of schemes'''
+        return self._schemes
+
+    def print_debug(self):
+        # DH * TODO: create pretty output and return as string to calling function
+        print("{}".format(self._loop))
+        for scheme in self._schemes:
+            print("{}".format(scheme))
+
+###############################################################################
 
 class Suite(object):
 
@@ -181,8 +104,6 @@ class Suite(object):
 !
 module {module}
 
-   use            :: ccpp_types, only: ccpp_t
-   ! Other modules required, e.g. type definitions
    {module_use}
 
    implicit none
@@ -190,7 +111,7 @@ module {module}
    private
    public :: {subroutines}
 
-   contains
+contains
 '''
 
     sub = '''
@@ -210,12 +131,11 @@ module {module}
 end module {module}
 '''
 
-    def __init__(self, xml_root, filename):
+    def __init__(self, filename, host_model, scheme_headers, verbosity=0):
         self._name = None
-        self._sdf_name = filename ##XXgoldyXX: Do we need this?
-        self._caps = None ##XXgoldyXX: Do we need this?
-        self._module = None
-        self._subroutines = None
+        self._sdf_name = filename
+        self._groups = list()
+        self.parse(host_model, scheme_headers, verbosity)
 
     @property
     def name(self):
@@ -227,11 +147,7 @@ end module {module}
         '''Get the name of the suite definition file.'''
         return self._sdf_name
 
-    @sdf_name.setter
-    def sdf_name(self, value):
-        self._sdf_name = value
-
-    def parse(self):
+    def parse(self, host_model, scheme_headers, verbosity=0):
         '''Parse the suite definition file.'''
         success = True
 
@@ -240,19 +156,30 @@ end module {module}
             success = False
             return success
 
-        tree = ET.parse(self._sdf_name)
-        suite_xml = tree.getroot()
+        tree, suite_xml = read_xml_file(self._sdf_name)
+        # We do not have line number information for the XML file
+        context = ParseContext(filename=self._sdf_name)
+        version = find_schema_version(suite_xml) # Only one version so far
+        res = validate_xml_file(self._sdf_name, 'suite', version)
+        if not res:
+            raise SuiteAbort("Invalid suite definition file, '{}'".format(self._sdf_name))
+        # End if
         self._name = suite_xml.get('name')
+        if verbosity > 0:
+            logger.info("Reading suite definition file for {}".format(self._name))
+        # End if
 
         # Flattened lists of all schemes and subroutines in SDF
-        self._all_schemes_called = []
-        self._all_subroutines_called = []
+        self._all_schemes_called = list()
+        self._all_subroutines_called = list()
 
         # Build hierarchical structure as in SDF
-        self._groups = []
-        for group_xml in suite_xml:
-            subcycles = []
-
+        for suite_item in suite_xml:
+            schemes = list()
+            subcycles = list()
+            item_type = suite_item.tag.lower()
+            # Suite item is a group or a suite-wide init or final method
+            if item_type in [ 'init', 'initialize', 'final', 'finalize' ]:
             # Add suite-wide init scheme to group 'init', similar for finalize
             if group_xml.tag.lower() == 'init' or group_xml.tag.lower() == 'finalize':
                 self._all_schemes_called.append(group_xml.text)
@@ -282,10 +209,10 @@ end module {module}
 
     def print_debug(self):
         # DH * TODO: create pretty output and return as string to calling function
-        print "ALL SUBROUTINES:"
-        print self._all_subroutines_called
-        print "STRUCTURED:"
-        print self._groups
+        print("ALL SUBROUTINES:")
+        print("{}".format(self._all_subroutines_called))
+        print("STRUCTURED:")
+        print("{}".format(self._groups))
         for group in self._groups:
             group.print_debug()
 
@@ -372,6 +299,7 @@ end module {module}
         f.close()
 
 ###############################################################################
+
 class Group(object):
 
     header='''
@@ -402,7 +330,7 @@ module {module}
 
    logical, save :: initialized = .false.
 
-   contains
+contains
 '''
 
     sub = '''
@@ -603,40 +531,20 @@ end module {module}
         '''Get the name of the group.'''
         return self._name
 
-    @name.setter
-    def name(self, value):
-        self._name = value
-
     @property
     def filename(self):
         '''Get the filename of write the output to.'''
         return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        self._filename = value
 
     @property
     def init(self):
         '''Get the init flag.'''
         return self._init
 
-    @init.setter
-    def init(self, value):
-        if not type(value) == types.BooleanType:
-            raise Exception("Invalid type {0} of argument value, boolean expected".format(type(value)))
-        self._init = value
-
     @property
     def finalize(self):
         '''Get the finalize flag.'''
         return self._finalize
-
-    @finalize.setter
-    def finalize(self, value):
-        if not type(value) == types.BooleanType:
-            raise Exception("Invalid type {0} of argument value, boolean expected".format(type(value)))
-        self._finalize = value
 
     @property
     def module(self):
@@ -655,7 +563,7 @@ end module {module}
 
     def print_debug(self):
         # DH * TODO: create pretty output and return as string to calling function
-        print self._name
+        print("{}".format(self._name))
         for subcycle in self._subcycles:
             subcycle.print_debug()
 
@@ -669,41 +577,131 @@ end module {module}
         self._pset = value
 
 
-class Subcycle(object):
+###############################################################################
 
-    def __init__(self, **kwargs):
-        self._filename = 'sys.stdout'
-        self._schemes = None
+class API(object):
+
+    header='''
+!>
+!! @brief Auto-generated API for {host_model} calls to CCPP suites
+!!
+!
+module {module}
+
+{module_use}
+
+   implicit none
+
+   private
+   public :: {subroutines}
+
+contains
+'''
+
+    sub = '''
+   subroutine {subroutine}(cdata, group_name, ierr)
+
+      type(ccpp_t),               intent(inout) :: cdata
+      character(len=*), optional, intent(in)    :: group_name
+      integer,                    intent(out)   :: ierr
+
+      ierr = 0
+
+      if (present(group_name)) then
+{group_calls}
+      else
+{suite_call}
+      end if
+
+   end subroutine {subroutine}
+'''
+
+    footer = '''
+end module {module}
+'''
+
+    def __init__(self, suites, host_model, scheme_headers):
+        self._filename    = CCPP_STATIC_API_MODULE + '.F90'
+        self._module      = CCPP_STATIC_API_MODULE
+        self._subroutines = None
+        self._suite       = None
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
     @property
-    def loop(self):
-        '''Get the list of loop.'''
-        return self._loop
-
-    @loop.setter
-    def loop(self, value):
-        if not type(value) is int:
-            raise Exception("Invalid type {0} of argument value, integer expected".format(type(value)))
-        self._loop = value
+    def filename(self):
+        '''Get the filename to write API to.'''
+        return self._filename
 
     @property
-    def schemes(self):
-        '''Get the list of schemes.'''
-        return self._schemes
+    def module(self):
+        '''Get the module name of the API.'''
+        return self._module
 
-    @schemes.setter
-    def schemes(self, value):
-        if not type(value) is list:
-            raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
-        self._schemes = value
+    @property
+    def subroutines(self):
+        '''Get the subroutines names of the API to.'''
+        return self._subroutines
 
-    def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
-        print self._loop
-        for scheme in self._schemes:
-            print scheme
+    def write(self):
+        """Write API for static build"""
+        if not self._suite:
+            raise Exception("No suite specified for generating API")
+        suite = self._suite
+        # Module use statements
+        module_use = '   use {module}, only: {subroutines}\n'.format(module=suite.module,
+                                                  subroutines=','.join(suite.subroutines))
+        for group in suite.groups:
+            module_use += '   use {module}, only: {subroutines}\n'.format(module=group.module,
+                                                      subroutines=','.join(group.subroutines))
+
+        # Create a subroutine for each stage
+        self._subroutines=[]
+        subs = ''
+        for ccpp_stage in CCPP_STAGES:
+            # Calls to groups of schemes for this stage
+            group_calls = ''
+            for group in suite.groups:
+                # The <init></init> and <finalize></finalize> groups require special treatment,
+                # since they can only be run in the respective stage (init/finalize)
+                if (group.init and not ccpp_stage == 'init') or \
+                    (group.finalize and not ccpp_stage == 'finalize'):
+                    continue
+                if not group_calls:
+                    clause = 'if'
+                else:
+                    clause = 'else if'
+                group_calls += '''
+         {clause} (trim(group_name)=="{group_name}") then
+            ierr = {group_name}_{stage}_cap(cdata)'''.format(clause=clause, group_name=group.name, stage=ccpp_stage)
+            group_calls += '''
+         else
+            call ccpp_error("Group " // trim(group_name) // " not found")
+            ierr = 1
+        end if
+'''.format(group_name=group.name)
+            suite_call = '''
+        ierr = suite_{stage}_cap(cdata)
+'''.format(stage=ccpp_stage)
+            subroutine = CCPP_STATIC_SUBROUTINE_NAME.format(stage=ccpp_stage)
+            self._subroutines.append(subroutine)
+            subs += API.sub.format(subroutine=subroutine,
+                                   group_calls=group_calls,
+                                   suite_call=suite_call)
+
+        # Write output to stdout or file
+        if (self._filename is not sys.stdout):
+            f = open(self._filename, 'w')
+        else:
+            f = sys.stdout
+        f.write(API.header.format(module=self._module,
+                                  module_use=module_use,
+                                  subroutines=','.join(self._subroutines)))
+        f.write(subs)
+        f.write(Suite.footer.format(module=self._module))
+        if (f is not sys.stdout):
+            f.close()
+        return
 
 ###############################################################################
 if __name__ == "__main__":
@@ -712,6 +710,14 @@ if __name__ == "__main__":
         # First, run doctest
         import doctest
         doctest.testmod()
+        frame_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        cpf = os.path.dirname(frame_root)
+        kessler = os.path.join(cpf, 'cam_driver', 'suites',
+                               'suite_cam_kessler_test_simple1.xml')
+        if os.path.exists(kessler):
+            foo = Suite(kessler, None, None)
+        else:
+            raise SuiteAbort("Cannot find test file, '{}'".format(kessler))
     except SuiteAbort as sa:
         print("{}".format(sa))
 else:

@@ -141,7 +141,7 @@ class VariableProperty(object):
             except ValueError:
                 valid_val = None # Redundant but more expressive than pass
         elif self.type is list:
-            if type(test_value) is str:
+            if isinstance(test_value, str):
                 match = list_re.match(test_value)
                 if match is None:
                     tv = None
@@ -155,9 +155,9 @@ class VariableProperty(object):
             else:
                 tv = test_value
             # End if
-            if type(tv) is list:
+            if isinstance(tv, list):
                 valid_val = tv
-            elif type(tv) is tuple:
+            elif isinstance(tv, tuple):
                 valid_val = list(tv)
             else:
                 valid_val = None
@@ -173,12 +173,12 @@ class VariableProperty(object):
             else:
                 pass
         elif self.type is bool:
-            if type(test_value) is str:
+            if isinstance(test_value, str):
                 valid_val = (test_value in ['True', 'False']) or (test_value.lower() in ['t', 'f', '.true.', '.false.'])
             else:
                 valid_val = not not test_value
         elif self.type is str:
-            if type(test_value) is str:
+            if isinstance(test_value, str):
                 if self._valid_values is not None:
                     if test_value in self._valid_values:
                         valid_val = test_value
@@ -500,7 +500,7 @@ class VarDictionary(dict):
     def __init__(self, variables=None):
         "Unlike dict, VarDictionary only takes a Var or Var list"
         super(VarDictionary, self).__init__()
-        if type(variables) is Var:
+        if isinstance(variables, Var):
             self.add_variable(variables)
         elif variables is not None:
             for var in variables:

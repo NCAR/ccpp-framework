@@ -207,12 +207,6 @@ class ParseSource(object):
     'myname'
     >>> print("{}".format(ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).context))
     foo.F90:14
-    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).type = 3
-
-    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).context = 3
-
-    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).name = 3
-
     """
 
     def __init__(self, name_in, type_in, context_in):

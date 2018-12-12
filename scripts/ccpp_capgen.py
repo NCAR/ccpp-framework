@@ -13,7 +13,6 @@ import os.path
 import logging
 # CCPP framework imports
 from fortran_parser import parse_fortran_file
-from parse_tools import read_xml_file
 from metavar import VarDictionary
 from host_registry import HostModel, parse_host_registry
 from ccpp_suite import API, Suite
@@ -185,38 +184,6 @@ def parse_scheme_files(scheme_pathsfile, preproc_defs, verbosity):
     return mheaders
 
 ###############################################################################
-def parse_sdf_file(sdf_file, verbosity):
-###############################################################################
-    """
-    Gather information from SDF file and return resulting suite object.
-    """
-    tree, root = read_xml_file(sdf_file)
-    return root
-
-###############################################################################
-def parse_sdf_files(sdf_pathsfile=None, sdf_file=None, verbosity=0):
-###############################################################################
-    """
-    Gather information from SDF files and return resulting suite objects.
-    """
-    suites = list()
-    if sdf_pathsfile is not None:
-        filenames = read_pathnames_from_file(sdf_pathsfile)
-        for filename in filenames:
-            root = parse_sdf_file(filename, verbosity)
-            suites.append(root)
-        # End for
-    # End if
-    if sdf_file is not None:
-        root = parse_sdf_file(sdf_file, verbosity)
-        suites.append(root)
-    # End if
-    if (sdf_pathsfile is None) and (sdf_file is None) and (verbosity > 0):
-        logger.warning("parse_sdf_files called with no files to parse")
-    # End if
-    return suites
-
-###############################################################################
 def _main_func():
 ###############################################################################
     logger.addHandler(logging.StreamHandler())
@@ -280,12 +247,17 @@ def _main_func():
     # Next, parse the scheme files
     scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs, verbosity)
     # Last, parse the SDF file(s)
+    suites = list()
     if sdf_pathsfile is not None:
         if sdf_is_xml:
-            sdfs = parse_sdf_files(sdf_file=sdf_pathsfile, verbosity=verbosity)
+            sdfs = [sdf_pathsfile]
         else:
-            sdfs = parse_sdf_files(sdf_pathsfile=sdf_pathsfile, verbosity=verbosity)
+            sdfs = sdf_pathsfile
         # End if
+        # Turn the SDF files into Suites
+        for sdf in sdfs:
+            suites.append(Suite(sdf, host_model, scheme_headers, verbosity))
+        # End for
     # End if
 # XXgoldyXX: v debug only
     print("headers = {}".format([x._table_title for x in host_model._ddt_defs]))
@@ -293,11 +265,6 @@ def _main_func():
     print("schemes = {}".format([x._table_title for x in scheme_headers]))
     print("sdfs = {}".format([x.attrib['name'] for x in suites]))
 # XXgoldyXX: ^ debug only
-    # Turn the parsed SDF files into Suites
-    suites = list()
-    for sdf in sdfs:
-        suites.append(Suite(sdf, host_model, scheme_headers))
-    # End for
     # Finally, we can get on with writing suites
     API(suites, host_model, scheme_headers).write(output_dir)
 

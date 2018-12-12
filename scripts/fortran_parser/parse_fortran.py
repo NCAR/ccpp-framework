@@ -54,13 +54,13 @@ class Ftype(object):
 
     def __init__(self, typestr_in=None, kind_in=None, line_in=None, context=None):
         if context is None:
-            self.context = ParseContext()
+            self._context = ParseContext()
         else:
-            self.context = ParseContext(context=context)
+            self._context = ParseContext(context=context)
         # We have to distinguish which type of initialization we have
         if typestr_in is not None:
             if line_in is not None:
-                raise ParseInternalError("typestr_in and line_in cannot both be used in a single call", self.context)
+                raise ParseInternalError("typestr_in and line_in cannot both be used in a single call", self._context)
             # End if
             self.typestr = typestr_in
             self.default_kind = kind_in is None
@@ -73,11 +73,11 @@ class Ftype(object):
                 # The kind has already been parsed for us (e.g., by character)
                 self.kind = kind_in
         elif kind_in is not None:
-            raise ParseInternalError("kind_in cannot be passed without typestr_in", self.context)
+            raise ParseInternalError("kind_in cannot be passed without typestr_in", self._context)
         elif line_in is not None:
             match = Ftype.itype_re.match(line_in.strip())
             if match is None:
-                raise ParseSyntaxError("type declaration", token=line_in, context=self.context)
+                raise ParseSyntaxError("type declaration", token=line_in, context=self._context)
             elif check_fortran_intrinsic(match.group(1)):
                 self.typestr = match.group(1)
                 if match.group(2) is not None:
@@ -88,14 +88,14 @@ class Ftype(object):
                 # End if
                 self.default_kind = self.kind is None
             else:
-                raise ParseSyntaxError("type declaration", token=line_in, context=self.context)
+                raise ParseSyntaxError("type declaration", token=line_in, context=self._context)
         else:
-            raise ParseInternalError("At least one of typestr_in or line must be passed", self.context)
+            raise ParseInternalError("At least one of typestr_in or line must be passed", self._context)
 
     def parse_kind_selector(self, kind_selector, context=None):
         if context is None:
             if hasattr(self, 'context'):
-                context = self.context
+                context = self._context
             else:
                 context = ParseContext()
             # End if
