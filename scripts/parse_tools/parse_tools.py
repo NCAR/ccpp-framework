@@ -2,12 +2,11 @@
 
 """Classes to aid the parsing process"""
 
-import logging
+# Python library imports
 import collections
 import copy
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
+# CCPP framework imports
+from parse_log import logger, initLog
 
 ########################################################################
 
@@ -121,9 +120,6 @@ class ParseContext(object):
         else:
             self.regions = ContextRegion()
         # End if
-        # Turn logging to WARNING if not set
-        _llevel = logger.getEffectiveLevel()
-        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
     def line_num(self):
@@ -210,12 +206,9 @@ class ParseSource(object):
     """
 
     def __init__(self, name_in, type_in, context_in):
-        _llevel = logger.getEffectiveLevel()
-        logger.setLevel(logging.ERROR)
         self._name = name_in
         self._type = type_in
         self._context = context_in
-        logger.setLevel(logging.WARNING if _llevel == logging.NOTSET else _llevel)
 
     @property
     def type(self):
@@ -233,5 +226,5 @@ class ParseSource(object):
 
 if __name__ == "__main__":
     import doctest
-    logger.setLevel(logging.WARNING)
+    logger = initLog('parse_tools')
     doctest.testmod()

@@ -219,6 +219,8 @@ class Var(object):
     ['Bob', 'Ray']
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())).get_prop_value('long_name')
     'Hi mom'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())).get_prop_value('intent')
+    'in'
     """
 
     # __spec_props are for variables defined in a specification

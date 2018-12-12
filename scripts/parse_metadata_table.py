@@ -88,10 +88,12 @@ suitable to be used with mkcap.py (which generates the fortran code for the sche
 - the script generates a separate file for each module within the given files
 """
 
+# Python library imports
 from __future__ import print_function
 import re
 import collections
 import logging
+# CCPP framework imports
 from metavar import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource
 from parse_tools import ParseInternalError, ParseSyntaxError

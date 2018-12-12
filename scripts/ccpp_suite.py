@@ -15,9 +15,8 @@ import xml.etree.ElementTree as ET
 # CCPP framework imports
 from parse_tools import ParseContext, ParseSyntaxError, FORTRAN_ID
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
+from parse_tools import initLog, logger, setLogToNull
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
-
-logger = logging.getLogger(__name__)
 
 init_re   = re.compile(FORTRAN_ID+r"_init$")
 run_re    = re.compile(FORTRAN_ID+r"_run$")
@@ -748,7 +747,8 @@ end module {module}
 
 ###############################################################################
 if __name__ == "__main__":
-    logger.addHandler(logging.NullHandler())
+    logger = initLog('ccpp_suite')
+    setLogToNull()
     try:
         # First, run doctest
         import doctest
@@ -763,5 +763,4 @@ if __name__ == "__main__":
             raise SuiteAbort("Cannot find test file, '{}'".format(kessler))
     except SuiteAbort as sa:
         print("{}".format(sa))
-else:
-    logger.addHandler(logging.StreamHandler())
+# No else
