@@ -2,7 +2,6 @@
 
 # CCPP prebuild config for MICM 
 
-
 ###############################################################################
 # Definitions                                                                 #
 ###############################################################################
@@ -10,8 +9,7 @@
 # Add all files with metadata tables on the host model side,
 # relative to basedir = top-level directory of host model
 VARIABLE_DEFINITION_FILES = [
-    'MusicBox_host/src/MusicBox_var_defs.f90',
-    'MICM_chemistry/src/kinetics/kinetics_module.F90'
+    'MusicBox_host/src/MusicBox_var_defs.f90'
     ]
 
 # Can be empty, since all physics schemes and their
@@ -23,8 +21,12 @@ PROJECT='3component'
 
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
-    'MICM_chemistry/src/chemistry_driver.F90'   : ['physics'],
-    'MICM_chemistry/src/kinetics/k_rateConst.F90'   : ['physics'],
+    'MICM_chemistry/src/chemistry_driver_moz.F90' : ['physics'],
+    'MICM_chemistry/src/chemistry_driver_ros.F90' : ['physics'],
+    'MICM_chemistry/src/kinetics/k_rateConst.F90' : ['physics'],
+    'MICM_chemistry/src/photolysis_interstitial.F90' : ['physics'],
+    'MICM_chemistry/src/tuv/tuv_photolysis.F90' : ['physics'],
+    'MICM_chemistry/src/mass_quantities_util.F90' : ['physics']
     }
 
 # Auto-generated makefile/cmakefile snippets that contain all schemes
