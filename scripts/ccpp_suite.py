@@ -12,7 +12,7 @@ import sys
 import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
+from parse_tools import ParseContext, ParseSyntaxError
 from parse_tools import FORTRAN_ID
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
@@ -70,11 +70,30 @@ class Scheme(object):
         '''Return name of scheme'''
         return self._name
 
-    def analyze(self, host_model, scheme_headers, logger):
+    def analyze(self, phase, host_model, scheme_headers, logger):
+        # Find our header
+        self._subroutine_name = self.name + '_' + phase
+        my_header = None
+        for module in scheme_headers:
+            for header in module:
+                if header.title == self._subroutine_name:
+                    my_header = header
+                    break
+                # End if
+            # End for
+            if my_header is not None:
+                break
+            # End if
+        # End for
+        if my_header is None:
+            raise SuiteAbort('Could not find subroutine, {}'.format(subroutine_name))
+        else:
+            self._arglist = my_header.argument_list()
+        # End if
         return ''
 
-    def write(self, outfile, level=2):
-        outfile.write('{}call {}()'.format(indent(level), self.name))
+    def write(self, outfile, level=2): # Add phase!!
+        outfile.write('{}call {}({})'.format(indent(level), self._subroutine_name, self._arglist))
 
     def schemes(self):
         'Return self as a list for consistency with subcycle'
@@ -93,11 +112,11 @@ class Subcycle(object):
             self._schemes.append(Scheme(scheme, context))
         # End forn
 
-    def analyze(self, host_model, scheme_headers, logger):
+    def analyze(self, phase, host_model, scheme_headers, logger):
         loopvar = '{}integer :: {}'.format(indent(2), self.name)
         scheme_mods = list()
         for scheme in self._schemes:
-            scheme_mods.append(scheme.analyze(host_model, scheme_headers, logger))
+            scheme_mods.append(scheme.analyze(phase, host_model, scheme_headers, logger))
         # End for
         return loopvar, scheme_mods
 
@@ -187,20 +206,20 @@ class Group(object):
         # End for
         return schemes
 
-    def analyze(self, host_model, scheme_headers, logger):
+    def analyze(self, phase, host_model, scheme_headers, logger):
         self._local_vars = set()
         self._local_schemes = set()
         for item in self._parts:
             if isinstance(item, Subcycle):
-                lvar, lschemes = item.analyze(host_model, scheme_headers, logger)
+                lvar, lschemes = item.analyze(phase, host_model, scheme_headers, logger)
                 self._local_vars.add(lvar)
                 for lscheme in lschemes:
                     self._local_schemes.add(lscheme)
                 # End for
             elif isinstance(item, Scheme):
-                self._local_schemes.add(item.analyze(host_model, scheme_headers, logger))
+                self._local_schemes.add(item.analyze(phase, host_model, scheme_headers, logger))
             else:
-                raise ParseInternalError('Illegal group type, {} in group {}'.format(type(item), self.name))
+                raise SuiteAbort('Illegal group type, {} in group {}'.format(type(item), self.name))
             # End if
         # End for
 
@@ -449,7 +468,7 @@ end module {module}
                 # Find out what sort of schemes are available
                 group_schemes = item.schemes()
                 print("Group {}, schemes = {}".format(item.name, [x.name for x in group_schemes]))
-                item.analyze(host_model, scheme_headers, logger)
+                item.analyze('run', host_model, scheme_headers, logger)
 
     def write(self, output_dir):
         """Create caps for all groups in the suite and for the entire suite

@@ -307,6 +307,14 @@ class MetadataHeader(ParseSource):
         else:
             return None
 
+    def argument_list(self):
+        args = list()
+        for var in self._variables:
+            # Each vars should be a list of length 1
+            args.append(var)
+        # End for
+        return ', '.join(args)
+
     def variable_start(self, line):
         """Return variable name if <line> is an interface metadata table header
         """
