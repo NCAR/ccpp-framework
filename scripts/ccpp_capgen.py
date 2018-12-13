@@ -89,11 +89,6 @@ def parse_command_line(args, description):
                         default="capfiles.txt",
                         help="Filename for list of generated cap files")
 
-    parser.add_argument("--host-pathlist", type=str,
-                        metavar='<filename for generated host filenames>',
-                        default="hostfiles.txt",
-                        help="Filename for list of generated host files")
-
     parser.add_argument("--output-root", type=str,
                         metavar='<directory for generated files>',
                         default=os.getcwd(),
@@ -156,12 +151,10 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
     for file in xml_files:
         vars, host_vars = parse_host_registry(file, logger)
         variables.merge(vars)
-        if verbosity > 1:
-            for var in host_vars.keys():
-                host_variables[var] = host_vars[var]
-                logger.info("{} defined in {}".format(var, host_vars[var]))
-            # End for
-        # End if
+        for var in host_vars.keys():
+            host_variables[var] = host_vars[var]
+            logger.info("{} defined in {}".format(var, host_vars[var]))
+        # End for
     # End for
     return HostModel(mheaders, host_variables, variables)
 
@@ -187,9 +180,9 @@ def _main_func():
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
     if verbosity > 1:
-        logger.setLevel(logger, logging.DEBUG)
+        setLogLevel(logger, logging.DEBUG)
     if verbosity > 0:
-        logger.setLevel(logger, logging.INFO)
+        setLogLevel(logger, logging.INFO)
     # End if
     host_pathsfile = os.path.abspath(args.host_pathnames)
     schemes_pathsfile = os.path.abspath(args.scheme_pathnames)
@@ -199,7 +192,6 @@ def _main_func():
         sdf_pathsfile = None
     # End if
     cap_output_file = os.path.abspath(args.cap_pathlist)
-    host_output_file = os.path.abspath(args.host_pathlist)
     output_dir = os.path.abspath(args.output_root)
     preproc_defs = args.preproc_directives
     gen_docfiles = args.generate_docfiles
@@ -224,10 +216,6 @@ def _main_func():
         cap_output_file = os.path.join(output_dir, cap_output_file)
     # End if
     check_for_writeable_file(cap_output_file, "Cap output file")
-    if not os.path.isabs(host_output_file):
-        host_output_file = os.path.join(output_dir, host_output_file)
-    # End if
-    check_for_writeable_file(host_output_file, "Host output file")
     # Did we get an SDF input?
     if sdf_pathsfile is not None:
         sdf_is_xml = is_xml_file(sdf_pathsfile)
@@ -257,6 +245,7 @@ def _main_func():
         for sdf in sdfs:
             suite = Suite(sdf, logger)
             suite.analyze(host_model, scheme_headers, logger)
+            out_file_name = suite.write(output_dir)
             suites.append(suite)
         # End for
     # End if

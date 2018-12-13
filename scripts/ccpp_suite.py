@@ -12,7 +12,8 @@ import sys
 import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from parse_tools import ParseContext, ParseSyntaxError, FORTRAN_ID
+from parse_tools import ParseContext, ParseSyntaxError, ParseInternalError
+from parse_tools import FORTRAN_ID
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
 
@@ -39,12 +40,20 @@ COPYRIGHT = '''!
 ! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
+INDENT = 3
+
 ###############################################################################
 
 class SuiteAbort(ValueError):
     "Class so main can log user errors without backtrace"
     def __init__(self, message):
         super(SuiteAbort, self).__init__(message)
+
+###############################################################################
+
+def indent(level=0):
+    'Return an indent string for any level'
+    return (INDENT*level)*' '
 
 ###############################################################################
 
@@ -61,6 +70,12 @@ class Scheme(object):
         '''Return name of scheme'''
         return self._name
 
+    def analyze(self, host_model, scheme_headers, logger):
+        return ''
+
+    def write(self, outfile, level=2):
+        outfile.write('{}call {}()'.format(indent(level), self.name))
+
     def schemes(self):
         'Return self as a list for consistency with subcycle'
         return [self]
@@ -76,6 +91,22 @@ class Subcycle(object):
         self._schemes = list()
         for scheme in sub_xml:
             self._schemes.append(Scheme(scheme, context))
+        # End forn
+
+    def analyze(self, host_model, scheme_headers, logger):
+        loopvar = '{}integer :: {}'.format(indent(2), self.name)
+        scheme_mods = list()
+        for scheme in self._schemes:
+            scheme_mods.append(scheme.analyze(host_model, scheme_headers, logger))
+        # End for
+        return loopvar, scheme_mods
+
+    def write(self, outfile):
+        outfile.write('{}do {} = 1, {}'.format(indent(2), self.name, self.loop))
+        for scheme in self._schemes:
+            scheme.write(outfile, level=3)
+        # End for
+        outfile.write('{}end do'.format(indent(2)))
 
     @property
     def name(self):
@@ -103,63 +134,12 @@ class Subcycle(object):
 class Group(object):
     "Class to represent a grouping of schemes in a suite"
 
-    header='''
-!>
-!! @brief Auto-generated cap module for the CCPP {group} group
-!!
-!
-module {module}
-
-   use, intrinsic :: iso_c_binding,                                   &
-                     only: c_f_pointer, c_ptr, c_int32_t
-   use            :: ccpp_types,                                      &
-                     only: ccpp_t, CCPP_GENERIC_KIND
-   use            :: ccpp_fields,                                     &
-                     only: ccpp_field_get
-#ifdef DEBUG
-   use            :: ccpp_errors,                                     &
-                     only: ccpp_error, ccpp_debug
-#endif
-
-   ! Other modules required, e.g. type definitions
-   {module_use}
-
-   implicit none
-
-   private
-   public :: {subroutines}
-
-   logical, save :: initialized = .false.
-
-contains
+    subhead = '''
+   subroutine {subname}({args})
 '''
 
-    sub = '''
-   function {subroutine}(cdata) result(ierr)
-
-      integer                     :: ierr
-      type(ccpp_t), intent(inout) :: cdata
-      type(c_ptr)                 :: cptr
-      integer, allocatable        :: cdims(:)
-      integer                     :: ckind
-
-{var_defs}
-
-      ierr = 0
-
-{initialized_test_block}
-
-{var_gets}
-
-{body}
-
-{initialized_set_block}
-
-   end function {subroutine}
-'''
-
-    footer = '''
-end module {module}
+    subend = '''
+   end subroutine {subname}
 '''
 
     initialized_test_blocks = {
@@ -207,133 +187,52 @@ end module {module}
         # End for
         return schemes
 
-    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
-        # First get target names of standard CCPP variables for subcycling and error handling
-        ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
-        ccpp_error_flag_target_name = metadata_request[CCPP_ERROR_FLAG_VARIABLE][0].target
-        ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
-        #
-        module_use = module_use_cap
-        self._module = 'ccpp_group_{name}_cap'.format(name=self._name)
-        self._filename = '{module_name}.F90'.format(module_name=self._module)
-        self._subroutines = []
+    def analyze(self, host_model, scheme_headers, logger):
+        self._local_vars = set()
+        self._local_schemes = set()
+        for item in self._parts:
+            if isinstance(item, Subcycle):
+                lvar, lschemes = item.analyze(host_model, scheme_headers, logger)
+                self._local_vars.add(lvar)
+                for lscheme in lschemes:
+                    self._local_schemes.add(lscheme)
+                # End for
+            elif isinstance(item, Scheme):
+                self._local_schemes.add(item.analyze(host_model, scheme_headers, logger))
+            else:
+                raise ParseInternalError('Illegal group type, {} in group {}'.format(type(item), self.name))
+            # End if
+        # End for
+
+    def write(self, outfile, host_arglist):
+        self._subroutines = list()
         local_subs = ''
-        #
-        for ccpp_stage in CCPP_STAGES:
-            if self._init and not ccpp_stage == 'init':
-                continue
-            elif self._finalize and not ccpp_stage == 'finalize':
-                continue
-            # For creating and mappig local variable names to standard names
-            local_vars = {}
-            local_var_cnt = 0
-            local_var_cnt_max = 9999
-            local_var_template = 'v{x:04d}'
-            # Add the predefined variables for subcycling and error handling (special, no need to retrieve from cdata via ccpp_field_get)
-            local_vars[CCPP_LOOP_COUNTER] = ccpp_loop_counter_target_name
-            local_vars[CCPP_ERROR_FLAG_VARIABLE] = ccpp_error_flag_target_name
-            local_vars[CCPP_ERROR_MSG_VARIABLE] = ccpp_error_msg_target_name
-            #
-            body = ''
-            var_defs = ''
-            var_gets = ''
-            for subcycle in self._subcycles:
-                if subcycle.loop > 1 and ccpp_stage == 'run':
-                    body += '''
-      associate(cnt => {loop_var_name})
-      do cnt=1,{loop_cnt}\n\n'''.format(loop_var_name=ccpp_loop_counter_target_name,loop_cnt=subcycle.loop)
-                for scheme_name in subcycle.schemes:
-                    module_name = scheme_name
-                    subroutine_name = scheme_name + '_' + ccpp_stage
-                    container = encode_container(module_name, scheme_name, subroutine_name)
-                    # Skip entirely empty routines
-                    if not arguments[module_name][scheme_name][subroutine_name]:
-                        continue
-                    error_check = ''
-                    args = ''
-                    length = 0
-                    for var_name in arguments[module_name][scheme_name][subroutine_name]:
-                        for var in metadata_request[var_name]:
-                            if container == var.container:
-                                break
-                        if not var_name in local_vars:
-                            local_var_cnt += 1
-                            if local_var_cnt > local_var_cnt_max:
-                                raise Exception("local_var_cnt exceeding local_var_cnt_max, increase limit!")
-                            tmpvar = copy.deepcopy(var)
-                            tmpvar.local_name = local_var_template.format(x=local_var_cnt) #var_name.replace('-','_')
-                            var_defs += '      ' + tmpvar.print_def() + '\n'
-                            # Use the index lookup from ccpp_field_maps for the group's
-                            # physics set and given variable name (standard name)
-                            var_gets += tmpvar.print_get(index=ccpp_field_maps[self._pset][var_name]) + '\n'
-                            # Add to list of local variables with the auto-generated local variable name
-                            local_vars[var_name] = tmpvar.local_name
-                            del tmpvar
-
-                        # Add to argument list
-                        arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=local_vars[var_name])#var_name.replace('-','_'))
-                        args += arg
-                        length += len(arg)
-                        # Split args so that lines don't exceed 260 characters (for PGI)
-                        if length > 70 and not var_name == arguments[module_name][scheme_name][subroutine_name][-1]:
-                            args += ' &\n                  '
-                            length = 0
-
-                    args = args.rstrip(',')
-                    subroutine_call = 'call {subroutine_name}({args})'.format(subroutine_name=subroutine_name, args=args)
-                    error_check = '''if ({target_name_flag}/=0) then
-             write({target_name_msg},'(a)') "An error occured in {subroutine_name}"
-             ierr={target_name_flag}
-             return
-          end if
-'''.format(target_name_flag=ccpp_error_flag_target_name, target_name_msg=ccpp_error_msg_target_name, subroutine_name=subroutine_name)
-                    body += '''
-        {subroutine_call}
-        {error_check}
-    '''.format(subroutine_call=subroutine_call, error_check=error_check)
-
-                    module_use += '   use {m}, only: {s}\n'.format(m=module_name, s=subroutine_name)
-
-                if subcycle.loop > 1 and ccpp_stage == 'run':
-                    body += '''
-      end do
-      end associate
-'''
-
-            subroutine = self._name + '_' + ccpp_stage + '_cap'
-            self._subroutines.append(subroutine)
-            # Test and set blocks for initialization status
-            initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
-                                        target_name_flag=ccpp_error_flag_target_name,
-                                        target_name_msg=ccpp_error_msg_target_name,
-                                        name=self._name)
-            initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
-                                        target_name_flag=ccpp_error_flag_target_name,
-                                        target_name_msg=ccpp_error_msg_target_name,
-                                        name=self._name)
+        # First, write out the subroutine header
+        subname = self.name + '_run'
+        outfile.write(Group.subhead.format(subname=subname, args=host_arglist))
+        # Write out the scheme use statements
+        for scheme in self._local_schemes:
+            outfile.write(scheme)
+        # End for
+        # Write out local variables
+        for var in self._local_vars:
+            outfile.write(var)
+        # End for
+        # Write the scheme calls
+        for item in self._parts:
+            item.write(outfile)
+        # End for
+        outfile.write(Group.subend.format(subname=subname))
+            # # Test and set blocks for initialization status
+            # initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
+            #                             target_name_flag=ccpp_error_flag_target_name,
+            #                             target_name_msg=ccpp_error_msg_target_name,
+            #                             name=self._name)
+            # initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
+            #                             target_name_flag=ccpp_error_flag_target_name,
+            #                             target_name_msg=ccpp_error_msg_target_name,
+            #                             name=self._name)
             # Create subroutine
-            local_subs += Group.sub.format(subroutine=subroutine,
-                                           initialized_test_block=initialized_test_block,
-                                           initialized_set_block=initialized_set_block,
-                                           var_defs=var_defs,
-                                           var_gets=var_gets,
-                                           body=body)
-
-        # Write output to stdout or file
-        if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
-        else:
-            f = sys.stdout
-        f.write(Group.header.format(group=self._name,
-                                    module=self._module,
-                                    module_use=module_use,
-                                    subroutines=','.join(self._subroutines)))
-        f.write(local_subs)
-        f.write(Group.footer.format(module=self._module))
-        if (f is not sys.stdout):
-            f.close()
-
-        return
 
     @property
     def name(self):
@@ -402,22 +301,9 @@ module {module}
    implicit none
 
    private
-   public :: {subroutines}
+{subroutines}
 
 contains
-'''
-
-    sub = '''
-   function {subroutine}(cdata) result(ierr)
-
-      integer :: ierr
-      type(ccpp_t), intent(inout) :: cdata
-
-      ierr = 0
-
-{body}
-
-   end function {subroutine}
 '''
 
     footer = '''
@@ -543,6 +429,7 @@ end module {module}
         init_seq = list()
         run_seq = list()
         final_seq = list()
+
         for item in self.groups:
             if (item.name == 'init') or (item.name == 'initialize'):
                 # This is an initial scheme
@@ -562,57 +449,72 @@ end module {module}
                 # Find out what sort of schemes are available
                 group_schemes = item.schemes()
                 print("Group {}, schemes = {}".format(item.name, [x.name for x in group_schemes]))
-#                run_seq.append(item)
+                item.analyze(host_model, scheme_headers, logger)
 
-    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
+    def write(self, output_dir):
         """Create caps for all groups in the suite and for the entire suite
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
-        self._module = 'ccpp_suite_cap'
-        self._filename = '{module_name}.F90'.format(module_name=self._module)
+        self._module = 'ccpp_{}_cap'.format(self.name)
+        filename = '{module_name}.F90'.format(module_name=self._module)
         # Init
         self._subroutines = []
-        module_use = module_use_cap
-        # Write group caps and generate module use statements
-        for group in self._groups:
-            group.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap)
-            module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
-        subs = ''
-        for ccpp_stage in CCPP_STAGES:
-            body = ''
+        module_use = None
+        output_file_name = os.path.join(output_dir, filename)
+        with open(output_file_name, 'w') as outfile:
+            # Write suite header
+            gsub_list = ""
             for group in self._groups:
-                # Groups 'init'/'finalize' are only run in stages 'init'/'finalize'
-                if (group.init and not ccpp_stage == 'init') or \
-                    (group.finalize and not ccpp_stage == 'finalize'):
-                    continue
-                # Write to body that calls the groups for this stage
-                body += '''
-      ierr = {group_name}_{stage}_cap(cdata)
-      if (ierr/=0) return
-'''.format(group_name=group.name, stage=ccpp_stage)
-            # Add name of subroutine in the suite cap to list of subroutine names
-            subroutine = 'suite_{stage}_cap'.format(stage=ccpp_stage)
-            self._subroutines.append(subroutine)
-            # Add subroutine to output
-            subs += Suite.sub.format(subroutine=subroutine, body=body)
+                gsub_list = gsub_list + ('   public :: {}_run\n'.format(group.name))
+            # End for
+            outfile.write(COPYRIGHT)
+            outfile.write(Suite.header.format(module=self._module,
+                                              module_use='',
+                                              subroutines=gsub_list))
+            for group in self._groups:
+                group.write(outfile, '<insert host arglist here>')
+            outfile.write(Suite.footer.format(module=self._module))
+            return output_file_name
+# Write group caps and generate module use statements
+#         for group in self._groups:
+#             group.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap)
+#             module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
+#         subs = ''
+#         for ccpp_stage in CCPP_STAGES:
+#             body = ''
+#             for group in self._groups:
+#                 # Groups 'init'/'finalize' are only run in stages 'init'/'finalize'
+#                 if (group.init and not ccpp_stage == 'init') or \
+#                     (group.finalize and not ccpp_stage == 'finalize'):
+#                     continue
+#                 # Write to body that calls the groups for this stage
+#                 body += '''
+#       ierr = {group_name}_{stage}_cap(cdata)
+#       if (ierr/=0) return
+# '''.format(group_name=group.name, stage=ccpp_stage)
+#             # Add name of subroutine in the suite cap to list of subroutine names
+#             subroutine = 'suite_{stage}_cap'.format(stage=ccpp_stage)
+#             self._subroutines.append(subroutine)
+#             # Add subroutine to output
+#             subs += Suite.sub.format(subroutine=subroutine, body=body)
 
-        # Write cap to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
-        else:
-            f = sys.stdout
-        f.write(Suite.header.format(module=self._module,
-                                    module_use=module_use,
-                                    subroutines=','.join(self._subroutines)))
-        f.write(subs)
-        f.write(Suite.footer.format(module=self._module))
-        if (f is not sys.stdout):
-            f.close()
+#         # Write cap to stdout or file
+#         if (self._filename is not sys.stdout):
+#             f = open(self._filename, 'w')
+#         else:
+#             f = sys.stdout
+#         f.write(Suite.header.format(module=self._module,
+#                                     module_use=module_use,
+#                                     subroutines=','.join(self._subroutines)))
+#         f.write(subs)
+#         f.write(Suite.footer.format(module=self._module))
+#         if (f is not sys.stdout):
+#             f.close()
 
-        # Create list of all caps generated (for groups and suite)
-        self._caps = [ self._filename ]
-        for group in self._groups:
-            self._caps.append(group.filename)
+#         # Create list of all caps generated (for groups and suite)
+#         self._caps = [ self._filename ]
+#         for group in self._groups:
+#             self._caps.append(group.filename)
 
 
     def create_sdf_name_include_file(self, incfilename):

@@ -201,7 +201,9 @@ class MetadataHeader(ParseSource):
             valid_lines = newvar is not None
             if valid_lines:
                 intent = newvar.get_prop_value('intent')
-                self._var_intents[intent].append(newvar)
+                if intent is not None:
+                    self._var_intents[intent].append(newvar)
+                # End if
                 self._variables.add_variable(newvar)
             else:
                 # We have hit the end of the table, check for blank line
