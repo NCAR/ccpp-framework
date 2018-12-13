@@ -109,7 +109,7 @@ class MetadataHeader(ParseSource):
                        "!! standard_name = horizontal_loop_extent",           \
                        "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
-                       "!! dimensions = () |  intent = in"])).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+                       "!! dimensions = () |  intent = in"])).get_var(standard_name='horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: End of file parsing Metadata table, at foobar.txt:7
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
@@ -118,7 +118,7 @@ class MetadataHeader(ParseSource):
                        "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
-                       "  subroutine foo()"])).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+                       "  subroutine foo()"])).get_var(standard_name='horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid Metadata table ending, '  subroutine foo()', at foobar.txt:7
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
@@ -127,7 +127,7 @@ class MetadataHeader(ParseSource):
                        "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
-                       "!! "])).get_var('horizontal_loop_extent') #doctest: +ELLIPSIS
+                       "!! "])).get_var(standard_name='horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var object at 0x...>
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
@@ -136,7 +136,7 @@ class MetadataHeader(ParseSource):
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
                        "!! "], line_start=0),                                 \
-                       syntax=FortranMetadataSyntax).get_var('horizontal_loop_extent').get_prop_value('local_name')
+                       syntax=FortranMetadataSyntax).get_var(standard_name='horizontal_loop_extent').get_prop_value('local_name')
     'im'
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["!> \section arg_table_foobar", "!! [ im ]",           \
@@ -144,7 +144,7 @@ class MetadataHeader(ParseSource):
                        "!! long_name = horizontal loop extent, start at 1",   \
                        "!! units = index | type = integer",                   \
                        "!! dimensions = () |  intent = in",                   \
-                       "!! "], line_start=0)).get_var('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+                       "!! "], line_start=0)).get_var(standard_name='horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid variable property value, 'horizontal loop extent', at foobar.txt:2
 """
@@ -195,10 +195,13 @@ class MetadataHeader(ParseSource):
         # Read the variables
         valid_lines =  True
         self._variables = VarDictionary(logger=logger)
+        self._var_intents = {'in' : list(), 'out' : list(), 'inout' : list()}
         while valid_lines:
             newvar, curr_line = self.parse_variable(curr_line, spec_name)
             valid_lines = newvar is not None
             if valid_lines:
+                intent = newvar.get_prop_value('intent')
+                self._var_intents[intent].append(newvar)
                 self._variables.add_variable(newvar)
             else:
                 # We have hit the end of the table, check for blank line
@@ -286,14 +289,19 @@ class MetadataHeader(ParseSource):
             return newvar, curr_line
         # End if
 
-    def get_var(self, standard_name):
-        if standard_name in self._variables:
+    def get_var(self, standard_name=None, intent=None):
+        if (standard_name is not None) and (standard_name in self._variables):
             vlist = self._variables[standard_name]
             # VarDictionary returns a list but there should only be one
             if len(vlist) != 1:
                 raise ParseInternalError("Standard name, '{}', ERROR in {}".format(standard_name, self._table_title), self._pobj)
             # End if
             return vlist[0]
+        elif intent is not None:
+            if intent not in self._var_intents:
+                raise ParseInternalError("Illegal intent type, '{}', in {}".format(intent, self._table_title), self._pobj)
+            # End if
+            return self._var_intents[intent]
         else:
             return None
 

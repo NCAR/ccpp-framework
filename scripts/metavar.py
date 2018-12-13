@@ -3,9 +3,12 @@
 # Class to hold all information on a CCPP metadata variable
 #
 
+# Python library imports
 from __future__ import print_function
 import re
 import xml.etree.ElementTree as ET
+from collections import OrderedDict
+# CCPP framework imports
 from parse_tools import check_fortran_id, check_fortran_type
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import ParseContext, ParseSource, ParseSyntaxError
@@ -471,20 +474,20 @@ class Var(object):
 
 ###############################################################################
 
-class VarDictionary(dict):
+class VarDictionary(OrderedDict):
     """
     A class to store and cross-check variables from one or more metadata
     headers.
     The dictionary is organized by standard_name with each entry a list
     containing all the known variables sharing that standard_name.
     >>> VarDictionary()
-    {}
+    VarDictionary()
     >>> VarDictionary({})
-    {}
+    VarDictionary()
     >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))) #doctest: +ELLIPSIS
-    {'hi_mom': [<__main__.Var object at 0x...>]}
+    VarDictionary([('hi_mom', [<__main__.Var object at 0x...>])])
     >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))]) #doctest: +ELLIPSIS
-    {'hi_mom': [<__main__.Var object at 0x...>]}
+    VarDictionary([('hi_mom', [<__main__.Var object at 0x...>])])
     >>> VarDictionary().add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())))
 
     """
