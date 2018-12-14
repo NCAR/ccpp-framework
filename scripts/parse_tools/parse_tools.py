@@ -7,9 +7,15 @@ import collections
 import copy
 # CCPP framework imports
 
+###############################################################################
+class CCPPError(ValueError):
+    "Class so programs can log user errors without backtrace"
+    def __init__(self, message):
+        super(CCPPError, self).__init__(message)
+
 ########################################################################
 
-class ParseSyntaxError(ValueError):
+class ParseSyntaxError(CCPPError):
     """Exception that is aware of parsing context"""
     def __init__(self, token_type, token=None, context=None):
         if context is None:
@@ -28,7 +34,9 @@ class ParseSyntaxError(ValueError):
 ########################################################################
 
 class ParseInternalError(StandardError):
-    """Exception for internal parser use errors"""
+    """Exception for internal parser use errors
+    Note that this error will not be trapped by programs such as ccpp_capgen
+    """
     def __init__(self, errmsg, context):
         if context is None:
             message = errmsg
@@ -39,7 +47,7 @@ class ParseInternalError(StandardError):
 
 ########################################################################
 
-class ParseContextError(ValueError):
+class ParseContextError(CCPPError):
     """Exception for errors using ParseContext"""
     def __init__(self, errmsg, context):
         if context is None:
@@ -83,10 +91,10 @@ class ParseContext(object):
     <__main__.ParseContext object at 0x...>
     >>> ParseContext("source.F90", 32)
     Traceback (most recent call last):
-    ValueError: ParseContext linenum must be an int
+    CCPPError: ParseContext linenum must be an int
     >>> ParseContext(32, 90) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: ParseContext filenum must be a string
+    CCPPError: ParseContext filenum must be a string
     >>> "{}".format(ParseContext(32, "source.F90"))
     'source.F90:33'
     >>> "{}".format(ParseContext())
@@ -102,7 +110,7 @@ class ParseContext(object):
         elif linenum is None:
             linenum = 0
         elif type(linenum) != int:
-            raise ValueError('ParseContext linenum must be an int')
+            raise CCPPError('ParseContext linenum must be an int')
         # End if
         if context is not None:
             # If context is passed, ignore filename
@@ -110,7 +118,7 @@ class ParseContext(object):
         elif filename is None:
             filename = "<standard input>"
         elif type(filename) != str:
-            raise ValueError('ParseContext filename must be a string')
+            raise CCPPError('ParseContext filename must be a string')
         # End if
         self._linenum = linenum
         self._filename = filename

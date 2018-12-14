@@ -12,24 +12,12 @@ import os
 import os.path
 import logging
 # CCPP framework imports
-from fortran_parser import parse_fortran_file
+from fortran_tools import parse_fortran_file
 from metavar import VarDictionary
 from host_registry import HostModel, parse_host_registry
+from host_cap import write_host_cap
 from ccpp_suite import API, Suite
-from parse_tools import initLog, setLogToStdout, setLogLevel
-
-###############################################################################
-
-class CapgenAbort(ValueError):
-    "Class so main can log user errors without backtrace"
-    def __init__(self, message):
-        super(CapgenAbort, self).__init__(message)
-
-###############################################################################
-def abort(message):
-###############################################################################
-    logger.error(message)
-    raise CapgenAbort(message)
+from parse_tools import initLog, setLogToStdout, setLogLevel, CCPPError
 
 ###############################################################################
 def is_xml_file(filename):
@@ -44,20 +32,20 @@ def check_for_existing_file(filename, description, readable=True):
     if os.path.exists(filename):
         if readable:
             if not os.access(filename, os.R_OK):
-                abort("No read access to {}, '{}'".format(description, filename))
+                raise CCPPError("No read access to {}, '{}'".format(description, filename))
             # End if
         # End if (no else needed, checks all done
     else:
-        abort("{}, '{}', must exist".format(description, filename))
+        raise CCPPError("{}, '{}', must exist".format(description, filename))
     # End if
 
 ###############################################################################
 def check_for_writeable_file(filename, description):
 ###############################################################################
     if os.path.exists(filename) and not os.access(filename, os.W_OK):
-        abort("Cannot write {}, '{}'".format(description, filename))
+        raise CCPPError("Cannot write {}, '{}'".format(description, filename))
     elif not os.access(os.path.dirname(filename), os.W_OK):
-        abort("Cannot write {}, '{}'".format(description, filename))
+        raise CCPPError("Cannot write {}, '{}'".format(description, filename))
     # End if (else just return)
 
 ###############################################################################
@@ -93,6 +81,10 @@ def parse_command_line(args, description):
                         metavar='<directory for generated files>',
                         default=os.getcwd(),
                         help="directory for generated files")
+
+    parser.add_argument("--generate-host-cap",
+                        action='store_true', default=False,
+                        help="Generate a host cap with correct API calling sequence")
 
     parser.add_argument("--generate-docfiles",
                         metavar='HTML | Latex | HTML,Latex', type=str,
@@ -148,15 +140,21 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
             mheaders.extend(hheaders)
         # End if
     # End for
+    name = None
     for file in xml_files:
-        vars, host_vars = parse_host_registry(file, logger)
+        hname, vars, host_vars = parse_host_registry(file, logger)
+        if (name is not None) and (hname != name):
+            raise CCPPError('Inconsistent host model names, {} and {}'.format(hname, name))
+        else:
+            name = hname
+        # End if
         variables.merge(vars)
         for var in host_vars.keys():
             host_variables[var] = host_vars[var]
             logger.info("{} defined in {}".format(var, host_vars[var]))
         # End for
     # End for
-    return HostModel(mheaders, host_variables, variables)
+    return HostModel(name, mheaders, host_variables, variables)
 
 ###############################################################################
 def parse_scheme_files(scheme_pathsfile, preproc_defs):
@@ -194,6 +192,7 @@ def _main_func():
     cap_output_file = os.path.abspath(args.cap_pathlist)
     output_dir = os.path.abspath(args.output_root)
     preproc_defs = args.preproc_directives
+    gen_hostcap = args.generate_host_cap
     gen_docfiles = args.generate_docfiles
     ## A few sanity checks
     # Check required arguments
@@ -203,9 +202,9 @@ def _main_func():
     ## Make sure output directory is legit
     if os.path.exists(output_dir):
         if not os.path.isdir(output_dir):
-            abort("output-root, '{}', is not a directory".format(args.output_root))
+            raise CCPPError("output-root, '{}', is not a directory".format(args.output_root))
         elif not os.access(output_dir, os.W_OK):
-            abort("Cannot write files to output-root ({})".format(args.output_root))
+            raise CCPPError("Cannot write files to output-root ({})".format(args.output_root))
         # End if (output_dir is okay)
     else:
         # Try to create output_dir (let it crash if it fails)
@@ -227,27 +226,21 @@ def _main_func():
     # End if
     ##XXgoldyXX: Temporary warning
     if gen_docfiles:
-        abort("--gen-docfiles not yet supported")
+        raise CCPPError("--gen-docfiles not yet supported")
     # End if
     # First up, handle the host files
     host_model = parse_host_model_files(host_pathsfile, preproc_defs, logger)
     # Next, parse the scheme files
     scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs)
-    # Last, parse the SDF file(s)
-    suites = list()
-    if sdf_pathsfile is not None:
+    # Last, we need a list of SDF file(s)
+    if sdf_pathsfile is None:
+        sdfs = list()
+    else:
         if sdf_is_xml:
             sdfs = [sdf_pathsfile]
         else:
             sdfs = sdf_pathsfile
         # End if
-        # Turn the SDF files into Suites
-        for sdf in sdfs:
-            suite = Suite(sdf, logger)
-            suite.analyze(host_model, scheme_headers, logger)
-            out_file_name = suite.write(output_dir)
-            suites.append(suite)
-        # End for
     # End if
 # XXgoldyXX: v debug only
     print("headers = {}".format([x._table_title for x in host_model._ddt_defs]))
@@ -255,12 +248,30 @@ def _main_func():
     print("schemes = {}".format([[x._table_title for x in y] for y in scheme_headers]))
 # XXgoldyXX: ^ debug only
     # Finally, we can get on with writing suites
-#    API(suites, host_model, scheme_headers).write(output_dir)
+    ccpp_api = API(sdfs, host_model, scheme_headers, logger)
+    cap_filenames = ccpp_api.write(output_dir)
+    if gen_hostcap:
+        # Create a cap file
+        hcap_filename = write_host_cap(host_model, output_dir, logger)
+    else:
+        hcap_filename = None
+    # End if
+    if not os.path.isabs(cap_output_file):
+        cap_output_file = os.path.join(output_dir, cap_output_file)
+    # End if
+    with open(cap_output_file, 'w') as cap_names:
+        for path in cap_filenames:
+            cap_names.write('{}\n'.format(path))
+        # End for
+        if hcap_filename is not None:
+            cap_names.write('{}\n'.format(hcap_filename))
+        # End if
+    # End with
 
 ###############################################################################
 
 if __name__ == "__main__":
     try:
         _main_func()
-    except CapgenAbort as ca:
-        pass # abort already logged the message
+    except CCPPError as ca:
+        logger.abort(ca)

@@ -11,8 +11,9 @@ if __name__ == '__main__' and __package__ is None:
     import sys
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
-from parse_tools import ParseContext, ParseInternalError, ParseSyntaxError
-from parse_tools import ParseObject, FortranMetadataSyntax, FORTRAN_ID
+from parse_tools import CCPPError, ParseInternalError, ParseSyntaxError
+from parse_tools import ParseContext, ParseObject
+from parse_tools import FortranMetadataSyntax, FORTRAN_ID
 from parse_metadata_table import MetadataHeader
 
 comment_re = re.compile(r"!.*$")
@@ -25,13 +26,6 @@ contains_re = re.compile(r"(?i)\s*contains")
 continue_re = re.compile(r"(?i)&\s*(!.*)?$")
 fixed_continue_re = re.compile(r"(?i)     [^0 ]")
 blank_re = re.compile(r"\s+")
-
-########################################################################
-
-class PFFAbort(ValueError):
-    "Internal error abort -- noone should be catching this exception"
-    def __init__(self, message):
-        super(PFFAbort, self).__init__(message)
 
 ########################################################################
 
@@ -423,7 +417,7 @@ def is_executable_statement(statement, in_module):
 def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=None):
     "Parse specification part of a module or (sub)program"
     if (mod_name is not None) and (prog_name is not None):
-        PFFAbort("<mod_name> and <prog_name> cannot both be used")
+        raise ParseInternalError("<mod_name> and <prog_name> cannot both be used")
     elif mod_name is not None:
         spec_name = mod_name
         endmatch = endmodule_re
@@ -435,7 +429,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
         endname = 'PROGRAM'
         inmod = False
     else:
-        PFFAbort("One of <mod_name> or <prog_name> must be used")
+        raise ParseInternal("One of <mod_name> or <prog_name> must be used")
     # End if
     inspec = True
     mheaders = list()

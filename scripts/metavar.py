@@ -11,7 +11,7 @@ from collections import OrderedDict
 # CCPP framework imports
 from parse_tools import check_fortran_id, check_fortran_type
 from parse_tools import check_dimensions, check_cf_standard_name
-from parse_tools import ParseContext, ParseSource, ParseSyntaxError
+from parse_tools import ParseContext, ParseSource, ParseSyntaxError, CCPPError
 
 real_subst_re = re.compile(r"(.*\d)p(\d.*)")
 list_re = re.compile(r"[(]([^)]*)[)]\s*$")
@@ -74,21 +74,21 @@ class VariableProperty(object):
         self._name = name_in
         self._type = type_in
         if self._type not in [ bool, int, list, str ]:
-            raise ValueError("{} has illegal VariableProperty type, '{}'".format(name_in, type_in))
+            raise CCPPError("{} has illegal VariableProperty type, '{}'".format(name_in, type_in))
         # End if
         self._valid_values = valid_values_in
         self._optional = optional_in
         if self.optional:
             if (default_in is None) and (default_fn_in is None):
-                raise ValueError('default_in or default_fn_in is a required property for {} because it is optional'.format(name_in))
+                raise CCPPError('default_in or default_fn_in is a required property for {} because it is optional'.format(name_in))
             if (default_in is not None) and (default_fn_in is not None):
-                raise ValueError('default_in and default_fn_in cannot both be provided')
+                raise CCPPError('default_in and default_fn_in cannot both be provided')
             self._default = default_in
             self._default_fn = default_fn_in
         elif default_in is not None:
-            raise ValueError('default_in is not a valid property for {} because it is not optional'.format(name_in))
+            raise CCPPError('default_in is not a valid property for {} because it is not optional'.format(name_in))
         elif default_in is not None:
-            raise ValueError('default_fn_in is not a valid property for {} because it is not optional'.format(name_in))
+            raise CCPPError('default_fn_in is not a valid property for {} because it is not optional'.format(name_in))
         self._check_fn = check_fn_in
 
     @property
@@ -134,7 +134,7 @@ class VariableProperty(object):
                         valid_val = None # i.e. pass
                 else:
                     valid_val = tv
-            except ValueError:
+            except CCPPError:
                 valid_val = None # Redundant but more expressive than pass
         elif self.type is list:
             if isinstance(test_value, str):
@@ -289,13 +289,13 @@ class Var(object):
         # End if
         for key in prop_dict:
             if Var.get_prop(key) is None:
-                raise ValueError("Invalid metadata variable property, '{}'".format(key))
+                raise CCPPError("Invalid metadata variable property, '{}'".format(key))
             # End if
         # End for
         # Make sure required properties are present
         for propname in required_props:
             if propname not in prop_dict:
-                raise ValueError("Required property, '{}', missing".format(propname))
+                raise CCPPError("Required property, '{}', missing".format(propname))
             # End if
         # End for
         self._prop_dict = prop_dict # Stealing dict from caller

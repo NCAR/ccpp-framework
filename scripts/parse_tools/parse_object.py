@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """A module for the base, ParseObject class"""
 
+# Python library imports
 import re
-from parse_tools import ParseContext
+# CCPP framework imports
+from parse_tools import ParseContext, CCPPError
 
 ########################################################################
 
@@ -237,7 +239,7 @@ class ParseObject(ParseContext):
                 _curr_line = self._lines[self.line_num].rstrip()
                 self._line_next = self.line_num + 1
                 self._line_end = self._line_next
-            except ValueError as exc:
+            except CCPPError as exc:
                 valid_line = False
         # End if
         # We allow continuation self._lines (ending with a single backslash)
@@ -273,7 +275,7 @@ class ParseObject(ParseContext):
 
     def reset_pos(self, line_start=0):
         if (line_start < 0) or (line_start >= len(self._lines)):
-            raise ValueError('Attempt to reset_pos to non-existent line, {}'.format(line_start))
+            raise CCPPError('Attempt to reset_pos to non-existent line, {}'.format(line_start))
         else:
             self.line_num = line_start
             self._line_next = line_start
@@ -282,7 +284,7 @@ class ParseObject(ParseContext):
     def write_line(self, line_num, line):
         "Overwrite line, <line_num> with <line>"
         if (line_num < 0) or (line_num >= len(self._lines)):
-            raise ValueError('Attempt to write non-existent line, {}'.format(line_num))
+            raise CCPPError('Attempt to write non-existent line, {}'.format(line_num))
         else:
             self._lines[line_num] = line
         # End if

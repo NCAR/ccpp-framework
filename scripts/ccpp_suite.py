@@ -12,10 +12,10 @@ import sys
 import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from parse_tools import ParseContext, ParseSyntaxError
+from parse_tools import ParseContext, ParseSyntaxError, CCPPError
 from parse_tools import FORTRAN_ID
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
-from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
+from fortran_tools import write_fortran
 
 init_re   = re.compile(FORTRAN_ID+r"_init$")
 run_re    = re.compile(FORTRAN_ID+r"_run$")
@@ -39,92 +39,6 @@ COPYRIGHT = '''!
 ! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
-
-INDENT    =   3 # Spaces per indent level
-CONTINUE  =   5 # Extra spaces on continuation line
-LINE_FILL =  78 # Target line length
-LINE_MAX  = 130 # Max line length
-
-###############################################################################
-
-class SuiteAbort(ValueError):
-    "Class so main can log user errors without backtrace"
-    def __init__(self, message):
-        super(SuiteAbort, self).__init__(message)
-
-###############################################################################
-
-def indent(level=0, continue_line=False):
-    'Return an indent string for any level'
-    if continue_line:
-        return ((INDENT*level)+CONTINUE)*' '
-    else:
-        return (INDENT*level)*' '
-    # End if
-
-###############################################################################
-
-def find_best_break(choices, last=LINE_FILL):
-    'Find largest good break'
-    possible = [x for x in choices if x < last]
-    if len(possible) == 0:
-        best = LINE_MAX + 1
-    else:
-        best = max(possible)
-    # End if
-    if (best > LINE_MAX) and (last < LINE_MAX):
-        best = find_best_break(choices, last=LINE_MAX)
-    # End if
-    return best
-
-###############################################################################
-
-def write_fortran(outfile, statement, indent_level, continue_line=False):
-    istr = indent(indent_level, continue_line)
-    outstr = istr + statement.strip()
-    line_len = len(outstr)
-    if line_len > LINE_FILL:
-        # Collect pretty break points
-        spaces = list()
-        commas = list()
-        sptr = len(istr)
-        in_single_char = False
-        in_double_char = False
-        while sptr < line_len:
-            if in_single_char:
-                if outstr[sptr] == "'":
-                    in_single_char = False
-                # End if (no else, just copy stuff in string)
-            elif in_double_char:
-                if outstr[sptr] == '"':
-                    in_double_char = False
-                # End if (no else, just copy stuff in string)
-            elif outstr[sptr] == "'":
-                in_single_char = True
-            elif outstr[sptr] == '"':
-                in_double_char = True
-            elif outstr[sptr] == '!':
-                # Commend in non-character context, suck in rest of line
-                sptr = line_len - 1
-            elif outstr[sptr] == ' ':
-                # Non-quote spaces are where we can break
-                spaces.append(sptr)
-            elif outstr[sptr] == ',':
-                # Non-quote commas are where we can break
-                commas.append(sptr)
-            # End if (no else, other characters will be ignored)
-            sptr = sptr + 1
-        # End while
-        best = find_best_break(spaces)
-        if best >= LINE_FILL:
-            best = find_best_break(commas)
-        # End if
-        outfile.write("{}&\n".format(outstr[0:best+1]))
-        statement = "  {}".format(outstr[best+1:])
-        write_fortran(outfile, statement, indent_level, continue_line=True)
-    else:
-        outfile.write("{}\n".format(outstr))
-    # End if
 
 ###############################################################################
 
@@ -157,7 +71,7 @@ class Scheme(object):
             # End if
         # End for
         if my_header is None:
-            raise SuiteAbort('Could not find subroutine, {}'.format(subroutine_name))
+            raise CCPPError('Could not find subroutine, {}'.format(subroutine_name))
         else:
             self._arglist = my_header.argument_list()
         # End if
@@ -290,7 +204,7 @@ class Group(object):
             elif isinstance(item, Scheme):
                 self._local_schemes.add(item.analyze(phase, host_model, scheme_headers, logger))
             else:
-                raise SuiteAbort('Illegal group type, {} in group {}'.format(type(item), self.name))
+                raise CCPPError('Illegal group type, {} in group {}'.format(type(item), self.name))
             # End if
         # End for
 
@@ -408,7 +322,7 @@ end module {module}
         self._init_scheme = None
         self._final_scheme = None
         if not os.path.exists(self._sdf_name):
-            raise SuiteAbort("Suite definition file {0} not found.".format(self._sdf_name))
+            raise CCPPError("Suite definition file {0} not found.".format(self._sdf_name))
         else:
             self.parse()
         # End if
@@ -434,7 +348,7 @@ end module {module}
         version = find_schema_version(suite_xml, self._logger)
         res = validate_xml_file(self._sdf_name, 'suite', version, self._logger)
         if not res:
-            raise SuiteAbort("Invalid suite definition file, '{}'".format(self._sdf_name))
+            raise CCPPError("Invalid suite definition file, '{}'".format(self._sdf_name))
         # End if
         self._name = suite_xml.get('name')
         self._logger.info("Reading suite definition file for {}".format(self._name))
@@ -511,7 +425,7 @@ end module {module}
                 elif final_re.match(header.title) is not None:
                     final_schemes.append(header)
                 else:
-                    raise SuiteAbort('Unknown scheme metadata type, "{}"'.format(header.title))
+                    raise CCPPError('Unknown scheme metadata type, "{}"'.format(header.title))
                 # End if
             # End for
         # End for
@@ -524,14 +438,14 @@ end module {module}
             if (item.name == 'init') or (item.name == 'initialize'):
                 # This is an initial scheme
                 if not isinstance(item, Scheme):
-                    raise SuiteAbort("Bad Suite initial method, {}".format(type(item)))
+                    raise CCPPError("Bad Suite initial method, {}".format(type(item)))
                 else:
                     init_seq.append(item)
                 # End if
             elif (item.name == 'final') or (item.name == 'finalize'):
                 # This is an final scheme
                 if not isinstance(item, Scheme):
-                    raise SuiteAbort("Bad Suite final method, {}".format(type(item)))
+                    raise CCPPError("Bad Suite final method, {}".format(type(item)))
                 else:
                     final_seq.append(item)
                 # End if
@@ -565,59 +479,12 @@ end module {module}
                 group.write(outfile, '<insert host arglist here>')
             outfile.write(Suite.footer.format(module=self._module))
             return output_file_name
-# Write group caps and generate module use statements
-#         for group in self._groups:
-#             group.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap)
-#             module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
-#         subs = ''
-#         for ccpp_stage in CCPP_STAGES:
-#             body = ''
-#             for group in self._groups:
-#                 # Groups 'init'/'finalize' are only run in stages 'init'/'finalize'
-#                 if (group.init and not ccpp_stage == 'init') or \
-#                     (group.finalize and not ccpp_stage == 'finalize'):
-#                     continue
-#                 # Write to body that calls the groups for this stage
-#                 body += '''
-#       ierr = {group_name}_{stage}_cap(cdata)
-#       if (ierr/=0) return
-# '''.format(group_name=group.name, stage=ccpp_stage)
-#             # Add name of subroutine in the suite cap to list of subroutine names
-#             subroutine = 'suite_{stage}_cap'.format(stage=ccpp_stage)
-#             self._subroutines.append(subroutine)
-#             # Add subroutine to output
-#             subs += Suite.sub.format(subroutine=subroutine, body=body)
-
-#         # Write cap to stdout or file
-#         if (self._filename is not sys.stdout):
-#             f = open(self._filename, 'w')
-#         else:
-#             f = sys.stdout
-#         f.write(Suite.header.format(module=self._module,
-#                                     module_use=module_use,
-#                                     subroutines=','.join(self._subroutines)))
-#         f.write(subs)
-#         f.write(Suite.footer.format(module=self._module))
-#         if (f is not sys.stdout):
-#             f.close()
-
-#         # Create list of all caps generated (for groups and suite)
-#         self._caps = [ self._filename ]
-#         for group in self._groups:
-#             self._caps.append(group.filename)
-
-
-    def create_sdf_name_include_file(self, incfilename):
-        # Create include file for framework that contains the name of the sdf used for static build
-        f = open(incfilename, "w")
-        f.write('character(len=*), parameter :: ccpp_suite_static_name = "{suite_name}"\n'.format(suite_name = self._name))
-        f.close()
 
 ###############################################################################
 
 class API(object):
 
-    header='''
+    header = '''
 !>
 !! @brief Auto-generated API for {host_model} calls to CCPP suites
 !!
@@ -629,42 +496,36 @@ module {module}
    implicit none
 
    private
-   public :: {subroutines}
+   public :: ccpp_physics
 
 contains
 '''
 
-    sub = '''
-   subroutine {subroutine}(cdata, group_name, ierr)
-
-      type(ccpp_t),               intent(inout) :: cdata
-      character(len=*), optional, intent(in)    :: group_name
-      integer,                    intent(out)   :: ierr
-
-      ierr = 0
-
-      if (present(group_name)) then
-{group_calls}
-      else
-{suite_call}
-      end if
-
-   end subroutine {subroutine}
+    subhead = '''
+   subroutine ccpp_physics({host_call_list})
+'''
+    subfoot = '''
+   end subroutine ccpp_physics
 '''
 
     footer = '''
 end module {module}
 '''
 
-    def __init__(self, suites):
+    def __init__(self, sdfs, host_model, scheme_headers, logger):
         self._module      = 'ccpp_physics_api'
-        self._filename    = self._module + '.F90'
-        self._suites      = suites
-
-    @property
-    def filename(self):
-        '''Get the filename to write API to.'''
-        return self._filename
+        self._host        = host_model
+        self._schemes     = scheme_headers
+        self._suites      = list()
+        # Turn the SDF files into Suites
+        for sdf in sdfs:
+            suite = Suite(sdf, logger)
+# XXgoldyXX: v debug only
+            suite.analyze(host_model, scheme_headers, logger)
+            self._suites.append(suite)
+# XXgoldyXX: ^ debug only
+        # End for
+    # End if
 
     @property
     def module(self):
@@ -676,65 +537,92 @@ end module {module}
         '''Get the subroutines names of the API to.'''
         return self._subroutines
 
-    def write(self):
+    def write(self, output_dir):
         """Write API for static build"""
-        if not self._suite:
-            raise Exception("No suite specified for generating API")
-        suite = self._suite
-        # Module use statements
-        module_use = '   use {module}, only: {subroutines}\n'.format(module=suite.module,
-                                                  subroutines=','.join(suite.subroutines))
-        for group in suite.groups:
-            module_use += '   use {module}, only: {subroutines}\n'.format(module=group.module,
-                                                      subroutines=','.join(group.subroutines))
+        if len(self._suites) == 0:
+            raise CCPPError("No suite specified for generating API")
+        # End if
+        filename = os.path.join(output_dir, self.module + '.F90')
+        api_filenames = list()
+        host_call_list = ''
+        host_dummy_args = list()
+        module_use = ''
+        # Write out the suite files
+        for suite in self._suites:
+            out_file_name = suite.write(output_dir)
+            api_filenames.append(out_file_name)
+        # End for
+        # Write out the API module
+        with open(filename, 'w') as api:
+            api.write(COPYRIGHT)
+            api.write(API.header.format(host_model=self._host.name,
+                                        module=self.module,
+                                        module_use=module_use))
+            api.write(API.subhead.format(host_call_list=host_call_list))
+            # Now, add in cases for all suite parts
+            callstr = 'call ccpp_physics({})'
+            api.write(API.subfoot)
+            api.write(API.footer.format(module=self.module))
+        # End with
+        api_filenames.append(filename)
+        return api_filenames
 
-        # Create a subroutine for each stage
-        self._subroutines=[]
-        subs = ''
-        for ccpp_stage in CCPP_STAGES:
-            # Calls to groups of schemes for this stage
-            group_calls = ''
-            for group in suite.groups:
-                # The <init></init> and <finalize></finalize> groups require special treatment,
-                # since they can only be run in the respective stage (init/finalize)
-                if (group.init and not ccpp_stage == 'init') or \
-                    (group.finalize and not ccpp_stage == 'finalize'):
-                    continue
-                if not group_calls:
-                    clause = 'if'
-                else:
-                    clause = 'else if'
-                group_calls += '''
-         {clause} (trim(group_name)=="{group_name}") then
-            ierr = {group_name}_{stage}_cap(cdata)'''.format(clause=clause, group_name=group.name, stage=ccpp_stage)
-            group_calls += '''
-         else
-            call ccpp_error("Group " // trim(group_name) // " not found")
-            ierr = 1
-        end if
-'''.format(group_name=group.name)
-            suite_call = '''
-        ierr = suite_{stage}_cap(cdata)
-'''.format(stage=ccpp_stage)
-            subroutine = CCPP_STATIC_SUBROUTINE_NAME.format(stage=ccpp_stage)
-            self._subroutines.append(subroutine)
-            subs += API.sub.format(subroutine=subroutine,
-                                   group_calls=group_calls,
-                                   suite_call=suite_call)
 
-        # Write output to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
-        else:
-            f = sys.stdout
-        f.write(API.header.format(module=self._module,
-                                  module_use=module_use,
-                                  subroutines=','.join(self._subroutines)))
-        f.write(subs)
-        f.write(Suite.footer.format(module=self._module))
-        if (f is not sys.stdout):
-            f.close()
-        return
+#         suite = self._suite
+#         # Module use statements
+#         module_use = '   use {module}, only: {subroutines}\n'.format(module=suite.module,
+#                                                   subroutines=','.join(suite.subroutines))
+#         for group in suite.groups:
+#             module_use += '   use {module}, only: {subroutines}\n'.format(module=group.module,
+#                                                       subroutines=','.join(group.subroutines))
+
+#         # Create a subroutine for each stage
+#         self._subroutines=[]
+#         subs = ''
+#         for ccpp_stage in CCPP_STAGES:
+#             # Calls to groups of schemes for this stage
+#             group_calls = ''
+#             for group in suite.groups:
+#                 # The <init></init> and <finalize></finalize> groups require special treatment,
+#                 # since they can only be run in the respective stage (init/finalize)
+#                 if (group.init and not ccpp_stage == 'init') or \
+#                     (group.finalize and not ccpp_stage == 'finalize'):
+#                     continue
+#                 if not group_calls:
+#                     clause = 'if'
+#                 else:
+#                     clause = 'else if'
+#                 group_calls += '''
+#          {clause} (trim(group_name)=="{group_name}") then
+#             ierr = {group_name}_{stage}_cap(cdata)'''.format(clause=clause, group_name=group.name, stage=ccpp_stage)
+#             group_calls += '''
+#          else
+#             call ccpp_error("Group " // trim(group_name) // " not found")
+#             ierr = 1
+#         end if
+# '''.format(group_name=group.name)
+#             suite_call = '''
+#         ierr = suite_{stage}_cap(cdata)
+# '''.format(stage=ccpp_stage)
+#             subroutine = CCPP_STATIC_SUBROUTINE_NAME.format(stage=ccpp_stage)
+#             self._subroutines.append(subroutine)
+#             subs += API.sub.format(subroutine=subroutine,
+#                                    group_calls=group_calls,
+#                                    suite_call=suite_call)
+
+#         # Write output to stdout or file
+#         if (self._filename is not sys.stdout):
+#             f = open(self._filename, 'w')
+#         else:
+#             f = sys.stdout
+#         f.write(API.header.format(module=self._module,
+#                                   module_use=module_use,
+#                                   subroutines=','.join(self._subroutines)))
+#         f.write(subs)
+#         f.write(Suite.footer.format(module=self._module))
+#         if (f is not sys.stdout):
+#             f.close()
+#         return
 
 ###############################################################################
 if __name__ == "__main__":
@@ -752,7 +640,7 @@ if __name__ == "__main__":
         if os.path.exists(kessler):
             foo = Suite(kessler, logger)
         else:
-            raise SuiteAbort("Cannot find test file, '{}'".format(kessler))
-    except SuiteAbort as sa:
+            raise CCPPError("Cannot find test file, '{}'".format(kessler))
+    except CCPPError as sa:
         print("{}".format(sa))
 # No else

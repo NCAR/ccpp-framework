@@ -95,7 +95,7 @@ import collections
 # CCPP framework imports
 from metavar import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource
-from parse_tools import ParseInternalError, ParseSyntaxError
+from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools import MetadataSyntax, FortranMetadataSyntax
 
 ########################################################################
@@ -157,7 +157,7 @@ class MetadataHeader(ParseSource):
         self._pobj = parse_object
         self._spec_name = spec_name
         if syntax is None:
-            raise ValueError('syntax may not be None')
+            raise CCPPError('syntax may not be None')
         # End if
         self._syntax = syntax
         "Initialize from the <lines> of <filename> beginning at <first_line>"
@@ -286,7 +286,7 @@ class MetadataHeader(ParseSource):
         else:
             try:
                 newvar = Var(var_props, source=self)
-            except ValueError as ve:
+            except CCPPError as ve:
                 raise ParseSyntaxError(ve, context=self._pobj)
             return newvar, curr_line
         # End if

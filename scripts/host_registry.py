@@ -13,31 +13,23 @@ import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
 from metavar import Var, VarDictionary
-from parse_tools import ParseSource, ParseContext
+from parse_tools import ParseSource, ParseContext, CCPPError
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
-
-###############################################################################
-class HostRegAbort(ValueError):
-    "Class so main can log user errors without backtrace"
-    def __init__(self, message):
-        super(HostRegAbort, self).__init__(message)
 
 ###############################################################################
 class HostModel(object):
     "Class to hold the data from a host model"
 
-    def __init__(self, ddt_defs, var_locations, variables):
+    def __init__(self, name, ddt_defs, var_locations, variables):
+        self._name = name
         self._ddt_defs = ddt_defs
         self._var_locations = var_locations
         self._variables = variables
 
-###############################################################################
-def abort(message, logger=None):
-###############################################################################
-    if logger is not None:
-        logger.error(message)
-    # End if (no else)
-    raise HostRegAbort(message)
+    @property
+    def name(self):
+        'Return the host model name'
+        return self._name
 
 ###############################################################################
 def parse_host_registry(filename, logger):
@@ -52,7 +44,8 @@ def parse_host_registry(filename, logger):
     if not res:
         abort("Invalid host registry file, '{}'".format(filename), logger)
     # End if
-    logger.info("Reading host model registry for {}".format(root.get('model')))
+    host_name = root.get('name')
+    logger.info("Reading host model registry for {}".format(host_name))
     # End if
     for child in root:
         if (child.tag == 'dimension') or (child.tag == 'variable'):
@@ -97,7 +90,7 @@ def parse_host_registry(filename, logger):
             variables.add_variable(newvar)
         # End if
     # End for
-    return variables, host_variables
+    return host_name, variables, host_variables
 
 ###############################################################################
 

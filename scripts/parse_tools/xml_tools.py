@@ -18,18 +18,7 @@ except ImportError as ie:
 # End try
 # CCPP framework imports
 import six
-
-###############################################################################
-class XMLAbort(ValueError):
-    "Class so main can log user errors without backtrace"
-    def __init__(self, message):
-        super(XMLAbort, self).__init__(message)
-
-###############################################################################
-def abort(message, logger):
-###############################################################################
-    logger.error(message)
-    raise XMLAbort(message)
+from parse_tools import CCPPError
 
 ###############################################################################
 def call_command(commands, logger, silent=False):
@@ -38,7 +27,7 @@ def call_command(commands, logger, silent=False):
     Try a command line and return the output on success (None on failure)
     >>> call_command(['ls', 'really__improbable_fffilename.foo'], logger) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    XMLAbort: Execution of 'ls really__improbable_fffilename.foo' failed:
+    CCPPError: Execution of 'ls really__improbable_fffilename.foo' failed:
     [Errno 2] No such file or directory
     >>> call_command(['ls', 'really__improbable_fffilename.foo'], logger, silent=True)
     False
@@ -49,14 +38,14 @@ def call_command(commands, logger, silent=False):
     try:
         outstr = subprocess.check_output(commands, stderr=subprocess.STDOUT)
         result = True
-    except (OSError, ValueError, subprocess.CalledProcessError) as err:
+    except (OSError, CCPPError, subprocess.CalledProcessError) as err:
         if silent:
             result = False
         else:
             cmd = ' '.join(commands)
             outstr = "Execution of '{}' failed:\n".format(cmd)
             outstr = outstr + "{}".format(err)
-            abort(outstr, logger)
+            raise CCPPError(outstr)
         # End if
     # End of try
     return result
@@ -70,40 +59,45 @@ def find_schema_version(root, logger):
     [1, 0]
     >>> find_schema_version(ET.fromstring('<model name="CAM" version="1.a"></model>'), logger) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    XMLAbort: Illegal version string, '1.a'
+    CCPPError: Illegal version string, '1.a'
     Format must be <integer>.<integer>
     >>> find_schema_version(ET.fromstring('<model name="CAM" version="0.0"></model>'), logger) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    XMLAbort: Illegal version string, '0.0'
+    CCPPError: Illegal version string, '0.0'
     Major version must be at least 1
     >>> find_schema_version(ET.fromstring('<model name="CAM" version="0.-1"></model>'), logger) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    XMLAbort: Illegal version string, '0.0'
+    CCPPError: Illegal version string, '0.0'
     Minor version must be at least 0
     """
     verbits = None
     if 'version' not in root.attrib:
-        abort("version attribute required", logger)
+        raise CCPPError("version attribute required")
     else:
         version = root.attrib['version']
         versplit = version.split('.')
         try:
             if len(versplit) != 2:
-                raise ValueError('oops')
-            verbits = [int(x) for x in versplit]
-            if verbits[0] < 1:
-                raise ValueError('Major version must be at least 1')
-            elif verbits[1] < 0:
-                raise ValueError('Minor version must be non-negative')
+                raise CCPPError('oops')
             # End if (no else needed)
-        except ValueError as ve:
+            try:
+                verbits = [int(x) for x in versplit]
+            except ValueError as ve:
+                raise CCPPError(ve)
+            # End try
+            if verbits[0] < 1:
+                raise CCPPError('Major version must be at least 1')
+            elif verbits[1] < 0:
+                raise CCPPError('Minor version must be non-negative')
+            # End if (no else needed)
+        except CCPPError as ve:
             errstr = """Illegal version string, '{}'
 Format must be <integer>.<integer>"""
             ve_str = str(ve)
             if len(ve_str) > 0:
                 errstr = ve_str + '\n' + errstr
             # End if
-            abort(errstr.format(version), logger)
+            raise CCPPError(errstr.format(version))
         # End try
     # End if
     return verbits
@@ -117,9 +111,9 @@ def validate_xml_file(filename, schema_root, version, logger):
     """
     # Check the filename
     if not os.path.isfile(filename):
-        abort("read_xml_file: Filename, '{}', does not exist".format(filename), logger)
+        raise CCPPError("read_xml_file: Filename, '{}', does not exist".format(filename))
     elif not os.access(filename, os.R_OK):
-        abort("read_xml_file: Cannot open '{}'".format(filename), logger)
+        raise CCPPError("read_xml_file: Cannot open '{}'".format(filename))
     # End if
     # Find the schema, based on the model version
     thispath = os.path.abspath(__file__)
@@ -130,10 +124,10 @@ def validate_xml_file(filename, schema_root, version, logger):
                                "{}_v{}.xsd".format(schema_root, verstring))
     if not os.path.isfile(schema_file):
         verstring = '.'.join([str(x) for x in version])
-        abort("""read_xml_file: Cannot find schema for version {},
-{} does not exist""".format(verstring, schema_file), logger)
+        raise CCPPError("""read_xml_file: Cannot find schema for version {},
+{} does not exist""".format(verstring, schema_file))
     elif not os.access(schema_file, os.R_OK):
-        abort("read_xml_file: Cannot open schema, '{}'".format(schema_file), logger)
+        raise CCPPError("read_xml_file: Cannot open schema, '{}'".format(schema_file))
     # End if
     if xmllint is not None:
         logger.debug("Checking file {} against schema {}".format(filename, schema_file))
@@ -157,9 +151,9 @@ def read_xml_file(filename, logger):
             tree = ET.parse(fd)
             root = tree.getroot()
     elif not os.access(filename, os.R_OK):
-        abort("read_xml_file: Cannot open '{}'".format(filename), logger)
+        raise CCPPError("read_xml_file: Cannot open '{}'".format(filename))
     else:
-        abort("read_xml_file: Filename, '{}', does not exist".format(filename), logger)
+        raise CCPPError("read_xml_file: Filename, '{}', does not exist".format(filename))
     # End if
     return tree, root
 
@@ -184,6 +178,6 @@ if __name__ == "__main__":
             print("CAM7 registry {}".format("validates" if res else "does not validate"))
         else:
             print("Could not find CAM7 registry, {}".format(cam7))
-    except XMLAbort as ca:
+    except CCPPError as ca:
         print("{}".format(ca))
 # No else:

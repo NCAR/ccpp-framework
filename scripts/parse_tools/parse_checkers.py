@@ -2,8 +2,10 @@
 
 """Helper functions to validate parsed input"""
 
+# Python library imports
 import re
-import copy
+# CCPP framework imports
+from parse_tools import CCPPError
 
 ########################################################################
 
@@ -28,14 +30,14 @@ def check_dimensions(test_val, max_len=0, error=False):
 
     >>> check_dimensions(["dim1", "dim2name"], error=True, max_len=5)
     Traceback (most recent call last):
-    ValueError: 'dim2name' is too long (> 5 chars)
+    CCPPError: 'dim2name' is too long (> 5 chars)
     >>> check_dimensions("hi_mom", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'hi_mom' is invalid; not a list
+    CCPPError: 'hi_mom' is invalid; not a list
     """
     if type(test_val) != list:
         if error:
-            raise ValueError("'{}' is invalid; not a list".format(test_val))
+            raise CCPPError("'{}' is invalid; not a list".format(test_val))
         else:
             test_val = None
         # End if
@@ -46,7 +48,7 @@ def check_dimensions(test_val, max_len=0, error=False):
             tvs = [check_fortran_id(x, max_len=max_len, error=error) for x in tdims]
             if None in tvs:
                 if error:
-                    raise ValueError("'{}' is an invalid dimension name".format(item))
+                    raise CCPPError("'{}' is an invalid dimension name".format(item))
                 else:
                     test_val = None
                 # End if
@@ -72,7 +74,7 @@ def check_cf_standard_name(test_val, error=False):
 
     >>> check_cf_standard_name("hi mom", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'hi_mom' is not a valid CF Standard Name
+    CCPPError: 'hi_mom' is not a valid CF Standard Name
     >>> check_cf_standard_name("")
 
     >>> check_cf_standard_name("_hi_mom")
@@ -87,7 +89,7 @@ def check_cf_standard_name(test_val, error=False):
     match = __CFID_RE.match(test_val)
     if match is None:
         if error:
-            raise ValueError("'{}' is not a valid CF Standard Name".format(test_val))
+            raise CCPPError("'{}' is not a valid CF Standard Name".format(test_val))
         else:
             test_val = None
         # End if
@@ -122,12 +124,12 @@ def check_fortran_id(test_val, max_len=0, error=False):
 
     >>> check_fortran_id("hi_mom", max_len=5, error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'hi_mom' is too long (> 5 chars)
+    CCPPError: 'hi_mom' is too long (> 5 chars)
     >>> check_fortran_id("hi mom")
 
     >>> check_fortran_id("hi mom", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'hi_mom' is not a valid Fortran identifier
+    CCPPError: 'hi_mom' is not a valid Fortran identifier
     >>> check_fortran_id("")
 
     >>> check_fortran_id("_hi_mom")
@@ -140,13 +142,13 @@ def check_fortran_id(test_val, max_len=0, error=False):
     match = __FID_RE.match(test_val)
     if match is None:
         if error:
-            raise ValueError("'{}' is not a valid Fortran identifier".format(test_val))
+            raise CCPPError("'{}' is not a valid Fortran identifier".format(test_val))
         else:
             test_val = None
         # End if
     elif (max_len > 0) and (len(test_val) > max_len):
         if error:
-            raise ValueError("'{}' is too long (> {} chars)".format(test_val, max_len))
+            raise CCPPError("'{}' is too long (> {} chars)".format(test_val, max_len))
         test_val = None
     # End if
     return test_val
@@ -176,7 +178,7 @@ def check_fortran_intrinsic(typestr, error=False):
     'doubleprecision'
     >>> check_fortran_intrinsic("char", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'char' is not a valid Fortran type
+    CCPPError: 'char' is not a valid Fortran type
     >>> check_fortran_intrinsic("int")
 
     >>> check_fortran_intrinsic("char", error=False)
@@ -193,7 +195,7 @@ def check_fortran_intrinsic(typestr, error=False):
     # End if
     if not match:
         if error:
-            raise ValueError("'{}' is not a valid Fortran type".format(typestr))
+            raise CCPPError("'{}' is not a valid Fortran type".format(typestr))
         else:
             typestr = None
         # End if
@@ -223,7 +225,7 @@ def check_fortran_type(typestr, error=False):
     'complex'
     >>> check_fortran_type("char", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'char' is not a valid Fortran type
+    CCPPError: 'char' is not a valid Fortran type
     >>> check_fortran_type("int")
 
     >>> check_fortran_type("char", error=False)
@@ -232,10 +234,10 @@ def check_fortran_type(typestr, error=False):
 
     >>> check_fortran_type("type", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'char' is not a valid derived Fortran type
+    CCPPError: 'char' is not a valid derived Fortran type
     >>> check_fortran_type("type(hi mom)", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ValueError: 'type(hi mom)' is not a valid derived Fortran type
+    CCPPError: 'type(hi mom)' is not a valid derived Fortran type
     """
     dt = ""
     match = check_fortran_intrinsic(typestr, error)
@@ -245,7 +247,7 @@ def check_fortran_type(typestr, error=False):
     # End if
     if match is None:
         if error:
-            raise ValueError("'{}' is not a valid{} Fortran type".format(typestr, dt))
+            raise CCPPError("'{}' is not a valid{} Fortran type".format(typestr, dt))
         else:
             typestr = None
         # End if

@@ -10,10 +10,11 @@ from parse_log      import initLog, setLogLevel
 from parse_log      import setLogToStdout, setLogToNull, setLogToFile
 from parse_object   import MetadataSyntax, FortranMetadataSyntax, ParseObject
 from parse_tools    import ParseContext, ParseSource
-from parse_tools    import ParseSyntaxError, ParseInternalError
+from parse_tools    import ParseSyntaxError, ParseInternalError, CCPPError
 from xml_tools      import find_schema_version, validate_xml_file, read_xml_file
 
 __all__ = [
+    'CCPPError',
     'check_cf_standard_name',
     'check_dimensions',
     'check_fortran_id',
