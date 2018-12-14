@@ -17,8 +17,6 @@ VARIABLE_DEFINITION_FILES = [
 # ccpp-physics - to fix, c.f. FV3 v1
 SCHEME_FILES_DEPENDENCIES = []
 
-PROJECT='3component'
-
 # Add all physics scheme files relative to basedir
 SCHEME_FILES = {
     'MICM_chemistry/src/chemistry_driver_moz.F90' : ['physics'],
