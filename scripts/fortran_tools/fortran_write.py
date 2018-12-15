@@ -93,9 +93,6 @@ def write_fortran(outfile, statement, indent_level, continue_line=False):
 
 ###############################################################################
 if __name__ == "__main__":
-    from parse_tools import initLog, setLogToNull
-    logger = initLog('ccpp_suite')
-    setLogToNull(logger)
     # First, run doctest
     import doctest
     doctest.testmod()

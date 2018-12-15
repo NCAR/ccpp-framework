@@ -490,6 +490,8 @@ class VarDictionary(OrderedDict):
     VarDictionary([('hi_mom', [<__main__.Var object at 0x...>])])
     >>> VarDictionary().add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())))
 
+    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))]).prop_list('local_name')
+    ['foo']
     """
 
     def __init__(self, variables=None, logger=None):
@@ -562,6 +564,22 @@ class VarDictionary(OrderedDict):
             # End for
         # End if
         return in_dict
+
+    def prop_list(self, prop_name):
+        '''Return a list of the <prop_name> property for each
+        variable. This method only allows one variable per standard name'''
+        plist = list()
+        for standard_name in self.keys():
+            vlist = self.variable_list(standard_name)
+            if (not isinstance(vlist, list)) or (len(vlist) < 1):
+                raise CCPPError("Illegal VarDictionary entry, '{}'".format(vlist))
+            elif len(vlist) > 1:
+                raise CCPPError("Duplicate variable, '{}'".format(standard_name))
+            else:
+                plist.append(vlist[0].get_prop_value(prop_name))
+            # End if
+        # End for
+        return plist
 
     def merge(self, other_dict):
         "Add new entries from <other_dict>"

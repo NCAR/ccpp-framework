@@ -308,11 +308,8 @@ class MetadataHeader(ParseSource):
             return None
 
     def argument_list(self):
-        args = list()
-        for var in self._variables:
-            # Each vars should be a list of length 1
-            args.append(var)
-        # End for
+        "Return the string representing this scheme's argument list"
+        args = self._variables.prop_list('local_name')
         return ', '.join(args)
 
     def variable_start(self, line):

@@ -31,6 +31,11 @@ class HostModel(object):
         'Return the host model name'
         return self._name
 
+    def argument_list(self):
+        'Return a string representing the host model variable arg list'
+        args = self._variables.prop_list('local_name')
+        return ', '.join(args)
+
 ###############################################################################
 def parse_host_registry(filename, logger):
 ###############################################################################

@@ -429,6 +429,8 @@ end module {module}
                 # End if
             # End for
         # End for
+        # Grab the host model argument list
+        self._host_arg_list = host_model.argument_list()
         # First pass, create init, run, and finalize sequences
         init_seq = list()
         run_seq = list()
@@ -476,7 +478,7 @@ end module {module}
                                               module_use='',
                                               subroutines=gsub_list))
             for group in self._groups:
-                group.write(outfile, '<insert host arglist here>')
+                group.write(outfile, self._host_arg_list)
             outfile.write(Suite.footer.format(module=self._module))
             return output_file_name
 
