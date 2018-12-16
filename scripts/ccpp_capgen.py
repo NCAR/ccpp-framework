@@ -151,7 +151,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
         variables.merge(vars)
         for var in host_vars.keys():
             host_variables[var] = host_vars[var]
-            logger.info("{} defined in {}".format(var, host_vars[var]))
+            logger.debug("{} defined in {}".format(var, host_vars[var]))
         # End for
     # End for
     return HostModel(name, mheaders, host_variables, variables)

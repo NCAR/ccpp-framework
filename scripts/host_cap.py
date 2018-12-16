@@ -12,8 +12,9 @@ import os.path
 import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from metavar import Var, VarDictionary
-from ccpp_suite import COPYRIGHT
+from metavar       import Var, VarDictionary
+from ccpp_suite    import COPYRIGHT
+from fortran_tools import FortranWriter
 
 ###############################################################################
 header = '''
@@ -22,21 +23,21 @@ header = '''
 !!
 !
 module {module}
+'''
 
-{module_use}
-
+preamble='''
    implicit none
 
    private
    public :: {host_model}_ccpp_physics
-
-contains
 '''
 
 subhead = '''
-   subroutine {host_model}_ccpp_physics(suite_name, suite_part)
+   subroutine {host_model}_ccpp_physics(suite_name, suite_part, dim_beg, dim_end)
       character(len=*), intent(in) :: suite_name
       character(len=*), intent(in) :: suite_part
+      integer,          intent(in) :: dim_beg(:)
+      integer,          intent(in) :: dim_end(:)
 '''
 
 subfoot = '''
@@ -52,16 +53,23 @@ def write_host_cap(host_model, output_dir, logger):
 ###############################################################################
     module_name = "{}_ccpp_cap".format(host_model.name)
     cap_filename = os.path.join(output_dir, '{}.F90'.format(module_name))
-    module_use = ''
-    with open(cap_filename, 'w') as cap:
-        cap.write(COPYRIGHT)
+    with FortranWriter(cap_filename, 'w') as cap:
+        cap.write(COPYRIGHT, 0)
         cap.write(header.format(host_model=host_model.name,
-                                module=module_name, module_use=module_use))
-        cap.write(subhead.format(host_model=host_model.name))
+                                module=module_name), 0)
+        modules = host_model.variable_locations()
+        mlen = max([len(x[0]) for x in modules])
+        for mod in modules:
+            mspc = (mlen - len(mod[0]))*' '
+            cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
+        # End for
+        cap.write(preamble.format(host_model=host_model.name), 1)
+        cap.write('contains', 0)
+        cap.write(subhead.format(host_model=host_model.name), 1)
         # Now, call the real API with the host model's variable list
         callstr = 'call ccpp_physics({})'
-        cap.write(subfoot.format(host_model=host_model.name))
-        cap.write(footer.format(module=module_name))
+        cap.write(subfoot.format(host_model=host_model.name), 1)
+        cap.write(footer.format(module=module_name), 0)
     # End with
     return cap_filename
 

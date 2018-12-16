@@ -36,6 +36,21 @@ class HostModel(object):
         args = self._variables.prop_list('local_name')
         return ', '.join(args)
 
+    def variable_list(self):
+        "Return an ordered list of the host model's variables"
+        return self._variables.variable_list()
+
+    def variable_locations(self):
+        """Return a set of module-variable and module-type pairs.
+        These represent the locations of all host model data."""
+        varset = set()
+        mods = self._variables.prop_list('module')
+        names = self._variables.prop_list('local_name')
+        for item in zip(mods, names):
+            varset.add(item)
+        # End for
+        return varset
+
 ###############################################################################
 def parse_host_registry(filename, logger):
 ###############################################################################

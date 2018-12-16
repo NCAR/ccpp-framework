@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 from parse_tools import ParseContext, ParseSyntaxError, CCPPError
 from parse_tools import FORTRAN_ID
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
-from fortran_tools import write_fortran
+from fortran_tools import FortranWriter
 
 init_re   = re.compile(FORTRAN_ID+r"_init$")
 run_re    = re.compile(FORTRAN_ID+r"_run$")
@@ -78,7 +78,7 @@ class Scheme(object):
         return ''
 
     def write(self, outfile, level=2): # Add phase!!
-        write_fortran(outfile, 'call {}({})'.format(self._subroutine_name, self._arglist), level)
+        outfile.write('call {}({})'.format(self._subroutine_name, self._arglist), level)
 
     def schemes(self):
         'Return self as a list for consistency with subcycle'
@@ -106,11 +106,11 @@ class Subcycle(object):
         return loopvar, scheme_mods
 
     def write(self, outfile):
-        write_fortran(outfile, 'do {} = 1, {}'.format(self.name, self.loop), 2)
+        outfile.write('do {} = 1, {}'.format(self.name, self.loop), 2)
         for scheme in self._schemes:
             scheme.write(outfile, level=3)
         # End for
-        write_fortran(outfile, 'end do', 2)
+        outfile.write('end do', 2)
 
     @property
     def name(self):
@@ -213,20 +213,20 @@ class Group(object):
         local_subs = ''
         # First, write out the subroutine header
         subname = self.name + '_run'
-        write_fortran(outfile, Group.subhead.format(subname=subname, args=host_arglist), 1)
+        outfile.write(Group.subhead.format(subname=subname, args=host_arglist), 1)
         # Write out the scheme use statements
         for scheme in self._local_schemes:
-            write_fortran(outfile, scheme, 1)
+            outfile.write(scheme, 1)
         # End for
         # Write out local variables
         for var in self._local_vars:
-            write_fortran(outfile, var, 1)
+            outfile.write(var, 1)
         # End for
         # Write the scheme calls
         for item in self._parts:
             item.write(outfile)
         # End for
-        write_fortran(outfile, Group.subend.format(subname=subname), 1)
+        outfile.write(Group.subend.format(subname=subname), 1)
             # # Test and set blocks for initialization status
             # initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
             #                             target_name_flag=ccpp_error_flag_target_name,
@@ -299,15 +299,15 @@ class Suite(object):
 !!
 !
 module {module}
+'''
 
+    preamble = '''
    {module_use}
 
    implicit none
 
    private
-{subroutines}
-
-contains
+   {subroutines}
 '''
 
     footer = '''
@@ -467,19 +467,20 @@ end module {module}
         self._subroutines = []
         module_use = None
         output_file_name = os.path.join(output_dir, filename)
-        with open(output_file_name, 'w') as outfile:
+        with FortranWriter(output_file_name, 'w') as outfile:
             # Write suite header
             gsub_list = ""
             for group in self._groups:
                 gsub_list = gsub_list + ('   public :: {}_run\n'.format(group.name))
             # End for
-            outfile.write(COPYRIGHT)
-            outfile.write(Suite.header.format(module=self._module,
-                                              module_use='',
-                                              subroutines=gsub_list))
+            outfile.write(COPYRIGHT, 0)
+            outfile.write(Suite.header.format(module=self._module), 0)
+            outfile.write(Suite.preamble.format(module_use='',
+                                                subroutines=gsub_list), 1)
+            outfile.write('contains', 0)
             for group in self._groups:
                 group.write(outfile, self._host_arg_list)
-            outfile.write(Suite.footer.format(module=self._module))
+            outfile.write(Suite.footer.format(module=self._module), 0)
             return output_file_name
 
 ###############################################################################
@@ -515,10 +516,11 @@ end module {module}
 '''
 
     def __init__(self, sdfs, host_model, scheme_headers, logger):
-        self._module      = 'ccpp_physics_api'
-        self._host        = host_model
-        self._schemes     = scheme_headers
-        self._suites      = list()
+        self._module        = 'ccpp_physics_api'
+        self._host          = host_model
+        self._schemes       = scheme_headers
+        self._suites        = list()
+        self._host_arg_list = host_model.argument_list()
         # Turn the SDF files into Suites
         for sdf in sdfs:
             suite = Suite(sdf, logger)
@@ -546,8 +548,8 @@ end module {module}
         # End if
         filename = os.path.join(output_dir, self.module + '.F90')
         api_filenames = list()
-        host_call_list = ''
-        host_dummy_args = list()
+        host_call_list = ', '.join(self._host_arg_list)
+        host_call_list = 'suite_name, suite_part, ' + host_call_list + ', dim_beg, dim_end'
         module_use = ''
         # Write out the suite files
         for suite in self._suites:
@@ -555,16 +557,24 @@ end module {module}
             api_filenames.append(out_file_name)
         # End for
         # Write out the API module
-        with open(filename, 'w') as api:
-            api.write(COPYRIGHT)
+        with FortranWriter(filename, 'w') as api:
+            api.write(COPYRIGHT, 0)
             api.write(API.header.format(host_model=self._host.name,
                                         module=self.module,
-                                        module_use=module_use))
-            api.write(API.subhead.format(host_call_list=host_call_list))
+                                        module_use=module_use), 0)
+            api.write(API.subhead.format(host_call_list=host_call_list), 1)
+            # Declare dummy arguments
+            api.write('character(len=*), intent(in) :: suite_name', 2)
+            api.write('character(len=*), intent(in) :: suite_part', 2)
+            for arg in self._host_arg_list:
+                pass
+            api.write('integer,          intent(in) :: dim_beg(:)', 2)
+            api.write('integer,          intent(in) :: dim_end(:)', 2)
+
             # Now, add in cases for all suite parts
             callstr = 'call ccpp_physics({})'
-            api.write(API.subfoot)
-            api.write(API.footer.format(module=self.module))
+            api.write(API.subfoot, 1)
+            api.write(API.footer.format(module=self.module), 0)
         # End with
         api_filenames.append(filename)
         return api_filenames

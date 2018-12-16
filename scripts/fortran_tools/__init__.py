@@ -2,9 +2,9 @@
 """
 
 from parse_fortran_file import parse_fortran_file
-from fortran_write      import write_fortran
+from fortran_write      import FortranWriter
 
 __all__ = [
     'parse_fortran_file',
-    'write_fortran'
+    'FortranWriter'
 ]

@@ -576,7 +576,10 @@ class VarDictionary(OrderedDict):
             elif len(vlist) > 1:
                 raise CCPPError("Duplicate variable, '{}'".format(standard_name))
             else:
-                plist.append(vlist[0].get_prop_value(prop_name))
+                pval = vlist[0].get_prop_value(prop_name)
+                if pval is not None:
+                    plist.append(pval)
+                # End if (no else, just ignore variables without <prop_name>)
             # End if
         # End for
         return plist
