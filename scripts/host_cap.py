@@ -13,7 +13,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
 from metavar       import Var, VarDictionary
-from ccpp_suite    import COPYRIGHT
+from ccpp_suite    import COPYRIGHT, API
 from fortran_tools import FortranWriter
 
 ###############################################################################
@@ -33,11 +33,7 @@ preamble='''
 '''
 
 subhead = '''
-   subroutine {host_model}_ccpp_physics(suite_name, suite_part, dim_beg, dim_end)
-      character(len=*), intent(in) :: suite_name
-      character(len=*), intent(in) :: suite_part
-      integer,          intent(in) :: dim_beg(:)
-      integer,          intent(in) :: dim_end(:)
+   subroutine {host_model}_ccpp_physics({api_vars})
 '''
 
 subfoot = '''
@@ -65,9 +61,13 @@ def write_host_cap(host_model, output_dir, logger):
         # End for
         cap.write(preamble.format(host_model=host_model.name), 1)
         cap.write('contains', 0)
-        cap.write(subhead.format(host_model=host_model.name), 1)
+        apivars = ", ".join(API.required_vars.prop_list('local_name'))
+        cap.write(subhead.format(api_vars=apivars, host_model=host_model.name), 1)
+        API.required_vars.declare_variables(cap, 2)
+        cap.write('', 0)
         # Now, call the real API with the host model's variable list
-        callstr = 'call ccpp_physics({})'
+        callstr = 'call ccpp_physics({}, {})'
+        cap.write(callstr.format(apivars, host_model.argument_list()), 2)
         cap.write(subfoot.format(host_model=host_model.name), 1)
         cap.write(footer.format(module=module_name), 0)
     # End with

@@ -12,9 +12,10 @@ import sys
 import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from parse_tools import ParseContext, ParseSyntaxError, CCPPError
-from parse_tools import FORTRAN_ID
-from parse_tools import read_xml_file, validate_xml_file, find_schema_version
+from metavar       import Var, VarDictionary
+from parse_tools   import ParseContext, ParseSource, ParseSyntaxError, CCPPError
+from parse_tools   import FORTRAN_ID
+from parse_tools   import read_xml_file, validate_xml_file, find_schema_version
 from fortran_tools import FortranWriter
 
 init_re   = re.compile(FORTRAN_ID+r"_init$")
@@ -515,6 +516,30 @@ contains
 end module {module}
 '''
 
+    api_source = ParseSource("CCPP_API", "MODULE",
+                             ParseContext(filename="ccpp_suite.F90"))
+
+    required_vars = VarDictionary([Var({'local_name':'suite_name',
+                                        'standard_name':'suite_name',
+                                        'intent':'in', 'type':'character',
+                                        'kind':'len=*', 'units':'',
+                                        'dimensions':'()'}, api_source),
+                                   Var({'local_name':'suite_part',
+                                        'standard_name':'suite_part',
+                                        'intent':'in', 'type':'character',
+                                        'kind':'len=*', 'units':'',
+                                        'dimensions':'()'}, api_source),
+                                   Var({'local_name':'dim_beg',
+                                        'standard_name':'array_of_dimension_starts',
+                                        'intent':'in', 'type':'integer',
+                                        'kind':'', 'units':'',
+                                        'dimensions':'(:)'}, api_source),
+                                   Var({'local_name':'dim_end',
+                                        'standard_name':'array_of_dimension_ends',
+                                        'intent':'in', 'type':'integer',
+                                        'kind':'', 'units':'',
+                                        'dimensions':'(:)'}, api_source)])
+
     def __init__(self, sdfs, host_model, scheme_headers, logger):
         self._module        = 'ccpp_physics_api'
         self._host          = host_model
@@ -548,8 +573,8 @@ end module {module}
         # End if
         filename = os.path.join(output_dir, self.module + '.F90')
         api_filenames = list()
-        host_call_list = ', '.join(self._host_arg_list)
-        host_call_list = 'suite_name, suite_part, ' + host_call_list + ', dim_beg, dim_end'
+        host_call_list = ', '.join(API.required_vars.prop_list('local_name'))
+        host_call_list = host_call_list + self._host_arg_list
         module_use = ''
         # Write out the suite files
         for suite in self._suites:
@@ -564,12 +589,13 @@ end module {module}
                                         module_use=module_use), 0)
             api.write(API.subhead.format(host_call_list=host_call_list), 1)
             # Declare dummy arguments
-            api.write('character(len=*), intent(in) :: suite_name', 2)
-            api.write('character(len=*), intent(in) :: suite_part', 2)
-            for arg in self._host_arg_list:
-                pass
-            api.write('integer,          intent(in) :: dim_beg(:)', 2)
-            api.write('integer,          intent(in) :: dim_end(:)', 2)
+            API.required_vars.declare_variables(api, 2)
+#            api.write('character(len=*), intent(in) :: suite_name', 2)
+#            api.write('character(len=*), intent(in) :: suite_part', 2)
+#            for arg in self._host_arg_list:
+#                pass
+#            api.write('integer,          intent(in) :: dim_beg(:)', 2)
+#            api.write('integer,          intent(in) :: dim_end(:)', 2)
 
             # Now, add in cases for all suite parts
             callstr = 'call ccpp_physics({})'

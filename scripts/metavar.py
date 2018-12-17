@@ -349,110 +349,35 @@ class Var(object):
     def source(self):
         return self._source
 
-    def print_def(self):
-        '''Print the definition line for the variable.'''
-        if self.type in STANDARD_VARIABLE_TYPES:
-            if self.kind:
-                str = "{s.type}({s._kind}), pointer :: {s.local_name}{s.rank}"
+    def write_def(self, outfile, indent):
+        '''Write the definition line for the variable.'''
+        vtype = self.get_prop_value('type')
+        kind = self.get_prop_value('kind')
+        name = self.get_prop_value('local_name')
+        dimval = self.get_prop_value('dimensions')
+        dims = Var.get_prop('dimensions').valid_value(dimval)
+        if (dims is not None) and (len(dims) > 0):
+            dimstr = '({})'.format(', '.join(dims))
+        else:
+            dimstr = ''
+        # End if
+        intent = self.get_prop_value('intent')
+        if intent is not None:
+            intent_str = ', intent({})'.format(intent)
+        else:
+            intent_str = ''
+        # End if
+        if vtype == 'type':
+            str = "type({kind}){intent}     :: {name}{dims}"
+        else:
+            if (kind is not None) and (len(kind) > 0):
+                str = "{type}({kind}){intent} :: {name}{dims}"
             else:
-                str = "{s.type}, pointer :: {s.local_name}{s.rank}"
-        else:
-            if self.kind:
-                error_message = "Generating variable definition statements for derived types with" + \
-                                " kind attributes not implemented; variable: {0}".format(self.standard_name)
-                raise Exception(error_message)
-            else:
-                str = "type({s.type}), pointer     :: {s.local_name}{s.rank}"
-        return str.format(s=self)
-
-    def print_get(self):
-        '''Print the data retrieval line for the variable. Depends on the type and of variable'''
-        if self.type in STANDARD_VARIABLE_TYPES and self.rank == '':
-            str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, kind=ckind)
-        if (ierr /= 0) then
-            call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
-            return
-        end if
-        if (kind({s.local_name}).ne.ckind) then
-            call ccpp_error('Kind mismatch for variable {s.standard_name}')
-            ierr = 1
-            return
-        end if
-        '''
-        elif self.type in STANDARD_VARIABLE_TYPES:
-            str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', {s.local_name}, ierr=ierr, dims=cdims, kind=ckind)
-        if (ierr /= 0) then
-            call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
-            return
-        end if
-        if (kind({s.local_name}).ne.ckind) then
-            call ccpp_error('Kind mismatch for variable {s.standard_name}')
-            ierr = 1
-            return
-        end if
-        '''
-        # Derived-type variables, scalar
-        elif self.rank == '':
-            str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, kind=ckind)
-        if (ierr /= 0) then
-            call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
-            return
-        end if
-        if (ckind.ne.CCPP_GENERIC_KIND) then
-            call ccpp_error('Kind mismatch for variable {s.standard_name}')
-            ierr = 1
-            return
-        end if
-        call c_f_pointer(cptr, {s.local_name})'''
-        # Derived-type variables, array
-        else:
-            str='''
-        call ccpp_field_get(cdata, '{s.standard_name}', cptr, ierr=ierr, dims=cdims, kind=ckind)
-        if (ierr /= 0) then
-            call ccpp_error('Unable to retrieve {s.standard_name} from CCPP data structure')
-            return
-        end if
-        if (ckind.ne.CCPP_GENERIC_KIND) then
-            call ccpp_error('Kind mismatch for variable {s.standard_name}')
-            ierr = 1
-            return
-        end if
-        call c_f_pointer(cptr, {s.local_name}, cdims)
-        deallocate(cdims)
-        '''
-        return str.format(s=self)
-
-    def print_add(self, ccpp_data_structure):
-        '''Print the data addition line for the variable. Depends on the type of variable.
-        Since the name of the ccpp data structure is not known, this needs to be filled later.
-        In case of errors a message is printed to screen; using 'return' statements as above
-        for ccpp_field_get is not possible, since the ccpp_field_add statements may be placed
-        inside OpenMP parallel regions.'''
-        # Standard-type variables, scalar and array
-        if self.type in STANDARD_VARIABLE_TYPES:
-            str='''
-            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', {s.target}, ierr, '{s.units}')
-            if (ierr /= 0) then
-                call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
-            end if'''
-        # Derived-type variables, scalar
-        elif self.rank == '':
-            str='''
-            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), ierr)
-            if (ierr /= 0) then
-                call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
-            end if'''
-        # Derived-type variables, array
-        else:
-            str='''
-            call ccpp_field_add({ccpp_data_structure}, '{s.standard_name}', '', c_loc({s.target}), rank=size(shape({s.target})), dims=shape({s.target}), ierr=ierr)
-            if (ierr /= 0) then
-                call ccpp_error('Unable to add field "{s.standard_name}" to CCPP data structure')
-            end if'''
-        return str.format(ccpp_data_structure=ccpp_data_structure, s=self)
+                str = "{type} :: {name}{dims}"
+            # End if
+        # End if
+        outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
+                                 name=name, dims=dimstr), indent)
 
     def print_debug(self):
         '''Print the data retrieval line for the variable.'''
@@ -584,6 +509,19 @@ class VarDictionary(OrderedDict):
         # End for
         return plist
 
+    def declare_variables(self, outfile, indent):
+        "Write out the declarations for this dictionary's variables"
+        for standard_name in self.keys():
+            vlist = self.variable_list(standard_name)
+            if (not isinstance(vlist, list)) or (len(vlist) < 1):
+                raise CCPPError("Illegal VarDictionary entry, '{}'".format(vlist))
+            elif len(vlist) > 1:
+                raise CCPPError("Duplicate variable, '{}'".format(standard_name))
+            else:
+                vlist[0].write_def(outfile, indent)
+            # End if
+        # End for
+
     def merge(self, other_dict):
         "Add new entries from <other_dict>"
         for ovar in other_dict.variable_list():
@@ -591,10 +529,6 @@ class VarDictionary(OrderedDict):
                 self.add_variable(ovar)
             # End if
         # End for
-
-###############################################################################
-
-CCPP_ERROR_STATUS_VARIABLE = 'error_status'
 
 ###############################################################################
 if __name__ == "__main__":
