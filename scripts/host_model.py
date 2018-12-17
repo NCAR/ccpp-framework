@@ -25,6 +25,9 @@ class HostModel(object):
         self._ddt_defs = ddt_defs
         self._var_locations = var_locations
         self._variables = variables
+        self._ddt_vars = {}
+        # Make sure we have a DDT definition for every DDT variable
+        self.check_ddt_vars()
 
     @property
     def name(self):
@@ -43,7 +46,15 @@ class HostModel(object):
     def add_ddt_defs(new_ddt_defs):
         "Add new DDT metadata definitions to model"
         if new_ddt_defs is not None:
-            self._ddt_defs.extend(new_ddt_defs)
+            for header in new_ddt_defs:
+                if header.title in self._ddt_defs:
+                    raise CCPPError("Duplicate DDT, {}, passed to add_ddt_defs".format(header.title))
+                else:
+                    self._ddt_defs[header.title] = header
+                # End if
+            # End for
+            # Make sure we have a DDT definition for every DDT variable
+            self.check_ddt_vars()
         # End if
 
     def add_variables(new_variables):
@@ -51,6 +62,24 @@ class HostModel(object):
         if new_variables is not None:
             self._variables.merge(new_variables)
         # End if
+
+    def check_ddt_vars(self):
+        "Check that we have a DDT definition for every DDT variable"
+        for var in self._variables.keys():
+            vtype = var.get_prop_value('type')
+            if var.type == 'type':
+                vkind = var.get_prop_value('kind')
+                stdname = var.get_prop_value('standard_name')
+                if stdname in self._ddt_vars:
+                    # Make sure this is a duplicate
+                    if self._ddt_vars[stdname] != self._ddt_defs[vkind]:
+                        raise CCPPError("Duplicate DDT definition for {}".format(vkind))
+                    # End if
+                else:
+                    self._ddt_vars[stdname] = self._ddt_defs[vkind]
+                # End if
+            # End if (no else, intrinsic types)
+        # End for
 
     def variable_locations(self):
         """Return a set of module-variable and module-type pairs.
@@ -70,6 +99,15 @@ class HostModel(object):
         else:
             return None
         # End if
+
+    def find_variable(self, standard_name):
+        "Return the host model variable matching <standard_name> or None"
+        my_var = self._variables.find_variable(standard_name)
+        if my_var is None:
+            # Look for a DDT element
+            pass
+        # End if
+        return my_var
 
     def add_host_variable_module(self, local_name, module):
         "Add a module name location for a host variable"

@@ -475,6 +475,25 @@ class VarDictionary(OrderedDict):
         # If we make it to here without an exception, add the variable
         self[standard_name].append(newvar)
 
+    def find_variable(self, standard_name, list_ok=False):
+        "Return the host model variable matching <standard_name> or None"
+        vlist = self.variable_list(standard_name)
+        if vlist is not None:
+            if (not isinstance(vlist, list)) or (len(vlist) < 1):
+                raise CCPPError("Illegal VarDictionary entry, '{}'".format(vlist))
+            elif (len(vlist) > 1) and (not list_ok):
+                raise CCPPError("Duplicate variable, '{}'".format(standard_name))
+            # End if
+            if list_ok:
+                var = vlist
+            else:
+                var = vlist[0]
+            # End if
+        else:
+            var = None
+        # End if
+        return var
+
     def has_variable(self, other_var):
         "Test wither <other_var> is already in our dictionary"
         in_dict = False

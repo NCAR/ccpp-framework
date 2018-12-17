@@ -14,7 +14,7 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append(sdir)
 # End if
 import convert_metadata
-from fortran_parser import parse_fortran_file
+from fortran_tools import parse_fortran_file
 from parse_tools import register_fortran_ddt_name
 
 ########################################################################

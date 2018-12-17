@@ -19,6 +19,9 @@ from host_cap import write_host_cap
 from ccpp_suite import API, Suite
 from parse_tools import initLog, setLogToStdout, setLogLevel, CCPPError
 
+## Init this now so that all Exceptions can be trapped
+logger = initLog('ccpp_capgen')
+
 ###############################################################################
 def is_xml_file(filename):
 ###############################################################################
@@ -63,10 +66,6 @@ def parse_command_line(args, description):
     parser.add_argument("--sdf-pathlist", metavar='<sdf file(s)>',
                         type=str, default='',
                         help="File with names of suite definition fileames to process or name of single XML SDF file")
-
-    parser.add_argument("--host-model-def", metavar='<host model def filename>',
-                        type=str,
-                        help="XML filename with host model definition")
 
     parser.add_argument("--preproc-directives",
                         metavar='VARDEF1[,VARDEF2 ...]', type=str, default=None,
@@ -125,7 +124,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
     Gather information from host files (e.g., DDTs, registry) and
     return a host model object with the information.
     """
-    mheaders = list()
+    mheaders = {}
     xml_files = list()
     host_variables = {}
     variables = VarDictionary(logger=logger)
@@ -137,7 +136,13 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
             xml_files.append(filename)
         else:
             hheaders = parse_fortran_file(filename, preproc_defs==preproc_defs, logger=logger)
-            mheaders.extend(hheaders)
+            for header in hheaders:
+                if header.title in mheaders:
+                    raise CCPPError("Duplicate DDT, {}, found in {}".format(header.title, filename))
+                else:
+                    mheaders[header.title] = header
+                # End if
+            # End for
         # End if
     # End for
     host_model = None
@@ -165,7 +170,6 @@ def parse_scheme_files(scheme_pathsfile, preproc_defs):
 ###############################################################################
 def _main_func():
 ###############################################################################
-    logger = initLog('ccpp_capgen')
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
     if verbosity > 1:
@@ -265,4 +269,4 @@ if __name__ == "__main__":
     try:
         _main_func()
     except CCPPError as ca:
-        logger.abort(ca)
+        logger.exception(ca)

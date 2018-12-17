@@ -71,14 +71,32 @@ class Scheme(object):
                 break
             # End if
         # End for
+        if my_header.module is None:
+            raise ParseSyntaxError('No module found for subroutine',
+                                   token=self._subroutine_name, context=context)
+        # End if
+        scheme_use = 'use {}, only: {}'.format(my_header.module,
+                                               self._subroutine_name)
         if my_header is None:
             raise CCPPError('Could not find subroutine, {}'.format(subroutine_name))
         else:
-            self._arglist = my_header.argument_list()
+            # We need to find the host model variable for each of our arguments
+            my_arglist = my_header.prop_list('standard_name')
+            host_arglist = list()
+            for arg in my_arglist:
+                hvar = host_model.find_variable(arg)
+                if hvar is None:
+                    raise CCPPError("No matching host variable for {} input, {}".format(self._subroutine_name, arg))
+                else:
+                    new_arg = hvar.??
+                    host_arglist.append(new_arg)
+                # End if
+            # End for
+            self._arglist = ?
         # End if
-        return ''
+        return scheme_use
 
-    def write(self, outfile, level=2): # Add phase!!
+    def write(self, outfile, phase, level=2):
         outfile.write('call {}({})'.format(self._subroutine_name, self._arglist), level)
 
     def schemes(self):

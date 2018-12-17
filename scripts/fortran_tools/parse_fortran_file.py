@@ -14,7 +14,7 @@ import re
 from parse_tools import CCPPError, ParseInternalError, ParseSyntaxError
 from parse_tools import ParseContext, ParseObject
 from parse_tools import FortranMetadataSyntax, FORTRAN_ID
-from parse_metadata_table import MetadataHeader
+from metadata_table import MetadataHeader
 
 comment_re = re.compile(r"!.*$")
 fixed_comment_re = re.compile(r"(?i)([C*]|(?:[ ]{0,4}!))")

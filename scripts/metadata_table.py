@@ -307,10 +307,9 @@ class MetadataHeader(ParseSource):
         else:
             return None
 
-    def argument_list(self):
-        "Return the string representing this scheme's argument list"
-        args = self._variables.prop_list('local_name')
-        return ', '.join(args)
+    def prop_list(self, prop_name):
+        "Return list of <prop_name> values for this scheme's arguments"
+        return self._variables.prop_list(prop_name)
 
     def variable_start(self, line):
         """Return variable name if <line> is an interface metadata table header
@@ -336,6 +335,11 @@ class MetadataHeader(ParseSource):
     def title(self):
         'Return the name of the metadata arg_table'
         return self._table_title
+
+    @property
+    def module(self):
+        'Return the module name for this header (if it exists)'
+        return self._spec_name
 
     @classmethod
     def metadata_table_start(cls, line, context=None, syntax=FortranMetadataSyntax):
