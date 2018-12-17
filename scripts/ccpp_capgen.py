@@ -14,7 +14,7 @@ import logging
 # CCPP framework imports
 from fortran_tools import parse_fortran_file
 from metavar import VarDictionary
-from host_registry import HostModel, parse_host_registry
+from host_model import HostModel
 from host_cap import write_host_cap
 from ccpp_suite import API, Suite
 from parse_tools import initLog, setLogToStdout, setLogLevel, CCPPError
@@ -140,21 +140,12 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
             mheaders.extend(hheaders)
         # End if
     # End for
-    name = None
+    host_model = None
     for file in xml_files:
-        hname, vars, host_vars = parse_host_registry(file, logger)
-        if (name is not None) and (hname != name):
-            raise CCPPError('Inconsistent host model names, {} and {}'.format(hname, name))
-        else:
-            name = hname
-        # End if
-        variables.merge(vars)
-        for var in host_vars.keys():
-            host_variables[var] = host_vars[var]
-            logger.debug("{} defined in {}".format(var, host_vars[var]))
-        # End for
+        host_model = HostModel.parse_host_registry(file, logger, mheaders,
+                                                   host_model=host_model)
     # End for
-    return HostModel(name, mheaders, host_variables, variables)
+    return host_model
 
 ###############################################################################
 def parse_scheme_files(scheme_pathsfile, preproc_defs):
