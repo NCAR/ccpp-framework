@@ -43,8 +43,18 @@ def check_dimensions(test_val, max_len=0, error=False):
         # End if
     else:
         for item in test_val:
+            isplit = item.split(':')
+            # Check for too many colons
+            if (len(isplit) > 2):
+                if error:
+                    raise CCPPError("'{}' is an invalid dimension range".format(item))
+                else:
+                    test_val = None
+                # End if
+                break
+            # End if
             # Check possible dim styles (a, a:b, a:, :b, :)
-            tdims = [x for x in item.split(':') if len(x) > 0]
+            tdims = [x for x in isplit if len(x) > 0]
             tvs = [check_fortran_id(x, max_len=max_len, error=error) for x in tdims]
             if None in tvs:
                 if error:

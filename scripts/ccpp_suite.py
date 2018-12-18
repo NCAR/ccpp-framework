@@ -57,6 +57,45 @@ class Scheme(object):
         '''Return name of scheme'''
         return self._name
 
+    def header_has_var(std_name, header):
+        '''Find the requested variable in the header or return the alternatives
+        This routine is only meant for loop dimension variables
+        '''
+        hvar = header.get_var(standard_name=std_name)
+        if hvar is None:
+            ##XXgoldyXX: Need to look for alternatives here
+            raise CCPPError("Scheme {} does not have input, {}, required by host model".format(self.name, std_name))
+        # End if (else we are okay)
+        return hvar
+
+    def host_arg_str(hvar_ind, host_model, ddt):
+        '''Create the proper statement of a piece of a host-model variable.
+        If ddt is True, we can only have a single element selected
+        '''
+        hstr = hvar.get_prop_value('local_name')
+        hdimval = hvar.get_prop_value('dimensions')
+        # Turn the dimensions string into a proper list and take the correct one
+        hdims = Var.get_prop('dimensions').valid_value(hdimval)
+        dimsep = ''
+        if len(hdims) > 0:
+            dimstr = '('
+        else:
+            dimstr = ''
+        # End if
+        for hdim in hdims:
+            if ddt and (':' in hdim):
+                raise CCPPError("Invalid DDT dimension spec {}({})".format(hstr, hdimval))
+            else:
+                hdim_vars = hdim.split(':')
+
+                dimstr = dimstr + dimsep + hdimstr
+                dimsep = ', '
+            # End if
+        # End for
+        if len(hdims) > 0:
+            dimstr = dimstr + ')'
+        # End if
+
     def analyze(self, phase, host_model, scheme_headers, logger):
         # Find our header
         self._subroutine_name = self.name + '_' + phase
@@ -90,13 +129,20 @@ class Scheme(object):
                     raise CCPPError("No matching host variable for {} input, {}".format(self._subroutine_name, arg))
                 elif isinstance(hvar, list):
                     args = list()
+                    alen = len(args)
+                    index = 0
                     for var in hvar:
-                        args.append(var.get_prop_name('local_name'))
+                        new_arg = hvar.get_prop_name('local_name')
+                        ddt = index < (alen - 1)
+                        argstr = host_arg_str(new_arg, host_model, my_header, ddt)
+                        index = index + 1
+                        args.append(argstr)
                     # End for
                     host_arglist.append('%'.join(args))
                 else:
                     new_arg = hvar.get_prop_name('local_name')
-                    host_arglist.append(new_arg)
+                    argstr = host_arg_str(new_arg, host_model, my_header, False)
+                    host_arglist.append(argstr)
                 # End if
             # End for
             self._arglist = host_arglist
@@ -554,17 +600,7 @@ end module {module}
                                         'standard_name':'suite_part',
                                         'intent':'in', 'type':'character',
                                         'kind':'len=*', 'units':'',
-                                        'dimensions':'()'}, api_source),
-                                   Var({'local_name':'dim_beg',
-                                        'standard_name':'array_of_dimension_starts',
-                                        'intent':'in', 'type':'integer',
-                                        'kind':'', 'units':'',
-                                        'dimensions':'(:)'}, api_source),
-                                   Var({'local_name':'dim_end',
-                                        'standard_name':'array_of_dimension_ends',
-                                        'intent':'in', 'type':'integer',
-                                        'kind':'', 'units':'',
-                                        'dimensions':'(:)'}, api_source)])
+                                        'dimensions':'()'}, api_source)])
 
     def __init__(self, sdfs, host_model, scheme_headers, logger):
         self._module        = 'ccpp_physics_api'
@@ -616,12 +652,8 @@ end module {module}
             api.write(API.subhead.format(host_call_list=host_call_list), 1)
             # Declare dummy arguments
             API.required_vars.declare_variables(api, 2)
-#            api.write('character(len=*), intent(in) :: suite_name', 2)
-#            api.write('character(len=*), intent(in) :: suite_part', 2)
 #            for arg in self._host_arg_list:
 #                pass
-#            api.write('integer,          intent(in) :: dim_beg(:)', 2)
-#            api.write('integer,          intent(in) :: dim_end(:)', 2)
 
             # Now, add in cases for all suite parts
             callstr = 'call ccpp_physics({})'

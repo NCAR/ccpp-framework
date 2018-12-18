@@ -113,7 +113,6 @@
       <xs:element name="type"     type="dim_type"
                   minOccurs="0" maxOccurs="1"
                   default="integer"/>
-      <xs:element name="module" type="fortran_id_type"/>
     </xs:sequence>
     <xs:attribute ref="local_name"     use="required"/>
     <xs:attribute ref="standard_name"  use="required"/>

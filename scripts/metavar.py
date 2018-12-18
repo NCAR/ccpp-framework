@@ -68,6 +68,29 @@ class VariableProperty(object):
     True
     >>> VariableProperty('units', str).is_match('type')
     False
+    >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('2')
+    2
+    >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('3')
+
+    >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('3', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: Illegal value variable property, '3'
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('()')
+    []
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x)')
+    ['x']
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('x')
+
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x:y)')
+    ['x:y']
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,y:z)')
+    ['w:x', 'y:z']
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,x:y:z)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'x:y:z' is an invalid dimension range
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x:3y)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '3y' is not a valid Fortran identifier
     """
 
     def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, default_fn_in=None, check_fn_in=None):
@@ -121,7 +144,7 @@ class VariableProperty(object):
         "Return True iff <test_name> is the name of this property"
         return self.name.lower() == test_name.lower()
 
-    def valid_value(self, test_value):
+    def valid_value(self, test_value, error=False):
         'Return True iff test_value is valid'
         valid_val = None
         if self.type is int:
@@ -187,7 +210,9 @@ class VariableProperty(object):
         # End if
         # Call a check function?
         if valid_val and (self._check_fn is not None):
-            valid_val = self._check_fn(valid_val)
+            valid_val = self._check_fn(valid_val, error=error)
+        elif (valid_val is None) and error:
+            raise CCPPError("Illegal {} variable property, '{}'".format(self.name, test_value))
         # End if
         return valid_val
 
@@ -213,10 +238,22 @@ class Var(object):
 
     >>> Var.get_prop('dimensions').valid_value(['Bob', 'Ray'])
     ['Bob', 'Ray']
-    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())).get_prop_value('long_name')
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('long_name')
     'Hi mom'
-    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())).get_prop_value('intent')
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('intent')
     'in'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'ttype' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid metadata variable property, 'ttype', at <standard input>:1
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))
+    Traceback (most recent call last):
+    ParseSyntaxError: Required property, 'units', missing, at <standard input>:1
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'inout', 'constant' : '.true.'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: foo is marked constant but is intent inout, at <standard input>:1
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'ino'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Illegal intent variable property, 'ino', at <standard input>:1
     """
 
     # __spec_props are for variables defined in a specification
@@ -291,16 +328,23 @@ class Var(object):
         # End if
         for key in prop_dict:
             if Var.get_prop(key) is None:
-                raise CCPPError("Invalid metadata variable property, '{}'".format(key))
+                raise ParseSyntaxError("Invalid metadata variable property, '{}'".format(key), context=self.context)
             # End if
         # End for
         # Make sure required properties are present
         for propname in required_props:
             if propname not in prop_dict:
-                raise CCPPError("Required property, '{}', missing".format(propname))
+                raise ParseSyntaxError("Required property, '{}', missing".format(propname), context=self.context)
             # End if
         # End for
-        self._prop_dict = prop_dict # Stealing dict from caller
+        # Check for any mismatch
+        if ('constant' in prop_dict) and ('intent' in prop_dict):
+            if prop_dict['intent'].lower() != 'in':
+                raise ParseSyntaxError("{} is marked constant but is intent {}".format(prop_dict['local_name'], prop_dict['intent']), context=self.context)
+            # End if
+        # End if
+        # Steal dict from caller
+        self._prop_dict = prop_dict
         # Fill in default values for missing properties
         for propname in master_propdict:
             if (propname not in prop_dict) and master_propdict[propname].optional:
@@ -312,6 +356,15 @@ class Var(object):
                 # End if
             # End if
         # End for
+        # Make sure all the variable values are valid
+        try:
+            for prop in self._prop_dict.keys():
+                check = Var.get_prop(prop).valid_value(self._prop_dict[prop],
+                                                       error=True)
+            # End for
+        except CCPPError as cp:
+            raise ParseSyntaxError(cp, context=self.context)
+        # End try
 
     def compatible(self, other):
         # We accept character(len=*) as compatible with character(len=INTEGER_VALUE)
@@ -363,8 +416,11 @@ class Var(object):
         else:
             dimstr = ''
         # End if
+        constant = self.get_prop_value('constant')
         intent = self.get_prop_value('intent')
-        if intent is not None:
+        if constant is not None:
+            const_str = ', indent(in)'.format(intent)
+        elif intent is not None:
             intent_str = ', intent({})'.format(intent)
         else:
             intent_str = ''
@@ -373,9 +429,9 @@ class Var(object):
             str = "type({kind}){intent}     :: {name}{dims}"
         else:
             if (kind is not None) and (len(kind) > 0):
-                str = "{type}({kind}){intent} :: {name}{dims}"
+                str = "{type}({kind}){param}{intent} :: {name}{dims}"
             else:
-                str = "{type} :: {name}{dims}"
+                str = "{type}{param}{intent} :: {name}{dims}"
             # End if
         # End if
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
@@ -411,13 +467,13 @@ class VarDictionary(OrderedDict):
     VarDictionary()
     >>> VarDictionary({})
     VarDictionary()
-    >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))) #doctest: +ELLIPSIS
+    >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))) #doctest: +ELLIPSIS
     VarDictionary([('hi_mom', [<__main__.Var object at 0x...>])])
-    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))]) #doctest: +ELLIPSIS
+    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]) #doctest: +ELLIPSIS
     VarDictionary([('hi_mom', [<__main__.Var object at 0x...>])])
-    >>> VarDictionary().add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext())))
+    >>> VarDictionary().add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())))
 
-    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'vtype', ParseContext()))]).prop_list('local_name')
+    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]).prop_list('local_name')
     ['foo']
     """
 
@@ -466,7 +522,7 @@ class VarDictionary(OrderedDict):
                                            context=cvar._context)
                 elif not cvar.compatible(newvar):
                     errstr = "Standard name incompatible with {}"
-                    raise ParseSyntaxError(errstr.format(cvar._context),
+                    raise ParseSyntaxError(errstr.format(cvar.context),
                                            token=standard_name,
                                            context=newvar.source.context)
                 # End if

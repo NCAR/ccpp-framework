@@ -28,7 +28,6 @@ class HostModel(object):
         self._dimensions = dims
         self._ddt_vars = {}
         self._ddt_fields = {}
-        self._dimensions = list() # Dimension vars that may be threaded
         # Make sure we have a DDT definition for every DDT variable
         self.check_ddt_vars()
         self.collect_ddt_fields()
@@ -50,6 +49,31 @@ class HostModel(object):
     def is_dimension(self, standard_name):
         'Return True iff standard_name is a host model dimension'
         return standard_name in self._dimensions
+
+    def dimension_declarations(self, outfile, indent):
+        """Write out this model's dimension index parameter declarations
+        These indices refer to the position within the dim_beg and dim_end
+        arrays passed from the host model.
+        Note, we have to hand roll these declarations because the index
+        variables are not part of the host model.
+        """
+        index_beg = 0
+        index_end = 0
+        for dkey in self._dimensions.keys():
+            index = index + 1
+            dim = self._dimensions[dim]
+            stdname = dim.get_prop_val('standard_name')
+            dtype = dim.get_prop_val('type')
+            kind_val = dim.get_prop_val('kind')
+            if kind_val:
+                kind = '({})'.format(kind_val)
+            else:
+                kind = ''
+            # End if
+            ind_str = '{dtype}{kind}, parameter :: index_of_{stdname} = {index}'
+            outfile.write(ind_str.format(dtype=dtype, kind=kind,
+                                         stdname=stdname, index=index), indent)
+        # End for
 
     def add_ddt_defs(new_ddt_defs):
         "Add new DDT metadata definitions to model"
