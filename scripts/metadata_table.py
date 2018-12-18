@@ -291,6 +291,10 @@ class MetadataHeader(ParseSource):
             return newvar, curr_line
         # End if
 
+    def variable_list(self):
+        "Return an ordered list of the header's variables"
+        return self._variables.variable_list()
+
     def get_var(self, standard_name=None, intent=None):
         if (standard_name is not None) and (standard_name in self._variables):
             vlist = self._variables[standard_name]

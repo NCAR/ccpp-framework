@@ -484,7 +484,7 @@ def parse_program(pobj, statements, logger=None):
             elif MetadataHeader.metadata_table_start(statements[index],
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
-                mheaders.append(MetadataHeader(pobj))
+                mheaders.append(MetadataHeader(pobj, spec_name=prog_name))
                 break
             # End if
         # End for
@@ -523,7 +523,7 @@ def parse_module(pobj, statements, logger=None):
             elif MetadataHeader.metadata_table_start(statements[index],
                                                      context=pobj,
                                                      syntax=FortranMetadataSyntax):
-                mheaders.append(MetadataHeader(pobj, logger=logger))
+                mheaders.append(MetadataHeader(pobj, spec_name=mod_name, logger=logger))
                 break
             # End if
         # End for

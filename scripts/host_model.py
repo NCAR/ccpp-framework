@@ -20,14 +20,18 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 class HostModel(object):
     "Class to hold the data from a host model"
 
-    def __init__(self, name, ddt_defs, var_locations, variables):
+    def __init__(self, name, ddt_defs, var_locations, variables, dims):
         self._name = name
         self._ddt_defs = ddt_defs
         self._var_locations = var_locations
         self._variables = variables
+        self._dimensions = dims
         self._ddt_vars = {}
+        self._ddt_fields = {}
+        self._dimensions = list() # Dimension vars that may be threaded
         # Make sure we have a DDT definition for every DDT variable
         self.check_ddt_vars()
+        self.collect_ddt_fields()
 
     @property
     def name(self):
@@ -43,6 +47,10 @@ class HostModel(object):
         "Return an ordered list of the host model's variables"
         return self._variables.variable_list()
 
+    def is_dimension(self, standard_name):
+        'Return True iff standard_name is a host model dimension'
+        return standard_name in self._dimensions
+
     def add_ddt_defs(new_ddt_defs):
         "Add new DDT metadata definitions to model"
         if new_ddt_defs is not None:
@@ -55,6 +63,7 @@ class HostModel(object):
             # End for
             # Make sure we have a DDT definition for every DDT variable
             self.check_ddt_vars()
+            self.collect_ddt_fields()
         # End if
 
     def add_variables(new_variables):
@@ -63,22 +72,59 @@ class HostModel(object):
             self._variables.merge(new_variables)
         # End if
 
+    def add_dimensions(new_dimensions):
+        "Add new dimension definitions to model"
+        if new_dimensions is not None:
+            self._dimensions.merge(new_dimensions)
+        # End if
+
     def check_ddt_vars(self):
         "Check that we have a DDT definition for every DDT variable"
-        for var in self._variables.keys():
-            vtype = var.get_prop_value('type')
-            if var.type == 'type':
-                vkind = var.get_prop_value('kind')
-                stdname = var.get_prop_value('standard_name')
-                if stdname in self._ddt_vars:
-                    # Make sure this is a duplicate
-                    if self._ddt_vars[stdname] != self._ddt_defs[vkind]:
-                        raise CCPPError("Duplicate DDT definition for {}".format(vkind))
+        for vkey in self._variables.keys():
+            for var in self._variables[vkey]:
+                vtype = var.get_prop_value('type')
+                if vtype == 'type':
+                    vkind = var.get_prop_value('kind')
+                    stdname = var.get_prop_value('standard_name')
+                    if stdname in self._ddt_vars:
+                        # Make sure this is a duplicate
+                        if self._ddt_vars[stdname] != self._ddt_defs[vkind]:
+                            raise CCPPError("Duplicate DDT definition for {}".format(vkind))
+                        # End if
+                    else:
+                        self._ddt_vars[stdname] = self._ddt_defs[vkind]
                     # End if
-                else:
-                    self._ddt_vars[stdname] = self._ddt_defs[vkind]
-                # End if
-            # End if (no else, intrinsic types)
+                # End if (no else, intrinsic types)
+            # End for
+        # End for
+
+    def collect_fields_from_ddt(self, ddt, source):
+        "Collect all the reachable fields from one DDT definition"
+        for var in ddt.variable_list():
+            vtype = var.get_prop_value('type')
+            stdname = var.get_prop_value('standard_name')
+            if stdname in self._ddt_fields:
+                src = [x.get_prop_name('kind') for x in source]
+                raise CCPPError("Duplicate DDT standard name, {}, from {}".format(stdname), src)
+            elif vtype == 'type':
+                # Process this DDT field if it defined
+                vkind = var.get_prop_value('kind')
+                if vkind in self._ddt_defs[vkind]:
+                    self.collect_fields(var, source + [var])
+                # End if (just ignore undefined subfields)
+            else:
+                # Record this intrinsic variable
+                self._ddt_fields[stdname] = source + [var]
+            # End if
+        # End for
+
+    def collect_ddt_fields(self):
+        "Make sure we know the standard names of all reachable fields"
+        for stdname in self._ddt_vars.keys():
+            # The source for the fields in this DDT is the variable
+            ddt = self._ddt_vars[stdname]
+            svar = self._variables.find_variable(stdname)
+            self.collect_fields_from_ddt(ddt, [svar])
         # End for
 
     def variable_locations(self):
@@ -103,9 +149,9 @@ class HostModel(object):
     def find_variable(self, standard_name):
         "Return the host model variable matching <standard_name> or None"
         my_var = self._variables.find_variable(standard_name)
-        if my_var is None:
-            # Look for a DDT element
-            pass
+        if (my_var is None) and (standard_name in self._ddt_vars):
+            # Found variable in a DDT element
+            my_var = self._ddt_vars[standard_name]
         # End if
         return my_var
 
@@ -121,6 +167,7 @@ class HostModel(object):
     @classmethod
     def parse_host_registry(cls, filename, logger, ddt_defs, host_model=None):
         variables = VarDictionary(logger=logger)
+        dimensions = VarDictionary(logger=logger)
         host_variables = {}
         tree, root = read_xml_file(filename, logger=logger)
         # We do not have line number information for the XML file
@@ -133,7 +180,7 @@ class HostModel(object):
         host_name = root.get('name')
         logger.info("Reading host model registry for {}".format(host_name))
         for child in root:
-            if (child.tag == 'dimension') or (child.tag == 'variable'):
+            if (child.tag == 'dimension') or (child.tag == 'variable') or (child.tag == 'constant'):
                 prop_dict = child.attrib
                 vname = prop_dict['local_name']
                 for var_prop in child:
@@ -172,18 +219,27 @@ class HostModel(object):
                 if (child.tag == 'dimension') and ('dimensions' not in prop_dict):
                     prop_dict['dimensions'] = "()"
                 # End if
+                if child.tag == 'constant':
+                    prop_dict['constant'] = '.true.'
+                # End if
                 newvar = Var(prop_dict, ParseSource(vname, 'REGISTRY', context))
-                variables.add_variable(newvar)
+                if child.tag == 'dimension':
+                    dimensions.add_variable(newvar)
+                else:
+                    variables.add_variable(newvar)
+                # End if
+            # Else need to read ddt_defs? <== XXgoldyXX?
             # End if
         # End for
         # Now that we have all the info from this XML, create a HostModel
         # object or add to the one that is there:
         if host_model is None:
-            host_model = HostModel(host_name, ddt_defs, host_variables, variables)
+            host_model = HostModel(host_name, ddt_defs, host_variables, variables, dimensions)
         elif host_name != host_model.name:
             raise CCPPError('Inconsistent host model names, {} and {}'.format(host_name, host_model.name))
         else:
             host_model.add_variables(variables)
+            host_model.add_dimensions(dimensions)
             host_model.add_ddt_defs(ddt_defs)
             for var in host_variables.keys():
                 host_model.add_host_variable_module(var, host_variables[var])

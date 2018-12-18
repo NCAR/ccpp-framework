@@ -153,7 +153,7 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
     return host_model
 
 ###############################################################################
-def parse_scheme_files(scheme_pathsfile, preproc_defs):
+def parse_scheme_files(scheme_pathsfile, preproc_defs, logger):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -162,6 +162,7 @@ def parse_scheme_files(scheme_pathsfile, preproc_defs):
     mheaders = list()
     filenames = read_pathnames_from_file(scheme_pathsfile)
     for filename in filenames:
+        logger.info('Reading CCPP schemes from {}'.format(filename))
         sheaders = parse_fortran_file(filename, preproc_defs==preproc_defs)
         mheaders.append(sheaders)
     # End for
@@ -226,7 +227,7 @@ def _main_func():
     # First up, handle the host files
     host_model = parse_host_model_files(host_pathsfile, preproc_defs, logger)
     # Next, parse the scheme files
-    scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs)
+    scheme_headers = parse_scheme_files(schemes_pathsfile, preproc_defs, logger)
     # Last, we need a list of SDF file(s)
     if sdf_pathsfile is None:
         sdfs = list()
@@ -238,7 +239,7 @@ def _main_func():
         # End if
     # End if
 # XXgoldyXX: v debug only
-    print("headers = {}".format([x._table_title for x in host_model._ddt_defs]))
+    print("headers = {}".format([host_model._ddt_defs[x].title for x in host_model._ddt_defs.keys()]))
     print("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
     print("schemes = {}".format([[x._table_title for x in y] for y in scheme_headers]))
 # XXgoldyXX: ^ debug only

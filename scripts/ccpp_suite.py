@@ -48,6 +48,7 @@ class Scheme(object):
 
     def __init__(self, scheme_xml, context):
         self._name = scheme_xml.text
+        self._context = context
         self._version = scheme_xml.get('version', None)
         self._lib = scheme_xml.get('lib', None)
 
@@ -73,7 +74,7 @@ class Scheme(object):
         # End for
         if my_header.module is None:
             raise ParseSyntaxError('No module found for subroutine',
-                                   token=self._subroutine_name, context=context)
+                                   token=self._subroutine_name, context=self._context)
         # End if
         scheme_use = 'use {}, only: {}'.format(my_header.module,
                                                self._subroutine_name)
@@ -87,12 +88,18 @@ class Scheme(object):
                 hvar = host_model.find_variable(arg)
                 if hvar is None:
                     raise CCPPError("No matching host variable for {} input, {}".format(self._subroutine_name, arg))
+                elif isinstance(hvar, list):
+                    args = list()
+                    for var in hvar:
+                        args.append(var.get_prop_name('local_name'))
+                    # End for
+                    host_arglist.append('%'.join(args))
                 else:
-                    new_arg = hvar.??
+                    new_arg = hvar.get_prop_name('local_name')
                     host_arglist.append(new_arg)
                 # End if
             # End for
-            self._arglist = ?
+            self._arglist = host_arglist
         # End if
         return scheme_use
 
@@ -111,6 +118,7 @@ class Subcycle(object):
     def __init__(self, sub_xml, context):
         self._name = sub_xml.get('name', "subcycle")
         self._loop = sub_xml.get('loop', "1")
+        self._context = context
         self._schemes = list()
         for scheme in sub_xml:
             self._schemes.append(Scheme(scheme, context))

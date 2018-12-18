@@ -139,30 +139,36 @@
     <xs:attribute ref="state_variable" use="optional"/>
   </xs:complexType>
 
+  <xs:complexType name="constant_type">
+    <xs:sequence>
+      <xs:element name="type"     type="md_type"/>
+      <xs:element name="dimensions" type="dimensions" />
+      <xs:choice>
+        <xs:element name="module" type="fortran_id_type"/>
+        <xs:element name="access" type="func_call_type"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute ref="local_name"     use="required"/>
+    <xs:attribute ref="standard_name"  use="required"/>
+    <xs:attribute ref="long_name"      use="optional"/>
+  </xs:complexType>
+
   <!-- definition of elements -->
 
   <xs:element name="dimension" type="dimension_decl_type">
   </xs:element>
 
-  <xs:element name="variable" type="variable_type">
+  <xs:element name="constant" type="constant_type">
   </xs:element>
 
-  <xs:element name="derived_data_type">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="variable" type="variable_type"
-                    minOccurs="1" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute ref="name"          use="required"/>
-      <xs:attribute ref="module"        use="required"/>
-    </xs:complexType>
+  <xs:element name="variable" type="variable_type">
   </xs:element>
 
   <xs:element name="model">
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="dimension"         minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element ref="derived_data_type" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="constant"          minOccurs="0" maxOccurs="unbounded"/>
         <xs:element ref="variable"          minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="name"    type="xs:string"    use="required"/>
