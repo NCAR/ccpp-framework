@@ -250,7 +250,7 @@ def check_fortran_type(typestr, error=False):
     CCPPError: 'type(hi mom)' is not a valid derived Fortran type
     """
     dt = ""
-    match = check_fortran_intrinsic(typestr, error)
+    match = check_fortran_intrinsic(typestr, error=False)
     if match is None:
         match = registered_fortran_ddt_name(typestr)
         dt = " derived"
@@ -270,6 +270,9 @@ def registered_fortran_ddt_name(name):
     if name in _REGISTERED_FORTRAN_DDT_NAMES:
         return name
     else:
+# XXgoldyXX: v debug only
+        print('XXG RFDN = {}'.format(_REGISTERED_FORTRAN_DDT_NAMES))
+# XXgoldyXX: ^ debug only
         return None
 
 ########################################################################

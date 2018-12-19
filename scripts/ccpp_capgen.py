@@ -17,7 +17,8 @@ from metavar import VarDictionary
 from host_model import HostModel
 from host_cap import write_host_cap
 from ccpp_suite import API, Suite
-from parse_tools import initLog, setLogToStdout, setLogLevel, CCPPError
+from parse_tools import initLog, setLogToStdout, setLogLevel
+from parse_tools import CCPPError, ParseInternalError
 
 ## Init this now so that all Exceptions can be trapped
 logger = initLog('ccpp_capgen')
@@ -269,5 +270,7 @@ def _main_func():
 if __name__ == "__main__":
     try:
         _main_func()
+    except ParseInternalError as pie:
+        logger.exception(pie)
     except CCPPError as ca:
-        logger.exception(ca)
+        logger.error(ca)

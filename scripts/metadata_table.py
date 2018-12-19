@@ -94,7 +94,7 @@ import re
 import collections
 # CCPP framework imports
 from metavar import Var, VarDictionary
-from parse_tools import ParseObject, ParseSource
+from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools import MetadataSyntax, FortranMetadataSyntax
 
@@ -177,6 +177,7 @@ class MetadataHeader(ParseSource):
             else:
                 # This should be a derived data type
                 self._header_type = 'DDT'
+                register_fortran_ddt_name(self.title)
             # End if
         else:
             # This has to be a scheme name

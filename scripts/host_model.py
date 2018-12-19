@@ -20,12 +20,11 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 class HostModel(object):
     "Class to hold the data from a host model"
 
-    def __init__(self, name, ddt_defs, var_locations, variables, dims):
+    def __init__(self, name, ddt_defs, var_locations, variables):
         self._name = name
         self._ddt_defs = ddt_defs
         self._var_locations = var_locations
         self._variables = variables
-        self._dimensions = dims
         self._ddt_vars = {}
         self._ddt_fields = {}
         # Make sure we have a DDT definition for every DDT variable
@@ -46,35 +45,6 @@ class HostModel(object):
         "Return an ordered list of the host model's variables"
         return self._variables.variable_list()
 
-    def is_dimension(self, standard_name):
-        'Return True iff standard_name is a host model dimension'
-        return standard_name in self._dimensions
-
-    def dimension_declarations(self, outfile, indent):
-        """Write out this model's dimension index parameter declarations
-        These indices refer to the position within the dim_beg and dim_end
-        arrays passed from the host model.
-        Note, we have to hand roll these declarations because the index
-        variables are not part of the host model.
-        """
-        index_beg = 0
-        index_end = 0
-        for dkey in self._dimensions.keys():
-            index = index + 1
-            dim = self._dimensions[dim]
-            stdname = dim.get_prop_val('standard_name')
-            dtype = dim.get_prop_val('type')
-            kind_val = dim.get_prop_val('kind')
-            if kind_val:
-                kind = '({})'.format(kind_val)
-            else:
-                kind = ''
-            # End if
-            ind_str = '{dtype}{kind}, parameter :: index_of_{stdname} = {index}'
-            outfile.write(ind_str.format(dtype=dtype, kind=kind,
-                                         stdname=stdname, index=index), indent)
-        # End for
-
     def add_ddt_defs(new_ddt_defs):
         "Add new DDT metadata definitions to model"
         if new_ddt_defs is not None:
@@ -94,12 +64,6 @@ class HostModel(object):
         "Add new variables definitions to model"
         if new_variables is not None:
             self._variables.merge(new_variables)
-        # End if
-
-    def add_dimensions(new_dimensions):
-        "Add new dimension definitions to model"
-        if new_dimensions is not None:
-            self._dimensions.merge(new_dimensions)
         # End if
 
     def check_ddt_vars(self):
@@ -191,7 +155,6 @@ class HostModel(object):
     @classmethod
     def parse_host_registry(cls, filename, logger, ddt_defs, host_model=None):
         variables = VarDictionary(logger=logger)
-        dimensions = VarDictionary(logger=logger)
         host_variables = {}
         tree, root = read_xml_file(filename, logger=logger)
         # We do not have line number information for the XML file
@@ -204,7 +167,7 @@ class HostModel(object):
         host_name = root.get('name')
         logger.info("Reading host model registry for {}".format(host_name))
         for child in root:
-            if (child.tag == 'dimension') or (child.tag == 'variable') or (child.tag == 'constant'):
+            if (child.tag == 'variable') or (child.tag == 'constant'):
                 prop_dict = child.attrib
                 vname = prop_dict['local_name']
                 for var_prop in child:
@@ -225,45 +188,31 @@ class HostModel(object):
                         # These elements should just have text, no attributes
                         if len(var_prop.attrib) > 0:
                             abort("Bad variable property, {} for variable, {}".format(var_prop.tag, vname), logger)
+                        elif var_prop.tag == 'dimensions':
+                            # We need to rebuild this text for compatibility
+                            dims = [x.strip() for x in var_prop.text.split(',')]
+                            prop_dict[var_prop.tag] = '({})'.format(', '.join(dims))
                         else:
                             prop_dict[var_prop.tag] = var_prop.text
                         # End if
                     # End if
                 # End for
-                ##XXgoldyXX: Try to make the XSD cough these up
-                if (child.tag == 'dimension') and ('type' not in prop_dict):
-                    prop_dict['type'] = "integer"
-                # End if
-                if (child.tag == 'dimension') and ('units' not in prop_dict):
-                    prop_dict['units'] = "1"
-                # End if
-                if (child.tag == 'dimension') and ('kind' not in prop_dict):
-                    prop_dict['kind'] = ""
-                # End if
-                if (child.tag == 'dimension') and ('dimensions' not in prop_dict):
-                    prop_dict['dimensions'] = "()"
-                # End if
                 if child.tag == 'constant':
                     prop_dict['constant'] = '.true.'
                 # End if
                 newvar = Var(prop_dict, ParseSource(vname, 'REGISTRY', context))
-                if child.tag == 'dimension':
-                    dimensions.add_variable(newvar)
-                else:
-                    variables.add_variable(newvar)
-                # End if
+                variables.add_variable(newvar)
             # Else need to read ddt_defs? <== XXgoldyXX?
             # End if
         # End for
         # Now that we have all the info from this XML, create a HostModel
         # object or add to the one that is there:
         if host_model is None:
-            host_model = HostModel(host_name, ddt_defs, host_variables, variables, dimensions)
+            host_model = HostModel(host_name, ddt_defs, host_variables, variables)
         elif host_name != host_model.name:
             raise CCPPError('Inconsistent host model names, {} and {}'.format(host_name, host_model.name))
         else:
             host_model.add_variables(variables)
-            host_model.add_dimensions(dimensions)
             host_model.add_ddt_defs(ddt_defs)
             for var in host_variables.keys():
                 host_model.add_host_variable_module(var, host_variables[var])

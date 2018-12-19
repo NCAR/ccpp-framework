@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 from collections import OrderedDict
 # CCPP framework imports
 from parse_tools import check_fortran_id, check_fortran_type
+from parse_tools import registered_fortran_ddt_name
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import ParseContext, ParseSource, ParseSyntaxError, CCPPError
 
@@ -74,7 +75,7 @@ class VariableProperty(object):
 
     >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('3', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    CCPPError: Illegal value variable property, '3'
+    CCPPError: Invalid value variable property, '3'
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('()')
     []
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x)')
@@ -97,7 +98,7 @@ class VariableProperty(object):
         self._name = name_in
         self._type = type_in
         if self._type not in [ bool, int, list, str ]:
-            raise CCPPError("{} has illegal VariableProperty type, '{}'".format(name_in, type_in))
+            raise CCPPError("{} has invalid VariableProperty type, '{}'".format(name_in, type_in))
         # End if
         self._valid_values = valid_values_in
         self._optional = optional_in
@@ -212,7 +213,7 @@ class VariableProperty(object):
         if valid_val and (self._check_fn is not None):
             valid_val = self._check_fn(valid_val, error=error)
         elif (valid_val is None) and error:
-            raise CCPPError("Illegal {} variable property, '{}'".format(self.name, test_value))
+            raise CCPPError("Invalid {} variable property, '{}'".format(self.name, test_value))
         # End if
         return valid_val
 
@@ -253,7 +254,7 @@ class Var(object):
     ParseSyntaxError: foo is marked constant but is intent inout, at <standard input>:1
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'ino'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Illegal intent variable property, 'ino', at <standard input>:1
+    ParseSyntaxError: Invalid intent variable property, 'ino', at <standard input>:1
     """
 
     # __spec_props are for variables defined in a specification
@@ -318,7 +319,7 @@ class Var(object):
         if 'ddt_type' in prop_dict:
             # Special case to bypass normal type rules
             if 'type' not in prop_dict:
-                prop_dict['type'] = 'type'
+                prop_dict['type'] = prop_dict['ddt_type']
             # End if
             if 'units' not in prop_dict:
                 prop_dict['units'] = ""
@@ -363,7 +364,8 @@ class Var(object):
                                                        error=True)
             # End for
         except CCPPError as cp:
-            raise ParseSyntaxError(cp, context=self.context)
+            raise ParseSyntaxError("{}: {}".format(self._prop_dict['local_name'], cp),
+                                   context=self.context)
         # End try
 
     def compatible(self, other):
@@ -425,13 +427,13 @@ class Var(object):
         else:
             intent_str = ''
         # End if
-        if vtype == 'type':
+        if registered_fortran_ddt_name(vtype):
             str = "type({kind}){intent}     :: {name}{dims}"
         else:
             if (kind is not None) and (len(kind) > 0):
-                str = "{type}({kind}){param}{intent} :: {name}{dims}"
+                str = "{type}({kind}){intent} :: {name}{dims}"
             else:
-                str = "{type}{param}{intent} :: {name}{dims}"
+                str = "{type}{intent} :: {name}{dims}"
             # End if
         # End if
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
@@ -538,7 +540,7 @@ class VarDictionary(OrderedDict):
         vlist = self.variable_list(standard_name)
         if vlist is not None:
             if (not isinstance(vlist, list)) or (len(vlist) < 1):
-                raise CCPPError("Illegal VarDictionary entry, '{}'".format(vlist))
+                raise CCPPError("Invalid VarDictionary entry, '{}'".format(vlist))
             elif (len(vlist) > 1) and (not list_ok):
                 raise CCPPError("Duplicate variable, '{}'".format(standard_name))
             # End if
@@ -574,7 +576,7 @@ class VarDictionary(OrderedDict):
         for standard_name in self.keys():
             vlist = self.variable_list(standard_name)
             if (not isinstance(vlist, list)) or (len(vlist) < 1):
-                raise CCPPError("Illegal VarDictionary entry, '{}'".format(vlist))
+                raise CCPPError("Invalid VarDictionary entry, '{}'".format(vlist))
             elif len(vlist) > 1:
                 raise CCPPError("Duplicate variable, '{}'".format(standard_name))
             else:
@@ -591,7 +593,7 @@ class VarDictionary(OrderedDict):
         for standard_name in self.keys():
             vlist = self.variable_list(standard_name)
             if (not isinstance(vlist, list)) or (len(vlist) < 1):
-                raise CCPPError("Illegal VarDictionary entry, '{}'".format(vlist))
+                raise CCPPError("Invalid VarDictionary entry, '{}'".format(vlist))
             elif len(vlist) > 1:
                 raise CCPPError("Duplicate variable, '{}'".format(standard_name))
             else:

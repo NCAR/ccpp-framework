@@ -68,7 +68,7 @@ class Scheme(object):
         # End if (else we are okay)
         return hvar
 
-    def host_arg_str(hvar_ind, host_model, ddt):
+    def host_arg_str(self, hvar, host_model, header, ddt):
         '''Create the proper statement of a piece of a host-model variable.
         If ddt is True, we can only have a single element selected
         '''
@@ -132,16 +132,14 @@ class Scheme(object):
                     alen = len(args)
                     index = 0
                     for var in hvar:
-                        new_arg = hvar.get_prop_name('local_name')
                         ddt = index < (alen - 1)
-                        argstr = host_arg_str(new_arg, host_model, my_header, ddt)
+                        argstr = self.host_arg_str(var, host_model, my_header, ddt)
                         index = index + 1
                         args.append(argstr)
                     # End for
                     host_arglist.append('%'.join(args))
                 else:
-                    new_arg = hvar.get_prop_name('local_name')
-                    argstr = host_arg_str(new_arg, host_model, my_header, False)
+                    argstr = self.host_arg_str(hvar, host_model, my_header, False)
                     host_arglist.append(argstr)
                 # End if
             # End for
