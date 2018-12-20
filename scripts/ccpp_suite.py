@@ -22,6 +22,8 @@ init_re   = re.compile(FORTRAN_ID+r"_init$")
 run_re    = re.compile(FORTRAN_ID+r"_run$")
 final_re  = re.compile(FORTRAN_ID+r"_finalize$")
 
+array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
+
 ###############################################################################
 # Module (global) variables
 ###############################################################################
@@ -68,6 +70,18 @@ class Scheme(object):
         # End if (else we are okay)
         return hvar
 
+    def find_host_model_var(self, hdim, host_model):
+        hsdims = list()
+        for hsdim in hdim.split(':'):
+            hsdim_var = host_model.find_variable(hsdim)
+            if hsdim_var is None:
+                raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
+            else:
+                hsdims.append(hsdim_var.get_prop_value('local_name'))
+            # End if
+        # End for
+        return ':'.join(hsdims)
+
     def host_arg_str(self, hvar, host_model, header, ddt):
         '''Create the proper statement of a piece of a host-model variable.
         If ddt is True, we can only have a single element selected
@@ -87,19 +101,22 @@ class Scheme(object):
                 raise CCPPError("Invalid DDT dimension spec {}({})".format(hstr, hdimval))
             else:
                 # Find the host model variable for each dim
-                hsdims = list()
-                for hsdim in hdim.split(':'):
-                    hsdim_var = host_model.find_variable(hsdim)
-                    if hsdim_var is None:
-                        raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
-                    else:
-                        hsdims.append(hsdim_var.get_prop_value('local_name'))
-                    # End if
-                # End for
-                dimstr = dimstr + dimsep + ':'.join(hsdims)
+                hsdims = self.find_host_model_var(hdim, host_model)
+                dimstr = dimstr + dimsep + hsdims
                 dimsep = ', '
             # End if
         # End for
+        # Does the local name have some trailing indices?
+        match = array_ref_re.match(hstr.strip())
+        if match is not None:
+            hstr = match.group(1)
+            # Find real names for all the indices
+            tokens = [x.strip() for x in match.group(2).strip().split(',')]
+            for token in tokens:
+                hsdim = self.find_host_model_var(token, host_model)
+                dimstr = dimstr + dimsep + hsdim
+            # End for
+        # End if
         if len(hdims) > 0:
             dimstr = dimstr + ')'
         # End if

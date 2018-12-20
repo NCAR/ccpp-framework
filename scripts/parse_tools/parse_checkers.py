@@ -113,9 +113,9 @@ def check_cf_standard_name(test_val, error=False):
 ########################################################################
 
 # FORTRAN_ID is a string representing the regular expression for Fortran names
-FORTRAN_ID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
+FORTRAN_ID = r"([A-Za-z][A-Za-z0-9_]*)"
 __FID_RE = re.compile(FORTRAN_ID+r"$")
-FORTRAN_SCALAR_ARREF = r"\([ ]*"+FORTRAN_ID+r"[ ]*(,[ ]*"+FORTRAN_ID+r"[ ]*)*\)"
+FORTRAN_SCALAR_ARREF = r"\([ ]*"+FORTRAN_ID+r"[ ]*(?:,[ ]*"+FORTRAN_ID+r"[ ]*){0,6}\)"
 FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"[ ]*"+FORTRAN_SCALAR_ARREF+r")"
 _FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
