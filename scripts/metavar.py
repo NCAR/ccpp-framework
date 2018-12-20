@@ -9,7 +9,7 @@ import re
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 # CCPP framework imports
-from parse_tools import check_fortran_id, check_fortran_type
+from parse_tools import check_fortran_ref, check_fortran_type
 from parse_tools import registered_fortran_ddt_name
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import ParseContext, ParseSource, ParseSyntaxError, CCPPError
@@ -259,7 +259,7 @@ class Var(object):
 
     # __spec_props are for variables defined in a specification
     __spec_props = [VariableProperty('local_name', str,
-                                     check_fn_in=check_fortran_id),
+                                     check_fn_in=check_fortran_ref),
                     VariableProperty('standard_name', str,
                                      check_fn_in=check_cf_standard_name),
                     VariableProperty('long_name', str, optional_in=True,
@@ -421,7 +421,7 @@ class Var(object):
         constant = self.get_prop_value('constant')
         intent = self.get_prop_value('intent')
         if constant is not None:
-            const_str = ', indent(in)'.format(intent)
+            intent_str = ', intent(in)'.format(intent)
         elif intent is not None:
             intent_str = ', intent({})'.format(intent)
         else:

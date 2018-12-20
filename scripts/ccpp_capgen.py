@@ -176,7 +176,7 @@ def _main_func():
     verbosity = args.verbose
     if verbosity > 1:
         setLogLevel(logger, logging.DEBUG)
-    if verbosity > 0:
+    elif verbosity > 0:
         setLogLevel(logger, logging.INFO)
     # End if
     host_pathsfile = os.path.abspath(args.host_pathnames)
@@ -186,8 +186,12 @@ def _main_func():
     else:
         sdf_pathsfile = None
     # End if
-    cap_output_file = os.path.abspath(args.cap_pathlist)
     output_dir = os.path.abspath(args.output_root)
+    if os.path.abspath(args.cap_pathlist):
+        cap_output_file = args.cap_pathlist
+    else:
+        cap_output_file = os.path.abspath(os.path.join(output_dir, args.cap_pathlist))
+    # End if
     preproc_defs = args.preproc_directives
     gen_hostcap = args.generate_host_cap
     gen_docfiles = args.generate_docfiles
@@ -239,11 +243,9 @@ def _main_func():
             sdfs = sdf_pathsfile
         # End if
     # End if
-# XXgoldyXX: v debug only
-    print("headers = {}".format([host_model._ddt_defs[x].title for x in host_model._ddt_defs.keys()]))
-    print("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
-    print("schemes = {}".format([[x._table_title for x in y] for y in scheme_headers]))
-# XXgoldyXX: ^ debug only
+    logger.debug("headers = {}".format([host_model._ddt_defs[x].title for x in host_model._ddt_defs.keys()]))
+    logger.debug("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
+    logger.debug("schemes = {}".format([[x._table_title for x in y] for y in scheme_headers]))
     # Finally, we can get on with writing suites
     ccpp_api = API(sdfs, host_model, scheme_headers, logger)
     cap_filenames = ccpp_api.write(output_dir)
@@ -273,4 +275,10 @@ if __name__ == "__main__":
     except ParseInternalError as pie:
         logger.exception(pie)
     except CCPPError as ca:
-        logger.error(ca)
+
+        if logger.getEffectiveLevel() <= logging.DEBUG:
+            logger.exception(ca)
+        else:
+            logger.error(ca)
+        # End if
+    # End try

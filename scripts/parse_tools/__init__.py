@@ -1,8 +1,9 @@
 """Public API for the parse_tools library
 """
 
-from parse_checkers import check_fortran_id, check_fortran_type, FORTRAN_ID
-from parse_checkers import check_fortran_intrinsic
+from parse_checkers import check_fortran_id, FORTRAN_ID
+from parse_checkers import check_fortran_ref, FORTRAN_SCALAR_REF
+from parse_checkers import check_fortran_intrinsic, check_fortran_type
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
 from parse_checkers import check_dimensions, check_cf_standard_name
@@ -19,10 +20,12 @@ __all__ = [
     'check_dimensions',
     'check_fortran_id',
     'check_fortran_intrinsic',
+    'check_fortran_ref',
     'check_fortran_type',
     'find_schema_version',
     'FortranMetadataSyntax',
     'FORTRAN_ID',
+    'FORTRAN_SCALAR_REF',
     'initLog',
     'MetadataSyntax',
     'ParseContext',

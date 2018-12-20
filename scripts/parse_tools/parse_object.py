@@ -4,7 +4,8 @@
 # Python library imports
 import re
 # CCPP framework imports
-from parse_tools import ParseContext, CCPPError
+from parse_tools    import ParseContext, CCPPError
+from parse_checkers import check_fortran_ref
 
 ########################################################################
 
@@ -64,6 +65,9 @@ class MetadataSyntax():
     True
     >>> MetadataSyntax.is_variable_name('2i')
     False
+    >>> MetadataSyntax.is_scalar_reference('hi[mom') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    AttributeError: class MetadataSyntax has no attribute 'is_scalar_reference'
     """
     _blank_line = re.compile(r"^##\s*$")
     _variable_name = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -168,12 +172,22 @@ class FortranMetadataSyntax(MetadataSyntax):
     False
     >>> FortranMetadataSyntax.is_variable_name('2i')
     False
+    >>> FortranMetadataSyntax.is_scalar_reference('hi_mom')
+    True
+    >>> FortranMetadataSyntax.is_scalar_reference('hi(mom)')
+    True
+    >>> FortranMetadataSyntax.is_scalar_reference('hi(mom, dad)')
+    True
     """
 
     _blank_line = re.compile(r"!!\s*$")
     _table_start = re.compile(r"(![!>]\s+)")
     _line_start  = re.compile(r"(!!\s+)")
     _variable_name = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+
+    @classmethod
+    def is_scalar_reference(cls, test_val):
+        return check_fortran_ref(test_val) is not None
 
 ########################################################################
 

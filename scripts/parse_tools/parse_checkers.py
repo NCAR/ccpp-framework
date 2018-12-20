@@ -113,14 +113,17 @@ def check_cf_standard_name(test_val, error=False):
 ########################################################################
 
 # FORTRAN_ID is a string representing the regular expression for Fortran names
-FORTRAN_ID = r"[A-Za-z][A-Za-z0-9_]*"
+FORTRAN_ID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
 __FID_RE = re.compile(FORTRAN_ID+r"$")
+FORTRAN_SCALAR_ARREF = r"\([ ]*"+FORTRAN_ID+r"[ ]*(,[ ]*"+FORTRAN_ID+r"[ ]*)*\)"
+FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"[ ]*"+FORTRAN_SCALAR_ARREF+r")"
+_FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
                             "double precision", "character" ]
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
 FORTRAN_TYPE_RE = re.compile(r"(?i)type\s*\(\s*("+FORTRAN_ID+r")\s*\)")
 
-_REGISTERED_FORTRAN_DDT_NAMES = []
+_REGISTERED_FORTRAN_DDT_NAMES = list()
 
 ########################################################################
 
@@ -159,7 +162,84 @@ def check_fortran_id(test_val, max_len=0, error=False):
     elif (max_len > 0) and (len(test_val) > max_len):
         if error:
             raise CCPPError("'{}' is too long (> {} chars)".format(test_val, max_len))
-        test_val = None
+        else:
+            test_val = None
+        # End if
+    # End if
+    return test_val
+
+########################################################################
+
+def check_fortran_ref(test_val, max_len=0, error=False):
+    """Return <test_val> if a valid simple Fortran variable reference,
+    otherwise, None. A simple Fortran variable reference is defined as
+    a scalar id or a scalar array reference.
+    if <error> is True, raise an Exception if <test_val> is not valid.
+    >>> check_fortran_ref("hi_mom")
+    'hi_mom'
+    >>> check_fortran_ref("hi_mom", max_len=5)
+
+    >>> check_fortran_ref("hi_mom", max_len=5, error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'hi_mom' is too long (> 5 chars)
+    >>> check_fortran_ref("hi mom")
+
+    >>> check_fortran_ref("hi mom", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'hi_mom' is not a valid Fortran identifier
+    >>> check_fortran_ref("")
+
+    >>> check_fortran_ref("_hi_mom")
+
+    >>> check_fortran_ref("2pac")
+
+    >>> check_fortran_ref("Agood4tranID")
+    'Agood4tranID'
+    >>> check_fortran_ref("foo(bar)")
+    'foo(bar)'
+    >>> check_fortran_ref("foo( bar, baz )")
+    'foo( bar, baz )'
+    >>> check_fortran_ref("foo( bar, )")
+
+    >>> check_fortran_ref("foo( bar, )", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'foo( bar, )' is not a valid Fortran scalar reference
+    >>> check_fortran_ref("foo()", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'foo()' is not a valid Fortran scalar reference
+    >>> check_fortran_ref("foo(bar, bazz)", max_len=3, error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'bazz' is too long (> 3 chars) in foo(bar, bazz)
+    >>> check_fortran_ref("foo(barr, baz)", max_len=3, error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'bazr' is too long (> 3 chars) in foo(barr, baz)
+    >>> check_fortran_ref("fooo(bar, baz)", max_len=3, error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'foo' is too long (> 3 chars) in fooo(bar, baz)
+    """
+    idval = check_fortran_id(test_val, max_len=max_len, error=False)
+    if idval is None:
+        match = _FORTRAN_SCALAR_REF_RE.match(test_val)
+        if match is None:
+            if error:
+                raise CCPPError("'{}' is not a valid Fortran scalar reference".format(test_val))
+            else:
+                test_val = None
+            # End if
+        elif max_len > 0:
+            tokens = test_val.strip().rstrip(')').split('(')
+            tokens = [tokens[0].strip()] + [x.strip() for x in tokens[1].split(',')]
+            for token in tokens:
+                if len(token) > max_len:
+                    if error:
+                        raise CCPPError("'{}' is too long (> {} chars) in {}".format(token, max_len, test_val))
+                    else:
+                        test_val = None
+                        break
+                    # End if
+                # End if
+            # End for
+        # End if
     # End if
     return test_val
 
@@ -270,9 +350,6 @@ def registered_fortran_ddt_name(name):
     if name in _REGISTERED_FORTRAN_DDT_NAMES:
         return name
     else:
-# XXgoldyXX: v debug only
-        print('XXG RFDN = {}'.format(_REGISTERED_FORTRAN_DDT_NAMES))
-# XXgoldyXX: ^ debug only
         return None
 
 ########################################################################

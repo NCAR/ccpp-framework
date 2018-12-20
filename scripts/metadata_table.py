@@ -97,6 +97,7 @@ from metavar import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools import MetadataSyntax, FortranMetadataSyntax
+from parse_tools import FORTRAN_ID, FORTRAN_SCALAR_REF
 
 ########################################################################
 
@@ -147,11 +148,15 @@ class MetadataHeader(ParseSource):
                        "!! "], line_start=0)).get_var(standard_name='horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid variable property value, 'horizontal loop extent', at foobar.txt:2
+    >>> MetadataHeader._var_start.match('[ qval ]') #doctest: +ELLIPSIS
+    <_sre.SRE_Match object at 0x...>
+    >>> MetadataHeader._var_start.match('[ qval(hi_mom) ]') #doctest: +ELLIPSIS
+    <_sre.SRE_Match object at 0x...>
 """
 
     _header_start = re.compile(r"\\section\s+arg_table_([A-Za-z][A-Za-z0-9_]*)")
 
-    _var_start = re.compile(r"^\[\s*(\w+)\s*\]$")
+    _var_start = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
     def __init__(self, parse_object, syntax=FortranMetadataSyntax, spec_name=None, logger=None):
         self._pobj = parse_object
@@ -327,8 +332,8 @@ class MetadataHeader(ParseSource):
         # End if
         if match is not None:
             name = match.group(1)
-            if not self._syntax.is_variable_name(name):
-                raise ParseSyntaxError("Invalid local variable name",
+            if not self._syntax.is_scalar_reference(name):
+                raise ParseSyntaxError("local variable name",
                                        token=name, context=self._pobj)
             # End if
         else:
@@ -356,7 +361,7 @@ class MetadataHeader(ParseSource):
             if match is not None:
                 name = match.group(1)
                 if not syntax.is_variable_name(name):
-                    raise ParseSyntaxError("Invalid arg_table name",
+                    raise ParseSyntaxError("arg_table name",
                                            token=name, context=context)
                 # End if
             else:

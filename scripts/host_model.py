@@ -15,12 +15,13 @@ import xml.etree.ElementTree as ET
 from metavar import Var, VarDictionary
 from parse_tools import ParseSource, ParseContext, CCPPError
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
+from parse_tools import check_fortran_intrinsic
 
 ###############################################################################
 class HostModel(object):
     "Class to hold the data from a host model"
 
-    def __init__(self, name, ddt_defs, var_locations, variables):
+    def __init__(self, name, ddt_defs, var_locations, variables, logger=None):
         self._name = name
         self._ddt_defs = ddt_defs
         self._var_locations = var_locations
@@ -28,8 +29,8 @@ class HostModel(object):
         self._ddt_vars = {}
         self._ddt_fields = {}
         # Make sure we have a DDT definition for every DDT variable
-        self.check_ddt_vars()
-        self.collect_ddt_fields()
+        self.check_ddt_vars(logger)
+        self.collect_ddt_fields(logger)
 
     @property
     def name(self):
@@ -45,13 +46,16 @@ class HostModel(object):
         "Return an ordered list of the host model's variables"
         return self._variables.variable_list()
 
-    def add_ddt_defs(new_ddt_defs):
+    def add_ddt_defs(new_ddt_defs, logger=None):
         "Add new DDT metadata definitions to model"
         if new_ddt_defs is not None:
             for header in new_ddt_defs:
                 if header.title in self._ddt_defs:
                     raise CCPPError("Duplicate DDT, {}, passed to add_ddt_defs".format(header.title))
                 else:
+                    if logger is not None:
+                        logger.debug('Adding ddt, {}'.format(header.title))
+                    # End if
                     self._ddt_defs[header.title] = header
                 # End if
             # End for
@@ -60,18 +64,18 @@ class HostModel(object):
             self.collect_ddt_fields()
         # End if
 
-    def add_variables(new_variables):
+    def add_variables(new_variables, logger=None):
         "Add new variables definitions to model"
         if new_variables is not None:
             self._variables.merge(new_variables)
         # End if
 
-    def check_ddt_vars(self):
+    def check_ddt_vars(self, logger=None):
         "Check that we have a DDT definition for every DDT variable"
         for vkey in self._variables.keys():
             for var in self._variables[vkey]:
                 vtype = var.get_prop_value('type')
-                if vtype == 'type':
+                if not check_fortran_intrinsic(vtype):
                     vkind = var.get_prop_value('kind')
                     stdname = var.get_prop_value('standard_name')
                     if stdname in self._ddt_vars:
@@ -86,7 +90,7 @@ class HostModel(object):
             # End for
         # End for
 
-    def collect_fields_from_ddt(self, ddt, source):
+    def collect_fields_from_ddt(self, ddt, source, logger=None):
         "Collect all the reachable fields from one DDT definition"
         for var in ddt.variable_list():
             vtype = var.get_prop_value('type')
@@ -103,16 +107,19 @@ class HostModel(object):
             else:
                 # Record this intrinsic variable
                 self._ddt_fields[stdname] = source + [var]
+                if logger is not None:
+                    logger.debug('Adding DDT field, {}, {}'.format(stdname, [x.get_prop_value('local_name') for x in self._ddt_fields[stdname]]))
+                # End if
             # End if
         # End for
 
-    def collect_ddt_fields(self):
+    def collect_ddt_fields(self, logger=None):
         "Make sure we know the standard names of all reachable fields"
         for stdname in self._ddt_vars.keys():
             # The source for the fields in this DDT is the variable
             ddt = self._ddt_vars[stdname]
             svar = self._variables.find_variable(stdname)
-            self.collect_fields_from_ddt(ddt, [svar])
+            self.collect_fields_from_ddt(ddt, [svar], logger)
         # End for
 
     def variable_locations(self):
@@ -137,17 +144,20 @@ class HostModel(object):
     def find_variable(self, standard_name):
         "Return the host model variable matching <standard_name> or None"
         my_var = self._variables.find_variable(standard_name)
-        if (my_var is None) and (standard_name in self._ddt_vars):
+        if (my_var is None) and (standard_name in self._ddt_fields):
             # Found variable in a DDT element
-            my_var = self._ddt_vars[standard_name]
+            my_var = self._ddt_fields[standard_name]
         # End if
         return my_var
 
-    def add_host_variable_module(self, local_name, module):
+    def add_host_variable_module(self, local_name, module, logger=None):
         "Add a module name location for a host variable"
         if local_name in self._var_locations:
             raise CCPPError("Host variable, {}, already located in module".format(self._var_locations[local_name]))
         else:
+            if logger is not None:
+                logger.debug('Adding variable, {}, from module, {}'.format(local_name, module))
+            # End if
             self._var_locations[local_name] = module
         # End if
 
@@ -208,14 +218,14 @@ class HostModel(object):
         # Now that we have all the info from this XML, create a HostModel
         # object or add to the one that is there:
         if host_model is None:
-            host_model = HostModel(host_name, ddt_defs, host_variables, variables)
+            host_model = HostModel(host_name, ddt_defs, host_variables, variables, logger=logger)
         elif host_name != host_model.name:
             raise CCPPError('Inconsistent host model names, {} and {}'.format(host_name, host_model.name))
         else:
-            host_model.add_variables(variables)
-            host_model.add_ddt_defs(ddt_defs)
+            host_model.add_variables(variables, logger=logger)
+            host_model.add_ddt_defs(ddt_defs, logger=logger)
             for var in host_variables.keys():
-                host_model.add_host_variable_module(var, host_variables[var])
+                host_model.add_host_variable_module(var, host_variables[var], logger=logger)
             # End for
         # End if
         return host_model

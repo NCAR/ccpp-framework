@@ -86,17 +86,27 @@ class Scheme(object):
             if ddt and (':' in hdim):
                 raise CCPPError("Invalid DDT dimension spec {}({})".format(hstr, hdimval))
             else:
-                hdim_vars = hdim.split(':')
-
-                dimstr = dimstr + dimsep + hdimstr
+                # Find the host model variable for each dim
+                hsdims = list()
+                for hsdim in hdim.split(':'):
+                    hsdim_var = host_model.find_variable(hsdim)
+                    if hsdim_var is None:
+                        raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
+                    else:
+                        hsdims.append(hsdim_var.get_prop_value('local_name'))
+                    # End if
+                # End for
+                dimstr = dimstr + dimsep + ':'.join(hsdims)
                 dimsep = ', '
             # End if
         # End for
         if len(hdims) > 0:
             dimstr = dimstr + ')'
         # End if
+        return hstr + dimstr
 
-    def analyze(self, phase, host_model, scheme_headers, logger):
+    def analyze(self, phase, host_model, scheme_headers, suite_vars, logger):
+        new_suite_vars = list()
         # Find our header
         self._subroutine_name = self.name + '_' + phase
         my_header = None
@@ -121,34 +131,47 @@ class Scheme(object):
             raise CCPPError('Could not find subroutine, {}'.format(subroutine_name))
         else:
             # We need to find the host model variable for each of our arguments
-            my_arglist = my_header.prop_list('standard_name')
+            my_args = my_header.variable_list()
             host_arglist = list()
-            for arg in my_arglist:
-                hvar = host_model.find_variable(arg)
-                if hvar is None:
-                    raise CCPPError("No matching host variable for {} input, {}".format(self._subroutine_name, arg))
-                elif isinstance(hvar, list):
-                    args = list()
-                    alen = len(args)
-                    index = 0
-                    for var in hvar:
-                        ddt = index < (alen - 1)
-                        argstr = self.host_arg_str(var, host_model, my_header, ddt)
-                        index = index + 1
-                        args.append(argstr)
-                    # End for
-                    host_arglist.append('%'.join(args))
+            for svar in my_args:
+                stdname = svar.get_prop_value('standard_name')
+                intent = svar.get_prop_value('intent').lower()
+                if (intent == 'in') or (intent == 'inout'):
+                    hvar = host_model.find_variable(stdname)
+                    if hvar is None:
+                        # No host variable, see if we have a suite variable
+                        if stdname in suite_vars:
+                            hvar = suite_vars[stdname]
+                        # End if
+                    # End if
+                    if hvar is None:
+                        raise CCPPError("No matching host or suite variable for {} input, {}".format(self._subroutine_name, stdname))
+                    elif isinstance(hvar, list):
+                        args = list()
+                        alen = len(hvar)
+                        index = 0
+                        for var in hvar:
+                            ddt = index < (alen - 1)
+                            argstr = self.host_arg_str(var, host_model, my_header, ddt)
+                            index = index + 1
+                            args.append(argstr)
+                        # End for
+                        host_arglist.append('%'.join(args))
+                    else:
+                        argstr = self.host_arg_str(hvar, host_model, my_header, False)
+                        host_arglist.append(argstr)
+                    # End if
                 else:
-                    argstr = self.host_arg_str(hvar, host_model, my_header, False)
-                    host_arglist.append(argstr)
+                    new_suite_vars.append(svar)
                 # End if
             # End for
             self._arglist = host_arglist
         # End if
-        return scheme_use
+        return scheme_use, new_suite_vars
 
     def write(self, outfile, phase, level=2):
-        outfile.write('call {}({})'.format(self._subroutine_name, self._arglist), level)
+        my_args = ', '.join(self._arglist)
+        outfile.write('call {}({})'.format(self._subroutine_name, my_args), level)
 
     def schemes(self):
         'Return self as a list for consistency with subcycle'
@@ -168,18 +191,21 @@ class Subcycle(object):
             self._schemes.append(Scheme(scheme, context))
         # End forn
 
-    def analyze(self, phase, host_model, scheme_headers, logger):
+    def analyze(self, phase, host_model, scheme_headers, suite_vars, logger):
         loopvar = '{}integer :: {}'.format(indent(2), self.name)
+        suite_vars = list()
         scheme_mods = list()
         for scheme in self._schemes:
-            scheme_mods.append(scheme.analyze(phase, host_model, scheme_headers, logger))
+            smods, svars = scheme.analyze(phase, host_model, scheme_headers, suite_vars, logger)
+            scheme_mods.append(smode)
+            suite_vars.extend(svars)
         # End for
-        return loopvar, scheme_mods
+        return loopvar, scheme_mods, suite_vars
 
-    def write(self, outfile):
+    def write(self, outfile, phase):
         outfile.write('do {} = 1, {}'.format(self.name, self.loop), 2)
         for scheme in self._schemes:
-            scheme.write(outfile, level=3)
+            scheme.write(outfile, phase, level=3)
         # End for
         outfile.write('end do', 2)
 
@@ -253,6 +279,8 @@ class Group(object):
                 self._parts.append(Scheme(item, context))
             # End if
         # End for
+        self._loop_var_defs = set()
+        self._local_schemes = set()
 
     def schemes(self):
         "Return a flattened list of schemes for this group"
@@ -262,21 +290,30 @@ class Group(object):
         # End for
         return schemes
 
-    def analyze(self, phase, host_model, scheme_headers, logger):
-        self._local_vars = set()
-        self._local_schemes = set()
+    def analyze(self, phase, host_model, scheme_headers, suite_vars, logger):
         for item in self._parts:
             if isinstance(item, Subcycle):
-                lvar, lschemes = item.analyze(phase, host_model, scheme_headers, logger)
-                self._local_vars.add(lvar)
+                lvar, lschemes, lsvars = item.analyze(phase, host_model, scheme_headers, suite_vars, logger)
+                self._loop_var_defs.add(lvar)
                 for lscheme in lschemes:
                     self._local_schemes.add(lscheme)
                 # End for
             elif isinstance(item, Scheme):
-                self._local_schemes.add(item.analyze(phase, host_model, scheme_headers, logger))
+                lschemes, lsvars = item.analyze(phase, host_model, scheme_headers, suite_vars, logger)
+                self._local_schemes.add(lschemes)
             else:
                 raise CCPPError('Illegal group type, {} in group {}'.format(type(item), self.name))
             # End if
+            for svar in lsvars:
+                stdname = svar.get_prop_value('standard_name')
+                if stdname in suite_vars:
+                    if not svar.compatible(suite_vars[stdname]):
+                        raise CCPPError('Incompatible duplicate variable, {}, found in {}'.format(svar.get_prop_value('local_name'), item.name))
+                    # End if (no else, variable already in dictionary)
+                else:
+                    suite_vars[stdname] = svar
+                # End if
+            # End for
         # End for
 
     def write(self, outfile, host_arglist):
@@ -290,12 +327,12 @@ class Group(object):
             outfile.write(scheme, 1)
         # End for
         # Write out local variables
-        for var in self._local_vars:
+        for var in self._loop_var_defs:
             outfile.write(var, 1)
         # End for
-        # Write the scheme calls
+        # Write the scheme and subcycle calls
         for item in self._parts:
-            item.write(outfile)
+            item.write(outfile, 'run')
         # End for
         outfile.write(Group.subend.format(subname=subname), 1)
             # # Test and set blocks for initialization status
@@ -397,6 +434,7 @@ end module {module}
         else:
             self.parse()
         # End if
+        self._suite_vars = {}
 
     @property
     def name(self):
@@ -526,7 +564,8 @@ end module {module}
                 # Find out what sort of schemes are available
                 group_schemes = item.schemes()
                 print("Group {}, schemes = {}".format(item.name, [x.name for x in group_schemes]))
-                item.analyze('run', host_model, scheme_headers, logger)
+                # Note that the group analyze can update _suite_vars
+                item.analyze('run', host_model, scheme_headers, self._suite_vars, logger)
 
     def write(self, output_dir):
         """Create caps for all groups in the suite and for the entire suite
@@ -609,10 +648,8 @@ end module {module}
         # Turn the SDF files into Suites
         for sdf in sdfs:
             suite = Suite(sdf, logger)
-# XXgoldyXX: v debug only
             suite.analyze(host_model, scheme_headers, logger)
             self._suites.append(suite)
-# XXgoldyXX: ^ debug only
         # End for
     # End if
 
@@ -634,7 +671,7 @@ end module {module}
         filename = os.path.join(output_dir, self.module + '.F90')
         api_filenames = list()
         host_call_list = ', '.join(API.required_vars.prop_list('local_name'))
-        host_call_list = host_call_list + self._host_arg_list
+        host_call_list = host_call_list + ", " + self._host_arg_list
         module_use = ''
         # Write out the suite files
         for suite in self._suites:
@@ -650,8 +687,8 @@ end module {module}
             api.write(API.subhead.format(host_call_list=host_call_list), 1)
             # Declare dummy arguments
             API.required_vars.declare_variables(api, 2)
-#            for arg in self._host_arg_list:
-#                pass
+            for var in self._host.variable_list():
+                var.write_def(api, 2)
 
             # Now, add in cases for all suite parts
             callstr = 'call ccpp_physics({})'
