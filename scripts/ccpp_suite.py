@@ -18,10 +18,9 @@ from parse_tools   import FORTRAN_ID
 from parse_tools   import read_xml_file, validate_xml_file, find_schema_version
 from fortran_tools import FortranWriter
 
-#init_re   = re.compile(FORTRAN_ID+r"_init$")
-#run_re    = re.compile(FORTRAN_ID+r"_run$")
-#final_re  = re.compile(FORTRAN_ID+r"_finalize$")
 phase_re  = re.compile(FORTRAN_ID+r"_((?i)(?:init)|(?:run)|(?:finalize))$")
+loop_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
+dimension_re = re.compile(FORTRAN_ID+r"_((?i)dimension)$")
 
 array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
 
@@ -60,27 +59,29 @@ class Scheme(object):
         '''Return name of scheme'''
         return self._name
 
-    def header_has_var(std_name, header):
-        '''Find the requested variable in the header or return the alternatives
-        This routine is only meant for loop dimension variables
-        '''
-        hvar = header.get_var(standard_name=std_name)
-        if hvar is None:
-            ##XXgoldyXX: Need to look for alternatives here
-            raise CCPPError("Scheme {} does not have input, {}, required by host model".format(self.name, std_name))
-        # End if (else we are okay)
-        return hvar
-
     def find_host_model_var(self, hdim, host_model):
         hsdims = list()
         for hsdim in hdim.split(':'):
-            hsdim_var = host_model.find_variable(hsdim)
+            hsdim_var = host_model.find_variable(hsdim, loop_subst=True)
             if hsdim_var is None:
                 raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
+            elif isinstance(hsdim_var, list):
+                hsdims.append(hsdim_var[0].get_prop_value('local_name'))
+                hsdims.append(hsdim_var[1].get_prop_value('local_name'))
             else:
                 hsdims.append(hsdim_var.get_prop_value('local_name'))
             # End if
         # End for
+        loop_var = loop_re.match(hdim)
+        if (dimension_re.match(hdim) is not None) and (len(hsdims) == 1):
+            # We need to specify the whole range
+            hsdims = ['1'] + hsdims
+        elif (loop_var is not None) and (len(hsdims) == 1):
+            # We may to specify the whole range
+            if loop_var.group(2).lower() == 'extent':
+                hsdims = ['1'] + hsdims
+            # End if
+        # End if
         return ':'.join(hsdims)
 
     def host_arg_str(self, hvar, host_model, header, ddt):
@@ -155,7 +156,7 @@ class Scheme(object):
                 stdname = svar.get_prop_value('standard_name')
                 intent = svar.get_prop_value('intent').lower()
                 if (intent == 'in') or (intent == 'inout'):
-                    hvar = host_model.find_variable(stdname)
+                    hvar = host_model.find_variable(stdname, loop_subst=True)
                     if hvar is None:
                         # No host variable, see if we have a suite variable
                         if stdname in suite_vars:

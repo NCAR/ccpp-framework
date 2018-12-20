@@ -9,17 +9,20 @@ from __future__ import print_function
 import sys
 import os
 import os.path
+import re
 import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
 from metavar import Var, VarDictionary
 from parse_tools import ParseSource, ParseContext, CCPPError
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
-from parse_tools import check_fortran_intrinsic
+from parse_tools import check_fortran_intrinsic, FORTRAN_ID
 
 ###############################################################################
 class HostModel(object):
     "Class to hold the data from a host model"
+
+    loop_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
 
     def __init__(self, name, ddt_defs, var_locations, variables, logger=None):
         self._name = name
@@ -141,12 +144,28 @@ class HostModel(object):
             return None
         # End if
 
-    def find_variable(self, standard_name):
+    def find_variable(self, standard_name, loop_subst=False):
         "Return the host model variable matching <standard_name> or None"
         my_var = self._variables.find_variable(standard_name)
         if (my_var is None) and (standard_name in self._ddt_fields):
             # Found variable in a DDT element
             my_var = self._ddt_fields[standard_name]
+        # End if
+        if (my_var is None) and loop_subst:
+            loop_var = HostModel.loop_re.match(standard_name)
+            if loop_var is not None:
+                # Let us see if we can fix a loop variable
+                # First up, we have an extent but host has begin and end
+                if loop_var.group(2).lower() == 'extent':
+                    beg_name = loop_var.group(1) + '_begin'
+                    end_name = loop_var.group(1) + '_end'
+                    beg_var = self.find_variable(beg_name)
+                    end_var = self.find_variable(end_name)
+                    if (beg_var is not None) and (end_var is not None):
+                        my_var = [beg_var, end_var]
+                    # End if
+                # End if
+            # End if
         # End if
         return my_var
 
