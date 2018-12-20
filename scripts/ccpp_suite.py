@@ -18,9 +18,10 @@ from parse_tools   import FORTRAN_ID
 from parse_tools   import read_xml_file, validate_xml_file, find_schema_version
 from fortran_tools import FortranWriter
 
-init_re   = re.compile(FORTRAN_ID+r"_init$")
-run_re    = re.compile(FORTRAN_ID+r"_run$")
-final_re  = re.compile(FORTRAN_ID+r"_finalize$")
+#init_re   = re.compile(FORTRAN_ID+r"_init$")
+#run_re    = re.compile(FORTRAN_ID+r"_run$")
+#final_re  = re.compile(FORTRAN_ID+r"_finalize$")
+phase_re  = re.compile(FORTRAN_ID+r"_((?i)(?:init)|(?:run)|(?:finalize))$")
 
 array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
 
@@ -537,22 +538,37 @@ end module {module}
         return self._groups
 
     def analyze(self, host_model, scheme_headers, logger):
-        'Collect all information needed to write a suite file'
+        '''Collect all information needed to write a suite file
+        >>> phase_re.match('foo_init').group(2)
+        'init'
+        >>> phase_re.match('FOO_INIT').group(2)
+        'INIT'
+        >>> phase_re.match('foo_run').group(2)
+        'run'
+        >>> phase_re.match('foo_finalize').group(2)
+        'finalize'
+        >>> phase_re.match('foo_finalize_bar') is None
+        True
+        '''
         # Collect all the available schemes
         init_schemes = list()
         run_schemes = list()
         final_schemes = list()
         for header_list in scheme_headers:
             for header in header_list:
-                if init_re.match(header.title) is not None:
-                    init_schemes.append(header)
-                elif run_re.match(header.title) is not None:
-                    run_schemes.append(header)
-                elif final_re.match(header.title) is not None:
-                    final_schemes.append(header)
+                match = phase_re.match(header.title)
+                if match is not None:
+                    pmatch = match.group(2).lower()
                 else:
                     raise CCPPError('Unknown scheme metadata type, "{}"'.format(header.title))
                 # End if
+                if pmatch == 'init':
+                    init_schemes.append(header)
+                elif pmatch == 'run':
+                    run_schemes.append(header)
+                elif pmatch == 'finalize':
+                    final_schemes.append(header)
+                # End if (else already raised error as above)
             # End for
         # End for
         # Grab the host model argument list
