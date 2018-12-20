@@ -162,7 +162,7 @@ class HostModel(object):
                     beg_var = self.find_variable(beg_name)
                     end_var = self.find_variable(end_name)
                     if (beg_var is not None) and (end_var is not None):
-                        my_var = [beg_var, end_var]
+                        my_var = (beg_var, end_var)
                     # End if
                 # End if
             # End if

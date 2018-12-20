@@ -65,7 +65,7 @@ class Scheme(object):
             hsdim_var = host_model.find_variable(hsdim, loop_subst=True)
             if hsdim_var is None:
                 raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
-            elif isinstance(hsdim_var, list):
+            elif isinstance(hsdim_var, tuple):
                 hsdims.append(hsdim_var[0].get_prop_value('local_name'))
                 hsdims.append(hsdim_var[1].get_prop_value('local_name'))
             else:
@@ -176,6 +176,11 @@ class Scheme(object):
                             args.append(argstr)
                         # End for
                         host_arglist.append('%'.join(args))
+                    elif isinstance(hvar, tuple):
+                        for var in hvar:
+                            argstr = self.host_arg_str(var, host_model, my_header, False)
+                            host_arglist.append(argstr)
+                        # End for
                     else:
                         argstr = self.host_arg_str(hvar, host_model, my_header, False)
                         host_arglist.append(argstr)
