@@ -315,6 +315,8 @@ class Group(object):
         return schemes
 
     def analyze(self, phase, host_model, scheme_headers, suite_vars, logger):
+        # We need a copy of the host model variables for dummy args
+        self._host_vars = host_model.variable_list()
         for item in self._parts:
             if isinstance(item, Subcycle):
                 lvar, lschemes, lsvars = item.analyze(phase, host_model, scheme_headers, suite_vars, logger)
@@ -348,12 +350,21 @@ class Group(object):
         outfile.write(Group.subhead.format(subname=subname, args=host_arglist), 1)
         # Write out the scheme use statements
         for scheme in self._local_schemes:
-            outfile.write(scheme, 1)
+            outfile.write(scheme, 2)
         # End for
+        outfile.write('', 0)
+        # Write out dummy arguments
+        outfile.write('! Dummy arguments', 2)
+        for var in self._host_vars:
+            var.write_def(outfile, 2)
+        # End for
+        outfile.write('', 0)
+        outfile.write('! Local Variables', 2)
         # Write out local variables
         for var in self._loop_var_defs:
             outfile.write(var, 1)
         # End for
+        outfile.write('', 0)
         # Write the scheme and subcycle calls
         for item in self._parts:
             item.write(outfile, 'run')
