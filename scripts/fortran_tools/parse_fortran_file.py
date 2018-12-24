@@ -368,7 +368,7 @@ def read_file(filename, preproc_defs=None):
                     prev_line = pobj.peek_line(prev_line_num)
                 # End if
                 if prev_line is None:
-                    raise ParseInternalError("No prev_line to continue", pobj)
+                    raise ParseInternalError("No prev_line to continue", context=pobj)
                 # End if
                 sindex = max(0, cont_in_col)
                 if cont_out_col > 0:
@@ -429,7 +429,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
         endname = 'PROGRAM'
         inmod = False
     else:
-        raise ParseInternal("One of <mod_name> or <prog_name> must be used")
+        raise ParseInternalError("One of <mod_name> or <prog_name> must be used")
     # End if
     inspec = True
     mheaders = list()

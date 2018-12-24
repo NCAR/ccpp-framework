@@ -12,7 +12,8 @@ from collections import OrderedDict
 from parse_tools import check_fortran_ref, check_fortran_type
 from parse_tools import registered_fortran_ddt_name
 from parse_tools import check_dimensions, check_cf_standard_name
-from parse_tools import ParseContext, ParseSource, ParseSyntaxError, CCPPError
+from parse_tools import ParseContext, ParseSource
+from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 
 real_subst_re = re.compile(r"(.*\d)p(\d.*)")
 list_re = re.compile(r"[(]([^)]*)[)]\s*$")
@@ -278,6 +279,8 @@ class Var(object):
                     VariableProperty('module', str,
                                      optional_in=True, default_in=''),
                     VariableProperty('constant', bool,
+                                     optional_in=True, default_in=False),
+                    VariableProperty('allocatable', bool,
                                      optional_in=True, default_in=False)]
 
     # __var_props contains properties which are not in __spec_props
@@ -462,151 +465,119 @@ class Var(object):
 class VarDictionary(OrderedDict):
     """
     A class to store and cross-check variables from one or more metadata
-    headers.
-    The dictionary is organized by standard_name with each entry a list
-    containing all the known variables sharing that standard_name.
+    headers. The class also serves as a scoping construct so that a variable
+    can be found in an innermost available scope.
+    The dictionary is organized by standard_name. It is an error to try
+    to add a variable if its standard name is already in the dictionary.
+    Scoping is a tree of VarDictionary objects.
     >>> VarDictionary()
     VarDictionary()
     >>> VarDictionary({})
     VarDictionary()
     >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))) #doctest: +ELLIPSIS
-    VarDictionary([('hi_mom', [<__main__.Var object at 0x...>])])
+    VarDictionary([('hi_mom', <__main__.Var object at 0x...>)])
     >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]) #doctest: +ELLIPSIS
-    VarDictionary([('hi_mom', [<__main__.Var object at 0x...>])])
+    VarDictionary([('hi_mom', <__main__.Var object at 0x...>)])
     >>> VarDictionary().add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())))
 
     >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]).prop_list('local_name')
     ['foo']
+    >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))).add_variable(Var({'local_name' : 'bar', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname2', 'DDT', ParseContext()))) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid Duplicate standard name, 'hi_mom', at <standard input>:
     """
 
-    def __init__(self, variables=None, logger=None):
+    def __init__(self, variables=None, parent_dict=None, logger=None):
         "Unlike dict, VarDictionary only takes a Var or Var list"
         super(VarDictionary, self).__init__()
         self._logger = logger
+        self._parent_dict = parent_dict
+        if parent_dict is not None:
+            parent_dict.add_sub_scope(self)
+        # End if
+        self._sub_dicts = list()
         if isinstance(variables, Var):
             self.add_variable(variables)
-        elif variables is not None:
+        elif isinstance(variables, list):
             for var in variables:
                 self.add_variable(var)
             # End for
+        elif variables is not None:
+            raise ParseInternalError('Illegal type for variables, {}'.format(type(variables)))
         # End if
 
-    def variable_list(self, standard_name=None):
-        "Retrieve variables matching <standard_name> (default all variables)"
-        if standard_name is None:
-            # Return a list of all variables in the system
-            vlist = list()
-            for sn in self.keys():
-                vlist.extend(self[sn])
-            # End for
-        elif standard_name in self:
-            # Return a list of all variables matching <standard_name>
-            vlist = self[standard_name]
+    def variable_list(self, recursive=False):
+        "Return a list of all variables"
+        if recursive and (self._parent_dict is not None):
+            vlist = self._parent_dict.variable_list(recursive=recursive)
         else:
-            vlist = None
+            vlist = list()
         # End if
+        for sn in self.keys():
+            vlist.append(self[sn])
+        # End for
         return vlist
 
     def add_variable(self, newvar):
         """Add a variable if it does not conflict with existing entries"""
         standard_name = newvar.get_prop_value('standard_name')
         if standard_name in self:
-            # We have a matching variable, is it legal?
-            currvars = self.variable_list(standard_name)
-            for cvar in currvars:
-                # Are we in the same context? Compare region info
-                if newvar.source == cvar.source:
-                    if self._logger is not None:
-                        self._logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
-                    # End if
-                    raise ParseSyntaxError("Duplicate standard name",
-                                           token=standard_name,
-                                           context=cvar._context)
-                elif not cvar.compatible(newvar):
-                    errstr = "Standard name incompatible with {}"
-                    raise ParseSyntaxError(errstr.format(cvar.context),
-                                           token=standard_name,
-                                           context=newvar.source.context)
-                # End if
-            # End for
-        else:
-            self[standard_name] = list()
+            # We already have a matching variable, error!
+            if self._logger is not None:
+                self._logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
+            # End if
+            raise ParseSyntaxError("Duplicate standard name",
+                                   token=standard_name, context=newvar._context)
+        # End if
+        cvar = self.find_variable(standard_name)
+        if (cvar is not None) and (not cvar.compatible(newvar)):
+            if self._logger is not None:
+                self._logger.error("Attempt to add incompatibble variable, {} from {}".format(standard_name, newvar.source.name))
+            # End if
+            errstr = "Standard name incompatible with {}"
+            raise ParseSyntaxError(errstr.format(cvar.context),
+                                   token=standard_name,
+                                   context=newvar.source.context)
         # End if
         # If we make it to here without an exception, add the variable
-        self[standard_name].append(newvar)
+        self[standard_name] = newvar
 
-    def find_variable(self, standard_name, list_ok=False):
-        "Return the host model variable matching <standard_name> or None"
-        vlist = self.variable_list(standard_name)
-        if vlist is not None:
-            if (not isinstance(vlist, list)) or (len(vlist) < 1):
-                raise CCPPError("Invalid VarDictionary entry, '{}'".format(vlist))
-            elif (len(vlist) > 1) and (not list_ok):
-                raise CCPPError("Duplicate variable, '{}'".format(standard_name))
-            # End if
-            if list_ok:
-                var = vlist
-            else:
-                var = vlist[0]
-            # End if
+    def find_variable(self, standard_name, any_scope=True, loop_subst=False):
+        """Return the host model variable matching <standard_name> or None
+        If any_scope is True, search parent scopes if not in current scope.
+        VarDictionary is a base class, loop_subst does nothing at this level.
+        """
+        if standard_name in self:
+            var = self[standard_name]
+        elif any_scope and (self._parent_dict is not None):
+            var = self._parent_dict.find_variable(standard_name, any_scope)
         else:
             var = None
         # End if
         return var
 
-    def has_variable(self, other_var):
-        "Test wither <other_var> is already in our dictionary"
-        in_dict = False
-        standard_name = other_var.get_prop_value('standard_name')
-        var_list = self.variable_list(standard_name)
-        if var_list is not None:
-            for cvar in var_list:
-                if cvar.source == other_var.source:
-                    in_dict = True
-                    break
-                # End if
-            # End for
-        # End if
-        return in_dict
+    def add_sub_scope(self, sub_dict):
+        'Add a child dictionary to enable traversal'
+        self._sub_dicts.append(sub_dict)
 
     def prop_list(self, prop_name):
-        '''Return a list of the <prop_name> property for each
-        variable. This method only allows one variable per standard name'''
+        'Return a list of the <prop_name> property for each variable.'
         plist = list()
         for standard_name in self.keys():
-            vlist = self.variable_list(standard_name)
-            if (not isinstance(vlist, list)) or (len(vlist) < 1):
-                raise CCPPError("Invalid VarDictionary entry, '{}'".format(vlist))
-            elif len(vlist) > 1:
-                raise CCPPError("Duplicate variable, '{}'".format(standard_name))
-            else:
-                pval = vlist[0].get_prop_value(prop_name)
-                if pval is not None:
-                    plist.append(pval)
-                # End if (no else, just ignore variables without <prop_name>)
-            # End if
+            plist.append(self[standard_name].get_prop_value(prop_name))
         # End for
         return plist
 
     def declare_variables(self, outfile, indent):
         "Write out the declarations for this dictionary's variables"
         for standard_name in self.keys():
-            vlist = self.variable_list(standard_name)
-            if (not isinstance(vlist, list)) or (len(vlist) < 1):
-                raise CCPPError("Invalid VarDictionary entry, '{}'".format(vlist))
-            elif len(vlist) > 1:
-                raise CCPPError("Duplicate variable, '{}'".format(standard_name))
-            else:
-                vlist[0].write_def(outfile, indent)
-            # End if
+            self[standard_name].write_def(outfile, indent)
         # End for
 
     def merge(self, other_dict):
         "Add new entries from <other_dict>"
         for ovar in other_dict.variable_list():
-            if not self.has_variable(ovar):
-                self.add_variable(ovar)
-            # End if
+            self.add_variable(ovar)
         # End for
 
 ###############################################################################

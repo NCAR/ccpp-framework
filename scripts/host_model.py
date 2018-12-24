@@ -19,7 +19,7 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from parse_tools import check_fortran_intrinsic, FORTRAN_ID
 
 ###############################################################################
-class HostModel(object):
+class HostModel(VarDictionary):
     "Class to hold the data from a host model"
 
     loop_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
@@ -28,7 +28,7 @@ class HostModel(object):
         self._name = name
         self._ddt_defs = ddt_defs
         self._var_locations = var_locations
-        self._variables = variables
+        super(HostModel, self).__init__(variables=variables, logger=logger)
         self._ddt_vars = {}
         self._ddt_fields = {}
         # Make sure we have a DDT definition for every DDT variable
@@ -42,12 +42,8 @@ class HostModel(object):
 
     def argument_list(self):
         'Return a string representing the host model variable arg list'
-        args = self._variables.prop_list('local_name')
+        args = self.prop_list('local_name')
         return ', '.join(args)
-
-    def variable_list(self):
-        "Return an ordered list of the host model's variables"
-        return self._variables.variable_list()
 
     def add_ddt_defs(new_ddt_defs, logger=None):
         "Add new DDT metadata definitions to model"
@@ -70,13 +66,13 @@ class HostModel(object):
     def add_variables(new_variables, logger=None):
         "Add new variables definitions to model"
         if new_variables is not None:
-            self._variables.merge(new_variables)
+            self.merge(new_variables)
         # End if
 
     def check_ddt_vars(self, logger=None):
         "Check that we have a DDT definition for every DDT variable"
-        for vkey in self._variables.keys():
-            for var in self._variables[vkey]:
+        for vkey in self.keys():
+            for var in self[vkey]:
                 vtype = var.get_prop_value('type')
                 if not check_fortran_intrinsic(vtype):
                     vkind = var.get_prop_value('kind')
@@ -121,7 +117,7 @@ class HostModel(object):
         for stdname in self._ddt_vars.keys():
             # The source for the fields in this DDT is the variable
             ddt = self._ddt_vars[stdname]
-            svar = self._variables.find_variable(stdname)
+            svar = super(HostModel, self).find_variable(stdname)
             self.collect_fields_from_ddt(ddt, [svar], logger)
         # End for
 
@@ -129,8 +125,8 @@ class HostModel(object):
         """Return a set of module-variable and module-type pairs.
         These represent the locations of all host model data."""
         varset = set()
-        mods = self._variables.prop_list('module')
-        names = self._variables.prop_list('local_name')
+        mods = self.prop_list('module')
+        names = self.prop_list('local_name')
         for item in zip(mods, names):
             varset.add(item)
         # End for
@@ -146,7 +142,7 @@ class HostModel(object):
 
     def find_variable(self, standard_name, loop_subst=False):
         "Return the host model variable matching <standard_name> or None"
-        my_var = self._variables.find_variable(standard_name)
+        my_var = super(HostModel, self).find_variable(standard_name)
         if (my_var is None) and (standard_name in self._ddt_fields):
             # Found variable in a DDT element
             my_var = self._ddt_fields[standard_name]

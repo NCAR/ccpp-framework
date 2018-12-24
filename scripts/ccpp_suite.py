@@ -93,6 +93,17 @@ class Scheme(object):
         # Turn the dimensions string into a proper list and take the correct one
         hdims = Var.get_prop('dimensions').valid_value(hdimval)
         dimsep = ''
+        # Does the local name have any extra indices?
+        match = array_ref_re.match(hstr.strip())
+        if match is not None:
+            hstr = match.group(1)
+            # Find real names for all the indices
+            tokens = [x.strip() for x in match.group(2).strip().split(',')]
+            for token in tokens:
+                hsdim = self.find_host_model_var(token, host_model)
+                dimstr = dimstr + dimsep + hsdim
+            # End for
+        # End if
         if len(hdims) > 0:
             dimstr = '('
         else:
@@ -108,17 +119,6 @@ class Scheme(object):
                 dimsep = ', '
             # End if
         # End for
-        # Does the local name have some trailing indices?
-        match = array_ref_re.match(hstr.strip())
-        if match is not None:
-            hstr = match.group(1)
-            # Find real names for all the indices
-            tokens = [x.strip() for x in match.group(2).strip().split(',')]
-            for token in tokens:
-                hsdim = self.find_host_model_var(token, host_model)
-                dimstr = dimstr + dimsep + hsdim
-            # End for
-        # End if
         if len(hdims) > 0:
             dimstr = dimstr + ')'
         # End if
@@ -215,12 +215,12 @@ class Subcycle(object):
             self._schemes.append(Scheme(scheme, context))
         # End forn
 
-    def analyze(self, phase, host_model, scheme_headers, suite_vars, logger):
+    def analyze(self, phase, parent, scheme_headers, suite_vars, logger):
         loopvar = '{}integer :: {}'.format(indent(2), self.name)
         suite_vars = list()
         scheme_mods = list()
         for scheme in self._schemes:
-            smods, svars = scheme.analyze(phase, host_model, scheme_headers, suite_vars, logger)
+            smods, svars = scheme.analyze(phase, suite_vars, scheme_headers, logger)
             scheme_mods.append(smode)
             suite_vars.extend(svars)
         # End for
@@ -256,8 +256,15 @@ class Subcycle(object):
 
 ###############################################################################
 
-class Group(object):
-    "Class to represent a grouping of schemes in a suite"
+class Group(VarDictionary):
+    """Class to represent a grouping of schemes in a suite
+    A Group object is implemented as a subroutine callable by the API.
+    The main arguments to a group are the host model variables.
+    Additional output arguments are generated from schemes with intent(out)
+    arguments.
+    Additional input or inout arguments are generated for inputs needed by
+    schemes which are produced (intent(out)) by other groups.
+    """
 
     subhead = '''
    subroutine {subname}({args})
@@ -293,14 +300,15 @@ class Group(object):
 ''',
     }
 
-    def __init__(self, group_xml, context):
+    def __init__(self, group_xml, parent, context):
         self._name = group_xml.get('name')
         self._parts = list()
+        super(Group, self).__init__(parent_dict=parent)
         for item in group_xml:
             if item.tag == 'subcycle':
-                self._parts.append(Subcycle(item, context))
+                self._parts.append(Subcycle(item, self, context))
             else:
-                self._parts.append(Scheme(item, context))
+                self._parts.append(Scheme(item, self, context))
             # End if
         # End for
         self._loop_var_defs = set()
@@ -314,30 +322,31 @@ class Group(object):
         # End for
         return schemes
 
-    def analyze(self, phase, host_model, scheme_headers, suite_vars, logger):
+    def analyze(self, phase, suite_vars, scheme_headers, logger):
         # We need a copy of the host model variables for dummy args
-        self._host_vars = host_model.variable_list()
+        self._host_vars = suite_vars.variable_list(recursive=True)
         for item in self._parts:
             if isinstance(item, Subcycle):
-                lvar, lschemes, lsvars = item.analyze(phase, host_model, scheme_headers, suite_vars, logger)
+                lvar, lschemes, lsvars = item.analyze(phase, self, scheme_headers, suite_vars, logger)
                 self._loop_var_defs.add(lvar)
                 for lscheme in lschemes:
                     self._local_schemes.add(lscheme)
                 # End for
             elif isinstance(item, Scheme):
-                lschemes, lsvars = item.analyze(phase, host_model, scheme_headers, suite_vars, logger)
+                lschemes, lsvars = item.analyze(phase, suite_vars, scheme_headers, logger)
                 self._local_schemes.add(lschemes)
             else:
                 raise CCPPError('Illegal group type, {} in group {}'.format(type(item), self.name))
             # End if
             for svar in lsvars:
                 stdname = svar.get_prop_value('standard_name')
-                if stdname in suite_vars:
-                    if not svar.compatible(suite_vars[stdname]):
+                suite_var = suite_vars.find_variable(stdname)
+                if suite_var is not None:
+                    if not svar.compatible(suite_var):
                         raise CCPPError('Incompatible duplicate variable, {}, found in {}'.format(svar.get_prop_value('local_name'), item.name))
                     # End if (no else, variable already in dictionary)
                 else:
-                    suite_vars[stdname] = svar
+                    suite_vars.add_variable(svar)
                 # End if
             # End for
         # End for
@@ -434,7 +443,7 @@ class Group(object):
 
 ###############################################################################
 
-class Suite(object):
+class Suite(VarDictionary):
 
     header='''
 !>
@@ -457,7 +466,7 @@ module {module}
 end module {module}
 '''
 
-    def __init__(self, filename, logger):
+    def __init__(self, filename, api, logger):
         self._logger = logger
         self._name = None
         self._sdf_name = filename
@@ -469,7 +478,7 @@ end module {module}
         else:
             self.parse()
         # End if
-        self._suite_vars = {}
+        super(Suite, self).__init__(parent_dict=api, logger=logger)
 
     @property
     def name(self):
@@ -515,7 +524,7 @@ end module {module}
                 self._final_scheme = Scheme(suite_item, context)
             else:
                 # Parse a group
-                self._groups.append(Group(suite_item, context))
+                self._groups.append(Group(suite_item, self, context))
             # End if
         # End for
         return success
@@ -614,8 +623,8 @@ end module {module}
                 # Find out what sort of schemes are available
                 group_schemes = item.schemes()
                 print("Group {}, schemes = {}".format(item.name, [x.name for x in group_schemes]))
-                # Note that the group analyze can update _suite_vars
-                item.analyze('run', host_model, scheme_headers, self._suite_vars, logger)
+                # Note that the group analyze can update this suite's vars
+                item.analyze('run', self, scheme_headers, logger)
 
     def write(self, output_dir):
         """Create caps for all groups in the suite and for the entire suite
@@ -645,7 +654,7 @@ end module {module}
 
 ###############################################################################
 
-class API(object):
+class API(VarDictionary):
 
     header = '''
 !>
@@ -678,26 +687,28 @@ end module {module}
     api_source = ParseSource("CCPP_API", "MODULE",
                              ParseContext(filename="ccpp_suite.F90"))
 
-    required_vars = VarDictionary([Var({'local_name':'suite_name',
-                                        'standard_name':'suite_name',
-                                        'intent':'in', 'type':'character',
-                                        'kind':'len=*', 'units':'',
-                                        'dimensions':'()'}, api_source),
-                                   Var({'local_name':'suite_part',
-                                        'standard_name':'suite_part',
-                                        'intent':'in', 'type':'character',
-                                        'kind':'len=*', 'units':'',
-                                        'dimensions':'()'}, api_source)])
+    required_vars = [Var({'local_name':'suite_name',
+                          'standard_name':'suite_name',
+                          'intent':'in', 'type':'character',
+                          'kind':'len=*', 'units':'',
+                          'dimensions':'()'}, api_source),
+                     Var({'local_name':'suite_part',
+                          'standard_name':'suite_part',
+                          'intent':'in', 'type':'character',
+                          'kind':'len=*', 'units':'',
+                          'dimensions':'()'}, api_source)]
 
     def __init__(self, sdfs, host_model, scheme_headers, logger):
         self._module        = 'ccpp_physics_api'
         self._host          = host_model
         self._schemes       = scheme_headers
         self._suites        = list()
+        super(API, self).__init__(variables=API.required_vars,
+                                  parent_dict=host_model, logger=logger)
         self._host_arg_list = host_model.argument_list()
         # Turn the SDF files into Suites
         for sdf in sdfs:
-            suite = Suite(sdf, logger)
+            suite = Suite(sdf, self, logger)
             suite.analyze(host_model, scheme_headers, logger)
             self._suites.append(suite)
         # End for
@@ -710,7 +721,7 @@ end module {module}
 
     @property
     def subroutines(self):
-        '''Get the subroutines names of the API to.'''
+        '''Get the subroutines names of the API'''
         return self._subroutines
 
     def write(self, output_dir):
@@ -819,7 +830,7 @@ if __name__ == "__main__":
         kessler = os.path.join(cpf, 'cam_driver', 'suites',
                                'suite_cam_kessler_test_simple1.xml')
         if os.path.exists(kessler):
-            foo = Suite(kessler, logger)
+            foo = Suite(kessler, VarDictionary(), logger)
         else:
             raise CCPPError("Cannot find test file, '{}'".format(kessler))
     except CCPPError as sa:

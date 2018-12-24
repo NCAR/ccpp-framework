@@ -302,16 +302,12 @@ class MetadataHeader(ParseSource):
         return self._variables.variable_list()
 
     def get_var(self, standard_name=None, intent=None):
-        if (standard_name is not None) and (standard_name in self._variables):
-            vlist = self._variables[standard_name]
-            # VarDictionary returns a list but there should only be one
-            if len(vlist) != 1:
-                raise ParseInternalError("Standard name, '{}', ERROR in {}".format(standard_name, self._table_title), self._pobj)
-            # End if
-            return vlist[0]
+        if standard_name is not None:
+            var = self._variables.find_variable(standard_name)
+            return var
         elif intent is not None:
             if intent not in self._var_intents:
-                raise ParseInternalError("Illegal intent type, '{}', in {}".format(intent, self._table_title), self._pobj)
+                raise ParseInternalError("Illegal intent type, '{}', in {}".format(intent, self._table_title), context=self._pobj)
             # End if
             return self._var_intents[intent]
         else:

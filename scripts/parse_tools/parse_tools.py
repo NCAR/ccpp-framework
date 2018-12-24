@@ -37,7 +37,7 @@ class ParseInternalError(StandardError):
     """Exception for internal parser use errors
     Note that this error will not be trapped by programs such as ccpp_capgen
     """
-    def __init__(self, errmsg, context):
+    def __init__(self, errmsg, context=None):
         if context is None:
             message = errmsg
         else:
