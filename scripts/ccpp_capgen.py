@@ -248,7 +248,7 @@ def _main_func():
     cap_filenames = ccpp_api.write(output_dir)
     if gen_hostcap:
         # Create a cap file
-        hcap_filename = write_host_cap(host_model, output_dir, logger)
+        hcap_filename = write_host_cap(host_model, ccpp_api, output_dir, logger)
     else:
         hcap_filename = None
     # End if

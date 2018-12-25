@@ -135,13 +135,12 @@ class Scheme(object):
         # End if
         return hstr + dimstr
 
-    def analyze(self, phase, scheme_headers, suite_vars, logger):
+    def analyze(self, phase, parent, scheme_headers, suite_vars, logger):
         # Find the host model (do we need to do this?)
-        host_model = suite_vars
+        host_model = parent
         while host_model.parent is not None:
             host_model = host_model.parent
         # End if
-        new_suite_vars = list()
         # Find our header
         self._subroutine_name = self.name + '_' + phase
         my_header = None
@@ -160,8 +159,10 @@ class Scheme(object):
             raise ParseSyntaxError('No module found for subroutine',
                                    token=self._subroutine_name, context=self._context)
         # End if
+        scheme_mods = set()
         scheme_use = 'use {}, only: {}'.format(my_header.module,
                                                self._subroutine_name)
+        scheme_mods.add(scheme_use)
         if my_header is None:
             raise CCPPError('Could not find subroutine, {}'.format(subroutine_name))
         else:
@@ -202,16 +203,16 @@ class Scheme(object):
                         host_arglist.append(argstr)
                     # End if
                 else:
-                    new_suite_vars.append(svar)
+                    suite_vars.add_variable(svar)
                 # End if
             # End for
             self._arglist = host_arglist
         # End if
-        return scheme_use, new_suite_vars
+        return scheme_mods, list() # No loop variables for scheme
 
-    def write(self, outfile, phase, level=2):
+    def write(self, outfile, phase, indent):
         my_args = ', '.join(self._arglist)
-        outfile.write('call {}({})'.format(self._subroutine_name, my_args), level)
+        outfile.write('call {}({})'.format(self._subroutine_name, my_args), indent)
 
     def schemes(self):
         'Return self as a list for consistency with subcycle'
@@ -222,8 +223,14 @@ class Scheme(object):
 class Subcycle(object):
     "Class to represent a subcycled group of schemes"
 
+    __def_name_index__ = 0 # To create unique default loop index variables
+
     def __init__(self, sub_xml, context):
-        self._name = sub_xml.get('name', "subcycle")
+        self._name = sub_xml.get('name', None)
+        if self._name is None:
+            Subcycle.__def_name_index__ = Subcycle.__def_name_index__ + 1
+            self._name = "subcycle_index{}".format(Subcycle.__def_name_index__)
+        # End if
         self._loop = sub_xml.get('loop', "1")
         self._context = context
         self._schemes = list()
@@ -232,20 +239,25 @@ class Subcycle(object):
         # End forn
 
     def analyze(self, phase, parent, scheme_headers, suite_vars, logger):
-        loopvar = '{}integer :: {}'.format(indent(2), self.name)
-        suite_vars = list()
-        scheme_mods = list()
+        loopvars = set()
+        loopvars.add('{}integer :: {}'.format(indent(2), self.name))
+        scheme_mods = set()
         for scheme in self._schemes:
-            smods, svars = scheme.analyze(phase, suite_vars, scheme_headers, logger)
-            scheme_mods.append(smode)
-            suite_vars.extend(svars)
+            smods, lvars = scheme.analyze(phase, parent, scheme_headers, suite_vars, logger)
+            for smod in smods:
+                scheme_mods.add(smod)
+            # End for
+            for lvar in lvars:
+                loopvars.add(lvar)
+            # End for
         # End for
-        return loopvar, scheme_mods, suite_vars
+        return scheme_mods, loopvars
 
-    def write(self, outfile, phase):
-        outfile.write('do {} = 1, {}'.format(self.name, self.loop), 2)
+    def write(self, outfile, phase, indent):
+        outfile.write('do {} = 1, {}'.format(self.name, self.loop), indent)
+        # Note that 'scheme' may be a sybcycle or other construct
         for scheme in self._schemes:
-            scheme.write(outfile, phase, level=3)
+            scheme.write(outfile, phase, indent+1)
         # End for
         outfile.write('end do', 2)
 
@@ -342,59 +354,47 @@ class Group(VarDictionary):
         # We need a copy of the host model variables for dummy args
         self._host_vars = suite_vars.variable_list(recursive=True)
         for item in self._parts:
-            if isinstance(item, Subcycle):
-                lvar, lschemes, lsvars = item.analyze(phase, self, scheme_headers, suite_vars, logger)
+            # Items can be schemes, subcycles or other objects
+            # All have the same interface and return a set of module use
+            # statements (lschemes) and a set of loop variables
+            lschemes, lvars = item.analyze(phase, self, scheme_headers, suite_vars, logger)
+            # Keep track of loop variables to define
+            for lvar in lvars:
                 self._loop_var_defs.add(lvar)
-                for lscheme in lschemes:
-                    self._local_schemes.add(lscheme)
-                # End for
-            elif isinstance(item, Scheme):
-                lschemes, lsvars = item.analyze(phase, suite_vars, scheme_headers, logger)
-                self._local_schemes.add(lschemes)
-            else:
-                raise CCPPError('Illegal group type, {} in group {}'.format(type(item), self.name))
-            # End if
-            for svar in lsvars:
-                stdname = svar.get_prop_value('standard_name')
-                suite_var = suite_vars.find_variable(stdname)
-                if suite_var is not None:
-                    if not svar.compatible(suite_var):
-                        raise CCPPError('Incompatible duplicate variable, {}, found in {}'.format(svar.get_prop_value('local_name'), item.name))
-                    # End if (no else, variable already in dictionary)
-                else:
-                    suite_vars.add_variable(svar)
-                # End if
+            # End for
+            for lscheme in lschemes:
+                self._local_schemes.add(lscheme)
             # End for
         # End for
 
-    def write(self, outfile, host_arglist):
+    def write(self, outfile, host_arglist, indent):
         self._subroutines = list()
         local_subs = ''
         # First, write out the subroutine header
         subname = self.name + '_run'
-        outfile.write(Group.subhead.format(subname=subname, args=host_arglist), 1)
+        outfile.write(Group.subhead.format(subname=subname, args=host_arglist), indent)
         # Write out the scheme use statements
         for scheme in self._local_schemes:
-            outfile.write(scheme, 2)
+            outfile.write(scheme, indent+1)
         # End for
         outfile.write('', 0)
         # Write out dummy arguments
-        outfile.write('! Dummy arguments', 2)
+        outfile.write('! Dummy arguments', indent+1)
         for var in self._host_vars:
-            var.write_def(outfile, 2)
+            var.write_def(outfile, indent+1)
         # End for
         outfile.write('', 0)
-        outfile.write('! Local Variables', 2)
+        outfile.write('! Local Variables', indent+1)
         # Write out local variables
         for var in self._loop_var_defs:
-            outfile.write(var, 1)
+            outfile.write(var, indent)
         # End for
         outfile.write('', 0)
         # Write the scheme and subcycle calls
         for item in self._parts:
-            item.write(outfile, 'run')
+            item.write(outfile, 'run', indent+1)
         # End for
-        outfile.write(Group.subend.format(subname=subname), 1)
+        outfile.write(Group.subend.format(subname=subname), indent)
             # # Test and set blocks for initialization status
             # initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
             #                             target_name_flag=ccpp_error_flag_target_name,
@@ -664,7 +664,7 @@ end module {module}
                                                 subroutines=gsub_list), 1)
             outfile.write('contains', 0)
             for group in self._groups:
-                group.write(outfile, self._host_arg_list)
+                group.write(outfile, self._host_arg_list, 1)
             outfile.write(Suite.footer.format(module=self._module), 0)
             return output_file_name
 
@@ -747,7 +747,7 @@ end module {module}
         # End if
         filename = os.path.join(output_dir, self.module + '.F90')
         api_filenames = list()
-        host_call_list = ', '.join(API.required_vars.prop_list('local_name'))
+        host_call_list = ', '.join(self.prop_list('local_name'))
         host_call_list = host_call_list + ", " + self._host_arg_list
         module_use = ''
         # Write out the suite files
@@ -763,7 +763,7 @@ end module {module}
                                         module_use=module_use), 0)
             api.write(API.subhead.format(host_call_list=host_call_list), 1)
             # Declare dummy arguments
-            API.required_vars.declare_variables(api, 2)
+            self.declare_variables(api, 2)
             for var in self._host.variable_list():
                 var.write_def(api, 2)
 
