@@ -442,6 +442,71 @@ class Var(object):
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
                                  name=name, dims=dimstr), indent)
 
+    def find_dimension_vars(self, hdim, scope):
+        hsdims = list()
+        for hsdim in hdim.split(':'):
+            hsdim_var = host_model.find_variable(hsdim, loop_subst=True)
+            if hsdim_var is None:
+                raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
+            elif isinstance(hsdim_var, tuple):
+                hsdims.append(hsdim_var[0].get_prop_value('local_name'))
+                hsdims.append(hsdim_var[1].get_prop_value('local_name'))
+            else:
+                hsdims.append(hsdim_var.get_prop_value('local_name'))
+            # End if
+        # End for
+        loop_var = loop_re.match(hdim)
+        if (dimension_re.match(hdim) is not None) and (len(hsdims) == 1):
+            # We need to specify the whole range
+            hsdims = ['1'] + hsdims
+        elif (loop_var is not None) and (len(hsdims) == 1):
+            # We may to specify the whole range
+            if loop_var.group(2).lower() == 'extent':
+                hsdims = ['1'] + hsdims
+            # End if
+        # End if
+        return ':'.join(hsdims)
+
+    def host_arg_str(self, hvar, host_model, header, ddt):
+        '''Create the proper statement of a piece of a host-model variable.
+        If ddt is True, we can only have a single element selected
+        '''
+        hstr = hvar.get_prop_value('local_name')
+        hdimval = hvar.get_prop_value('dimensions')
+        # Turn the dimensions string into a proper list and take the correct one
+        hdims = Var.get_prop('dimensions').valid_value(hdimval)
+        dimsep = ''
+        # Does the local name have any extra indices?
+        match = array_ref_re.match(hstr.strip())
+        if match is not None:
+            hstr = match.group(1)
+            # Find real names for all the indices
+            tokens = [x.strip() for x in match.group(2).strip().split(',')]
+            for token in tokens:
+                hsdim = self.find_host_model_var(token, host_model)
+                dimstr = dimstr + dimsep + hsdim
+            # End for
+        # End if
+        if len(hdims) > 0:
+            dimstr = '('
+        else:
+            dimstr = ''
+        # End if
+        for hdim in hdims:
+            if ddt and (':' in hdim):
+                raise CCPPError("Invalid DDT dimension spec {}({})".format(hstr, hdimval))
+            else:
+                # Find the host model variable for each dim
+                hsdims = self.find_host_model_var(hdim, host_model)
+                dimstr = dimstr + dimsep + hsdims
+                dimsep = ', '
+            # End if
+        # End for
+        if len(hdims) > 0:
+            dimstr = dimstr + ')'
+        # End if
+        return hstr + dimstr
+
     def print_debug(self):
         '''Print the data retrieval line for the variable.'''
         str='''Contents of {local_name} (* = mandatory for compatibility):
@@ -487,9 +552,10 @@ class VarDictionary(OrderedDict):
     ParseSyntaxError: Invalid Duplicate standard name, 'hi_mom', at <standard input>:
     """
 
-    def __init__(self, variables=None, parent_dict=None, logger=None):
+    def __init__(self, name, variables=None, parent_dict=None, logger=None):
         "Unlike dict, VarDictionary only takes a Var or Var list"
         super(VarDictionary, self).__init__()
+        self._name = name
         self._logger = logger
         self._parent_dict = parent_dict
         if parent_dict is not None:
@@ -502,9 +568,21 @@ class VarDictionary(OrderedDict):
             for var in variables:
                 self.add_variable(var)
             # End for
+        elif isinstance(variables, VarDictionary):
+            for stdname in variables.keys():
+                self[stdname] = variables[stdname]
+            # End for
         elif variables is not None:
-            raise ParseInternalError('Illegal type for variables, {}'.format(type(variables)))
+            raise ParseInternalError('Illegal type for variables, {} in {}'.format(type(variables), self.name))
         # End if
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def parent(self):
+        return self._parent_dict
 
     def variable_list(self, recursive=False):
         "Return a list of all variables"
@@ -526,13 +604,13 @@ class VarDictionary(OrderedDict):
             if self._logger is not None:
                 self._logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
             # End if
-            raise ParseSyntaxError("Duplicate standard name",
+            raise ParseSyntaxError("Duplicate standard name in {}".format(self.name),
                                    token=standard_name, context=newvar._context)
         # End if
         cvar = self.find_variable(standard_name)
         if (cvar is not None) and (not cvar.compatible(newvar)):
             if self._logger is not None:
-                self._logger.error("Attempt to add incompatibble variable, {} from {}".format(standard_name, newvar.source.name))
+                self._logger.error("Attempt to add incompatible variable, {} from {}".format(standard_name, newvar.source.name))
             # End if
             errstr = "Standard name incompatible with {}"
             raise ParseSyntaxError(errstr.format(cvar.context),

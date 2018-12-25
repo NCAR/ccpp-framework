@@ -28,7 +28,7 @@ class HostModel(VarDictionary):
         self._name = name
         self._ddt_defs = ddt_defs
         self._var_locations = var_locations
-        super(HostModel, self).__init__(variables=variables, logger=logger)
+        super(HostModel, self).__init__(self.name, variables=variables, logger=logger)
         self._ddt_vars = {}
         self._ddt_fields = {}
         # Make sure we have a DDT definition for every DDT variable
@@ -72,21 +72,20 @@ class HostModel(VarDictionary):
     def check_ddt_vars(self, logger=None):
         "Check that we have a DDT definition for every DDT variable"
         for vkey in self.keys():
-            for var in self[vkey]:
-                vtype = var.get_prop_value('type')
-                if not check_fortran_intrinsic(vtype):
-                    vkind = var.get_prop_value('kind')
-                    stdname = var.get_prop_value('standard_name')
-                    if stdname in self._ddt_vars:
-                        # Make sure this is a duplicate
-                        if self._ddt_vars[stdname] != self._ddt_defs[vkind]:
-                            raise CCPPError("Duplicate DDT definition for {}".format(vkind))
-                        # End if
-                    else:
-                        self._ddt_vars[stdname] = self._ddt_defs[vkind]
+            var = self[vkey]
+            vtype = var.get_prop_value('type')
+            if not check_fortran_intrinsic(vtype):
+                vkind = var.get_prop_value('kind')
+                stdname = var.get_prop_value('standard_name')
+                if stdname in self._ddt_vars:
+                    # Make sure this is not a duplicate
+                    if self._ddt_vars[stdname] != self._ddt_defs[vkind]:
+                        raise CCPPError("Duplicate DDT definition for {}".format(vkind))
                     # End if
-                # End if (no else, intrinsic types)
-            # End for
+                else:
+                    self._ddt_vars[stdname] = self._ddt_defs[vkind]
+                # End if
+            # End if (no else, intrinsic types)
         # End for
 
     def collect_fields_from_ddt(self, ddt, source, logger=None):
@@ -179,7 +178,6 @@ class HostModel(VarDictionary):
     ###########################################################################
     @classmethod
     def parse_host_registry(cls, filename, logger, ddt_defs, host_model=None):
-        variables = VarDictionary(logger=logger)
         host_variables = {}
         tree, root = read_xml_file(filename, logger=logger)
         # We do not have line number information for the XML file
@@ -190,6 +188,7 @@ class HostModel(VarDictionary):
             abort("Invalid host registry file, '{}'".format(filename), logger)
         # End if
         host_name = root.get('name')
+        variables = VarDictionary(host_name, logger=logger)
         logger.info("Reading host model registry for {}".format(host_name))
         for child in root:
             if (child.tag == 'variable') or (child.tag == 'constant'):

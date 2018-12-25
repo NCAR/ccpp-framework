@@ -96,13 +96,24 @@ class Scheme(object):
         # Does the local name have any extra indices?
         match = array_ref_re.match(hstr.strip())
         if match is not None:
-            hstr = match.group(1)
-            # Find real names for all the indices
             tokens = [x.strip() for x in match.group(2).strip().split(',')]
-            for token in tokens:
-                hsdim = self.find_host_model_var(token, host_model)
-                dimstr = dimstr + dimsep + hsdim
-            # End for
+            # There should one ':' token for each entry in hdims
+            if tokens.count(':') != len(hdims):
+                raise CCPPError("Invalid DDT variable spec, {}, should have {} colons".format(hstr, len(hdims)))
+            else:
+                hstr = match.group(1)
+                hdims_temp = hdims
+                hdims = list()
+                hdim_index = 0
+                for token in tokens:
+                    if token == ':':
+                        hdims.append(hdims_temp[hdim_index])
+                        hdim_index = hdim_index + 1
+                    else:
+                        hdims.append(token)
+                    # End if
+                # End for
+            # End if
         # End if
         if len(hdims) > 0:
             dimstr = '('
@@ -124,7 +135,12 @@ class Scheme(object):
         # End if
         return hstr + dimstr
 
-    def analyze(self, phase, host_model, scheme_headers, suite_vars, logger):
+    def analyze(self, phase, scheme_headers, suite_vars, logger):
+        # Find the host model (do we need to do this?)
+        host_model = suite_vars
+        while host_model.parent is not None:
+            host_model = host_model.parent
+        # End if
         new_suite_vars = list()
         # Find our header
         self._subroutine_name = self.name + '_' + phase
@@ -159,7 +175,7 @@ class Scheme(object):
                     hvar = host_model.find_variable(stdname, loop_subst=True)
                     if hvar is None:
                         # No host variable, see if we have a suite variable
-                        if stdname in suite_vars:
+                        if stdname in suite_vars.keys():
                             hvar = suite_vars[stdname]
                         # End if
                     # End if
@@ -303,12 +319,12 @@ class Group(VarDictionary):
     def __init__(self, group_xml, parent, context):
         self._name = group_xml.get('name')
         self._parts = list()
-        super(Group, self).__init__(parent_dict=parent)
+        super(Group, self).__init__(self.name, parent_dict=parent)
         for item in group_xml:
             if item.tag == 'subcycle':
                 self._parts.append(Subcycle(item, self, context))
             else:
-                self._parts.append(Scheme(item, self, context))
+                self._parts.append(Scheme(item, context))
             # End if
         # End for
         self._loop_var_defs = set()
@@ -473,12 +489,12 @@ end module {module}
         self._groups = list()
         self._init_scheme = None
         self._final_scheme = None
+        super(Suite, self).__init__(self.sdf_name, parent_dict=api, logger=logger)
         if not os.path.exists(self._sdf_name):
             raise CCPPError("Suite definition file {0} not found.".format(self._sdf_name))
         else:
             self.parse()
         # End if
-        super(Suite, self).__init__(parent_dict=api, logger=logger)
 
     @property
     def name(self):
@@ -703,7 +719,7 @@ end module {module}
         self._host          = host_model
         self._schemes       = scheme_headers
         self._suites        = list()
-        super(API, self).__init__(variables=API.required_vars,
+        super(API, self).__init__(self.module, variables=API.required_vars,
                                   parent_dict=host_model, logger=logger)
         self._host_arg_list = host_model.argument_list()
         # Turn the SDF files into Suites
@@ -830,7 +846,7 @@ if __name__ == "__main__":
         kessler = os.path.join(cpf, 'cam_driver', 'suites',
                                'suite_cam_kessler_test_simple1.xml')
         if os.path.exists(kessler):
-            foo = Suite(kessler, VarDictionary(), logger)
+            foo = Suite(kessler, VarDictionary('foo'), logger)
         else:
             raise CCPPError("Cannot find test file, '{}'".format(kessler))
     except CCPPError as sa:

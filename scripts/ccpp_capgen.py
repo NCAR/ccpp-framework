@@ -13,7 +13,6 @@ import os.path
 import logging
 # CCPP framework imports
 from fortran_tools import parse_fortran_file
-from metavar import VarDictionary
 from host_model import HostModel
 from host_cap import write_host_cap
 from ccpp_suite import API, Suite
@@ -127,8 +126,6 @@ def parse_host_model_files(host_pathsfile, preproc_defs, logger):
     """
     mheaders = {}
     xml_files = list()
-    host_variables = {}
-    variables = VarDictionary(logger=logger)
     filenames = read_pathnames_from_file(host_pathsfile)
     for filename in filenames:
         if is_xml_file(filename):
@@ -244,7 +241,7 @@ def _main_func():
         # End if
     # End if
     logger.debug("headers = {}".format([host_model._ddt_defs[x].title for x in host_model._ddt_defs.keys()]))
-    logger.debug("variables = {}".format([x.get_prop_value('local_name') for x in host_model._variables.variable_list()]))
+    logger.debug("variables = {}".format([x.get_prop_value('local_name') for x in host_model.variable_list()]))
     logger.debug("schemes = {}".format([[x._table_title for x in y] for y in scheme_headers]))
     # Finally, we can get on with writing suites
     ccpp_api = API(sdfs, host_model, scheme_headers, logger)

@@ -12,7 +12,6 @@ import os.path
 import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from metavar       import Var, VarDictionary
 from ccpp_suite    import COPYRIGHT, API
 from fortran_tools import FortranWriter
 

@@ -91,7 +91,6 @@ suitable to be used with mkcap.py (which generates the fortran code for the sche
 # Python library imports
 from __future__ import print_function
 import re
-import collections
 # CCPP framework imports
 from metavar import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
@@ -200,7 +199,7 @@ class MetadataHeader(ParseSource):
         # End while
         # Read the variables
         valid_lines =  True
-        self._variables = VarDictionary(logger=logger)
+        self._variables = VarDictionary(self.title, logger=logger)
         self._var_intents = {'in' : list(), 'out' : list(), 'inout' : list()}
         while valid_lines:
             newvar, curr_line = self.parse_variable(curr_line, spec_name)
