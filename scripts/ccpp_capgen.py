@@ -269,13 +269,15 @@ def _main_func():
 if __name__ == "__main__":
     try:
         _main_func()
+        sys.exit(0)
     except ParseInternalError as pie:
         logger.exception(pie)
+        sys.exit(-1)
     except CCPPError as ca:
-
         if logger.getEffectiveLevel() <= logging.DEBUG:
             logger.exception(ca)
         else:
             logger.error(ca)
         # End if
+        sys.exit(-1)
     # End try
