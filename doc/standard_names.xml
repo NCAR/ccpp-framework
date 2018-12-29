@@ -1,0 +1,206 @@
+<standard_names name="CCPP Standard Name Library">
+  <section name="dimensions"
+           comment="Note that the cap generator can substitute x_begin:x_end for x_extent">
+    <standard_name name="horizontal_dimension"
+                   long_name="Size horizontal dimension">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="horizontal_loop_extent"
+                   long_name="Number of items in horizontal dimension to use">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="horizontal_loop_begin"
+                   long_name="Beginning index of horizontal dimension to use">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="horizontal_loop_end"
+                   long_name="Ending index of horizontal dimension to use">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="thread_block_number"
+                   long_name="Number of current thread block">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="thread_block_begin"
+                   long_name="Beginning index of all thread blocks">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="thread_block_end"
+                   long_name="Ending index of all thread blocks">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="vertical_layer_dimension"
+                   long_name="number of vertical levels">
+      <type units="none">integer</type>
+    </standard_name>
+    <standard_name name="vertical_level_dimension"
+                   long_name="number of vertical interfaces">
+      <type units="none">integer</type>
+    </standard_name>
+  </section>
+  <section name="constants">
+    <standard_name name="gas_constant_dry_air">
+      <type kind="kind_phys" units="J kg-1 K-1">real</type>
+    </standard_name>
+    <standard_name name="specific_heat_of_dry_air_at_constant_pressure">
+      <type kind="kind_phys" units="J kg-1 K-1">real</type>
+    </standard_name>
+    <standard_name name="latent_heat_of_vaporization_of_water_at_0c"
+                   long_name="latent heat of vaporization of water at 0C">
+      <type kind="kind_phys" units="J kg-1">real</type>
+    </standard_name>
+    <standard_name name="density_of_liquid_water_at_0c"
+                   long_name="density of liquid water at 0C">
+      <type kind="kind_phys" units="kg m-3">real</type>
+    </standard_name>
+  </section>
+  <section name="coordinates">
+    <standard_name name="latitude">
+      <type kind="kind_phys" units="radians">real</type>
+    </standard_name>
+    <standard_name name="longitude">
+      <type kind="kind_phys" units="radians">real</type>
+    </standard_name>
+  </section>
+  <section name="state_variables">
+    <standard_name name="surface_air_pressure">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="dry_surface_pressure">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="surface_geopotential">
+      <type kind="kind_phys" units="m2 s-2">real</type>
+    </standard_name>
+    <standard_name name="temperature">
+      <type kind="kind_phys" units="K">real</type>
+    </standard_name>
+    <standard_name name="eastward_wind"
+                   long_name="Zonal wind">
+      <type kind="kind_phys" units="m s-1">real</type>
+    </standard_name>
+    <standard_name name="northward_wind"
+                   long_name="Meridional wind">
+      <type kind="kind_phys" units="m s-1">real</type>
+    </standard_name>
+    <standard_name name="dry_static_energy_content_of_atmosphere_layer"
+                   long_name="Dry static energy">
+      <type kind="kind_phys" units="J m-2">real</type>
+    </standard_name>
+    <standard_name name="lagrangian_tendency_of_air_pressure"
+                   long_name="Vertical pressure velocity">
+      <type kind="kind_phys" units="Pa s-1">real</type>
+    </standard_name>
+    <standard_name name="air_pressure"
+                   long_name="Midpoint air pressure">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="air_pressure_of_dry_air"
+                   long_name="Dry midpoint pressure">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="pressure_thickness">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="pressure_thickness_of_dry_air">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="reciprocal_of_pressure_thickness">
+      <type kind="kind_phys" units="Pa-1">real</type>
+    </standard_name>
+    <standard_name name="reciprocal_of_pressure_thickness_of_dry_air">
+      <type kind="kind_phys" units="Pa-1">real</type>
+    </standard_name>
+    <standard_name name="natural_log_of_air_pressure">
+      <type kind="kind_phys" units="pmid">real</type>
+    </standard_name>
+    <standard_name name="log_of_air_pressure_of_dry_air">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="inverse_exner_function_wrt_surface_pressure"
+                   long_name="inverse exner function w.r.t. surface pressure, (ps/p)^(R/cp)">
+      <type kind="kind_phys" units="1">real</type>
+    </standard_name>
+    <standard_name name="geopotential_height_above_surface_at_midpoints">
+      <type kind="kind_phys" units="m">real</type>
+    </standard_name>
+    <standard_name name="constituent_mixing_ratio">
+      <type kind="kind_phys" units="kg/kg moist or dry air depending on type">real</type>
+    </standard_name>
+    <standard_name name="water_vapor_specific_humidity">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="cloud_liquid_water_mixing_ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="rain_water_mixing_ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="air_pressure_at_interface">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="interface_pressure_dry">
+      <type kind="kind_phys" units="Pa">real</type>
+    </standard_name>
+    <standard_name name="ln_air_pressure_at_interface">
+      <type kind="kind_phys" units="ln(Pa)">real</type>
+    </standard_name>
+    <standard_name name="ln_interface_pressure_dry">
+      <type kind="kind_phys" units="ln(Pa)">real</type>
+    </standard_name>
+    <standard_name name="geopotential_height_above_surface_at_interfaces">
+      <type kind="kind_phys" units="m">real</type>
+    </standard_name>
+    <standard_name name="vertically_integrated_total_kinetic_and_static_energy_of_initial_state">
+      <type kind="kind_phys" units="J m-2">real</type>
+    </standard_name>
+    <standard_name name="vertically_integrated_total_kinetic_and_static_energy_of_current_state">
+      <type kind="kind_phys" units="J m-2">real</type>
+    </standard_name>
+    <standard_name name="vertically_integrated_total_water_of_initial_state">
+      <type kind="kind_phys" units="Pa s2 m-1">real</type>
+    </standard_name>
+    <standard_name name="vertically_integrated_total_water_of_new_state">
+      <type kind="kind_phys" units="Pa s2 m-1">real</type>
+    </standard_name>
+    <standard_name name="tendency_of_temperature">
+      <type kind="kind_phys" units="K s-1">real</type>
+    </standard_name>
+    <standard_name name="total_tendency_of_temperature">
+      <type kind="kind_phys" units="K s-1">real</type>
+    </standard_name>
+    <standard_name name="tendency_of_potential_temperature">
+      <type kind="kind_phys" units="K s-1">real</type>
+    </standard_name>
+    <standard_name name="total_tendency_of_potential_temperature">
+      <type kind="kind_phys" units="K s-1">real</type>
+    </standard_name>
+    <standard_name name="tendency_of_eastward_wind">
+      <type kind="kind_phys" units="m s-2">real</type>
+    </standard_name>
+    <standard_name name="tendency_of_northward_wind">
+      <type kind="kind_phys" units="m s-2">real</type>
+    </standard_name>
+    <standard_name name="surface_energy_flux">
+      <type kind="kind_phys" units="W m-2">real</type>
+    </standard_name>
+    <standard_name name="cumulative_boundary_flux_of_total_energy">
+      <type kind="kind_phys" units="W m-2">real</type>
+    </standard_name>
+    <standard_name name="cumulative_boundary_flux_of_total_water">
+      <type kind="kind_phys" units="W m-2">real</type>
+    </standard_name>
+    <standard_name name="reference_pressure_at_sea_level"
+                   long_name="reference pressure at sea level">
+      <type kind="kind_phys" units="mb">real</type>
+    </standard_name>
+    <standard_name name="exner_function"
+                   long_name="exner function">
+      <type kind="kind_phys" units="none">real</type>
+    </standard_name>
+    <standard_name name="potential_temperature"
+                   long_name="potential temperature">
+      <type kind="kind_phys" units="K">real</type>
+    </standard_name>
+  </section>
+</standard_names>

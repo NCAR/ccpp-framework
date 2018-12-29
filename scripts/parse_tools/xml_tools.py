@@ -139,7 +139,7 @@ def validate_xml_file(filename, schema_root, version, logger):
         return True # We could not check but still need to proceed
 
 ###############################################################################
-def read_xml_file(filename, logger):
+def read_xml_file(filename, logger=None):
 ###############################################################################
     if os.path.isfile(filename) and os.access(filename, os.R_OK):
         if six.PY3:
