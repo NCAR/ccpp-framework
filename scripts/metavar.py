@@ -535,19 +535,21 @@ class VarDictionary(OrderedDict):
     The dictionary is organized by standard_name. It is an error to try
     to add a variable if its standard name is already in the dictionary.
     Scoping is a tree of VarDictionary objects.
-    >>> VarDictionary()
-    VarDictionary()
-    >>> VarDictionary({})
-    VarDictionary()
-    >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))) #doctest: +ELLIPSIS
-    VarDictionary([('hi_mom', <__main__.Var object at 0x...>)])
-    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]) #doctest: +ELLIPSIS
-    VarDictionary([('hi_mom', <__main__.Var object at 0x...>)])
-    >>> VarDictionary().add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())))
+    >>> VarDictionary('foo')
+    VarDictionary(foo)
+    >>> VarDictionary('bar', variables={})
+    VarDictionary(bar)
+    >>> VarDictionary('baz', Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))) #doctest: +ELLIPSIS
+    VarDictionary(baz, [('hi_mom', <__main__.Var object at 0x...>)])
+    >>> print("{}".format(VarDictionary('baz', Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())))))
+    VarDictionary(baz, ['hi_mom'])
+    >>> VarDictionary('qux', [Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]) #doctest: +ELLIPSIS
+    VarDictionary(qux, [('hi_mom', <__main__.Var object at 0x...>)])
+    >>> VarDictionary('boo').add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())))
 
-    >>> VarDictionary([Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]).prop_list('local_name')
+    >>> VarDictionary('who', variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]).prop_list('local_name')
     ['foo']
-    >>> VarDictionary(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))).add_variable(Var({'local_name' : 'bar', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname2', 'DDT', ParseContext()))) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> VarDictionary('glitch', Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))).add_variable(Var({'local_name' : 'bar', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname2', 'DDT', ParseContext()))) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid Duplicate standard name, 'hi_mom', at <standard input>:
     """
@@ -569,6 +571,11 @@ class VarDictionary(OrderedDict):
                 self.add_variable(var)
             # End for
         elif isinstance(variables, VarDictionary):
+            for stdname in variables.keys():
+                self[stdname] = variables[stdname]
+            # End for
+        elif isinstance(variables, dict):
+            # variables will not be in 'order', but we accept them anyway
             for stdname in variables.keys():
                 self[stdname] = variables[stdname]
             # End for
@@ -657,6 +664,19 @@ class VarDictionary(OrderedDict):
         for ovar in other_dict.variable_list():
             self.add_variable(ovar)
         # End for
+
+    def __str__(self):
+        return "VarDictionary({}, {})".format(self.name, self.keys())
+
+    def __repr__(self):
+        srepr = super(VarDictionary, self).__repr__()
+        vstart = len("VarDictionary") + 1
+        if len(srepr) > vstart + 1:
+            comma = ", "
+        else:
+            comma = ""
+        # End if
+        return "VarDictionary({}{}{}".format(self.name, comma, srepr[vstart:])
 
 ###############################################################################
 if __name__ == "__main__":
