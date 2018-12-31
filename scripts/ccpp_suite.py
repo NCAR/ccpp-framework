@@ -222,7 +222,7 @@ class Scheme(object):
                         host_arglist.append(argstr)
                     # End if
                 else:
-                    suite_vars.add_variable(svar)
+                    suite_vars.add_variable(svar, exists_ok=True)
                 # End if
             # End for
             self._arglist = host_arglist

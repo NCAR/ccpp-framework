@@ -57,7 +57,7 @@ def convert_xml_to_markdown(root, library_name, snl):
             stdn_name = std_name.get('name')
             stdn_longname = std_name.get('long_name')
             if have_metavar and (stdn_longname is None):
-                stdn_longname = standard_name_to_long_name(stdn_name)
+                stdn_longname = standard_name_to_long_name({'standard_name':stdn_name})
             # End if
             snl.write("* `{}`: {}\n".format(stdn_name, stdn_longname))
             # Should only be a type in the standard_name text

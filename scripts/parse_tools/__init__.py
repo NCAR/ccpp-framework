@@ -1,7 +1,7 @@
 """Public API for the parse_tools library
 """
 
-from parse_checkers import check_fortran_id, FORTRAN_ID
+from parse_checkers import check_fortran_id, FORTRAN_ID, FORTRAN_DP_RE
 from parse_checkers import check_fortran_ref, FORTRAN_SCALAR_REF
 from parse_checkers import check_fortran_intrinsic, check_fortran_type
 from parse_checkers import registered_fortran_ddt_name
@@ -23,6 +23,7 @@ __all__ = [
     'check_fortran_ref',
     'check_fortran_type',
     'find_schema_version',
+    'FORTRAN_DP_RE',
     'FortranMetadataSyntax',
     'FORTRAN_ID',
     'FORTRAN_SCALAR_REF',

@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 from collections import OrderedDict
 # CCPP framework imports
 from parse_tools import check_fortran_ref, check_fortran_type
+from parse_tools import FORTRAN_DP_RE
 from parse_tools import registered_fortran_ddt_name
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import ParseContext, ParseSource
@@ -19,22 +20,106 @@ real_subst_re = re.compile(r"(.*\d)p(\d.*)")
 list_re = re.compile(r"[(]([^)]*)[)]\s*$")
 
 ########################################################################
-
-def standard_name_to_long_name(standard_name):
+def standard_name_to_long_name(prop_dict, context=None):
+########################################################################
     """Translate a standard_name to its default long_name
-    >>> standard_name_to_long_name('cloud_optical_depth_layers_from_0p55mu_to_0p99mu')
+    >>> standard_name_to_long_name({'standard_name':'cloud_optical_depth_layers_from_0p55mu_to_0p99mu'})
     'Cloud optical depth layers from 0.55mu to 0.99mu'
+    >>> standard_name_to_long_name({'local_name':'foo'}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No standard name to convert foo to long name
+    >>> standard_name_to_long_name({}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No standard name to convert to long name
+    >>> standard_name_to_long_name({'local_name':'foo'}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No standard name to convert foo to long name at foo.F90:3
+    >>> standard_name_to_long_name({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No standard name to convert to long name at foo.F90:3
     """
     # We assume that standar_name has been checked for validity
     # Make the first char uppercase and replace each underscore with a space
-    long_name = standard_name[0].upper() + re.sub("_", " ", standard_name[1:])
-    # Next, substitute a decimal point for the p in [:digit]p[:digit]
-    match = real_subst_re.match(long_name)
-    while match is not None:
-        long_name = match.group(1) + '.' + match.group(2)
+    if 'standard_name' in prop_dict:
+        standard_name = prop_dict['standard_name']
+        long_name = standard_name[0].upper() + re.sub("_", " ", standard_name[1:])
+        # Next, substitute a decimal point for the p in [:digit]p[:digit]
         match = real_subst_re.match(long_name)
-    # End while
+        while match is not None:
+            long_name = match.group(1) + '.' + match.group(2)
+            match = real_subst_re.match(long_name)
+        # End while
+    else:
+        long_name = ''
+        if 'local_name' in prop_dict:
+            lname = ' {}'.format(prop_dict['local_name'])
+        else:
+            lname = ''
+        # End if
+        if context is not None:
+            ctxt = ' at {}'.format(context)
+        else:
+            ctxt = ''
+        # End if
+        raise CCPPError('No standard name to convert{} to long name{}'.format(lname, ctxt))
+    # End if
     return long_name
+
+########################################################################
+def default_kind_val(prop_dict, context=None):
+########################################################################
+    """Choose a default kind based on a variable's type
+    >>> default_kind_val({'type':'REAL'})
+    'kind_phys'
+    >>> default_kind_val({'type':'complex'})
+    'kind_phys'
+    >>> default_kind_val({'type':'double precision'})
+    'kind_phys'
+    >>> default_kind_val({'type':'integer'})
+    ''
+    >>> default_kind_val({'type':'character'})
+    ''
+    >>> default_kind_val({'type':'logical'})
+    ''
+    >>> default_kind_val({'local_name':'foo'}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No type to find default kind for foo
+    >>> default_kind_val({}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No type to find default kind
+    >>> default_kind_val({'local_name':'foo'}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No type to find default kind for foo at foo.F90:3
+    >>> default_kind_val({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: No type to find default kind at foo.F90:3
+    """
+    if 'type' in prop_dict:
+        vtype = prop_dict['type'].lower()
+        if vtype == 'real':
+            kind = 'kind_phys'
+        elif vtype == 'complex':
+            kind = 'kind_phys'
+        elif FORTRAN_DP_RE.match(vtype) is not None:
+            kind = 'kind_phys'
+        else:
+            kind = ''
+        # End if
+    else:
+        kind = ''
+        if 'local_name' in prop_dict:
+            lname = ' {}'.format(prop_dict['local_name'])
+        else:
+            lname = ''
+        # End if
+        if context is not None:
+            ctxt = ' at {}'.format(context)
+        else:
+            ctxt = ''
+        # End if
+        raise CCPPError('No type to find default kind for {}{}'.format(lname, ctxt))
+    # End if
+    return kind
 
 ########################################################################
 
@@ -126,16 +211,14 @@ class VariableProperty(object):
         'Return the type of the property'
         return self._type
 
-    @property
-    def default(self, arg=None):
-        if self._default is not None:
+    def get_default_val(self, prop_dict, context=None):
+        if self._default_fn is not None:
+            return self._default_fn(prop_dict, context)
+        elif self._default is not None:
             return self._default
         else:
-            if arg is not None:
-                return self._default_fn(arg)
-            else:
-                return self._default_fn
-            # End if
+            ctxt = ' at {}'.format(context) if context is not None else ''
+            raise CCPPError('No default for variable property {}{}'.format(self.name, ctxt))
         # End if
 
     @property
@@ -271,7 +354,7 @@ class Var(object):
                     VariableProperty('type', str,
                                      check_fn_in=check_fortran_type),
                     VariableProperty('kind', str,
-                                     optional_in=True, default_in='kind_phys'),
+                                     optional_in=True, default_fn_in=default_kind_val),
                     VariableProperty('state_variable', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('optional', bool,
@@ -352,12 +435,7 @@ class Var(object):
         # Fill in default values for missing properties
         for propname in master_propdict:
             if (propname not in prop_dict) and master_propdict[propname].optional:
-                default_val = master_propdict[propname].default
-                if (propname == 'long_name') and callable(default_val):
-                    self._prop_dict[propname] = default_val(prop_dict['standard_name'])
-                else:
-                    self._prop_dict[propname] = default_val
-                # End if
+                self._prop_dict[propname] = master_propdict[propname].get_default_val(self._prop_dict, context=self.context)
             # End if
         # End for
         # Make sure all the variable values are valid
@@ -371,20 +449,46 @@ class Var(object):
                                    context=self.context)
         # End try
 
-    def compatible(self, other):
+    def compatible(self, other, logger=None):
         # We accept character(len=*) as compatible with character(len=INTEGER_VALUE)
-        if self.type == 'character':
-            if (self.kind == 'len=*' and other.kind.startswith('len=')) or \
-                   (self.kind.startswith('len=') and other.kind == 'len=*'):
-                return self.standard_name == other.standard_name \
-                    and self.units == other.units \
-                    and self.type == other.type \
-                    and self.rank == other.rank
-        return self.standard_name == other.standard_name \
-            and self.units == other.units \
-            and self.type == other.type \
-            and self.kind == other.kind \
-            and self.rank == other.rank
+        stype =     self.get_prop_value('type')
+        skind =     self.get_prop_value('kind')
+        sunits =    self.get_prop_value('units')
+        srank=      self.get_prop_value('tank')
+        sstd_name = self.get_prop_value('standard_name')
+        otype =     other.get_prop_value('type')
+        okind =     other.get_prop_value('kind')
+        ounits =    other.get_prop_value('units')
+        orank=      other.get_prop_value('tank')
+        ostd_name = other.get_prop_value('standard_name')
+        if stype == 'character':
+            kind_eq = ((skind == okind) or
+                       (skind == 'len=*' and okind.startswith('len=')) or
+                       (skind.startswith('len=') and okind == 'len=*'))
+        else:
+            kind_eq = skind == okind
+        # End if
+        if ((sstd_name == ostd_name) and kind_eq and
+            (sunits == ounits) and (stype == otype) and (srank == orank)):
+            return True
+        elif logger is not None:
+            if sstd_name != ostd_name:
+                logger.info("standard_name: '{}' != '{}'".format(sstd_name, ostd_name))
+            elif not kind_eq:
+                logger.info("kind: '{}' != '{}'".format(skind, okind))
+            elif sunits != ounits:
+                logger.info("units: '{}' != '{}'".format(sunits, ounits))
+            elif stype != otype:
+                logger.info("type: '{}' != '{}'".format(stype, otype))
+            elif srank != orank:
+                logger.info("rank: '{}' != '{}'".format(srank, orank))
+            else:
+                logger.error('Why are these variables not compatible?')
+            # End if
+            return False
+        else:
+            return False
+        # End if
 
     @classmethod
     def get_prop(cls, name, spec_type=None):
@@ -603,10 +707,10 @@ class VarDictionary(OrderedDict):
         # End for
         return vlist
 
-    def add_variable(self, newvar):
+    def add_variable(self, newvar, exists_ok=False):
         """Add a variable if it does not conflict with existing entries"""
         standard_name = newvar.get_prop_value('standard_name')
-        if standard_name in self:
+        if (standard_name in self) and (not exists_ok):
             # We already have a matching variable, error!
             if self._logger is not None:
                 self._logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
@@ -615,7 +719,7 @@ class VarDictionary(OrderedDict):
                                    token=standard_name, context=newvar._context)
         # End if
         cvar = self.find_variable(standard_name)
-        if (cvar is not None) and (not cvar.compatible(newvar)):
+        if (cvar is not None) and (not cvar.compatible(newvar, self._logger)):
             if self._logger is not None:
                 self._logger.error("Attempt to add incompatible variable, {} from {}".format(standard_name, newvar.source.name))
             # End if

@@ -256,7 +256,7 @@ class MetadataHeader(ParseSource):
             if valid_line:
                 properties = self._syntax.strip(curr_line).split('|')
                 for property in properties:
-                    pitems = property.split('=')
+                    pitems = property.split('=', 1)
                     if len(pitems) < 2:
                         raise ParseSyntaxError("variable property syntax",
                                                token=property,
