@@ -12,7 +12,7 @@ import os.path
 import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from ccpp_suite    import COPYRIGHT
+from ccpp_suite    import COPYRIGHT, CCPP_STAGES
 from fortran_tools import FortranWriter
 
 ###############################################################################
@@ -26,17 +26,16 @@ module {module}
 
 preamble='''
    implicit none
-
    private
-   public :: {host_model}_ccpp_physics
+
 '''
 
 subhead = '''
-   subroutine {host_model}_ccpp_physics({api_vars})
+   subroutine {host_model}_ccpp_physics_{stage}({api_vars})
 '''
 
 subfoot = '''
-   end subroutine {host_model}_ccpp_physics
+   end subroutine {host_model}_ccpp_physics_{stage}
 '''
 
 footer = '''
@@ -59,15 +58,20 @@ def write_host_cap(host_model, api, output_dir, logger):
             cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
         # End for
         cap.write(preamble.format(host_model=host_model.name), 1)
-        cap.write('contains', 0)
-        apivars = ", ".join(api.prop_list('local_name'))
-        cap.write(subhead.format(api_vars=apivars, host_model=host_model.name), 1)
-        api.declare_variables(cap, 2)
-        cap.write('', 0)
-        # Now, call the real API with the host model's variable list
-        callstr = 'call ccpp_physics({}, {})'
-        cap.write(callstr.format(apivars, host_model.argument_list()), 2)
-        cap.write(subfoot.format(host_model=host_model.name), 1)
+        for stage in CCPP_STAGES:
+            cap.write("public :: {host_model}_ccpp_physics_{stage}".format(host_model=host_model.name, stage=stage), 1)
+        # End for
+        cap.write('\ncontains\n', 0)
+        apivars = api.suite_var_list()
+        for stage in CCPP_STAGES:
+            cap.write(subhead.format(api_vars=apivars, host_model=host_model.name, stage=stage), 1)
+            api.declare_variables(cap, 2)
+            cap.write('', 0)
+            # Now, call the real API with the host model's variable list
+            callstr = 'call ccpp_physics_{}({}, {})'
+            cap.write(callstr.format(stage, apivars, host_model.argument_list()), 2)
+            cap.write(subfoot.format(host_model=host_model.name, stage=stage), 1)
+        # End for
         cap.write(footer.format(module=module_name), 0)
     # End with
     return cap_filename

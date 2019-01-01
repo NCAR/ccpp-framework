@@ -29,7 +29,7 @@ array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
 # Module (global) variables
 ###############################################################################
 
-CCPP_STAGES = [ 'init', 'run', 'finalize' ]
+CCPP_STAGES = [ 'initalize', 'run', 'finalize' ]
 
 COPYRIGHT = '''!
 ! This work (Common Community Physics Package Framework), identified by
@@ -229,7 +229,7 @@ class Scheme(object):
         # End if
         return scheme_mods, list() # No loop variables for scheme
 
-    def write(self, outfile, phase, indent):
+    def write(self, outfile, indent):
         my_args = ', '.join(self._arglist)
         outfile.write('call {}({})'.format(self._subroutine_name, my_args), indent)
 
@@ -272,11 +272,11 @@ class Subcycle(object):
         # End for
         return scheme_mods, loopvars
 
-    def write(self, outfile, phase, indent):
+    def write(self, outfile, indent):
         outfile.write('do {} = 1, {}'.format(self.name, self.loop), indent)
         # Note that 'scheme' may be a sybcycle or other construct
         for scheme in self._schemes:
-            scheme.write(outfile, phase, indent+1)
+            scheme.write(outfile, indent+1)
         # End for
         outfile.write('end do', 2)
 
@@ -348,7 +348,7 @@ class Group(VarDictionary):
     }
 
     def __init__(self, group_xml, parent, context):
-        self._name = group_xml.get('name')
+        self._name = parent.name + '_' + group_xml.get('name')
         self._parts = list()
         super(Group, self).__init__(self.name, parent_dict=parent)
         for item in group_xml:
@@ -360,6 +360,20 @@ class Group(VarDictionary):
         # End for
         self._loop_var_defs = set()
         self._local_schemes = set()
+
+    def has_item(self, item_name):
+        'Check to see if an item is already in this group'
+        has = False
+        for item in self._parts:
+# XXgoldyXX: v debug only
+            print('XXG: Looking for {} in {}, found {}'.format(item_name, self.name, item.name))
+# XXgoldyXX: ^ debug only
+            if item.name == item_name:
+                has = True
+                break
+            # End if
+        # End for
+        return has
 
     def add_item(self, item):
         'Add an item (e.g., Suite, Subcycle) to this group'
@@ -391,7 +405,6 @@ class Group(VarDictionary):
         # End for
 
     def write(self, outfile, host_arglist, indent):
-        self._subroutines = list()
         local_subs = ''
         # First, write out the subroutine header
         subname = self.name
@@ -406,16 +419,16 @@ class Group(VarDictionary):
         for var in self._host_vars:
             var.write_def(outfile, indent+1)
         # End for
-        outfile.write('', 0)
-        outfile.write('! Local Variables', indent+1)
+        if len(self._loop_var_defs) > 0:
+            outfile.write('\n! Local Variables', indent+1)
         # Write out local variables
         for var in self._loop_var_defs:
-            outfile.write(var, indent)
+            outfile.write(var, indent+1)
         # End for
         outfile.write('', 0)
         # Write the scheme and subcycle calls
         for item in self._parts:
-            item.write(outfile, 'run', indent+1)
+            item.write(outfile, indent+1)
         # End for
         outfile.write(Group.subend.format(subname=subname), indent)
             # # Test and set blocks for initialization status
@@ -459,11 +472,6 @@ class Group(VarDictionary):
         '''Get the subcycles.'''
         return self._subcycles
 
-    @property
-    def subroutines(self):
-        '''Get the subroutine names.'''
-        return self._subroutines
-
     def print_debug(self):
         # DH * TODO: create pretty output and return as string to calling function
         print("{}".format(self._name))
@@ -492,22 +500,13 @@ class Suite(VarDictionary):
 module {module}
 '''
 
-    _preamble_ = '''
-   {module_use}
-
-   implicit none
-
-   private
-   {subroutines}
-'''
-
     _footer_ = '''
 end module {module}
 '''
 
-    _initial_group_ = '<group name="{}_suite_initialize"></group>'
+    _initial_group_ = '<group name="suite_initialize"></group>'
 
-    _final_group_ = '<group name="{}_suite_finalize"></group>'
+    _final_group_ = '<group name="suite_finalize"></group>'
 
     _scheme_template = '<scheme>{}</scheme>'
 
@@ -551,16 +550,16 @@ end module {module}
         # End if
         self._name = suite_xml.get('name')
         self._logger.info("Reading suite definition file for {}".format(self._name))
-        gxml = ET.fromstring(Suite._initial_group_.format(self.name))
+        gxml = ET.fromstring(Suite._initial_group_)
         self._init_group = Group(gxml, self, self._context)
         self._groups.append(self._init_group)
-        gxml = ET.fromstring(Suite._final_group_.format(self.name))
+        gxml = ET.fromstring(Suite._final_group_)
         self._final_group = Group(gxml, self, self._context)
         # Build hierarchical structure as in SDF
         for suite_item in suite_xml:
             item_type = suite_item.tag.lower()
             # Suite item is a group or a suite-wide init or final method
-            if item_type in ['init', 'initialize']:
+            if item_type in ['init', 'initial', 'initialize']:
                 # Parse a suite-wide initialization scheme
                 self._init_group.add_item(Scheme(suite_item, self._context))
             elif item_type in ['final', 'finalize']:
@@ -585,11 +584,6 @@ end module {module}
     def module(self):
         '''Get the list of the module generated for this suite.'''
         return self._module
-
-    @property
-    def subroutines(self):
-        '''Get the list of all subroutines generated for this suite.'''
-        return self._subroutines
 
     @property
     def groups(self):
@@ -630,14 +624,14 @@ end module {module}
                 else:
                     raise CCPPError('Unknown scheme metadata type, "{}"'.format(header.title))
                 # End if
-                if pmatch[0:4] == 'init':
+                if (pmatch[0:4] == 'init') and (not self._init_group.has_item(header.title)):
                     sstr = Suite._scheme_template.format(match.group(1))
                     sxml = ET.fromstring(sstr)
                     scheme = Scheme(sxml, self._context)
                     self._init_group.add_item(scheme)
                 elif pmatch == 'run':
                     pass # We do not need this list for anything
-                elif pmatch[0:5] == 'final':
+                elif (pmatch[0:5] == 'final') and (not self._final_group.has_item(header.title)):
                     sstr = Suite._scheme_template.format(match.group(1))
                     sxml = ET.fromstring(sstr)
                     scheme = Scheme(sxml, self._context)
@@ -661,6 +655,36 @@ end module {module}
             item.analyze(phase, self, scheme_headers, logger)
         # End for
 
+    def is_run_group(self, group):
+        """Method to separate out run-loop groups from special inital
+        and final groups
+        """
+        return (group is not self._init_group) and (group is not self._final_group)
+
+    def max_part_len(self):
+        "What is the longest suite subroutine name?"
+        maxlen = 0
+        for spart in self.groups:
+            if self.is_run_group(spart):
+                maxlen = max(maxlen, len(spart.name))
+            # End if
+        # End for
+        return maxlen
+
+    def part_list(self, maxlen):
+        "Suite return value for the list_suite_parts function"
+        comma = ''
+        retstr = '(/'
+        for spart in self.groups:
+            if self.is_run_group(spart):
+                retstr = "{}{}'{}{}'".format(retstr, comma, spart.name,
+                                             ' '*(maxlen - len(spart.name)))
+                comma = ', '
+            # End if
+        # End for
+        retstr = retstr + '/)'
+        return retstr
+
     def write(self, output_dir):
         """Create caps for all groups in the suite and for the entire suite
         (calling the group caps one after another)"""
@@ -668,28 +692,35 @@ end module {module}
         self._module = 'ccpp_{}_cap'.format(self.name)
         filename = '{module_name}.F90'.format(module_name=self._module)
         # Init
-        self._subroutines = []
         module_use = None
         output_file_name = os.path.join(output_dir, filename)
         with FortranWriter(output_file_name, 'w') as outfile:
             # Write suite header
-            gsub_list = ""
-            for group in self._groups:
-                gsub_list = gsub_list + ('   public :: {}_run\n'.format(group.name))
-            # End for
             outfile.write(COPYRIGHT, 0)
             outfile.write(Suite._header_.format(module=self._module), 0)
-            outfile.write(Suite._preamble_.format(module_use='',
-                                                  subroutines=gsub_list), 1)
-            outfile.write('contains', 0)
+            # Write module 'use' statements here
+            outfile.write('implicit none\nprivate\n\n! Suite interfaces', 1)
+            for group in self._groups:
+                outfile.write('public :: {}'.format(group.name), 1)
+            # End for
+            outfile.write('\n! Private suite variables', 1)
+            for svar in self.keys():
+                self[svar].write_def(outfile, 1, allocatable=True)
+            # End for
+            outfile.write('\ncontains', 0)
             for group in self._groups:
                 group.write(outfile, self._host_arg_list, 1)
+            # End for
+            # Finish off the module
             outfile.write(Suite._footer_.format(module=self._module), 0)
             return output_file_name
 
 ###############################################################################
 
 class API(VarDictionary):
+
+    __suite_fname__ = 'ccpp_physics_suite_list'
+    __part_fname__  = 'ccpp_physics_suite_part_list'
 
     _header_ = '''
 !>
@@ -701,45 +732,42 @@ module {module}
 {module_use}
 
    implicit none
-
    private
-   public :: ccpp_physics
 
-contains
 '''
 
     subhead = '''
-   subroutine ccpp_physics({host_call_list})
+   subroutine ccpp_physics_{phase}({host_call_list})
 '''
     subfoot = '''
-   end subroutine ccpp_physics
+   end subroutine ccpp_physics_{phase}
 '''
 
     _footer_ = '''
 end module {module}
 '''
 
-    api_source = ParseSource("CCPP_API", "MODULE",
+    __api_source__ = ParseSource("CCPP_API", "MODULE",
                              ParseContext(filename="ccpp_suite.F90"))
 
-    required_vars = [Var({'local_name':'suite_name',
-                          'standard_name':'suite_name',
-                          'intent':'in', 'type':'character',
-                          'kind':'len=*', 'units':'',
-                          'dimensions':'()'}, api_source),
-                     Var({'local_name':'suite_part',
-                          'standard_name':'suite_part',
-                          'intent':'in', 'type':'character',
-                          'kind':'len=*', 'units':'',
-                          'dimensions':'()'}, api_source)]
+    _suite_name = Var({'local_name':'suite_name',
+                       'standard_name':'suite_name',
+                       'intent':'in', 'type':'character',
+                       'kind':'len=*', 'units':'',
+                       'dimensions':'()'}, __api_source__)
+
+    _suite_part = Var({'local_name':'suite_part',
+                       'standard_name':'suite_part',
+                       'intent':'in', 'type':'character',
+                       'kind':'len=*', 'units':'',
+                       'dimensions':'()'}, __api_source__)
 
     def __init__(self, sdfs, host_model, scheme_headers, logger):
         self._module        = 'ccpp_physics_api'
         self._host          = host_model
         self._schemes       = scheme_headers
         self._suites        = list()
-        super(API, self).__init__(self.module, variables=API.required_vars,
-                                  parent_dict=host_model, logger=logger)
+        super(API, self).__init__(self.module, parent_dict=host_model, logger=logger)
         self._host_arg_list = host_model.argument_list()
         # Turn the SDF files into Suites
         for sdf in sdfs:
@@ -754,10 +782,10 @@ end module {module}
         '''Get the module name of the API.'''
         return self._module
 
-    @property
-    def subroutines(self):
-        '''Get the subroutines names of the API'''
-        return self._subroutines
+    @classmethod
+    def suite_var_list(cls):
+        return '{}, {}'.format(cls._suite_name.get_prop_value('local_name'),
+                               cls._suite_part.get_prop_value('local_name'))
 
     def write(self, output_dir):
         """Write API for static build"""
@@ -766,8 +794,6 @@ end module {module}
         # End if
         filename = os.path.join(output_dir, self.module + '.F90')
         api_filenames = list()
-        host_call_list = ', '.join(self.prop_list('local_name'))
-        host_call_list = host_call_list + ", " + self._host_arg_list
         module_use = ''
         # Write out the suite files
         for suite in self._suites:
@@ -780,15 +806,97 @@ end module {module}
             api.write(API._header_.format(host_model=self._host.name,
                                           module=self.module,
                                           module_use=module_use), 0)
-            api.write(API.subhead.format(host_call_list=host_call_list), 1)
-            # Declare dummy arguments
-            self.declare_variables(api, 2)
-            for var in self._host.variable_list():
-                var.write_def(api, 2)
-
-            # Now, add in cases for all suite parts
-            callstr = 'call ccpp_physics({})'
-            api.write(API.subfoot, 1)
+            for stage in CCPP_STAGES:
+                api.write("public :: ccpp_physics_{}".format(stage), 1)
+            # End for
+            api.write("public :: {}".format(API.__suite_fname__), 1)
+            api.write("public :: {}".format(API.__part_fname__), 1)
+            api.write("\ncontains\n", 0)
+            # Write the module body
+            for stage in CCPP_STAGES:
+                host_call_list = API._suite_name.get_prop_value('local_name')
+                if stage == 'run':
+                    host_call_list = host_call_list + ', ' + API._suite_part.get_prop_value('local_name')
+                # End if
+                host_call_list = host_call_list + ", " + self._host_arg_list
+                host_call_list = host_call_list + ', '.join(self.prop_list('local_name'))
+                api.write(API.subhead.format(phase=stage, host_call_list=host_call_list), 1)
+                # Declare dummy arguments
+                API._suite_name.write_def(api, 2)
+                if stage == 'run':
+                    API._suite_part.write_def(api, 2)
+                # End if
+                for var in self._host.variable_list():
+                    var.write_def(api, 2)
+                # End for
+                self.declare_variables(api, 2)
+                # Now, add in cases for all suite parts
+                else_str = '\n'
+                for suite in self._suites:
+                    api.write("{}if (trim(suite_name) == '{}') then".format(else_str, suite.name), 2)
+                    if stage == 'run':
+                        el2_str = ''
+                        for spart in suite.groups:
+                            if suite.is_run_group(spart):
+                                api.write("{}if (trim(suite_part) == '{}') then".format(el2_str, spart.name), 3)
+                                api.write("call {}({})".format(spart.name, self._host_arg_list), 4)
+                                el2_str = 'else '
+                            # End if
+                        # End for
+                        api.write("else", 3)
+                        api.write("errmsg = 'No suite part named '//trim(suite_part)", 4)
+                        api.write("errmsg = trim(errmsg)//' found in suite {}'".format(suite.name), 4)
+                        api.write("errflg = 1", 4)
+                        api.write("end if", 3)
+                    else:
+                        api.write("call {}_{}({})".format(suite.name, stage, self._host_arg_list), 3)
+                    # End if
+                    else_str = 'else '
+                # End for
+                api.write("else", 2)
+                api.write("errmsg = 'No suite named '//trim(suite_name)//' found'", 3)
+                api.write("errflg = 1", 3)
+                api.write("end if", 2)
+                api.write(API.subfoot.format(phase=stage), 1)
+            # End for
+            # Write the list_suites function
+            api.write("function {}() result(list)".format(API.__suite_fname__), 1)
+            maxlen = 0
+            for suite in self._suites:
+                maxlen = max(maxlen, len(suite.name))
+            # End for
+            api.write("character(len={}) :: list(:)".format(maxlen), 2)
+            comma = ''
+            retstr = '(/'
+            for suite in self._suites:
+                retstr = "{}{}'{}{}'".format(retstr, comma, suite.name,
+                                             ' '*(maxlen - len(suite.name)))
+                comma = ', '
+            # End for
+            retstr = retstr + '/)'
+            api.write("list = {}".format(retstr), 2)
+            api.write("end function {}".format(API.__suite_fname__), 1)
+            # Write out the suite part list function
+            api.write("\nfunction {}(suite_name) result(list)".format(API.__part_fname__), 1)
+            maxlen = 0
+            for suite in self._suites:
+                maxlen = max(maxlen, suite.max_part_len())
+            # End for
+            api.write("character(len=*),  intent(in) :: suite_name", 2)
+            api.write("character(len={})             :: list(:)".format(maxlen), 2)
+            else_str = ''
+            api.write('', 0)
+            for suite in self._suites:
+                api.write("{}if(trim(suite_name) == '{}') then".format(else_str, suite.name), 2)
+                api.write("return {}".format(suite.part_list(maxlen)), 3)
+                else_str = 'else '
+            # End for
+            api.write("else", 2)
+            api.write("errmsg = 'No suite named '//trim(suite_name)//' found'", 3)
+            api.write("errflg = 1", 3)
+            api.write("end if", 2)
+            api.write("end function {}".format(API.__part_fname__), 1)
+            # Finish off the module
             api.write(API._footer_.format(module=self.module), 0)
         # End with
         api_filenames.append(filename)

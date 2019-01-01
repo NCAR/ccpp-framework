@@ -101,8 +101,12 @@ class FortranWriter(object):
                 if best >= self._line_fill:
                     best = self.find_best_break(commas)
                 # End if
-                self._file.write("{}{}&\n".format(outstr[0:best+1],
-                                                  (self._line_fill-best)*' '))
+                if len(outstr) > best:
+                    fill = "{}&".format((self._line_fill-best)*' ')
+                else:
+                    fill = ''
+                # End if
+                self._file.write("{}{}\n".format(outstr[0:best+1], fill))
                 statement = outstr[best+1:]
                 self.write(statement, indent_level, continue_line=True)
             else:

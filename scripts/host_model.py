@@ -224,9 +224,12 @@ class HostModel(VarDictionary):
                 if child.tag == 'constant':
                     prop_dict['constant'] = '.true.'
                 # End if
+                if child.tag == 'variable':
+                    prop_dict['intent'] = 'inout'
+                # End if
                 newvar = Var(prop_dict, ParseSource(vname, 'REGISTRY', context))
                 variables.add_variable(newvar)
-            # Else need to read ddt_defs? <== XXgoldyXX?
+            # Else
             # End if
         # End for
         # Now that we have all the info from this XML, create a HostModel

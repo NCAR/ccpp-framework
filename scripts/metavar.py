@@ -513,7 +513,7 @@ class Var(object):
     def source(self):
         return self._source
 
-    def write_def(self, outfile, indent):
+    def write_def(self, outfile, indent, allocatable=False):
         '''Write the definition line for the variable.'''
         vtype = self.get_prop_value('type')
         kind = self.get_prop_value('kind')
@@ -521,30 +521,46 @@ class Var(object):
         dimval = self.get_prop_value('dimensions')
         dims = Var.get_prop('dimensions').valid_value(dimval)
         if (dims is not None) and (len(dims) > 0):
-            dimstr = '({})'.format(', '.join(dims))
+            if allocatable:
+                dimstr = '(:' + ',:'*(len(dims) - 1) + ')'
+            else:
+                dimstr = '({})'.format(', '.join(dims))
+            # End if
         else:
             dimstr = ''
         # End if
         constant = self.get_prop_value('constant')
         intent = self.get_prop_value('intent')
-        if constant is not None:
-            intent_str = ', intent(in)'.format(intent)
+        if constant and allocatable:
+            raise CCPPError('Cannot create allocatable variable from constant, {}'.format(name))
+        # End if
+        if constant:
+            intent_str = 'intent(in)   '
+        elif allocatable:
+            if len(dimstr) > 0:
+                intent_str = 'allocatable  '
+            else:
+                intent_str = ' '*13
+            # End if
         elif intent is not None:
-            intent_str = ', intent({})'.format(intent)
+            intent_str = 'intent({}){}'.format(intent, ' '*(5 - len(intent)))
         else:
-            intent_str = ''
+            intent_str = ' '*13
         # End if
         if registered_fortran_ddt_name(vtype):
-            str = "type({kind}){intent}     :: {name}{dims}"
+            str = "type({kind}){cspc}{intent} :: {name}{dims}"
+            cspc = ',' + ' '*(13 - len(kind))
         else:
             if (kind is not None) and (len(kind) > 0):
-                str = "{type}({kind}){intent} :: {name}{dims}"
+                str = "{type}({kind}){cspc}{intent} :: {name}{dims}"
+                cspc = ',' + ' '*(17 - len(vtype) - len(kind))
             else:
-                str = "{type}{intent} :: {name}{dims}"
+                str = "{type}{cspc}{intent} :: {name}{dims}"
+                cspc = ',' + ' '*(19 - len(vtype))
             # End if
         # End if
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
-                                 name=name, dims=dimstr), indent)
+                                 name=name, dims=dimstr, cspc=cspc), indent)
 
     def find_dimension_vars(self, hdim, scope):
         hsdims = list()
