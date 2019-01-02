@@ -166,6 +166,7 @@ if __name__ == "__main__":
     # Make sure we can write a file
     import os
     import os.path
+    import six
     name = 'foo'
     while os.path.exists(name+'.F90'):
         name = name + 'xo'

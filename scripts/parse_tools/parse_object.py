@@ -4,8 +4,14 @@
 # Python library imports
 import re
 # CCPP framework imports
-from parse_tools    import ParseContext, CCPPError
-from parse_checkers import check_fortran_ref
+import six
+if six.PY3:
+    from parse_tools.parse_tools    import ParseContext, CCPPError
+    from parse_tools.parse_checkers import check_fortran_ref
+else:
+    from parse_tools    import ParseContext, CCPPError
+    from parse_checkers import check_fortran_ref
+# End if
 
 ########################################################################
 

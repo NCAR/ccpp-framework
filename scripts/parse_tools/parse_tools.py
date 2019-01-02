@@ -33,7 +33,7 @@ class ParseSyntaxError(CCPPError):
 
 ########################################################################
 
-class ParseInternalError(StandardError):
+class ParseInternalError(Exception):
     """Exception for internal parser use errors
     Note that this error will not be trapped by programs such as ccpp_capgen
     """

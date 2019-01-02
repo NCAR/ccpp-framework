@@ -365,9 +365,6 @@ class Group(VarDictionary):
         'Check to see if an item is already in this group'
         has = False
         for item in self._parts:
-# XXgoldyXX: v debug only
-            print('XXG: Looking for {} in {}, found {}'.format(item_name, self.name, item.name))
-# XXgoldyXX: ^ debug only
             if item.name == item_name:
                 has = True
                 break
