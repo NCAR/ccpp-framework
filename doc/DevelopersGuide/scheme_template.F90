@@ -116,7 +116,7 @@
          ! add your code here
 
          ! in case of errors, set errflg to a value != 0,
-         ! assign a meaningfull message to errmsg and return
+         ! assign a meaningful message to errmsg and return
 
          return
 
