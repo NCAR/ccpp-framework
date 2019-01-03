@@ -562,11 +562,17 @@ class Var(object):
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
                                  name=name, dims=dimstr, cspc=cspc), indent)
 
-    def write_allocate(self, outfile, indent):
+    def allocate_statement(self):
         name = self.get_prop_value('local_name')
         alloc_list = list()
-        dimstr = '(' + ','.join(alloc_list) + ')'
-        outfile.write('allocate({}({}))'.format(name, dimstr), indent)
+        dimval = self.get_prop_value('dimensions')
+        dims = Var.get_prop('dimensions').valid_value(dimval)
+        if (dims is not None) and (len(dims) > 0):
+            dimstr = '({})'.format(', '.join(dims))
+        else:
+            dimstr = ''
+        # End if
+        return 'allocate({}{})'.format(name, dimstr)
 
     def write_deallocate(self, outfile, indent):
         name = self.get_prop_value('local_name')

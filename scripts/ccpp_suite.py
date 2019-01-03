@@ -423,7 +423,10 @@ class Group(VarDictionary):
         # Allocate suite vars
         if allocate:
             for svar in suite_vars.variable_list():
-                svar.write_allocate(outfile, indent+1)
+                alloc_stmt = svar.allocate_statement()
+                # alloc_stmt = do extent => begin/end or dim & block subst
+                outfile.write(alloc_stmt, indent+1)
+            # End for
         # End if
         # Write the scheme and subcycle calls
         for item in self._parts:
@@ -433,6 +436,7 @@ class Group(VarDictionary):
         if deallocate:
             for svar in suite_vars.variable_list():
                 svar.write_deallocate(outfile, indent+1)
+            # End for
         # End if
         outfile.write(Group.subend.format(subname=subname), indent)
             # # Test and set blocks for initialization status
