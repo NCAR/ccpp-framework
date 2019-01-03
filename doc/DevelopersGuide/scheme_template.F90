@@ -86,10 +86,10 @@
       end subroutine scheme_template_finalize
 
 !> \section arg_table_scheme_template_run Argument Table
-!! | local_name | standard_name | long_name          | units | rank | type      | kind  | intent | optional |
-!! |------------|---------------|--------------------|-------|------|-----------|-------|--------|----------|
-!! | errmsg     | error_message | CCPP error message | none  |    0 | character | len=* | out    | F        |
-!! | errflg     | error_flag    | CCPP error flag    | flag  |    0 | integer   |       | out    | F        |
+!! | local_name | standard_name      | long_name                                | units | rank | type      | kind  | intent | optional |
+!! |------------|--------------------|------------------------------------------|-------|------|-----------|-------|--------|----------|
+!! | errmsg     | ccpp_error_message | error message for error handling in CCPP | none  |    0 | character | len=* | out    | F        |
+!! | errflg     | ccpp_error_flag    | error flag for error handling in CCPP    | flag  |    0 | integer   |       | out    | F        |
 !!
       subroutine scheme_template_run (errmsg, errflg)
 
