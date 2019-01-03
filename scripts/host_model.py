@@ -140,7 +140,9 @@ class HostModel(VarDictionary):
         # End if
 
     def find_variable(self, standard_name, loop_subst=False):
-        "Return the host model variable matching <standard_name> or None"
+        """Return the host model variable matching <standard_name> or None
+        If loop_subst is True, substitute a begin:end range for an extent.
+        """
         my_var = super(HostModel, self).find_variable(standard_name)
         if (my_var is None) and (standard_name in self._ddt_fields):
             # Found variable in a DDT element

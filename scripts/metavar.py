@@ -562,6 +562,16 @@ class Var(object):
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
                                  name=name, dims=dimstr, cspc=cspc), indent)
 
+    def write_allocate(self, outfile, indent):
+        name = self.get_prop_value('local_name')
+        alloc_list = list()
+        dimstr = '(' + ','.join(alloc_list) + ')'
+        outfile.write('allocate({}({}))'.format(name, dimstr), indent)
+
+    def write_deallocate(self, outfile, indent):
+        name = self.get_prop_value('local_name')
+        outfile.write('deallocate({})'.format(name), indent)
+
     def find_dimension_vars(self, hdim, scope):
         hsdims = list()
         for hsdim in hdim.split(':'):
@@ -748,7 +758,7 @@ class VarDictionary(OrderedDict):
         self[standard_name] = newvar
 
     def find_variable(self, standard_name, any_scope=True, loop_subst=False):
-        """Return the host model variable matching <standard_name> or None
+        """Return the variable matching <standard_name> or None
         If any_scope is True, search parent scopes if not in current scope.
         VarDictionary is a base class, loop_subst does nothing at this level.
         """

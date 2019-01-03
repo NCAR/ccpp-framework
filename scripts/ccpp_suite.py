@@ -191,38 +191,34 @@ class Scheme(object):
             for svar in my_args:
                 stdname = svar.get_prop_value('standard_name')
                 intent = svar.get_prop_value('intent').lower()
+                hvar = parent.find_variable(stdname, loop_subst=True)
                 if (intent == 'in') or (intent == 'inout'):
-                    hvar = parent.find_variable(stdname, loop_subst=True)
-                    if hvar is None:
-                        # No host variable, see if we have a suite variable
-                        if stdname in suite_vars.keys():
-                            hvar = suite_vars[stdname]
-                        # End if
-                    # End if
                     if hvar is None:
                         raise CCPPError("No matching host or suite variable for {} input, {}".format(self._subroutine_name, stdname))
-                    elif isinstance(hvar, list):
-                        args = list()
-                        alen = len(hvar)
-                        index = 0
-                        for var in hvar:
-                            ddt = index < (alen - 1)
-                            argstr = self.host_arg_str(var, host_model, my_header, ddt)
-                            index = index + 1
-                            args.append(argstr)
-                        # End for
-                        host_arglist.append('%'.join(args))
-                    elif isinstance(hvar, tuple):
-                        for var in hvar:
-                            argstr = self.host_arg_str(var, host_model, my_header, False)
-                            host_arglist.append(argstr)
-                        # End for
-                    else:
-                        argstr = self.host_arg_str(hvar, host_model, my_header, False)
+                elif hvar is None:
+                    # Create suite variable for intent(out)
+                    suite_vars.add_variable(svar, exists_ok=False)
+                    hvar = suite_vars.find_variable(stdname)
+                # End if (no else needed)
+                if isinstance(hvar, list):
+                    args = list()
+                    alen = len(hvar)
+                    index = 0
+                    for var in hvar:
+                        ddt = index < (alen - 1)
+                        argstr = self.host_arg_str(var, host_model, my_header, ddt)
+                        index = index + 1
+                        args.append(argstr)
+                    # End for
+                    host_arglist.append('%'.join(args))
+                elif isinstance(hvar, tuple):
+                    for var in hvar:
+                        argstr = self.host_arg_str(var, host_model, my_header, False)
                         host_arglist.append(argstr)
-                    # End if
+                    # End for
                 else:
-                    suite_vars.add_variable(svar, exists_ok=True)
+                    argstr = self.host_arg_str(hvar, host_model, my_header, False)
+                    host_arglist.append(argstr)
                 # End if
             # End for
             self._arglist = host_arglist
@@ -386,7 +382,7 @@ class Group(VarDictionary):
 
     def analyze(self, phase, suite_vars, scheme_headers, logger):
         # We need a copy of the host model variables for dummy args
-        self._host_vars = suite_vars.variable_list(recursive=True)
+        self._host_vars = suite_vars.parent.variable_list(recursive=True)
         for item in self._parts:
             # Items can be schemes, subcycles or other objects
             # All have the same interface and return a set of module use
@@ -401,7 +397,8 @@ class Group(VarDictionary):
             # End for
         # End for
 
-    def write(self, outfile, host_arglist, indent):
+    def write(self, outfile, host_arglist, indent,
+              suite_vars=None, allocate=False, deallocate=False):
         local_subs = ''
         # First, write out the subroutine header
         subname = self.name
@@ -423,10 +420,20 @@ class Group(VarDictionary):
             outfile.write(var, indent+1)
         # End for
         outfile.write('', 0)
+        # Allocate suite vars
+        if allocate:
+            for svar in suite_vars.variable_list():
+                svar.write_allocate(outfile, indent+1)
+        # End if
         # Write the scheme and subcycle calls
         for item in self._parts:
             item.write(outfile, indent+1)
         # End for
+        # Deallocate suite vars
+        if deallocate:
+            for svar in suite_vars.variable_list():
+                svar.write_deallocate(outfile, indent+1)
+        # End if
         outfile.write(Group.subend.format(subname=subname), indent)
             # # Test and set blocks for initialization status
             # initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
@@ -706,7 +713,15 @@ end module {module}
             # End for
             outfile.write('\ncontains', 0)
             for group in self._groups:
-                group.write(outfile, self._host_arg_list, 1)
+                if group is self._init_group:
+                    group.write(outfile, self._host_arg_list, 1,
+                                suite_vars=self, allocate=True)
+                elif group is self._final_group:
+                    group.write(outfile, self._host_arg_list, 1,
+                                suite_vars=self, deallocate=True)
+                else:
+                    group.write(outfile, self._host_arg_list, 1)
+                # End if
             # End for
             # Finish off the module
             outfile.write(Suite._footer_.format(module=self._module), 0)
