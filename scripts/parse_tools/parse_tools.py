@@ -12,22 +12,32 @@ def context_string(context=None, with_comma=True):
 ###############################################################################
     """Return a context string if <context> is not None otherwise, return
     an empty string.
-    if with_comma is True, prepend string with ', at '.
+    if with_comma is True, prepend string with ', at ' or ', in '.
     >>> context_string()
     ''
     >>> context_string(with_comma=True)
     ''
-    >>> context_string(context= ParseContext(32, "source.F90"), with_comma=False)
+    >>> context_string(context= ParseContext(linenum=32, filename="source.F90"), with_comma=False)
     'source.F90:33'
-    >>> context_string(context= ParseContext(32, "source.F90"), with_comma=True)
+    >>> context_string(context= ParseContext(linenum=32, filename="source.F90"), with_comma=True)
     ', at source.F90:33'
-    >>> context_string(context= ParseContext(32, "source.F90"))
+    >>> context_string(context= ParseContext(linenum=32, filename="source.F90"))
     ', at source.F90:33'
+    >>> context_string(context= ParseContext(filename="source.F90"), with_comma=False)
+    'source.F90'
+    >>> context_string(context= ParseContext(filename="source.F90"), with_comma=True)
+    ', in source.F90'
+    >>> context_string(context= ParseContext(filename="source.F90"))
+    ', in source.F90'
     """
     if context is None:
         cstr = ""
     elif with_comma:
-        cstr = ", at {}".format(context)
+        if context.line_num < 0:
+            cstr = ", in {}".format(context)
+        else:
+            cstr = ", at {}".format(context)
+        # End if
     else:
         cstr = "{}".format(context)
     # End if
@@ -111,8 +121,8 @@ class ParseContext(object):
     >>> "{}".format(ParseContext(32, "source.F90"))
     'source.F90:33'
     >>> "{}".format(ParseContext())
-    '<standard input>:1'
-    >>> ParseContext(32, "source.F90").increment(13)
+    '<standard input>'
+    >>> ParseContext(linenum=32, filename="source.F90").increment(13)
 
     """
 
@@ -121,8 +131,8 @@ class ParseContext(object):
             # If context is passed, ignore linenum
             linenum = context.line_num
         elif linenum is None:
-            linenum = 0
-        elif type(linenum) != int:
+            linenum = -1
+        elif not isinstance(linenum, int):
             raise CCPPError('ParseContext linenum must be an int')
         # End if
         if context is not None:
@@ -130,7 +140,7 @@ class ParseContext(object):
             filename = context.filename
         elif filename is None:
             filename = "<standard input>"
-        elif type(filename) != str:
+        elif not isinstance(filename, str):
             raise CCPPError('ParseContext filename must be a string')
         # End if
         self._linenum = linenum
@@ -159,10 +169,16 @@ class ParseContext(object):
         """Return a string representing the location in a file
         Note that self._linenum is zero based.
         """
-        return "{}:{}".format(self._filename, self._linenum+1)
+        if self._linenum >= 0:
+            return "{}:{}".format(self._filename, self._linenum+1)
+        else:
+            return "{}".format(self._filename)
 
     def increment(self, inc=1):
         "Increment the location within a file"
+        if self._linenum < 0:
+            self._linenum = 0
+        # End if
         self._linenum = self._linenum + inc
 
     def enter_region(self, region_type, region_name=None, nested_ok=True):
