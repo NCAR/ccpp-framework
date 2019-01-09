@@ -13,7 +13,7 @@ import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
 from metavar       import Var, VarDictionary
-from parse_tools   import ParseContext, ParseSource
+from parse_tools   import ParseContext, ParseSource, context_string
 from parse_tools   import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools   import FORTRAN_ID
 from parse_tools   import read_xml_file, validate_xml_file, find_schema_version
@@ -361,6 +361,8 @@ class Group(VarDictionary):
                 self.add_item(Scheme(item, context))
             # End if
         # End for
+        # Grab a frozen copy of the context
+        self._context = ParseContext(context=context)
         self._loop_var_defs = set()
         self._local_schemes = set()
 
@@ -430,9 +432,22 @@ class Group(VarDictionary):
         # Allocate suite vars
         if allocate:
             for svar in suite_vars.variable_list():
-                alloc_stmt = svar.allocate_statement()
-                # alloc_stmt = do extent => begin/end or dim & block subst
-                outfile.write(alloc_stmt, indent+1)
+                dims = svar.get_dimensions()
+                rdims = list()
+                for dim in dims:
+                    dvar = self.find_dimension_subst(dim, context=self._context)
+                    if dvar is None:
+                        dvar = self.find_variable(dim, any_scope=True)
+                    # End if
+                    if dvar is None:
+                        raise CCPPError("Dimension variable, {} not found{}".format(dim, context_string(self._context)))
+                    else:
+                        rdims.append(dvar)
+                    # End if
+                # End for
+                alloc_str = ', '.join([x.get_prop_value('local_name') for x in rdims])
+                lname = svar.get_prop_value('local_name')
+                outfile.write("allocate({}({}))".format(lname, alloc_str), indent+1)
             # End for
         # End if
         # Write the scheme and subcycle calls
@@ -442,7 +457,8 @@ class Group(VarDictionary):
         # Deallocate suite vars
         if deallocate:
             for svar in suite_vars.variable_list():
-                svar.write_deallocate(outfile, indent+1)
+                lname = svar.get_prop_value('local_name')
+                outfile.write('deallocate({})'.format(lname), indent+1)
             # End for
         # End if
         outfile.write(Group.subend.format(subname=subname), indent)

@@ -506,13 +506,18 @@ class Var(object):
     def source(self):
         return self._source
 
+    def get_dimensions(self):
+        "Return the variable's dimension string"
+        dimval = self.get_prop_value('dimensions')
+        dims = Var.get_prop('dimensions').valid_value(dimval)
+        return dims
+
     def write_def(self, outfile, indent, allocatable=False):
         '''Write the definition line for the variable.'''
         vtype = self.get_prop_value('type')
         kind = self.get_prop_value('kind')
         name = self.get_prop_value('local_name')
-        dimval = self.get_prop_value('dimensions')
-        dims = Var.get_prop('dimensions').valid_value(dimval)
+        dims = self.get_dimensions()
         if (dims is not None) and (len(dims) > 0):
             if allocatable:
                 dimstr = '(:' + ',:'*(len(dims) - 1) + ')'
@@ -555,55 +560,13 @@ class Var(object):
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
                                  name=name, dims=dimstr, cspc=cspc), indent)
 
-    def allocate_statement(self):
-        name = self.get_prop_value('local_name')
-        alloc_list = list()
-        dimval = self.get_prop_value('dimensions')
-        dims = Var.get_prop('dimensions').valid_value(dimval)
-        if (dims is not None) and (len(dims) > 0):
-            dimstr = '({})'.format(', '.join(dims))
-        else:
-            dimstr = ''
-        # End if
-        return 'allocate({}{})'.format(name, dimstr)
-
-    def write_deallocate(self, outfile, indent):
-        name = self.get_prop_value('local_name')
-        outfile.write('deallocate({})'.format(name), indent)
-
-    def find_dimension_vars(self, hdim, scope):
-        hsdims = list()
-        for hsdim in hdim.split(':'):
-            hsdim_var = host_model.find_variable(hsdim, loop_subst=True)
-            if hsdim_var is None:
-                raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
-            elif isinstance(hsdim_var, tuple):
-                hsdims.append(hsdim_var[0].get_prop_value('local_name'))
-                hsdims.append(hsdim_var[1].get_prop_value('local_name'))
-            else:
-                hsdims.append(hsdim_var.get_prop_value('local_name'))
-            # End if
-        # End for
-        loop_var = loop_re.match(hdim)
-        if (dimension_re.match(hdim) is not None) and (len(hsdims) == 1):
-            # We need to specify the whole range
-            hsdims = ['1'] + hsdims
-        elif (loop_var is not None) and (len(hsdims) == 1):
-            # We may to specify the whole range
-            if loop_var.group(2).lower() == 'extent':
-                hsdims = ['1'] + hsdims
-            # End if
-        # End if
-        return ':'.join(hsdims)
-
     def host_arg_str(self, hvar, host_model, header, ddt):
         '''Create the proper statement of a piece of a host-model variable.
         If ddt is True, we can only have a single element selected
         '''
         hstr = hvar.get_prop_value('local_name')
-        hdimval = hvar.get_prop_value('dimensions')
         # Turn the dimensions string into a proper list and take the correct one
-        hdims = Var.get_prop('dimensions').valid_value(hdimval)
+        hdims = hvar.get_dimensions()
         dimsep = ''
         # Does the local name have any extra indices?
         match = array_ref_re.match(hstr.strip())
@@ -684,7 +647,9 @@ class VarDictionary(OrderedDict):
     """
 
     # Regular expression matching <name>_extent, <name>_begin, or <name>_end
-    ebe_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
+    __ebe_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
+    # Regular expression matching <name>_loop_extent
+    __extent_re = re.compile(FORTRAN_ID+r"((?i)_loop_extent)$")
 
     # Variable representing the constant integer, 1
     var_one = Var({'local_name' : 'ccpp_one',
@@ -826,8 +791,9 @@ class VarDictionary(OrderedDict):
         in the dictionary.
         If <standard_name>_extent *is* present, return that variable as a
         range, (var_one, <standard_name>_extent)
+        In other cases, return None
         """
-        loop_var = VarDictionary.ebe_re.match(standard_name)
+        loop_var = VarDictionary.__ebe_re.match(standard_name)
         dict_var = self.find_variable(standard_name,
                                       any_scope=any_scope, loop_subst=False)
         logger_str = None
@@ -870,7 +836,28 @@ class VarDictionary(OrderedDict):
             my_var = None
         # End if
         if logger_str is not None:
-            self._logger.info(logger_str)
+            self._logger.debug(logger_str)
+        # End if
+        return my_var
+
+    def find_dimension_subst(self, standard_name, any_scope=True, context=None):
+        """If <standard_name> is of the form <standard_name>_loop_extent
+        attempt to find a variable of the form <standard_name>_dimension
+        and return that. If such a variable is not found, raise an exception.
+        If <standard_name> is not of the form <standard_name>_extent, return
+        None.
+        """
+        loop_var = VarDictionary.__extent_re.match(standard_name)
+        logger_str = None
+        if loop_var is not None:
+            # Let us see if we can replace the variable
+            dim_name = loop_var.group(1) + '_dimension'
+            my_var = self.find_variable(dim_name, any_scope=any_scope)
+            if my_var is None:
+                raise CCPPError("Dimension variable, {} not found{}".format(dim_name, context_string(context)))
+            # End if
+        else:
+            my_var = None
         # End if
         return my_var
 
