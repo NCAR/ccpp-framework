@@ -79,8 +79,15 @@ class Scheme(object):
             hsdims = ['1'] + hsdims
         elif (loop_var is not None) and (len(hsdims) == 1):
             # We may to specify the whole range
-            if loop_var.group(2).lower() == 'extent':
-                hsdims = ['1'] + hsdims
+            lv_type = loop_var.group(2).lower()
+            if lv_type == 'extent':
+                hsdims = ['1'] + hsdims # This should print as '1:<name>_extent'
+            elif lv_type == 'beg':
+                hsdims.append('') # This should print as '<name>_beg:'
+            elif lv_type == 'end':
+                hsdims = [''] + hsdims # This should print as ':<name>_end'
+            else:
+                raise ParseInternalError("Unknown loop variable type, '{}' in '{}'".format(lv_type, hdim))
             # End if
         # End if
         return ':'.join(hsdims)

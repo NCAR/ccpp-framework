@@ -127,15 +127,6 @@
     <standard_name name="constituent_mixing_ratio">
       <type kind="kind_phys" units="kg/kg moist or dry air depending on type">real</type>
     </standard_name>
-    <standard_name name="water_vapor_specific_humidity">
-      <type kind="kind_phys" units="kg kg-1">real</type>
-    </standard_name>
-    <standard_name name="cloud_liquid_water_mixing_ratio">
-      <type kind="kind_phys" units="kg kg-1">real</type>
-    </standard_name>
-    <standard_name name="rain_water_mixing_ratio">
-      <type kind="kind_phys" units="kg kg-1">real</type>
-    </standard_name>
     <standard_name name="air_pressure_at_interface">
       <type kind="kind_phys" units="Pa">real</type>
     </standard_name>
@@ -201,6 +192,57 @@
     <standard_name name="potential_temperature"
                    long_name="potential temperature">
       <type kind="kind_phys" units="K">real</type>
+    </standard_name>
+  </section>
+  <section name="constituents">
+    <standard_name name="water_vapor_specific_humidity">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="cloud_liquid_water_mixing_ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="rain_water_mixing_ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_ch4"
+                   long_name="CH4 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_co"
+                   long_name="CO volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_co2"
+                   long_name="CO2 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_ccl4"
+                   long_name="CCL4 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_cfc11"
+                   long_name="CFC11 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_cfc12"
+                   long_name="CFC12 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_cfc113"
+                   long_name="CFC113 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_cfc22"
+                   long_name="CFC22 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_o2"
+                   long_name="O2 volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
+    </standard_name>
+    <standard_name name="volume_mixing_ratio_n2o"
+                   long_name="N2O volume mixing ratio">
+      <type kind="kind_phys" units="kg kg-1">real</type>
     </standard_name>
   </section>
 </standard_names>

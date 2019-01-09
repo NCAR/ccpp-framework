@@ -22,8 +22,6 @@ from parse_tools import check_fortran_intrinsic, FORTRAN_ID
 class HostModel(VarDictionary):
     "Class to hold the data from a host model"
 
-    loop_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
-
     def __init__(self, name, ddt_defs, var_locations, variables, logger=None):
         self._name = name
         self._ddt_defs = ddt_defs
@@ -139,7 +137,7 @@ class HostModel(VarDictionary):
             return None
         # End if
 
-    def find_variable(self, standard_name, loop_subst=False):
+    def find_variable(self, standard_name, any_scope=False, loop_subst=False):
         """Return the host model variable matching <standard_name> or None
         If loop_subst is True, substitute a begin:end range for an extent.
         """
@@ -149,20 +147,7 @@ class HostModel(VarDictionary):
             my_var = self._ddt_fields[standard_name]
         # End if
         if (my_var is None) and loop_subst:
-            loop_var = HostModel.loop_re.match(standard_name)
-            if loop_var is not None:
-                # Let us see if we can fix a loop variable
-                # First up, we have an extent but host has begin and end
-                if loop_var.group(2).lower() == 'extent':
-                    beg_name = loop_var.group(1) + '_begin'
-                    end_name = loop_var.group(1) + '_end'
-                    beg_var = self.find_variable(beg_name)
-                    end_var = self.find_variable(end_name)
-                    if (beg_var is not None) and (end_var is not None):
-                        my_var = (beg_var, end_var)
-                    # End if
-                # End if
-            # End if
+            my_var = self.find_loop_subst(standard_name)
         # End if
         return my_var
 

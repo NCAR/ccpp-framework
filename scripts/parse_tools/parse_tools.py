@@ -8,6 +8,32 @@ import copy
 # CCPP framework imports
 
 ###############################################################################
+def context_string(context=None, with_comma=True):
+###############################################################################
+    """Return a context string if <context> is not None otherwise, return
+    an empty string.
+    if with_comma is True, prepend string with ', at '.
+    >>> context_string()
+    ''
+    >>> context_string(with_comma=True)
+    ''
+    >>> context_string(context= ParseContext(32, "source.F90"), with_comma=False)
+    'source.F90:33'
+    >>> context_string(context= ParseContext(32, "source.F90"), with_comma=True)
+    ', at source.F90:33'
+    >>> context_string(context= ParseContext(32, "source.F90"))
+    ', at source.F90:33'
+    """
+    if context is None:
+        cstr = ""
+    elif with_comma:
+        cstr = ", at {}".format(context)
+    else:
+        cstr = "{}".format(context)
+    # End if
+    return cstr
+
+###############################################################################
 class CCPPError(ValueError):
     "Class so programs can log user errors without backtrace"
     def __init__(self, message):
@@ -18,16 +44,11 @@ class CCPPError(ValueError):
 class ParseSyntaxError(CCPPError):
     """Exception that is aware of parsing context"""
     def __init__(self, token_type, token=None, context=None):
-        if context is None:
-            if token is None:
-                message = "{}".format(token_type)
-            else:
-                message = "Invalid {}, '{}'".format(token_type, token)
+        cstr = context_string(context)
+        if token is None:
+            message = "{}{}".format(token_type, cstr)
         else:
-            if token is None:
-                message = "{}, at {}".format(token_type, context)
-            else:
-                message = "Invalid {}, '{}', at {}".format(token_type, token, context)
+            message = "Invalid {}, '{}'{}".format(token_type, token, cstr)
         # End if
         super(ParseSyntaxError, self).__init__(message)
 
@@ -38,11 +59,7 @@ class ParseInternalError(Exception):
     Note that this error will not be trapped by programs such as ccpp_capgen
     """
     def __init__(self, errmsg, context=None):
-        if context is None:
-            message = errmsg
-        else:
-            message = "{}, at {}".format(errmsg, context)
-        # End if
+        message = "{}{}".format(errmsg, context_string(context))
         super(ParseInternalError, self).__init__(message)
 
 ########################################################################
@@ -50,11 +67,7 @@ class ParseInternalError(Exception):
 class ParseContextError(CCPPError):
     """Exception for errors using ParseContext"""
     def __init__(self, errmsg, context):
-        if context is None:
-            message = "{}".format(errmsg)
-        else:
-            message = "{}, at {}".format(errmsg, context)
-        # End if
+        message = "{}{}".format(errmsg, context_string(context))
         super(ParseContextError, self).__init__(message)
 
 ########################################################################

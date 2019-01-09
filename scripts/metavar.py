@@ -9,13 +9,14 @@ import re
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 # CCPP framework imports
-from parse_tools import check_fortran_ref, check_fortran_type
-from parse_tools import FORTRAN_DP_RE
+from parse_tools import check_fortran_ref, check_fortran_type, context_string
+from parse_tools import FORTRAN_DP_RE, FORTRAN_ID
 from parse_tools import registered_fortran_ddt_name
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import ParseContext, ParseSource
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 
+###############################################################################
 real_subst_re = re.compile(r"(.*\d)p(\d.*)")
 list_re = re.compile(r"[(]([^)]*)[)]\s*$")
 
@@ -56,11 +57,7 @@ def standard_name_to_long_name(prop_dict, context=None):
         else:
             lname = ''
         # End if
-        if context is not None:
-            ctxt = ' at {}'.format(context)
-        else:
-            ctxt = ''
-        # End if
+        ctxt = context_string(context)
         raise CCPPError('No standard name to convert{} to long name{}'.format(lname, ctxt))
     # End if
     return long_name
@@ -112,11 +109,7 @@ def default_kind_val(prop_dict, context=None):
         else:
             lname = ''
         # End if
-        if context is not None:
-            ctxt = ' at {}'.format(context)
-        else:
-            ctxt = ''
-        # End if
+        ctxt = context_string(context)
         raise CCPPError('No type to find default kind for {}{}'.format(lname, ctxt))
     # End if
     return kind
@@ -217,7 +210,7 @@ class VariableProperty(object):
         elif self._default is not None:
             return self._default
         else:
-            ctxt = ' at {}'.format(context) if context is not None else ''
+            ctxt = context_string(context)
             raise CCPPError('No default for variable property {}{}'.format(self.name, ctxt))
         # End if
 
@@ -690,6 +683,15 @@ class VarDictionary(OrderedDict):
     ParseSyntaxError: Invalid Duplicate standard name, 'hi_mom', at <standard input>:
     """
 
+    # Regular expression matching <name>_extent, <name>_begin, or <name>_end
+    ebe_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
+
+    # Variable representing the constant integer, 1
+    var_one = Var({'local_name' : 'ccpp_one',
+                   'standard_name' : 'ccpp_constant_one',
+                   'units' : '1', 'dimensions' : '()', 'type' : 'integer'},
+                  ParseSource('VarDictionary', 'REGISTRY', ParseContext()))
+
     def __init__(self, name, variables=None, parent_dict=None, logger=None):
         "Unlike dict, VarDictionary only takes a Var or Var list"
         super(VarDictionary, self).__init__()
@@ -775,6 +777,9 @@ class VarDictionary(OrderedDict):
         else:
             var = None
         # End if
+        if (var is None) and loop_subst:
+            var = self.find_loop_subst(standard_name, any_scope=any_scope)
+        # End if
         return var
 
     def add_sub_scope(self, sub_dict):
@@ -813,6 +818,61 @@ class VarDictionary(OrderedDict):
             comma = ""
         # End if
         return "VarDictionary({}{}{}".format(self.name, comma, srepr[vstart:])
+
+    def find_loop_subst(self, standard_name, any_scope=True, context=None):
+        """If <standard_name> is of the form <standard_name>_extent and that
+        variable is not in the dictionary, substitute a tuple of variables,
+        (<standard_name>_begin, <standard_name>_end), if those variables are
+        in the dictionary.
+        If <standard_name>_extent *is* present, return that variable as a
+        range, (var_one, <standard_name>_extent)
+        """
+        loop_var = VarDictionary.ebe_re.match(standard_name)
+        dict_var = self.find_variable(standard_name,
+                                      any_scope=any_scope, loop_subst=False)
+        logger_str = None
+        if loop_var is not None:
+            # Let us see if we can fix a loop variable
+            # First up, we have an extent but host has begin and end
+            if loop_var.group(2).lower() == 'extent':
+                if dict_var is not None:
+                    my_var = (VarDictionary.var_one, dict_var)
+                    if self._logger is not None:
+                        logger_str = "loop_subst: found {}{}".format(standard_name, context_string(context))
+                    # End if
+                else:
+                    beg_name = loop_var.group(1) + '_begin'
+                    end_name = loop_var.group(1) + '_end'
+                    beg_var = self.find_variable(beg_name)
+                    end_var = self.find_variable(end_name)
+                    if (beg_var is not None) and (end_var is not None):
+                        my_var = (beg_var, end_var)
+                        if self._logger is not None:
+                            logger_str = "loop_subst: {} ==> ({}, {}){}".format(standard_name, beg_name, end_name, context_string(context))
+                        # End if
+                    else:
+                        if self._logger is not None:
+                            logger_str = "loop_subst: {} ==> ({}, {}) FAILED{}".format(standard_name, beg_name, end_name, context_string(context))
+                        # End if
+                        my_var = None
+                    # End if
+                # End if
+            else:
+                if self._logger is not None:
+                    logger_str = "loop_subst: no known substitution for {}{}, not a loop variable?".format(standard_name, context_string(context))
+                # End if
+                my_var = None # Nothing to do here?
+            # End if
+        else:
+            if self._logger is not None:
+                logger_str = "loop_subst: {} is not a loop variable{}".format(standard_name, context_string(context))
+            # End if
+            my_var = None
+        # End if
+        if logger_str is not None:
+            self._logger.info(logger_str)
+        # End if
+        return my_var
 
 ###############################################################################
 if __name__ == "__main__":

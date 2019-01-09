@@ -8,6 +8,7 @@ __all__ = [
     'check_fortran_intrinsic',
     'check_fortran_ref',
     'check_fortran_type',
+    'context_string',
     'find_schema_version',
     'FORTRAN_DP_RE',
     'FortranMetadataSyntax',
@@ -34,7 +35,7 @@ import six
 if six.PY3:
     from parse_tools.parse_tools    import ParseContext, ParseSource
     from parse_tools.parse_tools    import ParseSyntaxError, ParseInternalError
-    from parse_tools.parse_tools    import CCPPError
+    from parse_tools.parse_tools    import CCPPError, context_string
     from parse_tools.parse_object   import MetadataSyntax, FortranMetadataSyntax
     from parse_tools.parse_object   import ParseObject
     from parse_tools.parse_checkers import check_fortran_id, FORTRAN_ID
@@ -54,7 +55,7 @@ if six.PY3:
 else:
     from parse_tools    import ParseContext, ParseSource
     from parse_tools    import ParseSyntaxError, ParseInternalError
-    from parse_tools    import CCPPError
+    from parse_tools    import CCPPError, context_string
     from parse_object   import MetadataSyntax, FortranMetadataSyntax
     from parse_object   import ParseObject
     from parse_checkers import check_fortran_id, FORTRAN_ID
