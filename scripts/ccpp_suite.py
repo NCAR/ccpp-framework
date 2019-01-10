@@ -29,7 +29,9 @@ array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
 # Module (global) variables
 ###############################################################################
 
-CCPP_STAGES = [ 'initalize', 'run', 'finalize' ]
+# Allowed CCPP stages dictionary with correct initial and final states
+CCPP_STAGES = [ 'initalize', 'timestep_inital', 'run',
+                'timestep_final', 'finalize' ]
 
 COPYRIGHT = '''!
 ! This work (Common Community Physics Package Framework), identified by
@@ -523,6 +525,17 @@ class Group(VarDictionary):
 
 class Suite(VarDictionary):
 
+    # The CCPP state machine consists of a dictionary of tuples.
+    # The dictionary key is a state_machine state.
+    # Each value is a tuple of of previous and next states:
+    # val[<state_name>] = (<allowed_previous_state(s)>, <allowed_next_state(s)>)
+    # The initial state is _state_machine_inital_state
+    _state_machine = { 'uninitialized' : (('initialized'),   ('initialized')),
+                       'initialized'   : (('uninitialized'), ('in_time_step',
+                                                              'uninitialized')),
+                       'in_time_step'  : (('initialized'),   ('initialized'))}
+    _state_machine_inital_state = 'uninitialized'
+
     _header_='''
 !>
 !! @brief Auto-generated cap module for the CCPP suite
@@ -531,8 +544,8 @@ class Suite(VarDictionary):
 module {module}
 '''
 
-    _state_machine ='''
-character(len=16) :: ccpp_suite_state = 'uninitialized'
+    _state_machine_init ='''
+character(len=16) :: ccpp_suite_state = '{state}'
 '''
 
     _footer_ = '''
@@ -577,25 +590,29 @@ end module {module}
         return self._sdf_name
 
     @classmethod
-    def check_suite_state(cls, correct_state, errflg, errmsg, outfile, indent):
-        if correct_state == 'initialized':
-            outfile.write("if (trim(ccpp_suite_state) == 'unitialized') then",
-                          indent)
-            outfile.write("{} = 1".format(errflg), indent+1)
-            outfile.write("{} = ".format(errmsg), indent+1)
-            outfile.write("else if (trim(ccpp_suite_state) == 'in_timestep') then",
-                          indent)
-        elif correct_state == 'uninitialized':
-            outfile.write("end if", indent)
-        elif correct_state == 'in_timestep':
-            outfile.write("end if", indent)
+    def check_suite_state(cls, next_state):
+        "Return a list of CCPP state check statements for <next_state>"
+        check_stmts = list()
+        if next_state in Suite._state_machine:
+            # We need to make sure we are an allowed previous state
+            prev_state = Suite._state_machine[next_state][0]
+            css = "trim(ccpp_suite_state)"
+            prev_checks = ["({} /= '{}')".format(css, x) for x in prev_state]
+            prev_str = ' .and. '.join(prev_checks)
+            if '.and.' in prev_str:
+                prev_str = '(' + prev_str + ')'
+            # End if
+            check_stmts.append(("if {} then".format(prev_str), 0))
+            check_stmts.append(("{errflg} = 1", 1))
+            errmsg_str = ("\"Invalid initial CCPP state, '\//"+ css +
+                          "//\"' in {funcname}\"")
+            check_stmts.append(("{errmsg} = {}".format(errmsg_str), 1))
+            check_stmts.append(("return", 1))
+            check_stmts.append(("end if", 0))
         else:
-            raise ParseInternalError("Unknown correct_state, '{}'".format(correct_state))
+            raise ParseInternalError("Unknown next_state, '{}'".format(correct_state))
         # End if
-        outfile.write("else", indent)
-        outfile.write("{} = 1".format(errflg), indent+1)
-        outfile.write("{} = \"Unknown ccpp_suite_state, '\"//trim(ccpp_suite_state)//\"'\"", indent+1)
-        outfile.write("end if", indent)
+        return check_stmts
 
     @classmethod
     def set_suite_state(cls, state):
@@ -766,7 +783,7 @@ end module {module}
             outfile.write(Suite._header_.format(module=self._module), 0)
             # Write module 'use' statements here
             outfile.write('implicit none\nprivate\n\n! Suite interfaces', 1)
-            outfile.write(Suite._state_machine, 1)
+            outfile.write(Suite._state_machine_init.format(state=Suite._state_machine_inital_state), 1)
             for group in self._groups:
                 outfile.write('public :: {}'.format(group.name), 1)
             # End for
