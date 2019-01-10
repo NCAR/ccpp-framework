@@ -652,10 +652,10 @@ class VarDictionary(OrderedDict):
     __extent_re = re.compile(FORTRAN_ID+r"((?i)_loop_extent)$")
 
     # Variable representing the constant integer, 1
-    var_one = Var({'local_name' : 'ccpp_one',
-                   'standard_name' : 'ccpp_constant_one',
-                   'units' : '1', 'dimensions' : '()', 'type' : 'integer'},
-                  ParseSource('VarDictionary', 'REGISTRY', ParseContext()))
+    __var_one = Var({'local_name' : 'ccpp_one', 'constant' : 'True',
+                     'standard_name' : 'ccpp_constant_one',
+                     'units' : '1', 'dimensions' : '()', 'type' : 'integer'},
+                    ParseSource('VarDictionary', 'REGISTRY', ParseContext()))
 
     def __init__(self, name, variables=None, parent_dict=None, logger=None):
         "Unlike dict, VarDictionary only takes a Var or Var list"
@@ -790,7 +790,7 @@ class VarDictionary(OrderedDict):
         (<standard_name>_begin, <standard_name>_end), if those variables are
         in the dictionary.
         If <standard_name>_extent *is* present, return that variable as a
-        range, (var_one, <standard_name>_extent)
+        range, (__var_one, <standard_name>_extent)
         In other cases, return None
         """
         loop_var = VarDictionary.__ebe_re.match(standard_name)
@@ -802,7 +802,7 @@ class VarDictionary(OrderedDict):
             # First up, we have an extent but host has begin and end
             if loop_var.group(2).lower() == 'extent':
                 if dict_var is not None:
-                    my_var = (VarDictionary.var_one, dict_var)
+                    my_var = (VarDictionary.__var_one, dict_var)
                     if self._logger is not None:
                         logger_str = "loop_subst: found {}{}".format(standard_name, context_string(context))
                     # End if

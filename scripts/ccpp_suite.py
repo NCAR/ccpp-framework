@@ -531,6 +531,10 @@ class Suite(VarDictionary):
 module {module}
 '''
 
+    _state_machine ='''
+character(len=16) :: ccpp_suite_state = 'uninitialized'
+'''
+
     _footer_ = '''
 end module {module}
 '''
@@ -539,6 +543,10 @@ end module {module}
 
     _final_group_ = '<group name="suite_finalize"></group>'
 
+    _timestep_inital_group_ = '<group name="timestep_inital"></group>'
+
+    timestep__final_group_ = '<group name="timestep_final"></group>'
+
     _scheme_template = '<scheme>{}</scheme>'
 
     def __init__(self, filename, api, logger):
@@ -546,8 +554,10 @@ end module {module}
         self._name = None
         self._sdf_name = filename
         self._groups = list()
-        self._init_group = None
-        self._final_group = None
+        self._suite_init_group = None
+        self._suite_final_group = None
+        self._timestep_init_group = None
+        self._timestep_final_group = None
         self._context = None
         super(Suite, self).__init__(self.sdf_name, parent_dict=api, logger=logger)
         if not os.path.exists(self._sdf_name):
@@ -566,6 +576,31 @@ end module {module}
         '''Get the name of the suite definition file.'''
         return self._sdf_name
 
+    @classmethod
+    def check_suite_state(cls, correct_state, errflg, errmsg, outfile, indent):
+        if correct_state == 'initialized':
+            outfile.write("if (trim(ccpp_suite_state) == 'unitialized') then",
+                          indent)
+            outfile.write("{} = 1".format(errflg), indent+1)
+            outfile.write("{} = ".format(errmsg), indent+1)
+            outfile.write("else if (trim(ccpp_suite_state) == 'in_timestep') then",
+                          indent)
+        elif correct_state == 'uninitialized':
+            outfile.write("end if", indent)
+        elif correct_state == 'in_timestep':
+            outfile.write("end if", indent)
+        else:
+            raise ParseInternalError("Unknown correct_state, '{}'".format(correct_state))
+        # End if
+        outfile.write("else", indent)
+        outfile.write("{} = 1".format(errflg), indent+1)
+        outfile.write("{} = \"Unknown ccpp_suite_state, '\"//trim(ccpp_suite_state)//\"'\"", indent+1)
+        outfile.write("end if", indent)
+
+    @classmethod
+    def set_suite_state(cls, state):
+        return "ccpp_suite_state = 'suite_state_{}'".format(state)
+
     def parse(self):
         '''Parse the suite definition file.'''
         success = True
@@ -582,26 +617,26 @@ end module {module}
         self._name = suite_xml.get('name')
         self._logger.info("Reading suite definition file for {}".format(self._name))
         gxml = ET.fromstring(Suite._initial_group_)
-        self._init_group = Group(gxml, self, self._context)
-        self._groups.append(self._init_group)
+        self._suite_init_group = Group(gxml, self, self._context)
+        self._groups.append(self._suite_init_group)
         gxml = ET.fromstring(Suite._final_group_)
-        self._final_group = Group(gxml, self, self._context)
+        self._suite_final_group = Group(gxml, self, self._context)
         # Build hierarchical structure as in SDF
         for suite_item in suite_xml:
             item_type = suite_item.tag.lower()
             # Suite item is a group or a suite-wide init or final method
             if item_type in ['init', 'initial', 'initialize']:
                 # Parse a suite-wide initialization scheme
-                self._init_group.add_item(Scheme(suite_item, self._context))
+                self._suite_init_group.add_item(Scheme(suite_item, self._context))
             elif item_type in ['final', 'finalize']:
                 # Parse a suite-wide finalization scheme
-                self._final_group.add_item(Scheme(suite_item, self._context))
+                self._suite_final_group.add_item(Scheme(suite_item, self._context))
             else:
                 # Parse a group
                 self._groups.append(Group(suite_item, self, self._context))
             # End if
         # End for
-        self._groups.append(self._final_group)
+        self._groups.append(self._suite_final_group)
         return success
 
     def print_debug(self):
@@ -655,18 +690,18 @@ end module {module}
                 else:
                     raise CCPPError('Unknown scheme metadata type, "{}"'.format(header.title))
                 # End if
-                if (pmatch[0:4] == 'init') and (not self._init_group.has_item(header.title)):
+                if (pmatch[0:4] == 'init') and (not self._suite_init_group.has_item(header.title)):
                     sstr = Suite._scheme_template.format(match.group(1))
                     sxml = ET.fromstring(sstr)
                     scheme = Scheme(sxml, self._context)
-                    self._init_group.add_item(scheme)
+                    self._suite_init_group.add_item(scheme)
                 elif pmatch == 'run':
                     pass # We do not need this list for anything
-                elif (pmatch[0:5] == 'final') and (not self._final_group.has_item(header.title)):
+                elif (pmatch[0:5] == 'final') and (not self._suite_final_group.has_item(header.title)):
                     sstr = Suite._scheme_template.format(match.group(1))
                     sxml = ET.fromstring(sstr)
                     scheme = Scheme(sxml, self._context)
-                    self._final_group.add_item(scheme)
+                    self._suite_final_group.add_item(scheme)
                 # End if (else already raised error as above)
             # End for
         # End for
@@ -674,9 +709,9 @@ end module {module}
         self._host_arg_list = host_model.argument_list()
         # First pass, create init, run, and finalize sequences
         for item in self.groups:
-            if item is self._init_group:
+            if item is self._suite_init_group:
                 phase = 'init'
-            elif item is self._final_group:
+            elif item is self._suite_final_group:
                 phase = 'finalize'
             else:
                 phase = 'run'
@@ -690,7 +725,7 @@ end module {module}
         """Method to separate out run-loop groups from special inital
         and final groups
         """
-        return (group is not self._init_group) and (group is not self._final_group)
+        return (group is not self._suite_init_group) and (group is not self._suite_final_group)
 
     def max_part_len(self):
         "What is the longest suite subroutine name?"
@@ -731,6 +766,7 @@ end module {module}
             outfile.write(Suite._header_.format(module=self._module), 0)
             # Write module 'use' statements here
             outfile.write('implicit none\nprivate\n\n! Suite interfaces', 1)
+            outfile.write(Suite._state_machine, 1)
             for group in self._groups:
                 outfile.write('public :: {}'.format(group.name), 1)
             # End for
@@ -740,10 +776,10 @@ end module {module}
             # End for
             outfile.write('\ncontains', 0)
             for group in self._groups:
-                if group is self._init_group:
+                if group is self._suite_init_group:
                     group.write(outfile, self._host_arg_list, 1,
                                 suite_vars=self, allocate=True)
-                elif group is self._final_group:
+                elif group is self._suite_final_group:
                     group.write(outfile, self._host_arg_list, 1,
                                 suite_vars=self, deallocate=True)
                 else:
