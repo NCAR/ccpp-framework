@@ -410,6 +410,7 @@ class Group(VarDictionary):
     def analyze(self, phase, suite_vars, scheme_headers, logger):
         # We need a copy of the host model variables for dummy args
         self._host_vars = suite_vars.parent.variable_list(recursive=True)
+        self._phase = phase
         for item in self._parts:
             # Items can be schemes, subcycles or other objects
             # All have the same interface and return a set of module use
@@ -429,6 +430,12 @@ class Group(VarDictionary):
     def write(self, outfile, host_arglist, indent,
               suite_vars=None, allocate=False, deallocate=False):
         local_subs = ''
+        # group type for (de)allocation
+        if 'timestep' in self._phase:
+            group_type = 'timestep'
+        else:
+            group_type = 'run'
+        # End if
         # First, write out the subroutine header
         subname = self.name
         outfile.write(Group.subhead.format(subname=subname, args=host_arglist), indent)
@@ -469,22 +476,25 @@ class Group(VarDictionary):
         # Allocate suite vars
         if allocate:
             for svar in suite_vars.variable_list():
-                dims = svar.get_dimensions()
-                rdims = list()
-                for dim in dims:
-                    dvar = self.find_dimension_subst(dim, context=self._context)
-                    if dvar is None:
-                        dvar = self.find_variable(dim, any_scope=True)
-                    # End if
-                    if dvar is None:
-                        raise CCPPError("Dimension variable, {} not found{}".format(dim, context_string(self._context)))
-                    else:
-                        rdims.append(dvar)
-                    # End if
-                # End for
-                alloc_str = ', '.join([x.get_prop_value('local_name') for x in rdims])
-                lname = svar.get_prop_value('local_name')
-                outfile.write("allocate({}({}))".format(lname, alloc_str), indent+1)
+                timestep_var = svar.get_prop_value('persistence')
+                if group_type == timestep_var:
+                    dims = svar.get_dimensions()
+                    rdims = list()
+                    for dim in dims:
+                        dvar = self.find_dimension_subst(dim, context=self._context)
+                        if dvar is None:
+                            dvar = self.find_variable(dim, any_scope=True)
+                        # End if
+                        if dvar is None:
+                            raise CCPPError("Dimension variable, {} not found{}".format(dim, context_string(self._context)))
+                        else:
+                            rdims.append(dvar)
+                        # End if
+                    # End for
+                    alloc_str = ', '.join([x.get_prop_value('local_name') for x in rdims])
+                    lname = svar.get_prop_value('local_name')
+                    outfile.write("allocate({}({}))".format(lname, alloc_str), indent+1)
+                # End if
             # End for
         # End if
         # Write the scheme and subcycle calls
@@ -494,8 +504,11 @@ class Group(VarDictionary):
         # Deallocate suite vars
         if deallocate:
             for svar in suite_vars.variable_list():
-                lname = svar.get_prop_value('local_name')
-                outfile.write('deallocate({})'.format(lname), indent+1)
+                timestep_var = svar.get_prop_value('persistence')
+                if group_type == timestep_var:
+                    lname = svar.get_prop_value('local_name')
+                    outfile.write('deallocate({})'.format(lname), indent+1)
+                # End if
             # End for
         # End if
         outfile.write(self._set_state[0], indent + self._set_state[1])
@@ -658,6 +671,10 @@ end module {module}
         self._groups.append(self._timestep_init_group)
         gxml = ET.fromstring(Suite.__timestep_final_group__)
         self._timestep_final_group = Group(gxml, self, self._context)
+        self._beg_groups = [x.name for x in [self._suite_init_group,
+                                             self._timestep_init_group]]
+        self._end_groups = [x.name for x in [self._suite_final_group,
+                                             self._timestep_final_group]]
         # Build hierarchical structure as in SDF
         for suite_item in suite_xml:
             item_type = suite_item.tag.lower()
@@ -832,10 +849,10 @@ end module {module}
             # End for
             outfile.write('\ncontains', 0)
             for group in self._groups:
-                if group is self._suite_init_group:
+                if group.name in self._beg_groups:
                     group.write(outfile, self._host_arg_list, 1,
                                 suite_vars=self, allocate=True)
-                elif group is self._suite_final_group:
+                elif group.name in self._end_groups:
                     group.write(outfile, self._host_arg_list, 1,
                                 suite_vars=self, deallocate=True)
                 else:

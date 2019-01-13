@@ -347,7 +347,8 @@ class Var(object):
                     VariableProperty('type', str,
                                      check_fn_in=check_fortran_type),
                     VariableProperty('kind', str,
-                                     optional_in=True, default_fn_in=default_kind_val),
+                                     optional_in=True,
+                                     default_fn_in=default_kind_val),
                     VariableProperty('state_variable', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('optional', bool,
@@ -357,7 +358,10 @@ class Var(object):
                     VariableProperty('constant', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('allocatable', bool,
-                                     optional_in=True, default_in=False)]
+                                     optional_in=True, default_in=False),
+                    VariableProperty('persistence', str, optional_in=True,
+                                     valid_values_in=['timestep', 'run'],
+                                     default_in='timestep')]
 
     # __var_props contains properties which are not in __spec_props
     __var_props = [VariableProperty('intent', str,
