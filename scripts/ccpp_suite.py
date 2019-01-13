@@ -655,6 +655,7 @@ end module {module}
         self._suite_final_group = Group(gxml, self, self._context)
         gxml = ET.fromstring(Suite.__timestep_initial_group__)
         self._timestep_init_group = Group(gxml, self, self._context)
+        self._groups.append(self._timestep_init_group)
         gxml = ET.fromstring(Suite.__timestep_final_group__)
         self._timestep_final_group = Group(gxml, self, self._context)
         # Build hierarchical structure as in SDF
@@ -684,6 +685,7 @@ end module {module}
                     raise ParseInternalError("Unhandled CCPP suite component tag type, '{}'".format(match_trans))
                 # End if
         # End for
+        self._groups.append(self._timestep_final_group)
         self._groups.append(self._suite_final_group)
         return success
 
