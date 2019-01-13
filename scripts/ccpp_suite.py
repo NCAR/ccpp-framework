@@ -12,27 +12,55 @@ import sys
 import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from metavar       import Var, VarDictionary
 from parse_tools   import ParseContext, ParseSource, context_string
 from parse_tools   import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools   import FORTRAN_ID
 from parse_tools   import read_xml_file, validate_xml_file, find_schema_version
+from metavar       import Var, VarDictionary
+from state_machine import StateMachine
 from fortran_tools import FortranWriter
-
-phase_re  = re.compile(FORTRAN_ID+r"_((?i)(?:init(?:ial(?:ize)?)?)|(?:run)|(?:final(?:ize)?))$")
-loop_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
-dimension_re = re.compile(FORTRAN_ID+r"_((?i)dimension)$")
-
-array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
 
 ###############################################################################
 # Module (global) variables
 ###############################################################################
 
-# Allowed CCPP stages dictionary with correct initial and final states
-CCPP_STAGES = [ 'initalize', 'timestep_inital', 'run',
-                'timestep_final', 'finalize' ]
+__init_st__ = r"(?:(?i)init(?:ial(?:ize)?)?)"
+__final_st__ = r"(?:(?i)final(?:ize)?)"
+__run_st__ = r"(?:(?i)run)"
+__ts_init_st__ = r"(?:(?i)timestep_init(?:ial(?:ize)?)?)"
+__ts_final_st__ = r"(?:(?i)timestep_final(?:ize)?)"
 
+loop_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
+dimension_re = re.compile(FORTRAN_ID+r"_((?i)dimension)$")
+
+array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
+
+# Allowed CCPP transitions
+CCPP_STATE_MACH = StateMachine((('initialize',       'uninitialized',
+                                 'initialized',       __init_st__),
+                                ('timestep_initial', 'initialized',
+                                 'in_time_step',      __ts_init_st__),
+                                ('run',              'in_time_step',
+                                 'in_time_step',      __run_st__),
+                                ('timestep_final',   'in_time_step',
+                                 'initialized',       __ts_final_st__),
+                                ('finalize',         'initialized',
+                                 'uninitialized',     __final_st__)))
+
+# Required variables for inclusion in auto-generated schemes
+CCPP_REQUIRED_VARS = [Var({'local_name' : 'errflg',
+                           'standard_name' : 'ccpp_error_flag', 'units' : '1',
+                           'dimensions' : '()', 'type' : 'integer'},
+                          ParseSource('ccpp_suite', 'REGISTRY',
+                                      ParseContext())),
+                      Var({'local_name' : 'errmsg',
+                           'standard_name' : 'ccpp_error_message',
+                           'units' : '1', 'dimensions' : '()',
+                           'type' : 'integer'},
+                          ParseSource('ccpp_suite', 'REGISTRY',
+                                      ParseContext()))]
+
+# CCPP copyright statement to be included in all generated Fortran files
 COPYRIGHT = '''!
 ! This work (Common Community Physics Package Framework), identified by
 ! NOAA, NCAR, CU/CIRES, is free of known copyright restrictions and is
@@ -151,25 +179,13 @@ class Scheme(object):
         while host_model.parent is not None:
             host_model = host_model.parent
         # End if
-        # Find our header
-        test_name1 = self.name + '_' + phase
-        if phase == 'init':
-            test_name2 = self.name + '_' + 'initialize'
-        elif phase == 'finalize':
-            test_name2 = self.name + '_' + 'final'
-        else:
-            test_name2 = None
-        # End if
         my_header = None
         for module in scheme_headers:
             for header in module:
-                if header.title == test_name1:
+                func_id, trans_id, match_trans = CCPP_STATE_MACH.transition_match(header.title, transition=phase)
+                if func_id == self.name:
                     my_header = header
-                    self._subroutine_name = test_name1
-                    break
-                elif (test_name2 is not None) and (header.title == test_name2):
-                    my_header = header
-                    self._subroutine_name = test_name2
+                    self._subroutine_name = header.title
                     break
                 # End if
             # End for
@@ -178,8 +194,8 @@ class Scheme(object):
             # End if
         # End for
         if my_header is None:
-            estr = 'No header found for subroutine, {}'
-            raise ParseInternalError(estr.format(test_name1),
+            estr = 'No {} header found for subroutine, {}'
+            raise ParseInternalError(estr.format(phase, self.name),
                                      context=self._context)
         # End if
         if my_header.module is None:
@@ -407,6 +423,8 @@ class Group(VarDictionary):
                 self._local_schemes.add(lscheme)
             # End for
         # End for
+        self._phase_check_stmts = Suite.check_suite_state(phase)
+        self._set_state = Suite.set_suite_state(phase)
 
     def write(self, outfile, host_arglist, indent,
               suite_vars=None, allocate=False, deallocate=False):
@@ -431,6 +449,23 @@ class Group(VarDictionary):
             outfile.write(var, indent+1)
         # End for
         outfile.write('', 0)
+        # Check state machine
+        verrflg = self.find_variable('ccpp_error_flag', any_scope=True)
+        if verrflg is not None:
+            errflg = verrflg.get_prop_value('local_name')
+        else:
+            raise CCPPError("No ccpp_error_flag variable for group, {}".format(self.name))
+        # End if
+        verrmsg = self.find_variable('ccpp_error_message', any_scope=True)
+        if verrmsg is not None:
+            errmsg = verrmsg.get_prop_value('local_name')
+        else:
+            raise CCPPError("No ccpp_error_message variable for group, {}".format(self.name))
+        # End if
+        for stmt in self._phase_check_stmts:
+            text = stmt[0].format(errflg=errflg , errmsg=errmsg, funcname=self.name)
+            outfile.write(text, indent + stmt[1])
+        # End for
         # Allocate suite vars
         if allocate:
             for svar in suite_vars.variable_list():
@@ -463,17 +498,8 @@ class Group(VarDictionary):
                 outfile.write('deallocate({})'.format(lname), indent+1)
             # End for
         # End if
+        outfile.write(self._set_state[0], indent + self._set_state[1])
         outfile.write(Group.subend.format(subname=subname), indent)
-            # # Test and set blocks for initialization status
-            # initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
-            #                             target_name_flag=ccpp_error_flag_target_name,
-            #                             target_name_msg=ccpp_error_msg_target_name,
-            #                             name=self._name)
-            # initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
-            #                             target_name_flag=ccpp_error_flag_target_name,
-            #                             target_name_msg=ccpp_error_msg_target_name,
-            #                             name=self._name)
-            # Create subroutine
 
     @property
     def name(self):
@@ -525,18 +551,10 @@ class Group(VarDictionary):
 
 class Suite(VarDictionary):
 
-    # The CCPP state machine consists of a dictionary of tuples.
-    # The dictionary key is a state_machine state.
-    # Each value is a tuple of of previous and next states:
-    # val[<state_name>] = (<allowed_previous_state(s)>, <allowed_next_state(s)>)
-    # The initial state is _state_machine_inital_state
-    _state_machine = { 'uninitialized' : (('initialized'),   ('initialized')),
-                       'initialized'   : (('uninitialized'), ('in_time_step',
-                                                              'uninitialized')),
-                       'in_time_step'  : (('initialized'),   ('initialized'))}
-    _state_machine_inital_state = 'uninitialized'
+    ___state_machine_initial_state__ = 'uninitialized'
+    __state_machine_var_name__     = 'ccpp_suite_state'
 
-    _header_='''
+    __header__ ='''
 !>
 !! @brief Auto-generated cap module for the CCPP suite
 !!
@@ -544,23 +562,23 @@ class Suite(VarDictionary):
 module {module}
 '''
 
-    _state_machine_init ='''
-character(len=16) :: ccpp_suite_state = '{state}'
+    __state_machine_init__ ='''
+character(len=16) :: {css_var_name} = '{state}'
 '''
 
-    _footer_ = '''
+    __footer__ = '''
 end module {module}
 '''
 
-    _initial_group_ = '<group name="suite_initialize"></group>'
+    __initial_group__ = '<group name="suite_initialize"></group>'
 
-    _final_group_ = '<group name="suite_finalize"></group>'
+    __final_group__ = '<group name="suite_finalize"></group>'
 
-    _timestep_inital_group_ = '<group name="timestep_inital"></group>'
+    __timestep_initial_group__ = '<group name="timestep_initial"></group>'
 
-    timestep__final_group_ = '<group name="timestep_final"></group>'
+    __timestep_final_group__ = '<group name="timestep_final"></group>'
 
-    _scheme_template = '<scheme>{}</scheme>'
+    __scheme_template__ = '<scheme>{}</scheme>'
 
     def __init__(self, filename, api, logger):
         self._logger = logger
@@ -590,33 +608,30 @@ end module {module}
         return self._sdf_name
 
     @classmethod
-    def check_suite_state(cls, next_state):
-        "Return a list of CCPP state check statements for <next_state>"
+    def check_suite_state(cls, stage):
+        "Return a list of CCPP state check statements for <stage>"
         check_stmts = list()
-        if next_state in Suite._state_machine:
+        if stage in CCPP_STATE_MACH.transitions():
             # We need to make sure we are an allowed previous state
-            prev_state = Suite._state_machine[next_state][0]
-            css = "trim(ccpp_suite_state)"
-            prev_checks = ["({} /= '{}')".format(css, x) for x in prev_state]
-            prev_str = ' .and. '.join(prev_checks)
-            if '.and.' in prev_str:
-                prev_str = '(' + prev_str + ')'
-            # End if
-            check_stmts.append(("if {} then".format(prev_str), 0))
-            check_stmts.append(("{errflg} = 1", 1))
-            errmsg_str = ("\"Invalid initial CCPP state, '\//"+ css +
+            prev_state = CCPP_STATE_MACH.initial_state(stage)
+            css = "trim({})".format(Suite.__state_machine_var_name__)
+            prev_str = "({} /= '{}')".format(css, prev_state)
+            check_stmts.append(("if {} then".format(prev_str), 1))
+            check_stmts.append(("{errflg} = 1", 2))
+            errmsg_str = ("\"Invalid initial CCPP state, '\"//"+ css +
                           "//\"' in {funcname}\"")
-            check_stmts.append(("{errmsg} = {}".format(errmsg_str), 1))
-            check_stmts.append(("return", 1))
-            check_stmts.append(("end if", 0))
+            check_stmts.append(("{{errmsg}} = {}".format(errmsg_str), 2))
+            check_stmts.append(("return", 2))
+            check_stmts.append(("end if", 1))
         else:
-            raise ParseInternalError("Unknown next_state, '{}'".format(correct_state))
+            raise ParseInternalError("Unknown stage, '{}'".format(stage))
         # End if
         return check_stmts
 
     @classmethod
-    def set_suite_state(cls, state):
-        return "ccpp_suite_state = 'suite_state_{}'".format(state)
+    def set_suite_state(cls, phase):
+        final = CCPP_STATE_MACH.final_state(phase)
+        return ("ccpp_suite_state = '{}'".format(final), 1)
 
     def parse(self):
         '''Parse the suite definition file.'''
@@ -633,25 +648,41 @@ end module {module}
         # End if
         self._name = suite_xml.get('name')
         self._logger.info("Reading suite definition file for {}".format(self._name))
-        gxml = ET.fromstring(Suite._initial_group_)
+        gxml = ET.fromstring(Suite.__initial_group__)
         self._suite_init_group = Group(gxml, self, self._context)
         self._groups.append(self._suite_init_group)
-        gxml = ET.fromstring(Suite._final_group_)
+        gxml = ET.fromstring(Suite.__final_group__)
         self._suite_final_group = Group(gxml, self, self._context)
+        gxml = ET.fromstring(Suite.__timestep_initial_group__)
+        self._timestep_init_group = Group(gxml, self, self._context)
+        gxml = ET.fromstring(Suite.__timestep_final_group__)
+        self._timestep_final_group = Group(gxml, self, self._context)
         # Build hierarchical structure as in SDF
         for suite_item in suite_xml:
             item_type = suite_item.tag.lower()
             # Suite item is a group or a suite-wide init or final method
-            if item_type in ['init', 'initial', 'initialize']:
-                # Parse a suite-wide initialization scheme
-                self._suite_init_group.add_item(Scheme(suite_item, self._context))
-            elif item_type in ['final', 'finalize']:
-                # Parse a suite-wide finalization scheme
-                self._suite_final_group.add_item(Scheme(suite_item, self._context))
-            else:
+            if item_type == 'group':
                 # Parse a group
                 self._groups.append(Group(suite_item, self, self._context))
-            # End if
+            else:
+                match_trans = CCPP_STATE_MACH.group_match(item_type)
+                if match_trans is None:
+                    raise CCPPError("Unknown CCPP suite component tag type, '{}'".format(item_type))
+                elif match_trans == 'initialize':
+                    # Parse a suite-wide initialization scheme
+                    self._suite_init_group.add_item(Scheme(suite_item, self._context))
+                elif match_trans == 'finalize':
+                    # Parse a suite-wide finalization scheme
+                    self._suite_final_group.add_item(Scheme(suite_item, self._context))
+                elif match_trans == 'timestep_initial':
+                    # Parse a suite-wide time step initialization scheme
+                    self._timestep_init_group.add_item(Scheme(suite_item, self._context))
+                elif match_trans == 'timestep_final':
+                    # Parse a suite-wide time step finalization scheme
+                    self._timestep_final_group.add_item(Scheme(suite_item, self._context))
+                else:
+                    raise ParseInternalError("Unhandled CCPP suite component tag type, '{}'".format(match_trans))
+                # End if
         # End for
         self._groups.append(self._suite_final_group)
         return success
@@ -675,47 +706,49 @@ end module {module}
 
     def analyze(self, host_model, scheme_headers, logger):
         '''Collect all information needed to write a suite file
-        >>> phase_re.match('foo_init').group(2)
+        >>> CCPP_STATE_MACH.transition_match('foo_init')
+        ('foo', 'init', 'initialize')
+        >>> CCPP_STATE_MACH.transition_match('foo_init', transition='finalize')
+        (None, None, None)
+        >>> CCPP_STATE_MACH.transition_match('FOO_INIT')
+        ('FOO', 'INIT', 'initialize')
+        >>> CCPP_STATE_MACH.transition_match('foo_initial')
+        ('foo', 'initial', 'initialize')
+        >>> CCPP_STATE_MACH.transition_match('foo_initialize')
+        ('foo', 'initialize', 'initialize')
+        >>> CCPP_STATE_MACH.transition_match('foo_initialize')[1][0:4]
         'init'
-        >>> phase_re.match('FOO_INIT').group(2)
-        'INIT'
-        >>> phase_re.match('foo_initial').group(2)
-        'initial'
-        >>> phase_re.match('foo_initialize').group(2)
-        'initialize'
-        >>> phase_re.match('foo_initialize').group(2)[0:4]
-        'init'
-        >>> phase_re.match('foo_initize') is None
-        True
-        >>> phase_re.match('foo_run').group(2)
-        'run'
-        >>> phase_re.match('foo_finalize').group(2)
-        'finalize'
-        >>> phase_re.match('foo_finalize').group(2)[0:5]
+        >>> CCPP_STATE_MACH.transition_match('foo_initize')
+        (None, None, None)
+        >>> CCPP_STATE_MACH.transition_match('foo_run')
+        ('foo', 'run', 'run')
+        >>> CCPP_STATE_MACH.transition_match('foo_finalize')
+        ('foo', 'finalize', 'finalize')
+        >>> CCPP_STATE_MACH.transition_match('foo_finalize')[1][0:5]
         'final'
-        >>> phase_re.match('foo_final').group(2)
-        'final'
-        >>> phase_re.match('foo_finalize_bar') is None
-        True
+        >>> CCPP_STATE_MACH.transition_match('foo_final')
+        ('foo', 'final', 'finalize')
+        >>> CCPP_STATE_MACH.transition_match('foo_finalize_bar')
+        (None, None, None)
         '''
         # Collect all the available schemes
         for header_list in scheme_headers:
             for header in header_list:
-                match = phase_re.match(header.title)
-                if match is not None:
-                    pmatch = match.group(2).lower()
+                func_id, trans_id, match_trans = CCPP_STATE_MACH.transition_match(header.title)
+                if trans_id is not None:
+                    pmatch = trans_id.lower()
                 else:
                     raise CCPPError('Unknown scheme metadata type, "{}"'.format(header.title))
                 # End if
                 if (pmatch[0:4] == 'init') and (not self._suite_init_group.has_item(header.title)):
-                    sstr = Suite._scheme_template.format(match.group(1))
+                    sstr = Suite.__scheme_template__.format(func_id)
                     sxml = ET.fromstring(sstr)
                     scheme = Scheme(sxml, self._context)
                     self._suite_init_group.add_item(scheme)
                 elif pmatch == 'run':
                     pass # We do not need this list for anything
                 elif (pmatch[0:5] == 'final') and (not self._suite_final_group.has_item(header.title)):
-                    sstr = Suite._scheme_template.format(match.group(1))
+                    sstr = Suite.__scheme_template__.format(func_id)
                     sxml = ET.fromstring(sstr)
                     scheme = Scheme(sxml, self._context)
                     self._suite_final_group.add_item(scheme)
@@ -727,9 +760,13 @@ end module {module}
         # First pass, create init, run, and finalize sequences
         for item in self.groups:
             if item is self._suite_init_group:
-                phase = 'init'
+                phase = 'initialize'
             elif item is self._suite_final_group:
                 phase = 'finalize'
+            elif item is self._timestep_init_group:
+                phase = 'timestep_initial'
+            elif item is self._timestep_final_group:
+                phase = 'timestep_final'
             else:
                 phase = 'run'
             # End if
@@ -739,7 +776,7 @@ end module {module}
         # End for
 
     def is_run_group(self, group):
-        """Method to separate out run-loop groups from special inital
+        """Method to separate out run-loop groups from special initial
         and final groups
         """
         return (group is not self._suite_init_group) and (group is not self._suite_final_group)
@@ -780,10 +817,10 @@ end module {module}
         with FortranWriter(output_file_name, 'w') as outfile:
             # Write suite header
             outfile.write(COPYRIGHT, 0)
-            outfile.write(Suite._header_.format(module=self._module), 0)
+            outfile.write(Suite.__header__.format(module=self._module), 0)
             # Write module 'use' statements here
             outfile.write('implicit none\nprivate\n\n! Suite interfaces', 1)
-            outfile.write(Suite._state_machine_init.format(state=Suite._state_machine_inital_state), 1)
+            outfile.write(Suite.__state_machine_init__.format(css_var_name=Suite.__state_machine_var_name__, state=Suite.___state_machine_initial_state__), 1)
             for group in self._groups:
                 outfile.write('public :: {}'.format(group.name), 1)
             # End for
@@ -804,7 +841,7 @@ end module {module}
                 # End if
             # End for
             # Finish off the module
-            outfile.write(Suite._footer_.format(module=self._module), 0)
+            outfile.write(Suite.__footer__.format(module=self._module), 0)
             return output_file_name
 
 ###############################################################################
@@ -814,7 +851,7 @@ class API(VarDictionary):
     __suite_fname__ = 'ccpp_physics_suite_list'
     __part_fname__  = 'ccpp_physics_suite_part_list'
 
-    _header_ = '''
+    __header__ = '''
 !>
 !! @brief Auto-generated API for {host_model} calls to CCPP suites
 !!
@@ -835,7 +872,7 @@ module {module}
    end subroutine ccpp_physics_{phase}
 '''
 
-    _footer_ = '''
+    __footer__ = '''
 end module {module}
 '''
 
@@ -895,17 +932,17 @@ end module {module}
         # Write out the API module
         with FortranWriter(filename, 'w') as api:
             api.write(COPYRIGHT, 0)
-            api.write(API._header_.format(host_model=self._host.name,
-                                          module=self.module,
-                                          module_use=module_use), 0)
-            for stage in CCPP_STAGES:
+            api.write(API.__header__.format(host_model=self._host.name,
+                                            module=self.module,
+                                            module_use=module_use), 0)
+            for stage in CCPP_STATE_MACH.transitions():
                 api.write("public :: ccpp_physics_{}".format(stage), 1)
             # End for
             api.write("public :: {}".format(API.__suite_fname__), 1)
             api.write("public :: {}".format(API.__part_fname__), 1)
             api.write("\ncontains\n", 0)
             # Write the module body
-            for stage in CCPP_STAGES:
+            for stage in CCPP_STATE_MACH.transitions():
                 host_call_list = API._suite_name.get_prop_value('local_name')
                 if stage == 'run':
                     host_call_list = host_call_list + ', ' + API._suite_part.get_prop_value('local_name')
@@ -989,67 +1026,10 @@ end module {module}
             api.write("end if", 2)
             api.write("end function {}".format(API.__part_fname__), 1)
             # Finish off the module
-            api.write(API._footer_.format(module=self.module), 0)
+            api.write(API.__footer__.format(module=self.module), 0)
         # End with
         api_filenames.append(filename)
         return api_filenames
-
-
-#         suite = self._suite
-#         # Module use statements
-#         module_use = '   use {module}, only: {subroutines}\n'.format(module=suite.module,
-#                                                   subroutines=','.join(suite.subroutines))
-#         for group in suite.groups:
-#             module_use += '   use {module}, only: {subroutines}\n'.format(module=group.module,
-#                                                       subroutines=','.join(group.subroutines))
-
-#         # Create a subroutine for each stage
-#         self._subroutines=[]
-#         subs = ''
-#         for ccpp_stage in CCPP_STAGES:
-#             # Calls to groups of schemes for this stage
-#             group_calls = ''
-#             for group in suite.groups:
-#                 # The <init></init> and <finalize></finalize> groups require special treatment,
-#                 # since they can only be run in the respective stage (init/finalize)
-#                 if (group.init and not ccpp_stage == 'init') or \
-#                     (group.finalize and not ccpp_stage == 'finalize'):
-#                     continue
-#                 if not group_calls:
-#                     clause = 'if'
-#                 else:
-#                     clause = 'else if'
-#                 group_calls += '''
-#          {clause} (trim(group_name)=="{group_name}") then
-#             ierr = {group_name}_{stage}_cap(cdata)'''.format(clause=clause, group_name=group.name, stage=ccpp_stage)
-#             group_calls += '''
-#          else
-#             call ccpp_error("Group " // trim(group_name) // " not found")
-#             ierr = 1
-#         end if
-# '''.format(group_name=group.name)
-#             suite_call = '''
-#         ierr = suite_{stage}_cap(cdata)
-# '''.format(stage=ccpp_stage)
-#             subroutine = CCPP_STATIC_SUBROUTINE_NAME.format(stage=ccpp_stage)
-#             self._subroutines.append(subroutine)
-#             subs += API.sub.format(subroutine=subroutine,
-#                                    group_calls=group_calls,
-#                                    suite_call=suite_call)
-
-#         # Write output to stdout or file
-#         if (self._filename is not sys.stdout):
-#             f = open(self._filename, 'w')
-#         else:
-#             f = sys.stdout
-#         f.write(API.header.format(module=self._module,
-#                                   module_use=module_use,
-#                                   subroutines=','.join(self._subroutines)))
-#         f.write(subs)
-#         f.write(Suite.footer.format(module=self._module))
-#         if (f is not sys.stdout):
-#             f.close()
-#         return
 
 ###############################################################################
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ import os.path
 import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from ccpp_suite    import COPYRIGHT, CCPP_STAGES
+from ccpp_suite    import COPYRIGHT, CCPP_STATE_MACH
 from fortran_tools import FortranWriter
 
 ###############################################################################
@@ -58,12 +58,12 @@ def write_host_cap(host_model, api, output_dir, logger):
             cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
         # End for
         cap.write(preamble.format(host_model=host_model.name), 1)
-        for stage in CCPP_STAGES:
+        for stage in CCPP_STATE_MACH.transitions():
             cap.write("public :: {host_model}_ccpp_physics_{stage}".format(host_model=host_model.name, stage=stage), 1)
         # End for
         cap.write('\ncontains\n', 0)
         apivars = api.suite_var_list()
-        for stage in CCPP_STAGES:
+        for stage in CCPP_STATE_MACH.transitions():
             cap.write(subhead.format(api_vars=apivars, host_model=host_model.name, stage=stage), 1)
             api.declare_variables(cap, 2)
             cap.write('', 0)
