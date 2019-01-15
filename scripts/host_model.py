@@ -38,9 +38,9 @@ class HostModel(VarDictionary):
         'Return the host model name'
         return self._name
 
-    def argument_list(self):
+    def argument_list(self, include_loop_vars=True):
         'Return a string representing the host model variable arg list'
-        args = self.prop_list('local_name')
+        args = self.prop_list('local_name', include_loop_vars=include_loop_vars)
         return ', '.join(args)
 
     def add_ddt_defs(new_ddt_defs, logger=None):

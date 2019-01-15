@@ -316,12 +316,6 @@ class Subcycle(object):
         '''Get the list of schemes'''
         return self._schemes
 
-    def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
-        print("{}".format(self._loop))
-        for scheme in self._schemes:
-            print("{}".format(scheme))
-
 ###############################################################################
 
 class Group(VarDictionary):
@@ -334,42 +328,20 @@ class Group(VarDictionary):
     schemes which are produced (intent(out)) by other groups.
     """
 
-    subhead = '''
+    __subhead__ = '''
    subroutine {subname}({args})
 '''
 
-    subend = '''
+    __subend__ = '''
    end subroutine {subname}
 '''
 
-    initialized_test_blocks = {
-        'init' : '''
-      if (initialized) return
-''',
-        'run' : '''
-      if (.not.initialized) then
-         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
-         {target_name_flag} = 1
-         return
-      end if
-''',
-        'finalize' : '''
-      if (.not.initialized) return
-''',
-    }
-
-    initialized_set_blocks = {
-        'init' : '''
-      initialized = .true.
-''',
-        'run' : '',
-        'finalize' : '''
-      initialized = .false.
-''',
-    }
-
-    def __init__(self, group_xml, parent, context):
+    def __init__(self, group_xml, transition, parent, context):
         self._name = parent.name + '_' + group_xml.get('name')
+        if transition not in CCPP_STATE_MACH.transitions():
+            raise ParseInternalError("Bad transition argument to Group, '{}'".format(transition))
+        # End if
+        self._transition = transition
         self._parts = list()
         super(Group, self).__init__(self.name, parent_dict=parent)
         for item in group_xml:
@@ -407,8 +379,25 @@ class Group(VarDictionary):
         # End for
         return schemes
 
+    @property
+    def phase(self):
+        'Return the CCPP state transition for this group spec'
+        return self._transition
+
+    def phase_match(self, scheme_name):
+        '''If scheme_name matches the group phase, return the group and
+            function ID. Otherwise, return None
+        '''
+        fid, tid, mt = CCPP_STATE_MACH.transition_match(scheme_name,
+                                                        transition=self.phase)
+        if tid is not None:
+            return self, fid
+        else:
+            return None, None
+        # End if
+
     def analyze(self, phase, suite_vars, scheme_headers, logger):
-        # We need a copy of the host model variables for dummy args
+        # We need a copy of the API and host model variables for dummy args
         self._host_vars = suite_vars.parent.variable_list(recursive=True)
         self._phase = phase
         for item in self._parts:
@@ -438,7 +427,7 @@ class Group(VarDictionary):
         # End if
         # First, write out the subroutine header
         subname = self.name
-        outfile.write(Group.subhead.format(subname=subname, args=host_arglist), indent)
+        outfile.write(Group.__subhead__.format(subname=subname, args=host_arglist), indent)
         # Write out the scheme use statements
         for scheme in self._local_schemes:
             outfile.write(scheme, indent+1)
@@ -512,53 +501,12 @@ class Group(VarDictionary):
             # End for
         # End if
         outfile.write(self._set_state[0], indent + self._set_state[1])
-        outfile.write(Group.subend.format(subname=subname), indent)
+        outfile.write(Group.__subend__.format(subname=subname), indent)
 
     @property
     def name(self):
         '''Get the name of the group.'''
         return self._name
-
-    @property
-    def filename(self):
-        '''Get the filename of write the output to.'''
-        return self._filename
-
-    @property
-    def init(self):
-        '''Get the init flag.'''
-        return self._init
-
-    @property
-    def finalize(self):
-        '''Get the finalize flag.'''
-        return self._finalize
-
-    @property
-    def module(self):
-        '''Get the module name.'''
-        return self._module
-
-    @property
-    def subcycles(self):
-        '''Get the subcycles.'''
-        return self._subcycles
-
-    def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
-        print("{}".format(self._name))
-        for subcycle in self._subcycles:
-            subcycle.print_debug()
-
-    @property
-    def pset(self):
-        '''Get the unique physics set of this group.'''
-        return self._pset
-
-    @pset.setter
-    def pset(self, value):
-        self._pset = value
-
 
 ###############################################################################
 
@@ -603,6 +551,9 @@ end module {module}
         self._timestep_init_group = None
         self._timestep_final_group = None
         self._context = None
+        # Full phases/groups are special groups where the entire state is passed
+        self._full_groups = {}
+        self._full_phases = {}
         super(Suite, self).__init__(self.sdf_name, parent_dict=api, logger=logger)
         if not os.path.exists(self._sdf_name):
             raise CCPPError("Suite definition file {0} not found.".format(self._sdf_name))
@@ -646,6 +597,13 @@ end module {module}
         final = CCPP_STATE_MACH.final_state(phase)
         return ("ccpp_suite_state = '{}'".format(final), 1)
 
+    def new_group(self, group_string, transition):
+        gxml = ET.fromstring(group_string)
+        group = Group(gxml, transition, self, self._context)
+        self._full_groups[group.name] = group
+        self._full_phases[group.phase] = group
+        return group
+
     def parse(self):
         '''Parse the suite definition file.'''
         success = True
@@ -661,43 +619,35 @@ end module {module}
         # End if
         self._name = suite_xml.get('name')
         self._logger.info("Reading suite definition file for {}".format(self._name))
-        gxml = ET.fromstring(Suite.__initial_group__)
-        self._suite_init_group = Group(gxml, self, self._context)
-        self._groups.append(self._suite_init_group)
-        gxml = ET.fromstring(Suite.__final_group__)
-        self._suite_final_group = Group(gxml, self, self._context)
-        gxml = ET.fromstring(Suite.__timestep_initial_group__)
-        self._timestep_init_group = Group(gxml, self, self._context)
-        self._groups.append(self._timestep_init_group)
-        gxml = ET.fromstring(Suite.__timestep_final_group__)
-        self._timestep_final_group = Group(gxml, self, self._context)
+        self._suite_init_group = self.new_group(Suite.__initial_group__,
+                                                "initialize")
+        self._suite_final_group = self.new_group(Suite.__final_group__,
+                                                 "finalize")
+        self._timestep_init_group = self.new_group(Suite.__timestep_initial_group__,
+                                                   "timestep_initial")
+        self._timestep_final_group = self.new_group(Suite.__timestep_final_group__,
+                                                    "timestep_final")
+        # Set up some groupings for later efficiency
         self._beg_groups = [x.name for x in [self._suite_init_group,
                                              self._timestep_init_group]]
         self._end_groups = [x.name for x in [self._suite_final_group,
                                              self._timestep_final_group]]
         # Build hierarchical structure as in SDF
+        self._groups.append(self._suite_init_group)
+        self._groups.append(self._timestep_init_group)
         for suite_item in suite_xml:
             item_type = suite_item.tag.lower()
             # Suite item is a group or a suite-wide init or final method
             if item_type == 'group':
                 # Parse a group
-                self._groups.append(Group(suite_item, self, self._context))
+                self._groups.append(Group(suite_item, 'run', self, self._context))
             else:
                 match_trans = CCPP_STATE_MACH.group_match(item_type)
                 if match_trans is None:
                     raise CCPPError("Unknown CCPP suite component tag type, '{}'".format(item_type))
-                elif match_trans == 'initialize':
+                elif match_trans in self._full_phases:
                     # Parse a suite-wide initialization scheme
-                    self._suite_init_group.add_item(Scheme(suite_item, self._context))
-                elif match_trans == 'finalize':
-                    # Parse a suite-wide finalization scheme
-                    self._suite_final_group.add_item(Scheme(suite_item, self._context))
-                elif match_trans == 'timestep_initial':
-                    # Parse a suite-wide time step initialization scheme
-                    self._timestep_init_group.add_item(Scheme(suite_item, self._context))
-                elif match_trans == 'timestep_final':
-                    # Parse a suite-wide time step finalization scheme
-                    self._timestep_final_group.add_item(Scheme(suite_item, self._context))
+                    self._full_phases[match_trans].add_item(Scheme(suite_item, self._context))
                 else:
                     raise ParseInternalError("Unhandled CCPP suite component tag type, '{}'".format(match_trans))
                 # End if
@@ -705,13 +655,6 @@ end module {module}
         self._groups.append(self._timestep_final_group)
         self._groups.append(self._suite_final_group)
         return success
-
-    def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
-        print("STRUCTURED:")
-        print("{}".format(self._groups))
-        for group in self._groups:
-            group.print_debug()
 
     @property
     def module(self):
@@ -753,39 +696,34 @@ end module {module}
         # Collect all the available schemes
         for header_list in scheme_headers:
             for header in header_list:
-                func_id, trans_id, match_trans = CCPP_STATE_MACH.transition_match(header.title)
-                if trans_id is not None:
-                    pmatch = trans_id.lower()
+                pgroup = None
+                for gname in self._full_groups.keys():
+                    mgroup = self._full_groups[gname]
+                    pgroup, func_id = mgroup.phase_match(header.title)
+                    if pgroup is not None:
+                        break
+                    # End if
+                # End for
+                if pgroup is not None:
+                    if not pgroup.has_item(header.title):
+                        sstr = Suite.__scheme_template__.format(func_id)
+                        sxml = ET.fromstring(sstr)
+                        scheme = Scheme(sxml, self._context)
+                        pgroup.add_item(scheme)
+                    # End if (no else needed)
                 else:
-                    raise CCPPError('Unknown scheme metadata type, "{}"'.format(header.title))
+                    if header.title.lower()[-4:] != '_run':
+                        raise CCPPError("Unknown CCPP scheme run type, '{}'".format(header.title))
+                    # End if
                 # End if
-                if (pmatch[0:4] == 'init') and (not self._suite_init_group.has_item(header.title)):
-                    sstr = Suite.__scheme_template__.format(func_id)
-                    sxml = ET.fromstring(sstr)
-                    scheme = Scheme(sxml, self._context)
-                    self._suite_init_group.add_item(scheme)
-                elif pmatch == 'run':
-                    pass # We do not need this list for anything
-                elif (pmatch[0:5] == 'final') and (not self._suite_final_group.has_item(header.title)):
-                    sstr = Suite.__scheme_template__.format(func_id)
-                    sxml = ET.fromstring(sstr)
-                    scheme = Scheme(sxml, self._context)
-                    self._suite_final_group.add_item(scheme)
-                # End if (else already raised error as above)
             # End for
         # End for
         # Grab the host model argument list
         self._host_arg_list = host_model.argument_list()
         # First pass, create init, run, and finalize sequences
         for item in self.groups:
-            if item is self._suite_init_group:
-                phase = 'initialize'
-            elif item is self._suite_final_group:
-                phase = 'finalize'
-            elif item is self._timestep_init_group:
-                phase = 'timestep_initial'
-            elif item is self._timestep_final_group:
-                phase = 'timestep_final'
+            if item.name in self._full_groups:
+                phase = self._full_groups[item.name].phase
             else:
                 phase = 'run'
             # End if
@@ -798,7 +736,7 @@ end module {module}
         """Method to separate out run-loop groups from special initial
         and final groups
         """
-        return (group is not self._suite_init_group) and (group is not self._suite_final_group)
+        return (group.name not in self._beg_groups) and (group.name not in self._end_groups)
 
     def max_part_len(self):
         "What is the longest suite subroutine name?"
@@ -884,10 +822,10 @@ module {module}
 
 '''
 
-    subhead = '''
+    __subhead__ = '''
    subroutine ccpp_physics_{phase}({host_call_list})
 '''
-    subfoot = '''
+    __subfoot__ = '''
    end subroutine ccpp_physics_{phase}
 '''
 
@@ -896,19 +834,23 @@ end module {module}
 '''
 
     __api_source__ = ParseSource("CCPP_API", "MODULE",
-                             ParseContext(filename="ccpp_suite.F90"))
+                                 ParseContext(filename="ccpp_suite.F90"))
 
-    _suite_name = Var({'local_name':'suite_name',
-                       'standard_name':'suite_name',
-                       'intent':'in', 'type':'character',
-                       'kind':'len=*', 'units':'',
-                       'dimensions':'()'}, __api_source__)
+    __suite_name__ = Var({'local_name':'suite_name',
+                          'standard_name':'suite_name',
+                          'intent':'in', 'type':'character',
+                          'kind':'len=*', 'units':'',
+                          'dimensions':'()'}, __api_source__)
 
-    _suite_part = Var({'local_name':'suite_part',
-                       'standard_name':'suite_part',
-                       'intent':'in', 'type':'character',
-                       'kind':'len=*', 'units':'',
-                       'dimensions':'()'}, __api_source__)
+    __suite_part__ = Var({'local_name':'suite_part',
+                          'standard_name':'suite_part',
+                          'intent':'in', 'type':'character',
+                          'kind':'len=*', 'units':'',
+                          'dimensions':'()'}, __api_source__)
+
+    # Note, we cannot add aux_vars to our dictionary as we do not want
+    #    them showing up in group dummy arg lists
+    __aux_vars__ = [__suite_name__, __suite_part__]
 
     def __init__(self, sdfs, host_model, scheme_headers, logger):
         self._module        = 'ccpp_physics_api'
@@ -916,7 +858,8 @@ end module {module}
         self._schemes       = scheme_headers
         self._suites        = list()
         super(API, self).__init__(self.module, parent_dict=host_model, logger=logger)
-        self._host_arg_list = host_model.argument_list()
+        self._host_arg_list_full = host_model.argument_list()
+        self._host_arg_list_noloop = host_model.argument_list(include_loop_vars=False)
         # Turn the SDF files into Suites
         for sdf in sdfs:
             suite = Suite(sdf, self, logger)
@@ -932,8 +875,8 @@ end module {module}
 
     @classmethod
     def suite_var_list(cls):
-        return '{}, {}'.format(cls._suite_name.get_prop_value('local_name'),
-                               cls._suite_part.get_prop_value('local_name'))
+        return '{}, {}'.format(cls.__suite_name__.get_prop_value('local_name'),
+                               cls.__suite_part__.get_prop_value('local_name'))
 
     def write(self, output_dir):
         """Write API for static build"""
@@ -962,22 +905,28 @@ end module {module}
             api.write("\ncontains\n", 0)
             # Write the module body
             for stage in CCPP_STATE_MACH.transitions():
-                host_call_list = API._suite_name.get_prop_value('local_name')
+                host_call_list = API.__suite_name__.get_prop_value('local_name')
                 if stage == 'run':
-                    host_call_list = host_call_list + ', ' + API._suite_part.get_prop_value('local_name')
+                    host_call_list = host_call_list + ', ' + API.__suite_part__.get_prop_value('local_name')
+                    hal = self._host_arg_list_full
+                else:
+                    hal = self._host_arg_list_noloop
                 # End if
-                host_call_list = host_call_list + ", " + self._host_arg_list
+                host_call_list = host_call_list + ", " + hal
                 host_call_list = host_call_list + ', '.join(self.prop_list('local_name'))
-                api.write(API.subhead.format(phase=stage, host_call_list=host_call_list), 1)
+                api.write(API.__subhead__.format(phase=stage, host_call_list=host_call_list), 1)
                 # Declare dummy arguments
-                API._suite_name.write_def(api, 2)
+                API.__suite_name__.write_def(api, 2)
                 if stage == 'run':
-                    API._suite_part.write_def(api, 2)
+                    API.__suite_part__.write_def(api, 2)
                 # End if
                 for var in self._host.variable_list():
-                    var.write_def(api, 2)
+                    stdname = var.get_prop_value('standard_name')
+                    if (stage=='run') or (self.loop_var_match(stdname) is None):
+                        var.write_def(api, 2)
+                    # End if
                 # End for
-                self.declare_variables(api, 2)
+                self.declare_variables(api, 2, include_loop_vars=(stage=='run'))
                 # Now, add in cases for all suite parts
                 else_str = '\n'
                 for suite in self._suites:
@@ -987,7 +936,7 @@ end module {module}
                         for spart in suite.groups:
                             if suite.is_run_group(spart):
                                 api.write("{}if (trim(suite_part) == '{}') then".format(el2_str, spart.name), 3)
-                                api.write("call {}({})".format(spart.name, self._host_arg_list), 4)
+                                api.write("call {}({})".format(spart.name, self._host_arg_list_full), 4)
                                 el2_str = 'else '
                             # End if
                         # End for
@@ -997,7 +946,7 @@ end module {module}
                         api.write("errflg = 1", 4)
                         api.write("end if", 3)
                     else:
-                        api.write("call {}_{}({})".format(suite.name, stage, self._host_arg_list), 3)
+                        api.write("call {}_{}({})".format(suite.name, stage, self._host_arg_list_noloop), 3)
                     # End if
                     else_str = 'else '
                 # End for
@@ -1005,7 +954,7 @@ end module {module}
                 api.write("errmsg = 'No suite named '//trim(suite_name)//' found'", 3)
                 api.write("errflg = 1", 3)
                 api.write("end if", 2)
-                api.write(API.subfoot.format(phase=stage), 1)
+                api.write(API.__subfoot__.format(phase=stage), 1)
             # End for
             # Write the list_suites function
             api.write("function {}() result(list)".format(API.__suite_fname__), 1)

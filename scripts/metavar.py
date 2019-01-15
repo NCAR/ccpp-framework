@@ -755,18 +755,22 @@ class VarDictionary(OrderedDict):
         'Add a child dictionary to enable traversal'
         self._sub_dicts.append(sub_dict)
 
-    def prop_list(self, prop_name):
+    def prop_list(self, prop_name, include_loop_vars=True):
         'Return a list of the <prop_name> property for each variable.'
         plist = list()
         for standard_name in self.keys():
-            plist.append(self[standard_name].get_prop_value(prop_name))
+            if include_loop_vars or (self.loop_var_match(standard_name) is None):
+                plist.append(self[standard_name].get_prop_value(prop_name))
+            # End if
         # End for
         return plist
 
-    def declare_variables(self, outfile, indent):
+    def declare_variables(self, outfile, indent, include_loop_vars=True):
         "Write out the declarations for this dictionary's variables"
         for standard_name in self.keys():
-            self[standard_name].write_def(outfile, indent)
+            if include_loop_vars or (self.loop_var_match(standard_name) is None):
+                self[standard_name].write_def(outfile, indent)
+            # End if
         # End for
 
     def merge(self, other_dict):
@@ -788,6 +792,9 @@ class VarDictionary(OrderedDict):
         # End if
         return "VarDictionary({}{}{}".format(self.name, comma, srepr[vstart:])
 
+    def loop_var_match(self, standard_name):
+        return VarDictionary.__ebe_re.match(standard_name)
+
     def find_loop_subst(self, standard_name, any_scope=True, context=None):
         """If <standard_name> is of the form <standard_name>_extent and that
         variable is not in the dictionary, substitute a tuple of variables,
@@ -797,7 +804,7 @@ class VarDictionary(OrderedDict):
         range, (__var_one, <standard_name>_extent)
         In other cases, return None
         """
-        loop_var = VarDictionary.__ebe_re.match(standard_name)
+        loop_var = self.loop_var_match(standard_name)
         dict_var = self.find_variable(standard_name,
                                       any_scope=any_scope, loop_subst=False)
         logger_str = None
