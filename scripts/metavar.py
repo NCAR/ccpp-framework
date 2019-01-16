@@ -322,10 +322,10 @@ class Var(object):
     'in'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'ttype' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))
     Traceback (most recent call last):
-    ParseSyntaxError: Invalid metadata variable property, 'ttype', at <standard input>:1
+    ParseSyntaxError: Invalid metadata variable property, 'ttype', in <standard input>
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))
     Traceback (most recent call last):
-    ParseSyntaxError: Required property, 'units', missing, at <standard input>:1
+    ParseSyntaxError: Required property, 'units', missing, in <standard input>
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'inout', 'constant' : '.true.'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: foo is marked constant but is intent inout, at <standard input>:1
@@ -698,15 +698,43 @@ class VarDictionary(OrderedDict):
     def parent(self):
         return self._parent_dict
 
-    def variable_list(self, recursive=False):
+    def include_var_in_list(self, var, std_vars, loop_vars, consts):
+        '''Return True iff <var> is of a type allowed by the logicals,
+        <std_vars> (not constants or loop_vars),
+        <loop_vars> a variable ending in "_extent", "_begin", "_end", or
+        <consts> a variable with the "constant" property.
+        '''
+        const_val = var.get_prop_value('constant')
+        const_var = Var.get_prop('constant').valid_value(const_val)
+        include_var = consts and const_var
+        if not include_var:
+            standard_name = var.get_prop_value('standard_name')
+            loop_var = VarDictionary.__ebe_re.match(standard_name) is not None
+            include_var = loop_var and loop_vars
+            if not include_var:
+                std_var = not (loop_var or const_var)
+                include_var = std_vars and std_var
+            # End if
+        # End if
+        return include_var
+
+    def variable_list(self, recursive=False,
+                      std_vars=True, loop_vars=True, consts=True):
         "Return a list of all variables"
         if recursive and (self._parent_dict is not None):
-            vlist = self._parent_dict.variable_list(recursive=recursive)
+            vlist = self._parent_dict.variable_list(recursive=recursive,
+                                                    std_vars=std_vars,
+                                                    loop_vars=loop_vars,
+                                                    consts=consts)
         else:
             vlist = list()
         # End if
         for sn in self.keys():
-            vlist.append(self[sn])
+            var = self[sn]
+            if self.include_var_in_list(var, std_vars=std_vars,
+                                        loop_vars=loop_vars, consts=consts):
+                vlist.append(var)
+            # End if
         # End for
         return vlist
 
@@ -755,20 +783,25 @@ class VarDictionary(OrderedDict):
         'Add a child dictionary to enable traversal'
         self._sub_dicts.append(sub_dict)
 
-    def prop_list(self, prop_name, include_loop_vars=True):
-        'Return a list of the <prop_name> property for each variable.'
+    def prop_list(self, prop_name, std_vars=True, loop_vars=True, consts=True):
+        '''Return a list of the <prop_name> property for each variable.
+        std_vars are variables which are neither constants nor loop variables.
+        '''
         plist = list()
         for standard_name in self.keys():
-            if include_loop_vars or (self.loop_var_match(standard_name) is None):
+            var = self.find_variable(standard_name, any_scope=False, loop_subst=False)
+            if self.include_var_in_list(var, std_vars=std_vars, loop_vars=loop_vars, consts=consts):
                 plist.append(self[standard_name].get_prop_value(prop_name))
             # End if
         # End for
         return plist
 
-    def declare_variables(self, outfile, indent, include_loop_vars=True):
+    def declare_variables(self, outfile, indent,
+                          std_vars=True, loop_vars=True, consts=True):
         "Write out the declarations for this dictionary's variables"
         for standard_name in self.keys():
-            if include_loop_vars or (self.loop_var_match(standard_name) is None):
+            var = self.find_variable(standard_name, any_scope=False, loop_subst=False)
+            if self.include_var_in_list(var, std_vars=std_vars, loop_vars=loop_vars, consts=consts):
                 self[standard_name].write_def(outfile, indent)
             # End if
         # End for

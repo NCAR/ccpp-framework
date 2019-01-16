@@ -62,14 +62,33 @@ def write_host_cap(host_model, api, output_dir, logger):
             cap.write("public :: {host_model}_ccpp_physics_{stage}".format(host_model=host_model.name, stage=stage), 1)
         # End for
         cap.write('\ncontains\n', 0)
-        apivars = api.suite_var_list()
         for stage in CCPP_STATE_MACH.transitions():
-            cap.write(subhead.format(api_vars=apivars, host_model=host_model.name, stage=stage), 1)
-            api.declare_variables(cap, 2)
+            loop_vars = stage == 'run'
+            apivars = [api.suite_name_var]
+            if loop_vars:
+                apivars.append(api.suite_part_var)
+            hmvars = host_model.variable_list(std_vars=False,
+                                              loop_vars=loop_vars,
+                                              consts=False)
+            lnames = [x.get_prop_value('local_name') for x in apivars + hmvars]
+            api_vlist = ", ".join(lnames)
+            cap.write(subhead.format(api_vars=api_vlist,
+                                     host_model=host_model.name, stage=stage), 1)
+            for var in apivars:
+                var.write_def(cap, 2)
+            # End for
+            for var in hmvars:
+                var.write_def(cap, 2)
+            # End for
             cap.write('', 0)
             # Now, call the real API with the host model's variable list
-            callstr = 'call ccpp_physics_{}({}, {})'
-            cap.write(callstr.format(stage, apivars, host_model.argument_list()), 2)
+            callstr = 'call ccpp_physics_{}({})'
+            hmvars = host_model.variable_list(std_vars=True,
+                                              loop_vars=loop_vars,
+                                              consts=True)
+            lnames = [x.get_prop_value('local_name') for x in apivars + hmvars]
+            api_vlist = ", ".join(lnames)
+            cap.write(callstr.format(stage, api_vlist), 2)
             cap.write(subfoot.format(host_model=host_model.name, stage=stage), 1)
         # End for
         cap.write(footer.format(module=module_name), 0)

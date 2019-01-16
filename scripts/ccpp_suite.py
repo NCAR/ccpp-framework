@@ -398,7 +398,8 @@ class Group(VarDictionary):
 
     def analyze(self, phase, suite_vars, scheme_headers, logger):
         # We need a copy of the API and host model variables for dummy args
-        self._host_vars = suite_vars.parent.variable_list(recursive=True)
+        self._host_vars = suite_vars.parent.variable_list(recursive=True,
+                                                          loop_vars=(phase=='run'))
         self._phase = phase
         for item in self._parts:
             # Items can be schemes, subcycles or other objects
@@ -719,7 +720,8 @@ end module {module}
             # End for
         # End for
         # Grab the host model argument list
-        self._host_arg_list = host_model.argument_list()
+        self._host_arg_list_full = host_model.argument_list()
+        self._host_arg_list_noloop = host_model.argument_list(loop_vars=False)
         # First pass, create init, run, and finalize sequences
         for item in self.groups:
             if item.name in self._full_groups:
@@ -788,13 +790,13 @@ end module {module}
             outfile.write('\ncontains', 0)
             for group in self._groups:
                 if group.name in self._beg_groups:
-                    group.write(outfile, self._host_arg_list, 1,
+                    group.write(outfile, self._host_arg_list_noloop, 1,
                                 suite_vars=self, allocate=True)
                 elif group.name in self._end_groups:
-                    group.write(outfile, self._host_arg_list, 1,
+                    group.write(outfile, self._host_arg_list_noloop, 1,
                                 suite_vars=self, deallocate=True)
                 else:
-                    group.write(outfile, self._host_arg_list, 1)
+                    group.write(outfile, self._host_arg_list_full, 1)
                 # End if
             # End for
             # Finish off the module
@@ -836,6 +838,8 @@ end module {module}
     __api_source__ = ParseSource("CCPP_API", "MODULE",
                                  ParseContext(filename="ccpp_suite.F90"))
 
+    # Note, we cannot add these vars to our dictionary as we do not want
+    #    them showing up in group dummy arg lists
     __suite_name__ = Var({'local_name':'suite_name',
                           'standard_name':'suite_name',
                           'intent':'in', 'type':'character',
@@ -848,10 +852,6 @@ end module {module}
                           'kind':'len=*', 'units':'',
                           'dimensions':'()'}, __api_source__)
 
-    # Note, we cannot add aux_vars to our dictionary as we do not want
-    #    them showing up in group dummy arg lists
-    __aux_vars__ = [__suite_name__, __suite_part__]
-
     def __init__(self, sdfs, host_model, scheme_headers, logger):
         self._module        = 'ccpp_physics_api'
         self._host          = host_model
@@ -859,7 +859,7 @@ end module {module}
         self._suites        = list()
         super(API, self).__init__(self.module, parent_dict=host_model, logger=logger)
         self._host_arg_list_full = host_model.argument_list()
-        self._host_arg_list_noloop = host_model.argument_list(include_loop_vars=False)
+        self._host_arg_list_noloop = host_model.argument_list(loop_vars=False)
         # Turn the SDF files into Suites
         for sdf in sdfs:
             suite = Suite(sdf, self, logger)
@@ -873,10 +873,13 @@ end module {module}
         '''Get the module name of the API.'''
         return self._module
 
-    @classmethod
-    def suite_var_list(cls):
-        return '{}, {}'.format(cls.__suite_name__.get_prop_value('local_name'),
-                               cls.__suite_part__.get_prop_value('local_name'))
+    @property
+    def suite_name_var(self):
+        return type(self).__suite_name__
+
+    @property
+    def suite_part_var(self):
+        return type(self).__suite_part__
 
     def write(self, output_dir):
         """Write API for static build"""
@@ -905,9 +908,9 @@ end module {module}
             api.write("\ncontains\n", 0)
             # Write the module body
             for stage in CCPP_STATE_MACH.transitions():
-                host_call_list = API.__suite_name__.get_prop_value('local_name')
+                host_call_list = self.suite_name_var.get_prop_value('local_name')
                 if stage == 'run':
-                    host_call_list = host_call_list + ', ' + API.__suite_part__.get_prop_value('local_name')
+                    host_call_list = host_call_list + ', ' + self.suite_part_var.get_prop_value('local_name')
                     hal = self._host_arg_list_full
                 else:
                     hal = self._host_arg_list_noloop
@@ -916,9 +919,9 @@ end module {module}
                 host_call_list = host_call_list + ', '.join(self.prop_list('local_name'))
                 api.write(API.__subhead__.format(phase=stage, host_call_list=host_call_list), 1)
                 # Declare dummy arguments
-                API.__suite_name__.write_def(api, 2)
+                self.suite_name_var.write_def(api, 2)
                 if stage == 'run':
-                    API.__suite_part__.write_def(api, 2)
+                    self.suite_part_var.write_def(api, 2)
                 # End if
                 for var in self._host.variable_list():
                     stdname = var.get_prop_value('standard_name')
@@ -926,7 +929,7 @@ end module {module}
                         var.write_def(api, 2)
                     # End if
                 # End for
-                self.declare_variables(api, 2, include_loop_vars=(stage=='run'))
+                self.declare_variables(api, 2, loop_vars=(stage=='run'))
                 # Now, add in cases for all suite parts
                 else_str = '\n'
                 for suite in self._suites:

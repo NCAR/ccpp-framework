@@ -5,6 +5,7 @@
 
 # Python library imports
 import re
+from collections import OrderedDict
 # CCPP framework imports
 from parse_tools import FORTRAN_ID
 
@@ -69,7 +70,7 @@ class StateMachine(object):
         functions which form part of the transition action.
         """
         # Implement the State Transition Table as a tuple and use accessors
-        self.__stt__ = {}
+        self.__stt__ = OrderedDict()
         if initial_data is not None:
             for trans in initial_data:
                 if len(trans) != 4:
