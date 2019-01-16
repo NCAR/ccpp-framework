@@ -225,16 +225,16 @@ def scan_free_line(line, in_continue, in_single_char, in_double_char, context):
     (2, -1, False, False, -1)
     >>> scan_free_line('  & line continued"', True, True, False, ParseContext()) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Cannot end non-continued line in a character context, at <standard input>:1
+    ParseSyntaxError: Cannot end non-continued line in a character context, in <standard input>
     >>> scan_free_line("  & line continued'", True, False, True, ParseContext()) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Cannot end non-continued line in a character context, at <standard input>:1
+    ParseSyntaxError: Cannot end non-continued line in a character context, in <standard input>
     >>> scan_free_line("int :: inde&", False, True, False, ParseContext())
     Traceback (most recent call last):
-    ParseSyntaxError: Cannot start line in character context if not a continued line, at <standard input>:1
+    ParseSyntaxError: Cannot start line in character context if not a continued line, in <standard input>
     >>> scan_free_line("int :: inde&", True, True, True, ParseContext())
     Traceback (most recent call last):
-    ParseSyntaxError: Cannot be both in an apostrophe character context and a quote character context, at <standard input>:1
+    ParseSyntaxError: Cannot be both in an apostrophe character context and a quote character context, in <standard input>
     """
 
     # A few sanity checks

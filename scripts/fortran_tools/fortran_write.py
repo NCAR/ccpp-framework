@@ -164,8 +164,10 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod()
     # Make sure we can write a file
+    import sys
     import os
     import os.path
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import six
     name = 'foo'
     while os.path.exists(name+'.F90'):
