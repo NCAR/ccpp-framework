@@ -170,14 +170,20 @@ if __name__ == "__main__":
         # We are in a subdir, find framework root and host root
         thispath = os.path.abspath(__file__)
         hdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(thispath))))
+        cam6 = os.path.join(hdir, "cam_driver", "src", "cam6_registry.xml")
         cam7 = os.path.join(hdir, "cam_driver", "src", "cam7_registry.xml")
-        if os.path.exists(cam7):
-            tree, root = read_xml_file(cam7, logger)
-            version = find_schema_version(root, logger)
-            res = validate_xml_file(cam7, 'host_registry', version, logger)
-            print("CAM7 registry {}".format("validates" if res else "does not validate"))
-        else:
-            print("Could not find CAM7 registry, {}".format(cam7))
+        for cpath in [cam6, cam7]:
+            if os.path.exists(cpath):
+                cbase = os.path.basename(cpath).split('.')[0].split('_')
+                cname = cbase[0].upper() + ' ' + cbase[1]
+                tree, root = read_xml_file(cpath, logger)
+                version = find_schema_version(root, logger)
+                res = validate_xml_file(cpath, 'host_registry', version, logger)
+                print("{} {}".format(cname, "validates" if res else "does not validate"))
+            else:
+                print("Could not find CAM7 registry, {}".format(cam7))
+            # End if
+        # End for
     except CCPPError as ca:
         print("{}".format(ca))
 # No else:

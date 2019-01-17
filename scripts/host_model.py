@@ -95,7 +95,7 @@ class HostModel(VarDictionary):
                 src = [x.get_prop_name('kind') for x in source]
                 raise CCPPError("Duplicate DDT standard name, {}, from {}".format(stdname), src)
             elif vtype == 'type':
-                # Process this DDT field if it defined
+                # Process this DDT field if it is defined
                 vkind = var.get_prop_value('kind')
                 if vkind in self._ddt_defs[vkind]:
                     self.collect_fields(var, source + [var])

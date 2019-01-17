@@ -564,7 +564,7 @@ class Var(object):
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
                                  name=name, dims=dimstr, cspc=cspc), indent)
 
-    def host_arg_str(self, hvar, host_model, header, ddt):
+    def host_arg_str(self, hvar, host_model, ddt):
         '''Create the proper statement of a piece of a host-model variable.
         If ddt is True, we can only have a single element selected
         '''
@@ -650,10 +650,14 @@ class VarDictionary(OrderedDict):
     ParseSyntaxError: Invalid Duplicate standard name, 'hi_mom', at <standard input>:
     """
 
-    # Regular expression matching <name>_extent, <name>_begin, or <name>_end
-    __ebe_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
-    # Regular expression matching <name>_loop_extent
-    __extent_re = re.compile(FORTRAN_ID+r"((?i)_loop_extent)$")
+    # Loop variables
+    __ccpp_loop_vars__ = ['horizontal_loop_begin', 'horizontal_loop_end',
+                          'thread_block_number', 'horizontal_loop_extent']
+    # Loop substitutions
+    __ccpp_loop_subst__ = {'horizontal_loop_extent' :
+                           ('horizontal_loop_begin', 'horizontal_loop_end')}
+    # Dimension substitutions
+    __ccpp_dim_subst__ = {'horizontal_loop_extent' : 'horizontal_dimension'}
 
     # Variable representing the constant integer, 1
     __var_one = Var({'local_name' : 'ccpp_one', 'constant' : 'True',
@@ -709,8 +713,8 @@ class VarDictionary(OrderedDict):
         include_var = consts and const_var
         if not include_var:
             standard_name = var.get_prop_value('standard_name')
-            loop_var = VarDictionary.__ebe_re.match(standard_name) is not None
-            include_var = loop_var and loop_vars
+            loop_var = VarDictionary.loop_var_match(standard_name)
+            include_var = (loop_var is not None) and loop_vars
             if not include_var:
                 std_var = not (loop_var or const_var)
                 include_var = std_vars and std_var
@@ -765,7 +769,6 @@ class VarDictionary(OrderedDict):
     def find_variable(self, standard_name, any_scope=True, loop_subst=False):
         """Return the variable matching <standard_name> or None
         If any_scope is True, search parent scopes if not in current scope.
-        VarDictionary is a base class, loop_subst does nothing at this level.
         """
         if standard_name in self:
             var = self[standard_name]
@@ -825,8 +828,17 @@ class VarDictionary(OrderedDict):
         # End if
         return "VarDictionary({}{}{}".format(self.name, comma, srepr[vstart:])
 
-    def loop_var_match(self, standard_name):
-        return VarDictionary.__ebe_re.match(standard_name)
+    @classmethod
+    def ccpp_loop_variables(cls):
+        return cls.__ccpp_loop_vars__
+
+    @classmethod
+    def loop_var_match(cls, standard_name):
+        if standard_name in cls.__ccpp_loop_subst__:
+            return cls.__ccpp_loop_subst__[standard_name]
+        else:
+            return None
+        # End if
 
     def find_loop_subst(self, standard_name, any_scope=True, context=None):
         """If <standard_name> is of the form <standard_name>_extent and that
@@ -837,41 +849,30 @@ class VarDictionary(OrderedDict):
         range, (__var_one, <standard_name>_extent)
         In other cases, return None
         """
-        loop_var = self.loop_var_match(standard_name)
+        loop_var = VarDictionary.loop_var_match(standard_name)
         dict_var = self.find_variable(standard_name,
                                       any_scope=any_scope, loop_subst=False)
         logger_str = None
         if loop_var is not None:
             # Let us see if we can fix a loop variable
-            # First up, we have an extent but host has begin and end
-            if loop_var.group(2).lower() == 'extent':
-                if dict_var is not None:
-                    my_var = (VarDictionary.__var_one, dict_var)
-                    if self._logger is not None:
-                        logger_str = "loop_subst: found {}{}".format(standard_name, context_string(context))
-                    # End if
-                else:
-                    beg_name = loop_var.group(1) + '_begin'
-                    end_name = loop_var.group(1) + '_end'
-                    beg_var = self.find_variable(beg_name)
-                    end_var = self.find_variable(end_name)
-                    if (beg_var is not None) and (end_var is not None):
-                        my_var = (beg_var, end_var)
-                        if self._logger is not None:
-                            logger_str = "loop_subst: {} ==> ({}, {}){}".format(standard_name, beg_name, end_name, context_string(context))
-                        # End if
-                    else:
-                        if self._logger is not None:
-                            logger_str = "loop_subst: {} ==> ({}, {}) FAILED{}".format(standard_name, beg_name, end_name, context_string(context))
-                        # End if
-                        my_var = None
-                    # End if
+            if dict_var is not None:
+                my_var = (VarDictionary.__var_one, dict_var)
+                if self._logger is not None:
+                    logger_str = "loop_subst: found {}{}".format(standard_name, context_string(context))
                 # End if
             else:
-                if self._logger is not None:
-                    logger_str = "loop_subst: no known substitution for {}{}, not a loop variable?".format(standard_name, context_string(context))
+                my_vars = [self.find_variable(x) for x in loop_var]
+                if None not in my_vars:
+                    my_var = tuple(my_vars)
+                    if self._logger is not None:
+                        logger_str = "loop_subst: {} ==> ({}, {}){}".format(standard_name, beg_name, end_name, context_string(context))
+                    # End if
+                else:
+                    if self._logger is not None:
+                        logger_str = "loop_subst: {} ==> ({}, {}) FAILED{}".format(standard_name, beg_name, end_name, context_string(context))
+                    # End if
+                    my_var = None
                 # End if
-                my_var = None # Nothing to do here?
             # End if
         else:
             if self._logger is not None:
@@ -891,11 +892,11 @@ class VarDictionary(OrderedDict):
         If <standard_name> is not of the form <standard_name>_extent, return
         None.
         """
-        loop_var = VarDictionary.__extent_re.match(standard_name)
+        loop_var = standard_name in VarDictionary.__ccpp_dim_subst__
         logger_str = None
-        if loop_var is not None:
+        if loop_var:
             # Let us see if we can replace the variable
-            dim_name = loop_var.group(1) + '_dimension'
+            dim_name = VarDictionary.__ccpp_dim_subst__[standard_name]
             my_var = self.find_variable(dim_name, any_scope=any_scope)
             if my_var is None:
                 raise CCPPError("Dimension variable, {} not found{}".format(dim_name, context_string(context)))

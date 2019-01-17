@@ -30,7 +30,6 @@ __run_st__ = r"(?:(?i)run)"
 __ts_init_st__ = r"(?:(?i)timestep_init(?:ial(?:ize)?)?)"
 __ts_final_st__ = r"(?:(?i)timestep_final(?:ize)?)"
 
-loop_re  = re.compile(FORTRAN_ID+r"_((?i)(?:extent)|(?:begin)|(?:end))$")
 dimension_re = re.compile(FORTRAN_ID+r"_((?i)dimension)$")
 
 array_ref_re = re.compile(r"([^(]*)[(]([^)]*)[)]")
@@ -90,26 +89,44 @@ class Scheme(object):
         '''Return name of scheme'''
         return self._name
 
+    def ddtspec_to_str(self, ddt_spec, host_model):
+        "Properly convert a DDT field reference to a string"
+        args = list()
+        alen = len(ddt_spec)
+        index = 0
+        for var in ddt_spec:
+            ddt = index < (alen - 1)
+            argstr = self.host_arg_str(var, host_model, ddt)
+            index = index + 1
+            args.append(argstr)
+        # End for
+        return '%'.join(args)
+
     def find_host_model_var(self, hdim, host_model):
+        "Create the correct array dimension reference for hdim"
         hsdims = list()
         for hsdim in hdim.split(':'):
             hsdim_var = host_model.find_variable(hsdim, loop_subst=True)
             if hsdim_var is None:
                 raise CCPPError("No matching host variable for {} dimension, {}".format(self._subroutine_name, hsdim))
             elif isinstance(hsdim_var, tuple):
-                hsdims.append(hsdim_var[0].get_prop_value('local_name'))
-                hsdims.append(hsdim_var[1].get_prop_value('local_name'))
+                # This is a dimension range (e.g., from a loop_subst)
+                lnames = [x.get_prop_value('local_name') for x in hsdim_var]
+                hsdims.extend(lnames)
+            elif isinstance(hsdim_var, list):
+                # This is a DDT reference
+                hsdims.append(self.ddtspec_to_str(hsdim_var, host_model))
             else:
                 hsdims.append(hsdim_var.get_prop_value('local_name'))
             # End if
         # End for
-        loop_var = loop_re.match(hdim)
+        loop_var = VarDictionary.loop_var_match(hdim)
         if (dimension_re.match(hdim) is not None) and (len(hsdims) == 1):
             # We need to specify the whole range
             hsdims = ['1'] + hsdims
         elif (loop_var is not None) and (len(hsdims) == 1):
             # We may to specify the whole range
-            lv_type = loop_var.group(2).lower()
+            lv_type = hdim.split('_')[-1]
             if lv_type == 'extent':
                 hsdims = ['1'] + hsdims # This should print as '1:<name>_extent'
             elif lv_type == 'beg':
@@ -122,7 +139,7 @@ class Scheme(object):
         # End if
         return ':'.join(hsdims)
 
-    def host_arg_str(self, hvar, host_model, header, ddt):
+    def host_arg_str(self, hvar, host_model, ddt):
         '''Create the proper statement of a piece of a host-model variable.
         If ddt is True, we can only have a single element selected
         '''
@@ -159,8 +176,13 @@ class Scheme(object):
             dimstr = ''
         # End if
         for hdim in hdims:
+            # We can only have a single element of a DDT when selecting
+            # a field. Is this a thread block?
+            if ddt and (hdim == 'thread_block_begin:thread_block_end'):
+                hdim = 'thread_block_number'
+            # End if
             if ddt and (':' in hdim):
-                raise CCPPError("Invalid DDT dimension spec {}({})".format(hstr, hdimval))
+                raise CCPPError("Invalid DDT dimension spec {}{}".format(hstr, hdimval))
             else:
                 # Find the host model variable for each dim
                 hsdims = self.find_host_model_var(hdim, host_model)
@@ -226,23 +248,14 @@ class Scheme(object):
                     hvar = suite_vars.find_variable(stdname)
                 # End if (no else needed)
                 if isinstance(hvar, list):
-                    args = list()
-                    alen = len(hvar)
-                    index = 0
-                    for var in hvar:
-                        ddt = index < (alen - 1)
-                        argstr = self.host_arg_str(var, host_model, my_header, ddt)
-                        index = index + 1
-                        args.append(argstr)
-                    # End for
-                    host_arglist.append('%'.join(args))
+                    host_arglist.append(self.ddtspec_to_str(hvar, host_model))
                 elif isinstance(hvar, tuple):
                     for var in hvar:
-                        argstr = self.host_arg_str(var, host_model, my_header, False)
+                        argstr = self.host_arg_str(var, host_model, False)
                         host_arglist.append(argstr)
                     # End for
                 else:
-                    argstr = self.host_arg_str(hvar, host_model, my_header, False)
+                    argstr = self.host_arg_str(hvar, host_model, False)
                     host_arglist.append(argstr)
                 # End if
             # End for
@@ -925,7 +938,7 @@ end module {module}
                 # End if
                 for var in self._host.variable_list():
                     stdname = var.get_prop_value('standard_name')
-                    if (stage=='run') or (self.loop_var_match(stdname) is None):
+                    if (stage=='run') or (VarDictionary.loop_var_match(stdname) is None):
                         var.write_def(api, 2)
                     # End if
                 # End for
