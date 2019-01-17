@@ -865,7 +865,8 @@ class VarDictionary(OrderedDict):
                 if None not in my_vars:
                     my_var = tuple(my_vars)
                     if self._logger is not None:
-                        logger_str = "loop_subst: {} ==> ({}, {}){}".format(standard_name, beg_name, end_name, context_string(context))
+                        names = [x.get_prop_value('local_name') for x in my_vars]
+                        logger_str = "loop_subst: {} ==> (){}".format(standard_name, ', '.join(names), context_string(context))
                     # End if
                 else:
                     if self._logger is not None:
