@@ -16,7 +16,7 @@ from parse_tools   import ParseContext, ParseSource, context_string
 from parse_tools   import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools   import FORTRAN_ID
 from parse_tools   import read_xml_file, validate_xml_file, find_schema_version
-from metavar       import Var, VarDictionary
+from metavar       import Var, VarDictionary, ddt_modules
 from state_machine import StateMachine
 from fortran_tools import FortranWriter
 
@@ -124,7 +124,7 @@ class Scheme(object):
         if (dimension_re.match(hdim) is not None) and (len(hsdims) == 1):
             # We need to specify the whole range
             hsdims = ['1'] + hsdims
-        elif (loop_var is not None) and (len(hsdims) == 1):
+        elif loop_var and (len(hsdims) == 1):
             # We may to specify the whole range
             lv_type = hdim.split('_')[-1]
             if lv_type == 'extent':
@@ -368,6 +368,8 @@ class Group(VarDictionary):
         self._context = ParseContext(context=context)
         self._loop_var_defs = set()
         self._local_schemes = set()
+        self._host_vars = None
+        self._host_ddts = None
 
     def has_item(self, item_name):
         'Check to see if an item is already in this group'
@@ -429,6 +431,8 @@ class Group(VarDictionary):
         # End for
         self._phase_check_stmts = Suite.check_suite_state(phase)
         self._set_state = Suite.set_suite_state(phase)
+        # Find any host DDT variables to create use statements
+        self._host_ddts = ddt_modules(self._host_vars)
 
     def write(self, outfile, host_arglist, indent,
               suite_vars=None, allocate=False, deallocate=False):
@@ -442,6 +446,13 @@ class Group(VarDictionary):
         # First, write out the subroutine header
         subname = self.name
         outfile.write(Group.__subhead__.format(subname=subname, args=host_arglist), indent)
+        # Write out any use statements
+        mlen = max([len(x[0]) for x in self._host_ddts])
+        for ddt in self._host_ddts:
+            mspc = (mlen - len(ddt[0]))*' '
+            outfile.write("use {}, {}only: {}".format(ddt[0], mspc, ddt[1]),
+                          indent+1)
+        # End for
         # Write out the scheme use statements
         for scheme in self._local_schemes:
             outfile.write(scheme, indent+1)
@@ -791,6 +802,7 @@ end module {module}
             outfile.write(COPYRIGHT, 0)
             outfile.write(Suite.__header__.format(module=self._module), 0)
             # Write module 'use' statements here
+            outfile.write('use machine', 1)
             outfile.write('implicit none\nprivate\n\n! Suite interfaces', 1)
             outfile.write(Suite.__state_machine_init__.format(css_var_name=Suite.__state_machine_var_name__, state=Suite.___state_machine_initial_state__), 1)
             for group in self._groups:
@@ -829,11 +841,12 @@ class API(VarDictionary):
 !!
 !
 module {module}
-
+'''
+    __preamble__ = '''
 {module_use}
 
-   implicit none
-   private
+implicit none
+private
 
 '''
 
@@ -879,7 +892,11 @@ end module {module}
             suite.analyze(host_model, scheme_headers, logger)
             self._suites.append(suite)
         # End for
-    # End if
+        # Find DDTs for use statements
+        host_vars = host_model.variable_list()
+        self._host_ddt_list_full = ddt_modules(host_vars)
+        host_vars = host_model.variable_list(loop_vars=False)
+        self._host_ddt_list_noloop = ddt_modules(host_vars)
 
     @property
     def module(self):
@@ -901,7 +918,7 @@ end module {module}
         # End if
         filename = os.path.join(output_dir, self.module + '.F90')
         api_filenames = list()
-        module_use = ''
+        module_use = 'use machine'
         # Write out the suite files
         for suite in self._suites:
             out_file_name = suite.write(output_dir)
@@ -911,8 +928,8 @@ end module {module}
         with FortranWriter(filename, 'w') as api:
             api.write(COPYRIGHT, 0)
             api.write(API.__header__.format(host_model=self._host.name,
-                                            module=self.module,
-                                            module_use=module_use), 0)
+                                            module=self.module), 0)
+            api.write(API.__preamble__.format(module_use=module_use), 1)
             for stage in CCPP_STATE_MACH.transitions():
                 api.write("public :: ccpp_physics_{}".format(stage), 1)
             # End for
@@ -925,12 +942,20 @@ end module {module}
                 if stage == 'run':
                     host_call_list = host_call_list + ', ' + self.suite_part_var.get_prop_value('local_name')
                     hal = self._host_arg_list_full
+                    hddt = self._host_ddt_list_full
                 else:
                     hal = self._host_arg_list_noloop
+                    hddt = self._host_ddt_list_noloop
                 # End if
                 host_call_list = host_call_list + ", " + hal
                 host_call_list = host_call_list + ', '.join(self.prop_list('local_name'))
                 api.write(API.__subhead__.format(phase=stage, host_call_list=host_call_list), 1)
+                # Write out any use statements
+                mlen = max([len(x[0]) for x in hddt])
+                for ddt in hddt:
+                    mspc = (mlen - len(ddt[0]))*' '
+                    api.write("use {}, {}only: {}".format(ddt[0], mspc, ddt[1]), 2)
+                # End for
                 # Declare dummy arguments
                 self.suite_name_var.write_def(api, 2)
                 if stage == 'run':
@@ -938,7 +963,7 @@ end module {module}
                 # End if
                 for var in self._host.variable_list():
                     stdname = var.get_prop_value('standard_name')
-                    if (stage=='run') or (VarDictionary.loop_var_match(stdname) is None):
+                    if (stage=='run') or (not VarDictionary.loop_var_match(stdname)):
                         var.write_def(api, 2)
                     # End if
                 # End for

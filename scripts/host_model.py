@@ -118,17 +118,6 @@ class HostModel(VarDictionary):
             self.collect_fields_from_ddt(ddt, [svar], logger)
         # End for
 
-    def variable_locations(self):
-        """Return a set of module-variable and module-type pairs.
-        These represent the locations of all host model data."""
-        varset = set()
-        mods = self.prop_list('module')
-        names = self.prop_list('local_name')
-        for item in zip(mods, names):
-            varset.add(item)
-        # End for
-        return varset
-
     def host_variable_module(self, local_name):
         "Return the module name for a host variable"
         if local_name in self._var_locations:
@@ -136,6 +125,21 @@ class HostModel(VarDictionary):
         else:
             return None
         # End if
+
+    def variable_locations(self):
+        """Return a set of module-variable and module-type pairs.
+        These represent the locations of all host model data with a listed
+        source location (variables with no <module> source are omitted)."""
+        varset = set()
+        lnames = self.prop_list('local_name')
+        for name in lnames:
+            module = self.host_variable_module(name)
+            if (module is not None) and (len(module) > 0):
+                varset.add((module, name))
+            # No else, either no module or a zero-length module name
+            # End if
+        # End for
+        return varset
 
     def find_variable(self, standard_name, any_scope=False, loop_subst=False):
         """Return the host model variable matching <standard_name> or None

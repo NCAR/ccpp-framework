@@ -115,6 +115,20 @@ def default_kind_val(prop_dict, context=None):
     return kind
 
 ########################################################################
+def ddt_modules(variable_list):
+########################################################################
+    ddt_mods = set()
+    for var in variable_list:
+        if var.is_ddt():
+            module = var.get_prop_value('module')
+            if len(module) > 0:
+                ddt_mods.add((module, var.get_prop_value('type')))
+            # End if
+        # End if
+    # End for
+    return ddt_mods
+
+########################################################################
 
 class VariableProperty(object):
     """Class to represent a single property of a metadata header entry
@@ -549,7 +563,7 @@ class Var(object):
         else:
             intent_str = ' '*13
         # End if
-        if registered_fortran_ddt_name(vtype):
+        if self.is_ddt():
             str = "type({kind}){cspc}{intent} :: {name}{dims}"
             cspc = ',' + ' '*(13 - len(kind))
         else:
@@ -563,6 +577,11 @@ class Var(object):
         # End if
         outfile.write(str.format(type=vtype, kind=kind, intent=intent_str,
                                  name=name, dims=dimstr, cspc=cspc), indent)
+
+    def is_ddt(self):
+        '''Return True iff <self> is a DDT type.'''
+        vtype = self.get_prop_value('type')
+        return registered_fortran_ddt_name(vtype) is not None
 
     def host_arg_str(self, hvar, host_model, ddt):
         '''Create the proper statement of a piece of a host-model variable.
@@ -829,11 +848,13 @@ class VarDictionary(OrderedDict):
         return "VarDictionary({}{}{}".format(self.name, comma, srepr[vstart:])
 
     @classmethod
-    def ccpp_loop_variables(cls):
-        return cls.__ccpp_loop_vars__
+    def loop_var_match(cls, standard_name):
+        'Return a loop variable match, if any, for <standard_name>'
+        return standard_name in cls.__ccpp_loop_vars__
 
     @classmethod
-    def loop_var_match(cls, standard_name):
+    def loop_subst_match(cls, standard_name):
+        'Return a loop substitution match, if any, for <standard_name>'
         if standard_name in cls.__ccpp_loop_subst__:
             return cls.__ccpp_loop_subst__[standard_name]
         else:
@@ -849,12 +870,12 @@ class VarDictionary(OrderedDict):
         range, (__var_one, <standard_name>_extent)
         In other cases, return None
         """
-        loop_var = VarDictionary.loop_var_match(standard_name)
-        dict_var = self.find_variable(standard_name,
-                                      any_scope=any_scope, loop_subst=False)
+        loop_var = VarDictionary.loop_subst_match(standard_name)
         logger_str = None
         if loop_var is not None:
             # Let us see if we can fix a loop variable
+            dict_var = self.find_variable(standard_name,
+                                          any_scope=any_scope, loop_subst=False)
             if dict_var is not None:
                 my_var = (VarDictionary.__var_one, dict_var)
                 if self._logger is not None:
