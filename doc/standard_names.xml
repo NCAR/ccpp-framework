@@ -245,4 +245,15 @@
       <type kind="kind_phys" units="kg kg-1">real</type>
     </standard_name>
   </section>
+  <section name="standard_variables"
+           comment="Standard / required CCPP variables">
+    <standard_name name="ccpp_error_message"
+                   long_name="Error message for error handling in CCPP">
+      <type kind="len=512" units="1">character</type>
+    </standard_name>
+    <standard_name name="ccpp_error_flag"
+                   long_name="Error flag for error handling in CCPP">
+      <type kind="" units="1">integer</type>
+    </standard_name>
+  </section>
 </standard_names>
