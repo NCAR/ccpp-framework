@@ -133,6 +133,8 @@ class Scheme(object):
                 hsdims.append('') # This should print as '<name>_beg:'
             elif lv_type == 'end':
                 hsdims = [''] + hsdims # This should print as ':<name>_end'
+            elif lv_type == 'number':
+                pass # This should be a single value (not an array section)
             else:
                 raise ParseInternalError("Unknown loop variable type, '{}' in '{}'".format(lv_type, hdim))
             # End if
@@ -144,9 +146,7 @@ class Scheme(object):
         If ddt is True, we can only have a single element selected
         '''
         hstr = hvar.get_prop_value('local_name')
-        hdimval = hvar.get_prop_value('dimensions')
-        # Turn the dimensions string into a proper list and take the correct one
-        hdims = Var.get_prop('dimensions').valid_value(hdimval)
+        hdims = hvar.get_dimensions()
         dimsep = ''
         # Does the local name have any extra indices?
         match = array_ref_re.match(hstr.strip())
@@ -469,7 +469,7 @@ class Group(VarDictionary):
         # Write out dummy arguments
         outfile.write('! Dummy arguments', indent+1)
         for var in self._host_vars:
-            var.write_def(outfile, indent+1)
+            var.write_def(outfile, indent+1, self)
         # End for
         if len(self._loop_var_defs) > 0:
             outfile.write('\n! Local Variables', indent+1)
@@ -815,7 +815,7 @@ end module {module}
             # End for
             outfile.write('\n! Private suite variables', 1)
             for svar in self.keys():
-                self[svar].write_def(outfile, 1, allocatable=True)
+                self[svar].write_def(outfile, 1, self, allocatable=True)
             # End for
             outfile.write('\ncontains', 0)
             for group in self._groups:
@@ -995,14 +995,14 @@ end module {module}
                     api.write("use {}, {}only: {}".format(ddt[0], mspc, ddt[1]), 2)
                 # End for
                 # Declare dummy arguments
-                self.suite_name_var.write_def(api, 2)
+                self.suite_name_var.write_def(api, 2, self)
                 if stage == 'run':
-                    self.suite_part_var.write_def(api, 2)
+                    self.suite_part_var.write_def(api, 2, self)
                 # End if
                 for var in self._host.variable_list():
                     stdname = var.get_prop_value('standard_name')
                     if (stage=='run') or (not VarDictionary.loop_var_match(stdname)):
-                        var.write_def(api, 2)
+                        var.write_def(api, 2, self)
                     # End if
                 # End for
                 self.declare_variables(api, 2, loop_vars=(stage=='run'))
@@ -1057,8 +1057,8 @@ end module {module}
             api.write("\nsubroutine {}({})".format(API.__part_fname__, inargs), 1)
             api.write("character(len=*),              intent(in)  :: suite_name", 2)
             api.write("character(len=*), allocatable, intent(out) :: part_list(:)", 2)
-            self._errmsg_var.write_def(api, 2)
-            self._errflg_var.write_def(api, 2)
+            self._errmsg_var.write_def(api, 2, self)
+            self._errflg_var.write_def(api, 2, self)
             api.write("\ninteger                                   :: pindex\n", 2)
             else_str = ''
             for suite in self._suites:

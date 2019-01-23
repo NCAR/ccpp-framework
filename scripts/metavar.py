@@ -530,7 +530,7 @@ class Var(object):
         dims = Var.get_prop('dimensions').valid_value(dimval)
         return dims
 
-    def write_def(self, outfile, indent, allocatable=False):
+    def write_def(self, outfile, indent, dict, allocatable=False):
         '''Write the definition line for the variable.'''
         vtype = self.get_prop_value('type')
         kind = self.get_prop_value('kind')
@@ -540,7 +540,23 @@ class Var(object):
             if allocatable:
                 dimstr = '(:' + ',:'*(len(dims) - 1) + ')'
             else:
-                dimstr = '({})'.format(', '.join(dims))
+                dimstr = '('
+                comma = ''
+                for dim in dims:
+                    dstdnames = dim.split(':')
+                    dvars = [dict.find_variable(x) for x in dstdnames]
+                    if None in dvars:
+                        for dim in dstdnames:
+                            if dict.find_variable(dim) is None:
+                                raise CCPPError("No variable found for '{}'".format(dim))
+                            # End if
+                        # End for
+                    # End if
+                    dnames = [x.get_prop_value('local_name') for x in dvars]
+                    dimstr = dimstr + comma + ':'.join(dnames)
+                    comma = ', '
+                # End for
+                dimstr = dimstr + ')'
             # End if
         else:
             dimstr = ''
@@ -824,7 +840,7 @@ class VarDictionary(OrderedDict):
         for standard_name in self.keys():
             var = self.find_variable(standard_name, any_scope=False, loop_subst=False)
             if self.include_var_in_list(var, std_vars=std_vars, loop_vars=loop_vars, consts=consts):
-                self[standard_name].write_def(outfile, indent)
+                self[standard_name].write_def(outfile, indent, self)
             # End if
         # End for
 

@@ -93,10 +93,10 @@ def write_host_cap(host_model, api, output_dir, logger):
             cap.write('use {}, only: {}'.format(api.module,
                                                 API.interface_name(stage)), 2)
             for var in apivars:
-                var.write_def(cap, 2)
+                var.write_def(cap, 2, host_model)
             # End for
             for var in hdvars:
-                var.write_def(cap, 2)
+                var.write_def(cap, 2, host_model)
             # End for
             cap.write('', 0)
             # Now, call the real API with the host model's variable list
