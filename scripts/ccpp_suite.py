@@ -250,10 +250,18 @@ class Scheme(object):
                 if isinstance(hvar, list):
                     host_arglist.append(self.ddtspec_to_str(hvar, host_model))
                 elif isinstance(hvar, tuple):
-                    for var in hvar:
-                        argstr = self.host_arg_str(var, host_model, False)
+                    loop_subst = VarDictionary.loop_subst_match(stdname)
+                    if (loop_subst is not None) and (len(loop_subst) == 2):
+                        # Special case for loops
+                        lnames = [x.get_prop_value('local_name') for x in hvar]
+                        argstr = "{} - {} + 1".format(lnames[0], lnames[1])
                         host_arglist.append(argstr)
-                    # End for
+                    else:
+                        for var in hvar:
+                            argstr = self.host_arg_str(var, host_model, False)
+                            host_arglist.append(argstr)
+                        # End for
+                    # End if
                 else:
                     argstr = self.host_arg_str(hvar, host_model, False)
                     host_arglist.append(argstr)
@@ -774,6 +782,16 @@ end module {module}
         # End for
         return maxlen
 
+    def num_run_parts(self):
+        'Return the number of run parts in this suite'
+        nparts = 0
+        for spart in self.groups:
+            if self.is_run_group(spart):
+                nparts = nparts + 1
+            # End if
+        # End for
+        return nparts
+
     def part_list(self, maxlen):
         "Suite return value for the list_suite_parts function"
         comma = ''
@@ -897,6 +915,15 @@ end module {module}
         self._host_ddt_list_full = ddt_modules(host_vars)
         host_vars = host_model.variable_list(loop_vars=False)
         self._host_ddt_list_noloop = ddt_modules(host_vars)
+        # We will need the correct names for errmsg and errflg
+        self._errmsg_var = host_model.find_variable('ccpp_error_message')
+        if self._errmsg_var is None:
+            raise CCPPError('Required variable, ccpp_error_message, not found')
+        # End if
+        self._errflg_var = host_model.find_variable('ccpp_error_flag')
+        if self._errflg_var is None:
+            raise CCPPError('Required variable, ccpp_error_flag, not found')
+        # End if
 
     @property
     def module(self):
@@ -924,6 +951,8 @@ end module {module}
             out_file_name = suite.write(output_dir)
             api_filenames.append(out_file_name)
         # End for
+        errmsg_name = self._errmsg_var.get_prop_value('local_name')
+        errflg_name = self._errflg_var.get_prop_value('local_name')
         # Write out the API module
         with FortranWriter(filename, 'w') as api:
             api.write(COPYRIGHT, 0)
@@ -982,9 +1011,9 @@ end module {module}
                             # End if
                         # End for
                         api.write("else", 3)
-                        api.write("errmsg = 'No suite part named '//trim(suite_part)", 4)
-                        api.write("errmsg = trim(errmsg)//' found in suite {}'".format(suite.name), 4)
-                        api.write("errflg = 1", 4)
+                        api.write("{errmsg} = 'No suite part named '//trim(suite_part)".format(errmsg=errmsg_name), 4)
+                        api.write("{errmsg} = trim({errmsg})//' found in suite {sname}'".format(errmsg=errmsg_name, sname=suite.name), 4)
+                        api.write("{errflg} = 1".format(errflg=errflg_name), 4)
                         api.write("end if", 3)
                     else:
                         api.write("call {}_{}({})".format(suite.name, stage, self._host_arg_list_noloop), 3)
@@ -992,18 +1021,20 @@ end module {module}
                     else_str = 'else '
                 # End for
                 api.write("else", 2)
-                api.write("errmsg = 'No suite named '//trim(suite_name)//' found'", 3)
-                api.write("errflg = 1", 3)
+                api.write("{errmsg} = 'No suite named '//trim(suite_name)//' found'".format(errmsg=errmsg_name), 3)
+                api.write("{errflg} = 1".format(errflg=errflg_name), 3)
                 api.write("end if", 2)
                 api.write(API.__subfoot__.format(phase=stage), 1)
             # End for
             # Write the list_suites function
             api.write("function {}() result(list)".format(API.__suite_fname__), 1)
             maxlen = 0
+            nsuites = 0
             for suite in self._suites:
                 maxlen = max(maxlen, len(suite.name))
+                nsuites = nsuites + 1
             # End for
-            api.write("character(len={}) :: list(:)".format(maxlen), 2)
+            api.write("character(len={}) :: list({})".format(maxlen, nsuites), 2)
             comma = ''
             retstr = '(/'
             for suite in self._suites:
@@ -1015,23 +1046,28 @@ end module {module}
             api.write("list = {}".format(retstr), 2)
             api.write("end function {}".format(API.__suite_fname__), 1)
             # Write out the suite part list function
-            api.write("\nfunction {}(suite_name) result(list)".format(API.__part_fname__), 1)
+            inargs = "suite_name, {errmsg}, {errflg}".format(errmsg=errmsg_name,
+                                                             errflg=errflg_name)
+            api.write("\nfunction {}({}) result(list)".format(API.__part_fname__, inargs), 1)
             maxlen = 0
             for suite in self._suites:
                 maxlen = max(maxlen, suite.max_part_len())
             # End for
             api.write("character(len=*),  intent(in) :: suite_name", 2)
-            api.write("character(len={})             :: list(:)".format(maxlen), 2)
+            self._errmsg_var.write_def(api, 2)
+            self._errflg_var.write_def(api, 2)
+            nparts = suite.num_run_parts()
+            api.write("character(len={})             :: list({})".format(maxlen, nparts), 2)
             else_str = ''
             api.write('', 0)
             for suite in self._suites:
                 api.write("{}if(trim(suite_name) == '{}') then".format(else_str, suite.name), 2)
-                api.write("return {}".format(suite.part_list(maxlen)), 3)
+                api.write("list = {}".format(suite.part_list(maxlen)), 3)
                 else_str = 'else '
             # End for
             api.write("else", 2)
-            api.write("errmsg = 'No suite named '//trim(suite_name)//' found'", 3)
-            api.write("errflg = 1", 3)
+            api.write("{errmsg} = 'No suite named '//trim(suite_name)//' found'".format(errmsg=errmsg_name), 3)
+            api.write("{errflg} = 1".format(errflg=errflg_name), 3)
             api.write("end if", 2)
             api.write("end function {}".format(API.__part_fname__), 1)
             # Finish off the module
