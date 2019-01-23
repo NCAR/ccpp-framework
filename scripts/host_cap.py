@@ -12,7 +12,7 @@ import os.path
 import subprocess
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from ccpp_suite    import COPYRIGHT, CCPP_STATE_MACH
+from ccpp_suite    import COPYRIGHT, CCPP_STATE_MACH, API
 from metavar       import VarDictionary
 from fortran_tools import FortranWriter
 
@@ -90,6 +90,8 @@ def write_host_cap(host_model, api, output_dir, logger):
             cap.write(subhead.format(api_vars=api_vlist,
                                      host_model=host_model.name,
                                      stage=stage), 1)
+            cap.write('use {}, only: {}'.format(api.module,
+                                                API.interface_name(stage)), 2)
             for var in apivars:
                 var.write_def(cap, 2)
             # End for

@@ -564,9 +564,10 @@ character(len=16) :: {css_var_name} = '{state}'
 end module {module}
 '''
 
-    __initial_group__ = '<group name="suite_initialize"></group>'
+    # Note that these group names need to match CCPP_STATE_MACH
+    __initial_group__ = '<group name="initialize"></group>'
 
-    __final_group__ = '<group name="suite_finalize"></group>'
+    __final_group__ = '<group name="finalize"></group>'
 
     __timestep_initial_group__ = '<group name="timestep_initial"></group>'
 
@@ -651,7 +652,7 @@ end module {module}
             raise CCPPError("Invalid suite definition file, '{}'".format(self._sdf_name))
         # End if
         self._name = suite_xml.get('name')
-        self._logger.info("Reading suite definition file for {}".format(self._name))
+        self._logger.info("Reading suite definition file for '{}'".format(self._name))
         self._suite_init_group = self.new_group(Suite.__initial_group__,
                                                 "initialize")
         self._suite_final_group = self.new_group(Suite.__final_group__,
@@ -782,29 +783,15 @@ end module {module}
         # End for
         return maxlen
 
-    def num_run_parts(self):
-        'Return the number of run parts in this suite'
-        nparts = 0
+    def part_list(self):
+        "Return list of run phase parts (groups)"
+        parts = list()
         for spart in self.groups:
             if self.is_run_group(spart):
-                nparts = nparts + 1
+                parts.append(spart.name[len(self.name)+1:])
             # End if
         # End for
-        return nparts
-
-    def part_list(self, maxlen):
-        "Suite return value for the list_suite_parts function"
-        comma = ''
-        retstr = '(/'
-        for spart in self.groups:
-            if self.is_run_group(spart):
-                retstr = "{}{}'{}{}'".format(retstr, comma, spart.name,
-                                             ' '*(maxlen - len(spart.name)))
-                comma = ', '
-            # End if
-        # End for
-        retstr = retstr + '/)'
-        return retstr
+        return parts
 
     def write(self, output_dir):
         """Create caps for all groups in the suite and for the entire suite
@@ -868,12 +855,11 @@ private
 
 '''
 
-    __subhead__ = '''
-   subroutine ccpp_physics_{phase}({host_call_list})
-'''
-    __subfoot__ = '''
-   end subroutine ccpp_physics_{phase}
-'''
+    __sub_name_template__ = 'ccpp_physics'
+
+    __subhead__ = 'subroutine {subname}({host_call_list})'
+
+    __subfoot__ = 'end subroutine {subname}\n'
 
     __footer__ = '''
 end module {module}
@@ -938,6 +924,11 @@ end module {module}
     def suite_part_var(self):
         return type(self).__suite_part__
 
+    @classmethod
+    def interface_name(cls, phase):
+        'Return the name of an API interface function'
+        return "{}_{}".format(cls.__sub_name_template__, phase)
+
     def write(self, output_dir):
         """Write API for static build"""
         if len(self._suites) == 0:
@@ -966,6 +957,10 @@ end module {module}
             api.write("public :: {}".format(API.__part_fname__), 1)
             api.write("\ncontains\n", 0)
             # Write the module body
+            max_suite_len = 0
+            for suite in self._suites:
+                max_suite_len = max(max_suite_len, len(suite.module))
+            # End for
             for stage in CCPP_STATE_MACH.transitions():
                 host_call_list = self.suite_name_var.get_prop_value('local_name')
                 if stage == 'run':
@@ -978,9 +973,23 @@ end module {module}
                 # End if
                 host_call_list = host_call_list + ", " + hal
                 host_call_list = host_call_list + ', '.join(self.prop_list('local_name'))
-                api.write(API.__subhead__.format(phase=stage, host_call_list=host_call_list), 1)
+                subname = API.interface_name(stage)
+                api.write(API.__subhead__.format(subname=subname, host_call_list=host_call_list), 1)
                 # Write out any use statements
                 mlen = max([len(x[0]) for x in hddt])
+                mlen = max(mlen, max_suite_len)
+                for suite in self._suites:
+                    mspc = (mlen - len(suite.module))*' '
+                    if stage == 'run':
+                        for spart in suite.groups:
+                            if suite.is_run_group(spart):
+                                api.write("use {}, {}only: {}".format(suite.module, mspc, spart.name), 2)
+                            # End if
+                        # End for
+                    else:
+                        api.write("use {}, {}only: {}_{}".format(suite.module, mspc, suite.name, stage), 2)
+                    # End if
+                # End for
                 for ddt in hddt:
                     mspc = (mlen - len(ddt[0]))*' '
                     api.write("use {}, {}only: {}".format(ddt[0], mspc, ddt[1]), 2)
@@ -1005,7 +1014,8 @@ end module {module}
                         el2_str = ''
                         for spart in suite.groups:
                             if suite.is_run_group(spart):
-                                api.write("{}if (trim(suite_part) == '{}') then".format(el2_str, spart.name), 3)
+                                pname = spart.name[len(suite.name)+1:]
+                                api.write("{}if (trim(suite_part) == '{}') then".format(el2_str, pname), 3)
                                 api.write("call {}({})".format(spart.name, self._host_arg_list_full), 4)
                                 el2_str = 'else '
                             # End if
@@ -1024,52 +1034,50 @@ end module {module}
                 api.write("{errmsg} = 'No suite named '//trim(suite_name)//' found'".format(errmsg=errmsg_name), 3)
                 api.write("{errflg} = 1".format(errflg=errflg_name), 3)
                 api.write("end if", 2)
-                api.write(API.__subfoot__.format(phase=stage), 1)
+                api.write(API.__subfoot__.format(subname=subname), 1)
             # End for
-            # Write the list_suites function
-            api.write("function {}() result(list)".format(API.__suite_fname__), 1)
-            maxlen = 0
+            # Write the list_suites subroutine
+            api.write("subroutine {}(suites)".format(API.__suite_fname__), 1)
             nsuites = 0
             for suite in self._suites:
-                maxlen = max(maxlen, len(suite.name))
                 nsuites = nsuites + 1
             # End for
-            api.write("character(len={}) :: list({})".format(maxlen, nsuites), 2)
-            comma = ''
-            retstr = '(/'
+            api.write("character(len=*), allocatable, intent(out) :: suites(:)", 2)
+            api.write("\ninteger                                    :: sindex", 2)
+            api.write("\nallocate(suites({}))".format(nsuites), 2)
+            api.write("do sindex = 1, {}".format(nsuites), 2)
             for suite in self._suites:
-                retstr = "{}{}'{}{}'".format(retstr, comma, suite.name,
-                                             ' '*(maxlen - len(suite.name)))
-                comma = ', '
+                api.write("suites(sindex) = '{}'".format(suite.name), 3)
             # End for
-            retstr = retstr + '/)'
-            api.write("list = {}".format(retstr), 2)
-            api.write("end function {}".format(API.__suite_fname__), 1)
-            # Write out the suite part list function
-            inargs = "suite_name, {errmsg}, {errflg}".format(errmsg=errmsg_name,
-                                                             errflg=errflg_name)
-            api.write("\nfunction {}({}) result(list)".format(API.__part_fname__, inargs), 1)
-            maxlen = 0
-            for suite in self._suites:
-                maxlen = max(maxlen, suite.max_part_len())
-            # End for
-            api.write("character(len=*),  intent(in) :: suite_name", 2)
+            api.write("end do", 2)
+            api.write("end subroutine {}".format(API.__suite_fname__), 1)
+            # Write out the suite part list subroutine
+            inargs = "suite_name, part_list, {errmsg}, {errflg}".format(errmsg=errmsg_name,
+                                                                        errflg=errflg_name)
+            api.write("\nsubroutine {}({})".format(API.__part_fname__, inargs), 1)
+            api.write("character(len=*),              intent(in)  :: suite_name", 2)
+            api.write("character(len=*), allocatable, intent(out) :: part_list(:)", 2)
             self._errmsg_var.write_def(api, 2)
             self._errflg_var.write_def(api, 2)
-            nparts = suite.num_run_parts()
-            api.write("character(len={})             :: list({})".format(maxlen, nparts), 2)
+            api.write("\ninteger                                   :: pindex\n", 2)
             else_str = ''
-            api.write('', 0)
             for suite in self._suites:
                 api.write("{}if(trim(suite_name) == '{}') then".format(else_str, suite.name), 2)
-                api.write("list = {}".format(suite.part_list(maxlen)), 3)
+                parts = suite.part_list()
+                nparts = len(parts)
+                api.write("allocate(part_list({}))\n".format(nparts), 3)
+                api.write("do pindex = 1, {}".format(nparts), 3)
+                for part in parts:
+                    api.write("part_list(pindex) = '{}'".format((part)), 4)
+                # End for
+                api.write("end do", 3)
                 else_str = 'else '
             # End for
             api.write("else", 2)
             api.write("{errmsg} = 'No suite named '//trim(suite_name)//' found'".format(errmsg=errmsg_name), 3)
             api.write("{errflg} = 1".format(errflg=errflg_name), 3)
             api.write("end if", 2)
-            api.write("end function {}".format(API.__part_fname__), 1)
+            api.write("end subroutine {}".format(API.__part_fname__), 1)
             # Finish off the module
             api.write(API.__footer__.format(module=self.module), 0)
         # End with
