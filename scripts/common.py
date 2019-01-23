@@ -7,11 +7,16 @@ CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
 CCPP_LOOP_COUNTER        = 'ccpp_loop_counter'
 
+CCPP_TYPE = 'ccpp_t'
+
 CCPP_INTERNAL_VARIABLES = {
     CCPP_ERROR_FLAG_VARIABLE : 'cdata%errflg',
     CCPP_ERROR_MSG_VARIABLE  : 'cdata%errmsg',
     CCPP_LOOP_COUNTER        : 'cdata%loop_cnt',
     }
+
+STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
+STANDARD_CHARACTER_TYPE = 'character'
 
 def execute(cmd, abort = True):
     """Runs a local command in a shell. Waits for completion and
