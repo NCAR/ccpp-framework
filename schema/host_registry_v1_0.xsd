@@ -122,7 +122,7 @@
     <xs:sequence>
       <xs:element name="type"     type="md_type"/>
       <xs:element name="dimensions" type="dimensions" />
-      <xs:choice>
+      <xs:choice minOccurs="0">
         <xs:element name="module" type="fortran_id_type"/>
         <xs:element name="access" type="func_call_type"/>
       </xs:choice>
