@@ -46,10 +46,10 @@ def convert_xml_to_markdown(root, library_name, snl):
 ###############################################################################
     snl.write('# {}\n'.format(library_name))
     # Write a table of contents
-    snl.write('##### Table of Contents\n')
+    snl.write('#### Table of Contents\n')
     for section in root:
         sec_name = section.get('name')
-        snl.write("[{name}](#{name})\n".format(name=sec_name))
+        snl.write("* [{name}](#{name})\n".format(name=sec_name))
     # End for
     snl.write('\n')
     for section in root:

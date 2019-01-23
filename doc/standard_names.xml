@@ -1,4 +1,4 @@
-<standard_names name="CCPP Standard Name Library">
+<standard_names name="CCPP Standard Name Library" version="1.0">
   <section name="dimensions"
            comment="Note that the cap generator can substitute x_begin:x_end for x_extent">
     <standard_name name="horizontal_dimension"
@@ -154,22 +154,34 @@
     <standard_name name="vertically_integrated_total_water_of_new_state">
       <type kind="kind_phys" units="Pa s2 m-1">real</type>
     </standard_name>
-    <standard_name name="tendency_of_temperature">
+    <standard_name name="tendency_of_temperature"
+                   long_name="Change in temperature from a parameterization">
       <type kind="kind_phys" units="K s-1">real</type>
     </standard_name>
-    <standard_name name="total_tendency_of_temperature">
+    <standard_name name="total_tendency_of_temperature"
+                   long_name="Total change in temperature from a
+                              physics suite">
       <type kind="kind_phys" units="K s-1">real</type>
     </standard_name>
-    <standard_name name="tendency_of_potential_temperature">
+    <standard_name name="tendency_of_potential_temperature"
+                   long_name="Change in potential temperature from a parameterization">
       <type kind="kind_phys" units="K s-1">real</type>
     </standard_name>
     <standard_name name="total_tendency_of_potential_temperature">
       <type kind="kind_phys" units="K s-1">real</type>
     </standard_name>
-    <standard_name name="tendency_of_eastward_wind">
+    <standard_name name="tendency_of_eastward_wind"
+                   long_name="Change in zonal wind from a parameterization">
       <type kind="kind_phys" units="m s-2">real</type>
     </standard_name>
-    <standard_name name="tendency_of_northward_wind">
+    <standard_name name="total_tendency_of_eastward_wind">
+      <type kind="kind_phys" units="m s-2">real</type>
+    </standard_name>
+    <standard_name name="tendency_of_northward_wind"
+                   long_name="Change in meridional from a parameterization">
+      <type kind="kind_phys" units="m s-2">real</type>
+    </standard_name>
+    <standard_name name="total_tendency_of_northward_wind">
       <type kind="kind_phys" units="m s-2">real</type>
     </standard_name>
     <standard_name name="surface_energy_flux">
