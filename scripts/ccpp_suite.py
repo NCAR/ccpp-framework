@@ -1002,7 +1002,7 @@ end module {module}
                 for var in self._host.variable_list():
                     stdname = var.get_prop_value('standard_name')
                     if (stage=='run') or (not VarDictionary.loop_var_match(stdname)):
-                        var.write_def(api, 2, self)
+                        var.write_def(api, 2, self, loop_subst=(stage=='run'))
                     # End if
                 # End for
                 self.declare_variables(api, 2, loop_vars=(stage=='run'))

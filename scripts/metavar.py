@@ -524,18 +524,32 @@ class Var(object):
     def source(self):
         return self._source
 
-    def get_dimensions(self):
+    def get_dimensions(self, loop_subst=False):
         "Return the variable's dimension string"
         dimval = self.get_prop_value('dimensions')
         dims = Var.get_prop('dimensions').valid_value(dimval)
-        return dims
+        if loop_subst:
+            newdims = list()
+            for dim in dims:
+                # loop_subst_match swallows an entire dim string, even ranges
+                ldim = VarDictionary.loop_subst_match(dim)
+                if ldim is None:
+                    newdims.append(dim)
+                else:
+                    newdims.append(ldim)
+                # End if
+            # End for
+        else:
+            newdims = dims
+        # End if
+        return newdims
 
-    def write_def(self, outfile, indent, dict, allocatable=False):
+    def write_def(self, outfile, indent, dict, allocatable=False, loop_subst=False):
         '''Write the definition line for the variable.'''
         vtype = self.get_prop_value('type')
         kind = self.get_prop_value('kind')
         name = self.get_prop_value('local_name')
-        dims = self.get_dimensions()
+        dims = self.get_dimensions(loop_subst=loop_subst)
         if (dims is not None) and (len(dims) > 0):
             if allocatable:
                 dimstr = '(:' + ',:'*(len(dims) - 1) + ')'
@@ -543,20 +557,28 @@ class Var(object):
                 dimstr = '('
                 comma = ''
                 for dim in dims:
-                    dstdnames = dim.split(':')
-                    dvars = [dict.find_variable(x) for x in dstdnames]
-                    if None in dvars:
-                        for dim in dstdnames:
-                            if dict.find_variable(dim) is None:
-                                raise CCPPError("No variable found for '{}'".format(dim))
-                            # End if
-                        # End for
+                    # Only ranges go into declaration
+                    if ':' not in dim:
+                        continue
+                    else:
+                        dstdnames = dim.split(':')
+                        dvars = [dict.find_variable(x) for x in dstdnames]
+                        if None in dvars:
+                            for dim in dstdnames:
+                                if dict.find_variable(dim) is None:
+                                    raise CCPPError("No variable found for '{}'".format(dim))
+                                # End if
+                            # End for
+                        # End if
+                        dnames = [x.get_prop_value('local_name') for x in dvars]
+                        dimstr = dimstr + comma + ':'.join(dnames)
+                        comma = ', '
                     # End if
-                    dnames = [x.get_prop_value('local_name') for x in dvars]
-                    dimstr = dimstr + comma + ':'.join(dnames)
-                    comma = ', '
                 # End for
                 dimstr = dimstr + ')'
+                if dimstr == '()':
+                    dimstr = '' # It ends up being a scalar reference
+                # End if
             # End if
         else:
             dimstr = ''
@@ -690,7 +712,9 @@ class VarDictionary(OrderedDict):
                           'thread_block_number', 'horizontal_loop_extent']
     # Loop substitutions
     __ccpp_loop_subst__ = {'horizontal_loop_extent' :
-                           ('horizontal_loop_begin', 'horizontal_loop_end')}
+                           ('horizontal_loop_begin', 'horizontal_loop_end'),
+                           'thread_block_begin:thread_block_end' :
+                           'thread_block_number'}
     # Dimension substitutions
     __ccpp_dim_subst__ = {'horizontal_loop_extent' : 'horizontal_dimension'}
 
