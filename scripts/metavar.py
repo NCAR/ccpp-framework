@@ -773,7 +773,7 @@ class VarDictionary(OrderedDict):
         if not include_var:
             standard_name = var.get_prop_value('standard_name')
             loop_var = VarDictionary.loop_var_match(standard_name)
-            include_var = (loop_var is not None) and loop_vars
+            include_var = loop_var and loop_vars
             if not include_var:
                 std_var = not (loop_var or const_var)
                 include_var = std_vars and std_var
@@ -889,7 +889,7 @@ class VarDictionary(OrderedDict):
 
     @classmethod
     def loop_var_match(cls, standard_name):
-        'Return a loop variable match, if any, for <standard_name>'
+        'Return True iff <standard_name> is a loop variable'
         return standard_name in cls.__ccpp_loop_vars__
 
     @classmethod
