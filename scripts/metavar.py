@@ -557,8 +557,8 @@ class Var(object):
                 dimstr = '('
                 comma = ''
                 for dim in dims:
-                    # Only ranges go into declaration
-                    if ':' not in dim:
+                    # Only ranges or sizes go into declaration
+                    if VarDictionary.loop_var_match(dim):
                         continue
                     else:
                         dstdnames = dim.split(':')
