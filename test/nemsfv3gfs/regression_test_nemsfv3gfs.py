@@ -200,11 +200,13 @@ def checkout_code(workdir, forks, branches):
 
 def run_regression_tests(workdir, account, compiler, testconfig):
     """Run the standard regression tests. This only works on Cheyenne.
-    Set environment variables ACCNR=account and NEMS_COMPILER=compiler."""
+    Set environment variables ACCNR=account, NEMS_COMPILER=compiler,
+    and RUNDIR_ROOT=workdir/FV3_RT (where regression tests are run)."""
     testdir = os.path.join(workdir, 'tests')
+    rundir = os.path.join(workdir, 'FV3_RT')
     os.chdir(testdir)
-    cmd = 'ACCNR={account} NEMS_COMPILER={compiler} ./rt.sh -l {rtconf} 2>&1 | tee rt.log'.format(
-                                            account=account, compiler=compiler, rtconf=testconfig)
+    cmd = 'ACCNR={account} NEMS_COMPILER={compiler} RUNDIR_ROOT={rundir} ./rt.sh -l {rtconf} 2>&1 | tee rt.log'.format(
+                                                  account=account, compiler=compiler, rundir=rundir, rtconf=testconfig)
     execute(cmd)
     os.chdir(workdir)
     return
