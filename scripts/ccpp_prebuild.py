@@ -96,11 +96,11 @@ def import_config(configfile):
     config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
     config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE
     config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
+    # For static build: location of static API file
+    config['static_api_dir'] = ccpp_prebuild_config.STATIC_API_DIR
 
     # Template code in host-model dependent CCPP prebuild config script
-    config['module_use_template_host_cap']   = ccpp_prebuild_config.MODULE_USE_TEMPLATE_HOST_CAP
     config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
-    config['module_use_template_scheme_cap'] = ccpp_prebuild_config.MODULE_USE_TEMPLATE_SCHEME_CAP
 
     # Add model-intependent, CCPP-internal variable definition files
     config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
@@ -329,7 +329,8 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
                           var_name, var.container, target, modules[pset_request[var_name][0]][-1]))
             # Update len=* for character variables
             if var.type == 'character' and var.kind == 'len=*':
-                logging.debug('Update kind information for requested variable {0} in {1} from {2} to {3}'.format(var_name, var.container, var.kind, kind))
+                logging.debug('Update kind information for requested variable {0} in {1} from {2} to {3}'.format(var_name,
+                                                                                           var.container, var.kind, kind))
                 var.kind = kind
 
     # Remove duplicated from list of modules
@@ -337,13 +338,11 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
         modules[pset] = sorted(list(set(modules[pset])))
     return (success, modules, metadata)
 
-def create_module_use_statements(modules, pset, module_use_template_host_cap):
-    """Create Fortran module use statements to be included in the host cap.
-    The template module_use_template_host_cap must include the required
-    modules for error handling of the ccpp_field_add statments."""
+def create_module_use_statements(modules, pset):
+    """Create Fortran module use statements to be included in the host cap."""
     logging.info('Generating module use statements for physics set {0} ...'.format(pset))
     success = True
-    module_use_statements = module_use_template_host_cap
+    module_use_statements = ''
     cnt = 1
     for module in modules:
         module_use_statements += 'use {0}\n'.format(module)
@@ -404,7 +403,7 @@ def generate_include_files(module_use_statements, ccpp_field_add_statements,
             f.write(ccpp_field_add_statements)
     return success
 
-def generate_scheme_caps(metadata, arguments, pset_schemes, ccpp_field_maps, caps_dir, module_use_template_scheme_cap):
+def generate_scheme_caps(metadata_define, metadata_request, arguments, pset_schemes, ccpp_field_maps, caps_dir):
     """Generate scheme caps for all schemes parsed."""
     success = True
     # Change to caps directory
@@ -427,39 +426,37 @@ def generate_scheme_caps(metadata, arguments, pset_schemes, ccpp_field_maps, cap
                 capdata[subroutine_name] = []
                 for var_name in arguments[module_name][scheme_name][subroutine_name]:
                     container = encode_container(module_name, scheme_name, subroutine_name)
-                    #print module_name, scheme_name, subroutine_name, var_name
-                    for var in metadata[var_name]:
+                    for var in metadata_request[var_name]:
                         if var.container == container:
                             capdata[subroutine_name].append(var)
                             break
-            # If required (not at the moment), add module use statements to module_use_template_scheme_cap
-            module_use_statement = module_use_template_scheme_cap
             # Write cap using the unique physics set for the scheme
             pset = pset_schemes[scheme_name][0]
-            cap.write(module_name, module_use_statement, capdata, ccpp_field_maps[pset])
+            cap.write(module_name, capdata, ccpp_field_maps[pset], metadata_define)
     #
     os.chdir(BASEDIR)
     return (success, scheme_caps)
 
 def generate_suite_and_group_caps(suite, metadata_request, metadata_define, arguments,
-                                  ccpp_field_maps, caps_dir, module_use_template_group_cap):
+                                  ccpp_field_maps, caps_dir):
     """Generate for the suite and for all groups parsed."""
     success = True
     # Change to caps directory
     os.chdir(caps_dir)
     # Write caps for suite and groups in suite
-    suite.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_template_group_cap)
+    suite.write(metadata_request, metadata_define, arguments, ccpp_field_maps)
     os.chdir(BASEDIR)
     # Create include file for CCPP framework that defines name of SDF used in static build
     suite.create_sdf_name_include_file(CCPP_STATIC_SDF_NAME_INCLUDE_FILE)
     return (success, suite.caps)
 
-def generate_static_api(suite, caps_dir):
+def generate_static_api(suite, static_api_dir):
     """Generate API for static build for a given suite"""
     success = True
     # Change to caps directory
-    os.chdir(caps_dir)
+    os.chdir(static_api_dir)
     api = API(suite=suite)
+    logging.info('Generating static API {0} in {1} ...'.format(api.filename, static_api_dir))
     api.write()
     os.chdir(BASEDIR)
     return (success, api)
@@ -558,7 +555,8 @@ def main():
 
     # Filter metadata/pset/arguments for static build - remove whatever is not included in suite definition file
     if static:
-        (success, metadata_request, pset_request, arguments_request) = filter_metadata(metadata_request, pset_request, arguments_request, suite)
+        (success, metadata_request, pset_request, arguments_request) = filter_metadata(metadata_request, pset_request,
+                                                                                             arguments_request, suite)
         if not success:
             raise Exception('Call to filter_metadata failed.')
 
@@ -585,7 +583,7 @@ def main():
     ccpp_field_maps = {}
     for pset in psets_merged:
         # Create module use statements to inject into the host model cap
-        (success, module_use_statements) = create_module_use_statements(modules[pset], pset, config['module_use_template_host_cap'])
+        (success, module_use_statements) = create_module_use_statements(modules[pset], pset)
         if not success:
             raise Exception('Call to create_module_use_statements failed.')
 
@@ -595,7 +593,8 @@ def main():
         # Create ccpp_fiels_add statements to inject into the host model cap;
         # this returns a ccpp_field_map that contains indices of variables in
         # the cdata structure for the given pset
-        (success, ccpp_field_add_statements, ccpp_field_map) = create_ccpp_field_add_statements(metadata_filtered, pset, config['ccpp_data_structure'])
+        (success, ccpp_field_add_statements, ccpp_field_map) = create_ccpp_field_add_statements(metadata_filtered,
+                                                                              pset, config['ccpp_data_structure'])
         if not success:
             raise Exception('Call to create_ccpp_field_add_statements failed.')
         ccpp_field_maps[pset] = ccpp_field_map
@@ -607,36 +606,35 @@ def main():
         if not success:
             raise Exception('Call to generate_include_files failed.')
 
-    # Static build: generate caps for entire suite and groups in the specified suite; generate API
-    if static:
-        (success, suite_and_group_caps) = generate_suite_and_group_caps(suite, metadata_request, metadata_define,
-                                                                        arguments_request, 
-                                                                        ccpp_field_maps,
-                                                                        config['caps_dir'],
-                                                                        config['module_use_template_scheme_cap'])
-        if not success:
-            raise Exception('Call to generate_suite_and_group_caps failed.')
-
-        (success, api) = generate_static_api(suite, config['caps_dir'])
-        if not success: 
-            raise Exception('Call to generate_static_api failed.')
-
-    # Generate scheme caps
-    (success, scheme_caps) = generate_scheme_caps(metadata_request, arguments_request, pset_schemes, ccpp_field_maps,
-                                                  config['caps_dir'], config['module_use_template_scheme_cap'])
-    if not success:
-        raise Exception('Call to generate_scheme_caps failed.')
-
     # Add filenames of schemes to makefile - add dependencies for schemes
     success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
                                                     config['schemes_makefile'], config['schemes_cmakefile'])
     if not success:
         raise Exception('Call to generate_schemes_makefile failed.')
 
-    # DH* NOT FOR STATIC BUILD - add static code (group and suite drivers) instead?
-    # Add filenames of scheme caps to makefile
     if static:
-        all_caps = scheme_caps + suite_and_group_caps + [api.filename]
+        # Static build: generate caps for entire suite and groups in the specified suite; generate API
+        (success, suite_and_group_caps) = generate_suite_and_group_caps(suite, metadata_request, metadata_define,
+                                                                        arguments_request, 
+                                                                        ccpp_field_maps,
+                                                                        config['caps_dir'])
+        if not success:
+            raise Exception('Call to generate_suite_and_group_caps failed.')
+
+        (success, api) = generate_static_api(suite, config['static_api_dir'])
+        if not success: 
+            raise Exception('Call to generate_static_api failed.')
+
+    else:
+        # Generate scheme caps for each individual scheme
+        (success, scheme_caps) = generate_scheme_caps(metadata_define, metadata_request, arguments_request,
+                                                      pset_schemes, ccpp_field_maps, config['caps_dir'])
+        if not success:
+            raise Exception('Call to generate_scheme_caps failed.')
+
+    # Add filenames of caps to makefile
+    if static:
+        all_caps = suite_and_group_caps
     else:
         all_caps = scheme_caps
     success = generate_caps_makefile(all_caps, config['caps_makefile'], config['caps_cmakefile'], config['caps_dir'])

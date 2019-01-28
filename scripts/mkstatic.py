@@ -12,6 +12,8 @@ import xml.etree.ElementTree as ET
 
 from common import decode_container, encode_container
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
+from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
+from mkcap import Var
 
 ###############################################################################
 
@@ -24,7 +26,112 @@ CCPP_STAGES = [ 'init', 'run', 'finalize' ]
 CCPP_STATIC_API_MODULE = 'ccpp_static_api'
 CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
 
+# Maximum number of dimensions of an array allowed by the Fortran 2008 standard
+FORTRAN_ARRAY_MAX_DIMS = 15
+
 ###############################################################################
+
+def extract_parents_and_indices_from_local_name(local_name):
+    """Break apart local_name into the different components (members of DDTs)
+    to determine all variables that are required; this must work for complex
+    constructs such as Atm(mytile)%q(:,:,:,Atm2(mytile2)%graupel), with 
+    result parent = 'Atm', indices = [mytile, Atm2, mytile2]"""
+    # First, extract all variables/indices in parentheses (used for subsetting)
+    indices = []
+    while '(' in local_name:
+        for i in xrange(len(local_name)):
+            if local_name[i] == '(':
+                last_open = i
+            elif local_name[i] == ')':
+                last_closed = i
+                break
+        index_set = local_name[last_open+1:last_closed].split(',')
+        for index_group in index_set:
+            for index in index_group.split(':'):
+                if index:
+                    if '%' in index:
+                        indices.append(index[:index.find('%')])
+                    else:
+                        # Skip hard-coded integers that are not variables
+                        try:
+                            int(index)
+                        except ValueError:
+                            indices.append(index)
+        # Remove this innermost index group (...) from local_name
+        local_name = local_name.replace(local_name[last_open:last_closed+1], '')
+    # Remove duplicates from indices
+    indices = list(set(indices))
+    # Derive parent of actual variable (now that all subsets have been processed)
+    if '%' in local_name:
+        parent = local_name[:local_name.find('%')]
+    else:
+        parent = local_name
+    return (parent, indices)
+
+def create_argument_list_wrapped(arguments):
+    """Create a wrapped argument list, remove trailing ',' """
+    argument_list = ''
+    length = 0
+    for argument in arguments:
+        argument_list += argument + ','
+        length += len(argument)+1
+        # Split args so that lines don't exceed 260 characters (for PGI)
+        if length > 70 and not argument == arguments[-1]:
+            argument_list += ' &\n                  '
+            length = 0
+    if argument_list:
+        argument_list = argument_list.rstrip(',')
+    return argument_list
+
+def create_argument_list_wrapped_explicit(arguments, additional_vars_following = False):
+    """Create a wrapped argument list with explicit arguments x=y. If no additional
+    variables are added (additional_vars_following == False), remove trailing ',' """
+    argument_list = ''
+    length = 0
+    for argument in arguments:
+        argument_list += argument + '=' + argument + ','
+        length += 2*len(argument)+2
+        # Split args so that lines don't exceed 260 characters (for PGI)
+        if length > 70 and not argument == arguments[-1]:
+            argument_list += ' &\n                  '
+            length = 0
+    if argument_list and not additional_vars_following:
+        argument_list = argument_list.rstrip(',')
+    return argument_list
+
+def create_arguments_module_use_var_defs(variable_dictionary, metadata_define):
+    """Given a dictionary of standard names and variables, and a metadata
+    dictionary with the variable definitions by the host model, create a list
+    of arguments (local names), module use statements (for derived data types
+    and non-standard kinds), and the variable definition statements."""
+    arguments = []
+    module_use = []
+    var_defs = []
+    local_kind_and_type_vars = []
+    for standard_name in variable_dictionary.keys():
+        # Add variable local name and variable definitions
+        arguments.append(variable_dictionary[standard_name].local_name)
+        var_defs.append(variable_dictionary[standard_name].print_def_intent())
+        # Add special kind variables and derived data type definitions to module use statements
+        if variable_dictionary[standard_name].type in STANDARD_VARIABLE_TYPES and variable_dictionary[standard_name].kind \
+                and not variable_dictionary[standard_name].type == STANDARD_CHARACTER_TYPE:
+            kind_var_standard_name = variable_dictionary[standard_name].kind
+            if not kind_var_standard_name in local_kind_and_type_vars:
+                if not kind_var_standard_name in metadata_define.keys():
+                    raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
+                kind_var = metadata_define[kind_var_standard_name][0]
+                module_use.append(kind_var.print_module_use())
+                local_kind_and_type_vars.append(kind_var_standard_name)
+        elif not variable_dictionary[standard_name].type in STANDARD_VARIABLE_TYPES:
+            type_var_standard_name = variable_dictionary[standard_name].type
+            if not type_var_standard_name in local_kind_and_type_vars:
+                if not type_var_standard_name in metadata_define.keys():
+                    raise Exception("Type {type} not defined by host model".format(type=type_var_standard_name))
+                type_var = metadata_define[type_var_standard_name][0]
+                module_use.append(type_var.print_module_use())
+                local_kind_and_type_vars.append(type_var_standard_name)
+
+    return (arguments, module_use, var_defs)
 
 class API(object):
 
@@ -48,8 +155,6 @@ class API(object):
 !
 module {module}
 
-   use ccpp_api, only : ccpp_t, ccpp_error
-
 {module_use}
 
    implicit none
@@ -61,9 +166,13 @@ module {module}
 '''
 
     sub = '''
-   subroutine {subroutine}(cdata, group_name, ierr)
+   subroutine {subroutine}({ccpp_var_name}, group_name, ierr)
 
-      type(ccpp_t),               intent(inout) :: cdata
+      use ccpp_types, only : ccpp_t
+
+      implicit none
+
+      type(ccpp_t),               intent(inout) :: {ccpp_var_name}
       character(len=*), optional, intent(in)    :: group_name
       integer,                    intent(out)   :: ierr
 
@@ -74,6 +183,8 @@ module {module}
       else
 {suite_call}
       end if
+
+      {ccpp_var_name}%errflg = ierr
 
    end subroutine {subroutine}
 '''
@@ -114,17 +225,43 @@ end module {module}
         if not self._suite:
             raise Exception("No suite specified for generating API")
         suite = self._suite
-        # Module use statements
+
+        # Module use statements for suite and group caps
         module_use = '   use {module}, only: {subroutines}\n'.format(module=suite.module,
                                                   subroutines=','.join(suite.subroutines))
         for group in suite.groups:
             module_use += '   use {module}, only: {subroutines}\n'.format(module=group.module,
                                                       subroutines=','.join(group.subroutines))
 
+        # Add all variables required to module use statements. This is for the API only,
+        # because the static API imports all variables from modules instead of receiving them
+        # via the argument list. Special handling for a single variable of type CCPP_TYPE (ccpp_t),
+        # which comes in as a scalar for any potential block/thread via the argument list.
+        ccpp_var = None
+        parent_standard_names = []
+        for ccpp_stage in CCPP_STAGES:
+            for parent_standard_name in suite.parents[ccpp_stage].keys():
+                if not parent_standard_name in parent_standard_names:
+                    parent_var = suite.parents[ccpp_stage][parent_standard_name]
+                    # Identify which variable is of type CCPP_TYPE (need local name)
+                    if parent_var.type == CCPP_TYPE:
+                        if ccpp_var and not ccpp_var.local_name==parent_var.local_name:
+                            raise Exception('There can be only one variable of type {0}, found {1} and {2}'.format(
+                                            CCPP_TYPE, ccpp_var.local_name, parent_var.local_name))
+                        ccpp_var = parent_var
+                        continue
+                    module_use += '   {0}\n'.format(parent_var.print_module_use())
+        if not ccpp_var:
+            raise Exception('No variable of type {0} found - need a scalar instance.'.format(CCPP_TYPE))
+        elif not ccpp_var.rank == '':
+            raise Exception('CCPP variable {0} of type {1} must be a scalar.'.format(ccpp_var.local_name, CCPP_TYPE))
+        del parent_standard_names
+
         # Create a subroutine for each stage
         self._subroutines=[]
         subs = ''
         for ccpp_stage in CCPP_STAGES:
+
             # Calls to groups of schemes for this stage
             group_calls = ''
             for group in suite.groups:
@@ -137,21 +274,31 @@ end module {module}
                     clause = 'if'
                 else:
                     clause = 'else if'
+                argument_list_group = create_argument_list_wrapped_explicit(group.arguments[ccpp_stage])
                 group_calls += '''
          {clause} (trim(group_name)=="{group_name}") then
-            ierr = {group_name}_{stage}_cap(cdata)'''.format(clause=clause, group_name=group.name, stage=ccpp_stage)
+            ierr = {group_name}_{stage}_cap({arguments})'''.format(clause=clause,
+                                                                   group_name=group.name,
+                                                                   stage=ccpp_stage,
+                                                                   arguments=argument_list_group)
             group_calls += '''
          else
-            call ccpp_error("Group " // trim(group_name) // " not found")
+            write({ccpp_var_name}%errmsg, '(*(a))') "Group " // trim(group_name) // " not found"
             ierr = 1
         end if
-'''.format(group_name=group.name)
+'''.format(ccpp_var_name=ccpp_var.local_name, group_name=group.name)
+
+            # Call to entire suite for this stage
+
+            # Create argument list for calling the full suite
+            argument_list_suite = create_argument_list_wrapped_explicit(suite.arguments[ccpp_stage])
             suite_call = '''
-        ierr = suite_{stage}_cap(cdata)
-'''.format(stage=ccpp_stage)
+        ierr = suite_{stage}_cap({arguments})
+'''.format(stage=ccpp_stage, arguments=argument_list_suite)
             subroutine = CCPP_STATIC_SUBROUTINE_NAME.format(stage=ccpp_stage)
             self._subroutines.append(subroutine)
             subs += API.sub.format(subroutine=subroutine,
+                                   ccpp_var_name=ccpp_var.local_name, 
                                    group_calls=group_calls,
                                    suite_call=suite_call)
 
@@ -192,9 +339,7 @@ class Suite(object):
 !
 module {module}
 
-   use            :: ccpp_types, only: ccpp_t
-   ! Other modules required, e.g. type definitions
-   {module_use}
+{module_use}
 
    implicit none
 
@@ -205,10 +350,14 @@ module {module}
 '''
 
     sub = '''
-   function {subroutine}(cdata) result(ierr)
+   function {subroutine}({arguments}) result(ierr)
+
+      {module_use}
+
+      implicit none
 
       integer :: ierr
-      type(ccpp_t), intent(inout) :: cdata
+      {var_defs}
 
       ierr = 0
 
@@ -229,6 +378,8 @@ end module {module}
         self._caps = None
         self._module = None
         self._subroutines = None
+        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
+        self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -300,7 +451,7 @@ end module {module}
         return success
 
     def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
+        '''Basic debugging output about the suite.'''
         print "ALL SUBROUTINES:"
         print self._all_subroutines_called
         print "STRUCTURED:"
@@ -313,22 +464,10 @@ end module {module}
         '''Get the list of all schemes.'''
         return self._all_schemes_called
 
-    #@all_schemes_called.setter
-    #def all_schemes_called(self, value):
-    #    if not type(value) is list:
-    #        raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
-    #    self._all_schemes_called = value
-
     @property
     def all_subroutines_called(self):
         '''Get the list of all subroutines.'''
         return self._all_subroutines_called
-
-    #@all_subroutines_called.setter
-    #def all_subroutines_called(self, value):
-    #    if not type(value) is list:
-    #        raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
-    #    self._all_subroutines_called = value
 
     @property
     def module(self):
@@ -350,13 +489,25 @@ end module {module}
         '''Get the list of groups in this suite.'''
         return self._groups
 
-    #@caps.setter
-    #def caps(self, value):
-    #    if not type(value) is list:
-    #        raise Exception("Invalid type {0} of argument value, list expected".format(type(value)))
-    #    self._caps = value
+    @property
+    def parents(self):
+        '''Get the parent variables for the suite.'''
+        return self._parents
 
-    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
+    @parents.setter
+    def parents(self, value):
+        self._parents = value
+
+    @property
+    def arguments(self):
+        '''Get the argument list for the suite.'''
+        return self._arguments
+
+    @arguments.setter
+    def arguments(self, value):
+        self._arguments = value
+
+    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps):
         """Create caps for all groups in the suite and for the entire suite
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
@@ -364,29 +515,55 @@ end module {module}
         self._filename = '{module_name}.F90'.format(module_name=self._module)
         # Init
         self._subroutines = []
-        module_use = module_use_cap
-        # Write group caps and generate module use statements
+        # Write group caps and generate module use statements; combine the argument lists
+        # and variable definitions for all groups into a suite argument list. This may
+        # require adjusting the intent of the variables.
+        module_use = ''
         for group in self._groups:
-            group.write(metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap)
+            group.write(metadata_request, metadata_define, arguments, ccpp_field_maps)
             module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
+            for ccpp_stage in CCPP_STAGES:
+                for parent_standard_name in group.parents[ccpp_stage].keys():
+                    if parent_standard_name in self.parents[ccpp_stage]:
+                        if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and \
+                            not group.parents[ccpp_stage][parent_standard_name].intent == 'in':
+                            self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                        elif self.parents[ccpp_stage][parent_standard_name].intent == 'out' and \
+                            not group.parents[ccpp_stage][parent_standard_name].intent == 'out':
+                            self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                    else:
+                        self.parents[ccpp_stage][parent_standard_name] = copy.deepcopy(group.parents[ccpp_stage][parent_standard_name])
         subs = ''
         for ccpp_stage in CCPP_STAGES:
+            # Create a wrapped argument list for calling the suite,
+            # get module use statements and variable definitions
+            (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = \
+                create_arguments_module_use_var_defs(self.parents[ccpp_stage], metadata_define)
+            argument_list_suite = create_argument_list_wrapped(self.arguments[ccpp_stage])
             body = ''
             for group in self._groups:
                 # Groups 'init'/'finalize' are only run in stages 'init'/'finalize'
                 if (group.init and not ccpp_stage == 'init') or \
                     (group.finalize and not ccpp_stage == 'finalize'):
                     continue
+                # Create a wrapped argument list for calling the group
+                (arguments_group, dummy, dummy) = create_arguments_module_use_var_defs(group.parents[ccpp_stage], metadata_define)
+                argument_list_group = create_argument_list_wrapped_explicit(arguments_group)
+
                 # Write to body that calls the groups for this stage
                 body += '''
-      ierr = {group_name}_{stage}_cap(cdata)
+      ierr = {group_name}_{stage}_cap({arguments})
       if (ierr/=0) return
-'''.format(group_name=group.name, stage=ccpp_stage)
+'''.format(group_name=group.name, stage=ccpp_stage, arguments=argument_list_group)
             # Add name of subroutine in the suite cap to list of subroutine names
             subroutine = 'suite_{stage}_cap'.format(stage=ccpp_stage)
             self._subroutines.append(subroutine)
             # Add subroutine to output
-            subs += Suite.sub.format(subroutine=subroutine, body=body)
+            subs += Suite.sub.format(subroutine=subroutine,
+                                     arguments=argument_list_suite,
+                                     module_use='\n      '.join(sub_module_use),
+                                     var_defs='\n      '.join(sub_var_defs),
+                                     body=body)
 
         # Write cap to stdout or file
         if (self._filename is not sys.stdout):
@@ -436,19 +613,7 @@ class Group(object):
 !
 module {module}
 
-   use, intrinsic :: iso_c_binding,                                   &
-                     only: c_f_pointer, c_ptr, c_int32_t
-   use            :: ccpp_types,                                      &
-                     only: ccpp_t, CCPP_GENERIC_KIND
-   use            :: ccpp_fields,                                     &
-                     only: ccpp_field_get
-#ifdef DEBUG
-   use            :: ccpp_errors,                                     &
-                     only: ccpp_error, ccpp_debug
-#endif
-
-   ! Other modules required, e.g. type definitions
-   {module_use}
+{module_use}
 
    implicit none
 
@@ -461,21 +626,19 @@ module {module}
 '''
 
     sub = '''
-   function {subroutine}(cdata) result(ierr)
+   function {subroutine}({argument_list}) result(ierr)
+
+      {module_use}
+
+      implicit none
 
       integer                     :: ierr
-      type(ccpp_t), intent(inout) :: cdata
-      type(c_ptr)                 :: cptr
-      integer, allocatable        :: cdims(:)
-      integer                     :: ckind
 
-{var_defs}
+      {var_defs}
 
       ierr = 0
 
 {initialized_test_block}
-
-{var_gets}
 
 {body}
 
@@ -494,9 +657,9 @@ end module {module}
 ''',
         'run' : '''
       if (.not.initialized) then
-         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
-         {target_name_flag} = 1
-         return
+        write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
+        {target_name_flag} = 1
+        return
       end if
 ''',
         'finalize' : '''
@@ -522,39 +685,39 @@ end module {module}
         self._module = None
         self._subroutines = None
         self._pset = None
+        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
+        self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps, module_use_cap):
+    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps):
+        # Create an inverse lookup table of local variable names defined (by the host model) and standard names
+        standard_name_by_local_name_define = {}
+        for standard_name in metadata_define.keys():
+            standard_name_by_local_name_define[metadata_define[standard_name][0].local_name] = standard_name
+
         # First get target names of standard CCPP variables for subcycling and error handling
         ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
         ccpp_error_flag_target_name = metadata_request[CCPP_ERROR_FLAG_VARIABLE][0].target
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
         #
-        module_use = module_use_cap
+        module_use = ''
         self._module = 'ccpp_group_{name}_cap'.format(name=self._name)
         self._filename = '{module_name}.F90'.format(module_name=self._module)
         self._subroutines = []
         local_subs = ''
         #
         for ccpp_stage in CCPP_STAGES:
+            # The special init and finalize routines are only run in that stage
             if self._init and not ccpp_stage == 'init':
                 continue
             elif self._finalize and not ccpp_stage == 'finalize':
                 continue
-            # For creating and mappig local variable names to standard names
+            # For mapping local variable names to standard names
             local_vars = {}
-            local_var_cnt = 0
-            local_var_cnt_max = 9999
-            local_var_template = 'v{x:04d}'
-            # Add the predefined variables for subcycling and error handling (special, no need to retrieve from cdata via ccpp_field_get)
-            local_vars[CCPP_LOOP_COUNTER] = ccpp_loop_counter_target_name
-            local_vars[CCPP_ERROR_FLAG_VARIABLE] = ccpp_error_flag_target_name
-            local_vars[CCPP_ERROR_MSG_VARIABLE] = ccpp_error_msg_target_name
             #
             body = ''
             var_defs = ''
-            var_gets = ''
             for subcycle in self._subcycles:
                 if subcycle.loop > 1 and ccpp_stage == 'run':
                     body += '''
@@ -570,44 +733,116 @@ end module {module}
                     error_check = ''
                     args = ''
                     length = 0
-                    for var_name in arguments[module_name][scheme_name][subroutine_name]:
-                        for var in metadata_request[var_name]:
+                    # Extract all variables needed (including indices for components/slices of arrays)
+                    for var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                        # Pick the correct variable for this module/scheme/subroutine
+                        # from the list of requested variable
+                        for var in metadata_request[var_standard_name]:
                             if container == var.container:
                                 break
-                        if not var_name in local_vars:
-                            local_var_cnt += 1
-                            if local_var_cnt > local_var_cnt_max:
-                                raise Exception("local_var_cnt exceeding local_var_cnt_max, increase limit!")
-                            tmpvar = copy.deepcopy(var)
-                            tmpvar.local_name = local_var_template.format(x=local_var_cnt) #var_name.replace('-','_')
-                            var_defs += '      ' + tmpvar.print_def() + '\n'
-                            # Use the index lookup from ccpp_field_maps for the group's
-                            # physics set and given variable name (standard name)
-                            var_gets += tmpvar.print_get(index=ccpp_field_maps[self._pset][var_name]) + '\n'
-                            # Add to list of local variables with the auto-generated local variable name
-                            local_vars[var_name] = tmpvar.local_name
-                            del tmpvar
+                        if not var_standard_name in local_vars.keys():
+                            if not var_standard_name in metadata_define.keys():
+                                raise Exception('Variable {standard_name} not defined in host model metadata'.format(
+                                                                                    standard_name=var_standard_name))
+                            var_local_name_define = metadata_define[var_standard_name][0].local_name
+
+                            # Break apart var_local_name_define into the different components (members of DDTs)
+                            # to determine all variables that are required
+                            (parent_local_name_define, parent_local_names_define_indices) = \
+                                extract_parents_and_indices_from_local_name(var_local_name_define)
+
+                            # Check for each of the derived parent local names as defined by the host model
+                            # if they are registered (i.e. if there is a standard name for it). Note that
+                            # the output of extract_parents_and_indices_from_local_name is stripped of any
+                            # array subset information, i.e. a local name 'Atm(:)%...' will produce a
+                            # parent local name 'Atm'. Since the rank of tha parent variable is not known
+                            # at this point and since the local name in the host model metadata table could
+                            # contain '(:)', '(:,:)', ... (up to the rank of the array), we search for the
+                            # maximum number of dimensions allowed by the Fortran standard.
+                            for local_name_define in [parent_local_name_define] + parent_local_names_define_indices:
+                                parent_standard_name = None
+                                parent_var = None
+                                for i in xrange(FORTRAN_ARRAY_MAX_DIMS+1):
+                                    if i==0:
+                                        dims_string = ''
+                                    else:
+                                        # (:) for i==1, (:,:) for i==2, ...
+                                        dims_string = '(' + ','.join([':' for j in xrange(i)]) + ')'
+                                    if local_name_define+dims_string in standard_name_by_local_name_define.keys():
+                                        parent_standard_name = standard_name_by_local_name_define[local_name_define+dims_string]
+                                        parent_var = metadata_define[parent_standard_name][0]
+                                        break
+                                if not parent_var:
+                                    raise Exception('Parent variable {parent} of {child} with standard name '.format(
+                                                               parent=local_name_define, child=var_local_name_define)+\
+                                                    '{standard_name} not defined in host model metadata'.format(
+                                                                               standard_name=var_standard_name))
+
+                                # Reset local name for entire array to a notation without (:), (:,:), etc.;
+                                # this is needed for the var.print_def_intent() routine to work correctly
+                                parent_var.local_name = local_name_define
+
+                                # Add variable to dictionary of parent variables, if not already there.
+                                # Set or update intent, depending on whether the variable is an index
+                                # in var_local_name_define or the actual parent of that variable.
+                                if not parent_standard_name in self.parents[ccpp_stage].keys():
+                                    self.parents[ccpp_stage][parent_standard_name] = copy.deepcopy(parent_var)
+                                    # Copy the intent of the actual variable being processed
+                                    if local_name_define == parent_local_name_define:
+                                        self.parents[ccpp_stage][parent_standard_name].intent = var.intent
+                                    # It's an index for the actual variable being processed --> intent(in)
+                                    else:
+                                        self.parents[ccpp_stage][parent_standard_name].intent = 'in'
+                                elif self.parents[ccpp_stage][parent_standard_name].intent == 'in':
+                                    # Adjust the intent if the actual variable is not intent(in)
+                                    if local_name_define == parent_local_name_define and not var.intent == 'in':
+                                        self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                                    # It's an index for the actual variable being processed, intent is ok
+                                    #else:
+                                    #   # nothing to do
+                                elif self.parents[ccpp_stage][parent_standard_name].intent == 'out':
+                                    # Adjust the intent if the actual variable is not intent(out)
+                                    if local_name_define == parent_local_name_define and not var.intent == 'out':
+                                        self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                                    # Adjust the intent, because the variable is also used as index variable
+                                    else:
+                                        self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+
+                                # Record this information in the local_vars dictionary
+                                local_vars[var_standard_name] = {
+                                    'var_local_name' : metadata_define[var_standard_name][0].local_name,
+                                    'parent_standard_name' : parent_standard_name
+                                    }
+
+                        else:
+                            parent_standard_name = local_vars[var_standard_name]['parent_standard_name']
+                            # Update intent information if necessary
+                            if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and not var.intent == 'in':
+                                self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                            elif self.parents[ccpp_stage][parent_standard_name].intent == 'out' and not var.intent == 'out':
+                                self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
 
                         # Add to argument list
-                        arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=local_vars[var_name])#var_name.replace('-','_'))
+                        arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
+                                                                var_name=local_vars[var_standard_name]['var_local_name'])
                         args += arg
                         length += len(arg)
                         # Split args so that lines don't exceed 260 characters (for PGI)
-                        if length > 70 and not var_name == arguments[module_name][scheme_name][subroutine_name][-1]:
+                        if length > 70 and not var_standard_name == arguments[module_name][scheme_name][subroutine_name][-1]:
                             args += ' &\n                  '
                             length = 0
 
                     args = args.rstrip(',')
                     subroutine_call = 'call {subroutine_name}({args})'.format(subroutine_name=subroutine_name, args=args)
                     error_check = '''if ({target_name_flag}/=0) then
-             write({target_name_msg},'(a)') "An error occured in {subroutine_name}"
-             ierr={target_name_flag}
-             return
-          end if
+        write({target_name_msg},'(a)') "An error occured in {subroutine_name}"
+        ierr={target_name_flag}
+        return
+      end if
 '''.format(target_name_flag=ccpp_error_flag_target_name, target_name_msg=ccpp_error_msg_target_name, subroutine_name=subroutine_name)
                     body += '''
-        {subroutine_call}
-        {error_check}
+      {subroutine_call}
+      {error_check}
     '''.format(subroutine_call=subroutine_call, error_check=error_check)
 
                     module_use += '   use {m}, only: {s}\n'.format(m=module_name, s=subroutine_name)
@@ -617,6 +852,11 @@ end module {module}
       end do
       end associate
 '''
+
+            # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
+            (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
+                                                                     self.parents[ccpp_stage], metadata_define)
+            sub_argument_list = create_argument_list_wrapped(self.arguments[ccpp_stage])
 
             subroutine = self._name + '_' + ccpp_stage + '_cap'
             self._subroutines.append(subroutine)
@@ -631,10 +871,11 @@ end module {module}
                                         name=self._name)
             # Create subroutine
             local_subs += Group.sub.format(subroutine=subroutine,
+                                           argument_list=sub_argument_list,
+                                           module_use='\n      '.join(sub_module_use),
                                            initialized_test_block=initialized_test_block,
                                            initialized_set_block=initialized_set_block,
-                                           var_defs=var_defs,
-                                           var_gets=var_gets,
+                                           var_defs='\n      '.join(sub_var_defs),
                                            body=body)
 
         # Write output to stdout or file
@@ -709,7 +950,7 @@ end module {module}
         return self._subroutines
 
     def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
+        '''Basic debugging output about the group.'''
         print self._name
         for subcycle in self._subcycles:
             subcycle.print_debug()
@@ -722,6 +963,24 @@ end module {module}
     @pset.setter
     def pset(self, value):
         self._pset = value
+
+    @property
+    def parents(self):
+        '''Get the parent variables for the group.'''
+        return self._parents
+
+    @parents.setter
+    def parents(self, value):
+        self._parents = value
+
+    @property
+    def arguments(self):
+        '''Get the argument list of the group.'''
+        return self._arguments
+
+    @arguments.setter
+    def arguments(self, value):
+        self._arguments = value
 
 
 class Subcycle(object):
@@ -755,195 +1014,11 @@ class Subcycle(object):
         self._schemes = value
 
     def print_debug(self):
-        # DH * TODO: create pretty output and return as string to calling function
+        '''Basic debugging output about the subcycle.'''
         print self._loop
         for scheme in self._schemes:
             print scheme
 
-
-class CapsMakefile(object):
-
-    header='''
-# All CCPP caps are defined here.
-#
-# This file is auto-generated using ccpp_prebuild.py
-# at compile time, do not edit manually.
-#
-CAPS_F90 ='''
-
-    def __init__(self, **kwargs):
-        self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
-
-    def write(self, caps):
-        if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
-        else:
-            f = sys.stdout
-
-        contents = self.header
-        for cap in caps:
-            contents += ' \\\n\t   {0}'.format(cap)
-        f.write(contents)
-
-        if (f is not sys.stdout):
-            f.close()
-
-    @property
-    def filename(self):
-        '''Get the filename of write the output to.'''
-        return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        self._filename = value
-
-
-class CapsCMakefile(object):
-
-    header='''
-# All CCPP caps are defined here.
-#
-# This file is auto-generated using ccpp_prebuild.py
-# at compile time, do not edit manually.
-#
-set(CAPS
-'''
-    footer=''')
-'''
-
-    def __init__(self, **kwargs):
-        self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
-
-    def write(self, schemes):
-        if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
-        else:
-            f = sys.stdout
-
-        contents = self.header
-        for scheme in schemes:
-            contents += '      {0}\n'.format(scheme)
-        contents += self.footer
-        f.write(contents)
-
-        if (f is not sys.stdout):
-            f.close()
-
-    @property
-    def filename(self):
-        '''Get the filename of write the output to.'''
-        return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        self._filename = value
-
-
-class SchemesMakefile(object):
-
-    header='''
-# All CCPP schemes are defined here.
-#
-# This file is auto-generated using ccpp_prebuild.py
-# at compile time, do not edit manually.
-#
-SCHEMES_F =
-
-SCHEMES_F90 =
-
-SCHEMES_f =
-
-SCHEMES_f90 ='''
-
-    def __init__(self, **kwargs):
-        self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
-
-    def write(self, schemes):
-        if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
-        else:
-            f = sys.stdout
-
-        contents = self.header
-        schemes_F = 'SCHEMES_F ='
-        schemes_F90 = 'SCHEMES_F90 ='
-        schemes_f = 'SCHEMES_f ='
-        schemes_f90 = 'SCHEMES_f90 ='
-        for scheme in schemes:
-            if scheme.endswith('.F'):
-                schemes_F += ' \\\n\t   {0}'.format(scheme)
-            elif scheme.endswith('.F90'):
-                schemes_F90 += ' \\\n\t   {0}'.format(scheme)
-            elif scheme.endswith('.f'):
-                schemes_f += ' \\\n\t   {0}'.format(scheme)
-            elif scheme.endswith('.f90'):
-                schemes_f90 += ' \\\n\t   {0}'.format(scheme)
-        contents = contents.replace('SCHEMES_F =', schemes_F)
-        contents = contents.replace('SCHEMES_F90 =', schemes_F90)
-        contents = contents.replace('SCHEMES_f =', schemes_f)
-        contents = contents.replace('SCHEMES_f90 =', schemes_f90)
-        f.write(contents)
-
-        if (f is not sys.stdout):
-            f.close()
-
-    @property
-    def filename(self):
-        '''Get the filename of write the output to.'''
-        return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        self._filename = value
-
-
-class SchemesCMakefile(object):
-
-    header='''
-# All CCPP schemes are defined here.
-#
-# This file is auto-generated using ccpp_prebuild.py
-# at compile time, do not edit manually.
-#
-set(SCHEMES
-'''
-    footer=''')
-'''
-
-    def __init__(self, **kwargs):
-        self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
-
-    def write(self, schemes):
-        if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
-        else:
-            f = sys.stdout
-
-        contents = self.header
-        for scheme in schemes:
-            contents += '      {0}\n'.format(scheme)
-        contents += self.footer
-        f.write(contents)
-
-        if (f is not sys.stdout):
-            f.close()
-
-    @property
-    def filename(self):
-        '''Get the filename of write the output to.'''
-        return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        self._filename = value
 
 ###############################################################################
 if __name__ == "__main__":

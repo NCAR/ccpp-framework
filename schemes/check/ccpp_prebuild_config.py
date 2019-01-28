@@ -43,7 +43,7 @@ CAPS_MAKEFILE = '/dev/null'
 CAPS_CMAKEFILE = '/dev/null'
 
 # Directory where to put all auto-generated physics caps
-CAPS_DIR = '.' # DH*
+CAPS_DIR = '.'
 
 # Optional arguments - only required for schemes that use
 # optional arguments. ccpp_prebuild.py will throw an exception
@@ -64,6 +64,9 @@ OPTIONAL_ARGUMENTS = {
 MODULE_INCLUDE_FILE = 'ccpp_modules_{set}.inc'
 FIELDS_INCLUDE_FILE = 'ccpp_fields_{set}.inc'
 
+# Directory where to write static API to
+STATIC_API_DIR = '.'
+
 # HTML document containing the model-defined CCPP variables
 HTML_VARTABLE_FILE = 'CCPP_VARIABLES_FV3.html'
 
@@ -81,16 +84,3 @@ LATEX_VARTABLE_FILE = 'CCPP_VARIABLES_FV3.tex'
 # OpenMP threads as the second dimension; nb is the loop
 # index for the current block, nt for the current thread
 CCPP_DATA_STRUCTURE = 'cdata'
-
-# Modules to load for auto-generated ccpp_field_add code
-# in the host model cap (e.g. error handling)
-MODULE_USE_TEMPLATE_HOST_CAP = \
-'''
-use ccpp_api, only: ccpp_error
-'''
-
-# Modules to load for auto-generated ccpp_field_get code
-# in the physics scheme cap (e.g. derived data types)
-MODULE_USE_TEMPLATE_SCHEME_CAP = \
-'''
-'''
