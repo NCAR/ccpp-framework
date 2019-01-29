@@ -254,7 +254,7 @@ class Scheme(object):
                     if (loop_subst is not None) and (len(loop_subst) == 2):
                         # Special case for loops
                         lnames = [x.get_prop_value('local_name') for x in hvar]
-                        argstr = "{} - {} + 1".format(lnames[0], lnames[1])
+                        argstr = "{end} - {beg} + 1".format(beg=lnames[0], end=lnames[1])
                         host_arglist.append(argstr)
                     else:
                         for var in hvar:
@@ -930,7 +930,7 @@ end module {module}
         return "{}_{}".format(cls.__sub_name_template__, phase)
 
     def write(self, output_dir):
-        """Write API for static build"""
+        """Write CCPP API module"""
         if len(self._suites) == 0:
             raise CCPPError("No suite specified for generating API")
         # End if
