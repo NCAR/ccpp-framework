@@ -507,7 +507,7 @@ end module {module}
     def arguments(self, value):
         self._arguments = value
 
-    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps):
+    def write(self, metadata_request, metadata_define, arguments):
         """Create caps for all groups in the suite and for the entire suite
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
@@ -520,7 +520,7 @@ end module {module}
         # require adjusting the intent of the variables.
         module_use = ''
         for group in self._groups:
-            group.write(metadata_request, metadata_define, arguments, ccpp_field_maps)
+            group.write(metadata_request, metadata_define, arguments)
             module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=','.join(group.subroutines))
             for ccpp_stage in CCPP_STAGES:
                 for parent_standard_name in group.parents[ccpp_stage].keys():
@@ -690,7 +690,7 @@ end module {module}
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, metadata_request, metadata_define, arguments, ccpp_field_maps):
+    def write(self, metadata_request, metadata_define, arguments):
         # Create an inverse lookup table of local variable names defined (by the host model) and standard names
         standard_name_by_local_name_define = {}
         for standard_name in metadata_define.keys():
