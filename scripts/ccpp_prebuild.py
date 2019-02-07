@@ -437,14 +437,13 @@ def generate_scheme_caps(metadata_define, metadata_request, arguments, pset_sche
     os.chdir(BASEDIR)
     return (success, scheme_caps)
 
-def generate_suite_and_group_caps(suite, metadata_request, metadata_define, arguments,
-                                  ccpp_field_maps, caps_dir):
+def generate_suite_and_group_caps(suite, metadata_request, metadata_define, arguments, caps_dir):
     """Generate for the suite and for all groups parsed."""
     success = True
     # Change to caps directory
     os.chdir(caps_dir)
     # Write caps for suite and groups in suite
-    suite.write(metadata_request, metadata_define, arguments, ccpp_field_maps)
+    suite.write(metadata_request, metadata_define, arguments)
     os.chdir(BASEDIR)
     # Create include file for CCPP framework that defines name of SDF used in static build
     suite.create_sdf_name_include_file(CCPP_STATIC_SDF_NAME_INCLUDE_FILE)
@@ -579,32 +578,33 @@ def main():
     if not success:
         raise Exception('Call to compare_metadata failed.')
 
-    # Dictionary of indices of variables in the cdata structure, per pset
-    ccpp_field_maps = {}
-    for pset in psets_merged:
-        # Create module use statements to inject into the host model cap
-        (success, module_use_statements) = create_module_use_statements(modules[pset], pset)
-        if not success:
-            raise Exception('Call to create_module_use_statements failed.')
+    if not static:
+        # Dictionary of indices of variables in the cdata structure, per pset
+        ccpp_field_maps = {}
+        for pset in psets_merged:
+            # Create module use statements to inject into the host model cap
+            (success, module_use_statements) = create_module_use_statements(modules[pset], pset)
+            if not success:
+                raise Exception('Call to create_module_use_statements failed.')
 
-        # Only process variables that fall into this pset
-        metadata_filtered = { key : value for (key, value) in metadata.items() if pset in pset_request[key] }
+            # Only process variables that fall into this pset
+            metadata_filtered = { key : value for (key, value) in metadata.items() if pset in pset_request[key] }
 
-        # Create ccpp_fiels_add statements to inject into the host model cap;
-        # this returns a ccpp_field_map that contains indices of variables in
-        # the cdata structure for the given pset
-        (success, ccpp_field_add_statements, ccpp_field_map) = create_ccpp_field_add_statements(metadata_filtered,
-                                                                              pset, config['ccpp_data_structure'])
-        if not success:
-            raise Exception('Call to create_ccpp_field_add_statements failed.')
-        ccpp_field_maps[pset] = ccpp_field_map
+            # Create ccpp_fiels_add statements to inject into the host model cap;
+            # this returns a ccpp_field_map that contains indices of variables in
+            # the cdata structure for the given pset
+            (success, ccpp_field_add_statements, ccpp_field_map) = create_ccpp_field_add_statements(metadata_filtered,
+                                                                                  pset, config['ccpp_data_structure'])
+            if not success:
+                raise Exception('Call to create_ccpp_field_add_statements failed.')
+            ccpp_field_maps[pset] = ccpp_field_map
 
-        # Generate include files for module_use_statements and ccpp_field_add_statements
-        success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
-                                                                   config['module_include_file'].format(set=pset),
-                                                                   config['fields_include_file'].format(set=pset))
-        if not success:
-            raise Exception('Call to generate_include_files failed.')
+            # Generate include files for module_use_statements and ccpp_field_add_statements
+            success = generate_include_files(module_use_statements, ccpp_field_add_statements, config['target_files'],
+                                                                       config['module_include_file'].format(set=pset),
+                                                                       config['fields_include_file'].format(set=pset))
+            if not success:
+                raise Exception('Call to generate_include_files failed.')
 
     # Add filenames of schemes to makefile - add dependencies for schemes
     success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
@@ -615,9 +615,7 @@ def main():
     if static:
         # Static build: generate caps for entire suite and groups in the specified suite; generate API
         (success, suite_and_group_caps) = generate_suite_and_group_caps(suite, metadata_request, metadata_define,
-                                                                        arguments_request, 
-                                                                        ccpp_field_maps,
-                                                                        config['caps_dir'])
+                                                                        arguments_request, config['caps_dir'])
         if not success:
             raise Exception('Call to generate_suite_and_group_caps failed.')
 
