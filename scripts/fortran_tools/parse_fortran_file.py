@@ -416,7 +416,7 @@ def read_file(filename, preproc_defs=None):
         raise IOError("read_file: file, '{}', does not exist".format(filename))
     else:
         # We need special rules for fixed-form source
-        fixed_form = filename[-2:] == '.f'
+        fixed_form = filename[-2:].lower() == '.f'
         # Read all lines of the file at once
         with open(filename, 'r') as file:
             file_lines = file.readlines()
@@ -481,7 +481,7 @@ def read_file(filename, preproc_defs=None):
                 if prev_line is None:
                     raise ParseInternalError("No prev_line to continue", context=pobj)
                 # End if
-                sindex = 0
+                sindex = max(cont_in_col+1, 0)
                 if fixed_form:
                     sindex = 6
                     eindex = 72
