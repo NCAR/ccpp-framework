@@ -258,7 +258,9 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
                         # Remove this var instance from list of var instances for this var_name
                         metadata[var_name].remove(var)
                         # Remove var_name from list of calling arguments for that subroutine
-                        arguments[module_name][scheme_name][subroutine_name].remove(var_name)
+                        # (unless that module has been filtered out for the static build)
+                        if module_name in arguments.keys():
+                            arguments[module_name][scheme_name][subroutine_name].remove(var_name)
                 elif optional_arguments[module_name][subroutine_name] == 'all':
                     logging.debug('optional argument {0} to subroutine {1} in module {2} is required, keep in list'.format(
                                                                                    var_name, subroutine_name, module_name))
