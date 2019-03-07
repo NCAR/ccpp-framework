@@ -44,7 +44,8 @@ end_type_re = re.compile(r"(?i)\s*end\s*type\s+"+FORTRAN_ID+r"?")
 class PreprocStack(object):
     "Class to handle preprocess regions"
 
-    ifdef_re = re.compile(r"#\s*ifdef\s(.*)")
+    ifdef_re = re.compile(r"#\s*ifdef\s+(.*)")
+    ifndef_re = re.compile(r"#\s*ifndef\s+(.*)")
     if_re = re.compile(r"#\s*if([^d].*)")
     elif_re = re.compile(r"#\s*elif\s(.*)")
     else_re = re.compile(r"#\s*else")
@@ -53,7 +54,7 @@ class PreprocStack(object):
     def __init__(self):
         self._region_stack = list()
 
-    def process_line(self, line, preproc_defs, pobj):
+    def process_line(self, line, preproc_defs, pobj, logger):
         sline = line.strip()
         is_preproc_line = PreprocStack.is_preproc_line(line)
         if is_preproc_line and (preproc_defs is not None):
@@ -64,7 +65,24 @@ class PreprocStack(object):
                 else:
                     start_region = False
                 # End if
+                if start_region and (logger is not None):
+                    logger.debug('Preproc: Starting True region ({}) on line {}'.format(match.group(1), pobj))
+                # End if
                 self._region_stack.append(start_region)
+            # End if
+            if match is None:
+                match = PreprocStack.ifndef_re.match(sline)
+                if match is not None:
+                    if match.group(1) in preproc_defs:
+                        start_region = preproc_defs[match.group(1)] == 0
+                    else:
+                        start_region = True
+                    # End if
+                    if (not start_region) and (logger is not None):
+                        logger.debug('Preproc: Starting False region ({}) on line {}'.format(match.group(1), pobj))
+                    # End if
+                    self._region_stack.append(start_region)
+                # End if
             # End if
             if match is None:
                 match = PreprocStack.if_re.match(sline)
@@ -405,7 +423,7 @@ def scan_free_line(line, in_continue, in_single_char, in_double_char, context):
 
 ########################################################################
 
-def read_file(filename, preproc_defs=None):
+def read_file(filename, preproc_defs=None, logger=None):
     """Read a file into an array of lines.
     Preprocess lines to consolidate continuation lines.
     Remove preprocessor directives and code eliminated by #if statements
@@ -447,12 +465,16 @@ def read_file(filename, preproc_defs=None):
                 continue
             # End if
             # Handle preproc issues
-            if preproc_status.process_line(curr_line, preproc_defs, pobj):
+            if preproc_status.process_line(curr_line, preproc_defs, pobj, logger):
                 pobj.write_line(curr_line_num, "")
                 curr_line, curr_line_num = pobj.next_line()
                 continue
             # End if
             if not preproc_status.in_true_region():
+# XXgoldyXX: v debug only
+                if 'memcheck' in filename:
+                    print('XXG: Rejecting line {}'.format(curr_line_num))
+# XXgoldyXX: ^ debug only
                 pobj.write_line(curr_line_num, "")
                 curr_line, curr_line_num = pobj.next_line()
                 continue
@@ -846,7 +868,7 @@ def parse_module(pobj, statements, logger=None):
 def parse_fortran_file(filename, preproc_defs=None, logger=None):
     mheaders = list()
     type_dict = {}
-    pobj = read_file(filename, preproc_defs=preproc_defs)
+    pobj = read_file(filename, preproc_defs=preproc_defs, logger=logger)
     pobj.reset_pos()
     curr_line, clo = pobj.curr_line()
     statements = line_statements(curr_line)

@@ -64,7 +64,10 @@ if __name__ == "__main__":
 # XXgoldyXX: ^ debug only
     tfilenames = list()
     # Find files with arg tables
-    for dir in ['physics', 'stochastic_physics']:
+    for dir in ['physics', 'stochastic_physics', 'GFS_layer']:
+        if not os.path.exists(os.path.join(sdir, dir)):
+            continue
+        # End if
         for file in os.listdir(os.path.join(sdir, dir)):
             has_arg_table = False
             pathname = os.path.join(sdir, dir, file)
