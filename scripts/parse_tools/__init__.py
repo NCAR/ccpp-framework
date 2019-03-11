@@ -18,6 +18,7 @@ __all__ = [
     'ParseSource',
     'ParseSyntaxError',
     'ParseObject',
+    'PreprocStack',
     'register_fortran_ddt_name',
     'registered_fortran_ddt_name',
     'setLogLevel',
@@ -38,7 +39,8 @@ from parse_checkers import check_fortran_type
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
 from parse_checkers import check_dimensions, check_cf_standard_name
-from parse_log      import initLog, setLogLevel
-from parse_log      import setLogToStdout, setLogToNull
-from parse_log      import setLogToFile
+from parse_log      import init_log, set_log_level
+from parse_log      import set_log_to_stdout, set_log_to_null
+from parse_log      import set_log_to_file
+from preprocess     import PreprocStack
 # End if

@@ -12,7 +12,7 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
 from parse_tools import CCPPError, ParseInternalError, ParseSyntaxError
-from parse_tools import ParseContext, ParseObject, ParseSource
+from parse_tools import ParseContext, ParseObject, ParseSource, PreprocStack
 from parse_tools import FORTRAN_ID
 from metadata_table import MetadataHeader
 from parse_fortran import parse_fortran_var_decl, fortran_type_definition
@@ -38,102 +38,6 @@ subroutine_re = re.compile(r"(?i)\s*"+prefix_spec_re+subname_re+FORTRAN_ID+argli
 end_subroutine_re = re.compile(r"(?i)\s*end\s*"+subname_re+FORTRAN_ID+r"?")
 use_re = re.compile(r"(?i)\s*use\s(?:,\s*intrinsic\s*::)?\s*only\s*:([^!]+)")
 end_type_re = re.compile(r"(?i)\s*end\s*type\s+"+FORTRAN_ID+r"?")
-
-########################################################################
-
-class PreprocStack(object):
-    "Class to handle preprocess regions"
-
-    ifdef_re = re.compile(r"#\s*ifdef\s+(.*)")
-    ifndef_re = re.compile(r"#\s*ifndef\s+(.*)")
-    if_re = re.compile(r"#\s*if([^d].*)")
-    elif_re = re.compile(r"#\s*elif\s(.*)")
-    else_re = re.compile(r"#\s*else")
-    end_re = re.compile(r"#\s*endif")
-
-    def __init__(self):
-        self._region_stack = list()
-
-    def process_line(self, line, preproc_defs, pobj, logger):
-        sline = line.strip()
-        is_preproc_line = PreprocStack.is_preproc_line(line)
-        if is_preproc_line and (preproc_defs is not None):
-            match = PreprocStack.ifdef_re.match(sline)
-            if match is not None:
-                if match.group(1) in preproc_defs:
-                    start_region = preproc_defs[match.group(1)] != 0
-                else:
-                    start_region = False
-                # End if
-                if start_region and (logger is not None):
-                    logger.debug('Preproc: Starting True region ({}) on line {}'.format(match.group(1), pobj))
-                # End if
-                self._region_stack.append(start_region)
-            # End if
-            if match is None:
-                match = PreprocStack.ifndef_re.match(sline)
-                if match is not None:
-                    if match.group(1) in preproc_defs:
-                        start_region = preproc_defs[match.group(1)] == 0
-                    else:
-                        start_region = True
-                    # End if
-                    if (not start_region) and (logger is not None):
-                        logger.debug('Preproc: Starting False region ({}) on line {}'.format(match.group(1), pobj))
-                    # End if
-                    self._region_stack.append(start_region)
-                # End if
-            # End if
-            if match is None:
-                match = PreprocStack.if_re.match(sline)
-                if match is not None:
-                    if '=' in sline:
-                        print("WARNING: Preprocessor #if statement not handled, at {}".format(pobj))
-                        self._region_stack.append(False)
-                    else:
-                        self._region_stack.append(match.group(1).strip() != '0')
-                    # End if
-                # End if
-            # End if
-            if match is None:
-                match = PreprocStack.elif_re.match(sline)
-                if match is not None:
-                    if '=' in sline:
-                        print("WARNING: Preprocessor #elif statement not handled , at {}".format(pobj))
-                        self._region_stack.append(False)
-                    else:
-                        self._region_stack.append(match.group(1).strip() != '0')
-                    # End if
-                # End if
-            # End if
-            if match is None:
-                match = PreprocStack.else_re.match(sline)
-                if match is not None:
-                    self._region_stack.append(not self._region_stack.pop())
-                # End if
-            # End if
-            if match is None:
-                match = PreprocStack.end_re.match(sline)
-                if match is not None:
-                    if len(self._region_stack) == 0:
-                        raise ParseSyntaxError("#endif found with no matching #if[def]", context=pobj)
-                    else:
-                        self._region_stack.pop()
-                    # End if
-                # End if
-            # End if
-        # Ignore all other lines
-        # End if
-        return is_preproc_line
-
-    @classmethod
-    def is_preproc_line(self, line):
-        'Return True iff line appears to be a preprocessor line'
-        return line.lstrip()[0] == '#'
-
-    def in_true_region(self):
-        "Return True iff the current line should be processed"
-        return (len(self._region_stack) == 0) or self._region_stack[-1]
 
 ########################################################################
 
@@ -471,10 +375,6 @@ def read_file(filename, preproc_defs=None, logger=None):
                 continue
             # End if
             if not preproc_status.in_true_region():
-# XXgoldyXX: v debug only
-                if 'memcheck' in filename:
-                    print('XXG: Rejecting line {}'.format(curr_line_num))
-# XXgoldyXX: ^ debug only
                 pobj.write_line(curr_line_num, "")
                 curr_line, curr_line_num = pobj.next_line()
                 continue
@@ -579,7 +479,7 @@ def parse_type_def(statements, type_def, mod_name, pobj, logger):
                 # Comment of variable
                 if ((not is_comment_statement(statement, logger)) and
                     (not parse_use_statement({}, statement, pobj, logger))):
-                    vars = parse_fortran_var_decl(statement, psrc)
+                    vars = parse_fortran_var_decl(statement, psrc, logger=logger)
                     for var in vars:
                         var_dict.add_variable(var)
                     # End for
@@ -635,7 +535,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
                 if ((not is_comment_statement(statement, logger)) and
                     (not parse_use_statement({}, statement, pobj, logger)) and
                     (active_table == spec_name)):
-                    vars = parse_fortran_var_decl(statement, psrc)
+                    vars = parse_fortran_var_decl(statement, psrc, logger=logger)
                     for var in vars:
                         var_dict.add_variable(var)
                     # End for
@@ -698,7 +598,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
                 elif ((not is_comment_statement(statement, logger)) and
                       (not parse_use_statement({}, statement, pobj, logger)) and
                       ('intent' in statement)):
-                    vars = parse_fortran_var_decl(statement, psrc)
+                    vars = parse_fortran_var_decl(statement, psrc, logger=logger)
                     for var in vars:
                         lname = var.get_prop_value('local_name').lower()
                         if lname in scheme_set:

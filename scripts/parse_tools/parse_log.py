@@ -6,31 +6,31 @@
 import logging
 # CCPP framework imports
 
-def initLog(name, level=None):
+def init_log(name, level=None):
     logger = logging.getLogger(name)
     # Turn logging to WARNING if not set
     llevel = logger.getEffectiveLevel()
     if (level is None) and (llevel == logging.NOTSET):
         logger.setLevel(logging.WARNING)
     # End if
-    setLogToStdout(logger)
+    set_log_to_stdout(logger)
     return logger
 
-def setLogLevel(logger, level):
+def set_log_level(logger, level):
     logger.setLevel(level)
 
-def removeHandlers(logger):
+def remove_handlers(logger):
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
 
-def setLogToStdout(logger):
-    removeHandlers(logger)
+def set_log_to_stdout(logger):
+    remove_handlers(logger)
     logger.addHandler(logging.StreamHandler())
 
-def setLogToNull(logger):
-    removeHandlers(logger)
+def set_log_to_null(logger):
+    remove_handlers(logger)
     logger.addHandler(logging.NullHandler())
 
-def setLogToFile(logger, filename):
-    removeHandlers(logger)
+def set_log_to_file(logger, filename):
+    remove_handlers(logger)
     logger.addHandler(logging.StreamHandler())

@@ -7,7 +7,7 @@ if __name__ == '__main__' and __package__ is None:
 import re
 from parse_tools import ParseSyntaxError, ParseInternalError
 from parse_tools import check_fortran_intrinsic, check_fortran_type
-from parse_tools import ParseContext, ParseSource
+from parse_tools import ParseContext, ParseSource, context_string
 from metavar import Var
 
 # A collection of types and tools for parsing Fortran code to support
@@ -167,11 +167,19 @@ class Ftype(object):
 
     @classmethod
     def reassemble_parens(cls, propstr, errstr, context, splitstr=','):
+        """Return list of <propstr> split by top-level instances of <splitstr>.
+        Occurrences of <splitstr> in character contexts or in parentheses are
+        ignored.
+        >>> Ftype.reassemble_parens("a(b, c),d,e()", 'spec', ParseContext())
+        ['a(b, c)', 'd', 'e()']
+        >>> Ftype.reassemble_parens("dimension(size(Grid%xlon,1),NSPC1),  intent(in)", 'spec', ParseContext())
+        ['dimension(size(Grid%xlon,1),NSPC1)', 'intent(in)']
+        """
         vars = list()
         proplist = propstr.split(splitstr)
         while len(proplist) > 0:
             var = proplist.pop(0)
-            while ('(' in var) and (')' not in var):
+            while var.count('(') != var.count(')'):
                 if len(proplist) == 0:
                     raise ParseSyntaxError(errstr, token=propstr, context=context)
                 # End if
@@ -516,11 +524,13 @@ def fortran_type_definition(line):
     return Ftype_type_decl.type_def_line(line)
 
 ########################################################################
-def parse_fortran_var_decl(line, source):
+def parse_fortran_var_decl(line, source, logger=None):
 ########################################################################
     """Parse a Fortran variable declaration line and return a list of
     Var objects representing the variables declared on <line>.
     >>> _var_id_re_.match('foo') #doctest: +ELLIPSIS
+    <_sre.SRE_Match object at 0x...>
+    >>> _var_id_re_.match("si(levr+1)") #doctest: +ELLIPSIS
     <_sre.SRE_Match object at 0x...>
     >>> _var_id_re_.match("foo()")
 
@@ -611,7 +621,16 @@ def parse_fortran_var_decl(line, source):
             # End if
             match = _var_id_re_.match(var)
             if match is None:
-                raise ParseSyntaxError('variable declaration', token=var, context=context)
+                if logger is not None:
+                    ctx = context_string(context)
+                    logger.warning("WARNING: Invalid variable declaration, {}{}".format(var, ctx))
+# XXgoldyXX: v debug only
+# Remove this!!
+                    raise ParseSyntaxError('variable declaration', token=var, context=context)
+# XXgoldyXX: ^ debug only
+                else:
+                    raise ParseSyntaxError('variable declaration', token=var, context=context)
+                # End if
             # End if
             prop_dict['local_name'] = match.group(1).strip()
             prop_dict['standard_name'] = Ftype.unique_standard_name()
@@ -636,7 +655,9 @@ def parse_fortran_var_decl(line, source):
             else:
                 prop_dict['dimensions'] = '()'
             # End if
-            newvars.append(Var(prop_dict, source))
+            # XXgoldyXX: I am nervous about allowing invalid Var objects here
+            newvars.append(Var(prop_dict, source,
+                               invalid_ok=(logger is not None), logger=logger))
         # End for
     # No else (not a variable declaration)
     # End if

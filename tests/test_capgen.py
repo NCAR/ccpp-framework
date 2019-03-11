@@ -3,6 +3,7 @@
 Test script to check ability to parse and generate caps.
 """
 
+# Python library imports
 import os.path
 if __name__ == '__main__' and __package__ is None:
     import sys
@@ -15,11 +16,17 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append(sdir)
 # End if
 import re
+import logging
+# CCPP framework imports
 import convert_metadata
-from parse_tools import register_fortran_ddt_name
+from parse_tools import register_fortran_ddt_name, init_log, set_log_level
 from metadata_table import MetadataHeader
 
-arg_table_re = re.compile(r"[\s]*!.*section.*arg_table_")
+arg_table_re = re.compile(r"(?i)[\s]*!.*section.*arg_table_")
+
+## Init this now so that all Exceptions can be trapped
+logger = init_log('ccpp_capgen')
+set_log_level(logger, logging.INFO)
 
 ########################################################################
 
@@ -105,7 +112,7 @@ if __name__ == "__main__":
                 if not os.path.exists(infile):
                     print("WARNING: Cannot find '{}'".format(infile))
                 else:
-                    convert_metadata.convert_file(infile, file, mdfile)
+                    convert_metadata.convert_file(infile, file, mdfile, logger)
                 # End if
             # End if
             if os.path.exists(mdfile):

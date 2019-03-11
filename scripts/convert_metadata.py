@@ -108,7 +108,7 @@ class MetadataTable(OrderedDict):
 
 ########################################################################
 
-def convert_file(filename_in, filename_out, metadata_filename_out):
+def convert_file(filename_in, filename_out, metadata_filename_out, logger):
     """Convert a file's old metadata to the new format
     Note that only the bare minimum error checking is done.
     """
@@ -232,7 +232,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out):
         # End while
     # End with (file)
     # Read in the Fortran source to find dimension information
-    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1})
+    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1}, logger=logger)
     # Find and replace dimension information for each metadata header
     for table in mdconfig:
         # Find matching Fortran header
@@ -244,7 +244,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out):
             # End if
         # End for
         if mheader is None:
-            print('WARNING: Cannot find {} in {} for dimension translation'.format(table.name, filename_out))
+            logger.warning('WARNING: Cannot find {} in {} for dimension translation'.format(table.name, filename_out))
             continue # Skip this table
         # End for
         # The Fortran table does not have valid standard names so
@@ -255,53 +255,63 @@ def convert_file(filename_in, filename_out, metadata_filename_out):
         # End for
         for lname in table.keys():
             var = table[lname]
-            if lname.lower() not in header_vars:
-                print('WARNING: Cannot find variable {} in {}, skipping dimension translation'.format(lname, table.name))
-                continue
+            if lname.lower() in header_vars:
+                fvar = header_vars[lname.lower()]
+            else:
+                logger.warning('WARNING: Cannot find variable {} in {} ({}), skipping dimension translation'.format(lname, table.name, filename_out))
+                fvar = None
             # End if
-            fvar = header_vars[lname.lower()]
             dimstring = var['dimensions'].strip().lstrip('(').rstrip(')')
             if ':' in dimstring: # i.e., this not a scalar variable
                 dims = dimstring.split(',')
                 rank = len(dims)
-                dims = list()
-                fdims = fvar.get_dimensions()
-                for fdim in fdims:
-                    fdlist = fdim.split(':')
-                    fdlen = len(fdlist)
-                    dlist = ['']*fdlen
-                    for index in xrange(fdlen):
-                        # For each dimension component, find the standard_name
-                        # First, see if it is blank, then integer, then var
-                        fd = fdlist[index]
-                        if len(fd) == 0:
-                            fdnum = ''
-                        else:
-                            fdnum = None
-                        # End if
-                        if len(fd) > 0:
-                            try:
-                                test = int(fd)
-                                fdnum = fd
-                            except Exception as e:
-                                pass
-                            # End try
-                        # End if
-                        if (len(fd) > 0) and (fdnum is None):
-                            # Try to find the standard name for this item
-                            if table.has(fd):
-                                fdvar = table.get(fd)
-                                fdnum = fdvar['standard_name']
+                if fvar is None:
+                    fdims = None
+                else:
+                    fdims = fvar.get_dimensions()
+                # End if
+                if fdims is None:
+                    # We are dealing with an invalid variable, deal with it
+                    dims = ['XX_NotFound_XX']*rank
+                else:
+                    dims = list()
+                    for fdim in fdims:
+                        fdlist = fdim.split(':')
+                        fdlen = len(fdlist)
+                        dlist = ['']*fdlen
+                        for index in xrange(fdlen):
+                            # For each dimension component, find the standard_name
+                            # First, see if it is blank, then integer, then var
+                            fd = fdlist[index]
+                            if len(fd) == 0:
+                                fdnum = ''
                             else:
-                                print('WARNING: No local variable found for dimension, {} in {}'.format(fd, lname))
-                                fdnum = 'XXnot_foundXX'
+                                fdnum = None
                             # End if
-                        # End if
-                        dlist[index] = fdnum
+                            if len(fd) > 0:
+                                try:
+                                    test = int(fd)
+                                    fdnum = fd
+                                except Exception as e:
+                                    pass
+                                # End try
+                            # End if
+                            if (len(fd) > 0) and (fdnum is None):
+                                # Try to find the standard name for this item
+                                if table.has(fd):
+                                    fdvar = table.get(fd)
+                                    fdnum = fdvar['standard_name']
+                                else:
+                                    logger.warning('WARNING: No local variable found for dimension, {} in {}'.format(fd, lname))
+                                    fdnum = 'XXnot_foundXX'
+                                # End if
+                            # End if
+                            dlist[index] = fdnum
+                        # End for
+                        # Reassemble dim
+                        dims.append(':'.join(dlist))
                     # End for
-                    # Reassemble dim
-                    dims.append(':'.join(dlist))
-                # End for
+                # End if
                 # Reset dimensions
                 var['dimensions'] = '(' + ','.join(dims) + ')'
             # End if

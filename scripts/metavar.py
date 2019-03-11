@@ -403,7 +403,11 @@ class Var(object):
         # End if
     # End for
 
-    def __init__(self, prop_dict, source):
+    def __init__(self, prop_dict, source, invalid_ok=False, logger=None):
+        """NB: invalid_ok=True is dangerous because it allows creation
+        of a Var object with invalid properties.
+        In order to prevent silent failures, invalid_ok requires a logger
+        in order to take effect."""
         if source.type is 'SCHEME':
             required_props = Var.__required_var_props
             master_propdict = Var.__var_propdict
@@ -434,13 +438,23 @@ class Var(object):
         # Make sure required properties are present
         for propname in required_props:
             if propname not in prop_dict:
-                raise ParseSyntaxError("Required property, '{}', missing".format(propname), context=self.context)
+                if invalid_ok and (logger is not None):
+                    ctx = context_string(self.context)
+                    logger.warning("Required property, '{}', missing{}".format(propname, ctx))
+                else:
+                    raise ParseSyntaxError("Required property, '{}', missing".format(propname), context=self.context)
+                # End if
             # End if
         # End for
         # Check for any mismatch
         if ('constant' in prop_dict) and ('intent' in prop_dict):
             if prop_dict['intent'].lower() != 'in':
-                raise ParseSyntaxError("{} is marked constant but is intent {}".format(prop_dict['local_name'], prop_dict['intent']), context=self.context)
+                if invalid and (logger is not None):
+                    ctx = context_string(self.context)
+                    logger.warning("{} is marked constant but is intent {}{}".format(prop_dict['local_name'], prop_dict['intent'], ctx))
+                else:
+                    raise ParseSyntaxError("{} is marked constant but is intent {}".format(prop_dict['local_name'], prop_dict['intent']), context=self.context)
+                # End if
             # End if
         # End if
         # Steal dict from caller
@@ -458,8 +472,13 @@ class Var(object):
                                                        error=True)
             # End for
         except CCPPError as cp:
-            raise ParseSyntaxError("{}: {}".format(self._prop_dict['local_name'], cp),
-                                   context=self.context)
+            if invalid_ok and (logger is not None):
+                ctx = context_string(self.context)
+                logger.warning("{}: {}{}".format(self._prop_dict['local_name'], cp, ctx))
+            else:
+                raise ParseSyntaxError("{}: {}".format(self._prop_dict['local_name'], cp),
+                                       context=self.context)
+            # End if
         # End try
 
     def compatible(self, other, logger=None):
