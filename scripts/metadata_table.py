@@ -111,14 +111,14 @@ class MetadataHeader(ParseSource):
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])) #doctest: +ELLIPSIS
-    <__main__.MetadataHeader object at 0x...>
+    <__main__.MetadataHeader foo / foobar at 0x...>
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["name = foobar", "type = scheme", "module = foobar",   \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in"])).get_var(standard_name='horizontal_loop_extent')
-    <horizontal_loop_extent: im>
+                       "dimensions = () |  intent = in"])).get_var(standard_name='horizontal_loop_extent') #doctest: +ELLIPSIS
+    <metavar.Var horizontal_loop_extent: im at 0x...>
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["name = foobar", "module = foo",                       \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
@@ -128,15 +128,6 @@ class MetadataHeader(ParseSource):
                        "  subroutine foo()"])).get_var(standard_name='horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Missing metadata header type, at foobar.txt:7
-    >>> MetadataHeader(ParseObject("foobar.txt",                              \
-                      ["name = foobar", "type = scheme",                      \
-                       "[ im ]", "standard_name = horizontal_loop_extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in",                      \
-                       ""])) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ParseSyntaxError: Invalid metadata header start, no module name, '[ im ]', at foobar.txt:3
     >>> MetadataHeader(ParseObject("foobar.txt",                              \
                       ["name = foobar", "type = scheme", "module=foobar",     \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
@@ -185,7 +176,7 @@ class MetadataHeader(ParseSource):
     __blank_line__ = re.compile(r"\s*[#;]")
 
     def __init__(self, parse_object=None,
-                 title=None, type=None, module=None, var_dict=None,
+                 title=None, type_in=None, module=None, var_dict=None,
                  logger=None):
         self._pobj = parse_object
         """If <parse_object> is not None, initialize from the current file and
@@ -200,7 +191,7 @@ class MetadataHeader(ParseSource):
             else:
                 self._table_title = title
             # End if
-            if type is None:
+            if type_in is None:
                 raise ParseInternalError('MetadataHeader requires a header type')
             else:
                 self._header_type = type
@@ -417,7 +408,20 @@ class MetadataHeader(ParseSource):
         return name
 
     def __repr__(self):
-        return '<MetadataHeader {} / {}>'.format(self.module, self.title)
+        base = super(MetadataHeader, self).__repr__()
+        pind = base.find(' object ')
+        if pind >= 0:
+            pre = base[0:pind]
+        else:
+            pre = '<MetadataHeader'
+        # End if
+        bind = base.find('at 0x')
+        if bind >= 0:
+            post = base[bind:]
+        else:
+            post = '>'
+        # End if
+        return '{} {} / {} {}'.format(pre, self.module, self.title, post)
 
     def __del__(self):
         try:

@@ -6,8 +6,9 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
 from parse_tools import ParseSyntaxError, ParseInternalError
-from parse_tools import check_fortran_intrinsic, check_fortran_type
 from parse_tools import ParseContext, ParseSource, context_string
+from parse_tools import check_fortran_intrinsic, check_fortran_type
+from parse_tools import check_balanced_paren
 from metavar import Var
 
 # A collection of types and tools for parsing Fortran code to support
@@ -530,8 +531,6 @@ def parse_fortran_var_decl(line, source, logger=None):
     Var objects representing the variables declared on <line>.
     >>> _var_id_re_.match('foo') #doctest: +ELLIPSIS
     <_sre.SRE_Match object at 0x...>
-    >>> _var_id_re_.match("si(levr+1)") #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
     >>> _var_id_re_.match("foo()")
 
     >>> _var_id_re_.match('foo').group(1)
@@ -619,20 +618,28 @@ def parse_fortran_var_decl(line, source, logger=None):
                 # We do not care about initializers
                 var = var[0:var.rindex('=')].rstrip()
             # End if
-            match = _var_id_re_.match(var)
-            if match is None:
-                if logger is not None:
-                    ctx = context_string(context)
-                    logger.warning("WARNING: Invalid variable declaration, {}{}".format(var, ctx))
-# XXgoldyXX: v debug only
-# Remove this!!
-                    raise ParseSyntaxError('variable declaration', token=var, context=context)
-# XXgoldyXX: ^ debug only
+            # Scan <var> and gather variable pieces
+            inchar = None # Character context
+            var_len = len(var)
+            ploc = var.find('(')
+            if ploc < 0:
+                varname = var.strip()
+                dimspec = None
+            else:
+                varname = var[0:ploc].strip()
+                begin, end = check_balanced_paren(var)
+                if (begin < 0) or (end < 0):
+                    if logger is not None:
+                        ctx = context_string(context)
+                        logger.warning("WARNING: Invalid variable declaration, {}{}".format(var, ctx))
+                    else:
+                        raise ParseSyntaxError('variable declaration', token=var, context=context)
+                    # End if
                 else:
-                    raise ParseSyntaxError('variable declaration', token=var, context=context)
+                    dimspec = var[begin:end+1]
                 # End if
             # End if
-            prop_dict['local_name'] = match.group(1).strip()
+            prop_dict['local_name'] = varname
             prop_dict['standard_name'] = Ftype.unique_standard_name()
             prop_dict['units'] = ''
             prop_dict['type'] = tobject.typestr
@@ -648,8 +655,8 @@ def parse_fortran_var_decl(line, source, logger=None):
             if intent is not None:
                 prop_dict['intent'] = intent
             # End if
-            if match.group(2) is not None:
-                prop_dict['dimensions'] = match.group(2)
+            if dimspec is not None:
+                prop_dict['dimensions'] = dimspec
             elif dimensions is not None:
                 prop_dict['dimensions'] = dimensions
             else:

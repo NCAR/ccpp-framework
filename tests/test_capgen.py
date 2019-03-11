@@ -27,6 +27,9 @@ arg_table_re = re.compile(r"(?i)[\s]*!.*section.*arg_table_")
 ## Init this now so that all Exceptions can be trapped
 logger = init_log('ccpp_capgen')
 set_log_level(logger, logging.INFO)
+## To cause convert_metadata to stop when an error condition is found
+## (no metadata file), uncomment out the next line.
+#logger = None
 
 ########################################################################
 

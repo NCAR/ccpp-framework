@@ -2,6 +2,7 @@
 """
 __all__ = [
     'CCPPError',
+    'check_balanced_paren',
     'check_cf_standard_name',
     'check_dimensions',
     'check_fortran_id',
@@ -27,15 +28,15 @@ __all__ = [
     'setLogToStdout',
 ]
 
-from parse_tools    import ParseContext, ParseSource
-from parse_tools    import ParseSyntaxError, ParseInternalError
-from parse_tools    import CCPPError, context_string
+from parse_source   import ParseContext, ParseSource
+from parse_source   import ParseSyntaxError, ParseInternalError
+from parse_source   import CCPPError, context_string
 from parse_object   import ParseObject
 from parse_checkers import check_fortran_id, FORTRAN_ID
 from parse_checkers import FORTRAN_DP_RE
 from parse_checkers import check_fortran_ref, FORTRAN_SCALAR_REF
 from parse_checkers import check_fortran_intrinsic
-from parse_checkers import check_fortran_type
+from parse_checkers import check_fortran_type, check_balanced_paren
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
 from parse_checkers import check_dimensions, check_cf_standard_name

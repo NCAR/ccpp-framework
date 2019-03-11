@@ -5,7 +5,7 @@
 # Python library imports
 import re
 # CCPP framework imports
-from parse_tools import CCPPError
+from parse_source import CCPPError
 
 ########################################################################
 
@@ -360,6 +360,73 @@ def check_fortran_type(typestr, error=False):
         # End if
     # End if
     return typestr
+
+########################################################################
+
+def check_balanced_paren(string, start=0, error=False):
+    """Return <string> indices delineating a balance set of parentheses.
+    Parentheses in character context do not count.
+    Left parenthesis search begins at <start>.
+    Return start and end indices if found
+    If no parentheses are found, return (-1, -1).
+    If a left parenthesis is found but no balancing right, return (begin, -1)
+    where begin
+    If error is True, raise a CCPPError.
+    >>> check_balanced_paren("foo")
+    (-1, -1)
+    >>> check_balanced_paren("(foo, bar)")
+    (0, 9)
+    >>> check_balanced_paren("( (foo, bar) )", start=1)
+    (2, 11)
+    >>> check_balanced_paren("(size(foo,1), qux)")
+    (0, 17)
+    >>> check_balanced_paren("(foo('bar()'))")
+    (0, 13)
+    >>> check_balanced_paren("(foo('bar()')")
+    (0, -1)
+    >>> check_balanced_paren("(foo('bar()')", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: ERROR: Unbalanced parenthesis in '(foo('bar()')'
+    """
+    index = start
+    begin = -1
+    end = -1
+    depth = 0
+    inchar = None
+    str_len = len(string)
+    while index < str_len:
+        if (string[index] == '"') or (string[index] == "'"):
+            if inchar == string[index]:
+                inchar = None
+            elif inchar is None:
+                inchar = string[index]
+            # else in character context, keep going
+            # End if
+        elif inchar is not None:
+            # In character context, keep going
+            pass
+        elif string[index] == '(':
+            if depth == 0:
+                begin = index
+            # End if
+            depth = depth + 1
+            if depth == 0:
+                break
+            # End if
+        elif string[index] == ')':
+            depth = depth - 1
+            if depth == 0:
+                end = index
+                break
+            # End if
+        # else just keep going
+        # End if
+        index = index + 1
+    # End while
+    if (begin >= 0) and (end < 0) and error:
+        raise CCPPError("ERROR: Unbalanced parenthesis in '{}'".format(string))
+    # End if
+    return begin, end
 
 ########################################################################
 

@@ -617,7 +617,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
         # End if
     # End while
     if (scheme_name is not None) and (var_dict is not None):
-        mheader = MetadataHeader(title=scheme_name, type='SCHEME',
+        mheader = MetadataHeader(title=scheme_name, type_in='SCHEME',
                                  module=spec_name, var_dict=var_dict,
                                  logger=logger)
     # End if

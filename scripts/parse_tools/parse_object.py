@@ -6,11 +6,9 @@ import re
 # CCPP framework imports
 import six
 if six.PY3:
-    from parse_tools.parse_tools    import ParseContext, CCPPError
-    from parse_tools.parse_checkers import check_fortran_ref
+    from parse_tools.parse_source    import ParseContext, CCPPError
 else:
-    from parse_tools    import ParseContext, CCPPError
-    from parse_checkers import check_fortran_ref
+    from parse_source    import ParseContext, CCPPError
 # End if
 
 ########################################################################
@@ -30,11 +28,11 @@ class ParseObject(ParseContext):
     (None, 1)
     >>> ParseObject('foobar.F90', ["##first line","## hi mom"], line_start=1).next_line()
     ('## hi mom', 1)
-    >>> ParseObject('foobar.F90', ["## hi \\\\","## mom"], line_start=0).next_line()
+    >>> ParseObject('foobar.F90', ["## hi \\\\","mom"], line_start=0).next_line()
     ('## hi mom', 0)
     >>> ParseObject('foobar.F90', ["line1","##line2","## hi mom"], line_start=2).next_line()
     ('## hi mom', 2)
-    >>> ParseObject('foobar.F90', ["## hi \\\\","## there \\\\","## mom"], line_start=0).next_line()
+    >>> ParseObject('foobar.F90', ["## hi \\\\","there \\\\","mom"], line_start=0).next_line()
     ('## hi there mom', 0)
     >>> ParseObject('foobar.F90', ["!! line1","!! hi mom"], line_start=1).next_line()
     ('!! hi mom', 1)

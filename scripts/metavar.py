@@ -183,9 +183,9 @@ class VariableProperty(object):
     ['x:y']
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,y:z)')
     ['w:x', 'y:z']
-    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,x:y:z)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,x:y:z:q)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    CCPPError: 'x:y:z' is an invalid dimension range
+    CCPPError: 'x:y:z:q' is an invalid dimension range
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x:3y)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: '3y' is not a valid Fortran identifier
@@ -449,7 +449,7 @@ class Var(object):
         # Check for any mismatch
         if ('constant' in prop_dict) and ('intent' in prop_dict):
             if prop_dict['intent'].lower() != 'in':
-                if invalid and (logger is not None):
+                if invalid_ok and (logger is not None):
                     ctx = context_string(self.context)
                     logger.warning("{} is marked constant but is intent {}{}".format(prop_dict['local_name'], prop_dict['intent'], ctx))
                 else:
@@ -704,9 +704,26 @@ class Var(object):
         # End if
         return str.format(**self._prop_dict)
 
-    def __repr__(self):
+    def __str__(self):
         '''Print representation or string for Var objects'''
-        return "<{standard_name}: {local_name}>".format(**self._prop_dict)
+        return "<Var {standard_name}: {local_name}>".format(**self._prop_dict)
+
+    def __repr__(self):
+        '''Object representation for Var objects'''
+        base = super(Var, self).__repr__()
+        pind = base.find(' object ')
+        if pind >= 0:
+            pre = base[0:pind]
+        else:
+            pre = '<Var'
+        # End if
+        bind = base.find('at 0x')
+        if bind >= 0:
+            post = base[bind:]
+        else:
+            post = '>'
+        # End if
+        return '{} {}: {} {}'.format(pre, self._prop_dict['standard_name'], self._prop_dict['local_name'], post)
 
 ###############################################################################
 
@@ -827,11 +844,11 @@ class VarDictionary(OrderedDict):
     >>> VarDictionary('bar', variables={})
     VarDictionary(bar)
     >>> VarDictionary('baz', Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))) #doctest: +ELLIPSIS
-    VarDictionary(baz, [('hi_mom', <__main__.Var object at 0x...>)])
+    VarDictionary(baz, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
     >>> print("{}".format(VarDictionary('baz', Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())))))
     VarDictionary(baz, ['hi_mom'])
     >>> VarDictionary('qux', [Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]) #doctest: +ELLIPSIS
-    VarDictionary(qux, [('hi_mom', <__main__.Var object at 0x...>)])
+    VarDictionary(qux, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
     >>> VarDictionary('boo').add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())))
 
     >>> VarDictionary('who', variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))]).prop_list('local_name')
