@@ -4,12 +4,7 @@
 # Python library imports
 import re
 # CCPP framework imports
-import six
-if six.PY3:
-    from parse_tools.parse_source    import ParseContext, CCPPError
-else:
-    from parse_source    import ParseContext, CCPPError
-# End if
+from parse_source    import ParseContext, CCPPError
 
 ########################################################################
 

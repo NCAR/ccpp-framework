@@ -108,7 +108,7 @@ if __name__ == "__main__":
         try:
             tbase = os.path.basename(tfile)
             file = os.path.join(pdir, tbase)
-            mbase = "{}.md".format('.'.join(tbase.split('.')[:-1]))
+            mbase = "{}.meta".format('.'.join(tbase.split('.')[:-1]))
             mdfile = os.path.join(pdir, mbase)
             if not os.path.exists(file):
                 infile = tfile

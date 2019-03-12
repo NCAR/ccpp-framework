@@ -206,7 +206,11 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
                                 entry = std_name
                             elif attr_name == 'intent':
                                 if entry.lower() == 'none':
-                                    raise ValueError("{} has intent = none in {}".format(var_name, table_name))
+                                    if logger is None:
+                                        raise ValueError("{} has intent = none in {}".format(var_name, table_name))
+                                    else:
+                                        logger.warning("{} has intent = none in {}".format(var_name, table_name))
+                                    # End if
                                 # End if
                             # No else needed
                             # End if
@@ -244,7 +248,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
             # End if
         # End for
         if mheader is None:
-            logger.warning('WARNING: Cannot find {} in {} for dimension translation'.format(table.name, filename_out))
+            if logger is not None:
+                logger.warning('WARNING: Cannot find {} in {} for dimension translation'.format(table.name, filename_out))
+            # End if
             continue # Skip this table
         # End for
         # The Fortran table does not have valid standard names so
@@ -258,7 +264,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
             if lname.lower() in header_vars:
                 fvar = header_vars[lname.lower()]
             else:
-                logger.warning('WARNING: Cannot find variable {} in {} ({}), skipping dimension translation'.format(lname, table.name, filename_out))
+                if logger is not None:
+                    logger.warning('WARNING: Cannot find variable {} in {} ({}), skipping dimension translation'.format(lname, table.name, filename_out))
+                # End if
                 fvar = None
             # End if
             dimstring = var['dimensions'].strip().lstrip('(').rstrip(')')
@@ -302,7 +310,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
                                     fdvar = table.get(fd)
                                     fdnum = fdvar['standard_name']
                                 else:
-                                    logger.warning('WARNING: No local variable found for dimension, {} in {}'.format(fd, lname))
+                                    if logger is not None:
+                                        logger.warning('WARNING: No local variable found for dimension, {} in {}'.format(fd, lname))
+                                    # End if
                                     fdnum = 'XXnot_foundXX'
                                 # End if
                             # End if
@@ -352,7 +362,7 @@ if __name__ == "__main__":
             for index in xrange(1, num_args):
                 source_file = os.path.abspath(sys.argv[index])
                 filename = os.path.basename(source_file)
-                mdfilename = "{}.md".format('.'.join(filename.split('.')[:-1]))
+                mdfilename = "{}.meta".format('.'.join(filename.split('.')[:-1]))
                 dest_file = os.path.join(target_dir, filename)
                 dest_mdfile = os.path.join(target_dir, mdfilename)
                 convert_file(source_file, dest_file, dest_mdfile)
@@ -362,7 +372,7 @@ if __name__ == "__main__":
             else:
                 tbase = os.path.basename(sys.argv[2])
                 tdir = os.path.dirname(sys.argv[2])
-                mdfilename = "{}.md".format('.'.join(tbase.split('.')[:-1]))
+                mdfilename = "{}.meta".format('.'.join(tbase.split('.')[:-1]))
                 dest_mdfile = os.path.join(tdir, mdfilename)
                 convert_file(sys.argv[1], sys.argv[2], dest_mdfile)
             # End if
