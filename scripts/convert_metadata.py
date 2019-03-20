@@ -4,17 +4,21 @@
 import sys
 import os.path
 import re
+import logging
 from collections import OrderedDict
 import logging
 # CCPP framework imports
-from parse_tools import FORTRAN_ID
+from parse_tools import FORTRAN_ID, init_log, set_log_level
 from fortran_tools import parse_fortran_file
 
 yes_re = re.compile(r"(?i)^\s*yes\s*$")
 module_re = re.compile(r"(?i)\s*module\s+"+(FORTRAN_ID)+r"\s*$")
 end_module_re = re.compile(r"(?i)\s*end\s*module\s+"+(FORTRAN_ID)+r"\s*$")
+type_re = re.compile(r"(?i)\s*type\s+"+(FORTRAN_ID)+r"\s*$")
+end_type_re = re.compile(r"(?i)\s*end\s*type\s+"+(FORTRAN_ID)+r"\s*$")
 required_attrs = ['standard_name', 'units', 'dimensions', 'type']
 warning = True
+__not_found__ = 'XX_NotFound_XX'
 
 ########################################################################
 
@@ -136,17 +140,31 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
     # End with
     max_line = len(fin_lines) - 1
     mdconfig = list()
+    in_preamble = True
+    in_type = False
     with open(filename_out, 'w') as file:
         line, lindex = next_line(fin_lines, max_line)
         while line is not None:
             # Check for a module line
             current_module = parse_module_line(line, current_module)
+            # Maintain a status of being in a DDT definition
+            if (not in_type) and type_re.match(line):
+                in_type = True
+            elif in_type and end_type_re.match(line):
+                in_type = False
+            # End if
+            # Check for end of preamble
+            if (not in_type) and (line.lstrip()[0:8].lower() == 'contains'):
+                in_preamble = False
+            # End if
             # Check for beginning of new table
             words = line.split()
             # This is case sensitive
             if len(words) > 2 and words[0] in ['!!', '!>'] and '\section' in words[1] and 'arg_table_' in words[2]:
                 # We have a new table, parse the header
                 table_name = words[2].replace('arg_table_','')
+##XXgoldyXX: Uncomment this after conversion is over
+#                logger.info('Found old metadata table, {}, on line {}'.format(table_name, lindex+1))
                 # The header line is not modified
                 file.write(line+"\n")
                 # Write an include line for the metadata table
@@ -157,7 +175,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                 line, lindex = next_line(fin_lines, max_line, cindex=lindex)
                 words = line.split('|')
                 header_locs = {}
-                dim_names = [':']*15
+                dim_names = [__not_found__]*15
                 # Do not work on a blank table
                 if len(words) > 1:
                     table_header = [x.strip() for x in words[1:-1]]
@@ -185,6 +203,8 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                         # End if
                         # First output the local name
                         var_name = entries[local_name_ind]
+                        # Strip old-style DDT references
+                        var_name = var_name[var_name.rfind('%')+1:]
                         mdobj = MetadataEntry(var_name)
                         mdtable[var_name] = mdobj
                         # Now, create the rest of the entries
@@ -197,7 +217,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                             elif attr_name == 'rank':
                                 attr_name = 'dimensions'
                                 rank = int(entry)
-                                entry = '(' + ','.join([':']*rank) + ')'
+                                entry = '(' + ','.join(dim_names[0:rank]) + ')'
                             elif attr_name == 'standard_name':
                                 # The standard name needs to be lowercase
                                 std_name = entry.lower()
@@ -208,7 +228,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                                 entries[ind] = std_name
                                 entry = std_name
                             elif attr_name == 'intent':
-                                if entry.lower() == 'none':
+                                if in_preamble:
+                                    entry = ''
+                                elif entry.lower() == 'none':
                                     if logger is None:
                                         raise ValueError("{} has intent = none in {}".format(var_name, table_name))
                                     else:
@@ -283,7 +305,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                 # End if
                 if fdims is None:
                     # We are dealing with an invalid variable, deal with it
-                    dims = ['XX_NotFound_XX']*rank
+                    dims = [__not_found__]*rank
                 else:
                     dims = list()
                     for fdim in fdims:
@@ -359,8 +381,12 @@ if __name__ == "__main__":
     if num_args < 3:
         usage(sys.argv[0])
     else:
-        logging.basicConfig()
-        logger = logging.getLogger('convert_metadata')
+        ## Init this now so that all Exceptions can be trapped
+        logger = init_log('ccpp_capgen')
+        set_log_level(logger, logging.INFO)
+        ## To cause convert_metadata to stop when an error condition is found
+        ## (no metadata file), uncomment out the next line.
+        #logger = None
         if os.path.isdir(sys.argv[-1]):
             target_dir = os.path.abspath(sys.argv[-1])
             num_args = num_args - 1

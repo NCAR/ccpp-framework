@@ -375,9 +375,13 @@ def read_file(filename, preproc_defs=None, logger=None):
                 continue
             # End if
             if not preproc_status.in_true_region():
-                pobj.write_line(curr_line_num, "")
-                curr_line, curr_line_num = pobj.next_line()
-                continue
+                # Special case to allow CCPP comment statements in False
+                # regions to find DDT and module table code
+                if (curr_line[0:2] != '!!') and (curr_line[0:2] != '!>'):
+                    pobj.write_line(curr_line_num, "")
+                    curr_line, curr_line_num = pobj.next_line()
+                    continue
+                # End if
             # End if
             # scan the line for properties
             if fixed_form:
@@ -469,7 +473,7 @@ def parse_type_def(statements, type_def, mod_name, pobj, logger):
             pmatch = end_type_re.match(statement)
             if pmatch is not None:
                 # We hit the end of the type, make a header
-                mheader = MetadataHeader(title=type_def[0], type='DDT',
+                mheader = MetadataHeader(title=type_def[0], type_in='DDT',
                                          module=mod_name, var_dict=var_dict,
                                          logger=logger)
                 inspec = False
@@ -514,18 +518,18 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
             asmatch = arg_table_start_re.match(statement)
             type_def = fortran_type_definition(statement)
             if asmatch is not None:
-                active_table = asmatch.group(1)
+                active_table = asmatch.group(1).lower()
             elif (pmatch is not None) or is_contains_statement(statement, inspec):
                 # We are done with the specification
                 inspec = False
                 if len(var_dict.variable_list()) > 0:
-                    mheader = MetadataHeader(title=spec_name, type='MODULE',
+                    mheader = MetadataHeader(title=spec_name, type_in='MODULE',
                                              module=spec_name,
                                              var_dict=var_dict, logger=logger)
                     mheaders.append(mheader)
                 # End if
                 break
-            elif (type_def is not None) and (type_def[0] == active_table):
+            elif (type_def is not None) and (type_def[0].lower() == active_table):
                 statements, ddt = parse_type_def(statements, type_def,
                                                  spec_name, pobj, logger)
                 mheaders.append(ddt)
@@ -597,7 +601,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
                     insub = False
                 elif ((not is_comment_statement(statement, logger)) and
                       (not parse_use_statement({}, statement, pobj, logger)) and
-                      ('intent' in statement)):
+                      ('intent' in statement.lower())):
                     vars = parse_fortran_var_decl(statement, psrc, logger=logger)
                     for var in vars:
                         lname = var.get_prop_value('local_name').lower()
@@ -664,6 +668,8 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
                 inspec = False
                 break
             elif asmatch is not None:
+                # Put table statement back to re-read
+                statements.insert(0, statement)
                 statements, new_hdrs = parse_preamble_data(statements,
                                                            pobj, spec_name,
                                                            endmatch, logger)
