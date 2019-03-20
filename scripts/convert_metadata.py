@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+
 # Python library imports
 import sys
 import os.path
 import re
 from collections import OrderedDict
+import logging
 # CCPP framework imports
 from parse_tools import FORTRAN_ID
 from fortran_tools import parse_fortran_file
@@ -108,7 +111,7 @@ class MetadataTable(OrderedDict):
 
 ########################################################################
 
-def convert_file(filename_in, filename_out, metadata_filename_out, logger):
+def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
     """Convert a file's old metadata to the new format
     Note that only the bare minimum error checking is done.
     """
@@ -344,7 +347,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
 def usage(cmd):
     print("Usage:")
     print("{} <source_file> <target_file>".format(cmd))
-    print("{} <source_file> [ <source_file> ...] [ <target_directory>".format(cmd))
+    print("{} <source_file> [ <source_file> ...] [ <target_directory> ]".format(cmd))
     print("")
     print("Translate the metadata in each <source_file> into a new file")
 
@@ -356,6 +359,8 @@ if __name__ == "__main__":
     if num_args < 3:
         usage(sys.argv[0])
     else:
+        logging.basicConfig()
+        logger = logging.getLogger('convert_metadata')
         if os.path.isdir(sys.argv[-1]):
             target_dir = os.path.abspath(sys.argv[-1])
             num_args = num_args - 1
@@ -365,7 +370,7 @@ if __name__ == "__main__":
                 mdfilename = "{}.meta".format('.'.join(filename.split('.')[:-1]))
                 dest_file = os.path.join(target_dir, filename)
                 dest_mdfile = os.path.join(target_dir, mdfilename)
-                convert_file(source_file, dest_file, dest_mdfile)
+                convert_file(source_file, dest_file, dest_mdfile, logger)
         else:
             if num_args != 3:
                 usage(sys.argv[0])
@@ -374,7 +379,7 @@ if __name__ == "__main__":
                 tdir = os.path.dirname(sys.argv[2])
                 mdfilename = "{}.meta".format('.'.join(tbase.split('.')[:-1]))
                 dest_mdfile = os.path.join(tdir, mdfilename)
-                convert_file(sys.argv[1], sys.argv[2], dest_mdfile)
+                convert_file(sys.argv[1], sys.argv[2], dest_mdfile, logger)
             # End if
         # End if
     # End if
