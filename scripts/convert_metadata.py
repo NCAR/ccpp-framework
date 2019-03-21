@@ -4,7 +4,6 @@
 import sys
 import os.path
 import re
-import logging
 from collections import OrderedDict
 import logging
 # CCPP framework imports
