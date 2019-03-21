@@ -126,10 +126,8 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
         raise IOError("convert_file: file, '{}', does not exist".format(filename_in))
     # End if
     if os.path.exists(filename_out):
-        yes = raw_input("Overwrite '{}' (Yes/No)? ".format(filename_out))
-        if yes_re.match(yes) is None:
-            return
-        # End if
+        raise IOError("convert_file: file, '{}', already exists".format(filename_out))
+    # End if
     # End if
     # Read all lines of the file at once
     with open(filename_in, 'r') as file:
@@ -261,7 +259,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
         # End while
     # End with (file)
     # Read in the Fortran source to find dimension information
-    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1}, logger=logger)
+    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1, 'HYBRID':1}, logger=logger)
     # Find and replace dimension information for each metadata header
     for table in mdconfig:
         # Find matching Fortran header
