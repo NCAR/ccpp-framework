@@ -1,10 +1,11 @@
 #!/usr/bin/env python
+
 # Python library imports
 import sys
 import os.path
 import re
-import logging
 from collections import OrderedDict
+import logging
 # CCPP framework imports
 from parse_tools import FORTRAN_ID, init_log, set_log_level
 from fortran_tools import parse_fortran_file
@@ -113,7 +114,7 @@ class MetadataTable(OrderedDict):
 
 ########################################################################
 
-def convert_file(filename_in, filename_out, metadata_filename_out, logger):
+def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
     """Convert a file's old metadata to the new format
     Note that only the bare minimum error checking is done.
     """
@@ -124,10 +125,8 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
         raise IOError("convert_file: file, '{}', does not exist".format(filename_in))
     # End if
     if os.path.exists(filename_out):
-        yes = raw_input("Overwrite '{}' (Yes/No)? ".format(filename_out))
-        if yes_re.match(yes) is None:
-            return
-        # End if
+        raise IOError("convert_file: file, '{}', already exists".format(filename_out))
+    # End if
     # End if
     # Read all lines of the file at once
     with open(filename_in, 'r') as file:
@@ -259,7 +258,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
         # End while
     # End with (file)
     # Read in the Fortran source to find dimension information
-    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1}, logger=logger)
+    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1, 'HYBRID':1}, logger=logger)
     # Find and replace dimension information for each metadata header
     for table in mdconfig:
         # Find matching Fortran header
@@ -367,7 +366,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger):
 def usage(cmd):
     print("Usage:")
     print("{} <source_file> <target_file>".format(cmd))
-    print("{} <source_file> [ <source_file> ...] [ <target_directory>".format(cmd))
+    print("{} <source_file> [ <source_file> ...] [ <target_directory> ]".format(cmd))
     print("")
     print("Translate the metadata in each <source_file> into a new file")
 
