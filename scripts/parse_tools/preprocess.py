@@ -50,6 +50,14 @@ def preproc_item_value(item, preproc_defs):
             symbol = args[0].id
             # defined is True as long as we know about the symbol
             value = symbol in preproc_defs
+        elif func == "notdefined":
+            args = item.args
+            if len(args) != 1:
+                raise PreprocError("Invalid defined statement, {}".format(ast.dump(item)))
+            # End if
+            symbol = args[0].id
+            # notdefined is True as long as we do not know about the symbol
+            value = symbol not in preproc_defs
         else:
             raise PreprocError("Cannot parse function {}".format(func))
         # End if
@@ -261,6 +269,8 @@ class PreprocStack(object):
         (True, True)
         >>> PreprocStack().process_if_line("#if defined(CCPP) &&", {'CCPP':1})
         (False, False)
+        >>> PreprocStack().process_if_line("#if !defined(CCPP) || defined(HYBRID)", {'CCPP':1, 'HYBRID':1})
+        (True, True)
         """
         match = PreprocStack.ifelif_re.match(line)
         if match is None:
