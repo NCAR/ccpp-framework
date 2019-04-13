@@ -40,29 +40,43 @@ module ccpp
     !>
     !! CCPP initialization subroutine.
     !!
-    !! @param[in]     filename The file name of the XML scheme file to load.
-    !! @param[in,out] cdata    The ccpp_t type data.
-    !! @param[  out]  ierr     Integer error flag.
+    !! @param[in]     suitename    The suite name to use/load
+    !! @param[in,out] cdata        The ccpp_t type data.
+    !! @param[  out]  ierr         Integer error flag.
+    !! @param[in]     cdata_target An optional cdata instance to cope the suite from
+    !! @param[in]     filename     The file name of the XML scheme file to load,
+    !!                             derive from suitename if not present; can include
+    !!                             an absolute or relative path to the suite def. file
     !
-    subroutine ccpp_init(filename, cdata, ierr, cdata_target)
-        character(len=*),     intent(in)           :: filename
+    subroutine ccpp_init(suitename, cdata, ierr, cdata_target)
+        character(len=*),     intent(in)           :: suitename
         type(ccpp_t), target, intent(inout)        :: cdata
         integer,              intent(  out)        :: ierr
         type(ccpp_t), target, intent(in), optional :: cdata_target
+        ! Local variables
+        character(len=256) :: filename_local
 
         ierr = 0
 
         call ccpp_debug('Called ccpp_init')
 
+#ifndef STATIC
+        if (len('./suite_' // trim(suitename) // '.xml')>len(filename_local)) then
+            call ccpp_error('Length of suitename + 12 exceeds length of local filename variable')
+            ierr = 1
+            return
+        end if
+        filename_local = './suite_' // trim(suitename) // '.xml'
 
         if (present(cdata_target)) then
+            ! Copy the suite from the target cdata instance
             cdata%suite => cdata_target%suite
             cdata%suite_iscopy = .True.
         else
+            ! Initialize the suite from the file
             cdata%suite => cdata%suite_target
             cdata%suite_iscopy = .False.
-            ! Initialize the suite
-            call ccpp_suite_init(filename, cdata%suite, ierr)
+            call ccpp_suite_init(filename_local, cdata%suite, ierr)
             if (ierr /= 0) then
                 call ccpp_error('In initializing the CCPP suite')
                 return
@@ -75,6 +89,7 @@ module ccpp
             call ccpp_error('In initializing the CCPP fields')
             return
         end if
+#endif
 
         ! Set flag indicating initialization state of cdata
         cdata%initialized = .true.
@@ -95,6 +110,7 @@ module ccpp
 
         call ccpp_debug('Called ccpp_finalize')
 
+#ifndef STATIC
         if (cdata%suite_iscopy) then
            nullify(cdata%suite)
            cdata%suite_iscopy = .False.
@@ -115,10 +131,11 @@ module ccpp
                 return
         end if
 
+        nullify(cdata%suite)
+#endif
+
         ! Set flag indicating initialization state of cdata
         cdata%initialized = .false.
-
-        nullify(cdata%suite)
 
     end subroutine ccpp_finalize
 
