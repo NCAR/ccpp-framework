@@ -7,9 +7,11 @@ CCPP Training Documentation
 ===========================
 
 .. toctree::
-   :maxdepth: 2
+   :numbered:
+   :maxdepth: 3
 
    Introduction
    Overview 
    CompliantPhysicsParams
+   ScientificDocRules
    Glossary
