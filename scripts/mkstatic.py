@@ -534,7 +534,7 @@ end module {module}
         """Create caps for all groups in the suite and for the entire suite
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
-        self._module = 'ccpp_suite_{suite_name}_cap'.format(suite_name=self._name)
+        self._module = 'ccpp_{suite_name}_cap'.format(suite_name=self._name)
         self._filename = '{module_name}.F90'.format(module_name=self._module)
         # Init
         self._subroutines = []
@@ -721,7 +721,7 @@ end module {module}
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
         #
         module_use = ''
-        self._module = 'ccpp_suite_{suite}_group_{name}_cap'.format(name=self._name, suite=self._suite)
+        self._module = 'ccpp_{suite}_{name}_cap'.format(name=self._name, suite=self._suite)
         self._filename = '{module_name}.F90'.format(module_name=self._module)
         self._subroutines = []
         local_subs = ''
