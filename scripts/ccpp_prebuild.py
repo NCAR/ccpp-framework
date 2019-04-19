@@ -26,10 +26,10 @@ from mkstatic import API, Suite, Group
 ###############################################################################
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', action='store', help='path to CCPP prebuild configuration file', required=True)
-parser.add_argument('--debug',  action='store_true', help='enable debugging output', default=False)
-parser.add_argument('--static', action='store_true', help='enable a static build for a given suite definition file', default=False)
-parser.add_argument('--suite',  action='store', help='suite definition file to use (for static build only)', default='')
+parser.add_argument('--config',     action='store', help='path to CCPP prebuild configuration file', required=True)
+parser.add_argument('--debug',      action='store_true', help='enable debugging output', default=False)
+parser.add_argument('--static',     action='store_true', help='enable a static build for a given suite definition file', default=False)
+parser.add_argument('--suites',     action='store', help='suite definition files to use (comma-separated, for static build only, without path)', default='')
 
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
@@ -43,9 +43,6 @@ SRCDIR = os.path.abspath(os.path.join(SCRIPTDIR, '..', 'src'))
 # Definition of variables (metadata tables) that are provided by CCPP
 CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(SRCDIR, 'ccpp_types.F90')
 
-# Name and location of include file that defines name of suite definition file for static build
-CCPP_STATIC_SDF_NAME_INCLUDE_FILE = os.path.join(SRCDIR, 'ccpp_suite_static.inc')
-
 ###############################################################################
 # Functions and subroutines                                                   #
 ###############################################################################
@@ -57,11 +54,11 @@ def parse_arguments():
     configfile = args.config
     debug = args.debug
     static = args.static
-    if static and not args.suite:
+    if static and not args.suites:
         parser.print_help()
         sys.exit(-1)
-    sdf = args.suite
-    return (success, configfile, debug, static, sdf)
+    sdfs = [ 'suite_{0}.xml'.format(x) for x in args.suites.split(',')]
+    return (success, configfile, debug, static, sdfs)
 
 def import_config(configfile):
     """Import the configuration from a given configuration file"""
@@ -90,6 +87,7 @@ def import_config(configfile):
     config['caps_makefile']             = ccpp_prebuild_config.CAPS_MAKEFILE
     config['caps_cmakefile']            = ccpp_prebuild_config.CAPS_CMAKEFILE
     config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR
+    config['suites_dir']                = ccpp_prebuild_config.SUITES_DIR
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
     config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
     config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
@@ -120,6 +118,20 @@ def setup_logging(debug):
     else:
         logging.info('Logging level set to INFO')
     return success
+
+def parse_suites(suites_dir, sdfs):
+    """Parse suite definition files for static build"""
+    logging.info('Parsing suite definition files ...')
+    suites = []
+    for sdf in sdfs:
+        logging.info('Parsing suite definition file {0} ...'.format(os.path.join(suites_dir, sdf)))
+        suite = Suite(sdf_name=os.path.join(suites_dir, sdf))
+        success = suite.parse()
+        if not success:
+            logging.error('Parsing suite definition file {0} failed.'.format(sdf))
+            break
+        suites.append(suite)
+    return (success, suites)
 
 def check_unique_pset_per_scheme(scheme_files):
     """Check that each scheme belongs to one and only one physics set"""
@@ -173,24 +185,7 @@ def collect_physics_subroutines(scheme_files):
     os.chdir(BASEDIR)
     return (success, metadata_request, pset_request, arguments_request, pset_schemes)
 
-def check_unique_pset_per_group(suite, pset_schemes):
-    """Check that all schemes in a group belongs to the same physics set"""
-    success = True
-    # For each group, scan all schemes in all subcycles for the physics sets they belong to
-    for group in suite.groups:
-        psets = []
-        for subcycle in group.subcycles:
-            for scheme in subcycle.schemes:
-                psets += pset_schemes[scheme]
-        # Remove duplicates
-        psets = list(set(psets))
-        if len(psets)>1:
-            logging.error("Group {0} contains schemes that belong to multiple physics sets: {1}".format(group.name, ','.join(psets)))
-            success = False
-        group.pset = psets[0]
-    return success
-
-def filter_metadata(metadata, pset, arguments, suite):
+def filter_metadata(metadata, pset, arguments, suites):
     """Remove all variables from metadata that are not used in the given suite"""
     success = True
     # Output: filtered dictionaries
@@ -203,8 +198,11 @@ def filter_metadata(metadata, pset, arguments, suite):
         for var in metadata[var_name][:]:
             container_string = decode_container(var.container)
             subroutine = container_string[container_string.find('SUBROUTINE')+len('SUBROUTINE')+1:]
-            if subroutine in suite.all_subroutines_called:
-                keep = True
+            for suite in suites:
+                if subroutine in suite.all_subroutines_called:
+                    keep = True
+                    break
+            if keep:
                 break
         if keep:
             metadata_filtered[var_name] = metadata[var_name]
@@ -212,8 +210,10 @@ def filter_metadata(metadata, pset, arguments, suite):
         else:
             print "filtering out variable {0}".format(var_name)
     for scheme in arguments.keys():
-        if scheme in suite.all_schemes_called:
-            arguments_filtered[scheme] = arguments[scheme]
+        for suite in suites:
+            if scheme in suite.all_schemes_called:
+                arguments_filtered[scheme] = arguments[scheme]
+                break
 
     return (success, metadata_filtered, pset_filtered, arguments_filtered)
 
@@ -439,24 +439,30 @@ def generate_scheme_caps(metadata_define, metadata_request, arguments, pset_sche
     os.chdir(BASEDIR)
     return (success, scheme_caps)
 
-def generate_suite_and_group_caps(suite, metadata_request, metadata_define, arguments, caps_dir):
+def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arguments, caps_dir):
     """Generate for the suite and for all groups parsed."""
-    success = True
+    logging.info("Generating suite and group caps ...")
+    suite_and_group_caps = []
     # Change to caps directory
     os.chdir(caps_dir)
-    # Write caps for suite and groups in suite
-    suite.write(metadata_request, metadata_define, arguments)
+    for suite in suites:
+        logging.debug("Generating suite and group caps for suite {0}...".format(suite.name))
+        # Write caps for suite and groups in suite
+        suite.write(metadata_request, metadata_define, arguments)
+        suite_and_group_caps += suite.caps
     os.chdir(BASEDIR)
-    # Create include file for CCPP framework that defines name of SDF used in static build
-    suite.create_sdf_name_include_file(CCPP_STATIC_SDF_NAME_INCLUDE_FILE)
-    return (success, suite.caps)
+    if suite_and_group_caps:
+        success = True
+    else:
+        success = False
+    return (success, suite_and_group_caps)
 
-def generate_static_api(suite, static_api_dir):
+def generate_static_api(suites, static_api_dir):
     """Generate API for static build for a given suite"""
     success = True
     # Change to caps directory
     os.chdir(static_api_dir)
-    api = API(suite=suite)
+    api = API(suites=suites)
     logging.info('Generating static API {0} in {1} ...'.format(api.filename, static_api_dir))
     api.write()
     os.chdir(BASEDIR)
@@ -504,7 +510,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
 def main():
     """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
-    (success, configfile, debug, static, sdf) = parse_arguments()
+    (success, configfile, debug, static, sdfs) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -516,12 +522,11 @@ def main():
     if not success:
         raise Exception('Call to import_config failed.')
 
+    # Parse suite definition files for static build
     if static:
-        # Parse suite definition file for static build
-        suite = Suite(sdf_name=sdf)
-        success = suite.parse()
+        (success, suites) = parse_suites(config['suites_dir'], sdfs)
         if not success:
-            raise Exception('Parsing suite definition file {0} failed.'.format(sdf))
+            raise Exception('Parsing suite definition files failed.')
 
     # Check that each scheme only belongs to one set of physics
     # this is required for using the optimized version of ccpp_field_get
@@ -545,19 +550,10 @@ def main():
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
-    # For static build, also check that each group only contains scheme that
-    # belong to one set of physics; this is required for using the optimized
-    # version of ccpp_field_get that supplies the build-time derived index
-    # of the variable in the cdata structure
-    if static:
-        success = check_unique_pset_per_group(suite, pset_schemes)
-        if not success:
-            raise Exception('Call to check_unique_pset_per_group failed.')
-
     # Filter metadata/pset/arguments for static build - remove whatever is not included in suite definition file
     if static:
         (success, metadata_request, pset_request, arguments_request) = filter_metadata(metadata_request, pset_request,
-                                                                                             arguments_request, suite)
+                                                                                            arguments_request, suites)
         if not success:
             raise Exception('Call to filter_metadata failed.')
 
@@ -616,12 +612,12 @@ def main():
 
     if static:
         # Static build: generate caps for entire suite and groups in the specified suite; generate API
-        (success, suite_and_group_caps) = generate_suite_and_group_caps(suite, metadata_request, metadata_define,
+        (success, suite_and_group_caps) = generate_suite_and_group_caps(suites, metadata_request, metadata_define,
                                                                         arguments_request, config['caps_dir'])
         if not success:
             raise Exception('Call to generate_suite_and_group_caps failed.')
 
-        (success, api) = generate_static_api(suite, config['static_api_dir'])
+        (success, api) = generate_static_api(suites, config['static_api_dir'])
         if not success: 
             raise Exception('Call to generate_static_api failed.')
 
