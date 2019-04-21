@@ -8,6 +8,12 @@ from xml.etree import ElementTree as ET
 from common import indent, encode_container
 from mkcap import Var
 
+# DH* 20190420 - work around to parse additional type definitions
+import sys, os
+sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
+from parse_fortran import Ftype_type_decl
+# *DH 20190420
+
 # The argument tables for schemes and variable definitions should have the following format:
 # !! \section arg_table_SubroutineName (e.g. SubroutineName = SchemeName_run) OR \section arg_table_DerivedTypeName OR \section arg_table_ModuleName
 # !! | local_name     | standard_name                                         | long_name                                | units   | rank | type      |    kind   | intent | optional |
@@ -180,7 +186,23 @@ def parse_variable_tables(filename):
                 # Check for the word 'type', that it is the first word in the line,
                 # and that a name exists afterwards. It is assumed that definitions
                 # (not usage) of derived types cannot be nested - reasonable for Fortran.
-                if words[j].lower() == 'type' and j == 0 and len(words) > 1 and not '(' in words[j+1]:
+                #
+                # DH* 20190420 - workaround to parse additional type definitions like
+                #     type, extends(GFS_data_sub_type) :: GFS_data_type
+                # use Ftype_type_decl class routine type_def_line and extract type_name
+                if (words[j].lower() == 'type' or words[j].lower() == 'type,') and j == 0 and 'extends' in line:
+                    type_declaration = Ftype_type_decl.type_def_line(line.strip())
+                    if in_type:
+                        raise Exception('Nested definitions of derived types not supported')
+                    in_type = True
+                    type_name = type_declaration[0]
+                    if type_name in registry[module_name].keys():
+                        raise Exception('Duplicate derived type name {0} in module {1}'.format(
+                                                                       type_name, module_name))
+                    registry[module_name][type_name] = [current_line_number]
+                elif words[j].lower() == 'type' and j == 0 and len(words) > 1 and not '(' in words[j+1]:
+                #if words[j].lower() == 'type' and j == 0 and len(words) > 1 and not '(' in words[j+1]:
+                # *DH 20190420
                     if in_type:
                         raise Exception('Nested definitions of derived types not supported')
                     in_type = True
