@@ -44,16 +44,17 @@ module ccpp
     !! @param[in,out] cdata        The ccpp_t type data.
     !! @param[  out]  ierr         Integer error flag.
     !! @param[in]     cdata_target An optional cdata instance to cope the suite from
-    !! @param[in]     filename     The file name of the XML scheme file to load,
-    !!                             derive from suitename if not present; can include
-    !!                             an absolute or relative path to the suite def. file
+    !! @param[in]     is_filename  Switch to interpret suitename as filename/filepath
+    !!                             (for dynamic build only, default value .false.)
     !
-    subroutine ccpp_init(suitename, cdata, ierr, cdata_target)
+    subroutine ccpp_init(suitename, cdata, ierr, cdata_target, is_filename)
         character(len=*),     intent(in)           :: suitename
         type(ccpp_t), target, intent(inout)        :: cdata
         integer,              intent(  out)        :: ierr
         type(ccpp_t), target, intent(in), optional :: cdata_target
+        logical,              intent(in), optional :: is_filename
         ! Local variables
+        logical            :: is_filename_local
         character(len=256) :: filename_local
 
         ierr = 0
@@ -61,12 +62,27 @@ module ccpp
         call ccpp_debug('Called ccpp_init')
 
 #ifndef STATIC
-        if (len('./suite_' // trim(suitename) // '.xml')>len(filename_local)) then
-            call ccpp_error('Length of suitename + 12 exceeds length of local filename variable')
-            ierr = 1
-            return
+        if (present(is_filename)) then
+            is_filename_local = is_filename
+        else
+            is_filename_local = .false.
         end if
-        filename_local = './suite_' // trim(suitename) // '.xml'
+
+        if (is_filename_local) then
+            if (len(trim(suitename))>len(filename_local)) then
+                call ccpp_error('Length of suitename=filename exceeds length of local filename variable')
+                ierr = 1
+                return
+            end if
+            filename_local = trim(suitename)
+        else
+            if (len('./suite_' // trim(suitename) // '.xml')>len(filename_local)) then
+                call ccpp_error('Length of suitename + 12 exceeds length of local filename variable')
+                ierr = 1
+                return
+            end if
+            filename_local = './suite_' // trim(suitename) // '.xml'
+        end if
 
         if (present(cdata_target)) then
             ! Copy the suite from the target cdata instance

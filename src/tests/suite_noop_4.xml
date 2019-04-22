@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="TEST_4">
+<suite name="noop_4">
   <group name="noopgroup1">
     <subcycle loop="1">
       <scheme lib="check">noop</scheme>

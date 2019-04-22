@@ -45,7 +45,7 @@ program test_init_finalize
         call exit(ierr)
     end if
 
-    call ccpp_init(filename, cdata, ierr)
+    call ccpp_init(trim(filename), cdata, ierr, is_filename=.true.)
     if (ierr /= 0) then
         call exit(ierr)
     end if
