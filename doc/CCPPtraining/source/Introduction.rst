@@ -39,7 +39,7 @@ This table describes the type changes and symbols used in this guide.
 | ``%``                  | Command-line prompt          | ``% cd $TOP_DIR``                     |
 +------------------------+------------------------------+---------------------------------------+
 
-Following these typefaces and conventions, shell commands, code examples, namelist varialbes, etc.
+Following these typefaces and conventions, shell commands, code examples, namelist variables, etc.
 will be presented in this style:
 
 .. code-block:: console

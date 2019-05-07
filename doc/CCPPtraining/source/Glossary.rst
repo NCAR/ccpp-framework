@@ -8,7 +8,7 @@ Glossary
       physics innovations in state-of-the-art atmospheric models
 
    CCPP framework
-      the driver that connects the physics schemes with a host mode
+      the driver that connects the physics schemes with a host model
 
    CCPP physics
       the pool of CCPP-compliant physics schemes
@@ -65,7 +65,7 @@ Glossary
       CCPP framework and physics libraries are statistically linked to the executable
 
    subcycling
-      executing a physics scheme on a shorter timestep than the rest of physics (or the dynamics)
+      executing a physics scheme in a loop with a shorter timestep than the rest of physics (or the dynamics)
 
    suite
       a collection of physics schemes and interstitial schemes that is known to work well together
