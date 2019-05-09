@@ -187,10 +187,15 @@ def parse_variable_tables(filename):
                 # and that a name exists afterwards. It is assumed that definitions
                 # (not usage) of derived types cannot be nested - reasonable for Fortran.
                 #
+                # DH* 20190508 - workaround to skip 'type is' statements inside
+                # the Fortran 2003 'select type' group
+                if (words[j].lower() == 'type' and j<len(words)-1 and \
+                        (words[j+1].lower() == 'is' or words[j+1].lower().startswith('is('))):
+                    continue
                 # DH* 20190420 - workaround to parse additional type definitions like
                 #     type, extends(GFS_data_sub_type) :: GFS_data_type
                 # use Ftype_type_decl class routine type_def_line and extract type_name
-                if (words[j].lower() == 'type' or words[j].lower() == 'type,') and j == 0 and 'extends' in line:
+                elif (words[j].lower() == 'type' or words[j].lower() == 'type,') and j == 0 and 'extends' in line:
                     type_declaration = Ftype_type_decl.type_def_line(line.strip())
                     if in_type:
                         raise Exception('Nested definitions of derived types not supported')
