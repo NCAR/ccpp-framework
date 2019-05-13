@@ -18,6 +18,10 @@ CCPP_INTERNAL_VARIABLES = {
 STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
 STANDARD_CHARACTER_TYPE = 'character'
 
+# For static build
+CCPP_STATIC_API_MODULE = 'ccpp_static_api'
+CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
+
 def execute(cmd, abort = True):
     """Runs a local command in a shell. Waits for completion and
     returns status, stdout and stderr. If abort = True, abort in
