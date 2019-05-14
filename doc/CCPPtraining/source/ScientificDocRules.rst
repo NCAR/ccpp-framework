@@ -1,8 +1,5 @@
-.. _ScientificDocRules:
-
-****************************************
 Scientific Documentation Rules
-****************************************
+==============================
 
 Technically, scientific documentation is not needed for a parameterization
 to work with the CCPP. However, scientific and technical documentation is
@@ -31,9 +28,8 @@ is a good way of getting started in writing documentation for a new scheme. The
 CCPP Scientific Documentation can be converted to html format 
 (see https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/).
 
-=============================
 Doxygen comments and commands
-=============================
+-----------------------------
 
 Firstly, be aware that regular Fortran comments using ``“!”`` are not parsed
 by Doxygen. The Doxygen in-line comment block begins with ``“!>”``, and
@@ -60,9 +56,8 @@ Doxygen that documentation follows after the member. Example:
 If you simply want Doxygen to use the original comments, you must modify the comment 
 line to use ``“!>”`` at the first line and ``“!!”`` at the subsequent lines.
 
-=============================
 Doxygen Documentation Style
-=============================
+---------------------------
 
 To document a physics suite, a broad array of information should be included
 in order to serve both software engineering and scientific purposes. The
@@ -73,9 +68,8 @@ documentation style could be divided into four categories:
 * Doxygen Modules
 * Bibliography
 
------------------------------
 Doxygen files
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Doxygen provides the “\\file” tag as a way to provide documentation on the
 Fortran source code file level. That is, in the generated documentation,
@@ -95,16 +89,13 @@ using the “\\file” tag, e.g.:
    !! drag and mountain blocking.
 
 The brief description for each file is displayed next to the source filename
-on the Doxygen-generated “File List” page (see :numref:`Figure %s <doxygen_file_list>`).
-
-.. _doxygen_file_list:
+on the Doxygen-generated “File List” page:
 
 .. figure:: _static/DoxygenFileList.png
    :align: center
 
------------------------------
 Doxygen Overview Page
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Pages in Doxygen can be used for documentation that is not directly attached
 to a source code entity such as file or module. They are external text files
@@ -159,9 +150,8 @@ The HTML result is `here <https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/s
 You can see that the **“+”** signs before **“@ref”** generate a list with bullets.
 Doxygen command **“\\c”** displays its argument using a typewriter font.
 
------------------------------
 Physics Scheme Pages
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Each major scheme in CCPP should have its own scheme page containing an
 overview of the parameterization.  This page is not tied to the Fortran
@@ -243,9 +233,8 @@ together.  Doxygen automatically generates an index of all pages that is visible
 top-level of the documentation, thus allowing the user to quickly find, and navigate
 between, the available pages.
 
------------------------------
 Doxygen Modules
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The CCPP documentation is based on Doxygen modules (note this is not the same as
 Fortran modules). Each Doxygen module pertains to a particular parameterization and
@@ -401,9 +390,8 @@ is required. But it is suggested that following “\ingroup” and “\brief”,
           end subroutine mfpbl
    !>  @}
 
------------------------------
 Bibliography
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Doxygen can handle in-line paper citations and link to an automatically created
 bibliography page. The bibliographic data for any papers that are cited need to
@@ -417,9 +405,8 @@ Citations are invoked with the following tag:
 
    \cite bibtex_key_to_paper
 
------------------------------
 Equations
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 See `link <http://www.doxygen.nl/manual/formulas.html>`_ for information
 about including equations. For the best rendering, the following option
@@ -432,13 +419,12 @@ should be set in the Doxygen configuration file:
 
 There are many great online resources to use the LaTeX math typesetting used in Doxygen.
 
-============================
 Doxygen Configuration
-============================
+-----------------------------
 
------------------------------
 Configuration file
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 The CCPP contains a Doxygen configuration file
 ``./ccpp/physics/physics/docs/ccpplatex_dox``, such that you don’t need to
 create an additional one.
@@ -513,9 +499,8 @@ Doxygen files for layout (ccpp_dox_layout.xml), a html style (ccpp_dox_extra_sty
 and bibliography (library.bib) are provided with the CCPP. Additionally, a 
 configuration file is supplied, with the following variables modified from the default:
 
--------------------------------
 Diagrams
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 On its own, Doxygen is capable of creating simple text-based class diagrams.
 With the help of the additional software GraphViz, Doxygen can generate
@@ -542,9 +527,9 @@ the call graph for subroutine mpdrv in GFDL cloud microphysics generated by Doxy
 .. figure:: _static/DoxygenCallGraph.png
    :align: center
 
-===============================
 Using Doxygen
-===============================
+-------------------------------
+
 In order to generate Doxygen-based documentation, you need to follow four steps:
 
 1. Have the Doxygen executable installed on your computer. This is already done on

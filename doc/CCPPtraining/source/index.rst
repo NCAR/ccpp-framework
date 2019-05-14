@@ -10,8 +10,6 @@ CCPP Training Documentation
    :numbered:
    :maxdepth: 3
 
-   Introduction
    Overview 
    CompliantPhysicsParams
-   ScientificDocRules
    Glossary
