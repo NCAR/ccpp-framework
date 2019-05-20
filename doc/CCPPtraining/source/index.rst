@@ -10,11 +10,15 @@ CCPP Training Documentation
    :numbered:
    :maxdepth: 3
 
-   Introduction
    Overview 
    CompliantPhysicsParams
-   ScientificDocRules
    ConfigBuildOptions
-   BuildingRunningHostModels
+   ConstructingSuite
+   AutoGenPhysCaps
+   HostSideCoding
+   CodeManagement
+   CCPPPreBuild
+   BuildingRunningHostMdoels
    AddingNewSchemes
+   Acronyms
    Glossary

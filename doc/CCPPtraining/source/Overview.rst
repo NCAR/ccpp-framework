@@ -137,3 +137,5 @@ Kinetic Energy (TKE)-based EDMF, the EMC and Climate Process Team (CPT) suite us
 (CSAW) deep convection, and the NOAA Global Systems Division (GSD) suite uses aerosol aware
 Thompson microphysics, Mellor-Yamada-Nakashini-Niino (MYNN) PBL and shallow convection, and
 Rapid Update Cycle (RUC) LSM.*
+
+.. include:: Introduction.rst

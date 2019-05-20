@@ -177,7 +177,7 @@ Input/output variable (argument) rules
 
 * At present, only two types of variable definitions are supported by the CCPP framework:
    * Standard Intrinsic Fortran variables are preferred (``character``, ``integer``, ``logical``, ``real``).
-     For character variables, the length should be specified as ``\∗``. All others can have a kind attribute
+     For character variables, the length should be specified as ``*``. All others can have a kind attribute
      of a kind type defined by the host model.
    * Derived data types (DDTs). While the use of DDTs is discouraged in general, some use cases may
      justify their application (e.g. DDTs for chemistry that contain tracer arrays or information on
@@ -297,6 +297,8 @@ should be observed when including OpenMP or MPI communication in a physics schem
 
 * For Fortran coarrays, consult with the GMTB helpdesk (gmtb-help@ucar.edu).
 
-.. This should go at the end of the last chapter
+.. include:: ScientificDocRules.rst
+
+.. Bibliography should go at the end of the last chapter
 
 .. bibliography:: references.bib
