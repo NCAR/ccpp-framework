@@ -14,4 +14,7 @@ CCPP Training Documentation
    Overview 
    CompliantPhysicsParams
    ScientificDocRules
+   ConfigBuildOptions
+   BuildingRunningHostModels
+   AddingNewSchemes
    Glossary
