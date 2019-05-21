@@ -31,12 +31,12 @@ The name of the suite is listed at the top of the SDF and must be consistent wit
 Groups
 --------------
 
-The concept of grouping physics in the SDF (reflected in the **<group name="XYZ">** elements) enables “groups” of parameterizations to be called with other computation (such as related to the dycore, I/O, etc.) in between. One can edit the groups to suit the needs of the host application. For example, if a subset of physics schemes needs to be more tightly connected with the dynamics and called more frequently, one could create a group consisting of that subset and place a **ccpp_run** call in the appropriate place in the host application. The remainder of the parameterization groups could be called using ccpp_run calls in a different part of the host application code.
+The concept of grouping physics in the SDF (reflected in the **<group name="XYZ">** elements) enables “groups” of parameterizations to be called with other computation (such as related to the dycore, I/O, etc.) in between. One can edit the groups to suit the needs of the host application. For example, if a subset of physics schemes needs to be more tightly connected with the dynamics and called more frequently, one could create a group consisting of that subset and place a **ccpp_run** call in the appropriate place in the host application. The remainder of the parameterization groups could be called using **ccpp_run** calls in a different part of the host application code.
 
 -----------------
 Subcycling 
 -----------------
-The SDF allows subcycling of schemes, or calling a subset of schemes at a smaller time step than others. The <subcycle loop = n> element in the SDF controls this function. All schemes within such an element are called n times during one ccpp_run call. An example of this is found in the **FV3_GFS_v15.xml** SDF, where the surface schemes are executed twice for each timestep (implementing a predictor/corrector paradigm):
+The SDF allows subcycling of schemes, or calling a subset of schemes at a smaller time step than others. The **<subcycle loop = n>** element in the SDF controls this function. All schemes within such an element are called n times during one ccpp_run call. An example of this is found in the **FV3_GFS_v15.xml** SDF, where the surface schemes are executed twice for each timestep (implementing a predictor/corrector paradigm):
 
 .. code-block:: xml
  
@@ -90,7 +90,7 @@ Consider the simplest case, in which all physics schemes are to be called togeth
  
    <?xml version="1.0" encoding="UTF-8"?>
    <suite name="Suite_A" lib="ccppphys" ver="3.0.0">
-   ...
+     ...
      <group name="physics">
        <subcycle loop="1">
          <scheme>Suite_A_interstitial_1</scheme>
@@ -109,7 +109,7 @@ Consider the simplest case, in which all physics schemes are to be called togeth
    </suite>
  
  
-Note the syntax of the SDF file. The root (the first element to appear in the xml file) is the suite with the name of the suite given as an attribute. In this example, the suite name is Suite_A. Within each suite are groups, which specify a physics group to call (i.e. **physics, fast_physics, time_vary, radiation, stochastics**). Each group has an option to subcycle. The value given for loop determines the number of times all of the schemes within the **subcycle** element are called. Finally, the scheme elements are children of the **subcycle** elements and are listed in the order they will be executed. In this example, **scheme_1_pre** and **scheme_1_post** are scheme-specific preprocessing and postprocessing interstitial schemes, respectively. The suite-level preprocessing and postprocessing interstitial **schemes scheme_2_generic_pre** and **scheme_2_generic_post** are also called in this example. **Suite_A_interstitial_2** is a scheme for **suite_A** and connects various schemes within this suite.
+Note the syntax of the SDF file. The root (the first element to appear in the xml file) is the **suite** with the **name** of the suite given as an attribute. In this example, the suite name is **Suite_A**. Within each suite are groups, which specify a physics group to call (i.e. **physics, fast_physics, time_vary, radiation, stochastics**). Each group has an option to subcycle. The value given for loop determines the number of times all of the schemes within the **subcycle** element are called. Finally, the **scheme** elements are children of the **subcycle** elements and are listed in the order they will be executed. In this example, **scheme_1_pre** and **scheme_1_post** are scheme-specific preprocessing and postprocessing interstitial schemes, respectively. The suite-level preprocessing and postprocessing interstitial **schemes scheme_2_generic_pre** and **scheme_2_generic_post** are also called in this example. **Suite_A_interstitial_2** is a scheme for **suite_A** and connects various schemes within this suite.
 
 -------------------------------
 Case with multiple groups
