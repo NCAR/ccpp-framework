@@ -1,11 +1,11 @@
 ..  _ConstructingSuite:
 
 *******************************
-Constructing suites
+Constructing Suites
 *******************************
 
 ==============================
-Suite definition file
+Suite Definition File
 ==============================
 
 The SDF is a file in XML format used to specify the name of the suite, the physics schemes to run, groups of physics that run together, the order in which to run the physics, and whether subcycling will be used to run any of the parameterizations with shorter timesteps. The SDF files are located in **ccpp/suites/suite_*.xml**. 
@@ -55,7 +55,7 @@ The SDF allows subcycling of schemes, or calling a subset of schemes at a smalle
 Note that currently no time step information is included in the SDF and that the subcycling of schemes resembles more an iteration over schemes with the loop counter being available as integer variable with standard name ccpp_loop_counter. If subcycling is used for a set of parameterizations, the smaller time step must be an input argument for those schemes.
 
 ----------------------
-Order of schemes
+Order of Schemes
 ----------------------
 
 Schemes may be interdependent and the order in which the schemes are run may make a difference in the model output. For the static build, reading the SDF(s) and defining the order of schemes for each suite happens at compile time. For the dynamic build, no SDF is used at compile time (:numref:`Figure %s <ccpp_sdf_dynamic_static>`). Instead, at runtime the SDF is read and the order of schemes is determined. 
@@ -72,16 +72,16 @@ Some schemes require additional interstitial code that must be run before or aft
    : *Schematic of the use of the SDF in dynamic and static builds. Note that, for the static build, more than one SDF can be supplied at compile time, but only one can be used at runtime*.
 
 =========================
-Interstitial schemes
+Interstitial Schemes
 =========================
 The SDF can have an arbitrary number of additional interstitial schemes in between the primary parameterizations to preprocess or postprocess data. There are two main types of interstitial schemes, scheme-specific and suite-level. The scheme-specific interstitial scheme is needed for one specific scheme and the suite-leve interstitial scheme processes data that are relevant for various schemes within a suite.
 
 =========================
-SDF examples
+SDF Examples
 =========================
 
 ----------------------------------------------------
-Simplest case: single group and no subcycling
+Simplest Case: Single Group and no Subcycling
 ----------------------------------------------------
 
 Consider the simplest case, in which all physics schemes are to be called together in a single group with no subcycling (i.e. **subcycle loop=”1”**).  The subcycle loop must be set in each group.  The SDF **suite_Suite_A.xml** could contain the following:
@@ -112,7 +112,7 @@ Consider the simplest case, in which all physics schemes are to be called togeth
 Note the syntax of the SDF file. The root (the first element to appear in the xml file) is the **suite** with the **name** of the suite given as an attribute. In this example, the suite name is **Suite_A**. Within each suite are groups, which specify a physics group to call (i.e. **physics, fast_physics, time_vary, radiation, stochastics**). Each group has an option to subcycle. The value given for loop determines the number of times all of the schemes within the **subcycle** element are called. Finally, the **scheme** elements are children of the **subcycle** elements and are listed in the order they will be executed. In this example, **scheme_1_pre** and **scheme_1_post** are scheme-specific preprocessing and postprocessing interstitial schemes, respectively. The suite-level preprocessing and postprocessing interstitial **schemes scheme_2_generic_pre** and **scheme_2_generic_post** are also called in this example. **Suite_A_interstitial_2** is a scheme for **suite_A** and connects various schemes within this suite.
 
 -------------------------------
-Case with multiple groups
+Case with Multiple Groups
 -------------------------------
 
 Some models require that the physics be called in groups, with non-physics computations in-between the groups.
@@ -138,7 +138,7 @@ Some models require that the physics be called in groups, with non-physics compu
    </suite>
 
 ---------------------------- 
-Case with subcycling
+Case with Subcycling
 ----------------------------
 
 Consider the case where a model requires that some subset of physics be called on a smaller time step than the rest of the physics, e.g. for computational stability. In this case, one would make use of the subcycle element as follows: 
@@ -161,7 +161,7 @@ Consider the case where a model requires that some subset of physics be called o
    </suite>
 
 ------------------------------- 
-Operational GFS v15 suite
+Operational GFS v15 Suite
 -------------------------------
 
 Here is the SDF for the physics suite equivalent to the operational GFS v15 in the UFS Atmosphere, which employs various groups and subcycling:
