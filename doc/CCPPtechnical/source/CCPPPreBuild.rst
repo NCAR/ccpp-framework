@@ -8,18 +8,18 @@ Technical Aspects of the CCPP *Prebuild*
 *Prebuild* Script Function  
 =============================
 
-The CCPP *prebuild* script **ccpp/framework/scripts/ccpp_prebuild.py** is the central piece of code that connects the host model with the CCPP-Physics schemes (see Figs. 3.2 and 3.3). This script must be run before compiling the CCPP-Physics library and the host model cap. This may be done manually or as part of a host model build-time script. In the case of the SCM, **ccpp_prebuild.py** must be run manually, as it not incorporated in that model’s build system. In the case of NEMSfv3gfs, **ccpp_prebuild.py** can be run manually or automatically as a step in the build system.
+The :term:`CCPP` *prebuild* script **ccpp/framework/scripts/ccpp_prebuild.py** is the central piece of code that connects the host model with the :term:`CCPP-Physics` schemes (see Figs. 3.2 and 3.3). This script must be run before compiling the :term:`CCPP-Physics` library and the host model cap. This may be done manually or as part of a host model build-time script. In the case of the SCM, **ccpp_prebuild.py** must be run manually, as it not incorporated in that model’s build system. In the case of NEMSfv3gfs, **ccpp_prebuild.py** can be run manually or automatically as a step in the build system.
 
-The CCPP *prebuild* script automates several tasks based on the information collected from the metadata tables on the host model side and from the individual physics schemes (see :numref:`Figure %s <ccpp_prebuild>`):
- * Compiles a list of variables required to run all schemes in the CCPP-Physics pool.
+The :term:`CCPP` *prebuild* script automates several tasks based on the information collected from the metadata tables on the host model side and from the individual physics schemes (see :numref:`Figure %s <ccpp_prebuild>`):
+ * Compiles a list of variables required to run all schemes in the :term:`CCPP-Physics` pool.
  * Compiles a list of variables provided by the host model.
  * Matches these variables by their **standard_name**, checks for missing variables and mismatches of their attributes (e.g., units, rank, type, kind) and processes information on optional variables.
  * For the static build only, filters out unused variables for a given suite.
  * For the dynamic build only, creates Fortran code (**ccpp_modules_*.inc**, **ccpp_fields_*.inc**) that stores pointers to the host model variables in the **cdata** structure.
  * Autogenerates software caps as appropriate, depending on the build type.
     * If dynamic, the script generates individual caps for all physics schemes.
-    * If static, the script generates caps for the suite as a whole and physics groups as defined in the input SDFs; in addition, the CCPP API for the static build is generated.
- * Populates makefiles with schemes, scheme dependencies, and caps. For the static build, statements to compile the static CCPP API are included as well. 
+    * If static, the script generates caps for the suite as a whole and physics groups as defined in the input :term:`SDF`\s; in addition, the :term:`CCPP` API for the static build is generated.
+ * Populates makefiles with schemes, scheme dependencies, and caps. For the static build, statements to compile the static :term:`CCPP` API are included as well. 
 
 .. _ccpp_prebuild:
 
@@ -34,11 +34,11 @@ The CCPP *prebuild* script automates several tasks based on the information coll
 Script Configuration
 =============================
 
-To connect the CCPP with a host model **XYZ**, a Python-based configuration file for this model must be created in the host model’s repository. The easiest way is to copy an existing configuration file for the TEST model in sub-directory **schemes/check** of the ccpp-Framework repository. The configuration in **ccpp_prebuild_config.py** depends largely on (a) the directory structure of the host model itself, (b) where the **ccpp-framework** and the **ccpp-physics** directories are located relative to the directory structure of the host model, and (c) from which directory the **ccpp_prebuild.py** script is executed before/during the build process (this is referred to as basedir in **ccpp_prebuild_config_XYZ.py**).
+To connect the :term:`CCPP` with a host model **XYZ**, a Python-based configuration file for this model must be created in the host model’s repository. The easiest way is to copy an existing configuration file for the TEST model in sub-directory **schemes/check** of the ccpp-Framework repository. The configuration in **ccpp_prebuild_config.py** depends largely on (a) the directory structure of the host model itself, (b) where the **ccpp-framework** and the **ccpp-physics** directories are located relative to the directory structure of the host model, and (c) from which directory the **ccpp_prebuild.py** script is executed before/during the build process (this is referred to as basedir in **ccpp_prebuild_config_XYZ.py**).
 
 Listing 8.1 contains an example for the CCPP-SCM prebuild config. Here, it is assumed that both **ccpp-framework** and **ccpp-physics** are located in directories ccpp/framework and ccpp/physics of the top-level directory of the host model, and that **ccpp_prebuild.py** is executed from the same top-level directory.
 
-Listing 8.1: CCPP prebuild config for SCM (shortened)
+Listing 8.1: :term:`CCPP` prebuild config for SCM (shortened)
 
  | **# Host model identifier**
  | **HOST_MODEL_IDENTIFIER = "TEST"**
@@ -99,9 +99,9 @@ Although most of the variables in the **ccpp_prebuild_config.py** script are des
 Running ccpp_prebuild.py 
 =============================
 
-Once the configuration in **ccpp_prebuild_config.py** is complete, the **ccpp_prebuild.py** script can be run from the top level directory. For the SCM, this script must be run (in dynamic build mode only) to reconcile data provided by the SCM with data required by the physics schemes before compilation and to generate physics caps and makefile segments. For the UFS Atmosphere host model, the **ccpp_prebuild.py** script is called automatically by the NEMSfv3gfs build system when the CCPP build is requested (by running the CCPP regression tests or by passing the option CCPP=Y and others to the **compile.sh** script; see the compile commands defined in the CCPP regression test configurations for further details). 
+Once the configuration in **ccpp_prebuild_config.py** is complete, the **ccpp_prebuild.py** script can be run from the top level directory. For the SCM, this script must be run (in dynamic build mode only) to reconcile data provided by the SCM with data required by the physics schemes before compilation and to generate physics caps and makefile segments. For the :term:`UFS` Atmosphere host model, the **ccpp_prebuild.py** script is called automatically by the NEMSfv3gfs build system when the :term:`CCPP` build is requested (by running the :term:`CCPP` regression tests or by passing the option CCPP=Y and others to the **compile.sh** script; see the compile commands defined in the :term:`CCPP` regression test configurations for further details). 
 
-For developers adding a CCPP-compliant physics scheme, running **ccpp_prebuild.py** periodically is recommended to check that the metadata in the argument tables match between the host model and the physics scheme. For the UFS Atmosphere, running **ccpp_prebuild.py** manually is identical to running it for the SCM (since the relative paths to their respective **ccpp_prebuild_config.py** files are identical), except it may be necessary to add the **--static** and **--suites** command-line arguments for the static option.
+For developers adding a CCPP-compliant physics scheme, running **ccpp_prebuild.py** periodically is recommended to check that the metadata in the argument tables match between the host model and the physics scheme. For the :term:`UFS` Atmosphere, running **ccpp_prebuild.py** manually is identical to running it for the SCM (since the relative paths to their respective **ccpp_prebuild_config.py** files are identical), except it may be necessary to add the **--static** and **--suites** command-line arguments for the static option.
 
 As alluded to above, the **ccpp_prebuild.py** script has six command line options, with the path to a host-model specific configuration file (**--config**) being the only necessary input option:
 
@@ -119,13 +119,13 @@ So, the simplest possible invocation of the script (called from the host model�
  
 which assumes a dynamic build with a configuration script located at the specified path. The debug option can be used for more verbose output from the script.
 
-For a static build (described above), where the CCPP-Framework and the physics libraries are statically linked to the executable and a set of one or more suites are defined at build-time, the **--suites** and **--static** options must be included. The SDF(s) should be specified using the **--suites** command-line argument. Such files are included with the SCM and NEMSfv3gfs repositories, and must be included with the code of any host model to use the CCPP. Unless the **--static** command-line argument is used with the script, it will assume dynamically linked libraries.   An example of a static build using two SDFs is:
+For a static build (described above), where the :term:`CCPP-Framework` and the physics libraries are statically linked to the executable and a set of one or more suites are defined at build-time, the **--suites** and **--static** options must be included. The :term:`SDF`\(s) should be specified using the **--suites** command-line argument. Such files are included with the SCM and NEMSfv3gfs repositories, and must be included with the code of any host model to use the :term:`CCPP`\. Unless the **--static** command-line argument is used with the script, it will assume dynamically linked libraries.   An example of a static build using two :term:`SDF`\s is:
 
 **./ccpp/framework/scripts/ccpp_prebuild.py** \ 
 **--config=./ccpp/config/ccpp_prebuild_config.py --static** \ 
 **--suites=FV3_GFS_v15,FV3_CPT_v0**
 
-If the CCPP *prebuild* step is successful, the last output line will be:
+If the :term:`CCPP` *prebuild* step is successful, the last output line will be:
 
 **INFO: CCPP prebuild step completed successfully.**
  
@@ -146,11 +146,11 @@ If invoking the **ccpp_prebuild.py** script fails, some message other than the s
  #. **ERROR: Configuration file** erroneous/path/to/config/file **not found**
       * Check that the path entered for the **--config** command line option points to a readable configuration file.
  #. **KeyError**: 'erroneous_scheme_name' when using the **--static** and **--suites** options
-      * This error indicates that a scheme within the supplied SDFs does not match any scheme names found in the SCHEME_FILES variable of the supplied configuration file that lists scheme source files. Double check that the scheme’s source file is included in the SCHEME_FILES list and that the scheme name that causes the error is spelled correctly in the supplied SDFs and matches what is in the source file (minus any *_init, *_run, *_finalize suffixes).
+      * This error indicates that a scheme within the supplied :term:`SDF`\s does not match any scheme names found in the SCHEME_FILES variable of the supplied configuration file that lists scheme source files. Double check that the scheme’s source file is included in the SCHEME_FILES list and that the scheme name that causes the error is spelled correctly in the supplied :term:`SDF`\s and matches what is in the source file (minus any *_init, *_run, *_finalize suffixes).
  #. **CRITICAL: Suite definition file** erroneous/path/to/SDF.xml **not found**. 
 
     **Exception: Parsing suite definition file** erroneous/path/to/SDF.xml **failed**.
-      * Check that the path **SUITES_DIR** in the CCPP prebuild config and the names entered for the **--suites** command line option are correct.
+      * Check that the path **SUITES_DIR** in the :term:`CCPP` prebuild config and the names entered for the **--suites** command line option are correct.
  #. **ERROR: Scheme file** path/to/offending/scheme/source/file **belongs to multiple physics sets**: set1, set2
 
     **Exception: Call to check_unique_pset_per_scheme failed**.
@@ -158,7 +158,7 @@ If invoking the **ccpp_prebuild.py** script fails, some message other than the s
  #. **ERROR: Group** group1 **contains schemes that belong to multiple physics sets**: set1,set2
 
     **Exception: Call to check_unique_pset_per_group failed**.
-      * This error indicates that one of the groups defined in the supplied SDF(s) contains schemes that belong to more than one physics set. Make sure that the group is defined correctly in the SDF(s) and that the schemes within the group belong to the same physics set (only one set per scheme is allowed at this time).
+      * This error indicates that one of the groups defined in the supplied :term:`SDF`\(s) contains schemes that belong to more than one physics set. Make sure that the group is defined correctly in the :term:`SDF`\(s) and that the schemes within the group belong to the same physics set (only one set per scheme is allowed at this time).
  #. **INFO: Parsing metadata tables for variables provided by host model** …
 
     **IOError: [Errno 2] No such file or directory**: 'erroneous_file.f90'
@@ -233,7 +233,7 @@ If invoking the **ccpp_prebuild.py** script fails, some message other than the s
  #. **ERROR: Variable** X **requested by MODULE_**\Y **SCHEME_**\Z **SUBROUTINE_**\A **not provided by the model**
      **Exception: Call to compare_metadata failed.**
 
-     * A variable requested by one or more physics schemes is not being provided by the host model. If the variable exists in the host model but is not being made available for the CCPP, an entry must be added to one of the host model variable metadata tables.
+     * A variable requested by one or more physics schemes is not being provided by the host model. If the variable exists in the host model but is not being made available for the :term:`CCPP`, an entry must be added to one of the host model variable metadata tables.
  #. **ERROR:   error, variable** X **requested by MODULE_**\Y **SCHEME_**\Z **SUBROUTINE_**\A **cannot be identified unambiguously. Multiple definitions in MODULE_**\Y **TYPE_**\B
       * A variable is defined in the host model variable metadata tables more than once (with the same standard name). Remove the offending entry or provide a different standard name for one of the duplicates.
  #. **ERROR:   incompatible entries in metadata for variable** var_name:
