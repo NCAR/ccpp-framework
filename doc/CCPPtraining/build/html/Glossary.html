@@ -1,0 +1,152 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>5. Glossary &#8212; CCPPtraining v1.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="4. Adding a new scheme (Weiwei)" href="AddingNewSchemes.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="AddingNewSchemes.html" title="4. Adding a new scheme (Weiwei)"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CCPPtraining v1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="glossary">
+<h1>5. Glossary<a class="headerlink" href="#glossary" title="Permalink to this headline">¶</a></h1>
+<dl class="glossary docutils">
+<dt id="term-ccpp">CCPP</dt>
+<dd>the Common Community Physics Package designed to facilitate the implementation of
+physics innovations in state-of-the-art atmospheric models</dd>
+<dt id="term-ccpp-framework">CCPP framework</dt>
+<dd>the driver that connects the physics schemes with a host model</dd>
+<dt id="term-ccpp-physics">CCPP physics</dt>
+<dd>the pool of CCPP-compliant physics schemes</dd>
+<dt id="term-dynamic-ccpp-build">dynamic CCPP build</dt>
+<dd>CCPP framework and physics libraries are dynamically linked to the executable</dd>
+<dt id="term-entry-exit-point-subroutine">entry/exit point subroutine</dt>
+<dd>a subroutine that is exposed to the CCPP framework and serves as a public interface for the
+underlying code; for example, scheme A uses several source files and subroutines to parameterize
+a physical process, but its interaction with a host model (exchange of arguments) is entirely
+through one subroutine, which is defined as the entry/exit point subroutine</dd>
+<dt id="term-group">group</dt>
+<dd>Set of physics schemes within a suite definition file (SDF) that are called together, for example ‘radiation’</dd>
+<dt id="term-host-cap">host cap</dt>
+<dd>manually-generated interface (that includes some auto-generated code) between the host
+model/application and the CCPP framework and physics</dd>
+<dt id="term-host-model-application">host model/application</dt>
+<dd>an atmospheric driver or other model that allocates memory, provides metadata for the
+variables passed into and out of the physics, and controls time-stepping; the framework
+that the physics schemes are connected with</dd>
+<dt id="term-hybrid-ccpp">hybrid CCPP</dt>
+<dd>enables use of non-CCPP physics and CCPP-compliant physics in the same run</dd>
+<dt id="term-interstitial-scheme">interstitial scheme</dt>
+<dd>a scheme used to calculate the missing variables based on existing variables in the model
+and run before/after the scheme and cannot be part of the scheme itself. At present,
+adding interstitial schemes should be done in cooperation with the GMTB Help Desk</dd>
+<dt id="term-parameterization">parameterization</dt>
+<dd>the representation, in a dynamic model, of physical effects in terms of admittedly
+oversimplified parameters, rather than realistically requiring such effects to be
+consequences of the dynamics of the system (AMS Glossary)</dd>
+<dt id="term-physics-cap">physics cap</dt>
+<dd>auto-generated interface between an individual  physics scheme and the CCPP framework</dd>
+<dt id="term-set">set</dt>
+<dd>Collection of physics schemes that do not share memory (e.g. fast and slow physics)</dd>
+<dt id="term-standalone-ccpp">standalone CCPP</dt>
+<dd>non-Hybrid CCPP. Only CCPP-compliant parameterizations can be used. Physics scheme
+selection and order is determined by an external suite definition file (SDF)</dd>
+<dt id="term-standard-name">standard_name</dt>
+<dd>variable names based on CF conventions (<a class="reference external" href="http://cfconventions.org">http://cfconventions.org</a>) that are uniquely
+identified by CCPP physics schemes and provided by a host model</dd>
+<dt id="term-static-ccpp-build">static CCPP build</dt>
+<dd>CCPP framework and physics libraries are statistically linked to the executable</dd>
+<dt id="term-subcycling">subcycling</dt>
+<dd>executing a physics scheme in a loop with a shorter timestep than the rest of physics (or the dynamics)</dd>
+<dt id="term-suite">suite</dt>
+<dd>a collection of physics schemes and interstitial schemes that is known to work well together</dd>
+<dt id="term-suite-definition-file-sdf">suite definition file (SDF)</dt>
+<dd>an external file containing information about a physics suite’s construction; its contents
+describe the schemes that are called, what order they are called, whether they are subcycled,
+and whether they are grouped into units to be called together with intervening non-physics code</dd>
+<dt id="term-xsd-file-extension">.xsd file extension</dt>
+<dd>XML schema definition</dd>
+</dl>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="AddingNewSchemes.html"
+                        title="previous chapter">4. Adding a new scheme (Weiwei)</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Glossary.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="AddingNewSchemes.html" title="4. Adding a new scheme (Weiwei)"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CCPPtraining v1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2019 .
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.5.
+    </div>
+  </body>
+</html>

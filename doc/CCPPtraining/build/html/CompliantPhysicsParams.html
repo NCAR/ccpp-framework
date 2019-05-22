@@ -1,0 +1,990 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>2. CCPP-Compliant Physics Parameterizations &#8212; CCPPtraining v1.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="3. CCPP Configuration and Build Options" href="ConfigBuildOptions.html" />
+    <link rel="prev" title="1. CCPP Overview" href="Overview.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="ConfigBuildOptions.html" title="3. CCPP Configuration and Build Options"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Overview.html" title="1. CCPP Overview"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CCPPtraining v1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ccpp-compliant-physics-parameterizations">
+<span id="compliantphysparams"></span><h1>2. CCPP-Compliant Physics Parameterizations<a class="headerlink" href="#ccpp-compliant-physics-parameterizations" title="Permalink to this headline">¶</a></h1>
+<p>A basic description of the rules for a parameterization to be considered CCPP-compliant
+is summarized in this section (see also <a class="reference internal" href="#heinzelleretal2018" id="id1">[HBCF18]</a>).</p>
+<p>It should be noted that making a scheme CCPP-compliant is a necessary step for acceptance of the
+scheme in the pool of supported CCPP physics schemes, but does not guarantee it. Acceptance is subject to
+approval by a Governance committee and depends on scientific innovation, demonstrated added
+value, and compliance with the rules described below. The criteria for acceptance of innovations into the
+CCPP is under development. For further information, please contact the GMTB helpdesk at <a class="reference external" href="mailto:gmtb-help&#37;&#52;&#48;ucar&#46;edu">gmtb-help<span>&#64;</span>ucar<span>&#46;</span>edu</a>.</p>
+<p>It is recommended that parameterizations be comprised of the smallest units that will be used.
+For example, if a given set of deep and shallow convection schemes will always be called together
+and in a pre-established order, it is acceptable to group them within a single scheme. However, if one
+envisions that the deep and shallow convection schemes may someday operate independently, they should
+be coded as two separate schemes to allow for more flexibility.</p>
+<p>Some schemes in the CCPP have been implemented using a driver as an entry point. In this context,
+a driver is defined as a wrapper that sits on top of the actual scheme and provides the CCPP entry
+points. In order to minimize the layers of code in the CCPP, the implementation of a driver is
+discouraged, that is, it is preferable that the CCPP be composed of atomic parameterizations. One
+example is the implementation of the Morrison-Gettelman microphysics, in which a simple entrypoint
+leads to two versions of the scheme, MG2 and MG3.  A cleaner implementation would be to retire MG2
+in favor of MG3, to put MG2 and MG3 as separate schemes, or to create a single scheme that can behave
+as MG2 nd MG3 depending on namelist options.</p>
+<p>However, there are some reasons that may justify the implementation of a driver:</p>
+<ul class="simple">
+<li>To preserve schemes that are also distributed outside of the CCPP. For example, the Thompson
+microphysics scheme is distributed both with the WRF model and with the CCPP. Having a driver
+with CCPP directives allows the Thompson scheme to remain intact so that it can be synchronized
+between the WRF and CCPP distributions.</li>
+<li>To deal with optional arguments.</li>
+<li>To perform unit conversions and array transformations, such as flip the vertical direction
+and rearrange index order. Note that, in the future, these capabilities will be included
+in the CCPP-Framework so that schemes do not have to perform these operations.</li>
+</ul>
+<p>Somewhere here include info on schemes that have options, such as MG2 and MG3 are in the same
+scheme.  MYNN has many options.  So does GF.  It is a grey area what is defined as a new scheme
+versus options within a scheme.</p>
+<div class="section" id="general-rules">
+<h2>2.1. General rules<a class="headerlink" href="#general-rules" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#scheme-template"><span class="std std-ref">Listing 1</span></a> contains a Fortran template for a CCPP-compliant scheme, which can also
+be found in <code class="docutils literal notranslate"><span class="pre">ccpp/framework/doc/DevelopersGuide/scheme_template.F90</span></code>.</p>
+<div class="highlight-fortran notranslate" id="scheme-template"><div class="highlight"><pre><span></span>    <span class="k">module </span><span class="n">scheme_template</span>
+
+      <span class="k">contains</span>
+
+<span class="k">      subroutine </span><span class="n">scheme_template_init</span> <span class="p">()</span>
+      <span class="k">end subroutine </span><span class="n">scheme_template_init</span>
+
+      <span class="k">subroutine </span><span class="n">scheme_template_finalize</span><span class="p">()</span>
+      <span class="k">end subroutine </span><span class="n">scheme_template_finalize</span>
+
+<span class="c">!&gt; \section arg_table_scheme_template_run Argument Table</span>
+<span class="c">!! | local_name | standard_name      | long_name                                | units | rank | type      | kind  | intent | optional |</span>
+<span class="c">!! |------------|--------------------|------------------------------------------|-------|------|-----------|-------|--------|----------|</span>
+<span class="c">!! | errmsg     | ccpp_error_message | error message for error handling in CCPP | none  |    0 | character | len=* | out    | F        |</span>
+<span class="c">!! | errflg     | ccpp_error_flag    | error flag for error handling in CCPP    | flag  |    0 | integer   |       | out    | F        |</span>
+<span class="c">!!</span>
+      <span class="k">subroutine </span><span class="n">scheme_template_run</span> <span class="p">(</span><span class="n">errmsg</span><span class="p">,</span> <span class="n">errflg</span><span class="p">)</span>
+
+         <span class="k">implicit none</span>
+
+         <span class="c">!--- arguments</span>
+         <span class="c">! add your arguments here</span>
+         <span class="kt">character</span><span class="p">(</span><span class="nb">len</span><span class="o">=*</span><span class="p">),</span> <span class="k">intent</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>   <span class="kd">::</span> <span class="n">errmsg</span>
+         <span class="kt">integer</span><span class="p">,</span>          <span class="k">intent</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>   <span class="kd">::</span> <span class="n">errflg</span>
+
+         <span class="c">!--- local variables</span>
+         <span class="c">! add your local variables here</span>
+
+         <span class="k">continue</span>
+
+         <span class="c">!--- initialize CCPP error handling variables</span>
+         <span class="n">errmsg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+         <span class="n">errflg</span> <span class="o">=</span> <span class="mi">0</span>
+
+         <span class="c">!--- initialize intent(out) variables</span>
+         <span class="c">! initialize all intent(out) variables here</span>
+
+         <span class="c">!--- actual code</span>
+         <span class="c">! add your code here</span>
+
+         <span class="c">! in case of errors, set errflg to a value != 0,</span>
+         <span class="c">! assign a meaningful message to errmsg and return</span>
+
+         <span class="k">return</span>
+
+<span class="k">      end subroutine </span><span class="n">scheme_template_run</span>
+
+    <span class="k">end module </span><span class="n">scheme_template</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>Each scheme must be in its own module (module name = scheme name) and must have three entry
+points (subroutines) starting with the name of the module:</li>
+</ul>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="k">module </span><span class="n">scheme</span>
+  <span class="k">implicit none</span>
+<span class="k">  private</span>
+<span class="k">  public</span> <span class="kd">::</span> <span class="n">scheme_init</span><span class="p">,</span><span class="n">scheme_run</span><span class="p">,</span><span class="n">scheme_finalize</span>
+  <span class="k">contains</span>
+<span class="k">    subroutine </span><span class="n">scheme_init</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_init</span>
+    <span class="k">subroutine </span><span class="n">scheme_finalize</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_finalize</span>
+    <span class="k">subroutine </span><span class="n">scheme_run</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_run</span>
+<span class="k">end module </span><span class="n">scheme</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">_init</span></code> and <code class="docutils literal notranslate"><span class="pre">_finalize</span></code> routines are run automatically when the CCPP physics are initialized and
+finalized, respectively.  These routines may be called more than once, depending on the host model’s
+parallelization strategy, and as such must be idempotent (that is, the answer must be the same when
+the subroutine is called multiple times).</p>
+<ul class="simple">
+<li>Additional modules (<code class="docutils literal notranslate"><span class="pre">scheme_pre</span></code> and <code class="docutils literal notranslate"><span class="pre">scheme_post</span></code>) can be used if there is any part of the physics
+scheme that must be executed before or after the <code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">scheme</span></code> defined above.  These situations are
+described in more detail in Section 5.2 and 6.1.2. If additional modules are included, they also
+must have three entry points:</li>
+</ul>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="k">module </span><span class="n">scheme_pre</span>
+  <span class="k">implicit none</span>
+<span class="k">  private</span>
+<span class="k">  public</span> <span class="kd">::</span> <span class="n">scheme_pre_init</span><span class="p">,</span> <span class="n">scheme_pre_run</span><span class="p">,</span> <span class="p">&amp;</span>
+            <span class="n">scheme_pre_finalize</span>
+  <span class="k">contains</span>
+<span class="k">    subroutine </span><span class="n">scheme_pre_init</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_pre_init</span>
+    <span class="k">subroutine </span><span class="n">scheme_pre_finalize</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_pre_finalize</span>
+    <span class="k">subroutine </span><span class="n">scheme_pre_run</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_pre_run</span>
+<span class="k">end module </span><span class="n">scheme_pre</span>
+
+<span class="k">module </span><span class="n">scheme_post</span>
+  <span class="k">implicit none</span>
+<span class="k">  private</span>
+<span class="k">  public</span> <span class="kd">::</span> <span class="n">scheme_post_init</span><span class="p">,</span> <span class="n">scheme_post_run</span><span class="p">,</span> <span class="p">&amp;</span>
+            <span class="n">scheme_post_finalize</span>
+  <span class="k">contains</span>
+<span class="k">    subroutine </span><span class="n">scheme_post_init</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_post_init</span>
+    <span class="k">subroutine </span><span class="n">scheme_post_finalize</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_post_finalize</span>
+    <span class="k">subroutine </span><span class="n">scheme_post_run</span><span class="p">()</span>
+    <span class="k">end subroutine </span><span class="n">scheme_post_run</span>
+<span class="k">end module </span><span class="n">scheme_post</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>All CCPP entrypoint schemes need to be accompanied by a table that describes the arguments to
+the subroutine (see example in <a class="reference internal" href="#scheme-template"><span class="std std-ref">Listing 1</span></a>).  However, empty schemes
+(e.g., <code class="docutils literal notranslate"><span class="pre">scheme_template_init</span></code> in <a class="reference internal" href="#scheme-template"><span class="std std-ref">Listing 1</span></a>) are excepted and need
+no argument table.</li>
+<li>The order of arguments in the table does not need to be the same as in the argument list of
+the subroutine, but that is preferable.</li>
+<li>The argument table must precede the entry point subroutine, and must start with
+<code class="docutils literal notranslate"><span class="pre">!&gt;</span> <span class="pre">\section</span> <span class="pre">arg_table_subroutine_name</span> <span class="pre">Argument</span> <span class="pre">Table</span></code> and end with a line containing only <code class="docutils literal notranslate"><span class="pre">!!</span></code></li>
+<li><dl class="first docutils">
+<dt>All external information required by the scheme must be passed in via the argument list.</dt>
+<dd><ul class="first last">
+<li>Statements such as <code class="docutils literal notranslate"><span class="pre">use</span> <span class="pre">EXTERNAL_MODULE</span></code> should not be used for passing in data and
+all physical constants should go through the argument list.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>If the width of an argument table exceeds 250 characters, the argument table should be wrapped.
+in C preprocessor directives:</li>
+</ul>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="cp">#if 0</span>
+<span class="c">!&gt; \section arg_table_scheme_template_run Argument Table...</span>
+<span class="c">!!</span>
+<span class="cp">#endif</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>For better readability, it is suggested to align the columns in the metadata table.</li>
+<li>Note that module names, scheme names and subroutine names are case sensitive.</li>
+</ul>
+</div>
+<div class="section" id="input-output-variable-argument-rules">
+<h2>2.2. Input/output variable (argument) rules<a class="headerlink" href="#input-output-variable-argument-rules" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Variables available for CCPP physics schemes are identified by their unique
+<code class="docutils literal notranslate"><span class="pre">standard_name</span></code>. While an effort is made to comply with existing <code class="docutils literal notranslate"><span class="pre">standard_name</span></code>
+definitions of the CF conventions (<a class="reference external" href="http://cfconventions.org">http://cfconventions.org</a>), additional names
+are used in the CCPP (see below for further information).</li>
+<li>A list of available standard names and an example of naming conventions can be found in
+<code class="docutils literal notranslate"><span class="pre">ccpp/framework/doc/DevelopersGuide/CCPP_VARIABLES_${HOST}.pdf</span></code>, where <code class="docutils literal notranslate"><span class="pre">${HOST}</span></code> is the
+name of the host model.  Running the CCPP prebuild script (described in Chapter 3)
+will generate a LaTeX source file that can be compiled to produce
+a PDF file with all variables defined by the host model and requested by the physics schemes.</li>
+<li>A <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> cannot be assigned to more than one local variable (<code class="docutils literal notranslate"><span class="pre">local_name</span></code>).
+The <code class="docutils literal notranslate"><span class="pre">local_name</span></code> of a variable can be chosen freely and does not have to match the
+<code class="docutils literal notranslate"><span class="pre">local_name</span></code> in the host model.</li>
+<li>All variable information (units, rank, index ordering) must match the specifications on
+the host model side, but sub-slices can be used/added in the host model. For example, in
+<code class="docutils literal notranslate"><span class="pre">GFS_typedefs.F90</span></code>, tendencies can be split so they can be used in the necessary physics scheme:</li>
+</ul>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="c">!! | IPD_Data(nb)%Intdiag%dt3dt(:,:,1) | cumulative_change_in_temperature_due_to_longwave_radiation</span>
+<span class="c">!! | IPD_Data(nb)%Intdiag%dt3dt(:,:,2) | cumulative_change_in_temperature_due_to_shortwave_radiation_and_orographic_gravity_wave_drag</span>
+<span class="c">!! | IPD_Data(nb)%Intdiag%dt3dt(:,:,3) | cumulative_change_in_temperature_due_to_PBL</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>The two mandatory variables that every scheme must accept as <code class="docutils literal notranslate"><span class="pre">intent(out)</span></code> arguments are
+<code class="docutils literal notranslate"><span class="pre">errmsg</span></code> and <code class="docutils literal notranslate"><span class="pre">errflg</span></code> (see also coding rules).</li>
+<li><dl class="first docutils">
+<dt>At present, only two types of variable definitions are supported by the CCPP framework:</dt>
+<dd><ul class="first last">
+<li>Standard Intrinsic Fortran variables are preferred (<code class="docutils literal notranslate"><span class="pre">character</span></code>, <code class="docutils literal notranslate"><span class="pre">integer</span></code>, <code class="docutils literal notranslate"><span class="pre">logical</span></code>, <code class="docutils literal notranslate"><span class="pre">real</span></code>).
+For character variables, the length should be specified as <code class="docutils literal notranslate"><span class="pre">*</span></code>. All others can have a kind attribute
+of a kind type defined by the host model.</li>
+<li>Derived data types (DDTs). While the use of DDTs is discouraged in general, some use cases may
+justify their application (e.g. DDTs for chemistry that contain tracer arrays or information on
+whether tracers are advected). It should be understood that use of DDTs within schemes
+forces their use in host models and potentially limits a scheme’s generality. Where possible,
+DDTs should be broken into components that could be usable for another scheme of the same type.
+Where DDTs currently exist within CCPP-compliant schemes, they are likely there due to expediency
+concerns and should eventually be phased out.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>It is preferable to have separate variables for physically-distinct quantities. For example,
+an array containing various cloud properties should be split into its individual
+physically-distinct components to facilitate generality. An exception to this rule is if
+there is a need to perform the same operation on an array of otherwise physically-distinct
+variables. For example, tracers that undergo vertical diffusion can be combined into one array
+where necessary. This tactic should be avoided wherever possible, and is not acceptable merely
+as a convenience.</li>
+<li>If a scheme is to make use of CCPP’s subcycling capability in the suite definition
+file (SDF; see also GMTB Single Column Model Technical Guide v2.1, chapter 6.1.3,
+<a class="reference external" href="https://dtcenter.org/gmtb/users/ccpp/docs">https://dtcenter.org/gmtb/users/ccpp/docs</a>), the loop counter can be obtained from CCPP as
+an <code class="docutils literal notranslate"><span class="pre">intent(in)</span></code> variable (see Listings 3.1 and 3.2 for a mandatory list of variables
+that are provided by the CCPP framework and/or the host model for this and other purposes).</li>
+</ul>
+</div>
+<div class="section" id="coding-rules">
+<h2>2.3. Coding rules<a class="headerlink" href="#coding-rules" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Code must comply to modern Fortran standards (Fortran 90/95/2003).</li>
+<li><dl class="first docutils">
+<dt>Labeled <code class="docutils literal notranslate"><span class="pre">end</span></code> statements should be used for modules, subroutines and functions, for example:</dt>
+<dd><ul class="first last">
+<li><code class="docutils literal notranslate"><span class="pre">$module</span> <span class="pre">scheme_template</span> <span class="pre">→</span> <span class="pre">end</span> <span class="pre">module</span> <span class="pre">scheme_template</span></code></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><code class="docutils literal notranslate"><span class="pre">implicit</span> <span class="pre">none</span></code> is not allowed.</li>
+<li>All <code class="docutils literal notranslate"><span class="pre">intent(out)</span></code> variables must be set inside the subroutine, including the mandatory
+variables <code class="docutils literal notranslate"><span class="pre">errflg</span></code> and <code class="docutils literal notranslate"><span class="pre">errmsg</span></code>.</li>
+<li>Decomposition-dependent host model data inside the module cannot be permanent,
+i.e. variables that contain domain-dependent data cannot be kept using the <code class="docutils literal notranslate"><span class="pre">save</span></code> attribute.</li>
+<li><code class="docutils literal notranslate"><span class="pre">goto</span></code> statements are not alowed.</li>
+<li><code class="docutils literal notranslate"><span class="pre">common</span></code> blocks are not allowed.</li>
+<li>Errors are handled by the host model using the two mandatory arguments <code class="docutils literal notranslate"><span class="pre">errmsg</span></code> and
+<code class="docutils literal notranslate"><span class="pre">errflg</span></code>. In the event of an error, a meaningful error message should be assigned to <code class="docutils literal notranslate"><span class="pre">errmsg</span></code>
+and set errflg to a value other than 0, for example:</li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>write <span class="o">(</span>errmsg, ‘<span class="o">(</span>*<span class="o">(</span>a<span class="o">))</span>’<span class="o">)</span> ‘Logic error in scheme xyz: …’
+<span class="nv">errflg</span> <span class="o">=</span> <span class="m">1</span>
+<span class="k">return</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>Schemes are not allowed to abort/stop the program.</li>
+<li>Schemes are not allowed to perform I/O operations (except for reading lookup tables
+or other information needed to initialize the scheme), including stdout/stderr.</li>
+<li>Line lengths of up to 120 characters are suggested for better readability (exception: CCPP
+metadata argument tables).</li>
+</ul>
+<p>Additional coding rules are listed under the <em>Coding Standards</em> section of the NOAA NGGPS
+Overarching System team document on Code, Data, and Documentation Management for NEMS
+Modeling Applications and Suites (available at
+<a class="reference external" href="https://docs.google.com/document/u/1/d/1bjnyJpJ7T3XeW3zCnhRLTL5a3m4_3XIAUeThUPWD9Tg/edit#heading=h.97v79689onyd">https://docs.google.com/document/u/1/d/1bjnyJpJ7T3XeW3zCnhRLTL5a3m4_3XIAUeThUPWD9Tg/edit#heading=h.97v79689onyd</a>).</p>
+</div>
+<div class="section" id="parallel-programming-rules">
+<h2>2.4. Parallel programming rules<a class="headerlink" href="#parallel-programming-rules" title="Permalink to this headline">¶</a></h2>
+<p>Most often shared memory (OpenMP) and MPI communication are done outside the physics in
+which case the physics looping and arrays already take into account the sizes of the
+threaded tasks through their input indices and array dimensions.  The following rules
+should be observed when including OpenMP or MPI communication in a physics scheme:</p>
+<ul>
+<li><p class="first">Shared-memory (OpenMP) parallelization inside a scheme is allowed with the restriction
+that the number of OpenMP threads to use is obtained from the host model as in <code class="docutils literal notranslate"><span class="pre">intent(in)</span></code>
+argument in the argument list (Listings 3.1 and 3.2).</p>
+</li>
+<li><p class="first">MPI communication is allowed in the <code class="docutils literal notranslate"><span class="pre">_init</span></code> and <code class="docutils literal notranslate"><span class="pre">_finalize</span></code> phase for the purpose
+of computing, reading or writing scheme-specific data that is independent of the host
+model’s data decomposition. An example is the initial read of a lookup table of aerosol
+properties by one or more MPI processes, and its subsequent broadcast to all processes.
+Several restrictions apply:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The implementation of reading and writing of data must be scalable to perform
+efficiently from a few to millions of tasks.</li>
+<li>The MPI communicator must be provided by the host model as an <code class="docutils literal notranslate"><span class="pre">intent(in)</span></code>
+argument in the argument list (Listings 3.1 and 3.2).</li>
+<li>The use of MPI is restricted to global communications: <code class="docutils literal notranslate"><span class="pre">barrier</span></code>, <code class="docutils literal notranslate"><span class="pre">broadcast</span></code>,
+<code class="docutils literal notranslate"><span class="pre">gather</span></code>, <code class="docutils literal notranslate"><span class="pre">scatter</span></code>, <code class="docutils literal notranslate"><span class="pre">reduce</span></code>.</li>
+<li>The use of MPI_COMM_WORLD is not allowed.</li>
+<li>The use of point-to-point communication is not allowed.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Calls to MPI and OpenMP functions, and the import of the MPI and OpenMP libraries,
+must be guarded by C preprocessor directives as illustrated in the following listing.
+OpenMP pragmas can be inserted without C preprocessor guards, since they are ignored
+by the compiler if the OpenMP compiler flag is omitted.</p>
+</li>
+</ul>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="cp">#ifdef MPI</span>
+  <span class="k">use </span><span class="n">mpi</span>
+<span class="cp">#endif</span>
+<span class="cp">#ifdef OPENMP</span>
+  <span class="k">use </span><span class="n">omp_lib</span>
+<span class="cp">#endif</span>
+<span class="p">...</span>
+<span class="cp">#ifdef MPI</span>
+  <span class="k">call </span><span class="n">MPI_BARRIER</span><span class="p">(</span><span class="n">mpicomm</span><span class="p">,</span> <span class="n">ierr</span><span class="p">)</span>
+<span class="cp">#endif</span>
+
+<span class="cp">#ifdef OPENMP</span>
+  <span class="n">me</span> <span class="o">=</span> <span class="n">OMP_GET_THREAD_NUM</span><span class="p">()</span>
+<span class="cp">#else</span>
+  <span class="n">me</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="cp">#endif</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>For Fortran coarrays, consult with the GMTB helpdesk (<a class="reference external" href="mailto:gmtb-help&#37;&#52;&#48;ucar&#46;edu">gmtb-help<span>&#64;</span>ucar<span>&#46;</span>edu</a>).</li>
+</ul>
+</div>
+<div class="section" id="scientific-documentation-rules">
+<h2>2.5. Scientific Documentation Rules<a class="headerlink" href="#scientific-documentation-rules" title="Permalink to this headline">¶</a></h2>
+<p>Technically, scientific documentation is not needed for a parameterization
+to work with the CCPP. However, scientific and technical documentation is
+important for code maintenance and for fostering understanding among stakeholders
+and is required of physics schemes in order to be included in the CCPP. This
+section describes the process used for documenting parameterizations in the CCPP.
+Doxygen was chosen as a platform for generating human-readable output due to its
+built-in functionality with Fortran, its high level of configurability, and its
+ability to parse in-line comments within the source code. Keeping documentation
+with the source itself increases the likelihood that the documentation will be
+updated along with the underlying code. Additionally, inline documentation is
+amenable to version control.</p>
+<p>The purpose of this section is to provide an understanding of how to properly
+document a physics scheme using doxygen in-line comments. It covers what kind of
+information should be in the documentation, how to mark up the in-line comments
+so that doxygen will parse it correctly, where to put various comments within
+the code, and how to configure and run doxygen to generate HTML (or other format)
+output. Part of this documentation, namely subroutine argument tables, have
+functional significance as part of the CCPP infrastructure. These tables must be
+in a particular format to be parsed by Python scripts that “automatically” generate
+a software cap for a given physics scheme. Although the procedure outlined herein
+is not unique, following it will provide a level of continuity with previous
+documented schemes.  Reviewing the documentation for CCPP v2.0 parameterizations
+is a good way of getting started in writing documentation for a new scheme. The
+CCPP Scientific Documentation can be converted to html format
+(see <a class="reference external" href="https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/">https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/</a>).</p>
+<div class="section" id="doxygen-comments-and-commands">
+<h3>2.5.1. Doxygen comments and commands<a class="headerlink" href="#doxygen-comments-and-commands" title="Permalink to this headline">¶</a></h3>
+<p>Firstly, be aware that regular Fortran comments using <code class="docutils literal notranslate"><span class="pre">“!”</span></code> are not parsed
+by Doxygen. The Doxygen in-line comment block begins with <code class="docutils literal notranslate"><span class="pre">“!&gt;”</span></code>, and
+subsequent lines begin with <code class="docutils literal notranslate"><span class="pre">“!!”</span></code>. All Doxygen commands start with a backslash
+(<code class="docutils literal notranslate"><span class="pre">“\”</span></code>) or an at-sign (<code class="docutils literal notranslate"><span class="pre">“&#64;”</span></code>). Example in the first line of each Fortran file,
+brief one sentence overview of the file purpose using Doxygen command <strong>“\file”</strong>:</p>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="c">!&gt; \file gwdps.f</span>
+<span class="c">!! This file is the  parameterization of orographic gravity wave</span>
+<span class="c">!! drag and mountain blocking.</span>
+</pre></div>
+</div>
+<p>The parameter definition begins with <code class="docutils literal notranslate"><span class="pre">“!&lt;”</span></code>, where the sign <code class="docutils literal notranslate"><span class="pre">‘&lt;’</span></code> just tells
+Doxygen that documentation follows after the member. Example:</p>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="kt">integer</span><span class="p">,</span> <span class="k">parameter</span><span class="p">,</span> <span class="k">public</span> <span class="kd">::</span> <span class="n">NF_VGAS</span> <span class="o">=</span> <span class="mi">10</span>   <span class="c">!&lt; number of gas species</span>
+<span class="kt">integer</span><span class="p">,</span> <span class="k">parameter</span>         <span class="kd">::</span> <span class="n">IMXCO2</span>  <span class="o">=</span> <span class="mi">24</span>   <span class="c">!&lt; input CO2 data longitude points</span>
+<span class="kt">integer</span><span class="p">,</span> <span class="k">parameter</span>         <span class="kd">::</span> <span class="n">JMXCO2</span>  <span class="o">=</span> <span class="mi">12</span>   <span class="c">!&lt; input CO2 data latitude points</span>
+<span class="kt">integer</span><span class="p">,</span> <span class="k">parameter</span>         <span class="kd">::</span> <span class="n">MINYEAR</span> <span class="o">=</span> <span class="mi">1957</span> <span class="c">!&lt; earlist year 2D CO2 data available</span>
+</pre></div>
+</div>
+<p>If you simply want Doxygen to use the original comments, you must modify the comment
+line to use <code class="docutils literal notranslate"><span class="pre">“!&gt;”</span></code> at the first line and <code class="docutils literal notranslate"><span class="pre">“!!”</span></code> at the subsequent lines.</p>
+</div>
+<div class="section" id="doxygen-documentation-style">
+<h3>2.5.2. Doxygen Documentation Style<a class="headerlink" href="#doxygen-documentation-style" title="Permalink to this headline">¶</a></h3>
+<p>To document a physics suite, a broad array of information should be included
+in order to serve both software engineering and scientific purposes. The
+documentation style could be divided into four categories:</p>
+<ul class="simple">
+<li>Doxygen Files</li>
+<li>Doxygen Pages (Overview page and scheme pages)</li>
+<li>Doxygen Modules</li>
+<li>Bibliography</li>
+</ul>
+<div class="section" id="doxygen-files">
+<h4>2.5.2.1. Doxygen files<a class="headerlink" href="#doxygen-files" title="Permalink to this headline">¶</a></h4>
+<p>Doxygen provides the “\file” tag as a way to provide documentation on the
+Fortran source code file level. That is, in the generated documentation,
+one may navigate by source code filenames (if desired) rather than through
+a “functional” navigation. The most important documentation organization is
+through the “module” concept mentioned below, because the division of a scheme
+into multiple source files is often functionally irrelevant. Nevertheless,
+using a “file” tag provides an alternate path to navigate the documentation
+and it should be included in every source file. Therefore, it is prudent to
+include a small documentation block to describe what code is in each file
+using the “\file” tag, e.g.:</p>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="c">!&gt; \file gwdps.f</span>
+<span class="c">!! This file is the  parameterization of orographic gravity wave</span>
+<span class="c">!! drag and mountain blocking.</span>
+</pre></div>
+</div>
+<p>The brief description for each file is displayed next to the source filename
+on the Doxygen-generated “File List” page:</p>
+<div class="figure align-center">
+<img alt="_images/DoxygenFileList.png" src="_images/DoxygenFileList.png" />
+</div>
+</div>
+<div class="section" id="doxygen-overview-page">
+<h4>2.5.2.2. Doxygen Overview Page<a class="headerlink" href="#doxygen-overview-page" title="Permalink to this headline">¶</a></h4>
+<p>Pages in Doxygen can be used for documentation that is not directly attached
+to a source code entity such as file or module. They are external text files
+that generate pages with a high-level scientific overview and
+typically contain a longer description of a project or suite. You can refer to
+any source code entity from within the page.</p>
+<p>The GMTB maintains a main page, created by the Doxygen command
+<strong>“\mainpage”</strong>, containing an overall description and background of the CCPP.
+Physics developers do not have to edit the file with the mainpage, which has a
+user-visible title, but not label:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">/**</span>
+<span class="go">\mainpage Introduction</span>
+<span class="go">...</span>
+<span class="go">*/</span>
+</pre></div>
+</div>
+<p>All other pages listed under the main page are created using the Doxygen
+tag <strong>“\page”</strong> described in the next section. In any Doxygen page,
+you can refer to any entity of source code by using Doxygen tag <strong>“\ref”</strong>
+or <strong>“&#64;ref”</strong>. Example in <code class="docutils literal notranslate"><span class="pre">code_overview.txt</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">The FV3GFS physics suite uses the parameterizations in the following order,</span>
+<span class="go">as defined in  \c suite_SCM_GFS_2017_updated.xml and \c suite_SCM_GFS_2018_updated.xml:</span>
+<span class="go"> + @ref GFS_RRTMG</span>
+<span class="go"> + @ref GFS_SFCLYR</span>
+<span class="go"> + @ref GFS_NSST</span>
+<span class="go"> + @ref GFS_NOAH</span>
+<span class="go"> + @ref GFS_SFCSICE</span>
+<span class="go"> + @ref GFS_HEDMF</span>
+<span class="go"> + @ref GFS_GWDPS</span>
+<span class="go"> + @ref GFS_RAYLEIGH</span>
+<span class="go"> + @ref GFS_OZPHYS</span>
+<span class="go"> + @ref GFS_H2OPHYS</span>
+<span class="go"> + @ref GFS_SAMFdeep</span>
+<span class="go"> + @ref GFS_GWDC</span>
+<span class="go"> + @ref GFS_SAMFshal</span>
+<span class="go"> + GFS Microphysics (MP) scheme option:</span>
+<span class="go">   + @ref GFDL_cloud</span>
+<span class="go">      + @ref gfdlmp</span>
+<span class="go">      + @ref fast_sat_adj</span>
+<span class="go">   + @ref GFS_ZHAOC</span>
+<span class="go">      + @ref condense</span>
+<span class="go">      + @ref precip</span>
+<span class="go"> + @ref GFS_CALPRECIPTYPE</span>
+</pre></div>
+</div>
+<p>The HTML result is <a class="reference external" href="https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/subpage_overview.html">here</a>.
+You can see that the <strong>“+”</strong> signs before <strong>“&#64;ref”</strong> generate a list with bullets.
+Doxygen command <strong>“\c”</strong> displays its argument using a typewriter font.</p>
+</div>
+<div class="section" id="physics-scheme-pages">
+<h4>2.5.2.3. Physics Scheme Pages<a class="headerlink" href="#physics-scheme-pages" title="Permalink to this headline">¶</a></h4>
+<p>Each major scheme in CCPP should have its own scheme page containing an
+overview of the parameterization.  This page is not tied to the Fortran
+code directly; instead, it is created with a separate text file that starts
+with the command <strong>“\page”</strong>.  Each page has a label (e.g., “GFS_ZHAOC” in
+the following example) and a user-visible title (“GFS Zhao-Carr Microphysics
+Scheme” in the following example). It is noted that labels must be unique
+across the entire Doxygen project so that the <strong>“\ref”</strong> command can be used
+to create an unambiguous link to the structuring element. It therefore makes
+sense to choose label names that refer to their context.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">/**</span>
+<span class="go">\page GFS_ZHAOC GFS Zhao-Carr Microphysics Scheme</span>
+
+<span class="go">\section des_zhao Description</span>
+<span class="go">This is the GFS scheme for grid-scale condensation and precipitation which is</span>
+<span class="go">based on Zhao and Carr (1997) \cite zhao_and_carr_1997 and Sundqvist et al.</span>
+<span class="go">(1989) \cite sundqvist_et_al_1989 .</span>
+<span class="go">...</span>
+<span class="go">Figure 1 shows a schematic illustration of this scheme.</span>
+<span class="go">...</span>
+<span class="go">\image  html  GFS_zhaocarr_schematic.png &quot;Figure 1: Schematic illustration of the precipitation scheme&quot; width=10cm</span>
+<span class="go">…</span>
+
+<span class="go">\section intro_zhao Intraphysics Communication</span>
+<span class="go"> + For grid-scale condensation and evaporation of cloud process</span>
+<span class="go">(\ref arg_table_zhaocarr_gscond_run)</span>
+<span class="go">+ For precipitation (snow or rain) production</span>
+<span class="go">(\ref arg_table_zhaocarr_precpd_run)</span>
+
+<span class="go">\section Gen_zhao  General Algorithm</span>
+<span class="go"> + \ref general_gscond</span>
+<span class="go"> + \ref general_precpd</span>
+
+<span class="go">*/</span>
+</pre></div>
+</div>
+<p>The HTML result is <a class="reference external" href="https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/GFS_ZHAOC.html">here</a>.
+The physics scheme page will often describe the following:</p>
+<ol class="loweralpha">
+<li><dl class="first docutils">
+<dt>Description section (<strong>“\section”</strong>), which usually includes:</dt>
+<dd><ul class="first last">
+<li><p class="first">Scientific origin and scheme history (<strong>“\cite”</strong>)</p>
+</li>
+<li><p class="first">Key features and differentiating points</p>
+</li>
+<li><p class="first">A picture is sometimes worth a thousand words (<strong>“\image”</strong>)</p>
+<p>To insert images into Doxygen documentation, you’ll need to have your
+images ready in a graphical format (i.e., .png) depending
+on which Doxygen output you’re willing to generate. For example, for LaTeX
+output the images must be provided in Encapsulated PostScript (.eps); For
+HTML output the images could be provided in the Portable Network Graphic
+(.png) format. Example of including the same image in multiple formats for
+HTML and LaTeX outputs:</p>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">\image  html  gfdl_cloud_mp_diagram.png &quot;Figure 1: GFDL MP at a glance (Courtesy of S.J. Lin at GFDL)&quot; width=10cm</span>
+<span class="go">\image  latex  gfdl_cloud_mp_diagram.eps &quot;Figure 1: GFDL MP at a glance (Courtesy of S.J. Lin at GFDL)&quot; width=10cm</span>
+</pre></div>
+</div>
+<p>In the CCPP, images are put under <code class="docutils literal notranslate"><span class="pre">./docs/img/</span></code> directory.</p>
+<ol class="loweralpha simple" start="2">
+<li>Intraphysics Communication Section (<strong>“\section”</strong>)<ul>
+<li>The argument table for CCPP entry point subroutine <strong>{scheme}_run</strong> will be in this section.
+It is created by inserting a reference link (<strong>“\ref”</strong>) to the table in the Fortran code
+for the scheme.</li>
+</ul>
+</li>
+<li>General Algorithm Section (<strong>“\section”</strong>)<ul>
+<li>The general description of the algorithn will be in this section.  It is created by inserting
+a reference link (<strong>“\ref”</strong>) in the Fortran code for the scheme.</li>
+</ul>
+</li>
+</ol>
+<p>The symbols <strong>“/**”</strong> and <strong>“*/”</strong> need to be the first and last entries of the page.
+Here is an example of GFS Zhao-Carr microphysics scheme page:</p>
+<p>Note that separate pages can also be created to document something that is not a scheme.
+For example, a page could be created to describe a suite, or how a set of schemes work
+together.  Doxygen automatically generates an index of all pages that is visible at the
+top-level of the documentation, thus allowing the user to quickly find, and navigate
+between, the available pages.</p>
+</div>
+<div class="section" id="doxygen-modules">
+<h4>2.5.2.4. Doxygen Modules<a class="headerlink" href="#doxygen-modules" title="Permalink to this headline">¶</a></h4>
+<p>The CCPP documentation is based on Doxygen modules (note this is not the same as
+Fortran modules). Each Doxygen module pertains to a particular parameterization and
+is used to aggregate all code related to that scheme, even when it is in separate
+files. Since Doxygen cannot know which files or subroutines belong to each physics
+scheme, each relevant subroutine must be tagged with the module name. This allows
+Doxygen to understand your modularized design and generate the documentation accordingly.
+<a class="reference external" href="https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/modules.html">Here</a>
+is a list of module list defined in CCPP.</p>
+<p>A module is defined using:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">!&gt;\defgroup group_name group_title</span>
+</pre></div>
+</div>
+<p>Where <code class="docutils literal notranslate"><span class="pre">group_name</span></code> is the identifier and the <code class="docutils literal notranslate"><span class="pre">group_title</span></code> is what the
+group is referred to in the output. In the example below, we’re defining a parent
+module “GFS radsw Main”:</p>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="c">!&gt; \defgroup module_radsw_main GFS radsw Main</span>
+<span class="c">!! This module includes NCEP&#39;s modifications of the RRTMG-SW radiation</span>
+<span class="c">!! code from AER.</span>
+<span class="c">!! ...</span>
+<span class="c">!!\author   Eli J. Mlawer, emlawer@aer.com</span>
+<span class="c">!!\author   Jennifer S. Delamere, jdelamer@aer.com</span>
+<span class="c">!!\author   Michael J. Iacono, miacono@aer.com</span>
+<span class="c">!!\author   Shepard A. Clough</span>
+<span class="c">!!\version NCEP SW v5.1  Nov 2012 -RRTMG-SW v3.8</span>
+<span class="c">!!</span>
+</pre></div>
+</div>
+<p>One or more contact persons should be listed with author. If you make
+significant modifications or additions to a file , consider adding an
+author and a version line for yourself. The above example generates
+the Author, Version sections on the page. All email addresses are converted
+to mailto hypertext links automatically:</p>
+<dl class="docutils">
+<dt><strong>Author</strong></dt>
+<dd><p class="first">Eli J. Mlawer, <a class="reference external" href="mailto:emlawer&#37;&#52;&#48;aer&#46;com">emlawer<span>&#64;</span>aer<span>&#46;</span>com</a></p>
+<p>Jennifer S. Delamere, <a class="reference external" href="mailto:jdelamer&#37;&#52;&#48;aer&#46;com">jdelamer<span>&#64;</span>aer<span>&#46;</span>com</a></p>
+<p>Michael J. Iacono, <a class="reference external" href="mailto:miacono&#37;&#52;&#48;aer&#46;com">miacono<span>&#64;</span>aer<span>&#46;</span>com</a></p>
+<p class="last">Shepard A. Clough</p>
+</dd>
+<dt><strong>Version</strong></dt>
+<dd>NCEP SW v5.1  Nov 2012 -RRTMG-SW v3.8</dd>
+</dl>
+<p>In order to include other pieces of code in the same module, the following
+tag must be used at the beginning of a comment block:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">\ingroup group_name</span>
+</pre></div>
+</div>
+<p>For example:</p>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="c">!&gt;\ingroup module_radsw_main</span>
+<span class="c">!&gt; The subroutine computes the optical depth in band 16:  2600-3250</span>
+<span class="c">!! cm-1 (low - h2o,ch4; high - ch4)</span>
+<span class="c">!-----------------------------------</span>
+      <span class="k">subroutine </span><span class="n">taumol16</span>
+<span class="c">!...................................</span>
+</pre></div>
+</div>
+<p>In the same comment block where a group is defined for a physics scheme,
+there should be some additional documentation. First, using the “brief”
+command, a brief one or two sentence description of the scheme should be
+included. After a blank doxygen comment line, begin the scheme origin
+and history using “version”, “author” and “date”.</p>
+<p>Each subroutine that is a CCPP entry point to a parameterization, should
+be further documented with a documentation block immediately preceding
+its definition in the source. The documentation block should include at
+least the following components:</p>
+<ul class="simple">
+<li>A brief one- or two-sentence description with the brief tag</li>
+<li>A more detailed one or two paragraph description of the function of the subroutine</li>
+<li><dl class="first docutils">
+<dt>An argument table that includes entries for each subroutine argument</dt>
+<dd><ul class="first last">
+<li>The argument table content should be immediately preceded by the following line:</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="c">!!\section arg_table_SUBROUTINE_NAME</span>
+</pre></div>
+</div>
+<p>This line is also functional documentation used during the CCPP prebuild step.  The
+first line of the table should contain the following “header” names</p>
+<ol class="loweralpha simple">
+<li><strong>local_name</strong>: contains the local subroutine variable name</li>
+<li><strong>standard_name</strong>: CF-compliant standard name</li>
+<li><strong>long_name</strong>: a short description</li>
+<li><strong>units</strong>: format follows “unit exponent”, i.e. m2 s-2 for m2/s2</li>
+<li><strong>rank</strong>: 0 for scalar, 1 for 1-D array, 2 for 2-D array, etc.</li>
+<li><strong>type</strong>: integer, real, logical, etc.</li>
+<li><strong>kind</strong>: the specified floating point precision kind (at present, to be
+extended to different integer kinds in the future)</li>
+<li><strong>intent</strong>: in, out, inout</li>
+<li><strong>optional</strong>: T/F</li>
+</ol>
+<p>The argument table should be immediately followed by a blank doxygen line “!!”,
+which is needed to denote the end of an argument table. Here is an example :</p>
+<div class="highlight-fortran notranslate"><div class="highlight"><pre><span></span><span class="c">!! \section arg_table_scheme_X__run Argument Table</span>
+<span class="c">!! | local_name | standard_name                            | long_name                                   | units   | rank | type    |    kind   | intent | optional |</span>
+<span class="c">!! |------------|------------------------------------------|---------------------------------------------|---------|------|---------|-----------|--------|----------|</span>
+<span class="c">!! | im         | horizontal_loop_extent                   | horizontal loop extent                      | count   |    0 | integer |           | in     | F        |</span>
+<span class="c">!! | levs       | vertical_dimension                       | vertical layer dimension                    | count   |    0 | integer |           | in     | F        |</span>
+<span class="c">!! | vdftra     | vertically_diffused_tracer_concentration | tracer concentration diffused by PBL scheme | kg kg-1 |    3 | real    | kind_phys | inout  | F        |</span>
+</pre></div>
+</div>
+<p>The order of arguments in the table does not have to match the order of actual
+arguments in the subroutine, but it is preferred.</p>
+<ul class="simple">
+<li>A section called “General Algorithm” with a bullet or numbered list of
+the tasks completed in the subroutine algorithm</li>
+<li>At the end of initial subroutine documentation block, a “Detailed algorithm”
+section is started and the entirety of the code  is encompassed with the
+“!&gt; &#64;{” and “!&gt; &#64;}” delimiters. This way, any comments explaining detailed
+aspects of the code are automatically included in the “Detailed Algorithm” section.</li>
+</ul>
+<p>For subroutines that are not a CCPP entry point to a scheme, no argument table
+is required. But it is suggested that following “ingroup” and “brief”, use
+“param” to define each argument with local name, a short description and unit, i.e.,</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">!&gt;  \ingroup HEDMF</span>
+<span class="go">!!  \brief This subroutine is used for calculating the mass flux and updraft properties.</span>
+<span class="go">!!  ...</span>
+<span class="go">!!</span>
+<span class="go">!!  \param[in] im      integer, number of used points</span>
+<span class="go">!!  \param[in] ix      integer, horizontal dimension</span>
+<span class="go">!!  \param[in] km      integer, vertical layer dimension</span>
+<span class="go">!!  \param[in] ntrac   integer, number of tracers</span>
+<span class="go">!!  \param[in] delt    real, physics time step</span>
+<span class="go">!!  ...</span>
+<span class="go">!!  \section general_mfpbl mfpbl General Algorithm</span>
+<span class="go">!!  -# Determine an updraft parcel&#39;s entrainment rate, buoyancy, and vertical velocity.</span>
+<span class="go">!!  -# Recalculate the PBL height ...</span>
+<span class="go">!!  -# Calculate the mass flux profile and updraft properties.</span>
+<span class="go">!!  \section detailed_mfpbl mfpbl Detailed Algorithm</span>
+<span class="go">!&gt;  @{</span>
+<span class="go">       subroutine mfpbl(im,ix,km,ntrac,delt,cnvflg,                       &amp;</span>
+<span class="go">       &amp;   zl,zm,thvx,q1,t1,u1,v1,hpbl,kpbl,                              &amp;</span>
+<span class="go">       &amp;   sflx,ustar,wstar,xmf,tcko,qcko,ucko,vcko)</span>
+<span class="go">         …</span>
+<span class="go">       end subroutine mfpbl</span>
+<span class="go">!&gt;  @}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="bibliography">
+<h4>2.5.2.5. Bibliography<a class="headerlink" href="#bibliography" title="Permalink to this headline">¶</a></h4>
+<p>Doxygen can handle in-line paper citations and link to an automatically created
+bibliography page. The bibliographic data for any papers that are cited need to
+be put in BibTeX format and Saved in a .bib file. The bib file for CCPP is
+included in the repository, and the Doxygen configuration option
+<code class="docutils literal notranslate"><span class="pre">cite_bib_files</span></code> points to the included file.</p>
+<p>Citations are invoked with the following tag:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">\cite bibtex_key_to_paper</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="equations">
+<h4>2.5.2.6. Equations<a class="headerlink" href="#equations" title="Permalink to this headline">¶</a></h4>
+<p>See <a class="reference external" href="http://www.doxygen.nl/manual/formulas.html">link</a> for information
+about including equations. For the best rendering, the following option
+should be set in the Doxygen configuration file:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">USE_MATHJAX            = YES</span>
+<span class="go">MATHJAX_RELPATH        =  https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2</span>
+</pre></div>
+</div>
+<p>There are many great online resources to use the LaTeX math typesetting used in Doxygen.</p>
+</div>
+</div>
+<div class="section" id="doxygen-configuration">
+<h3>2.5.3. Doxygen Configuration<a class="headerlink" href="#doxygen-configuration" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="configuration-file">
+<h4>2.5.3.1. Configuration file<a class="headerlink" href="#configuration-file" title="Permalink to this headline">¶</a></h4>
+<p>The CCPP contains a Doxygen configuration file
+<code class="docutils literal notranslate"><span class="pre">./ccpp/physics/physics/docs/ccpplatex_dox</span></code>, such that you don’t need to
+create an additional one.</p>
+<p>If starting from scratch, you can generate a default configuration file using the command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">doxygen -g &lt;config_file&gt;</span>
+</pre></div>
+</div>
+<p>Then you can edit the default configuration file to serve your needs. The default
+file includes plenty of comments to explain all the options. Some of the important
+things you need to pay attention to are:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The name of your project:</li>
+</ul>
+</div></blockquote>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">PROJECT_NAME = ‘your project name’</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>The input files (relative to the directory where you run Doxygen):</li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">INPUT =</span>
+</pre></div>
+</div>
+<p>The following lines should be listed here: the Doxygen mainpage text file, the
+scheme pages, and the source codes to be contained in the output. The order in
+which schemes are listed determines the order in the html result.</p>
+<ul class="simple">
+<li>The directory where to put the documentation (if you leave it empty, then the
+documentation will be created in the directory where you run Doxygen):</li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">OUTPUT_DIRECTORY = doc</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>The type of documentation you want to generate (HTML, LaTeX and/or something else):</li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">GENERATE_HTML = YES</span>
+</pre></div>
+</div>
+<p>If HTML is chosen, the following tells doxygen where to put the html documentation
+relative OUTPUT_DIRECTORY:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">HTML_OUTPUT = html</span>
+<span class="go">HTML_FILE_EXTENSION = .html</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">HTML_FILE_EXTENSION</span></code> tells what the extension of the html files should be.</p>
+<ul class="simple">
+<li>Other important settings for a Fortran code project are:</li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">OPTIMIZE_FOR_FORTRAN        =    YES</span>
+<span class="go">EXTENSION_MAPPING           = .f=FortranFree        \</span>
+<span class="go">                              .F90=FortranFree      \</span>
+<span class="go">                              .f90=FortranFree</span>
+<span class="go">LAYOUT_FILE                 = ccpp_dox_layout.xml</span>
+<span class="go">CITE_BIB_FILES              = library.bib</span>
+<span class="go">FILE_PATTERN                = *.f     \</span>
+<span class="go">                              *.F90   \</span>
+<span class="go">                              *.f90   \</span>
+<span class="go">                              *.txt</span>
+<span class="go">GENERATE_TREEVIEW           = yes</span>
+</pre></div>
+</div>
+<p>Doxygen files for layout (ccpp_dox_layout.xml), a html style (ccpp_dox_extra_style.css),
+and bibliography (library.bib) are provided with the CCPP. Additionally, a
+configuration file is supplied, with the following variables modified from the default:</p>
+</div>
+<div class="section" id="diagrams">
+<h4>2.5.3.2. Diagrams<a class="headerlink" href="#diagrams" title="Permalink to this headline">¶</a></h4>
+<p>On its own, Doxygen is capable of creating simple text-based class diagrams.
+With the help of the additional software GraphViz, Doxygen can generate
+additional graphics-based diagrams, optionally in UML style. To enable
+GraphViz support, the configure file parameter “HAVE_DOT” must be set to “YES”.</p>
+<p>You can use Doxygen to create call graphs of all the physics schemes in CCPP.
+In order to create the call graphs you will need to set the following options in
+your Doxygen config file:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">HAVE_DOT             = YES</span>
+<span class="go">EXTRACT_ALL          = YES</span>
+<span class="go">EXTRACT_PRIVATE      = YES</span>
+<span class="go">EXTRACT_STATIC       = YES</span>
+<span class="go">CALL_GRAPH           = YES</span>
+</pre></div>
+</div>
+<p>Note that will need the DOT (graph description language) utility to be installed
+when starting Doxygen. Doxygen will call it to generate the graphs. On most
+distributions the DOT utility can be found in the GraphViz package. Here is
+the call graph for subroutine mpdrv in GFDL cloud microphysics generated by Doxygen:</p>
+<div class="figure align-center">
+<img alt="_images/DoxygenCallGraph.png" src="_images/DoxygenCallGraph.png" />
+</div>
+</div>
+</div>
+<div class="section" id="using-doxygen">
+<h3>2.5.4. Using Doxygen<a class="headerlink" href="#using-doxygen" title="Permalink to this headline">¶</a></h3>
+<p>In order to generate Doxygen-based documentation, you need to follow four steps:</p>
+<ol class="arabic">
+<li><p class="first">Have the Doxygen executable installed on your computer. This is already done on
+theia machine. Add the following line into .cshrc file under your home directory:</p>
+<p><code class="docutils literal notranslate"><span class="pre">alias</span> <span class="pre">doxygen/scratch4/BMC/gmtb/doxygen-1.8.10/bin/doxygen</span></code></p>
+</li>
+</ol>
+<p>Source your .cshrc file.</p>
+<ol class="arabic simple" start="2">
+<li>Document your code, including Doxygen main page, scheme pages and in-line
+comments within source code as described above.</li>
+<li>Prepare a Bibliography file in BibTex format for paper referred in the physics suite.</li>
+<li>create or edit a Doxygen configuration file to control what Doxygen pages, source
+files and bibliography file get parsed, how the source files get parsed, and to
+customize the output.</li>
+<li>Run the Doxygen command from the command line with the doxygen configuration file
+given as an argument:</li>
+</ol>
+<blockquote>
+<div><code class="docutils literal notranslate"><span class="pre">$doxygen</span> <span class="pre">$PATH_TO_CONFIG_FILE/&lt;config_file&gt;</span></code></div></blockquote>
+<p>Running this command may output compiler-like warning or errors that need to be fixed
+in order to produce proper output. Output is generated depending on the type specified
+(HTML, LaTeX, etc.) in the configuration file and is put in a location specified in the
+configuration file. The generated HTML documentation can be viewed by pointing a HTML
+browser to the <code class="docutils literal notranslate"><span class="pre">index.html</span></code> file in the <code class="docutils literal notranslate"><span class="pre">./docs/doc/html/</span></code> directory.</p>
+<p>For precise instructions on creating the scientific documentation, contact the GMTB
+helpdesk at <a class="reference external" href="mailto:gmtb-help&#37;&#52;&#48;ucar&#46;edu">gmtb-help<span>&#64;</span>ucar<span>&#46;</span>edu</a>.</p>
+<p id="bibtex-bibliography-CompliantPhysicsParams-0"><table class="docutils citation" frame="void" id="heinzelleretal2018" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[HBCF18]</a></td><td>D.&nbsp;Heinzeller, L.&nbsp;Bernardet, L.&nbsp;Carson, and G.&nbsp;Firl. Common community physics package (ccpp) developers’ guide v2.0. 2018. URL: <a class="reference external" href="https://dtcenter.org/gmtb/users/ccpp/docs/CCPP-DevGuide-v2.pdf">https://dtcenter.org/gmtb/users/ccpp/docs/CCPP-DevGuide-v2.pdf</a>.</td></tr>
+</tbody>
+</table>
+</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">2. CCPP-Compliant Physics Parameterizations</a><ul>
+<li><a class="reference internal" href="#general-rules">2.1. General rules</a></li>
+<li><a class="reference internal" href="#input-output-variable-argument-rules">2.2. Input/output variable (argument) rules</a></li>
+<li><a class="reference internal" href="#coding-rules">2.3. Coding rules</a></li>
+<li><a class="reference internal" href="#parallel-programming-rules">2.4. Parallel programming rules</a></li>
+<li><a class="reference internal" href="#scientific-documentation-rules">2.5. Scientific Documentation Rules</a><ul>
+<li><a class="reference internal" href="#doxygen-comments-and-commands">2.5.1. Doxygen comments and commands</a></li>
+<li><a class="reference internal" href="#doxygen-documentation-style">2.5.2. Doxygen Documentation Style</a><ul>
+<li><a class="reference internal" href="#doxygen-files">2.5.2.1. Doxygen files</a></li>
+<li><a class="reference internal" href="#doxygen-overview-page">2.5.2.2. Doxygen Overview Page</a></li>
+<li><a class="reference internal" href="#physics-scheme-pages">2.5.2.3. Physics Scheme Pages</a></li>
+<li><a class="reference internal" href="#doxygen-modules">2.5.2.4. Doxygen Modules</a></li>
+<li><a class="reference internal" href="#bibliography">2.5.2.5. Bibliography</a></li>
+<li><a class="reference internal" href="#equations">2.5.2.6. Equations</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#doxygen-configuration">2.5.3. Doxygen Configuration</a><ul>
+<li><a class="reference internal" href="#configuration-file">2.5.3.1. Configuration file</a></li>
+<li><a class="reference internal" href="#diagrams">2.5.3.2. Diagrams</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#using-doxygen">2.5.4. Using Doxygen</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Overview.html"
+                        title="previous chapter">1. CCPP Overview</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ConfigBuildOptions.html"
+                        title="next chapter">3. CCPP Configuration and Build Options</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/CompliantPhysicsParams.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="ConfigBuildOptions.html" title="3. CCPP Configuration and Build Options"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Overview.html" title="1. CCPP Overview"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CCPPtraining v1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2019 .
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.5.
+    </div>
+  </body>
+</html>

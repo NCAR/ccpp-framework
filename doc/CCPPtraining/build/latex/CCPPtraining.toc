@@ -1,0 +1,28 @@
+\babel@toc {english}{}
+\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}
+\contentsline {section}{\numberline {1.1}How To Use This Document}{1}{section.1.1}
+\contentsline {chapter}{\numberline {2}CCPP Overview}{3}{chapter.2}
+\contentsline {chapter}{\numberline {3}CCPP-Compliant Physics Parameterizations}{7}{chapter.3}
+\contentsline {section}{\numberline {3.1}General rules}{7}{section.3.1}
+\contentsline {section}{\numberline {3.2}Input/output variable (argument) rules}{10}{section.3.2}
+\contentsline {section}{\numberline {3.3}Coding rules}{11}{section.3.3}
+\contentsline {section}{\numberline {3.4}Parallel programming rules}{11}{section.3.4}
+\contentsline {chapter}{\numberline {4}Scientific Documentation Rules}{13}{chapter.4}
+\contentsline {section}{\numberline {4.1}Doxygen comments and commands}{13}{section.4.1}
+\contentsline {section}{\numberline {4.2}Doxygen Documentation Style}{14}{section.4.2}
+\contentsline {subsection}{\numberline {4.2.1}Doxygen files}{14}{subsection.4.2.1}
+\contentsline {subsection}{\numberline {4.2.2}Doxygen Overview Page}{15}{subsection.4.2.2}
+\contentsline {subsection}{\numberline {4.2.3}Physics Scheme Pages}{15}{subsection.4.2.3}
+\contentsline {subsection}{\numberline {4.2.4}Doxygen Modules}{17}{subsection.4.2.4}
+\contentsline {subsection}{\numberline {4.2.5}Bibliography}{19}{subsection.4.2.5}
+\contentsline {subsection}{\numberline {4.2.6}Equations}{19}{subsection.4.2.6}
+\contentsline {section}{\numberline {4.3}Doxygen Configuration}{20}{section.4.3}
+\contentsline {subsection}{\numberline {4.3.1}Configuration file}{20}{subsection.4.3.1}
+\contentsline {subsection}{\numberline {4.3.2}Diagrams}{21}{subsection.4.3.2}
+\contentsline {section}{\numberline {4.4}Using Doxygen}{22}{section.4.4}
+\contentsline {chapter}{\numberline {5}Configuring and Building Options (Weiwei)}{23}{chapter.5}
+\contentsline {chapter}{\numberline {6}Building and Running Host Models (Weiwei)}{25}{chapter.6}
+\contentsline {chapter}{\numberline {7}Adding a new scheme (Weiwei)}{27}{chapter.7}
+\contentsline {chapter}{\numberline {8}Glossary}{29}{chapter.8}
+\contentsline {chapter}{Bibliography}{31}{chapter*.25}
+\contentsline {chapter}{Index}{33}{section*.26}
