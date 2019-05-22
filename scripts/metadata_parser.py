@@ -186,40 +186,24 @@ def parse_variable_tables(filename):
                 # Check for the word 'type', that it is the first word in the line,
                 # and that a name exists afterwards. It is assumed that definitions
                 # (not usage) of derived types cannot be nested - reasonable for Fortran.
+                # The following if / elif / else statements filter lines that do not
+                # contain a type definition.
                 #
-                # DH* 20190508 - workaround to skip 'type is' statements inside
-                # the Fortran 2003 'select type' group
-                if (words[j].lower() == 'type' and j<len(words)-1 and \
+                # Ignore words containing type that are not 'type', 'type,', 'type::';
+                # this includes variable declarations of a user defined type, e.g. 'type(mytype) ::'
+                if not (words[j].lower()=='type' or \
+                       words[j].lower().startswith('type,') or \
+                       words[j].lower().startswith('type::')):
+                    continue
+                # Ignore variable declarations of a user defined type with a space
+                # between 'type' and '(', e.g. 'type (mytype) ::'
+                elif j == 0 and len(words) > 1 and words[j+1].startswith('('):
+                    continue
+                # Ignore lines starting with 'type is' or 'type is(' (select type statements)
+                elif (words[j].lower() == 'type' and j==0 and j<len(words)-1 and \
                         (words[j+1].lower() == 'is' or words[j+1].lower().startswith('is('))):
                     continue
-                # DH* 20190420 - workaround to parse additional type definitions like
-                #     type, extends(GFS_data_sub_type) :: GFS_data_type
-                # use Ftype_type_decl class routine type_def_line and extract type_name
-                elif (words[j].lower() == 'type' or words[j].lower() == 'type,') and j == 0 and 'extends' in line:
-                    type_declaration = Ftype_type_decl.type_def_line(line.strip())
-                    if in_type:
-                        raise Exception('Nested definitions of derived types not supported')
-                    in_type = True
-                    type_name = type_declaration[0]
-                    if type_name in registry[module_name].keys():
-                        raise Exception('Duplicate derived type name {0} in module {1}'.format(
-                                                                       type_name, module_name))
-                    registry[module_name][type_name] = [current_line_number]
-                elif words[j].lower() == 'type' and j == 0 and len(words) > 1 and not '(' in words[j+1]:
-                #if words[j].lower() == 'type' and j == 0 and len(words) > 1 and not '(' in words[j+1]:
-                # *DH 20190420
-                    if in_type:
-                        raise Exception('Nested definitions of derived types not supported')
-                    in_type = True
-                    # Allow parsing "type my_type" and "type :: mytype"
-                    if words[j+1].strip() == '::':
-                        type_name = words[j+2].split('(')[0].strip()
-                    else:
-                        type_name = words[j+1].split('(')[0].strip()
-                    if type_name in registry[module_name].keys():
-                        raise Exception('Duplicate derived type name {0} in module {1}'.format(
-                                                                       type_name, module_name))
-                    registry[module_name][type_name] = [current_line_number]
+                # Detect 'end type TYPENAME' and (fallback) unlabeled 'end type' statements
                 elif words[j].lower() == 'type' and j == 1 and words[j-1].lower() == 'end':
                     if not in_type:
                         raise Exception('Encountered "end_type" without corresponding "type" statement')
@@ -232,6 +216,22 @@ def parse_variable_tables(filename):
                         raise Exception('Type names in opening/closing statement do not match: {0} vs {1}'.format(type_name, test_type_name))
                     in_type = False
                     registry[module_name][type_name].append(current_line_number)
+                # If type is not the first word, ignore the word
+                elif j>0:
+                    continue
+                # Detect type definition using Ftype_type_decl class, routine
+                # type_def_line and extract type_name
+                else:
+                    type_declaration = Ftype_type_decl.type_def_line(line.strip())
+                    if in_type:
+                        raise Exception('Nested definitions of derived types not supported')
+                    in_type = True
+                    type_name = type_declaration[0]
+                    if type_name in registry[module_name].keys():
+                        raise Exception('Duplicate derived type name {0} in module {1}'.format(
+                                                                       type_name, module_name))
+                    registry[module_name][type_name] = [current_line_number]
+                # Done with user defined type detection
             line_counter += 1
         logging.debug('Parsing file {0} with registry {1}'.format(filename, registry))
 
