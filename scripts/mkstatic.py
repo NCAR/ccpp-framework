@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 from common import decode_container, encode_container
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
+from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
 from mkcap import Var
 
 ###############################################################################
@@ -22,9 +23,6 @@ from mkcap import Var
 #CCPP_ERROR_FLAG_VARIABLE = 'error_flag'
 
 CCPP_STAGES = [ 'init', 'run', 'finalize' ]
-
-CCPP_STATIC_API_MODULE = 'ccpp_static_api'
-CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
 
 # Maximum number of dimensions of an array allowed by the Fortran 2008 standard
 FORTRAN_ARRAY_MAX_DIMS = 15
