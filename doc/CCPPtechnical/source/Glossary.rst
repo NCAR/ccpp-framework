@@ -61,6 +61,13 @@ Glossary
       The NOAA Environmental Modeling System - a software infrastructure that supports 
       NCEP/EMC’s forecast products. The coupling software is based on ESMF and the NUOPC layer.
 
+   NUOPC
+      The National Unified Operational Prediction Capability is a consortium of Navy, NOAA,
+      and Air Force modelers and their research partners. It aims to advance the weather
+      modeling systems used by meteorologists, mission planners, and decision makers. NUOPC
+      partners are working toward a common model architecture - a standard way of building
+      models - in order to make it easier to collaboratively build modeling systems.
+
    Parameterization
       The representation, in a dynamic model, of physical effects in terms of admittedly
       oversimplified parameters, rather than realistically requiring such effects to be 
