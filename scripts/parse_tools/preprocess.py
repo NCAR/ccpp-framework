@@ -269,8 +269,6 @@ class PreprocStack(object):
         (True, True)
         >>> PreprocStack().process_if_line("#if defined(CCPP) &&", {'CCPP':1})
         (False, False)
-        >>> PreprocStack().process_if_line("#if !defined(CCPP) || defined(HYBRID)", {'CCPP':1, 'HYBRID':1})
-        (True, True)
         """
         match = PreprocStack.ifelif_re.match(line)
         if match is None:

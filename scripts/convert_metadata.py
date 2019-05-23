@@ -258,7 +258,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
         # End while
     # End with (file)
     # Read in the Fortran source to find dimension information
-    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1, 'HYBRID':1}, logger=logger)
+    mheaders = parse_fortran_file(filename_out, preproc_defs={'CCPP':1}, logger=logger)
     # Find and replace dimension information for each metadata header
     for table in mdconfig:
         # Find matching Fortran header
