@@ -23,6 +23,7 @@ This chapter contains a brief description on how to add a new scheme to the *CCP
     * ``gmtb-scm/ccpp/config/ccpp_prebuild_config.py`` for the SCM
 
 * Add the new scheme to the list of schemes in ``ccpp_prebuild_config.py`` using the same path as the existing schemes:
+
 .. code-block:: console
 
     SCHEME_FILES = [ ...
@@ -31,6 +32,7 @@ This chapter contains a brief description on how to add a new scheme to the *CCP
     ...]
 
 * If the new scheme uses optional arguments, add information on which ones to use further down in the configuration file. See existing entries and documentation in the configuration file for the possible options:
+
 .. code-block:: console
 
     OPTIONAL_ARGUMENTS = {
