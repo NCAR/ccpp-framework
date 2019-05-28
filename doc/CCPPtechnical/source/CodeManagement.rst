@@ -37,21 +37,21 @@ Some of these repositories are public (no GitHub account required) and some are 
 The primary development by GMTB, including the latest CCPP developments, are maintained in the following branches:
 
 
-+----------------------------------------+-------------------+
-| Repository (GMTB development version)  | Branch name       |
-+========================================+===================+
-| https://github.com/NCAR/NEMSfv3gfs     | gmtb/ccpp         |
-+----------------------------------------+-------------------+
-| https://github.com/NCAR/FV3            | gmtb/ccpp         |
-+----------------------------------------+-------------------+
-| https://github.com/NCAR/ccpp-physics   |master             |
-+----------------------------------------+-------------------+
-| https://github.com/NCAR/ccpp-framework |master             |
-+----------------------------------------+-------------------+
-| https://github.com/NCAR/NEMS           |gmtb/ccpp          |
-+----------------------------------------+-------------------+
-| https://github.com/NCAR/FMS            | GFS-FMS           |
-+----------------------------------------+-------------------+
++---------------------------------------------+----------------------+
+| Repository (GMTB development version)       |    Branch name       |
++=============================================+======================+
+| https://github.com/NCAR/NEMSfv3gfs          |    gmtb/ccpp         |
++---------------------------------------------+----------------------+
+| https://github.com/NCAR/FV3                 |    gmtb/ccpp         |
++---------------------------------------------+----------------------+
+| https://github.com/NCAR/ccpp-physics        |   master             |
++---------------------------------------------+----------------------+
+| https://github.com/NCAR/ccpp-framework      |   master             |
++---------------------------------------------+----------------------+
+| https://github.com/NCAR/NEMS                |   gmtb/ccpp          |
++---------------------------------------------+----------------------+
+| https://github.com/NCAR/FMS                 |    GFS-FMS           |
++---------------------------------------------+----------------------+
 
 -----------------------
 SCM
@@ -87,7 +87,31 @@ Directory Structure of ccpp/framework
 
 The following is the directory structure for the ccpp/framework (condensed version):
 
-.. literalinclude:: ./ccpp_framework.txt
+.. code-block:: console
+
+   ├── cmake                  # cmake files for building
+   ├── doc                    # Documentation for design/implementation
+   │                          # and developers guide
+   │   ├── CCPPtechnical      # CCPP Technical documentation
+   │   │   ├── build
+   │   │   └── source
+   │   │       ├── _static
+   │   │       └── _templates
+   │   ├── common            # Latex style file used by various documentation efforts
+   │   ├── DevelopersGuide
+   │   │   └── images
+   │   └── img
+   ├── schemes                # Example ccpp_prebuild_config.py
+   │   ├── check
+   ├── scripts                # Scripts for ccpp_prebuild.py, metadata
+   │                          # parser, etc.
+   │   ├── fortran_tools
+   │   └── parse_tools
+   ├── src                    # CCPP framework source code
+   │   └── tests              # SDFs and code for testing
+   ├── test
+   │   └── nemsfv3gfs         # NEMSfv3gfs regression test scripts
+   └── tests                  # Development for framework upgrades
 
 
 --------------------------------------
@@ -96,7 +120,14 @@ Directory Structure of ccpp/physics
 
 The following is the directory structure for the ccpp/physics (condensed version):
 
-.. literalinclude:: ./ccpp_physics.txt
+.. code-block:: console
+
+   ├── physics                 # CCPP physics source code
+   │   ├── docs                # Scientific documentation (doxygen)
+   │   │   ├── img             # Figures for doxygen
+   │   │   └── pdftxt          # Text files for documentation
+   └── stochastic_physics      # Source code for stochastic physics
+
 
 
 =====================================================
@@ -128,48 +159,64 @@ Because of the large number of submodules of the central repository NEMSfv3gfs, 
 
 Start with checking out the main repository from the NCAR GitHub
 
- | **git clone -b gmtb/ccpp https://github.com/NCAR/NEMSfv3gfs**
- | **cd NEMSfv3gfs**
- | **git submodule init**
- | **git submodule update**
+.. code-block:: console
+
+   git clone -b gmtb/ccpp https://github.com/NCAR/NEMSfv3gfs
+   cd NEMSfv3gfs
+   git submodule init
+   git submodule update
 
 At this point, you have checked out the correct branches of all six repositories. Each repository is connected to a remote destination (simply called remote in GitHub language), which points to the NCAR GitHub pages and is labeled as origin. For consistency with the CCPP workflow, we recommend renaming the NCAR remote destination to upstream for all six repositories in order to guarantee that your development will be pushed to your fork and not directly to the NCAR repository. For example:
 
- | **cd ccpp/framework**
- | **git remote rename origin upstream**
- | **cd ../..**
+.. code-block:: console
 
-Checking out remote branches means that the local branches are in a detached state, since you cannot commit directly to a remote branch. As long as you are not making any modifications in a certain repository, this is not a problem. If during your development changes are made to the corresponding upstream branch, you can simply navigate to this repository and check out the updated version (example NEMS):
+   cd ccpp/framework
+   git remote rename origin upstream
+   cd ../..
 
- | **cd NEMS**
- | **git remote update**
- | **git checkout upstream/gmtb/ccpp**
- | **cd ..**
+Checking out remote branches as submodules means that your local branches are in a detached head state, since the submodule points to a specific commit. As long as you are not making any modifications in a certain repository, this is not a problem. If during your development changes are made to the corresponding upstream branch, you can simply navigate to this repository and check out the updated version (example NEMS):
+
+.. code-block:: console
+
+   cd NEMS
+   git remote update
+   git checkout upstream/gmtb/ccpp
+   cd ..
 
 However, if you are making changes in a repository (submodule or main repository), you must create a local branch, for example in NEMSfv3gfs:
 
- | **git checkout -b my_local_development_branch**
+.. code-block:: console
 
+   git checkout -b my_local_development_branch
+ 
 Once you are ready to contribute the code to the upstream repository, you need to create a pull request (PR; see next section). In order to do so, you will use your own fork of this repository (see previous section) and configure your fork as an additional remote destination, which we typically label as origin. For the same example NEMSfv3gfs:
 
- | **git remote add origin https://github.com/YOUR_GITHUB_USER/NEMSfv3gfs**
- | **git remote update**
+.. code-block:: console
+
+   git remote add origin https://github.com/YOUR_GITHUB_USER/NEMSfv3gfs
+   git remote update
 
 Then, push your local branch to your fork:
 
- | **git push origin my_local_development_branch**
+.. code-block:: console
+
+   git push origin my_local_development_branch
 
 For each repository/submodule, you can check the configured remote destinations and all existing branches (remote and local):
 
- | **git remote -v show**
- | **git remote update**
- | **git branch -a**
+.. code-block:: console
+
+   git remote -v show
+   git remote update
+   git branch -a
 
 As opposed to branches without modifications described in step 3, changes to the upstream repository can be brought into the local branch by pulling them down. For the example of submodule FV3 (where a local branch is checked out):
 
- | **cd FV3**
- | **git remote update**
- | **git pull upstream gmtb/ccpp**
+.. code-block:: console
+
+   cd FV3
+   git remote update
+   git pull upstream gmtb/ccpp
 
 
 -----------------------------------
@@ -179,48 +226,64 @@ The process for checking out SCM is described in the following, assuming access 
 
 Start with checking out the main repository from the NCAR GitHub
 
- | **git clone https://github.com/NCAR/gmtb-scm**
- | **cd gmtb-scm**
- | **git submodule init**
- | **git submodule update**
+.. code-block:: console
+
+   git clone https://github.com/NCAR/gmtb-scm
+   cd gmtb-scm
+   git submodule init
+   git submodule update
 
 At this point, you have checked out the correct branches of all three repositories. Each repository is connected to a remote destination (simply called remote in GitHub language), which points to the NCAR GitHub pages and is labeled as origin. For consistency with the CCPP workflow, we recommend renaming the NCAR remote destination to upstream for all repositories. For example:
 
- | **cd ccpp/framework**
- | **git remote rename origin upstream**
- | **cd ../..**
+.. code-block:: console
+
+   cd ccpp/framework
+   git remote rename origin upstream
+   cd ../..
 
 Checking out remote branches means that your local branches are in a detached state, since you cannot commit directly to a remote branch. As long as you are not making any modifications in a certain repository, this is not a problem. If during your development work changes are made to the corresponding upstream branch, you can simply navigate to this repository and check out the updated version (example ccpp-physics):
 
- | **cd ccpp/physics**
- | **git remote update**
- | **git checkout upstream/master**
- | **cd ../..**
+.. code-block:: console
+
+   cd ccpp/physics
+   git remote update
+   git checkout upstream/master
+   cd ../..
 
 However, if you are making changes in a repository (submodule or main repository), you must create a local branch, for example in gmtb-scm:
 
- | **git checkout -b my_local_development_branch**
+.. code-block:: console
 
+   git checkout -b my_local_development_branch
+ 
 Once you are ready to contribute the code to the upstream repository, you need to create a PR (see next section). In order to do so, you first need to create your own fork of this repository (see previous section) and configure your fork as an additional remote destination, which we typically label as origin. For the same example gmtb-scm:
 
- | **git remote add origin https://github.com/YOUR_GITHUB_USER/gmtb-scm**
- | **git remote update**
+.. code-block:: console
+ 
+   git remote add origin https://github.com/YOUR_GITHUB_USER/gmtb-scm
+   git remote update
 
 Then, push your local branch to your fork:
 
- | **git push origin my_local_development_branch**
+.. code-block:: console
+
+   git push origin my_local_development_branch
 
 For each repository/submodule, you can check the configured remote destinations and all existing branches (remote and local):
 
- | **git remote -v show**
- | **git remote update**
- | **git branch -a**
+.. code-block:: console
 
+   git remote -v show
+   git remote update
+   git branch -a
+ 
 As opposed to branches without modifications described in step 3, changes to the upstream repository can be brought into the local branch by pulling them down. For the example of submodule ccpp-physics (where a local branch is checked out):
 
- | **cd ccpp/physics**
- | **git remote update**
- | **git pull upstream master**
+.. code-block:: console
+
+   cd ccpp/physics
+   git remote update
+   git pull upstream master
 
 .. _committing-changes:
 
@@ -229,46 +292,64 @@ Committing Changes to your Fork
 ==================================
 Once you have your fork set up to begin code modifications, you should check that the cloned repositories upstream and origin are set correctly:
 		
- | **git remote -v**
+.. code-block:: console
+
+   git remote -v
 
 This should point to your fork as origin and the repository you cloned as upstream:
 
- | **origin	      https://github.com/YOUR_GITHUB_USER/ccpp-physics (fetch)**
- | **origin	      https://github.com/YOUR_GIRHUB_USER/ccpp-physics (push)**
- | **upstream   https://github.com/NCAR/ccpp-physics (fetch)**
- | **upstream   https://github.com/NCAR/ccpp-physics (push)**
+.. code-block:: console
+
+   origin	      https://github.com/YOUR_GITHUB_USER/ccpp-physics (fetch)
+   origin	      https://github.com/YOUR_GIRHUB_USER/ccpp-physics (push)
+   upstream   https://github.com/NCAR/ccpp-physics (fetch)
+   upstream   https://github.com/NCAR/ccpp-physics (push)
 
 Also check what branch you are working on:
 
- | **git branch**
+.. code-block:: console
+
+   git branch
 
 This command will show what branch you have checked out on your fork:
 
- | *** features/my_local_development_branch**
- | **master**
+.. code-block:: console
+
+   * features/my_local_development_branch
+     master
 
 After making modifications and testing, you can commit the changes to your fork.  First check what files have been modified:
 
- | **git status**
+.. code-block:: console
+
+   git status
 
 This git command will provide some guidance on what files need to be added and what files are “untracked”.  To add new files or stage modified files to be committed:
 
- | **git add filename1 filename2**
+.. code-block:: console
+
+   git add filename1 filename2
 
 At this point it is helpful to have a description of your changes to these files documented somewhere, since when you commit the changes, you will be prompted for this information.  To commit these changes to your local repository and push them to the development branch on your fork:
 
- | **git commit**
- | **git push origin features/my_local_development_branch**
+.. code-block:: console
+
+   git commit
+   git push origin features/my_local_development_branch
 
 When this is done, you can check the status again:
 
- | **git status**
+.. code-block:: console
+
+   git status
 
 This should show that your working copy is up to date with what is in the repository:
 
- | **On branch features/my_local_development_branch**
- | **Your branch is up to date with 'origin/features/my_local_development_branch'.**
- | **nothing to commit, working tree clean**
+.. code-block:: console
+
+   On branch features/my_local_development_branch
+   Your branch is up to date with 'origin/features/my_local_development_branch'.
+   nothing to commit, working tree clean
 
 At this point you can continue development or create a PR as discussed in the next section.
 
