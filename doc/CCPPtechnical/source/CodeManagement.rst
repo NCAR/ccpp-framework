@@ -14,7 +14,7 @@ This chapter describes the organization of the code, provides instruction on the
 UFS Atmosphere
 -----------------------
 
-The UFS Atmosphere source code is contained in the NEMSfv3gfs code repository. CCPP users and developers should use the NEMSfv3gfs code and submodules maintained by GMTB in GitHub. For codes whose authoritative repository is in VLab, GMTB synchronizes these with VLab at periodic intervals. 
+The :term:`UFS` Atmosphere source code is contained in the NEMSfv3gfs code repository. CCPP users and developers should use the NEMSfv3gfs code and submodules maintained by GMTB in GitHub. For codes whose authoritative repository is in VLab, GMTB synchronizes these with VLab at periodic intervals. 
 
 https://github.com/NCAR/NEMSfv3gfs
 
@@ -111,11 +111,13 @@ Creating Forks
 
 The GitHub forking workflow relies on forks (personal copies) of the shared repositories on GitHub. These forks need to be created only once, and only for directories that users will contribute changes to. The following steps describe how to create a fork for the example of the ccpp-physics submodule/repository:
 
- #. Go to https://github.com/NCAR/ccpp-physics and make sure you are signed in as your GitHub user.
- #. Select the "fork" button in the upper right corner.
+ Go to https://github.com/NCAR/ccpp-physics and make sure you are signed in as your GitHub user.
+
+ Select the "fork" button in the upper right corner.
       * If you have already created a fork, this will take you to your fork.
       * If you have not yet created a fork, this will create one for you.
- #. Note that the repo name in the upper left (blue) will be either "NCAR" or "your GitHub name” which tells you which fork you are looking at.
+
+ Note that the repo name in the upper left (blue) will be either "NCAR" or "your GitHub name” which tells you which fork you are looking at.
 
 Note that personal forks are not required until a user wishes to make code contributions. The procedure for how to check out the code laid out below can be followed without having created any forks beforehand.
 
@@ -229,10 +231,10 @@ Once you have your fork set up to begin code modifications, you should check tha
 
 This should point to your fork as origin and the repository you cloned as upstream:
 
- | origin	      https://github.com/YOUR_GITHUB_USER/ccpp-physics (fetch)
- | origin	      https://github.com/YOUR_GIRHUB_USER/ccpp-physics (push)
- | upstream   https://github.com/NCAR/ccpp-physics (fetch)
- | upstream   https://github.com/NCAR/ccpp-physics (push)
+ | **origin	      https://github.com/YOUR_GITHUB_USER/ccpp-physics (fetch)**
+ | **origin	      https://github.com/YOUR_GIRHUB_USER/ccpp-physics (push)**
+ | **upstream   https://github.com/NCAR/ccpp-physics (fetch)**
+ | **upstream   https://github.com/NCAR/ccpp-physics (push)**
 
 Also check what branch you are working on:
 
@@ -240,8 +242,8 @@ Also check what branch you are working on:
 
 This command will show what branch you have checked out on your fork:
 
- | * features/my_local_development_branch
- |   master
+ | *** features/my_local_development_branch**
+ | **master**
 
 After making modifications and testing, you can commit the changes to your fork.  First check what files have been modified:
 
@@ -262,9 +264,9 @@ When this is done, you can check the status again:
 
 This should show that your working copy is up to date with what is in the repository:
 
- | On branch features/my_local_development_branch
- | Your branch is up to date with 'origin/features/my_local_development_branch'.
- | nothing to commit, working tree clean
+ | **On branch features/my_local_development_branch**
+ | **Your branch is up to date with 'origin/features/my_local_development_branch'.**
+ | **nothing to commit, working tree clean**
 
 At this point you can continue development or create a PR as discussed in the next section.
 
