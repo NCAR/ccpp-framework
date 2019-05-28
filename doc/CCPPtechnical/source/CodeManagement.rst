@@ -57,7 +57,7 @@ The primary development by GMTB, including the latest CCPP developments, are mai
 SCM
 -----------------------
 
-CCPP developers should use the SCM code and submodules maintained by GMTB in GitHub. The ccpp-framework and ccpp-physics repositories are used by the two models, creating a two-way dependency between them (see Section 7.3 for implications on the code review and testing procedure).
+CCPP developers should use the SCM code and submodules maintained by GMTB in GitHub. The ccpp-framework and ccpp-physics repositories are used by the two models, creating a two-way dependency between them (see :ref:`committing-changes` for implications on the code review and testing procedure).
 
 https://github.com/NCAR/gmtb-scm
  
@@ -221,6 +221,8 @@ As opposed to branches without modifications described in step 3, changes to the
  | **cd ccpp/physics**
  | **git remote update**
  | **git pull upstream master**
+
+.. _committing-changes:
 
 ==================================
 Committing Changes to your Fork
