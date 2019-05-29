@@ -294,7 +294,7 @@ The suite name is ``FV3_GFS_v15``. Five groups (``fast_physics, time_vary, radia
 * ``GFS_surface_generic_pre``: Preprocessor for the surface schemes (land, sea ice)
 * ``GFS_surface_composites_pre``: Preprocessor for surafce composites
 * ``GFS_suite_interstitial_2``: GFS suite interstitial 2
-* ``sfc_diff``：Calculation of the exchange coefficients in the GFS surface layer
+* ``sfc_diff``: Calculation of the exchange coefficients in the GFS surface layer
 * ``GFS_surface_loop_control_part1``: GFS surface loop control part 1
 * ``sfc_nst_pre``: Preprocessor for the near-surface sea temperature 
 * ``sfc_nst``: GFS Near-surface sea temperature 
