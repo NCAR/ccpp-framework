@@ -15,7 +15,7 @@ Glossary
       The pool of CCPP-compliant physics schemes; also refers to a software repository of the same name
 
    Dynamic CCPP build
-      A standalone CCPP build type in which the *CCPP-Framework* and *CCPP-physics* libraries are
+      A CCPP build type in which the *CCPP-Framework* and *CCPP-physics* libraries are
       dynamically linked to the executable and all CCPP-compliant schemes available in the library
       can be invoked at runtime. This build type is available for both the SCM and the UFS Atmosphere
 
@@ -39,11 +39,6 @@ Glossary
       An atmospheric model that allocates memory, provides metadata for the variables passed into
       and out of the physics, and controls time-stepping
 
-   Hybrid CCPP build
-      A CCPP build type that enables the use of non-CCPP physics and CCPP-compliant physics in
-      the same run as opposed to a standalone CCPP build that only enables CCPP-compliant physics.
-      This build type is only available for the UFS Atmosphere
-
    Interstitial scheme
       A modularized piece of code to perform data preparation, diagnostics, or other “glue”
       functions that allows primary schemes to work together as a suite. They can be categorized
@@ -54,7 +49,7 @@ Glossary
       applying tendencies, for example.
 
    Multi-suite static CCPP build
-      A standalone, static CCPP build type in which a set of physics suites is specified
+      A static CCPP build type in which a set of physics suites is specified
       at compile time from which one can be chosen at runtime.
 
    NEMS
@@ -108,16 +103,12 @@ Glossary
       time-splitting) in a section of an atmospheric model that is distinct from the dynamical
       core in the code organization
 
-   Standalone CCPP build
-      A CCPP build type that enables the use of only CCPP-compliant physics, as opposed to
-      the hybrid CCPP build. The build type can be dynamic or static
-
    Standard_name
       Variable names based on CF conventions (http://cfconventions.org) that are uniquely
       identified by the *CCPP-compliant* schemes and provided by a host model
 
    Static CCPP build
-      A standalone build type in which the *CCPP-Framework* and the *CCPP-physics* libraries
+      A build type in which the *CCPP-Framework* and the *CCPP-physics* libraries
       are statically linked to the executable and only the suites determined at compile time
       can be invoked at runtime. This build type is only available for the UFS Atmosphere
 
