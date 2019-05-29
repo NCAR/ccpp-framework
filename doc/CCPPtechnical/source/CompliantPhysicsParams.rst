@@ -267,7 +267,7 @@ in a physics scheme:
 
 * For Fortran coarrays, consult with the GMTB helpdesk (gmtb-help@ucar.edu).
 
-.. include:: ScientificDocRules.rst
+.. include:: ScientificDocRules.inc
 
 .. Bibliography should go at the end of the last chapter
 
