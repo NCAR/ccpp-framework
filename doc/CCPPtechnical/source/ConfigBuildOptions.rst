@@ -9,25 +9,22 @@ There are some differences between building and running the SCM and the UFS Atmo
 
 The relevant options for building CCPP with the UFS Atmosphere can be described as follows:
 
-* **Without CCPP (non-CCPP)**: The code is compiled without CCPP and runs using the original UFS Atmosphere physics drivers, such as ``GFS_physics_driver.F90``. This option entirely bypasses all CCPP functionality and is only used for regression testing against the unmodified UFS Atmosphere codebase.
+* **Without CCPP (CCPP=N)**: The code is compiled without CCPP and runs using the original UFS Atmosphere physics drivers, such as ``GFS_physics_driver.F90``. This option entirely bypasses all CCPP functionality and is only used for RT against the unmodified UFS Atmosphere codebase.
 
 .. * **Hybrid CCPP**: The code is compiled with CCPP enabled and allows combining non-CCPP-Physics and CCPP-compliant physics. This is restricted to parameterizations that are termed as “physics” by EMC, i.e. that in a non-CCPP build would be called from ``GFS_physics_driver.F90``. Parameterizations that fall into the categories “time_vary”, “radiation” and “stochastics” have to be CCPP-compliant. The hybrid option is fairly complex and not recommended for users to start with. It is intended as a temporary measure for research and development until all necessary physics are available through the CCPP. This option uses the existing physics calling infrastructure ``GFS_physics_driver.F90`` to call either CCPP-compliant or non-CCPP-compliant schemes within the same run. Note that the *CCPP-Framework* and *CCPP-physics* are dynamically linked to the executable for this option.
 
-* **Standalone CCPP**: The code is compiled with CCPP enabled and restricted to CCPP-compliant physics. That is, any parameterization to be called as part of a suite must be available in CCPP. Physics scheme selection and order is determined at runtime by an external suite definition file (SDF; see Chapter 4.1 for further details on the SDF). The existing physics-calling code ``GFS_physics_driver.F90`` and ``GFS_radiation_driver.F90`` are bypassed altogether in this mode and any additional code needed to connect parameterizations within a suite previously contained therein is executed from the so-called CCPP-compliant “interstitial schemes”. One further option determines how the CCPP-compliant physics are called within the host model:
-    * **Dynamic CCPP**: This option is recommended for research and development users, since it allows choosing any physics schemes within the CCPP library at runtime by making adjustments to the CCPP SDF and the model namelist. This option carries computational overhead associated with the higher level of flexibility. Note that the *CCPP-Framework* and *CCPP-physics* are dynamically linked to the executable.
-    * **Static CCPP**: The code is compiled with CCPP enabled but restricted to CCPP-compliant physics defined by one or more SDFs used at compile time. This option is recommended for users interested in production-mode and operational applications, since it limits flexibility in favor of runtime performance and memory footprint. Note that the *CCPP-Framework* and *CCPP-physics* are statically linked to the executable.
+* **With CCPP (CCPP=Y)**: The code is compiled with CCPP enabled and restricted to CCPP-compliant physics. That is, any parameterization to be called as part of a suite must be available in CCPP. Physics scheme selection and order is determined at runtime by an external suite definition file (SDF; see :ref:`ConstructingSuite` for further details on the SDF). The existing physics-calling code ``GFS_physics_driver.F90`` and ``GFS_radiation_driver.F90`` are bypassed altogether in this mode and any additional code needed to connect parameterizations within a suite previously contained therein is executed from the so-called CCPP-compliant “interstitial schemes”. One further option determines how the CCPP-compliant physics are called within the host model:
+    * **Dynamic CCPP (STATIC=N)**: This option is recommended for research and development users, since it allows choosing any physics schemes within the CCPP library at runtime by making adjustments to the CCPP SDF and the model namelist. This option carries computational overhead associated with the higher level of flexibility. Note that the *CCPP-Framework* and *CCPP-physics* are dynamically linked to the executable.
+    * **Static CCPP (STATIC=Y)**: The code is compiled with CCPP enabled but restricted to CCPP-compliant physics defined by one or more SDFs used at compile time. This option is recommended for users interested in production-mode and operational applications, since it limits flexibility in favor of runtime performance and memory footprint. Note that the *CCPP-Framework* and *CCPP-physics* are statically linked to the executable.
 
 .. _ccpp_build_option:
 
 .. figure:: _static/ccpp_build_option.png
     :align: center
 
-    *Options for building the CCPP with the UFS Atmosphere. The most common options will be to use the CCPP in standalone mode.*
-.. (CCPP=Y) HYBRID=N).
+    *Options for building the CCPP with the UFS Atmosphere. Runs where computational performance is valued over physics flexibility should use STATIC=Y.*
 
-Runs where computational performance is valued over physics flexibility should use STATIC=Y.*
-
-Conversely, for the SCM, only the dynamic CCPP standalone build is supported.
+Conversely, for the SCM, only the dynamic CCPP build is supported.
 
 For all options that activate the CCPP, the ``ccpp_prebuild.py`` Python script must be run. This may be done manually or as part of a host model build-time script. In the case of the SCM,         ``ccpp_prebuild.py`` must be run manually, as it is not incorporated in that model’s build system. In the case of the UFS Atmosphere, ``ccpp_prebuild.py`` is run automatically as a step in the build system, although it can be run manually for debugging purposes.
 
