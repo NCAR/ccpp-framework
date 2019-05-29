@@ -15,7 +15,8 @@ import sys
 # *DH
 
 # Local modules
-from common import encode_container, decode_container, execute, CCPP_INTERNAL_VARIABLES
+from common import encode_container, decode_container, execute
+from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE
 from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
 from mkdoc import metadata_to_html, metadata_to_latex
@@ -27,6 +28,7 @@ from mkstatic import API, Suite, Group
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',     action='store', help='path to CCPP prebuild configuration file', required=True)
+parser.add_argument('--clean',      action='store_true', help='remove files created by this script, then exit', default=False)
 parser.add_argument('--debug',      action='store_true', help='enable debugging output', default=False)
 parser.add_argument('--static',     action='store_true', help='enable a static build for a given suite definition file', default=False)
 parser.add_argument('--suites',     action='store', help='suite definition files to use (comma-separated, for static build only, without path)', default='')
@@ -52,13 +54,14 @@ def parse_arguments():
     success = True
     args = parser.parse_args()
     configfile = args.config
+    clean = args.clean
     debug = args.debug
     static = args.static
     if static and not args.suites:
         parser.print_help()
         sys.exit(-1)
     sdfs = [ 'suite_{0}.xml'.format(x) for x in args.suites.split(',')]
-    return (success, configfile, debug, static, sdfs)
+    return (success, configfile, clean, debug, static, sdfs)
 
 def import_config(configfile):
     """Import the configuration from a given configuration file"""
@@ -117,6 +120,33 @@ def setup_logging(debug):
         logging.info('Logging level set to DEBUG')
     else:
         logging.info('Logging level set to INFO')
+    return success
+
+def clean_files(config, static):
+    """Clean files created by ccpp_prebuild.py"""
+    success = True
+    logging.info('Performing clean ....')
+    # Create list of files to remove, use wildcards where necessary
+    files_to_remove = [
+        config['schemes_makefile'],
+        config['schemes_cmakefile'],
+        config['caps_makefile'],
+        config['caps_cmakefile'],
+        config['html_vartable_file'],
+        config['latex_vartable_file'],
+        ]
+    if static:
+        files_to_remove.append(os.path.join(config['caps_dir'], 'ccpp_*_cap.F90'))
+        files_to_remove.append(os.path.join(config['static_api_dir'], '{api}.F90'.format(api=CCPP_STATIC_API_MODULE)))
+    else:
+        files_to_remove.append(os.path.join(config['caps_dir'], '*_cap.F90'))
+        for target_file in config['target_files']:
+            target_file_path = os.path.split(target_file)[0]
+            files_to_remove.append(os.path.join(target_file_path, config['module_include_file'].format(set='*')))
+            files_to_remove.append(os.path.join(target_file_path, config['fields_include_file'].format(set='*')))
+    # Not very pythonic, but the easiest way w/o importing another Python module
+    cmd = 'rm -vf {0}'.format(' '.join(files_to_remove))
+    execute(cmd)
     return success
 
 def parse_suites(suites_dir, sdfs):
@@ -510,7 +540,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
 def main():
     """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
-    (success, configfile, debug, static, sdfs) = parse_arguments()
+    (success, configfile, clean, debug, static, sdfs) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -521,6 +551,12 @@ def main():
     (success, config) = import_config(configfile)
     if not success:
         raise Exception('Call to import_config failed.')
+
+    # Perform clean if requested, then exit
+    if clean:
+        success = clean_files(config, static)
+        logging.info('CCPP prebuild clean completed successfully, exiting.')
+        sys.exit(0)
 
     # Parse suite definition files for static build
     if static:
