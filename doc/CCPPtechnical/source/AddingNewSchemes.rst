@@ -19,6 +19,7 @@ This chapter contains a brief description on how to add a new scheme to the *CCP
 * Follow the guidelines outlined in Chapter 2 to make your scheme CCPP-compliant. Make sure to use an uppercase suffix ``.F90`` to enable C preprocessing.
 
 * Locate the CCPP *prebuild* configuration files for the target host model, for example:
+
     * ``NEMSfv3gfs/ccpp/config/ccpp_prebuild_config.py`` for the UFS Atmosphere
     * ``gmtb-scm/ccpp/config/ccpp_prebuild_config.py`` for the SCM
 
@@ -47,12 +48,14 @@ This chapter contains a brief description on how to add a new scheme to the *CCP
 * Place new scheme in the same location as existing schemes in the CCPP directory structure, e.g., ``../some_relative_path/new_scheme.F90``.
 
 * Edit the SDF and add the new scheme at the place it should be run. SDFs are located in
+
     * ``NEMSfv3gfs/ccpp/suites`` for the UFS Atmosphere
     * ``gmtb-scm/ccpp/suites`` for the SCM
 
 * Before running, check for consistency between the namelist and the SDF. There is no default consistency check between the SDF and the namelist unless the developer adds one. Errors may result in segment faults in running something you did not intend to run if the arrays are not allocated.
 
 * Test and debug the new scheme:
+
     * Typical problems include segment faults related to variables and array allocation.
     * Make sure SDF and namelist are compatible. Inconsistencies may result in segmentation faults because arrays are not allocated or in unintended scheme(s) being executed.
     * A scheme called GFS_debug (``GFS_debug.F90``) may be added to the SDF where needed to print state variables and interstitial variables. If needed, edit the scheme beforehand to add new variables that need to be printed.

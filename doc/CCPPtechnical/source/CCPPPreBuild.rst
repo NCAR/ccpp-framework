@@ -31,6 +31,7 @@ tables on the host model side and from the individual physics schemes (see :numr
    pointers to the host model variables in the ``cdata`` structure.
 
  * Autogenerates software caps as appropriate, depending on the build type.
+
     * If dynamic, the script generates individual caps for all physics schemes.
     * If static, the script generates caps for the suite as a whole and physics groups as defined in the input
       :term:`SDF`\s; in addition, the :term:`CCPP` API for the static build is generated.

@@ -5,6 +5,7 @@ Acronyms
 *************************
 
 .. table:: 
+   :widths: 20 80
 
    +----------------+---------------------------------------------------+
    | Abbreviation   | Explanation                                       |
@@ -78,8 +79,8 @@ Acronyms
    |                | (NOAA) Environmental Modeling System              |
    +----------------+---------------------------------------------------+
    | NEMSfv3gfs     | National Oceanic and Atmospheric Administration   |
-   |                | (NOAA) Environmental Modeling System using FV3    |
-   |                | dynamic core and GFS physics                      |
+   |                | (NOAA) Environmental Modeling System              |
+   |                | using FV3 dynamic core and GFS physics            |
    +----------------+---------------------------------------------------+
    | NGGPS          | Next Generation Global Prediction System          |
    +----------------+---------------------------------------------------+

@@ -187,6 +187,7 @@ The HTML result is `here <https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/G
 The physics scheme page will often describe the following:
 
 1. Description section (``“\\section”``), which usually includes:
+
       * Scientific origin and scheme history (``“\\cite”``)
       * Key features and differentiating points
       * A picture is worth a thousand words (``“\\image”``)
@@ -308,11 +309,13 @@ be further documented with a documentation block immediately preceding
 its definition in the source. The documentation block should include at
 least the following components:
 
-* A brief one- or two-sentence description with the \brief tag
-* A more detailed one or two paragraph description of the function of the subroutine
-* An argument table that includes entries for each subroutine argument
-   * The argument table content should be immediately preceded by the following line:
+* A brief one- or two-sentence description with the ``"\\brief"`` tag
 
+* A more detailed one or two paragraph description of the function of the subroutine
+
+* An argument table that includes entries for each subroutine argument
+
+   * The argument table content should be immediately preceded by the following line:
 
 .. code-block:: fortran
 

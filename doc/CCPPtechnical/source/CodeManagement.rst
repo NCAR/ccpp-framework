@@ -76,9 +76,9 @@ The primary development by GMTB, including the latest CCPP developments, are mai
 +========================================+===================+
 | https://github.com/NCAR/gmtb-scm       | master            |
 +----------------------------------------+-------------------+
-| https://github.com/NCAR/ccpp-physics   |master             |
+| https://github.com/NCAR/ccpp-physics   | master            |
 +----------------------------------------+-------------------+
-| https://github.com/NCAR/ccpp-framework |master             |
+| https://github.com/NCAR/ccpp-framework | master            |
 +----------------------------------------+-------------------+
 
 --------------------------------------
@@ -145,6 +145,7 @@ The GitHub forking workflow relies on forks (personal copies) of the shared repo
  Go to https://github.com/NCAR/ccpp-physics and make sure you are signed in as your GitHub user.
 
  Select the "fork" button in the upper right corner.
+
       * If you have already created a fork, this will take you to your fork.
       * If you have not yet created a fork, this will create one for you.
 

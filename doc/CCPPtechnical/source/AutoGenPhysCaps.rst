@@ -64,8 +64,7 @@ The *prebuild* step will produce the following files for the UFS Atmosphere mode
 
   ccpp/physics/*_cap.F90
 
-* ``*.inc`` files that contain ``module use`` and ``ccpp_field_add`` statements that populate the
-   ccpp data type (``cdata``) with the necessary information on where (in memory) to find required variables:
+* ``*.inc`` files that contain ``module use`` and ``ccpp_field_add`` statements that populate the ccpp data type (``cdata``) with the necessary information on where (in memory) to find required variables:
 
 .. code-block:: console
 

@@ -147,6 +147,7 @@ Input/output Variable (argument) Rules
   ``errmsg`` and ``errflg`` (see also coding rules in Section :ref:`CodingRules`).
 
 * At present, only two types of variable definitions are supported by the CCPP-framework:
+
    * Standard Intrinsic Fortran variables are preferred (``character``, ``integer``, ``logical``, ``real``).
      For character variables, the length should be specified as ``*`` in order to allow the host model
      to specify the corresponding variable with a length of its own choice. All others can have a
@@ -176,8 +177,8 @@ Coding Rules
 
 * Code must comply to modern Fortran standards (Fortran 90/95/2003).
 
-* Labeled ``end`` statements should be used for modules, subroutines and functions, for example,
-   ``$module scheme_template → end module scheme_template``.
+* Labeled ``end`` statements should be used for modules, subroutines and functions,
+  for example, ``module scheme_template → end module scheme_template``.
 
 * Implicit variable declarations are not allowed. The ``implicit none`` statement is mandatory and
   is preferable at the module-level so that it applies to all the subroutines in the module.
