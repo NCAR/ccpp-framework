@@ -1,6 +1,6 @@
 .. include:: prolog.inc 
 
-How To Use This Document
+How to Use this Document
 ========================
 
 This document contains documentation for the Common Community Physics Package (CCPP). It decsribes the:
@@ -15,7 +15,7 @@ This document contains documentation for the Common Community Physics Package (C
 
 For the latest version of the released code, please visit the `GMTB Website <http://www.dtcenter.org/gmtb/users/ccpp>`_
 
-Please send questions and comments to the help desk: `gmtb-help@ucar.edu`
+Please send questions and comments to the help desk: gmtb-help@ucar.edu
 
 This table describes the type changes and symbols used in this guide.
 
