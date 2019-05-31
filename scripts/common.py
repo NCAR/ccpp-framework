@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
+import keyword
 import logging
+import re
 import subprocess
 
 CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
@@ -100,3 +102,21 @@ def escape_tex(text):
                 '%', '\%').replace(
                 '_', '\_')
 
+def string_to_python_identifier(string):
+    """Replaces forbidden characters in strings with standard substitutions
+    so that the result is a valid Python object (variable, function) name.
+    At this point, it only converts characters found in the units attributes.
+    A check for allowed characters in Python v2 catches missing conversions."""
+    # Replace whitespaces with underscores
+    string = string.replace(" ","_")
+    # Replace decimal points with _p_
+    string = string.replace(".","_p_")
+    # Replace dashes and minus sign with _minus_
+    string = string.replace("-","_minus_")
+    # Replace plus signs with _plus_
+    string = string.replace("+","_plus_")
+    # Test that the resulting string is a valid Python identifier
+    if re.match("[_A-Za-z][_a-zA-Z0-9]*$", string) and not keyword.iskeyword(string):
+        return string
+    else:
+        raise Exception("Resulting string '{0}' is not a valid Python identifier".format(string))
