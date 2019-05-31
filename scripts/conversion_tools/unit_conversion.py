@@ -7,8 +7,8 @@ function or as an interface to scalar and array-based functions that perform mor
 complex conversions than the ones listed here. It is also possible, but in some cases
 less performant, to construct conversions for composed units by combining some of the
 basic conversions listed here. For instance, one could create a speed conversion from
-km h-1 to m s-1 by combining the formulas for km to m and h to min, which would be
-slower than boiling it down to a single mathematical expression."""
+km h-1 to m s-1 by combining the formulas for km to m and h to min, which will be
+slower than boiling it down to a single mathematical expression (see example below)."""
 
 ############
 # Length   #
@@ -88,11 +88,11 @@ def hPa__to__Pa():
 
 def m_s_minus_1__to__km_h_minus_1():
     """Convert meter per second to kilometer per hour"""
-    return '{0}/{1}'.format(m__to__km(),s__to__h())
+    return '({0})/({1})'.format(m__to__km(),s__to__h()) + '*{var}'
 
 def km_h_minus_1__to__m_s_minus_1():
     """Convert kilometer per hour to meter per second"""
-    return '{0}/{1}'.format(km__to__m(),h__to__s())
+    return '({0})/({1})'.format(km__to__m(),h__to__s()) + '*{var}'
 
 def W_m_minus_2__to__erg_cm_minus_2_s_minus_1():
     """Convert Watt per square meter to erg per square centimeter and second"""
