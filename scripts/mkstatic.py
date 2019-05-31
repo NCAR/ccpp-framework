@@ -97,7 +97,7 @@ def create_argument_list_wrapped_explicit(arguments, additional_vars_following =
         argument_list = argument_list.rstrip(',')
     return argument_list
 
-def create_arguments_module_use_var_defs(variable_dictionary, metadata_define):
+def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, tmpvars = None):
     """Given a dictionary of standard names and variables, and a metadata
     dictionary with the variable definitions by the host model, create a list
     of arguments (local names), module use statements (for derived data types
@@ -128,7 +128,11 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define):
                 type_var = metadata_define[type_var_standard_name][0]
                 module_use.append(type_var.print_module_use())
                 local_kind_and_type_vars.append(type_var_standard_name)
-
+    # Add any local variables (required for unit conversions, array transformations, ...)
+    if tmpvars:
+        var_defs.append('! Local variables for unit conversions, array transformations, ...')
+        for tmpvar in tmpvars:
+            var_defs.append(tmpvar.print_def_local())
     return (arguments, module_use, var_defs)
 
 class API(object):
@@ -732,6 +736,9 @@ end module {module}
                 continue
             # For mapping local variable names to standard names
             local_vars = {}
+            # For mapping temporary variable names (for unit conversions, etc) to local variable names
+            tmpvar_cnt = 0
+            tmpvars    = {}
             #
             body = ''
             var_defs = ''
@@ -741,6 +748,12 @@ end module {module}
       associate(cnt => {loop_var_name})
       do cnt=1,{loop_cnt}\n\n'''.format(loop_var_name=ccpp_loop_counter_target_name,loop_cnt=subcycle.loop)
                 for scheme_name in subcycle.schemes:
+                    # actions_before and actions_after capture operations such
+                    # as unit conversions, transformations that have to happen
+                    # before and/or after the call to the subroutine (scheme)
+                    actions_before = ''
+                    actions_after  = ''
+                    #
                     module_name = scheme_name
                     subroutine_name = scheme_name + '_' + ccpp_stage
                     container = encode_container(module_name, scheme_name, subroutine_name)
@@ -839,9 +852,39 @@ end module {module}
                             elif self.parents[ccpp_stage][parent_standard_name].intent == 'out' and not var.intent == 'out':
                                 self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
 
-                        # Add to argument list
-                        arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
-                                                                var_name=local_vars[var_standard_name]['var_local_name'])
+                        # Add necessary actions before/after while populating the subroutine's argument list
+                        if var.actions['out']:
+                            if local_vars[var_standard_name]['var_local_name'] in tmpvars.keys():
+                                # If the variable already has a local variable (tmpvar), reuse it
+                                tmpvar = tmpvars[local_vars[var_standard_name]['var_local_name']]
+                            else:
+                                # Add a local variable (tmpvar) for this variable
+                                tmpvar_cnt += 1
+                                tmpvar = copy.deepcopy(var)
+                                tmpvar.local_name = 'tmpvar{0}'.format(tmpvar_cnt)
+                                tmpvars[local_vars[var_standard_name]['var_local_name']] = tmpvar
+                            if var.rank:
+                                # Add allocate statement if the variable has a rank > 0
+                                actions_before += '      allocate({t}, source={v})\n'.format(t=tmpvar.local_name, v=local_vars[var_standard_name]['var_local_name'])
+                            if var.actions['in']:
+                                # Add unit conversion before entering the subroutine
+                                actions_before += '      {t} = {c}\n'.format(t=tmpvar.local_name,c=var.actions['in'].format(var=local_vars[var_standard_name]['var_local_name']))
+                            # Add unit conversion after returning from the subroutine
+                            actions_after  += '      {v} = {c}\n'.format(v=local_vars[var_standard_name]['var_local_name'],c=var.actions['out'].format(var=tmpvar.local_name))
+                            if var.rank:
+                                # Add deallocate statement if the variable has a rank > 0
+                                actions_after += '      deallocate({t})\n'.format(t=tmpvar.local_name)
+                            # Add to argument list
+                            arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
+                                                                    var_name=tmpvar.local_name)
+                        elif var.actions['in']:
+                            # Add to argument list, call action in argument list
+                            action = var.actions['in'].format(var=local_vars[var_standard_name]['var_local_name'])
+                            arg = '{local_name}={action},'.format(local_name=var.local_name, action=action)
+                        else:
+                            # Add to argument list
+                            arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
+                                                                    var_name=local_vars[var_standard_name]['var_local_name'])
                         args += arg
                         length += len(arg)
                         # Split args so that lines don't exceed 260 characters (for PGI)
@@ -850,7 +893,13 @@ end module {module}
                             length = 0
 
                     args = args.rstrip(',')
-                    subroutine_call = 'call {subroutine_name}({args})'.format(subroutine_name=subroutine_name, args=args)
+                    subroutine_call = '''
+{actions_before}
+
+      call {subroutine_name}({args})
+
+{actions_after}
+'''.format(subroutine_name=subroutine_name, args=args, actions_before=actions_before.rstrip('\n'), actions_after=actions_after.rstrip('\n'))
                     error_check = '''if ({target_name_flag}/=0) then
         write({target_name_msg},'(a)') "An error occured in {subroutine_name}"
         ierr={target_name_flag}
@@ -872,7 +921,7 @@ end module {module}
 
             # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
-                                                                     self.parents[ccpp_stage], metadata_define)
+                                                           self.parents[ccpp_stage], metadata_define, tmpvars.values())
             sub_argument_list = create_argument_list_wrapped(self.arguments[ccpp_stage])
 
             subroutine = self._suite + '_' + self._name + '_' + ccpp_stage + '_cap'
