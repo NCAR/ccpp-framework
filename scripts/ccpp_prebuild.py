@@ -328,7 +328,9 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
                             ' Multiple definitions in {0}'.format(provided_by)
             logging.error(error_message)
             continue
-        # Check that the variable properties are compatible between the model and the schemes
+        # Check that the variable properties are compatible between the model and the schemes;
+        # because we know that all variables in the metadata_request[var_name] list are compatible,
+        # it is sufficient to test the first entry against (the unique) metadata_define[var_name][0].
         if not metadata_request[var_name][0].compatible(metadata_define[var_name][0]):
             success = False
             error_message = '  incompatible entries in metadata for variable {0}:\n'.format(var_name) +\
@@ -336,6 +338,23 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
                             '    requested: {0}'.format(metadata_request[var_name][0].print_debug())
             logging.error(error_message)
             continue
+        # Check for and register unit conversions if necessary. This must be done for each registered
+        # variable in the metadata_request[var_name] list (i.e. for each subroutine that is using it).
+        # Because var is an instance of the variable specific to the subroutine that uses it, and since
+        # each variable can be passed to a subroutine only once, there can be no overlapping/conflicting
+        # unit conversions.
+        for var in metadata_request[var_name]:
+            # Compare units
+            if var.units == metadata_define[var_name][0].units:
+                continue
+            # Register conversion, depending on the intent for this subroutine
+            if var.intent=='inout':
+                var.convert_to(metadata_define[var_name][0].units)
+                var.convert_from(metadata_define[var_name][0].units)
+            elif var.intent=='in':
+                var.convert_to(metadata_define[var_name][0].units)
+            elif var.intent=='out':
+                var.convert_from(metadata_define[var_name][0].units)
         # Construct the actual target variable and list of modules to use from the information in 'container'
         var = metadata_define[var_name][0]
         target = ''
