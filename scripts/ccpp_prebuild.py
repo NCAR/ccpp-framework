@@ -347,14 +347,14 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
             # Compare units
             if var.units == metadata_define[var_name][0].units:
                 continue
-            # Register conversion, depending on the intent for this subroutine
+            # Register conversion, depending on the intent for this subroutine.
             if var.intent=='inout':
-                var.convert_to(metadata_define[var_name][0].units)
                 var.convert_from(metadata_define[var_name][0].units)
+                var.convert_to(metadata_define[var_name][0].units)
             elif var.intent=='in':
-                var.convert_to(metadata_define[var_name][0].units)
-            elif var.intent=='out':
                 var.convert_from(metadata_define[var_name][0].units)
+            elif var.intent=='out':
+                var.convert_to(metadata_define[var_name][0].units)
         # Construct the actual target variable and list of modules to use from the information in 'container'
         var = metadata_define[var_name][0]
         target = ''

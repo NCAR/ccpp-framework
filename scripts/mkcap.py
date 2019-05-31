@@ -211,7 +211,7 @@ class Var(object):
         except AttributeError:
             raise Exception('Error, automatic unit conversion from {0} to {1} not implemented'.format(self.units, units))
         conversion = function()
-        self._actions['in'] = function()
+        self._actions['out'] = function()
 
     def convert_from(self, units):
         """Generate action to convert data in other units to the variable's units"""
@@ -221,7 +221,7 @@ class Var(object):
         except AttributeError:
             raise Exception('Error, automatic unit conversion from {1} to {0} not implemented'.format(self.units, units))
         conversion = function()
-        self._actions['out'] = function()
+        self._actions['in'] = function()
 
     def print_module_use(self):
         '''Print the module use line for the variable.'''
