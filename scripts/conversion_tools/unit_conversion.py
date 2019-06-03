@@ -88,15 +88,21 @@ def hPa__to__Pa():
     return '1.0E+2{kind}*{var}'
 
 def m_s_minus_1__to__km_h_minus_1():
-    """Convert meter per second to kilometer per hour"""
-    return '({0})/({1})'.format(m__to__km(),s__to__h()) + '*{var}'
+    """Convert meter per second to kilometer per hour. A more expensive
+    and less accurate option would be to combine the above conversions
+    for meter to kilometer and second to hours into the following formula:
+    '({0})/({1})'.format(m__to__km(),s__to__h()) + '*{var}'"""
+    return '3.6E+0{kind}*{var}'
 
 def km_h_minus_1__to__m_s_minus_1():
-    """Convert kilometer per hour to meter per second"""
-    return '({0})/({1})'.format(km__to__m(),h__to__s()) + '*{var}'
+    """Convert kilometer per hour to meter per second. A more expensive
+    and less accurate option would be to combine the above conversions
+    for kilometer to meter and hours to second into the following formula:
+    '({0})/({1})'.format(km__to__m(),h__to__s()) + '*{var}'"""
+    return '{var}/3.6E+0{kind}'
 
 def W_m_minus_2__to__erg_cm_minus_2_s_minus_1():
-    """Convert Watt per square meter to erg per square centimeter and second"""
+    """Convert Watt per square meter to erg per square centimeter and second."""
     return '1.0E+3{kind}*{var}'
 
 def erg_cm_minus_2_s_minus_1__to__W_m_minus_2():
