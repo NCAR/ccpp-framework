@@ -167,12 +167,22 @@ class MetadataTable(ParseSource):
     >>> MetadataTable.__var_start__.match('[ qval ]') #doctest: +ELLIPSIS
     <_sre.SRE_Match object at 0x...>
     >>> MetadataTable.__var_start__.match('[ qval(hi_mom) ]') #doctest: +ELLIPSIS
+
+    >>> MetadataTable.__vref_start__.match('[ qval(hi_mom) ]') #doctest: +ELLIPSIS
     <_sre.SRE_Match object at 0x...>
+    >>> MetadataTable.__var_start__.match('[ qval ]').group(1)
+    'qval'
+    >>> MetadataTable.__vref_start__.match('[ qval(hi_mom) ]').group(1)
+    'qval'
+    >>> MetadataTable.__vref_start__.match('[ qval(hi_mom) ]').group(2)
+    'hi_mom'
 """
 
     __header_start__ = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
 
-    __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
+    __var_start__ = re.compile(r"^\[\s*"+FORTRAN_ID+r"\s*\]$")
+
+    __vref_start__ = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
 
     __blank_line__ = re.compile(r"\s*[#;]")
 
@@ -513,6 +523,9 @@ class MetadataTable(ParseSource):
             match = None
         else:
             match = MetadataTable.__var_start__.match(line)
+            if match is None:
+                match = MetadataTable.__vref_start__.match(line)
+            # End if
         # End if
         if match is not None:
             name = match.group(1)

@@ -136,7 +136,10 @@ FORTRAN_ID = r"([A-Za-z][A-Za-z0-9_]*)"
 __FID_RE = re.compile(FORTRAN_ID+r"$")
 # Note that the scalar array reference expressions below are not really for
 # scalar references because a colon can be a placeholder, unlike in Fortran code
-FORTRAN_SCALAR_ARREF = r"\(\s*(?:"+FORTRAN_ID+r"|[:])\s*(?:,\s*(?:"+FORTRAN_ID+r"|[:])\s*){0,6}\)"
+__FORTRAN_AID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
+__FORT_DIM = r"("+__FORTRAN_AID+r"|[:])"
+__REPEAT_DIM = r"(?:,\s*"+__FORT_DIM+r"\s*)"
+FORTRAN_SCALAR_ARREF = r"[(]\s*"+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6}[)]"
 FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+FORTRAN_SCALAR_ARREF+r")"
 _FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
@@ -196,6 +199,14 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
     otherwise, None. A simple Fortran variable reference is defined as
     a scalar id or a scalar array reference.
     if <error> is True, raise an Exception if <test_val> is not valid.
+    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(1)
+    'foo'
+    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2)
+    'bar'
+    >>> _FORTRAN_SCALAR_REF_RE.match("foo( :, baz )").group(2)
+    ':'
+    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(3)
+    'baz'
     >>> check_fortran_ref("hi_mom", None, False)
     'hi_mom'
     >>> check_fortran_ref("hi_mom", None, False, max_len=5)
@@ -220,6 +231,8 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
     'foo(bar)'
     >>> check_fortran_ref("foo( bar, baz )", None, False)
     'foo( bar, baz )'
+    >>> check_fortran_ref("foo( :, baz )", None, False)
+    'foo( :, baz )'
     >>> check_fortran_ref("foo( bar, )", None, False)
 
     >>> check_fortran_ref("foo( bar, )", None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
