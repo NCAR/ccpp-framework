@@ -851,7 +851,7 @@ def parse_module(pobj, statements, logger=None):
     inmodule = pobj.in_region('MODULE', region_name=mod_name)
     active_table = None
     while inmodule and (statements is not None):
-        while len(statements) > 0:
+        while statements:
             statement = statements.pop(0)
             # End module
             pmatch = endmodule_re.match(statement)
@@ -898,9 +898,12 @@ def parse_fortran_file(filename, preproc_defs=None, logger=None):
     type_dict = {}
     pobj = read_file(filename, preproc_defs=preproc_defs, logger=logger)
     pobj.reset_pos()
-    curr_line, clo = pobj.curr_line()
+    curr_line, _ = pobj.curr_line()
     statements = line_statements(curr_line)
-    while (statements is not None) and (len(statements) > 0):
+    while statements is not None:
+        if not statements:
+            statements = read_statements(pobj)
+        # End if
         statement = statements.pop(0)
         if program_re.match(statement) is not None:
             # push statement back so parse_program can use it
