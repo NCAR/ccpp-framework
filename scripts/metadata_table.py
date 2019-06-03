@@ -182,7 +182,7 @@ class MetadataTable(ParseSource):
 
     __var_start__ = re.compile(r"^\[\s*"+FORTRAN_ID+r"\s*\]$")
 
-    __vref_start__ = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
+    __vref_start__ = re.compile(r"^\[\s*("+FORTRAN_SCALAR_REF+r")\s*\]$")
 
     __blank_line__ = re.compile(r"\s*[#;]")
 
@@ -528,7 +528,7 @@ class MetadataTable(ParseSource):
             # End if
         # End if
         if match is not None:
-            name = match.group(1)
+            name = match.group(0).lstrip('[[ ]*').rstrip('[\] ]*')
             if not MetadataTable.is_scalar_reference(name):
                 raise ParseSyntaxError("local variable name",
                                        token=name, context=self._pobj)

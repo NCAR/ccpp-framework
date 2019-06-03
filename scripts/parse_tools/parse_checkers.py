@@ -84,7 +84,7 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
 ########################################################################
 
 # CF_ID is a string representing the regular expression for CF Standard Names
-CF_ID = r"[a-z][a-z0-9_]*"
+CF_ID = r"(?i)[a-z][a-z0-9_]*"
 __CFID_RE = re.compile(CF_ID+r"$")
 
 def check_cf_standard_name(test_val, prop_dict, error):
@@ -106,7 +106,7 @@ def check_cf_standard_name(test_val, prop_dict, error):
     >>> check_cf_standard_name("2pac", None, False)
 
     >>> check_cf_standard_name("Agood4tranID", None, False)
-
+    'agood4tranid'
     >>> check_cf_standard_name("agoodcfid", None, False)
     'agoodcfid'
     """
@@ -122,6 +122,8 @@ def check_cf_standard_name(test_val, prop_dict, error):
         else:
             test_val = None
         # End if
+    else:
+        test_val = test_val.lower()
     # End if
     return test_val
 
@@ -137,9 +139,9 @@ __FID_RE = re.compile(FORTRAN_ID+r"$")
 # Note that the scalar array reference expressions below are not really for
 # scalar references because a colon can be a placeholder, unlike in Fortran code
 __FORTRAN_AID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
-__FORT_DIM = r"("+__FORTRAN_AID+r"|[:])"
+__FORT_DIM = r"(?:"+__FORTRAN_AID+r"|[:])"
 __REPEAT_DIM = r"(?:,\s*"+__FORT_DIM+r"\s*)"
-FORTRAN_SCALAR_ARREF = r"[(]\s*"+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6}[)]"
+FORTRAN_SCALAR_ARREF = r"[(]\s*("+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6})[)]"
 FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+FORTRAN_SCALAR_ARREF+r")"
 _FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
@@ -201,11 +203,11 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
     if <error> is True, raise an Exception if <test_val> is not valid.
     >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(1)
     'foo'
-    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2)
+    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2).split(',')[0].strip()
     'bar'
-    >>> _FORTRAN_SCALAR_REF_RE.match("foo( :, baz )").group(2)
+    >>> _FORTRAN_SCALAR_REF_RE.match("foo( :, baz )").group(2).split(',')[0].strip()
     ':'
-    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(3)
+    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2).split(',')[1].strip()
     'baz'
     >>> check_fortran_ref("hi_mom", None, False)
     'hi_mom'
@@ -288,24 +290,26 @@ def check_local_name(test_val, prop_dict, error, max_len=0):
     property is present and True, and the 'type' property matches the
     type of <test_val>.
     if <error> is True, raise an Exception if <test_val> is not valid.
-    >>> check_local_name("hi_mom", None, False)
+    >>> check_local_name("hi_mom", None, error=False)
     'hi_mom'
-    >>> check_local_name('122', {'protected':True,'type':'integer'}, False)
+    >>> check_local_name('122', {'protected':True,'type':'integer'}, error=False)
     '122'
-    >>> check_local_name('122', None, False)
+    >>> check_local_name('122', None, error=False)
 
-    >>> check_local_name('122', {}, False)
+    >>> check_local_name('122', {}, error=False)
 
-    >>> check_local_name('122', {'protected':False,'type':'integer'}, False)
+    >>> check_local_name('122', {'protected':False,'type':'integer'}, error=False)
 
-    >>> check_local_name('122', {'protected':True,'type':'real'}, False)
+    >>> check_local_name('122', {'protected':True,'type':'real'}, error=False)
 
-    >>> check_local_name('-122.e4', {'protected':True,'type':'real'}, False)
+    >>> check_local_name('-122.e4', {'protected':True,'type':'real'}, error=False)
     '-122.e4'
-    >>> check_local_name('-122.', {'protected':True,'type':'real','kind':'kp'}, False)
+    >>> check_local_name('-122.', {'protected':True,'type':'real','kind':'kp'}, error=False)
 
-    >>> check_local_name('-122._kp', {'protected':True,'type':'real','kind':'kp'}, False)
+    >>> check_local_name('-122._kp', {'protected':True,'type':'real','kind':'kp'}, error=False)
     '-122._kp'
+    >>> check_local_name('q(:,:,index_of_water_vapor_specific_humidity)', {}, error=False)
+    'q(:,:,index_of_water_vapor_specific_humidity)'
     """
     valid_val = None
     # First check for a constant
@@ -324,8 +328,7 @@ def check_local_name(test_val, prop_dict, error, max_len=0):
     else:
         kind = ""
     # End if
-    if protected and (len(vtype) > 0) and check_fortran_literal(test_val,
-                                                                vtype, kind):
+    if protected and vtype and check_fortran_literal(test_val, vtype, kind):
         valid_val = test_val
     # End if
     if valid_val is None:

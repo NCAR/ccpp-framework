@@ -6,25 +6,25 @@ module test_host_mod
    implicit none
    public
 
-   integer                    :: ntimes_loop
+   integer                      :: ntimes_loop
    !> \section arg_table_test_host_mod  Argument Table
    !! \htmlinclude arg_table_test_host_host.html
    !!
-   integer,         parameter :: ncols = 10
-   integer,         parameter :: pver = 5
-   integer,         parameter :: pverp = 6
-   integer,         parameter :: pcnst = 2
-   real(kind_phys)            :: temp_midpoints(ncols, pver)
-   real(kind_phys)            :: temp_interfaces(ncols, pverp)
-   real(kind_phys)            :: dt
-   real(kind_phys), parameter :: temp_inc = 0.05_kind_phys
-   type(physics_state)        :: phys_state
-   integer                    :: num_model_times = -1
-   integer,       allocatable :: model_times(:)
+   integer,         parameter   :: ncols = 10
+   integer,         parameter   :: pver = 5
+   integer,         parameter   :: pverp = 6
+   integer,         parameter   :: pcnst = 2
+   real(kind_phys), allocatable :: temp_midpoints(:,:)
+   real(kind_phys)              :: temp_interfaces(ncols, pverp)
+   real(kind_phys)              :: dt
+   real(kind_phys), parameter   :: temp_inc = 0.05_kind_phys
+   type(physics_state)          :: phys_state
+   integer                      :: num_model_times = -1
+   integer,         allocatable :: model_times(:)
 
-   integer,         parameter :: num_time_steps = 2
-   real(kind_phys), parameter :: tolerance = 1.0e-13_kind_phys
-   real(kind_phys)            :: tint_save(ncols, pverp)
+   integer,         parameter   :: num_time_steps = 2
+   real(kind_phys), parameter   :: tolerance = 1.0e-13_kind_phys
+   real(kind_phys)              :: tint_save(ncols, pverp)
 
    public :: init_temp
    public :: compare_temp
