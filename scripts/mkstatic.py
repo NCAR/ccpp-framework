@@ -840,7 +840,8 @@ end module {module}
 
                                 # Record this information in the local_vars dictionary
                                 local_vars[var_standard_name] = {
-                                    'var_local_name' : metadata_define[var_standard_name][0].local_name,
+                                    'name' : metadata_define[var_standard_name][0].local_name,
+                                    'kind' : metadata_define[var_standard_name][0].kind,
                                     'parent_standard_name' : parent_standard_name
                                     }
 
@@ -853,24 +854,30 @@ end module {module}
                                 self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
 
                         # Add necessary actions before/after while populating the subroutine's argument list
+                        kind_string = '_' + local_vars[var_standard_name]['kind'] if local_vars[var_standard_name]['kind'] else ''
                         if var.actions['out']:
-                            if local_vars[var_standard_name]['var_local_name'] in tmpvars.keys():
+                            if local_vars[var_standard_name]['name'] in tmpvars.keys():
                                 # If the variable already has a local variable (tmpvar), reuse it
-                                tmpvar = tmpvars[local_vars[var_standard_name]['var_local_name']]
+                                tmpvar = tmpvars[local_vars[var_standard_name]['name']]
                             else:
                                 # Add a local variable (tmpvar) for this variable
                                 tmpvar_cnt += 1
                                 tmpvar = copy.deepcopy(var)
                                 tmpvar.local_name = 'tmpvar{0}'.format(tmpvar_cnt)
-                                tmpvars[local_vars[var_standard_name]['var_local_name']] = tmpvar
+                                tmpvars[local_vars[var_standard_name]['name']] = tmpvar
                             if var.rank:
                                 # Add allocate statement if the variable has a rank > 0
-                                actions_before += '      allocate({t}, source={v})\n'.format(t=tmpvar.local_name, v=local_vars[var_standard_name]['var_local_name'])
+                                actions_before += '      allocate({t}, source={v})\n'.format(t=tmpvar.local_name,
+                                                                                             v=local_vars[var_standard_name]['name'])
                             if var.actions['in']:
                                 # Add unit conversion before entering the subroutine
-                                actions_before += '      {t} = {c}\n'.format(t=tmpvar.local_name,c=var.actions['in'].format(var=local_vars[var_standard_name]['var_local_name']))
+                                actions_before += '      {t} = {c}\n'.format(t=tmpvar.local_name,
+                                                                             c=var.actions['in'].format(var=local_vars[var_standard_name]['name'],
+                                                                                                        kind=kind_string))
                             # Add unit conversion after returning from the subroutine
-                            actions_after  += '      {v} = {c}\n'.format(v=local_vars[var_standard_name]['var_local_name'],c=var.actions['out'].format(var=tmpvar.local_name))
+                            actions_after  += '      {v} = {c}\n'.format(v=local_vars[var_standard_name]['name'],
+                                                                         c=var.actions['out'].format(var=tmpvar.local_name,
+                                                                                                     kind=kind_string))
                             if var.rank:
                                 # Add deallocate statement if the variable has a rank > 0
                                 actions_after += '      deallocate({t})\n'.format(t=tmpvar.local_name)
@@ -879,12 +886,13 @@ end module {module}
                                                                     var_name=tmpvar.local_name)
                         elif var.actions['in']:
                             # Add to argument list, call action in argument list
-                            action = var.actions['in'].format(var=local_vars[var_standard_name]['var_local_name'])
+                            action = var.actions['in'].format(var=local_vars[var_standard_name]['name'],
+                                                              kind=kind_string)
                             arg = '{local_name}={action},'.format(local_name=var.local_name, action=action)
                         else:
                             # Add to argument list
                             arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
-                                                                    var_name=local_vars[var_standard_name]['var_local_name'])
+                                                                    var_name=local_vars[var_standard_name]['name'])
                         args += arg
                         length += len(arg)
                         # Split args so that lines don't exceed 260 characters (for PGI)

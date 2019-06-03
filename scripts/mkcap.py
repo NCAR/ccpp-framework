@@ -9,6 +9,7 @@ import copy
 import os
 import sys
 import getopt
+import six
 import xml.etree.ElementTree as ET
 
 from common import CCPP_ERROR_FLAG_VARIABLE
@@ -169,8 +170,12 @@ class Var(object):
 
     @actions.setter
     def actions(self, values):
-        if type(value)==dict and 'in' in values.keys() and 'out' in values.keys():
-            self._actions = values
+        if type(value)==dict:
+            for key in values.keys():
+                if key in ['in', 'out'] and isinstance(values[key], six.string_types):
+                    self._actions[key] = values[key]
+                else:
+                    raise Exception('Invalid values for variable attribute actions.')
         else:
             raise Exception('Invalid values for variable attribute actions.')
 
@@ -593,8 +598,12 @@ module {module}_cap
                     if x.rank:
                         actions_before += '        allocate({t}, source={x})\n'.format(t=tmpvar.local_name, x=x.local_name)
                     if x.actions['in']:
-                        actions_before += '        {t} = {c}\n'.format(t=tmpvar.local_name,c=x.actions['in'].format(var=x.local_name))
-                    actions_after  += '        {x} = {c}\n'.format(x=x.local_name,c=x.actions['out'].format(var=tmpvar.local_name))
+                        actions_before += '        {t} = {c}\n'.format(t=tmpvar.local_name,
+                                                                       c=x.actions['in'].format(var=x.local_name,
+                                                                                                kind='_' + x.kind if x.kind else ''))
+                    actions_after  += '        {x} = {c}\n'.format(x=x.local_name,
+                                                                   c=x.actions['out'].format(var=tmpvar.local_name,
+                                                                                             kind='_' + x.kind if x.kind else ''))
                     if x.rank:
                         actions_after += '        deallocate({t})\n'.format(t=tmpvar.local_name)
                     tmpvars[x.local_name] = tmpvar.local_name
@@ -607,7 +616,7 @@ module {module}_cap
                 elif x.local_name in tmpvars.keys():
                     arg = "{0}={1},".format(x.local_name, tmpvars[x.local_name])
                 elif x.actions['in'] and not x.actions['out']:
-                    action = x.actions['in'].format(var=x.local_name)
+                    action = x.actions['in'].format(var=x.local_name, kind='_' + x.kind if x.kind else '')
                     arg = '{0}={1},'.format(x.local_name, action)
                 else:
                     arg = "{0}={0},".format(x.local_name)
