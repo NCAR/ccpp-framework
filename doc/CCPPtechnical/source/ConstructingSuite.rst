@@ -69,7 +69,7 @@ Some schemes require additional interstitial code that must be run before or aft
    :alt: map to buried treasure
    :align: center 
 
-   : *Schematic of the use of the :term:`SDF` in dynamic and static builds. Note that, for the static build, more than one :term:`SDF` can be supplied at compile time, but only one can be used at runtime*.
+   *Schematic of the use of the SDF in dynamic and static builds. Note that, for the static build, more than one SDF can be supplied at compile time, but only one can be used at runtime*.
 
 =========================
 Interstitial Schemes

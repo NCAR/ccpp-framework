@@ -46,7 +46,7 @@ to expose the variables passed between physics and dynamics, and to clarify how 
 is exchanged among parameterizations. During runtime, the CCPP-Framework is responsible for
 communicating the necessary variables between the host model and the parameterizations.
 
-There are multiple options to build the CCPP (see more detail in Chapter 3). For example,
+There are multiple options to build the CCPP (see more detail in :numref:`Chapter %s <ConfigBuildOptions>`). For example,
 with the CCPP dynamic build, all the CCPP-compliant parameterizations are compiled into a
 library which is linked to the host model at runtime. Conversely, with the CCPP static
 build, one or more physics suites are compiled into a library and linked to the host model

@@ -53,9 +53,11 @@ connect two or more schemes together, or provide code for conversions, initializ
 tendencies, for example. The rules and guidelines provided in the following sections apply both to
 primary and interstitial schemes.
 
+.. _GeneralRules:
+
 General Rules
 =============
-A CCPP-compliant scheme is in the form of Fortran modules. :ref:`Listing 1 <scheme_template>` contains
+A CCPP-compliant scheme is in the form of Fortran modules. :ref:`Listing 2.1 <scheme_template>` contains
 the template for a CCPP-compliant scheme (``ccpp/framework/doc/DevelopersGuide/scheme_template.F90``),
 which includes four essential components: argument metadata tables, the *_init*, *_run*, and *_finalize*
 subroutines.
@@ -66,8 +68,7 @@ subroutines.
    :language: fortran
    :lines: 78-125
 
-*Listing 2.1: Fortran template for a CCPP-compliant scheme showing an argument table and
-the _init, _run, and _finalize subroutines.*
+*Listing 2.1: Fortran template for a CCPP-compliant scheme showing an argument table and the _init, _run, and _finalize subroutines.*
 
 More details are found below:
 
@@ -80,8 +81,8 @@ More details are found below:
   code to execute the scheme.
 
 * Each non-empty CCPP entrypoint subroutine requires a commented argument table 
-  (:ref:`Listing 1 <scheme_template>`).  Empty subroutines do not require an argument table
-  (e.g., `scheme_template_init` in :ref:`Listing 1 <scheme_template>`), since no variables need to be passed.
+  (:ref:`Listing 2.1 <scheme_template>`).  Empty subroutines do not require an argument table
+  (e.g., `scheme_template_init` in :ref:`Listing 2.1 <scheme_template>`), since no variables need to be passed.
 
 * The argument table contains the metadata of the variables required by the scheme. The table must
   precede the entry point subroutine (*_init*, *_run*, and *_finalize*) and must start with
@@ -111,8 +112,9 @@ More details are found below:
 
 * Interstitial modules (``scheme_pre`` and ``scheme_post``) can be included if any part of the physics
   scheme must be executed before (``_pre``) or after (``_post``) the ``module scheme`` defined above.
-  These situations are described in more detail in Section 5.1.
+  These situations are described in more detail in :numref:`Section %s <DynamicBuildCaps>`.
 
+.. _IOVariableRules:
 
 Input/output Variable (argument) Rules
 ======================================
@@ -124,7 +126,7 @@ Input/output Variable (argument) Rules
 
 * A list of available standard names and an example of naming conventions can be found in
   ``ccpp/framework/doc/DevelopersGuide/CCPP_VARIABLES_${HOST}.pdf``, where ``${HOST}`` is the 
-  name of the host model.  Running the CCPP *prebuild* script (described in Chapter 3)
+  name of the host model.  Running the CCPP *prebuild* script (described in :numref:`Chapter %s <CCPPPreBuild>`)
   will generate a LaTeX source file that can be compiled to produce
   a PDF file with all variables defined by the host model and requested by the physics schemes.
 
@@ -144,7 +146,7 @@ Input/output Variable (argument) Rules
    !! | IPD_Data(nb)%Intdiag%dt3dt(:,:,3) | cumulative_change_in_temperature_due_to_PBL
 
 * The two mandatory variables that any scheme-related subroutine must accept as ``intent(out)`` arguments are
-  ``errmsg`` and ``errflg`` (see also coding rules in Section :ref:`CodingRules`).
+  ``errmsg`` and ``errflg`` (see also coding rules in :numref:`Section %s <CodingRules>`).
 
 * At present, only two types of variable definitions are supported by the CCPP-framework:
 
@@ -167,8 +169,8 @@ Input/output Variable (argument) Rules
   as a convenience.
 
 * If a scheme is to make use of CCPP’s subcycling capability, the loop counter can be obtained
-  from CCPP as an ``intent(in)`` variable (see Listings 3.1 and 3.2 for a mandatory list of variables
-  that are provided by the CCPP-Framework and/or the host model for this and other purposes). 
+  from CCPP as an ``intent(in)`` variable (see :ref:`Listing 6.2 <MandatoryVariables>` for a mandatory
+  list of variables that are provided by the CCPP-Framework and/or the host model for this and other purposes). 
 
 .. _CodingRules:
 
@@ -228,7 +230,7 @@ in a physics scheme:
 
 * Shared-memory (OpenMP) parallelization inside a scheme is allowed with the restriction
   that the number of OpenMP threads to use is obtained from the host model as an ``intent(in)``
-  argument in the argument list (Listings 3.1 and 3.2).
+  argument in the argument list (:ref:`Listing 6.2 <MandatoryVariables>`).
 
 * MPI communication is allowed in the ``_init`` and ``_finalize`` phase for the purpose
   of computing, reading or writing scheme-specific data that is independent of the host
@@ -239,7 +241,7 @@ in a physics scheme:
    * The implementation of reading and writing of data must be scalable to perform
      efficiently from a few to millions of tasks.
    * The MPI communicator must be provided by the host model as an ``intent(in)``
-     argument in the argument list (Listings 3.1 and 3.2).
+     argument in the argument list (:ref:`Listing 6.2 <MandatoryVariables>`).
    * The use of MPI_COMM_WORLD is not allowed.
 
 * Calls to MPI and OpenMP functions, and the import of the MPI and OpenMP libraries,

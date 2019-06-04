@@ -1,4 +1,4 @@
-..  _CCPPPreBuild:
+.. _CCPPPreBuild:
 
 **************************************************
 Technical Aspects of the CCPP *Prebuild*
@@ -9,7 +9,7 @@ Technical Aspects of the CCPP *Prebuild*
 =============================
 
 The :term:`CCPP` *prebuild* script ``ccpp/framework/scripts/ccpp_prebuild.py`` is the central piece of code that
-connects the host model with the :term:`CCPP-Physics` schemes (see Figs. 3.2 and 3.3). This script must be run 
+connects the host model with the :term:`CCPP-Physics` schemes (see :numref:`Figures %s <ccpp_dynamic_build>` and :numref:`%s <ccpp_static_build>`). This script must be run 
 before compiling the :term:`CCPP-Physics` library and the host model cap. This may be done manually or as part
 of a host model build-time script. In the case of the SCM, ``ccpp_prebuild.py`` must be run manually, as it not
 incorporated in that model’s build system. In the case of NEMSfv3gfs, ``ccpp_prebuild.py`` can be run manually
@@ -54,7 +54,9 @@ Script Configuration
 
 To connect the :term:`CCPP` with a host model ``XYZ``, a Python-based configuration file for this model must be created in the host model’s repository. The easiest way is to copy an existing configuration file for the TEST model in sub-directory ``schemes/check`` of the ccpp-Framework repository. The configuration in ``ccpp_prebuild_config.py`` depends largely on (a) the directory structure of the host model itself, (b) where the ``ccpp-framework`` and the ``ccpp-physics`` directories are located relative to the directory structure of the host model, and (c) from which directory the ``ccpp_prebuild.py`` script is executed before/during the build process (this is referred to as basedir in ``ccpp_prebuild_config_XYZ.py``).
 
-Listing 8.1 contains an example for the CCPP-SCM prebuild config. Here, it is assumed that both ``ccpp-framework`` and ``ccpp-physics`` are located in directories ``ccpp/framework`` and ``ccpp/physics`` of the top-level directory of the host model, and that ``ccpp_prebuild.py`` is executed from the same top-level directory.
+:ref:`Listing 8.1 <ccpp_prebuild_example>` contains an example for the CCPP-SCM prebuild config. Here, it is assumed that both ``ccpp-framework`` and ``ccpp-physics`` are located in directories ``ccpp/framework`` and ``ccpp/physics`` of the top-level directory of the host model, and that ``ccpp_prebuild.py`` is executed from the same top-level directory.
+
+.. _ccpp_prebuild_example:
 
 .. code-block:: console
 
@@ -111,7 +113,7 @@ Listing 8.1 contains an example for the CCPP-SCM prebuild config. Here, it is as
 
    # EOF
 
-*Listing 8.1: :term:`CCPP` prebuild config for SCM (shortened)*
+*Listing 8.1: CCPP prebuild config for SCM (shortened)*
 
 Although most of the variables in the ``ccpp_prebuild_config.py`` script are described by in-line comments in the code listing above and their use is described in :numref:`Figure %s <ccpp_prebuild>`, some clarifying comments are in order regarding the ``SCHEME_FILES`` variable. This is a list of CCPP-compliant physics scheme entry/exit point source files. For each item in this list, a list of physics “sets” in which the scheme may be executed is included. A physics set refers to a collection of physics schemes that are able to be called together and executed in one software domain of a host model that do not share variables with schemes from another physics set. This feature was included to cater to the needs of the FV3GFS, which provides a clear-cut example of this concept. In this model, part of the microphysics scheme needed to be coupled more tightly with the dynamics, so this part of the microphysics code was put into a physics set labeled “fast_physics” which is executed within the dycore code. The variables in this physics set are distinct (in memory, due to a lack of a model variable registry) from variables used in the rest of the physics, which are part of the “slow_physics” set. In the future, it may be necessary to have additional sets, e.g. for chemistry or separate surface model components that do not share data/memory with other model components. For simpler models such as the GMTB SCM, only one physics set (labeled “physics”) is necessary. The concept of physics sets is different from physics “groups”, which are capable of sharing variables among their members and between groups but are used to organize schemes into sequential, callable units.
 
