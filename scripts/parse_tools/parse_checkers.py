@@ -253,7 +253,7 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
     Traceback (most recent call last):
     CCPPError: 'foo' is too long (> 3 chars) in fooo(bar, baz)
     """
-    idval = check_fortran_id(test_val, prop_dict, error, max_len=max_len)
+    idval = check_fortran_id(test_val, prop_dict, False, max_len=max_len)
     if idval is None:
         match = _FORTRAN_SCALAR_REF_RE.match(test_val)
         if match is None:
