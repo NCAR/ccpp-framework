@@ -9,13 +9,12 @@ import copy
 import os
 import sys
 import getopt
-import six
 import xml.etree.ElementTree as ET
 
 from common import CCPP_ERROR_FLAG_VARIABLE
 from common import CCPP_INTERNAL_VARIABLES
 from common import STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
-from common import string_to_python_identifier
+from common import isstring, string_to_python_identifier
 from conversion_tools import unit_conversion
 
 ###############################################################################
@@ -172,7 +171,7 @@ class Var(object):
     def actions(self, values):
         if type(value)==dict:
             for key in values.keys():
-                if key in ['in', 'out'] and isinstance(values[key], six.string_types):
+                if key in ['in', 'out'] and isstring(values[key]):
                     self._actions[key] = values[key]
                 else:
                     raise Exception('Invalid values for variable attribute actions.')
