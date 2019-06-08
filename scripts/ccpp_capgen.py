@@ -42,7 +42,8 @@ def check_for_existing_file(filename, description, readable=True):
     if os.path.exists(filename):
         if readable:
             if not os.access(filename, os.R_OK):
-                raise CCPPError("No read access to {}, '{}'".format(description, filename))
+                errmsg = "No read access to {}, '{}'"
+                raise CCPPError(errmsg.format(description, filename))
             # End if
         # End if (no else needed, checks all done
     else:
@@ -134,11 +135,13 @@ def read_pathnames_from_file(pathsfile):
             # Skip blank lines and lines which appear to start with a comment.
             if (len(path) > 0) and (path[0] != '#') and (path[0] != '!'):
                 # Check for an absolute path
-                if not os.path.isabs(path):
+                if os.path.isabs(path):
+                    check_for_existing_file(path, "pathname")
+                else:
                     # Assume relative pathnames are relative to pathsfile
                     path = os.path.normpath(os.path.join(root_path, path))
+                    check_for_existing_file(path, pdesc)
                 # End if
-                check_for_existing_file(path, pdesc)
                 pathnames.append(path)
             # End if (else skip blank or comment line)
         # End for
@@ -210,17 +213,24 @@ def find_associated_fortran_file(filename):
     return fort_filename
 
 ###############################################################################
-def create_file_list(files, suffix, file_type):
+def create_file_list(files, suffix, file_type, logger):
 ###############################################################################
     master_list = list()
     file_list = [x.strip() for x in files.split(',')]
+    pdesc = '{} pathnames file'.format(file_type)
     for filename in file_list:
-        check_for_existing_file(filename, '{} pathnames file'.format(file_type))
         suff = os.path.basename(filename).split('.')[-1]
         if suff == suffix:
+            check_for_existing_file(filename, pdesc)
             master_list.append(os.path.abspath(filename))
-        else:
+        elif suff == 'txt':
+            check_for_existing_file(filename, pdesc)
             master_list.extend(read_pathnames_from_file(filename))
+            lmsg = 'Reading .{} filenames from {}'
+            logger.debug(lmsg.format(suffix, filename))
+        else:
+            lmsg = 'WARNING: Not reading {}, only reading .{} or .txt files'
+            logger.warning(lmsg.format(filename, suffix))
         # End if
     # End for
     return master_list
@@ -594,9 +604,10 @@ def _main_func():
         # End if
     else:
         # We need to create three lists of files, hosts, schemes, and SDFs
-        host_files = create_file_list(args.host_files, 'meta', 'Host')
-        scheme_files = create_file_list(args.scheme_files, 'meta', 'Scheme')
-        sdfs = create_file_list(args.suites, 'xml', 'Suite')
+        host_files = create_file_list(args.host_files, 'meta', 'Host', logger)
+        scheme_files = create_file_list(args.scheme_files, 'meta',
+                                        'Scheme', logger)
+        sdfs = create_file_list(args.suites, 'xml', 'Suite', logger)
         preproc_defs = args.preproc_directives
         gen_hostcap = args.generate_host_cap
         gen_docfiles = args.generate_docfiles
@@ -625,7 +636,9 @@ def _main_func():
         # Next, parse the scheme files
         scheme_headers = parse_scheme_files(scheme_files, preproc_defs, logger)
         ddts = host_model._ddt_lib.keys()
-        logger.debug("DDT definitions = {}".format(ddts))
+        if ddts:
+            logger.debug("DDT definitions = {}".format(ddts))
+        # End if
         plist = host_model.prop_list('local_name')
         logger.debug("{} variables = {}".format(host_model.name, plist))
         logger.debug("schemes = {}".format([x.title for x in scheme_headers]))

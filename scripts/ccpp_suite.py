@@ -949,9 +949,7 @@ class Scheme(SuiteObject):
                                      context=self._context)
         # End if
         scheme_mods = set()
-        scheme_use = 'use {}, only: {}'.format(my_header.module,
-                                               self._subroutine_name)
-        scheme_mods.add(scheme_use)
+        scheme_mods.add((my_header.module, self._subroutine_name))
         for var in my_header.variable_list():
             vstdname = var.get_prop_value('standard_name')
             vdims = var.get_dimensions()
@@ -1506,20 +1504,32 @@ class Group(SuiteObject):
         outfile.write(Group.__subhead__.format(subname=subname, args=call_list),
                       indent)
         # Write out any use statements
-        ddt_defs = self._ddt_library.ddt_modules(self.call_list.variable_list())
-        local_vars = [x[0] for x in subpart_var_set.values()]
+        modmax = 0
+        for scheme in self._local_schemes:
+            if len(scheme[0]) > modmax:
+                modmax = len(scheme[0])
+            # End if
+        # End for
+        # Write out the scheme use statements
+        scheme_use = 'use {},{} only: {}'
+        for scheme in self._local_schemes:
+            smod = scheme[0]
+            sname = scheme[1]
+            slen = ' '*(modmax - len(smod))
+            outfile.write(scheme_use.format(smod, slen, sname), indent+1)
+        # End for
         # Look for any DDT types
         call_vars = self.call_list.variable_list()
-        self._ddt_library.write_ddt_use_statements(call_vars, outfile, indent+1)
-        # Write out the scheme use statements
-        for scheme in self._local_schemes:
-            outfile.write(scheme, indent+1)
-        # End for
+        self._ddt_library.write_ddt_use_statements(call_vars, outfile,
+                                                   indent+1, pad=modmax)
+        decl_vars = [x[0] for x in subpart_var_set.values()]
+        self._ddt_library.write_ddt_use_statements(decl_vars, outfile,
+                                                   indent+1, pad=modmax)
         outfile.write('', 0)
         # Write out dummy arguments
         outfile.write('! Dummy arguments', indent+1)
         msg = 'Variables for {}: ({})'
-        logger.debug(msg.format(self.name, self.call_list.variable_list()))
+        logger.debug(msg.format(self.name, call_vars))
         self.call_list.declare_variables(outfile, indent+1, dummy=True)
         if subpart_var_set:
             outfile.write('\n! Local Variables', indent+1)
@@ -1746,7 +1756,8 @@ end module {module}
         # End if
         self._name = suite_xml.get('name')
         self._module = 'ccpp_{}_cap'.format(self.name)
-        self._logger.info("Reading suite definition file for '{}'".format(self._name))
+        lmsg = "Reading suite definition file for '{}'"
+        self._logger.info(lmsg.format(self._name))
         gname = Suite.__initial_group_name__
         self._suite_init_group = self.new_group_from_name(gname)
         gname = Suite.__final_group_name__
@@ -2100,7 +2111,7 @@ end module {module}
         # Secondary level is by phase
         scheme_library = {}
         # First, process DDT headers
-        self._ddt_lib = DDTLibrary('{}_api_ddts'.format(host_model.name),
+        self._ddt_lib = DDTLibrary('{}_api'.format(host_model.name),
                                    ddts=[d for d in scheme_headers
                                          if d.header_type == 'ddt'],
                                    logger=logger)

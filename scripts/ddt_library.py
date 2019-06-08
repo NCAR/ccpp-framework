@@ -173,6 +173,7 @@ class DDTLibrary(dict):
         "Our dict is DDT definition headers, key is type"
         self._name = '{}_ddt_lib'.format(name)
         self._ddt_fields = {}    # DDT field to DDT access map
+        self._max_mod_name_len = 0
         super(DDTLibrary, self).__init__()
         if ddts is None:
             ddts = list()
@@ -197,6 +198,10 @@ class DDTLibrary(dict):
                     lmsg = 'Adding DDT {} to {}'
                     logger.debug(lmsg.format(ddt.title, self.name))
                 self[ddt.title] = ddt
+                dlen = len(ddt.module)
+                if dlen > self._max_mod_name_len:
+                    self._max_mod_name_len = dlen
+                # End if
             # End if
         # End for
 
@@ -271,16 +276,13 @@ class DDTLibrary(dict):
         # End for
         return ddt_mods
 
-    def write_ddt_use_statements(self, variable_list, outfile, indent):
+    def write_ddt_use_statements(self, variable_list, outfile, indent, pad=0):
+        pad = max(pad, self._max_mod_name_len)
         ddt_mods = self.ddt_modules(variable_list)
-        dmax = 0
-        for ddt_mod in ddt_mods:
-            dmax = max(dmax, len(ddt_mod[0]))
-        # End for
         for ddt_mod in ddt_mods:
             dmod = ddt_mod[0]
             dtype = ddt_mod[1]
-            slen = ' '*(dmax - len(dmod))
+            slen = ' '*(pad - len(dmod))
             ustring = 'use {},{} only: {}'
             outfile.write(ustring.format(dmod, slen, dtype), indent)
         # End for
