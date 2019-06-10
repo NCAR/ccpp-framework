@@ -121,7 +121,11 @@ def write_host_cap(host_model, api, output_dir, logger):
         cap.write('   use {kinds}'.format(kinds=KINDS_MODULE), 1)
 
         modules = host_model.variable_locations()
-        mlen = max([len(x[0]) for x in modules])
+        if modules:
+            mlen = max([len(x[0]) for x in modules])
+        else:
+            mlen = 0
+        # End if
         max_suite_len = 0
         for suite in api.suites:
             max_suite_len = max(max_suite_len, len(suite.module))

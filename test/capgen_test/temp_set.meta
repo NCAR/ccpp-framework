@@ -34,13 +34,21 @@
   type = real
   kind = kind_phys
   intent = inout
-[ temp_layer ]
+[ temp ]
   standard_name = potential_temperature
   units = K
   dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = out
+[ ps ]
+  standard_name = surface_air_pressure
+  state_variable = true
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_dimension)
+  intent = in
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

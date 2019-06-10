@@ -15,8 +15,7 @@ CONTAINS
   !!
   subroutine test_host(retval)
 
-    use test_host_data,     only: allocate_physics_state
-    use test_host_mod,      only: ncols, pver, pcnst, phys_state, num_time_steps
+    use test_host_mod,      only: ncols, num_time_steps
     use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
     use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_initial
     use test_host_ccpp_cap, only: test_host_ccpp_physics_run
@@ -24,7 +23,7 @@ CONTAINS
     use test_host_ccpp_cap, only: test_host_ccpp_physics_finalize
     use test_host_ccpp_cap, only: ccpp_physics_suite_list
     use test_host_ccpp_cap, only: ccpp_physics_suite_part_list
-    use test_host_mod,      only: init_temp, compare_temp, check_model_times
+    use test_host_mod,      only: init_data, compare_data, check_model_times
 
     logical, intent(out)            :: retval
 
@@ -36,8 +35,7 @@ CONTAINS
     integer                         :: errflg
 
     ! Initialize our 'data'
-    call allocate_physics_state(ncols, pver, pcnst, phys_state)
-    call init_temp()
+    call init_data()
 
     ! Use the suite information to setup the run
     call test_host_ccpp_physics_initialize('temp_suite', errmsg, errflg)
@@ -129,7 +127,7 @@ CONTAINS
        if (.not. check_model_times()) then
           write(6, *) 'Model times error!'
           errflg = -1
-       else if (compare_temp()) then
+       else if (compare_data()) then
           write(6, *) 'Answers are correct!'
           errflg = 0
        else

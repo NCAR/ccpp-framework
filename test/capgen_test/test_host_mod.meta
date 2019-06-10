@@ -1,6 +1,12 @@
 [ccpp-arg-table]
   name = test_host_mod
   type = module
+[ index_qv ]
+  standard_name = index_of_water_vapor_specific_humidity
+  units = index
+  type = integer
+  protected = True
+  dimensions = ()
 [ ncols]
   standard_name = horizontal_dimension
   units = count

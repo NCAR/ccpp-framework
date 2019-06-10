@@ -5,7 +5,7 @@
 # Python library imports
 import re
 # CCPP framework imports
-from parse_source import CCPPError, ParseInternalError
+from .parse_source import CCPPError, ParseInternalError
 
 ########################################################################
 
@@ -141,9 +141,9 @@ __FID_RE = re.compile(FORTRAN_ID+r"$")
 __FORTRAN_AID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
 __FORT_DIM = r"(?:"+__FORTRAN_AID+r"|[:])"
 __REPEAT_DIM = r"(?:,\s*"+__FORT_DIM+r"\s*)"
-FORTRAN_SCALAR_ARREF = r"[(]\s*("+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6})[)]"
-FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+FORTRAN_SCALAR_ARREF+r")"
-_FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
+__FORTRAN_SCALAR_ARREF = r"[(]\s*("+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6})[)]"
+FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+__FORTRAN_SCALAR_ARREF+r")"
+FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
                             "double precision", "character" ]
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
@@ -201,13 +201,15 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
     otherwise, None. A simple Fortran variable reference is defined as
     a scalar id or a scalar array reference.
     if <error> is True, raise an Exception if <test_val> is not valid.
-    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(1)
+    >>> FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(1)
     'foo'
-    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2).split(',')[0].strip()
+    >>> FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2)
+    'bar, baz '
+    >>> FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2).split(',')[0].strip()
     'bar'
-    >>> _FORTRAN_SCALAR_REF_RE.match("foo( :, baz )").group(2).split(',')[0].strip()
+    >>> FORTRAN_SCALAR_REF_RE.match("foo( :, baz )").group(2).split(',')[0].strip()
     ':'
-    >>> _FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2).split(',')[1].strip()
+    >>> FORTRAN_SCALAR_REF_RE.match("foo( bar, baz )").group(2).split(',')[1].strip()
     'baz'
     >>> check_fortran_ref("hi_mom", None, False)
     'hi_mom'
@@ -255,20 +257,23 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
     """
     idval = check_fortran_id(test_val, prop_dict, False, max_len=max_len)
     if idval is None:
-        match = _FORTRAN_SCALAR_REF_RE.match(test_val)
+        match = FORTRAN_SCALAR_REF_RE.match(test_val)
         if match is None:
             if error:
-                raise CCPPError("'{}' is not a valid Fortran scalar reference".format(test_val))
+                emsg = "'{}' is not a valid Fortran scalar reference"
+                raise CCPPError(emsg.format(test_val))
             else:
                 test_val = None
             # End if
         elif max_len > 0:
             tokens = test_val.strip().rstrip(')').split('(')
-            tokens = [tokens[0].strip()] + [x.strip() for x in tokens[1].split(',')]
+            tokens = [tokens[0].strip()] + [x.strip()
+                                            for x in tokens[1].split(',')]
             for token in tokens:
                 if len(token) > max_len:
                     if error:
-                        raise CCPPError("'{}' is too long (> {} chars) in {}".format(token, max_len, test_val))
+                        emsg = "'{}' is too long (> {} chars) in {}"
+                        raise CCPPError(emsg.format(token, max_len, test_val))
                     else:
                         test_val = None
                         break

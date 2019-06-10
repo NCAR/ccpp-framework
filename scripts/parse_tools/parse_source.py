@@ -199,7 +199,7 @@ class ParseContext(object):
             filename = context.filename
         elif filename is None:
             filename = "<standard input>"
-        elif not isinstance(filename, str):
+        elif not isinstance(filename, (str, unicode)):
             raise CCPPError('ParseContext filename must be a string')
         # End if
         self._linenum = linenum

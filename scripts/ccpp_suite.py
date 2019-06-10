@@ -110,12 +110,12 @@ class CallList(VarDictionary):
     def __init__(self, name, logger=None):
         super(CallList, self).__init__(name, logger=logger)
 
-    def add_vars(self, call_list):
+    def add_vars(self, call_list, gen_unique=False):
         "Add new variables from another CallList (<call_list>)"
         for var in call_list.variable_list():
             stdname = var.get_prop_value('standard_name')
             if stdname not in self:
-                self.add_variable(var)
+                self.add_variable(var, gen_unique=gen_unique)
             # End if
         # End for
 
@@ -140,15 +140,18 @@ class CallList(VarDictionary):
                     # End if
                 else:
                     lname = var.get_prop_value('local_name')
+                    aref = var.array_ref()
+                    if aref is not None:
+                        lname = aref.group(1)
+                    # End if
                 # End if
                 if include_dims:
-                    dims = var.get_dimensions()
                     if cldict is not None:
                         dict = cldict
                     else:
                         dict = self
                     # End if
-                    vdims = var.call_dimstring(dims, dict)
+                    vdims = var.call_dimstring(dict)
                     if BLANK_DIMS_RE.match(vdims) is None:
                         lname = lname + vdims
                     # End if
@@ -361,6 +364,7 @@ class SuiteObject(VarDictionary):
         Do not add <newvar> if it exists as a local variable.
         Do not add <newvar> if it is a suite variable"""
         stdname = newvar.get_prop_value('standard_name')
+        pvar = self.parent.find_variable(stdname, any_scope=False)
         if SuiteObject.is_suite_variable(newvar):
             pass # Do not add this variable to a call list
         elif self.call_list is not None:
@@ -374,8 +378,27 @@ class SuiteObject(VarDictionary):
         elif self.parent is None:
             errmsg = 'No call_list found for {}'.format(newvar)
             raise ParseInternalError(errmsg)
-        elif self.parent.find_variable(stdname, any_scope=False):
-            pass # We have the variable, no need to add it to a call list
+        elif pvar:
+            # Check for call list incompatibility
+            if pvar is not None:
+                compat, reason = pvar.compatible(newvar)
+                if compat:
+                    # Check for call list intent incompatibility
+                    vintent = newvar.get_prop_value('intent')
+                    pintent = pvar.get_prop_value('intent')
+                    if (pintent == 'in') and (vintent == 'inout'):
+                        pvar.adjust_intent('inout')
+                    # No else, variables are compatible
+                else:
+                    emsg = 'Attempt to add incompatible variable to call list:'
+                    emsg += '\n{} from {} is not compatible with {} from {}'
+                    emsg += '\n{}'.format(reason)
+                    nlname = newvar.get_prop_value('local_name')
+                    plname = pvar.get_prop_value('local_name')
+                    raise CCPPError(emsg.format(nlname, newvar.source.name,
+                                                plname, pver.source.name))
+                # End if
+            # End if (no else, variable already in call list)
         else:
             self.parent.add_call_list_variable(newvar, exists_ok=exists_ok,
                                                gen_unique=gen_unique)
@@ -389,7 +412,7 @@ class SuiteObject(VarDictionary):
         """
         found_dims = False
         if var is not None:
-            self.add_call_list_variable(var, exists_ok=True)
+            self.add_call_list_variable(var, exists_ok=True, gen_unique=True)
             found_dims = True
         # End if
         if vmatch is not None:
@@ -401,7 +424,7 @@ class SuiteObject(VarDictionary):
                 for svar in svars:
                     self.add_call_list_variable(svar, exists_ok=True)
                 # End for
-                # Register the action
+                # Register the action (probably at Group level)
                 self.register_action(vmatch)
             # End if
         # End if
@@ -751,6 +774,10 @@ class SuiteObject(VarDictionary):
                     # End if
                 # End if
             # End if
+        # End if
+        if found_var:
+            # Check that all dimensions are available
+            pass
         # End if
         return found_var, var_vdim, new_vdims, missing_vert
 
@@ -2163,7 +2190,8 @@ end module {module}
             for suite in self._suites:
                 for group in suite.groups:
                     if group.phase() == phase:
-                        self.__call_lists[phase].add_vars(group.call_list)
+                        self.__call_lists[phase].add_vars(group.call_list,
+                                                          gen_unique=True)
                     # End if
                 # End for
              # End for

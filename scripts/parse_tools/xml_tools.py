@@ -9,6 +9,7 @@ from __future__ import print_function
 import os
 import os.path
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 try:
     from distutils.spawn import find_executable
@@ -17,8 +18,10 @@ except ImportError as ie:
     xmllint = None
 # End try
 # CCPP framework imports
-import six
-from parse_source import CCPPError
+from .parse_source import CCPPError
+
+# Find python version
+PY3 = sys.version_info[0] > 2
 
 ###############################################################################
 def call_command(commands, logger, silent=False):
@@ -142,7 +145,7 @@ def validate_xml_file(filename, schema_root, version, logger):
 def read_xml_file(filename, logger=None):
 ###############################################################################
     if os.path.isfile(filename) and os.access(filename, os.R_OK):
-        if six.PY3:
+        if PY3:
             file_open = (lambda x: open(x, 'r', encoding='utf-8'))
         else:
             file_open = (lambda x: open(x, 'r'))

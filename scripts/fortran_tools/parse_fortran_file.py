@@ -18,7 +18,7 @@ from parse_tools import CCPPError, ParseInternalError, ParseSyntaxError
 from parse_tools import ParseContext, ParseObject, ParseSource, PreprocStack
 from parse_tools import FORTRAN_ID, context_string
 from metadata_table import MetadataTable
-from parse_fortran import parse_fortran_var_decl, fortran_type_definition
+from .parse_fortran import parse_fortran_var_decl, fortran_type_definition
 from metavar import VarDictionary
 
 comment_re = re.compile(r"!.*$")
@@ -529,8 +529,9 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
             asmatch = arg_table_start_re.match(statement)
             type_def = fortran_type_definition(statement)
             if asmatch is not None:
-                active_table = asmatch.group(1).lower()
-            elif (pmatch is not None) or is_contains_statement(statement, inspec):
+                active_table = asmatch.group(1)
+            elif (pmatch is not None) or is_contains_statement(statement,
+                                                               inspec):
                 # We are done with the specification
                 inspec = False
                 # Put statement back so caller knows where we are
@@ -545,7 +546,8 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
                     msg = 'Adding header {}{}'
                     logger.debug(msg.format(mheader.title, ctx))
                 break
-            elif (type_def is not None) and (type_def[0].lower() == active_table):
+            elif ((type_def is not None) and
+                  (type_def[0].lower() == active_table.lower())):
                 # Put statement back so caller knows where we are
                 statements.insert(0, statement)
                 statements, ddt = parse_type_def(statements, type_def,
@@ -562,17 +564,18 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
                     logger.debug(msg.format(ddt.title, ctx))
                 # End if
                 active_table = None
-            else:
+            elif active_table is not None:
                 # We should have a variable definition to add
                 if ((not is_comment_statement(statement, logger)) and
                     (not parse_use_statement({}, statement, pobj, logger)) and
-                    (active_table == spec_name)):
-                    vars = parse_fortran_var_decl(statement, psrc, logger=logger)
+                    (active_table.lower() == spec_name.lower())):
+                    vars = parse_fortran_var_decl(statement, psrc,
+                                                  logger=logger)
                     for var in vars:
                         var_dict.add_variable(var)
                     # End for
                 # End if
-            # End if
+            # End if (else we are not in an active table so just skip)
         # End while
         if inspec and (len(statements) == 0):
             statements = read_statements(pobj)
@@ -618,7 +621,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
                 break
             elif smatch is not None:
                 scheme_name = smatch.group(1)
-                inpreamble = scheme_name == table_name
+                inpreamble = scheme_name.lower() == table_name.lower()
                 if inpreamble:
                     if smatch.group(2) is not None:
                         smstr = smatch.group(2).strip()

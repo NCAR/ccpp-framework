@@ -18,15 +18,16 @@ CONTAINS
 !> \section arg_table_temp_set_run  Argument Table
 !! \htmlinclude arg_table_temp_set_run.html
 !!
-  SUBROUTINE temp_set_run(ncol, lev, ilev, timestep, temp_level, temp_layer,  &
+  SUBROUTINE temp_set_run(ncol, lev, ilev, timestep, temp_level, temp, ps,    &
        errmsg, errflg)
 !----------------------------------------------------------------
    IMPLICIT NONE
 !----------------------------------------------------------------
 
    integer,            intent(in)    :: ncol, lev, ilev
-   REAL(kind_phys),    intent(out)   :: temp_layer(:,:)
+   REAL(kind_phys),    intent(out)   :: temp(:,:)
    real(kind_phys),    intent(in)    :: timestep
+   real(kind_phys),    intent(in)    :: ps(:)
    REAL(kind_phys),    INTENT(inout) :: temp_level(:, :)
    character(len=512), intent(out)   :: errmsg
    integer,            intent(out)   :: errflg
@@ -46,7 +47,7 @@ CONTAINS
 
     do col_index = 1, ncol
        do lev_index = 1, lev
-          temp_layer(col_index, lev_index) = (temp_level(col_index, lev_index) &
+          temp(col_index, lev_index) = (temp_level(col_index, lev_index)      &
                + temp_level(col_index, lev_index + 1)) / 2.0_kind_phys
        end do
     end do

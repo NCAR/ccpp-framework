@@ -169,9 +169,6 @@ class HostModel(VarDictionary):
                                        context=ParseContext(filename='host_model.py'))
                 self.add_variable(new_var)
                 my_var = new_var
-# XXgoldyXX: v debug only
-                raise ValueError('New host variable, {}'.format(my_var))
-# XXgoldyXX: ^ debug only
             # End if
         # End if
         return my_var

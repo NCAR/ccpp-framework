@@ -6,6 +6,10 @@ physics suite runtime code, and CCPP framework documentation.
 """
 
 # Python library imports
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+
 import argparse
 import sys
 import os
@@ -25,7 +29,13 @@ from metadata_table import MetadataTable
 logger = init_log('ccpp_capgen')
 
 ## Recognized Fortran filename extensions
-__fortran_filename_extensions__ = ['F90', 'f90', 'F', 'f']
+__fortran_filename_extensions = ['F90', 'f90', 'F', 'f']
+
+## Metadata table types which can have extra variables in Fortran
+__extra_variable_table_types = ['module', 'host', 'ddt']
+
+## Metadata table types where order is significant
+__ordered_table_types = ['scheme']
 
 ## header for kinds file
 kinds_header = '''
@@ -200,7 +210,7 @@ def find_associated_fortran_file(filename):
     else:
         base = filename[0:lastdot+1]
     # End if
-    for extension in __fortran_filename_extensions__:
+    for extension in __fortran_filename_extensions:
         test_name = base + extension
         if os.path.exists(test_name):
             fort_filename = test_name
@@ -270,6 +280,34 @@ def add_error(error_string, new_error):
         error_string += '\n'
     # End if
     return error_string + new_error
+
+###############################################################################
+def is_arrayspec(local_name):
+###############################################################################
+    "Return True iff <local_name> is an array reference"
+    return '(' in local_name
+
+###############################################################################
+def find_var_in_list(local_name, var_list):
+###############################################################################
+    """Find a variable, <local_name>, in <var_list>.
+    local name is used because Fortran metadata variables do not have
+    real standard names.
+    Note: The search is case insensitive.
+    Return both the variable and the index where it was found.
+    If not found, return None for the variable and -1 for the index
+    """
+    vvar = None
+    vind = -1
+    lname = local_name.lower()
+    for lind, lvar in enumerate(var_list):
+        if lvar.get_prop_value('local_name').lower() == lname:
+            vvar = lvar
+            vind = lind
+            break
+        # End if
+    # End for
+    return vvar, vind
 
 ###############################################################################
 def var_comp(prop_name, mvar, fvar, title, case_sensitive=False):
@@ -360,13 +398,19 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
         mlen = len(mlist)
         flist = fort_header.variable_list()
         flen = len(flist)
+        # Remove array references from mlist before checking lengths
+        for mvar in mlist:
+            if is_arrayspec(mvar.get_prop_value('local_name')):
+                mlen -= 1
+            # End if
+        # End for
         list_match = mlen == flen
         if not list_match:
-            if (fht == 'module') or (fht == 'host'):
+            if fht in __extra_variable_table_types:
                 if flen > mlen:
                     list_match= True
                 else:
-                    etype = 'Fortran module'
+                    etype = 'Fortran {}'.format(fht)
                 # End if
             elif flen > mlen:
                 etype = 'metadata header'
@@ -381,38 +425,62 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
         for mind, mvar in enumerate(mlist):
             std_name = mvar.get_prop_value('standard_name')
             lname = mvar.get_prop_value('local_name')
+            arrayref = is_arrayspec(lname)
+            fvar, find = find_var_in_list(lname, flist)
             if mind >= flen:
-                if fort_header.find_variable(lname,
-                                         use_local_name=True) is None:
+                if arrayref:
+                    # Array reference, variable not in Fortran table
+                    pass
+                elif fvar is None:
                     errmsg = 'No Fortran variable for {} in {}'
                     errors_found = add_error(errors_found,
                                              errmsg.format(lname, title))
                 # End if (no else, we already reported an out-of-place error
+                # Do not break to collect all missing variables
+                continue
+            # End if
+            # At this point, we should have a Fortran variable
+            if fvar is None:
+                errmsg = 'Variable mismatch in {}, no Fortran variable {}.'
+                errors_found = add_error(errors_found, errmsg.format(title,
+                                                                     lname))
+                continue
+            # End if
+            # Check order dependence
+            if fht in __ordered_table_types:
+                if find != mind:
+                    errmsg = 'Out of order argument, {} in {}'
+                    errors_found = add_error(errors_found,
+                                             errmsg.format(lname, title))
+                    continue
+                # End if
+            # End if
+            if arrayref:
+                # Array reference, do not look for this in Fortran table
+                continue
+            # End if
+            errs = var_comp('local_name', mvar, fvar, title)
+            if errs:
+                errors_found = add_error(errors_found, errs)
             else:
-                fvar = flist[mind]
-                errs = var_comp('local_name', mvar, fvar, title)
+                errs = var_comp('type', mvar, fvar, title)
                 if errs:
                     errors_found = add_error(errors_found, errs)
-                else:
-                    errs = var_comp('type', mvar, fvar, title)
+                # End if
+                errs = var_comp('kind', mvar, fvar, title)
+                if errs:
+                    errors_found = add_error(errors_found, errs)
+                # End if
+                if meta_header.header_type == 'scheme':
+                    errs = var_comp('intent', mvar, fvar, title)
                     if errs:
                         errors_found = add_error(errors_found, errs)
                     # End if
-                    errs = var_comp('kind', mvar, fvar, title)
-                    if errs:
-                        errors_found = add_error(errors_found, errs)
-                    # End if
-                    if meta_header.header_type == 'scheme':
-                        errs = var_comp('intent', mvar, fvar, title)
-                        if errs:
-                            errors_found = add_error(errors_found, errs)
-                        # End if
-                    # End if
-                    # Compare dimensions
-                    errs = dims_comp(meta_header, mvar, fvar, title, logger)
-                    if errs:
-                        errors_found = add_error(errors_found, errs)
-                    # End if
+                # End if
+                # Compare dimensions
+                errs = dims_comp(meta_header, mvar, fvar, title, logger)
+                if errs:
+                    errors_found = add_error(errors_found, errs)
                 # End if
             # End if
         # End for
@@ -469,8 +537,9 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
     # End for
     if errors_found:
         num_errors = len(re.findall(r'\n', errors_found)) + 1
-        errmsg = "{}\n{} errors found comparing {} to {}"
+        errmsg = "{}\n{} error{} found comparing {} to {}"
         raise CCPPError(errmsg.format(errors_found, num_errors,
+                                      's' if num_errors > 1 else '',
                                       mfilename, ffilename))
     # End if
 
@@ -548,7 +617,7 @@ def parse_scheme_files(scheme_filenames, preproc_defs, logger):
         # Check for duplicates, then add to dict
         for header in mheaders:
             if header.title in header_dict:
-                errmsg = "Duplicate [ttype], {title}, found in {file}"
+                errmsg = "Duplicate {ttype}, {title}, found in {file}"
                 edict = {'title':header.title,
                          'file':filename,
                          'ttype':header.header_type}

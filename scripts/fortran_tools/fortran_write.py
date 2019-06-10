@@ -168,29 +168,34 @@ if __name__ == "__main__":
     import os
     import os.path
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import six
     name = 'foo'
     while os.path.exists(name+'.F90'):
         name = name + 'xo'
     # End while
     name = name + '.F90'
     if os.access(os.getcwd(), os.W_OK):
-        check = ['      subroutine foo(long_argument1, long_argument2, long_argument3,           &',
-                 '           long_argument4)',
+        check = [('      subroutine foo(long_argument1, long_argument2, '
+                  'long_argument3, long_argument4,              &'),
+                 '           long_argument5)',
                  '      end subroutine foo']
         with FortranWriter(name, 'w') as foo:
-            foo.write("subroutine foo(long_argument1, long_argument2, long_argument3, long_argument4)", 2)
+            foo.write(("subroutine foo(long_argument1, long_argument2, "
+                       "long_argument3, long_argument4, long_argument5)"), 2)
             foo.write("end subroutine foo", 2)
         # End with
         # Check file
         with open(name, 'r') as foo:
             statements = foo.readlines()
             if len(statements) != len(check):
-                print("ERROR: File has {} statements, should have {}".format(len(statements), len(check)))
+                emsg = "ERROR: File has {} statements, should have {}"
+                print(emsg.format(len(statements), len(check)))
             else:
                 for line_num in range(len(statements)):
                     if statements[line_num].rstrip() != check[line_num]:
-                        print("ERROR: Line {} does not match".format(line_num+1))
+                        emsg = "ERROR: Line {} does not match"
+                        print(emsg.format(line_num+1))
+                        print("{}".format(statements[line_num].rstrip()))
+                        print("{}".format(check[line_num]))
                     # End if
                 # End for
         # End with

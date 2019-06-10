@@ -97,8 +97,9 @@ import re
 from metavar     import Var, VarDictionary, CCPP_CONSTANT_VARS
 from parse_tools import ParseObject, ParseSource, ParseContext, context_string
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
-from parse_tools import FORTRAN_ID, FORTRAN_SCALAR_REF, unique_standard_name
-from parse_tools import check_fortran_ref, register_fortran_ddt_name
+from parse_tools import FORTRAN_ID, FORTRAN_SCALAR_REF, FORTRAN_SCALAR_REF_RE
+from parse_tools import check_fortran_ref, check_fortran_id
+from parse_tools import register_fortran_ddt_name, unique_standard_name
 
 ########################################################################
 
@@ -182,7 +183,7 @@ class MetadataTable(ParseSource):
 
     __var_start__ = re.compile(r"^\[\s*"+FORTRAN_ID+r"\s*\]$")
 
-    __vref_start__ = re.compile(r"^\[\s*("+FORTRAN_SCALAR_REF+r")\s*\]$")
+    __vref_start__ = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
 
     __blank_line__ = re.compile(r"\s*[#;]")
 
@@ -421,11 +422,84 @@ class MetadataTable(ParseSource):
         if var_props is None:
             return None, curr_line
         else:
+            # Check for array reference
+            sub_name = MetadataTable.check_array_reference(local_name,
+                                                           var_props, context)
+            if sub_name:
+                var_props['local_name'] = sub_name
+            # End if (else just leave the local name alone)
             try:
                 newvar = Var(var_props, source=self, context=context)
             except CCPPError as ve:
                 raise ParseSyntaxError(ve, context=self._pobj)
             return newvar, curr_line
+        # End if
+
+    @classmethod
+    def check_array_reference(cls, local_name, var_dict, context):
+        """If <local_name> is an array reference, check it against
+        the 'dimensions' property in <var_dict>. If <local_name> is an
+        array reference, return it with the colons filled in with the
+        dictionary dimensions, otherwise, return None.
+        >>> MetadataTable.check_array_reference('foo', {'dimensions':['ccpp_constant_one:bar', 'ccpp_constant_one:baz']}, ParseContext(filename='foo.meta'))
+
+        >>> MetadataTable.check_array_reference('foo', {}, ParseContext(filename='foo.meta'))
+
+        >>> MetadataTable.check_array_reference('foo(qux', {'dimensions':['ccpp_constant_one:bar', 'ccpp_constant_one:baz']}, ParseContext(filename='foo.meta')) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ParseInternalError: Invalid scalar reference, foo(qux, in foo.meta
+        >>> MetadataTable.check_array_reference('foo(qux)', {'dimensions':['ccpp_constant_one:bar', 'ccpp_constant_one:baz']}, ParseContext(filename='foo.meta')) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ParseInternalError: foo has rank 2 but foo(qux) has 0, in foo.meta
+        >>> MetadataTable.check_array_reference('foo(:,qux)', {'dimensions':['ccpp_constant_one:bar', 'ccpp_constant_one:baz']}, ParseContext(filename='foo.meta')) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ParseInternalError: foo has rank 2 but foo(:,qux) has 1, in foo.meta
+        >>> MetadataTable.check_array_reference('foo(:,qux)', {'foo':['ccpp_constant_one:bar', 'ccpp_constant_one:baz']}, ParseContext(filename='foo.meta')) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ParseInternalError: Missing variable dimensions, foo(:,qux), in foo.meta
+        >>> MetadataTable.check_array_reference('foo(:,:,qux)', {'dimensions':['ccpp_constant_one:bar']}, ParseContext(filename='foo.meta')) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ParseInternalError: foo has rank 1 but foo(:,:,qux) has 2, in foo.meta
+        >>> MetadataTable.check_array_reference('foo(:,:,qux)', {'dimensions':['ccpp_constant_one:bar','ccpp_constant_one:baz']}, ParseContext(filename='foo.meta'))
+        'foo(ccpp_constant_one:bar, ccpp_constant_one:baz, qux)'
+        """
+        if check_fortran_id(local_name, var_dict, False) is None:
+            rmatch = FORTRAN_SCALAR_REF_RE.match(local_name)
+            if rmatch is None:
+                errmsg = 'Invalid scalar reference, {}{}'
+                ctx = context_string(context)
+                raise ParseInternalError(errmsg.format(local_name, ctx))
+            # End if
+            rname = rmatch.group(1)
+            rdims = [x.strip() for x in rmatch.group(2).split(',')]
+            if 'dimensions' in var_dict:
+                vdims = [x.strip() for x in var_dict['dimensions']]
+            else:
+                errmsg = 'Missing variable dimensions, {}{}'
+                ctx = context_string(context)
+                raise ParseInternalError(errmsg.format(local_name, ctx))
+            # End if
+            colon_rank = len([x for x in rdims if x == ':'])
+            if colon_rank != len(vdims):
+                errmsg = '{} has rank {} but {} has {}{}'
+                ctx = context_string(context)
+                raise ParseInternalError(errmsg.format(rname, len(vdims),
+                                                       local_name, colon_rank,
+                                                       ctx))
+            # End if
+            sub_dims = list()
+            sindex = 0
+            for rind in rdims:
+                if rind == ':':
+                    sub_dims.append(':')
+                    sindex += 1
+                else:
+                    sub_dims.append(rind)
+                # End if
+            # End for
+            return '{}({})'.format(rname, ', '.join(sub_dims))
+        else:
+            return None
         # End if
 
     def variable_list(self, std_vars=True, loop_vars=True, consts=True):
@@ -525,10 +599,14 @@ class MetadataTable(ParseSource):
             match = MetadataTable.__var_start__.match(line)
             if match is None:
                 match = MetadataTable.__vref_start__.match(line)
+                if match is not None:
+                    name = match.group(1)+'('+match.group(2)+')'
+                # End if
+            else:
+                name = match.group(1)
             # End if
         # End if
         if match is not None:
-            name = match.group(0).lstrip('[[ ]*').rstrip('[\] ]*')
             if not MetadataTable.is_scalar_reference(name):
                 raise ParseSyntaxError("local variable name",
                                        token=name, context=self._pobj)

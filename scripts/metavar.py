@@ -9,7 +9,7 @@ import re
 from collections import OrderedDict
 # CCPP framework imports
 from parse_tools import check_local_name, check_fortran_type, context_string
-from parse_tools import FORTRAN_DP_RE, FORTRAN_ID
+from parse_tools import FORTRAN_DP_RE, FORTRAN_ID, FORTRAN_SCALAR_REF_RE
 from parse_tools import registered_fortran_ddt_name
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import ParseContext, ParseSource
@@ -536,6 +536,7 @@ class Var(object):
         In order to prevent silent failures, invalid_ok requires a logger
         in order to take effect.
         if <prop_dict> is really a Var object, use that object's prop_dict."""
+        self._parent_var = None # for array references
         if isinstance(prop_dict, Var):
             prop_dict = prop_dict.copy_prop_dict()
         # End if
@@ -685,6 +686,18 @@ class Var(object):
             return False, reason
         # End if
 
+    def adjust_intent(self, intent):
+        """Add an intent to this Var or adjust its existing intent.
+        Note: An existing intent can only be adjusted to 'inout'
+        """
+        if 'intent' not in self._prop_dict:
+            self._prop_dict['intent'] = intent
+        elif intent == 'inout':
+            self._prop_dict['intent'] = intent
+        else:
+            raise ParseInternalError("Can only adjust intent to be 'inout'")
+        # End if
+
     @classmethod
     def get_prop(cls, name, spec_type=None):
         "Return VariableProperty object for <name> or None"
@@ -824,6 +837,107 @@ class Var(object):
         else:
             return None
 
+    def handle_array_ref(self):
+        """If this Var's local_name is an array ref, add in the array
+        reference indices to the Var's dimensions.
+        Return the (stripped) local_name and the full dimensions.
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref()
+        ('foo', [])
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref()
+        ('foo', ['ccpp_constant_one:dim1'])
+        >>> Var({'local_name' : 'foo(:,:,bar)', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '(ccpp_constant_one:dim1,ccpp_constant_one:dim2)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref()
+        ('foo', ['ccpp_constant_one:dim1', 'ccpp_constant_one:dim2', 'bar'])
+        >>> Var({'local_name' : 'foo(bar,:)', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref()
+        ('foo', ['bar', 'ccpp_constant_one:dim1'])
+        >>> Var({'local_name' : 'foo(bar)', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref() #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        CCPPError: Call dims mismatch for foo(bar), not enough colons
+        >>> Var({'local_name' : 'foo(:,bar,:)', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref() #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        CCPPError: Call dims mismatch for foo(:,bar,:), not enough dims
+        >>> Var({'local_name' : 'foo(:,:,bar)', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref() #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        CCPPError: Call dims mismatch for foo(:,:,bar), not enough dims
+        >>> Var({'local_name' : 'foo(:,bar)', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '(ccpp_constant_one:dim1,ccpp_constant_one:dim2)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext())).handle_array_ref() #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        CCPPError: Call dims mismatch for foo(:,bar), too many dims
+        """
+        dimlist = self.get_dimensions()
+        aref = self.array_ref()
+        if aref is not None:
+            lname = aref.group(1)
+            # Substitute dimensions for colons in array reference
+            sdimlist = dimlist
+            num_dims = len(sdimlist)
+            dimlist = [x.strip() for x in aref.group(2).split(',')]
+            num_colons = sum(dim == ':' for dim in dimlist)
+            cind = 0
+            if num_dims > num_colons:
+                emsg = 'Call dims mismatch for {}, not enough colons'
+                lname = self.get_prop_value('local_name')
+                raise CCPPError(emsg.format(lname))
+            # End if
+            for dind, dim in enumerate(dimlist):
+                if dim == ':':
+                    if cind >= num_dims:
+                        emsg = 'Call dims mismatch for {}, not enough dims'
+                        lname = self.get_prop_value('local_name')
+                        raise CCPPError(emsg.format(lname))
+                    # End if
+                    dimlist[dind] = sdimlist[cind]
+                    cind += 1
+                # End if
+            # End for
+            if cind < num_colons:
+                emsg = 'Call dims mismatch for {}, too many dims'
+                lname = self.get_prop_value('local_name')
+                raise CCPPError(emsg.format(lname))
+            # End if
+        else:
+            lname = self.get_prop_value('local_name')
+        # End if
+        return lname, dimlist
+
+    def call_dimstring(self, var_dict, loop_vars=None):
+        """Return the dimensions string for a variable call.
+        """
+        dimlist = []
+        lname, dims = self.handle_array_ref()
+        for dim in dims:
+            if ':' in dim:
+                collist = dim.split(':')
+                if ((len(collist) >= 3) and
+                    (len(''.join([x.strip() for x in collist])) > 0)):
+                    ctx = context_string(self.contex)
+                    emsg = 'Must include ranges if stride is used{}'
+                    raise CCPPError(emsg.format(ctx))
+                else:
+                    dimlist.append(':')
+                # End if
+            else:
+                # Do we need an option for always doing this substitution?
+                dstdnames = dim.split(':')
+                dvars = [var_dict.find_variable(x) for x in dstdnames]
+                if None in dvars:
+                    for dim in dstdnames:
+                        if var_dict.find_variable(dim) is None:
+                            emsg = "No variable found for dimension '{}' in {}"
+                            raise CCPPError(emsg.format(dim, name))
+                        # End if
+                    # End for
+                # End if
+                dnames = [x.get_prop_value('local_name') for x in dvars]
+                dimlist.append(':'.join(dnames))
+            # End if
+            comma = ', '
+        # End for
+        if dimlist:
+            dimstr = '(' + ','.join(dimlist) + ')'
+        else:
+            dimstr = '' # It ends up being a scalar reference
+        # End if
+        return dimstr
+
     def call_string(self, var_dict, loop_vars=None):
         """Construct the actual argument string for this Var by translating
         standard names to local names.
@@ -831,20 +945,17 @@ class Var(object):
         if <loop_vars> is not None, look there first for array bounds,
         even if usage requires a loop substitution.
         """
-        call_str = self.get_prop_value('local_name')
         if loop_vars is None:
+            call_str = self.get_prop_value('local_name')
             dims = None
         else:
-            dims = self.get_dimensions()
+            call_str, dims = self.handle_array_ref()
         # End if
-        if dims and (loop_vars is not None):
+        if dims:
             call_str = call_str + '('
             dsep = ''
             for dim in dims:
-                if loop_vars is not None:
-                    lname = loop_vars.find_loop_dim_match(dim)
-                else:
-                    lname = None
+                lname = loop_vars.find_loop_dim_match(dim)
                 # End if
                 if lname is None:
                     isep = ''
@@ -901,6 +1012,33 @@ class Var(object):
         # End if
         return valid
 
+    def array_ref(self):
+        """If this Var's local_name is an array reference, return a
+        Fortran array reference regexp match.
+        Otherwise, return None"""
+        match = FORTRAN_SCALAR_REF_RE.match(self.get_prop_value('local_name'))
+        return match
+
+    @property
+    def parent(self):
+        "Return this variable's parent variable (or None)"
+        return self._parent_var
+
+    @parent.setter
+    def parent(self, parent_var):
+        "Set this variable's parent if not already set"
+        if self._parent_var is not None:
+            emsg = 'Attempting to set parent for {} but parent already set'
+            lname = self.get_prop_value('local_name')
+            raise ParseInternalError(emsg.format(lname))
+        elif not isinstance(parent_var, Var):
+            emsg = 'Attempting to set parent for {}, bad parent type, {}'
+            lname = self.get_prop_value('local_name')
+            raise ParseInternalError(emsg.format(lname, type(parent_var)))
+        else:
+            self._parent_var = parent_var
+        # End if
+
     @property
     def context(self):
         "Return this variable's parsed context"
@@ -933,7 +1071,7 @@ class Var(object):
         dims = self.valid_value('dimensions')
         return dims
 
-    def get_dim_stdnames(self):
+    def get_dim_stdnames(self, include_constants=True):
         "Return a set of all the dimension standard names for this Var"
         dimset = set()
         for dim in self.get_dimensions():
@@ -942,8 +1080,10 @@ class Var(object):
                 try:
                     ival = int(name)
                 except ValueError as ve:
-                    # Not an integer, add it
-                    dimset.add(name)
+                    # Not an integer, maybe add it
+                    if include_constants or (not (name in CCPP_CONSTANT_VARS)):
+                        dimset.add(name)
+                    # End if
                 # End try
             # End for
         # End for
@@ -978,40 +1118,6 @@ class Var(object):
         # End if
         return Var.find_vertical_dimension(vdims)[0]
 
-    def call_dimstring(self, dims, dict, explicit_range=False):
-        dimstr = '('
-        comma = ''
-        for dim in dims:
-            if (not explicit_range) and (':' in dim):
-                if ':' in dim[dim.index(':')+1:]:
-                    ctx = context_string(self.contex)
-                    emsg = 'Must include ranges if stride is used{}'
-                    raise CCPPError(emsg.format(ctx))
-                else:
-                    dimstr = dimstr + comma + ':'
-                # End if
-            else:
-                dstdnames = dim.split(':')
-                dvars = [dict.find_variable(x) for x in dstdnames]
-                if None in dvars:
-                    for dim in dstdnames:
-                        if dict.find_variable(dim) is None:
-                            emsg = "No variable found for dimension '{}' in {}"
-                            raise CCPPError(emsg.format(dim, name))
-                        # End if
-                    # End for
-                # End if
-                dnames = [x.get_prop_value('local_name') for x in dvars]
-                dimstr = dimstr + comma + ':'.join(dnames)
-            # End if
-            comma = ', '
-        # End for
-        dimstr = dimstr + ')'
-        if dimstr == '()':
-            dimstr = '' # It ends up being a scalar reference
-        # End if
-        return dimstr
-
     def write_def(self, outfile, indent, dict, allocatable=False, dummy=False):
         '''Write the definition line for the variable.'''
         stdname = self.get_prop_value('standard_name')
@@ -1026,12 +1132,16 @@ class Var(object):
         # End if
         kind = self.get_prop_value('kind')
         name = self.get_prop_value('local_name')
+        aref = self.array_ref()
+        if aref is not None:
+            name = aref.group(1)
+        # End if
         dims = self.get_dimensions()
-        if (dims is not None) and dims:
+        if dims:
             if allocatable or dummy:
                 dimstr = '(:' + ',:'*(len(dims) - 1) + ')'
             else:
-                dimstr = self.call_dimstring(dims, dict)
+                dimstr = self.call_dimstring(dict)
         else:
             dimstr = ''
         # End if
@@ -1103,7 +1213,8 @@ class Var(object):
         else:
             post = '>'
         # End if
-        return '{} {}: {} {}'.format(pre, self._prop_dict['standard_name'], self._prop_dict['local_name'], post)
+        return '{} {}: {} {}'.format(pre, self._prop_dict['standard_name'],
+                                     self._prop_dict['local_name'], post)
 
 ###############################################################################
 
@@ -1397,6 +1508,7 @@ class VarDictionary(OrderedDict):
             parent_dict.add_sub_scope(self)
         # End if
         self._sub_dicts = list()
+        self._local_names = {} # local names in use
         if isinstance(variables, Var):
             self.add_variable(variables)
         elif isinstance(variables, list):
@@ -1471,23 +1583,36 @@ class VarDictionary(OrderedDict):
         if (standard_name in self) and (not exists_ok):
             # We already have a matching variable, error!
             if self._logger is not None:
-                self._logger.error("Attempt to add duplicate variable, {} from {}".format(standard_name, newvar.source.name))
+                emsg = "Attempt to add duplicate variable, {} from {}"
+                self._logger.error(emsg.format(standard_name,
+                                               newvar.source.name))
             # End if
-            raise ParseSyntaxError("(duplicate) standard name in {}".format(self.name),
+            emsg = "(duplicate) standard name in {}"
+            raise ParseSyntaxError(emsg.format(self.name),
                                    token=standard_name, context=newvar._context)
         # End if
         cvar = self.find_variable(standard_name, any_scope=False)
         if cvar is not None:
-            compat, reason = cvar.compatible(newvar, self._logger)
-            if not compat:
+            compat, reason = cvar.compatible(newvar, logger=self._logger)
+            if compat:
+                # Check for intent mismatch
+                vintent = cvar.get_prop_value('intent')
+                dintent = newvar.get_prop_value('intent')
+                if vintent != dintent:
+                    raise CCPPError("check intent")
+            else:
                 if self._logger is not None:
-                    self._logger.error("Attempt to add incompatible variable, {} from {}".format(standard_name, newvar.source.name))
+                    emsg = "Attempt to add incompatible variable, {} from {}"
+                    emsg += "\n{}".format(reason)
+                    self._logger.error(emsg.format(standard_name,
+                                                   newvar.source.name))
                 # End if
                 nlname = newvar.get_prop_value('local_name')
                 clname = cvar.get_prop_value('local_name')
                 cstr = context_string(cvar.context, with_comma=True)
                 errstr = "new variable, {}, incompatible {} between {}{} and"
-                raise ParseSyntaxError(errstr.format(nlname, reason, clname, cstr),
+                raise ParseSyntaxError(errstr.format(nlname, reason,
+                                                     clname, cstr),
                                        token=standard_name,
                                        context=newvar.context)
             # End if
@@ -1505,9 +1630,22 @@ class VarDictionary(OrderedDict):
                                        context=newvar.source.context)
             # End if (no else, things are okay)
         # End if (no else, things are okay)
+        # Check if this variable has a parent (i.e., it is an array reference)
+        aref = newvar.array_ref()
+        if aref is not None:
+            pname = aref.group(1).strip()
+            pvar = self.find_local_name(pname)
+            if pvar is not None:
+                newvar.parent = pvar
+            # End if
+        # End if
         # If we make it to here without an exception, add the variable
         if standard_name not in self:
             self[standard_name] = newvar
+        # End if
+        lname = lname.lower()
+        if lname not in self._local_names:
+            self._local_names[lname] = standard_name
         # End if
 
     def remove_variable(self, standard_name):
@@ -1540,6 +1678,23 @@ class VarDictionary(OrderedDict):
             new_var = clone.clone(new_name)
         # End if
         return var
+
+    def find_local_name(self, local_name):
+        """Return a variable in this dictionary with local_name = <local_name>
+        or return None if no such variable is currently in the dictionary"""
+        pvar = None
+        lname = local_name.lower() # Case is insensitive for local names
+        if lname in self._local_names:
+            stdname = self._local_names[lname]
+            pvar = self.find_variable(stdname, any_scope=False)
+            if not pvar:
+                emsg = 'VarDictionary {} should have standard_name, {}, '
+                emsg += 'based on local_name {}'
+                raise ParseInternalError(emsg.format(self.name,
+                                                     stdname, local_name))
+            # End if (no else, pvar is fine)
+        # End if
+        return pvar
 
     def add_sub_scope(self, sub_dict):
         'Add a child dictionary to enable traversal'
@@ -1740,7 +1895,7 @@ class VarDictionary(OrderedDict):
         else:
             var_prefix = '{}'.format(prefix)
         # End if
-        varlist = [x for x in self.prop_list('local_name') if var_prefix in x]
+        varlist = [x for x in self._local_names.keys() if var_prefix in x]
         newvar = None
         while newvar is None:
             if index == 0:

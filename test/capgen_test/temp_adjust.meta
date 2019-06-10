@@ -1,7 +1,7 @@
 [ccpp-arg-table]
   name = temp_adjust_run
   type = scheme
-[ nbox ]
+[ foo ]
   standard_name = horizontal_loop_extent
   type = integer
   units = count
@@ -28,6 +28,21 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
+  intent = inout
+[ qv ]
+  standard_name = water_vapor_specific_humidity
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ ps ]
+  standard_name = surface_air_pressure
+  state_variable = true
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_dimension)
   intent = inout
 [ errmsg ]
   standard_name = ccpp_error_message
