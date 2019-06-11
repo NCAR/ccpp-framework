@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
+import keyword
 import logging
+import re
 import subprocess
+import sys
 
 CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
@@ -100,3 +103,32 @@ def escape_tex(text):
                 '%', '\%').replace(
                 '_', '\_')
 
+def isstring(s):
+    """Return true if a variable is a string"""
+    # We use Python 3
+    if (sys.version_info.major == 3):
+        return isinstance(s, str)
+    # We use Python 2
+    elif (sys.version_info.major == 2):
+        return isinstance(s, basestring)
+    else:
+        raise Exception('Unknown Python version')
+
+def string_to_python_identifier(string):
+    """Replaces forbidden characters in strings with standard substitutions
+    so that the result is a valid Python object (variable, function) name.
+    At this point, it only converts characters found in the units attributes.
+    A check for allowed characters in Python v2 catches missing conversions."""
+    # Replace whitespaces with underscores
+    string = string.replace(" ","_")
+    # Replace decimal points with _p_
+    string = string.replace(".","_p_")
+    # Replace dashes and minus sign with _minus_
+    string = string.replace("-","_minus_")
+    # Replace plus signs with _plus_
+    string = string.replace("+","_plus_")
+    # Test that the resulting string is a valid Python identifier
+    if re.match("[_A-Za-z][_a-zA-Z0-9]*$", string) and not keyword.iskeyword(string):
+        return string
+    else:
+        raise Exception("Resulting string '{0}' is not a valid Python identifier".format(string))
