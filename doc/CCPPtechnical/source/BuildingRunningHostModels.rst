@@ -4,7 +4,7 @@
 Building and Running Host Models
 ****************************************
 
-The following instructions describe how to compile and run the CCPP code with the SCM (:numref:`Section %s <SCM>`) and with the UFS Atmosphere (:numref:`Section %s <UFSAtmo>`). Instructions are for the *Theia, Jet* and *Cheyenne* computational platforms, with examples on how to run the code on Theia included as necessary.
+The following instructions describe how to compile and run the CCPP code with the SCM (:numref:`Section %s <SCM>`) and with the UFS Atmosphere (:numref:`Section %s <UFSAtmo>`). Instructions are for the *Theia, Jet* and *Cheyenne* computational platforms, with examples on how to run the code on *Theia*.
 
 .. _SCM:
 
@@ -23,7 +23,7 @@ The basic requirements for building and running the CCPP and SCM bundle are list
     * FORTRAN 90+ compiler versions
         * ifort 18.0.1.163 and 19.0.2
         * gfortran 6.2, 8.1, and 9.1
-        * pgf90 17.7 and17.9
+        * pgf90 17.7 and 17.9
     * C compiler versions
         * icc v18.0.1.163 and 19.0.2
         * gcc 6.2 and 8.1
@@ -37,9 +37,9 @@ The basic requirements for building and running the CCPP and SCM bundle are list
 Because these tools and libraries are typically the purview of system administrators to install and maintain, they are considered part of the basic system requirements.
 Further, there are several utility libraries as part of the NCEPlibs package that must be installed prior to building the SCM.
 
-    * bacio - Binary I/O library
-    * sp - Spectral Transformation Library
-    * w3nco - GRIB decoder and encoder library
+    * bacio v2.0.1 - Binary I/O library
+    * sp v2.0.2 - Spectral Transformation Library
+    * w3nco v2.0.6 - GRIB decoder and encoder library
 
 These libraries are prebuilt on most NOAA machines using the Intel compiler. For those needing to build the libraries themselves, GMTB recommends using the source code from GitHub at https://github.com/NCAR/NCEPlibs.git, which includes build files for various compilers and machines using OpenMP flags and which are thread-safe. Instructions for installing NCEPlibs are included on the GitHub repository webpage, but for the sake of example, execute the following for obtaining and building from source in ``/usr/local/NCEPlibs`` on a Mac:
 
@@ -64,7 +64,7 @@ Building and Running the SCM
 
 Instructions for downloading the code are provided in :numref:`Chapter %s <CodeManagement>`. Here are the steps to compile and run SCM:
 
-* Run the CCPP *prebuild* script to match required physics variables with those available from the dycore (SCM) and to generate physics *caps* and *makefile* segments.
+* Run the CCPP *prebuild* script to match required physics variables with those available from the dycore (SCM) and to generate physics *caps* and ``makefile`` segments.
 
     .. code-block:: console
 
@@ -78,19 +78,17 @@ Instructions for downloading the code are provided in :numref:`Chapter %s <CodeM
 
 * (Optional) Run the machine setup script if necessary. This script loads compiler modules (Fortran 2003-compliant), netCDF module, etc. and sets compiler environment variables.
 
-    .. code-block:: console
+   * ``source etc/Theia_setup_intel.csh`` (for csh) or ``. etc/Theia_setup_intel.sh`` (for bash)
+   * ``source etc/Theia_setup_gnu.csh`` (for csh) or ``. etc/Theia_setup_gnu.sh`` (for bash)
+   * ``source etc/Theia_setup_pgi.csh`` (for csh) or ``. etc/Theia_setup_pgi.sh`` (for bash)
+   * ``source etc/Cheyenne_setup_intel.csh`` (for csh) or ``. etc/Cheyenne_setup_intel.sh`` (for bash)
+   * ``source etc/Cheyenne_setup_gnu.csh`` (for csh) or ``. etc/Cheyenne_setup_gnu.sh`` (for bash)
+   * ``source etc/Cheyenne_setup_pgi.csh`` (for csh) or ``. etc/Cheyenne_setup_pgi.sh`` (for bash)
+   * ``source etc/UBUNTU_setup.csh`` (for csh) or ``. etc/UBUNTU_setup.sh`` (for bash) if following the instructions in ``doc/README_UBUNTU.txt``
+   * ``source etc/CENTOS_setup.csh`` (for csh) or ``. etc/CENTOS_setup.sh`` (for bash) if following the instructions in ``doc/README_CENTOS.txt``
+   * ``source etc/MACOSX_setup.csh`` (for csh) or ``. etc/MACOSX_setup.sh`` (for bash) if following the instructions in ``doc/README_MACOSX.txt``
 
-        source etc/Theia_setup_intel.csh (for csh) or . etc/Theia_setup_intel.sh (for bash)
-        source etc/Theia_setup_gnu.csh (for csh) or . etc/Theia_setup_gnu.sh (for bash)
-        source etc/Theia_setup_pgi.csh (for csh) or . etc/Theia_setup_pgi.sh (for bash)
-        source etc/Cheyenne_setup_intel.csh (for csh) or . etc/Cheyenne_setup_intel.sh (for bash)
-        source etc/Cheyenne_setup_gnu.csh (for csh) or . etc/Cheyenne_setup_gnu.sh (for bash)
-        source etc/Cheyenne_setup_pgi.csh (for csh) or . etc/Cheyenne_setup_pgi.sh (for bash)
-        source etc/UBUNTU_setup.csh (for csh) or . etc/UBUNTU_setup.sh (for bash) if following the instructions in doc/README_UBUNTU.txt
-        source etc/CENTOS_setup.csh (for csh) or . etc/CENTOS_setup.sh (for bash) if following the instructions in doc/README_CENTOS.txt
-        source etc/MACOSX_setup.csh (for csh) or . etc/MACOSX_setup.sh (for bash) if following the instructions in doc/README_MACOSX.txt
-
-Note: If using a local Linux or Mac system, we provide instructions for how to set up your development system (compilers and libraries) in ``doc/README_{MACOSX,UBUNTU,CENTOS}.txt``. If following these, you will need to run the respective setup script listed above. If your computing environment was previously set up to use modern compilers with an associated netCDF installation, it may not be necessary, although we recommend setting environment variables such as ``CC`` and ``FC``. For version 3.0 and above, it is required to have the ``NETCDF`` environment variable set to the path of the netCDF installation that was compiled with the same compiler used in the following steps. Otherwise, the ``cmake`` step will not complete successfully.
+.. note:: If using a local Linux or Mac system, we provide instructions for how to set up your development system (compilers and libraries) in ``doc/README_{MACOSX,UBUNTU,CENTOS}.txt``. If following these, you will need to run the respective setup script listed above. If your computing environment was previously set up to use modern compilers with an associated netCDF installation, it may not be necessary, although we recommend setting environment variables such as ``CC`` and ``FC``. For version 3.0 and above, it is required to have the ``NETCDF`` environment variable set to the path of the netCDF installation that was compiled with the same compiler used in the following steps. Otherwise, the ``cmake`` step will not complete successfully.
 
 * Make a build directory and change into it.
 
@@ -142,7 +140,7 @@ Although ``make clean`` is not currently implemented, an out-of-source build is 
     pwd #confirm that you are in the build/run directory before deleting files
     rm -rfd *
 
-Note: This command can be dangerous (deletes files without confirming), so make sure that you’re in the right directory before executing!
+.. warning:: This command can be dangerous (deletes files without confirming), so make sure that you’re in the right directory before executing!
 
 There are several test cases provided with this version of the SCM. For all cases, the SCM will go through the time steps, applying forcing and calling the physics defined in the chosen SDF using physics configuration options from an associated namelist. The model is executed through one of two Python run scripts that are pre-staged into the ``bin`` directory: ``run_gmtb_scm.py`` or ``multi_run_gmtb_scm.py``. The former sets up and runs one integration while the latter sets up and runs several integrations serially.
 
@@ -162,12 +160,12 @@ When invoking the run script, the only required argument is the name of the case
     * SCM_csawmg
     * SCM_GSD_v0
 
-Note that using the Thompson microphysics scheme (as in ``SCM_GSD_v0``) requires the existence of look-up tables during its initialization phase. As of the release, computation of the lookup tables has been prohibitively slow with this model, so it is highly suggested that they be downloaded and staged to use this scheme (and the ``SCM_GSD_v0`` suite). Pre-computed tables have been created and are available for download at the following URLs:
+Note that using the Thompson microphysics scheme (as in ``SCM_GSD_v0``) requires the existence of lookup tables during its initialization phase. As of the release, computation of the lookup tables has been prohibitively slow with this model, so it is highly suggested that they be downloaded and staged to use this scheme (and the ``SCM_GSD_v0`` suite). Pre-computed tables have been created and are available for download at the following URLs:
     * https://dtcenter.org/GMTB/freezeH2O.dat (243 M)
     * https://dtcenter.org/GMTB/qr_acr_qg.dat (49 M)
     * https://dtcenter.org/GMTB/qr_acr_qs.dat (32 M)
 
-These files should be staged in ``gmtb-scm/scm/data/GFS_physics_data`` prior to executing the run script. Since binary files can be system-dependent (due to endianness), it is possible that these files will not be read correctly on your system. For reference, the linked files were generated on Theia using the Intel v18 compiler.
+These files should be staged in ``gmtb-scm/scm/data/physics_input_data`` prior to executing the run script. Since binary files can be system-dependent (due to endianness), it is possible that these files will not be read correctly on your system. For reference, the linked files were generated on *Theia* using the Intel v18 compiler.
 
 Also note that some cases require specified surface fluxes. Special SDFs that correspond to the suites listed above have been created and use the ``*_prescribed_surface`` decoration. It is not necessary to specify this filename decoration when specifying the suite name. If the ``spec_sfc_flux`` variable in the configuration file of the case being run is set to ``.true.``, the run script will automatically use the special SDF that corresponds to the chosen suite from the list above.
 
@@ -176,8 +174,9 @@ If specifying a namelist other than the default, the value must be an entire fil
 If the run aborts with the error message
 
 .. code-block:: console
+   :emphasize-lines: 1,1
 
-    gmtb_scm: libccppphys.so.X.X.X: cannot open shared object file: No such file or directory
+   gmtb_scm: libccppphys.so.X.X.X: cannot open shared object file: No such file or directory
 
 the environment variable ``LD_LIBRARY_PATH`` must be set to
 
@@ -203,7 +202,7 @@ In addition to the main options, some helper options can also be used with any o
 
 **Batch Run Script**
 
-If using the model on HPC resources and significant amounts of processor time is anticipated for the experiments, it will likely be necessary to submit a job through the HPC’s batch system. An example script has been included in the repository for running the model on Theia’s batch system (SLURM). It is located in ``gmtb-scm/scm/etc/gmtb_scm_slurm_example.py``. Edit the job_name, account, etc. to suit your needs and copy to the ``bin`` directory. The case name to be run is included in the command variable. To use, invoke
+If using the model on HPC resources and significant amounts of processor time is anticipated for the experiments, it will likely be necessary to submit a job through the HPC’s batch system. An example script has been included in the repository for running the model on *Theia*’s batch system (SLURM). It is located in ``gmtb-scm/scm/etc/gmtb_scm_slurm_example.py``. Edit the job_name, account, etc. to suit your needs and copy to the ``bin`` directory. The case name to be run is included in the command variable. To use, invoke
 
 .. code-block:: console
 
@@ -211,10 +210,7 @@ If using the model on HPC resources and significant amounts of processor time is
 
 from the ``bin`` directory.
 
-Additional information on the SCM can be found at https://dtcenter.org/gmtb/users/ccpp/docs/SCM-CCPP-Guide_v3.0.pdf (**!!!GF: Update for release**).
-
-
-
+Additional information on the SCM can be found at https://dtcenter.org/gmtb/users/ccpp/docs/SCM-CCPP-Guide_v3.0.pdf
 
 .. _UFSAtmo:
 
@@ -302,15 +298,15 @@ Here, ``system`` stands for the machine on which the code is compiled and can be
 
 The ``MAKEOPTS`` string, enclosed in single or double quotes, allows to specify options for compiling the code. The following options are of interest for building the CCPP version of NEMSfv3gfs:
 
-* **CCPP=Y** - enables CCPP (default is ``N``)
+* **CCPP=Y** - enables :term:`CCPP` (default is ``N``)
 * **STATIC=Y** - enables the CCPP static mode; requires ``CCPP=Y`` (default is ``N``) and ``SUITES=...`` (see below)
 * **SUITES=XYZ, ABC, DEF, ...** - specify SDF(s) to use when compiling the code in CCPP static mode; SDFs are located in ``ccpp/suites/``, omit the path in the argument; requires ``CCPP=Y STATIC=Y`` (default is ``‘’``)
 * **SION=Y** - enables support for the SIONlib I/O library (used by CCPP to read precomputed lookup tables instead of computing them on the fly); available on *Theia, Cheyenne, Jet*; also available on *Mac OS X* and *Linux* if instructions in ``doc/README_{macosx,linux}.txt`` are followed (default is ``N``)
 * **32BIT=Y** - compiles FV3 dynamical core in single precision; note that physics are always compiled in double precision; this option is only available on *Theia, Cheyenne*, and *Jet* (default is ``N``)
-* **REPRO=Y** - compiles code in ``REPRO`` mode, i.e. removes certain compiler optimization flags used in the default ``PROD`` mode to obtain bit-for-bit (b4b) identical results between CCPP and non-CCPP code (default is ``N``)
-* **DEBUG=Y** - compiles code in ``DEBUG`` mode, i.e. removes all optimization of ``PROD`` mode and add bound checks; mutually exclusive with ``REPRO=Y`` (default is ``N``)
+* **REPRO=Y** - compiles code in :term:`REPRO` mode, i.e. removes certain compiler optimization flags used in the default :term:`PROD` mode to obtain bit-for-bit (b4b) identical results between CCPP and non-CCPP code (default is ``N``)
+* **DEBUG=Y** - compiles code in DEBUG mode, i.e. removes all optimization of :term:`PROD` mode and add bound checks; mutually exclusive with ``REPRO=Y`` (default is ``N``)
 * **INTEL18=Y** - available on *Theia* and *Jet* only, compiles code with Intel 18 compiler instead of the default Intel 15 compiler (default is ``N``); note that Intel 18 is the only supported compiler on *Cheyenne*.
-* **TRANSITION=Y** - applies selective lowering of optimization for selected files to obtain b4b with non-CCPP code in ``PROD`` mode (only when using Intel 15 on *Theia*)
+* **TRANSITION=Y** - applies selective lowering of optimization for selected files to obtain b4b with non-CCPP code in PROD mode (only when using Intel 15 on *Theia*)
 
 Examples:
 
@@ -326,11 +322,11 @@ Examples:
 
         ./compile.sh $PWD/../FV3 jet.intel ‘CCPP=Y DEBUG=Y INTEL18=Y’
 
-* Compile static CCPP code for the advanced CPT suite on *Linux* with the GNU compiler, enable support for the SIONlib I/O library (requires that the library to be installed)
+* Compile static CCPP code for the CPT suite on *Linux* with the GNU compiler, enable support for the SIONlib I/O library (requires that the library to be installed)
 
     .. code-block:: console
 
-        ./compile.sh $PWD/../FV3 linux.gnu ‘SION=Y CCPP=Y STATIC=Y SUITES=suite_FV3_CPT_advanced’
+        ./compile.sh $PWD/../FV3 linux.gnu ‘SION=Y CCPP=Y STATIC=Y SUITES=FV3_CPT_v0’
 
 * *Cheyenne* static build with multiple suites:
 
@@ -347,7 +343,7 @@ Regression testing is the process of testing changes to the programs to make sur
 Overview of the RTs
 ^^^^^^^^^^^^^^^^^^^
 
-The RT configuration files are located in ``./tests`` relative to the top-level directory of NEMSfv3gfs and have names ``rt*.conf``. The default RT configuration file, supplied with the NEMSfv3gfs master, compares the results from the non-CCPP code to the *official baseline* and is called ``rt.conf``. Before running the RT script ``rt.sh`` in the same directory, the user has to set one or more environment variables and potentially modify the script to change the location of the automatically created run directories. The environment variables are ``ACCNR`` (mandatory unless the user is a member of the default project ``nems``; sets the account to be charged for running the RTs), ``NEMS_COMPILER`` (optional for the ``intel`` compiler option, set to ``gnu`` to switch), and potentially ``RUNDIR_ROOT``. ``RUNDIR_ROOT`` allows the user to specify an alternative location for the RT run directories underneath which directories called ``rt_$PID`` are created (``$PID`` is the process identifier of the ``rt.sh`` invocation). This may be required on systems where the user does not have write permissions in the default run directory tree.
+The RT configuration files are located in ``./tests`` relative to the top-level directory of NEMSfv3gfs and have names ``rt*.conf``. The default RT configuration file, supplied with the NEMSfv3gfs master, compares the results from the non-CCPP code to the *official baseline* and is called ``rt.conf``. Before running the RT script ``rt.sh`` in the same directory, the user has to set one or more environment variables and potentially modify the script to change the location of the automatically created run directories. The environment variables are ``ACCNR`` (mandatory unless the user is a member of the default project *nems*; sets the account to be charged for running the RTs), ``NEMS_COMPILER`` (optional for the ``intel`` compiler option, set to ``gnu`` to switch), and potentially ``RUNDIR_ROOT``. ``RUNDIR_ROOT`` allows the user to specify an alternative location for the RT run directories underneath which directories called ``rt_$PID`` are created (``$PID`` is the process identifier of the ``rt.sh`` invocation). This may be required on systems where the user does not have write permissions in the default run directory tree.
 
 .. code-block:: console
 
@@ -411,7 +407,7 @@ The *official baseline* directory is defined as:
 
 Note that ``yyyymmdd`` is the year, month and day the RT was created.
 
-Thus, modifying ``$DISKNM`` will break the RTs!
+.. warning::  Modifying ``$DISKNM`` will break the RTs!
 
 *Personal baseline* results (see below) are stored in
 
@@ -443,15 +439,15 @@ In case a user does not have write permissions to ``$STMP (/scratch4/NCEPDEV/stm
 Non-CCPP vs CCPP Tests
 ^^^^^^^^^^^^^^^^^^^^^^
 
-While the official EMC RTs do not execute the CCPP code, GMTB provides RTs to exercise the CCPP in its various modes: ``rt_ccpp_standalone.conf`` tests the CCPP with dynamic build and ``rt_ccpp_static.conf`` tests the CCPP with static build. These tests compare the results of runs done using the CCPP against a previously generated *personal baseline* created without the CCPP by running ``rt_ccpp_ref.conf``.  For this comparison, both the non-CCPP *personal baseline* and the tests using the CCPP are performed with code built with the ``REPRO`` compiler options.
+While the official EMC RTs do not execute the CCPP code, GMTB provides RTs to exercise the CCPP in its various modes: ``rt_ccpp_standalone.conf`` tests the CCPP with dynamic build and ``rt_ccpp_static.conf`` tests the CCPP with static build. These tests compare the results of runs done using the CCPP against a previously generated *personal baseline* created without the CCPP by running ``rt_ccpp_ref.conf``.  For this comparison, both the non-CCPP *personal baseline* and the tests using the CCPP are performed with code built with the :term:`REPRO` compiler options.
 
-The command below should be used to create a *personal baseline* using non-CCPP code compiled in ``REPRO`` mode.
+The command below should be used to create a *personal baseline* using non-CCPP code compiled in :term:`REPRO` mode.
 
 .. code-block:: console
 
     ./rt.sh -l rt_ccpp_ref.conf -c fv3 # create own reg. test baseline
 
-Once the *personal baseline* in ``REPRO`` mode has been created, the CCPP tests can be run to compare against it. Use the ``-l`` option to select the test suite and the ``-m`` option to compare against the *personal baseline*.
+Once the *personal baseline* in REPRO mode has been created, the CCPP tests can be run to compare against it. Use the ``-l`` option to select the test suite and the ``-m`` option to compare against the *personal baseline*.
 
 .. code-block:: console
 
