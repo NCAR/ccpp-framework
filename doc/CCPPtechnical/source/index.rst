@@ -18,7 +18,7 @@ CCPP Technical Documentation
    HostSideCoding
    CodeManagement
    CCPPPreBuild
-   BuildingRunningHostMdoels
+   BuildingRunningHostModels
    AddingNewSchemes
    Acronyms
    Glossary
