@@ -23,7 +23,9 @@ SCHEME_FILES = {
     'MICM_chemistry/src/chemistry_driver_ros.F90' : ['physics'],
     'MICM_chemistry/src/kinetics/k_rateConst.F90' : ['physics'],
     'MICM_chemistry/src/photolysis_interstitial.F90' : ['physics'],
-    'MICM_chemistry/src/tuv/tuv_photolysis.F90' : ['physics'],
+    'MICM_chemistry/src/tuv/oxygen_xsect/molec_ox_xsect.F90' : ['physics'],
+    'MICM_chemistry/src/tuv/rad_xfer/tuv_radiation_transfer.F90' : ['physics'],
+    'MICM_chemistry/src/tuv/photo_rates/tuv_photolysis.F90' : ['physics'],
     'MICM_chemistry/src/mass_quantities_util.F90' : ['physics']
     }
 
