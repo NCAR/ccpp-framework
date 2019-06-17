@@ -4,6 +4,18 @@
 CCPP Overview
 *************************
 
+.. warning:: The information in this document is up to date with the CCPP and GMTB SCM v3 public
+   release as of June 17, 2019. If you are a developer looking for more current information, please
+   obtain and build the up-to-date Technical Documentation from the master branch of the ccpp-framework
+   code repository:
+
+    .. code-block:: console
+
+       git clone https://github.com/NCAR/ccpp-framework
+       cd ccpp-framework/doc/CCPPtechnical   
+       make html
+       make latexpdf
+
 Ideas for this project originated within the Earth System Prediction Capability (ESPC)
 physics interoperability group, which has representatives from the US National Center
 for Atmospheric Research (NCAR), the Navy, National Oceanic and Atmospheric Administration
@@ -136,7 +148,7 @@ future operational implementations. The GFS_v15plus suite is the same as the GFS
 except using the Turbulent Kinetic Energy (TKE)-based EDMF PBL scheme. The Climate Process
 Team (CPT) v0 suite (CPT_v0) uses the aerosol-aware (aa) Morrison-Gettelman 3 (MG3) microphysics
 scheme and Chikira-Sugiyama convection scheme with Arakawa-Wu extension (CSAW). The NOAA Global
-Systems Division (GSD) v0 suite (GFS_v0) includes aaThompson microphysics,
+Systems Division (GSD) v0 suite (GSD_v0) includes aaThompson microphysics,
 Mellor-Yamada-Nakanishi-Niino (MYNN) PBL and shallow convection, Grell-Freitas (GF) deep
 convection schemes, and the Rapid Update Cycle (RUC) LSM.*
 
