@@ -256,7 +256,6 @@ Here is the :term:`SDF` for the physics suite equivalent to the operational GFS 
          <scheme>GFS_MP_generic_pre</scheme>
          <scheme>gfdl_cloud_microphys</scheme>
          <scheme>GFS_MP_generic_post</scheme>
-         <scheme>sfc_sice_post</scheme>
          <scheme>maximum_hourly_diagnostics</scheme>
        </subcycle>
      </group>
@@ -332,7 +331,6 @@ The suite name is ``FV3_GFS_v15``. Five groups (``fast_physics, time_vary, radia
 * ``cnvc90``: Convective cloud cover 
 * ``GFS_MP_generic_pre``: Preprocessor for all GFS microphysics
 * ``gfdl_cloud_microphys``: GFDL cloud microphysics
-* ``GFS_MP_generic_post``: Postprocessor for GFS microphysics 
-* ``sfc_sice_post``: Postprocessor for the simple sea ice 
-* ``Maximum_hourly_diagnostics``: Computation of the maximum of the selected diagnostics 
+* ``GFS_MP_generic_post``: Postprocessor for GFS microphysics
+* ``Maximum_hourly_diagnostics``: Computation of the maximum of the selected diagnostics
 * ``GFS_stochastics``: GFS stochastics scheme: Stochastic Kinetic Energy Backscatter (SKEB), Perturbed boundary layer specific humidity (SHUM), or Stochastically Perturbed Physics Tendencies (SPPT) 
