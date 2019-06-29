@@ -305,7 +305,6 @@ The ``MAKEOPTS`` string, enclosed in single or double quotes, allows to specify 
 * **32BIT=Y** - compiles FV3 dynamical core in single precision; note that physics are always compiled in double precision; this option is only available on *Theia, Cheyenne*, and *Jet* (default is ``N``)
 * **REPRO=Y** - compiles code in :term:`REPRO` mode, i.e. removes certain compiler optimization flags used in the default :term:`PROD` mode to obtain bit-for-bit (b4b) identical results between CCPP and non-CCPP code (default is ``N``)
 * **DEBUG=Y** - compiles code in DEBUG mode, i.e. removes all optimization of :term:`PROD` mode and add bound checks; mutually exclusive with ``REPRO=Y`` (default is ``N``)
-* **INTEL18=Y** - available on *Theia* and *Jet* only, compiles code with Intel 18 compiler instead of the default Intel 15 compiler (default is ``N``); note that Intel 18 is the only supported compiler on *Cheyenne*.
 * **TRANSITION=Y** - applies selective lowering of optimization for selected files to obtain b4b with non-CCPP code in PROD mode (only when using Intel 15 on *Theia*)
 
 Examples:
@@ -316,11 +315,11 @@ Examples:
 
         ./compile.sh $PWD/../FV3 theia.intel ‘32BIT=Y’
 
-* Compile dynamic CCPP code in ``DEBUG`` mode on *Jet* with Intel 18
+* Compile dynamic CCPP code in ``DEBUG`` mode on *Jet*
 
     .. code-block:: console
 
-        ./compile.sh $PWD/../FV3 jet.intel ‘CCPP=Y DEBUG=Y INTEL18=Y’
+        ./compile.sh $PWD/../FV3 jet.intel ‘CCPP=Y DEBUG=Y’
 
 * Compile static CCPP code for the CPT suite on *Linux* with the GNU compiler, enable support for the SIONlib I/O library (requires that the library to be installed)
 
