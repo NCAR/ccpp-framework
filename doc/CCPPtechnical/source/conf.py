@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath('.'))
 
 project = 'CCPP Technical'
 copyright = '2019 '
-author = ' '
+author = 'J. Schramm, L. Bernardet, L. Carson, \\\ G. Firl, D. Heinzeller, L. Pan, and M. Zhang'
 
 # The short X.Y version
 version = 'v3.0.0'
@@ -123,6 +123,7 @@ htmlhelp_basename = 'CCPPtechnical'
 
 # -- Options for LaTeX output ------------------------------------------------
 
+latex_engine = 'pdflatex'
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
@@ -139,6 +140,7 @@ latex_elements = {
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
+      'maketitle': r'\newcommand\sphinxbackoftitlepage{For referencing this document please use: \newline \break Schramm, J., L. Bernardet, L. Carson, G. Firl, D. Heinzeller, L. Pan, and M. Zhang, 2019. CCPP Technical Documentation Release v3.0.0. 91pp. Available at https://dtcenter.org/GMTB/v3.0/ccpp\_tech\_guide.pdf.}\sphinxmaketitle'
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
@@ -146,7 +148,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'CCPPtechnical.tex', 'CCPP Technical Documentation',
-     ' ', 'manual'),
+     author,'manual'),
 ]
 
 

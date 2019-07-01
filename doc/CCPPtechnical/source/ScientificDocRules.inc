@@ -28,7 +28,7 @@ documented schemes.
 Reviewing the documentation for CCPP parameterizations is a good way of getting
 started in writing documentation for a new scheme. The CCPP Scientific
 Documentation can be converted to html format 
-(see https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/).
+(see https://dtcenter.org/GMTB/v3.0/sci_doc/).
 
 Doxygen Comments and Commands
 -----------------------------
@@ -145,7 +145,7 @@ as defined in
    - \ref GFS_CALPRECIPTYPE
    - \ref STOCHY_PHYS
 
-The HTML result is `here <https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/subpage_overview.html>`_.
+The HTML result is `here <https://dtcenter.org/GMTB/v3.0/sci_doc/GFS_v15_page.html>`_.
 You can see that the ``“-”`` signs before ``“@ref”`` generate a list with bullets.
 Doxygen command ``“\\c”`` displays its argument using a typewriter font.
 
@@ -183,7 +183,6 @@ sense to choose label names that refer to their context.
    */
 
 
-The HTML result is `here <https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/GFS_ZHAOC.html>`__.
 The physics scheme page will often describe the following:
 
 1. Description section (``“\\section”``), which usually includes:
@@ -237,7 +236,7 @@ is used to aggregate all code related to that scheme, even when it is in separat
 files. Since doxygen cannot know which files or subroutines belong to each physics
 scheme, each relevant subroutine must be tagged with the module name. This allows
 doxygen to understand your modularized design and generate the documentation accordingly.
-`Here <https://dtcenter.org/gmtb/users/ccpp/docs/sci_doc_v2/modules.html>`__ 
+`Here <https://dtcenter.org/GMTB/v3.0/sci_doc/modules.html>`_
 is a list of module list defined in CCPP.
 
 A module is defined using:
