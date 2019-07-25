@@ -81,7 +81,7 @@ def check_dimensions(test_val, max_len=0, error=False):
 ########################################################################
 
 # CF_ID is a string representing the regular expression for CF Standard Names
-CF_ID = r"[a-z][a-z0-9_]*"
+CF_ID = r"[A-Za-z][A-Za-z0-9_]*"
 __CFID_RE = re.compile(CF_ID+r"$")
 
 def check_cf_standard_name(test_val, error=False):
