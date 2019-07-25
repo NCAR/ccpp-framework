@@ -216,15 +216,14 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                                 rank = int(entry)
                                 entry = '(' + ','.join(dim_names[0:rank]) + ')'
                             elif attr_name == 'standard_name':
-                                # The standard name needs to be lowercase
-                                std_name = entry.lower()
                                 # Standard names cannot have dashes
-                                std_name = std_name.replace('-', '_')
+                                std_name = entry.replace('-', '_')
                                 # Standard names cannot have periods
                                 std_name = std_name.replace('.', '_')
                                 entries[ind] = std_name
                                 entry = std_name
                             elif attr_name == 'intent':
+                                # Don't write intent attribute for variable/type definitions
                                 if in_preamble:
                                     entry = ''
                                 elif entry.lower() == 'none':
@@ -232,6 +231,15 @@ def convert_file(filename_in, filename_out, metadata_filename_out, logger=None):
                                         raise ValueError("{} has intent = none in {}".format(var_name, table_name))
                                     else:
                                         logger.warning("{} has intent = none in {}".format(var_name, table_name))
+                            elif attr_name == 'optional':
+                                # Don't write optional attribute for variable/type definitions
+                                if in_preamble:
+                                    entry = ''
+                                elif not entry in ['F', 'T']:
+                                    if logger is None:
+                                        raise ValueError("{} has optional = {} in {}".format(var_name, entry, table_name))
+                                    else:
+                                        logger.warning("{} has optional = {} in {}".format(var_name, entry, table_name))
                                     # End if
                                 # End if
                             # No else needed
