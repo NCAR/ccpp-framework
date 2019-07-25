@@ -179,12 +179,16 @@ class Var(object):
             raise Exception('Invalid values for variable attribute actions.')
 
     def type_kind_test(self):
-        """Type and kind definitions are special variables
-        that can be identified by the type being the same
+        """Type and kind definitions are special variables.
+        Type definitions can be identified by the type being the same
         as the local name and the standard name of the variable.
-        Make sure that local_name and standard_name are both
-        identical to type, not just one of them."""
-        if self.type == self.local_name and self.type == self.standard_name:
+        Kind definitions are identified by the localname being the same
+        as the standard name, and the type being integer."""
+        if not self.type:
+            return
+        elif self.type == self.local_name and self.type == self.standard_name:
+            self.type_kind_var = True
+        elif self.local_name == self.standard_name and self.type == 'integer':
             self.type_kind_var = True
         elif self.type == self.local_name or self.type == self.standard_name:
             raise Exception('Type or kind definitions must have matching local_name, standard_name and type.')
@@ -435,6 +439,7 @@ class Var(object):
         var.kind          = data[columns.index('kind')]
         var.intent        = data[columns.index('intent')]
         var.optional      = data[columns.index('optional')]
+        var.type_kind_test()
         return var
 
     def to_xml(self, element):
