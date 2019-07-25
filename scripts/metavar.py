@@ -241,7 +241,7 @@ class VariableProperty(object):
         return self.name.lower() == test_name.lower()
 
     def valid_value(self, test_value, error=False):
-        'Return True iff test_value is valid'
+        'Return a sanitized version of test_value if valid, otherwise return None or abort'
         valid_val = None
         if self.type is int:
             try:
@@ -289,7 +289,11 @@ class VariableProperty(object):
                 pass
         elif self.type is bool:
             if isinstance(test_value, str):
-                valid_val = (test_value in ['True', 'False']) or (test_value.lower() in ['t', 'f', '.true.', '.false.'])
+                if test_value.lower() in ['t', 'true', '.true.'] + ['f', 'false', '.false.']:
+                    valid_val = (test_value.lower() in ['t', 'true', '.true.']) or \
+                                not (test_value.lower() in ['f', 'false', '.false.'])
+                else:
+                    valid_val = None # i.e., pass
             else:
                 valid_val = not not test_value
         elif self.type is str:
