@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 """
 Metadata headers are in config file format.
 The argument tables for schemes and variable definitions should
@@ -39,13 +39,13 @@ character at the start of each line).
   type = integer
   dimensions = ()
   intent = in
-  [ ix ]
+[ ix ]
   standard_name = horizontal_loop_dimension
   long_name = horizontal dimension
   units = index | type = integer | dimensions = ()
   intent = in
   ...
-  [ errmsg]
+[ errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
   units = none
@@ -53,7 +53,7 @@ character at the start of each line).
   len = *
   dimensions = ()
   intent = out
-  [ ierr ]
+[ ierr ]
   standard_name = ccpp_error_flag
   long_name = error flag for error handling in CCPP
   type = integer
@@ -96,7 +96,7 @@ import re
 from metavar     import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
-from parse_tools import FORTRAN_ID, FORTRAN_SCALAR_REF
+from parse_tools import LITERAL, FORTRAN_ID, FORTRAN_SCALAR_REF
 from parse_tools import check_fortran_ref
 
 ########################################################################
@@ -171,7 +171,7 @@ class MetadataHeader(ParseSource):
 
     __header_start__ = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
 
-    __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
+    __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
     __blank_line__ = re.compile(r"\s*[#;]")
 
