@@ -81,7 +81,7 @@ def check_dimensions(test_val, max_len=0, error=False):
 ########################################################################
 
 # CF_ID is a string representing the regular expression for CF Standard Names
-CF_ID = r"[A-Za-z][A-Za-z0-9_]*"
+CF_ID = r"(?i)[a-z][a-z0-9_]*"
 __CFID_RE = re.compile(CF_ID+r"$")
 
 def check_cf_standard_name(test_val, error=False):
@@ -127,13 +127,15 @@ def check_cf_standard_name(test_val, error=False):
 
 ########################################################################
 
+# LITERAL is a strin representing a literal value
+LITERAL = r"([0-9]*)"
 # FORTRAN_ID is a string representing the regular expression for Fortran names
 FORTRAN_ID = r"([A-Za-z][A-Za-z0-9_]*)"
 __FID_RE = re.compile(FORTRAN_ID+r"$")
 # Note that the scalar array reference expressions below are not really for
 # scalar references because a colon can be a placeholder, unlike in Fortran code
-FORTRAN_SCALAR_ARREF = r"\(\s*(?:"+FORTRAN_ID+r"|[:])\s*(?:,\s*(?:"+FORTRAN_ID+r"|[:])\s*){0,6}\)"
-FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+FORTRAN_SCALAR_ARREF+r")"
+FORTRAN_SCALAR_ARREF = r"\(\s*(?:"+FORTRAN_ID+r"|"+LITERAL+r"|[:])\s*(?:,\s*(?:"+FORTRAN_ID+r"|"+LITERAL+r"|[:])\s*){0,6}\)"
+FORTRAN_SCALAR_REF = r"(?:"+"(?:"+LITERAL+r"|"+FORTRAN_ID+")"+r"\s*"+"(?:"+LITERAL+r"|"+FORTRAN_SCALAR_ARREF+r")"+r")"
 _FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
                             "double precision", "character" ]
