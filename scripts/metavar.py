@@ -191,6 +191,9 @@ class VariableProperty(object):
     CCPPError: '3y' is not a valid Fortran identifier
     """
 
+    __true_vals = ['t', 'true', '.true.']
+    __false_vals = ['f', 'false', '.false.']
+
     def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, default_fn_in=None, check_fn_in=None):
         self._name = name_in
         self._type = type_in
@@ -289,9 +292,9 @@ class VariableProperty(object):
                 pass
         elif self.type is bool:
             if isinstance(test_value, str):
-                if test_value.lower() in ['t', 'true', '.true.'] + ['f', 'false', '.false.']:
-                    valid_val = (test_value.lower() in ['t', 'true', '.true.']) or \
-                                not (test_value.lower() in ['f', 'false', '.false.'])
+                if test_value.lower() in VariableProperty.__true_vals + VariableProperty.__false_vals:
+                    valid_val = (test_value.lower() in VariableProperty.__true_vals) or \
+                                not (test_value.lower() in VariableProperty.__false_vals)
                 else:
                     valid_val = None # i.e., pass
             else:
