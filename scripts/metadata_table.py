@@ -1,4 +1,4 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 """
 Metadata headers are in config file format.
 The argument tables for schemes and variable definitions should
