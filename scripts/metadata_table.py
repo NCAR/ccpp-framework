@@ -258,7 +258,7 @@ class MetadataHeader(ParseSource):
         if self.title is None:
             raise ParseSyntaxError("metadata header start, no table name",
                                    token=curr_line, context=self._pobj)
-        elif self._header_type is None:
+        elif self.header_type is None:
             raise ParseSyntaxError("metadata header start, no table type",
                                    token=curr_line, context=self._pobj)
         elif self.header_type == "ddt":

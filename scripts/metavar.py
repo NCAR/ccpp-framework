@@ -370,7 +370,12 @@ class Var(object):
                     VariableProperty('dimensions', list,
                                      check_fn_in=check_dimensions),
                     VariableProperty('type', str,
-                                     check_fn_in=check_fortran_type),
+                                     # DH* Avoid checking of DDTs being registered or not,
+                                     # this only works if all DDTs required in one metadata
+                                     # are defined in that file and/or parsed beforehand.
+                                     #check_fn_in=check_fortran_type),
+                                     # *DH
+                                     ),
                     VariableProperty('kind', str,
                                      optional_in=True,
                                      default_fn_in=default_kind_val),
