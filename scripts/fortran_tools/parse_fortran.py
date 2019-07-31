@@ -405,6 +405,8 @@ class Ftype_type_decl(Ftype):
     ['GFS_statein_type', ['public', 'extends(foo)'], None]
     >>> Ftype_type_decl.type_def_line('type(foo) :: bar')
 
+    >>> Ftype_type_decl.type_def_line('type foo ! This is a comment')
+    ['foo', None, None]
     """
 
     __type_decl_re__ = re.compile(r"(?i)(type)\s*\(\s*([A-Z][A-Z0-9_]*)\s*\)?")
@@ -436,7 +438,11 @@ class Ftype_type_decl(Ftype):
         of a type definition"""
         type_def = None
         if not cls.type_match(line):
-            sline = line.strip()
+            if '!' in line:
+                sline = line[0:line.index('!')].strip()
+            else:
+                sline = line.strip()
+            # End if
             if sline.lower()[0:4] == 'type':
                 if '::' in sline:
                     elements = sline.split('::')
