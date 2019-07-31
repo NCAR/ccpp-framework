@@ -404,7 +404,6 @@ class Var(object):
         var.kind          = data[columns.index('kind')]
         var.intent        = data[columns.index('intent')]
         var.optional      = data[columns.index('optional')]
-        var.type_kind_test()
         return var
 
     def to_xml(self, element):
