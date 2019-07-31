@@ -80,6 +80,11 @@ CCPP_MANDATORY_VARIABLES = {
                             ),
     }
 
+# Save metadata to avoid repeated parsing of type/variable definition files
+NEW_METADATA_SAVE = {}
+
+###############################################################################
+
 def merge_dictionaries(x, y):
     """Merges two metadata dictionaries. For each list of elements
     (variables = class Var in mkcap.py) in one dictionary, we know
@@ -113,43 +118,38 @@ def merge_dictionaries(x, y):
             z[key] = y[key]
     return z
 
-
 def read_new_metadata(filename, module_name, table_name, scheme_name = None, subroutine_name = None):
     """Read metadata in new format and convert output to ccpp_prebuild metadata dictionary"""
     if not os.path.isfile(filename):
         raise Exception("New metadata file {0} not found".format(filename))
 
-    new_metadata_headers = MetadataHeader.parse_metadata_file(filename)
-    metadata = collections.OrderedDict()
+    # Save metadata, because this routine new_metadata
+    # is called once for every table in that file
+    if filename in NEW_METADATA_SAVE.keys():
+        new_metadata_headers = NEW_METADATA_SAVE[filename]
+    else:
+        new_metadata_headers = MetadataHeader.parse_metadata_file(filename)
+        NEW_METADATA_SAVE[filename] = new_metadata_headers
 
+    # Convert new metadata for requested table to old metadata dictionary
+    metadata = collections.OrderedDict()
     for new_metadata_header in new_metadata_headers:
         if not scheme_name:
             if not new_metadata_header.title == table_name:
-                # DH* I believe this is necessary (for multiple tables in one file), but let's abort for testing
-                #continue
-                raise Exception("Error parsing new metadata for variable/type definition table {0} from file {1}".format(table_name, filename))
-                # *DH
-            if table_name == module_name:
+                # Skip this table, since it is not requested right now
+                continue
+            if new_metadata_header.title == module_name:
                 container = encode_container(module_name)
             else:
-                container = encode_container(module_name, table_name)
+                container = encode_container(module_name, new_metadata_header.title)
         else:
             if not new_metadata_header.title == table_name:
-                # DH* I believe this is necessary (for multiple tables in one file), but let's abort for testing
-                #continue
-                raise Exception("Error parsing new metadata for variable/type definition table {0} from file {1}".format(table_name, filename))
-                # *DH
+                # Skip this table, since it is not requested right now
+                continue
             container = encode_container(module_name, scheme_name, table_name)
         for new_var in new_metadata_header.variable_list():
-            #print 'type'          , new_var.get_prop_value('type')
-            #print 'kind'          , new_var.get_prop_value('kind')
-            #print 'units'         , new_var.get_prop_value('units')
-            #print 'tank'          , new_var.get_prop_value('tank')
-            #print 'dimensions'    , new_var.get_prop_value('dimensions')
-            rank = len(new_var.get_prop_value('dimensions'))
-            #print 'standard_name' , new_var.get_prop_value('standard_name')
             standard_name = new_var.get_prop_value('standard_name')
-            #print 'optional'      , new_var.get_prop_value('optional')
+            rank = len(new_var.get_prop_value('dimensions'))
             var = Var(standard_name = standard_name,
                       long_name     = new_var.get_prop_value('long_name'),
                       units         = new_var.get_prop_value('units'),
@@ -162,7 +162,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                       )
             # Set rank using integer-setter method
             var.rank = rank
-            #print var.print_debug()
+            # Check for duplicates in same table
             if standard_name in metadata.keys():
                 raise Exception("Error, multiple definitions of standard name {0} in new metadata table {1}".format(standard_name, table_name))
             metadata[standard_name] = [var]
@@ -233,6 +233,9 @@ def parse_variable_tables(filename):
         line_counter = 0
         in_type = False
         for line in lines[startline:endline]:
+            # For the purpose of identifying module, type and scheme constructs, remove any trailing comments from line
+            if '!' in line and not line.startswith('!'):
+                line = line[:line.find('!')]
             current_line_number = startline + line_counter
             words = line.split()
             for j in range(len(words)):
@@ -384,7 +387,7 @@ def parse_variable_tables(filename):
                             raise Exception('Encountered invalid line "{0}" in argument table {1}'.format(line, table_name))
                     else:
                         if new_metadata:
-                            raise Exception("Invalid definition of new metadata format in file {0}".format(filename))
+                            raise Exception("Invalid definition of new metadata format in file {0}: {1}".format(filename, words))
                         var_items = [x.strip() for x in words[1:-1]]
                         if not len(var_items) == len(table_header):
                             raise Exception('Error parsing variable entry "{0}" in argument table {1}'.format(var_items, table_name))
@@ -532,6 +535,9 @@ def parse_scheme_tables(filename):
     module_lines = {}
     line_counter = 0
     for line in lines:
+        # For the purpose of identifying module constructs, remove any trailing comments from line
+        if '!' in line and not line.startswith('!'):
+            line = line[:line.find('!')]
         words = line.split()
         if len(words) > 1 and words[0].lower() == 'module' and not words[1].lower() == 'procedure':
             module_name = words[1].strip()
@@ -557,6 +563,9 @@ def parse_scheme_tables(filename):
         line_counter = 0
         in_subroutine = False
         for line in lines[startline:endline]:
+            # For the purpose of identifying scheme constructs, remove any trailing comments from line
+            if '!' in line and not line.startswith('!'):
+                line = line[:line.find('!')]
             current_line_number = startline + line_counter
             words = line.split()
             for j in range(len(words)):

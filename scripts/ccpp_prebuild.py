@@ -9,14 +9,10 @@ import os
 import re
 import sys
 
-# DH* TODO
-# CONSISTENCY CHECK BETWEEN OPTIONAL ARGUMENTS IN THE METADATA TABLE AND IN
-# THE ACTUAL ARGUMENT LIST / FORTRAN VARIABLE DECLARATIONS (RANKS, TYPE, INTENT).
-# *DH
-
 # Local modules
-from common import encode_container, decode_container, execute
+from common import encode_container, decode_container, decode_container_as_dict, execute
 from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE
+from common import split_var_name_and_array_reference
 from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
 from mkdoc import metadata_to_html, metadata_to_latex
@@ -106,6 +102,14 @@ def import_config(configfile):
     # Add model-intependent, CCPP-internal variable definition files
     config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
 
+    # To handle new metadata: import DDT references (if exist)
+    try:
+        config['typedefs_new_metadata'] = ccpp_prebuild_config.TYPEDEFS_NEW_METADATA
+        logging.info("Found TYPEDEFS_NEW_METADATA dictionary in config, assume at least some data is in new metadata formet")
+    except AttributeError:
+        config['typedefs_new_metadata'] = None
+        logging.info("Could not find TYPEDEFS_NEW_METADATA dictionary in config, assume all data is in old metadata formet")
+
     return(success, config)
 
 def setup_logging(debug):
@@ -172,8 +176,86 @@ def check_unique_pset_per_scheme(scheme_files):
             success = False
     return success
 
-def gather_variable_definitions(variable_definition_files):
-    """Scan all Fortran source files with variable definitions on the host model side."""
+def convert_local_name_from_new_metadata(metadata, standard_name, typedefs_new_metadata, converted_variables):
+    """Convert local names in new metadata format (no old-style DDT references, array references as
+    standard names) to old metadata format (with old-style DDT references, array references as local names)."""
+    success = True
+    var = metadata[standard_name][0]
+    # Check if this variable has already been converted
+    if standard_name in converted_variables:
+        logging.debug('Variable {0} was in old metadata format and has already been converted'.format(standard_name))
+        return (success, var.local_name, converted_variables)
+    # Decode container into a dictionary
+    container = decode_container_as_dict(var.container)
+    # Check if variable is in old or new metadata format
+    module_name = container['MODULE']
+    if not module_name in typedefs_new_metadata.keys():
+        logging.debug('Variable {0} is in old metadata format, no conversion necessary'.format(standard_name))
+        return (success, var.local_name, converted_variables)
+    # For module variables set type_name to module_name
+    if not 'TYPE' in container.keys():
+        type_name = module_name
+    else:
+        type_name = container['TYPE']
+    # Check that this module/type is configured (modules will have empty prefices)
+    if not type_name in typedefs_new_metadata[module_name].keys():
+        logging.error("Module {0} uses the new metadata format, but module/type {1} is not configured".format(module_name, type_name))
+        success = False
+        return (success, None, converted_variables)
+
+    # The local name (incl. the array reference) is in new metadata format
+    local_name = var.local_name
+    logging.info("Converting local name {0} of variable {1} from new to old metadata".format(local_name, standard_name))
+    if "(" in local_name:
+        (actual_var_name, array_reference) = split_var_name_and_array_reference(local_name)
+        indices = array_reference.lstrip('(').rstrip(')').split(',')
+        indices_local_names = []
+        for index_range in indices:
+            # Leave colons-only dimension alone
+            if index_range == ':':
+                indices_local_names.append(index_range)
+                continue
+            # Split by colons to get a pair of dimensions
+            dimensions = index_range.split(':')
+            dimensions_local_names = []
+            for dimension in dimensions:
+                # Leave literals alone
+                try:
+                    int(dimension)
+                    dimensions_local_names.append(dimension)
+                    continue
+                except ValueError:
+                    pass
+                # Convert the local name of the dimension to old metadata standard, if necessary (recursive call)
+                (success, local_name_dim, converted_variables) = convert_local_name_from_new_metadata(
+                                      metadata, dimension, typedefs_new_metadata, converted_variables)
+                if not success:
+                    return (success, None, converted_variables)
+                # Update the local name of the dimension, if necessary
+                if not metadata[dimension][0].local_name == local_name_dim:
+                    logging.debug("Updating local name of variable {0} from {1} to {2}".format(dimension,
+                                                      metadata[dimension][0].local_name, local_name_dim))
+                    metadata[dimension][0].local_name = local_name_dim
+                dimensions_local_names.append(local_name_dim)
+            indices_local_names.append(':'.join(dimensions_local_names))
+        # Put back together the array reference with local names in old metadata format
+        array_reference_local_names = '(' + ','.join(indices_local_names) + ')'
+        # Compose local name (still without any DDT reference prefix)
+        local_name = actual_var_name + array_reference_local_names
+
+    # Prefix the local name with the reference if not empty
+    if typedefs_new_metadata[module_name][type_name]:
+        local_name = typedefs_new_metadata[module_name][type_name] + '%' + local_name
+    if success:
+        converted_variables.append(standard_name)
+
+    return (success, local_name, converted_variables)
+
+def gather_variable_definitions(variable_definition_files, typedefs_new_metadata):
+    """Scan all Fortran source files with variable definitions on the host model side.
+    If typedefs_new_metadata is not None, search all metadata entries and convert new metadata
+    (local names) into old metadata by prepending the DDT references."""
+    #
     logging.info('Parsing metadata tables for variables provided by host model ...')
     success = True
     metadata_define = {}
@@ -185,6 +267,28 @@ def gather_variable_definitions(variable_definition_files):
         metadata_define = merge_dictionaries(metadata_define, metadata)
         # Return to BASEDIR
         os.chdir(BASEDIR)
+    #
+    if typedefs_new_metadata:
+        logging.info('Convert local names from new metadata format into old metadata format ...')
+        # Keep track of which variables have already been converted
+        converted_variables = []
+        for key in metadata_define.keys():
+            # Double-check that variable definitions are unique
+            if len(metadata_define[key])>1:
+                logging.error("Multiple definitions of standard_name {0} in type/variable defintions".format(key))
+                success = False
+                return
+            (success, local_name, converted_variables) = convert_local_name_from_new_metadata(
+                             metadata_define, key, typedefs_new_metadata, converted_variables)
+            if not success:
+                logging.error("An error occurred during the conversion of variable {0} from new to old metadata format".format(key))
+                return (success, metadata_define)
+            # Update the local name of the variable, if necessary
+            if not metadata_define[key][0].local_name == local_name:
+                logging.debug("Updating local name of variable {0} from {1} to {2}".format(key,
+                                               metadata_define[key][0].local_name, local_name))
+                metadata_define[key][0].local_name = local_name
+    #
     return (success, metadata_define)
 
 def collect_physics_subroutines(scheme_files):
@@ -238,7 +342,7 @@ def filter_metadata(metadata, pset, arguments, suites):
             metadata_filtered[var_name] = metadata[var_name]
             pset_filtered[var_name] = pset[var_name]
         else:
-            print "filtering out variable {0}".format(var_name)
+            logging.info("filtering out variable {0}".format(var_name))
     for scheme in arguments.keys():
         for suite in suites:
             if scheme in suite.all_schemes_called:
@@ -591,7 +695,7 @@ def main():
         raise Exception('Call to check_unique_pset_per_scheme failed.')
 
     # Variables defined by the host model
-    (success, metadata_define) = gather_variable_definitions(config['variable_definition_files'])
+    (success, metadata_define) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 

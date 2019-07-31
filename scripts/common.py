@@ -53,7 +53,6 @@ def execute(cmd, abort = True):
             logging.error(message)
     return (status, stdout.rstrip('\n'), stderr.rstrip('\n'))
 
-
 def indent(elem, level=0):
     """Subroutine for writing "pretty" XML; copied from
     http://effbot.org/zone/element-lib.htm#prettyprint"""
@@ -71,6 +70,25 @@ def indent(elem, level=0):
         if level and (not elem.tail or not elem.tail.strip()):
           elem.tail = i
 
+def split_var_name_and_array_reference(var_name):
+    """Split an expression like foo(:,a,1:ddt%ngas)
+    into components foo and (:,a,1:ddt%ngas)."""
+    actual_var_name = None
+    array_reference = None
+    # Search for first pair of parentheses from the end of the string
+    parentheses = 0
+    i = len(var_name)-1
+    while i>=0:
+        if var_name[i] == ')':
+            parentheses += 1
+        elif var_name[i] == '(':
+            parentheses -= 1
+        if parentheses == 0:
+            actual_var_name = var_name[:i]
+            array_reference = var_name[i:]
+            break
+        i -= 1
+    return (actual_var_name, array_reference)
 
 def encode_container(*args):
     """Encodes a container, i.e. the location of a metadata table for CCPP.
@@ -96,6 +114,20 @@ def decode_container(container):
     for i in xrange(len(items)):
         items[i] = items[i][:items[i].find('_')] + ' ' + items[i][items[i].find('_')+1:]
     return ' '.join(items)
+
+def decode_container_as_dict(container):
+    """Decodes a container, i.e. the description of a location of a metadata table
+    for CCPP. Currently, there are three possibilities with different numbers of
+    input arguments: module, module+typedef, module+scheme+subroutine. Return
+    a dictionary with possible keys MODULE, TYPE, SCHEME, SUBROUTINE."""
+    items = container.split(' ')
+    if not len(items) in [1, 2, 3]:
+        raise Exception("decode_container not implemented for {0} items".format(len(items)))
+    itemsdict = {}
+    for i in xrange(len(items)):
+        key, value = (items[i][:items[i].find('_')], items[i][items[i].find('_')+1:])
+        itemsdict[key] = value
+    return itemsdict
 
 def escape_tex(text):
     """Substitutes characters for generating LaTeX sources files from Python."""
