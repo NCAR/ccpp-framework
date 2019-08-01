@@ -191,6 +191,9 @@ class VariableProperty(object):
     CCPPError: '3y' is not a valid Fortran identifier
     """
 
+    __true_vals = ['t', 'true', '.true.']
+    __false_vals = ['f', 'false', '.false.']
+
     def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, default_fn_in=None, check_fn_in=None):
         self._name = name_in
         self._type = type_in
@@ -241,7 +244,7 @@ class VariableProperty(object):
         return self.name.lower() == test_name.lower()
 
     def valid_value(self, test_value, error=False):
-        'Return True iff test_value is valid'
+        'Return a sanitized version of test_value if valid, otherwise return None or abort'
         valid_val = None
         if self.type is int:
             try:
@@ -289,7 +292,11 @@ class VariableProperty(object):
                 pass
         elif self.type is bool:
             if isinstance(test_value, str):
-                valid_val = (test_value in ['True', 'False']) or (test_value.lower() in ['t', 'f', '.true.', '.false.'])
+                if test_value.lower() in VariableProperty.__true_vals + VariableProperty.__false_vals:
+                    valid_val = (test_value.lower() in VariableProperty.__true_vals) or \
+                                not (test_value.lower() in VariableProperty.__false_vals)
+                else:
+                    valid_val = None # i.e., pass
             else:
                 valid_val = not not test_value
         elif self.type is str:
@@ -363,7 +370,12 @@ class Var(object):
                     VariableProperty('dimensions', list,
                                      check_fn_in=check_dimensions),
                     VariableProperty('type', str,
-                                     check_fn_in=check_fortran_type),
+                                     # DH* Avoid checking of DDTs being registered or not,
+                                     # this only works if all DDTs required in one metadata
+                                     # are defined in that file and/or parsed beforehand.
+                                     #check_fn_in=check_fortran_type),
+                                     # *DH
+                                     ),
                     VariableProperty('kind', str,
                                      optional_in=True,
                                      default_fn_in=default_kind_val),
