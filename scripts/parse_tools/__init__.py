@@ -4,7 +4,8 @@ from __future__ import absolute_import
 
 from .parse_source   import ParseContext, ParseSource
 from .parse_source   import ParseSyntaxError, ParseInternalError
-from .parse_source   import CCPPError, context_string, unique_standard_name
+from .parse_source   import CCPPError, context_string
+from .parse_source   import unique_standard_name, reset_standard_name_counter
 from .parse_object   import ParseObject
 from .parse_checkers import check_fortran_id, FORTRAN_ID
 from .parse_checkers import FORTRAN_DP_RE
@@ -50,6 +51,7 @@ __all__ = [
     'register_fortran_ddt_name',
     'read_xml_file',
     'registered_fortran_ddt_name',
+    'reset_standard_name_counter',
     'setLogLevel',
     'setLogToFile',
     'setLogToNull',

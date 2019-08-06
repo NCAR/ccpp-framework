@@ -9,14 +9,27 @@ import os.path
 import logging
 # CCPP framework imports
 
-__sname_num__ = 0 # Counter for unique standard names
+__sname_num = 0 # Counter for unique standard names
 
 ###############################################################################
 def unique_standard_name():
 ###############################################################################
-    global __sname_num__
-    __sname_num__ = __sname_num__ + 1
-    return 'enter_standard_name_{}'.format(__sname_num__)
+    """
+    Return a unique standard name.
+    """
+    global __sname_num
+    __sname_num = __sname_num + 1
+    return 'enter_standard_name_{}'.format(__sname_num)
+
+###############################################################################
+def reset_standard_name_counter():
+###############################################################################
+    """
+    Reset the unique_standard_name counter so that future calls to
+    unique_standard name will restart.
+    """
+    global __sname_num
+    __sname_num = 0
 
 ###############################################################################
 def context_string(context=None, with_comma=True, nodir=False):

@@ -17,16 +17,18 @@ import os.path
 import logging
 import re
 # CCPP framework imports
+from parse_tools import init_log, set_log_level, context_string
+from parse_tools import CCPPError, ParseInternalError
+from file_utils import check_for_existing_file, check_for_writeable_file
+from file_utils import create_file_list
 from fortran_tools import parse_fortran_file, FortranWriter
 from host_model import HostModel
 from host_cap import write_host_cap
 from ccpp_suite import API, Suite, COPYRIGHT, KINDS_MODULE, KINDS_FILENAME
-from parse_tools import init_log, set_log_level, context_string
-from parse_tools import CCPPError, ParseInternalError
 from metadata_table import MetadataTable
 
 ## Init this now so that all Exceptions can be trapped
-logger = init_log('ccpp_capgen')
+logger = init_log(os.path.basename(__file__))
 
 ## Recognized Fortran filename extensions
 __fortran_filename_extensions = ['F90', 'f90', 'F', 'f']
@@ -46,46 +48,25 @@ kinds_header = '''
 '''
 
 ###############################################################################
-def check_for_existing_file(filename, description, readable=True):
-###############################################################################
-    'Check for file existence and access, abort on error'
-    if os.path.exists(filename):
-        if readable:
-            if not os.access(filename, os.R_OK):
-                errmsg = "No read access to {}, '{}'"
-                raise CCPPError(errmsg.format(description, filename))
-            # End if
-        # End if (no else needed, checks all done
-    else:
-        raise CCPPError("{}, '{}', must exist".format(description, filename))
-    # End if
-
-###############################################################################
-def check_for_writeable_file(filename, description):
-###############################################################################
-    if os.path.exists(filename) and not os.access(filename, os.W_OK):
-        raise CCPPError("Cannot write {}, '{}'".format(description, filename))
-    elif not os.access(os.path.dirname(filename), os.W_OK):
-        raise CCPPError("Cannot write {}, '{}'".format(description, filename))
-    # End if (else just return)
-
-###############################################################################
 def parse_command_line(args, description):
 ###############################################################################
+    "Create an ArgumentParser to parse and return command-line arguments"
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument("--host-files", metavar='<host files filename>',
                         type=str, required=True,
                         help="""Comma separated list of host filenames to process
-Filenames with a '.md' suffix are treated as host model metadata files
-Other filenames are treated as containing a list of .md filenames""")
+Filenames with a '.meta' suffix are treated as host model metadata files
+Filenames with a '.txt' suffix are treated as containing a list of .meta
+filenames""")
 
     parser.add_argument("--scheme-files", metavar='<scheme files filename>',
                         type=str, required=True,
                         help="""Comma separated list of scheme filenames to process
-Filenames with a '.md' suffix are treated as scheme metadata files
-Other filenames are treated as containing a list of .md filenames""")
+Filenames with a '.meta' suffix are treated as scheme metadata files
+Filenames with a '.txt' suffix are treated as containing a list of .meta
+filenames""")
 
     parser.add_argument("--suites", metavar='<Suite definition file(s)>',
                         type=str, required=True,
@@ -132,33 +113,6 @@ Other filenames are treated as containing a list of .xml filenames""")
     return pargs
 
 ###############################################################################
-def read_pathnames_from_file(pathsfile):
-###############################################################################
-    'Read path names from <pathsfile> and return them as a list'
-    # We want to end up with absolute paths, treat <pathsfile> as root location
-    root_path = os.path.dirname(os.path.abspath(pathsfile))
-    pdesc = 'pathname in {}'.format(pathsfile)
-    pathnames = list()
-    with open(pathsfile, 'r') as infile:
-        for line in infile.readlines():
-            path = line.strip()
-            # Skip blank lines and lines which appear to start with a comment.
-            if (len(path) > 0) and (path[0] != '#') and (path[0] != '!'):
-                # Check for an absolute path
-                if os.path.isabs(path):
-                    check_for_existing_file(path, "pathname")
-                else:
-                    # Assume relative pathnames are relative to pathsfile
-                    path = os.path.normpath(os.path.join(root_path, path))
-                    check_for_existing_file(path, pdesc)
-                # End if
-                pathnames.append(path)
-            # End if (else skip blank or comment line)
-        # End for
-    # End with open
-    return pathnames
-
-###############################################################################
 def delete_pathnames_from_file(capfile, logger):
 ###############################################################################
     """Remove all the filenames found in <capfile>, then delete <capfile>"""
@@ -202,6 +156,7 @@ def delete_pathnames_from_file(capfile, logger):
 ###############################################################################
 def find_associated_fortran_file(filename):
 ###############################################################################
+    "Find the Fortran file associated with metadata file, <filename>"
     fort_filename = None
     lastdot = filename.rfind('.')
     ##XXgoldyXX: Should we check to make sure <filename> ends in '.meta.'?
@@ -221,29 +176,6 @@ def find_associated_fortran_file(filename):
         raise CCPPError("Cannot find Fortran file associated with {}".format(filename))
     # End if
     return fort_filename
-
-###############################################################################
-def create_file_list(files, suffix, file_type, logger):
-###############################################################################
-    master_list = list()
-    file_list = [x.strip() for x in files.split(',')]
-    pdesc = '{} pathnames file'.format(file_type)
-    for filename in file_list:
-        suff = os.path.basename(filename).split('.')[-1]
-        if suff == suffix:
-            check_for_existing_file(filename, pdesc)
-            master_list.append(os.path.abspath(filename))
-        elif suff == 'txt':
-            check_for_existing_file(filename, pdesc)
-            master_list.extend(read_pathnames_from_file(filename))
-            lmsg = 'Reading .{} filenames from {}'
-            logger.debug(lmsg.format(suffix, filename))
-        else:
-            lmsg = 'WARNING: Not reading {}, only reading .{} or .txt files'
-            logger.warning(lmsg.format(filename, suffix))
-        # End if
-    # End for
-    return master_list
 
 ###############################################################################
 def create_kinds_file(kind_phys, output_dir, logger):
@@ -642,6 +574,8 @@ def parse_scheme_files(scheme_filenames, preproc_defs, logger):
 ###############################################################################
 def _main_func():
 ###############################################################################
+    """Parse command line, then parse indicated host, scheme, and suite files.
+    Finally, generate code to allow host model to run indicated CCPP suites."""
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
     if verbosity > 1:
@@ -673,10 +607,10 @@ def _main_func():
         # End if
     else:
         # We need to create three lists of files, hosts, schemes, and SDFs
-        host_files = create_file_list(args.host_files, 'meta', 'Host', logger)
-        scheme_files = create_file_list(args.scheme_files, 'meta',
+        host_files = create_file_list(args.host_files, ['meta'], 'Host', logger)
+        scheme_files = create_file_list(args.scheme_files, ['meta'],
                                         'Scheme', logger)
-        sdfs = create_file_list(args.suites, 'xml', 'Suite', logger)
+        sdfs = create_file_list(args.suites, ['xml'], 'Suite', logger)
         preproc_defs = args.preproc_directives
         gen_hostcap = args.generate_host_cap
         gen_docfiles = args.generate_docfiles
