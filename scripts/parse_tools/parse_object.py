@@ -3,8 +3,11 @@
 
 # Python library imports
 import re
+import sys
+import os.path
+sys.path.insert(0, os.path.dirname(__file__))
 # CCPP framework imports
-from .parse_source    import ParseContext, CCPPError
+from parse_source    import ParseContext, CCPPError
 
 ########################################################################
 

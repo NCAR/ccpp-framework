@@ -261,8 +261,8 @@ class VariableProperty(object):
     <__main__.VariableProperty object at ...>
     >>> VariableProperty('local_name', str).name
     'local_name'
-    >>> VariableProperty('standard_name', str).type
-    <type 'str'>
+    >>> VariableProperty('standard_name', str).type == str
+    True
     >>> VariableProperty('units', str).is_match('units')
     True
     >>> VariableProperty('units', str).is_match('UNITS')
@@ -286,6 +286,8 @@ class VariableProperty(object):
     ['x:y']
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,y:z)')
     ['w:x', 'y:z']
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('size(foo)')
+    ['size(foo)']
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,x:y:z:q)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: 'x:y:z:q' is an invalid dimension range
@@ -457,10 +459,10 @@ class Var(object):
     'Hi mom'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('intent')
     'in'
-    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'ttype' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'ttype' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid metadata variable property, 'ttype', in <standard input>
-    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()))
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Required property, 'units', missing, in <standard input>
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'inout', 'protected' : '.true.'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -1733,7 +1735,7 @@ class VarDictionary(OrderedDict):
         # End for
 
     def __str__(self):
-        return "VarDictionary({}, {})".format(self.name, self.keys())
+        return "VarDictionary({}, {})".format(self.name, list(self.keys()))
 
     def __repr__(self):
         srepr = super(VarDictionary, self).__repr__()

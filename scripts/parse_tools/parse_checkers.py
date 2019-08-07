@@ -4,8 +4,11 @@
 
 # Python library imports
 import re
+import sys
+import os.path
+sys.path.insert(0, os.path.dirname(__file__))
 # CCPP framework imports
-from .parse_source import CCPPError, ParseInternalError
+from parse_source import CCPPError, ParseInternalError
 
 ########################################################################
 
@@ -28,9 +31,11 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
     ['start1:end1', 'start2:end2']
     >>> check_dimensions(['start1:', 'start2:end2'], None, False)
     ['start1:', 'start2:end2']
+    >>> check_dimensions(['size(foo)'], None, False)
+    ['size(foo)']
     >>> check_dimensions(["dim1", "dim2name"], None, False, max_len=5)
 
-    >>> check_dimensions(["dim1", "dim2name"], None, True, max_len=5)
+    >>> check_dimensions(["dim1", "dim2name"], None, True, max_len=5) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: 'dim2name' is too long (> 5 chars)
     >>> check_dimensions("hi_mom", None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -66,6 +71,11 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                     # Not an integer, try a Fortran ID
                     valid = check_fortran_id(tdim, None,
                                              error, max_len=max_len) is not None
+                    if not valid:
+                        ##XXgoldyXX: hack, fix this!
+                        # Check for size entry -- just accept
+                        if tdim[0:4].lower() == 'size':
+                            valid = tdim
                 # End try
                 if not valid:
                     if error:

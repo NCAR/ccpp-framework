@@ -583,6 +583,12 @@ def parse_fortran_var_decl(line, source, logger=None):
     'errmsg'
     >>> parse_fortran_var_decl("character(len=512), intent(out) :: errmsg", ParseSource('foo.F90', 'scheme', ParseContext()))[0].get_prop_value('kind')
     'len=512'
+    >>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(8)", ParseSource('foo.F90', 'scheme', ParseContext()))[0].get_prop_value('dimensions')
+    '(8)'
+    >>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(size(bar))", ParseSource('foo.F90', 'scheme', ParseContext()))[0].get_prop_value('dimensions')
+    '(size(bar))'
+    >>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(8)", ParseSource('foo.F90', 'scheme', ParseContext()))[0].get_dimensions()
+    ['8']
     >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('local_name') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid variable declaration, character(len=*), intent(out) :: errmsg, intent not allowed in module variable, in <standard input>

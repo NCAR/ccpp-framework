@@ -51,8 +51,8 @@ def parse_command_line(args, description):
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument("--files", metavar='<list of files to process>',
-                        type=str, required=True,
+    parser.add_argument("files", metavar='<list of files to process>',
+                        type=str,
                         help="""Comma separated list of filenames to process
 Filenames with a '.meta' suffix are treated as host model metadata files
 Filenames with a '.txt' suffix are treated as containing a list of .meta
@@ -67,13 +67,17 @@ filenames""")
                         default=os.getcwd(),
                         help="directory for generated files")
 
+    parser.add_argument("--section-separator", type=str, default='',
+                        help="""Comment line to separate CCPP metadata tables
+(must start with a # or ; character)""")
+
     parser.add_argument("--verbose", action='count',
                         help="Log more activity, repeat for increased output")
     pargs = parser.parse_args(args)
     return pargs
 
 ###############################################################################
-def parse_fortran_files(filenames, preproc_defs, output_dir, logger):
+def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
 ###############################################################################
     """
     Parse each file in <filenames> and produce a prototype metadata file
@@ -91,9 +95,11 @@ def parse_fortran_files(filenames, preproc_defs, output_dir, logger):
         mfilename = os.path.join(output_dir, fname)
         # Write the metadata file with all the items collected from Fortran
         with open(mfilename, 'w') as outfile:
+            header_sep = ''
             for header in fheaders:
                 lname_dict = {'1':'ccpp_constant_one'}
-                outfile.write('[ccpp-arg-table]\n')
+                outfile.write('{}[ccpp-arg-table]\n'.format(header_sep))
+                header_sep = sep + '\n'
                 outfile.write('  name  = {}\n'.format(header.title))
                 outfile.write('  type  = {}\n'.format(header.header_type))
                 for var in header.variable_list():
@@ -117,18 +123,20 @@ def parse_fortran_files(filenames, preproc_defs, output_dir, logger):
                     dims = var.get_dimensions()
                     # Fill in standard names for dimensions
                     dlist = list()
-                    for dim in dims:
-                        dslist = list()
-                        for dimspec in dim.split(':'):
-                            if dimspec and (dimspec in lname_dict):
-                                dstr = lname_dict[dimspec]
-                            else:
-                                dstr = unique_standard_name()
-                            # End if
-                            dslist.append(dstr)
+                    if dims:
+                        for dim in dims:
+                            dslist = list()
+                            for dimspec in dim.split(':'):
+                                if dimspec and (dimspec in lname_dict):
+                                    dstr = lname_dict[dimspec]
+                                else:
+                                    dstr = unique_standard_name()
+                                # End if
+                                dslist.append(dstr)
+                            # End for
+                            dlist.append(':'.join(dslist))
                         # End for
-                        dlist.append(':'.join(dslist))
-                    # End for
+                    # End if
                     prop = '(' + ','.join(dlist) + ')'
                     outfile.write('  dimensions = {}\n'.format(prop))
                     if header.header_type == 'scheme':
@@ -155,6 +163,11 @@ def _main_func():
     # End if
     # Make sure we know where output is going
     output_dir = os.path.abspath(args.output_root)
+    # Optional table separator comment
+    section_sep = args.section_separator
+    if not MetadataTable.is_blank(section_sep):
+        emsg = "Illegal section separator, '{}', first character must be # or ;"
+        raise CCPPError(emsg.format(section_sep))
     # We need to create a list of input Fortran files
     fort_files = create_file_list(args.files, __fortran_filename_extensions,
                                   'Fortran', logger)
@@ -175,7 +188,7 @@ def _main_func():
     # End if
     # Parse the files and create metadata
     meta_files = parse_fortran_files(fort_files, preproc_defs,
-                                     output_dir, logger)
+                                     output_dir, section_sep, logger)
 
 ###############################################################################
 

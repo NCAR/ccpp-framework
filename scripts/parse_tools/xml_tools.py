@@ -11,6 +11,7 @@ import os.path
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+sys.path.insert(0, os.path.dirname(__file__))
 try:
     from distutils.spawn import find_executable
     xmllint = find_executable('xmllint')
@@ -18,7 +19,7 @@ except ImportError as ie:
     xmllint = None
 # End try
 # CCPP framework imports
-from .parse_source import CCPPError
+from parse_source import CCPPError
 
 # Find python version
 PY3 = sys.version_info[0] > 2

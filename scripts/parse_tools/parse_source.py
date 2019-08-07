@@ -198,6 +198,13 @@ class ParseContext(object):
 
     """
 
+    # python 2/3 difference
+    try:
+        __pstr_types = (str, unicode)
+    except Exception:
+        __pstr_types = (str,)
+    # End try
+
     def __init__(self, linenum=None, filename=None, context=None):
         if context is not None:
             # If context is passed, ignore linenum
@@ -212,7 +219,7 @@ class ParseContext(object):
             filename = context.filename
         elif filename is None:
             filename = "<standard input>"
-        elif not isinstance(filename, (str, unicode)):
+        elif not isinstance(filename, ParseContext.__pstr_types):
             raise CCPPError('ParseContext filename must be a string')
         # End if
         self._linenum = linenum
