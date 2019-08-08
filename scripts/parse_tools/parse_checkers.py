@@ -33,6 +33,11 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
     ['start1:', 'start2:end2']
     >>> check_dimensions(['size(foo)'], None, False)
     ['size(foo)']
+    >>> check_dimensions(['size(foo,1) '], None, False)
+    ['size(foo,1) ']
+    >>> check_dimensions(['size(foo,1'], None, False) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: Invalid dimension component, size(foo,1
     >>> check_dimensions(["dim1", "dim2name"], None, False, max_len=5)
 
     >>> check_dimensions(["dim1", "dim2name"], None, True, max_len=5) #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -72,10 +77,18 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                     valid = check_fortran_id(tdim, None,
                                              error, max_len=max_len) is not None
                     if not valid:
-                        ##XXgoldyXX: hack, fix this!
-                        # Check for size entry -- just accept
-                        if tdim[0:4].lower() == 'size':
-                            valid = tdim
+                        # Check for size entry -- simple check
+                        tcheck = tdim.strip().lower()
+                        if tcheck[0:4] == 'size':
+                            ploc = check_balanced_paren(tdim[4:])
+                            if -1 in ploc:
+                                emsg = 'Invalid dimension component, {}'
+                                raise CCPPError(emsg.format(tdim))
+                            else:
+                                valid = tdim
+                            # End if
+                        # End if
+                    # End if
                 # End try
                 if not valid:
                     if error:

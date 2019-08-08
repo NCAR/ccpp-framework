@@ -12,11 +12,12 @@ The annotation form is:
 !> \section arg_table_<name>  Argument Table
 !! \htmlinclude arg_table_<name>.html
 
-where <name> is the name of the scheme, the name of the DDT, or
-the name of the module containing data to be included in the metadata
-file.
-The annotation must appear just before the scheme or DDT and before
-any module data which should not be included in the metadata file.
+where <name> is the name of the scheme, the name of the DDT, or the
+name of the module containing data to be included in the metadata file.
+For a scheme, the annotation must appear just before the subroutine statement.
+For a DDT definition, the annotation must appear just before the type statement.
+For module data, the annotation should occur after any module variables
+  which should not be included in the metadata file.
 """
 
 # Python library imports
