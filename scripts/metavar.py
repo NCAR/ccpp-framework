@@ -381,8 +381,6 @@ class Var(object):
                                      default_fn_in=default_kind_val),
                     VariableProperty('state_variable', bool,
                                      optional_in=True, default_in=False),
-                    VariableProperty('optional', bool,
-                                     optional_in=True, default_in=False),
                     VariableProperty('constant', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('allocatable', bool,
@@ -392,7 +390,9 @@ class Var(object):
                                      default_in='timestep')]
 
     # __var_props contains properties which are not in __spec_props
-    __var_props = [VariableProperty('intent', str,
+    __var_props = [VariableProperty('optional', bool,
+                                     optional_in=True, default_in=False),
+                   VariableProperty('intent', str,
                                     valid_values_in=['in', 'out', 'inout'])]
 
 
@@ -708,11 +708,13 @@ class Var(object):
         type          = {type} *
         dimensions    = {dimensions} *
         kind          = {kind} *
-        intent        = {intent}
-        optional      = {optional}
-        '''
+'''
+        if 'intent' in self.__spec_propdict.keys():
+            str += '        intent        = {intent}\n'
+        if 'optional' in self.__spec_propdict.keys():
+            str += '        optional      = {optional}\n'
         if self._context is not None:
-            str = str + '\n        context       = {}'.format(self._context)
+            str += '        context       = {}'.format(self._context)
         # End if
         return str.format(**self._prop_dict)
 
