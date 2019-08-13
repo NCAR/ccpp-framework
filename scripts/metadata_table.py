@@ -372,6 +372,42 @@ class MetadataHeader(ParseSource):
         "Return an ordered list of the header's variables"
         return self._variables.variable_list()
 
+# DH*
+    def to_html(self, filename, props):
+        HTML = """
+<html>
+<head>
+<title>My First HTML</title>
+<meta charset="UTF-8">
+</head>
+<body>
+<table>
+{header}{contents}</table>
+</body>
+</html>
+"""
+        # Write table header
+        header = "<tr>"
+        for prop in props:
+            header += "<th>{}</th>".format(prop)
+        header += "</tr>\n"
+        # Write table contents, one row per variable
+        contents = ""
+        for var in self._variables.variable_list():
+            row = "<tr>"
+            for prop in props:
+                value = var.get_prop_value(prop)
+                if value is None:
+                    value = "n/a"
+                row += "<td>{}</td>".format(value)
+            row += "</tr>\n"
+            contents += row
+        with open(filename,"w") as f:
+            f.writelines(HTML.format(header=header, contents=contents))
+        print(filename)
+        raise Exception
+# *DH
+
     def get_var(self, standard_name=None, intent=None):
         if standard_name is not None:
             var = self._variables.find_variable(standard_name)
