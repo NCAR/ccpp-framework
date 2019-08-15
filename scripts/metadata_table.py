@@ -91,6 +91,7 @@ Notes on the input format:
 
 # Python library imports
 from __future__ import print_function
+import os
 import re
 # CCPP framework imports
 from metavar     import Var, VarDictionary
@@ -385,7 +386,7 @@ class MetadataHeader(ParseSource):
         "Return an ordered list of the header's variables"
         return self._variables.variable_list()
 
-    def to_html(self, props):
+    def to_html(self, outdir, props):
         """Write html file for metadata table and return filename.
         Skip metadata headers without variables"""
         if not self._variables.variable_list():
@@ -403,13 +404,13 @@ class MetadataHeader(ParseSource):
                 value = var.get_prop_value(prop)
                 # Pretty-print for dimensions
                 if prop == 'dimensions':
-                    value = '(' + ','.join(value) + ')'
+                    value = '(' + ', '.join(value) + ')'
                 elif value is None:
                     value = "n/a"
                 row += "<td>{}</td>".format(value)
             row += "</tr>\n"
             contents += row
-        filename = self.title + '.html'
+        filename = os.path.join(outdir, self.title + '.html')
         with open(filename,"w") as f:
             f.writelines(self.__html_template__.format(header=header, contents=contents))
         return filename
