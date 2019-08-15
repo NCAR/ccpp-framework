@@ -175,6 +175,19 @@ class MetadataHeader(ParseSource):
 
     __blank_line__ = re.compile(r"\s*[#;]")
 
+    __html_template__ = """
+<html>
+<head>
+<title>My First HTML</title>
+<meta charset="UTF-8">
+</head>
+<body>
+<table>
+{header}{contents}</table>
+</body>
+</html>
+"""
+
     def __init__(self, parse_object=None,
                  title=None, type_in=None, module=None, var_dict=None,
                  logger=None):
@@ -372,20 +385,11 @@ class MetadataHeader(ParseSource):
         "Return an ordered list of the header's variables"
         return self._variables.variable_list()
 
-# DH*
-    def to_html(self, filename, props):
-        HTML = """
-<html>
-<head>
-<title>My First HTML</title>
-<meta charset="UTF-8">
-</head>
-<body>
-<table>
-{header}{contents}</table>
-</body>
-</html>
-"""
+    def to_html(self, props):
+        """Write html file for metadata table and return filename.
+        Skip metadata headers without variables"""
+        if not self._variables.variable_list():
+            return None
         # Write table header
         header = "<tr>"
         for prop in props:
@@ -397,16 +401,18 @@ class MetadataHeader(ParseSource):
             row = "<tr>"
             for prop in props:
                 value = var.get_prop_value(prop)
-                if value is None:
+                # Pretty-print for dimensions
+                if prop == 'dimensions':
+                    value = '(' + ','.join(value) + ')'
+                elif value is None:
                     value = "n/a"
                 row += "<td>{}</td>".format(value)
             row += "</tr>\n"
             contents += row
+        filename = self.title + '.html'
         with open(filename,"w") as f:
-            f.writelines(HTML.format(header=header, contents=contents))
-        print(filename)
-        raise Exception
-# *DH
+            f.writelines(self.__html_template__.format(header=header, contents=contents))
+        return filename
 
     def get_var(self, standard_name=None, intent=None):
         if standard_name is not None:
