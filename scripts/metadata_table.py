@@ -179,7 +179,7 @@ class MetadataHeader(ParseSource):
     __html_template__ = """
 <html>
 <head>
-<title>My First HTML</title>
+<title>{title}</title>
 <meta charset="UTF-8">
 </head>
 <body>
@@ -412,7 +412,8 @@ class MetadataHeader(ParseSource):
             contents += row
         filename = os.path.join(outdir, self.title + '.html')
         with open(filename,"w") as f:
-            f.writelines(self.__html_template__.format(header=header, contents=contents))
+            f.writelines(self.__html_template__.format(title=self.title + ' argument table',
+                                                       header=header, contents=contents))
         return filename
 
     def get_var(self, standard_name=None, intent=None):
