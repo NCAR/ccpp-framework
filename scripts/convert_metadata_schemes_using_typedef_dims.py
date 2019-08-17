@@ -207,8 +207,6 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
 #                logger.info('Found old metadata table, {}, on line {}'.format(table_name, lindex+1))
                 # The header line is not modified
                 file.write(line+"\n")
-                # Write an include line for the metadata table
-                file.write('!! \htmlinclude {}.html\n'.format(table_name))
                 # Create the table start section
                 mdtable = MetadataTable(table_name, current_module)
                 mdconfig.append(mdtable)
@@ -218,6 +216,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
                 dim_names = [__not_found__]*15
                 # Do not work on a blank table
                 if len(words) > 1:
+                    # Write an include line for the metadata table
+                    file.write('!! \htmlinclude {}.html\n'.format(table_name))
+                    #
                     table_header = [x.strip() for x in words[1:-1]]
                     for ind in xrange(len(table_header)):
                         header_locs[table_header[ind]] = ind

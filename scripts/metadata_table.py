@@ -91,6 +91,7 @@ Notes on the input format:
 
 # Python library imports
 from __future__ import print_function
+import os
 import re
 # CCPP framework imports
 from metavar     import Var, VarDictionary
@@ -174,6 +175,19 @@ class MetadataHeader(ParseSource):
     __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
     __blank_line__ = re.compile(r"\s*[#;]")
+
+    __html_template__ = """
+<html>
+<head>
+<title>{title}</title>
+<meta charset="UTF-8">
+</head>
+<body>
+<table>
+{header}{contents}</table>
+</body>
+</html>
+"""
 
     def __init__(self, parse_object=None,
                  title=None, type_in=None, module=None, var_dict=None,
@@ -371,6 +385,36 @@ class MetadataHeader(ParseSource):
     def variable_list(self):
         "Return an ordered list of the header's variables"
         return self._variables.variable_list()
+
+    def to_html(self, outdir, props):
+        """Write html file for metadata table and return filename.
+        Skip metadata headers without variables"""
+        if not self._variables.variable_list():
+            return None
+        # Write table header
+        header = "<tr>"
+        for prop in props:
+            header += "<th>{}</th>".format(prop)
+        header += "</tr>\n"
+        # Write table contents, one row per variable
+        contents = ""
+        for var in self._variables.variable_list():
+            row = "<tr>"
+            for prop in props:
+                value = var.get_prop_value(prop)
+                # Pretty-print for dimensions
+                if prop == 'dimensions':
+                    value = '(' + ', '.join(value) + ')'
+                elif value is None:
+                    value = "n/a"
+                row += "<td>{}</td>".format(value)
+            row += "</tr>\n"
+            contents += row
+        filename = os.path.join(outdir, self.title + '.html')
+        with open(filename,"w") as f:
+            f.writelines(self.__html_template__.format(title=self.title + ' argument table',
+                                                       header=header, contents=contents))
+        return filename
 
     def get_var(self, standard_name=None, intent=None):
         if standard_name is not None:
