@@ -14,7 +14,7 @@ This chapter describes the organization of the code, provides instruction on the
 UFS Atmosphere
 -----------------------
 
-The :term:`UFS` Atmosphere source code is contained in the NEMSfv3gfs code repository. CCPP users and developers should use the NEMSfv3gfs code and submodules maintained by GMTB in GitHub. For codes whose authoritative repository is in VLab, GMTB synchronizes these with VLab at periodic intervals. 
+The :term:`UFS` Atmosphere source code is contained in the NEMSfv3gfs code repository. CCPP users and developers should use the NEMSfv3gfs code and submodules maintained by GMTB in GitHub. For codes whose authoritative repository is managed by EMC, GMTB synchronizes these with EMC's at periodic intervals. Note that EMC is incrementally transitioning its repositories from VLab to GitHub, and therefore this code management is expected to change in the future. 
 
 https://github.com/NCAR/NEMSfv3gfs
 
@@ -32,23 +32,22 @@ https://github.com/NCAR/FMS
 
 Users have read-only access to these repositories and as such cannot accidentally destroy any important (shared) branches of these authoritative repositories.
 
-Some of these repositories are public (no GitHub account required) and some are private. The public repositories (ccpp-framework, ccpp-physics, and Flexible Modeling System - FMS) may be used directly to read or create forks. Write permission is generally restricted, however. The private repositories require access - please send a request and your GitHub username to gmtb-help@ucar.edu.
+Some of these repositories are public (no GitHub account required) and some are private. The public repositories (ccpp-framework, ccpp-physics, NEMS, and Flexible Modeling System - FMS) may be used directly to read or create forks. Write permission is generally restricted, however. The private repositories require access - please send a request and your GitHub username to gmtb-help@ucar.edu.
 
-The primary development by GMTB, including the latest CCPP developments, are maintained in the following branches:
-
+The following branches are recommended for CCPP users and developers:
 
 +---------------------------------------------+----------------------+
 | Repository (GMTB development version)       |    Branch name       |
 +=============================================+======================+
-| https://github.com/NCAR/NEMSfv3gfs          |    gmtb/ccpp         |
+| https://github.com/NCAR/NEMSfv3gfs          |   master             |
 +---------------------------------------------+----------------------+
-| https://github.com/NCAR/FV3                 |    gmtb/ccpp         |
+| https://github.com/NCAR/FV3                 |   master             |
 +---------------------------------------------+----------------------+
 | https://github.com/NCAR/ccpp-physics        |   master             |
 +---------------------------------------------+----------------------+
 | https://github.com/NCAR/ccpp-framework      |   master             |
 +---------------------------------------------+----------------------+
-| https://github.com/NCAR/NEMS                |   gmtb/ccpp          |
+| https://github.com/NCAR/NEMS                |   develop            |
 +---------------------------------------------+----------------------+
 | https://github.com/NCAR/FMS                 |    GFS-FMS           |
 +---------------------------------------------+----------------------+
@@ -67,9 +66,9 @@ https://github.com/NCAR/ccpp-framework
 
 https://github.com/NCAR/ccpp-physics
 
-Users have read-only access to these repositories and as such cannot accidentally destroy any important (shared) branches of these authoritative repositories. Both CCPP repositories are public (no GitHub account required) and may be used directly to read or create forks. Write permission is generally restricted, however. The SCM repository is private, to request access please send a message and your GitHub username to gmtb-help@ucar.edu.
+Users have read-only access to these repositories and as such cannot accidentally destroy any important (shared) branches of these authoritative repositories. Both CCPP repositories and the SCM repositories are public (no GitHub account required) and may be used directly to read or create forks. Write permission is generally restricted, however. 
 
-The primary development by GMTB, including the latest CCPP developments, are maintained in the following branches:
+The following branches are recommended for CCPP users and developers:
 
 +----------------------------------------+-------------------+
 | Repository (GMTB development version)  | Branch name       |
@@ -162,7 +161,7 @@ Start with checking out the main repository from the NCAR GitHub
 
 .. code-block:: console
 
-   git clone -b gmtb/ccpp https://github.com/NCAR/NEMSfv3gfs
+   git clone -b https://github.com/NCAR/NEMSfv3gfs
    cd NEMSfv3gfs
    git submodule init
    git submodule update
@@ -181,7 +180,7 @@ Checking out remote branches as submodules means that your local branches are in
 
    cd NEMS
    git remote update
-   git checkout upstream/gmtb/ccpp
+   git checkout upstream/develop
    cd ..
 
 However, if you are making changes in a repository (submodule or main repository), you must create a local branch, for example in NEMSfv3gfs:
@@ -217,7 +216,7 @@ As opposed to branches without modifications described in step 3, changes to the
 
    cd FV3
    git remote update
-   git pull upstream gmtb/ccpp
+   git pull upstream master
 
 
 -----------------------------------
@@ -370,6 +369,8 @@ Go to the github.com web interface, and navigate to your repository fork and bra
  | Fill in a short title (one line)
  | Fill in a detailed description, including reporting on any testing you did
  | Click on “Create pull request”
+
+If your development also requires changes in other repositories, you must open PRs in those repositories as well. In the PR message for each repository, please note the associate PRs submitted to other repositories.
 
 Several people (aka CODEOWNERS) are automatically added to the list of reviewers on the right hand side. If others should be reviewing the code, click on the “reviewers” item on the right hand side and enter their GitHub usernames
 
