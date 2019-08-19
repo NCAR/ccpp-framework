@@ -60,7 +60,7 @@ CCPP developers should use the SCM code and submodules maintained by GMTB in Git
 
 https://github.com/NCAR/gmtb-scm
  
-As for NEMSfv3gfs, there are two submodules referenced in the gmtb-scm repository:
+As with NEMSfv3gfs, there are two submodules referenced in the gmtb-scm repository:
 
 https://github.com/NCAR/ccpp-framework
 
@@ -161,7 +161,7 @@ Start with checking out the main repository from the NCAR GitHub
 
 .. code-block:: console
 
-   git clone -b https://github.com/NCAR/NEMSfv3gfs
+   git clone https://github.com/NCAR/NEMSfv3gfs
    cd NEMSfv3gfs
    git submodule init
    git submodule update
