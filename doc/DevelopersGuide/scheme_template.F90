@@ -7,24 +7,23 @@
 ! - scheme must be in its own module (module name = scheme name) and must
 !   have three entry points (subroutines) starting with the name of the module:
 !   module scheme_template -> subroutines scheme_template_{init,finalize,run}
+! 
+! - each .f or .F90 file with CCPP entry point scheme(s) must be accompanied by a 
+!   .meta file containing metadata for the scheme(s) 
 !
-! - empty schemes (e.g., scheme_template_init below) do not need an argument table
-!
-! - schemes in use require an argument table as below; order of arguments in the
-!   table must be the same as in the argument list of the subroutine
+! - empty schemes (e.g., scheme_template_init below) do not need metadata
 !
 ! - all external information required by the scheme must be passed in via the
 !   argument list, i.e. NO 'use EXTERNAL_MODULE' statements
 !
-! - if width of argument tables exceeds 250 characters, wrap the table (but only
-!   the table) in CPP preprocessor directives #if 0 YOUR_TABLE #endif
+! Metadata rules:
 !
-! - for readibility, it is suggested to align the columns in the metadata table
+! - refer to file scheme_template.meta for information about the metadata
 !
 ! Input/output variable (argument) rules:
 !
-! - for a list of variables available for the specific host model, see table
-!   "TABLE_NAME_NUMBER_MISSING" [howto keep up to date?] in the CCPP developer's guide
+! - for a list of variables available for the specific host model, see files
+!   doc/DevelopersGuide/CCPP_VARIABLES_XYZ.pdf, where XYZ is the name of the model
 !
 ! - a standard_name cannot be assigned to more than one local variable (local_name)
 !
@@ -85,12 +84,6 @@
       subroutine scheme_template_finalize()
       end subroutine scheme_template_finalize
 
-!> \section arg_table_scheme_template_run Argument Table
-!! | local_name | standard_name      | long_name                                | units | rank | type      | kind  | intent | optional |
-!! |------------|--------------------|------------------------------------------|-------|------|-----------|-------|--------|----------|
-!! | errmsg     | ccpp_error_message | error message for error handling in CCPP | none  |    0 | character | len=* | out    | F        |
-!! | errflg     | ccpp_error_flag    | error flag for error handling in CCPP    | flag  |    0 | integer   |       | out    | F        |
-!!
       subroutine scheme_template_run (errmsg, errflg)
 
          implicit none
