@@ -185,7 +185,7 @@ class Var(object):
         try:
             function = getattr(unit_conversion, function_name)
         except AttributeError:
-            raise Exception('Error, automatic unit conversion from {0} to {1} not implemented'.format(self.units, units))
+            raise Exception('Error, automatic unit conversion from {0} to {1} for {2} in {3} not implemented'.format(self.units, units, self.standard_name, self.container))
         conversion = function()
         self._actions['out'] = function()
 
@@ -195,7 +195,7 @@ class Var(object):
         try:
             function = getattr(unit_conversion, function_name)
         except AttributeError:
-            raise Exception('Error, automatic unit conversion from {1} to {0} not implemented'.format(self.units, units))
+            raise Exception('Error, automatic unit conversion from {1} to {0} for {2} in {3} not implemented'.format(self.units, units, self.standard_name, self.container))
         conversion = function()
         self._actions['in'] = function()
 
