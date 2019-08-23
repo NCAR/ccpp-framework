@@ -60,13 +60,13 @@ General Rules
 A CCPP-compliant scheme is in the form of Fortran modules. :ref:`Listing 2.1 <scheme_template>` contains
 the template for a CCPP-compliant scheme (``ccpp/framework/doc/DevelopersGuide/scheme_template.F90``),
 which includes three essential components: the *_init*, *_run*, and *_finalize* subroutines. Each ``.f`` or ``.F90``
-file that contains a entry point(s) for CCPP scheme(s) must be accompanied by a .meta file in the same directory 
+file that contains an entry point(s) for CCPP scheme(s) must be accompanied by a .meta file in the same directory 
 as described in :numref:`Section %s <MetadataRules>`
 
 .. _scheme_template:
 .. literalinclude:: ../../DevelopersGuide/scheme_template.F90
    :language: fortran
-   :lines: 77-118
+   :lines: 85-130
 
 *Listing 2.1: Fortran template for a CCPP-compliant scheme showing the _init, _run, and _finalize subroutines.*
 
@@ -80,8 +80,19 @@ More details are found below:
   must be the same when the subroutine is called multiple times). The _run subroutine contains the
   code to execute the scheme.
 
-* Each ``.f`` or ``.F90`` file with a CCPP entry point scheme must be accompanied by a a ``.meta`` file containing
+* Each ``.f`` or ``.F90`` file with one or more CCPP entry point schemes must be accompanied by a a ``.meta`` file containing
   metadata about the arguments to the scheme(s). For more information, see :numref:`Section %s <MetadataRules>`.
+
+* Non-empty schemes must be preceded by the three lines below. These are markup comments used by Doxygen,
+  the software employed to create the scientific documentation, to insert an external file containing metadata 
+  information (in this case, ``schemename_run.html``) in the documentation. See more on this topic in 
+  :numref:`Section %s <SciDoc>`.
+
+.. code-block:: fortran
+
+   !> \section arg_table_schemename_run Argument Table
+   !! \htmlinclude schemename_run.html
+   !!
 
 * All external information required by the scheme must be passed in via the argument list. Statements
   such as  ``‘use EXTERNAL_MODULE’`` should not be used for passing in data and all physical constants
@@ -98,7 +109,7 @@ More details are found below:
 
 Metadata Rules
 ==============
-* Metadata files (``.meta``) are in XML format and contain metada for one or more CCPP entry point schemes.
+* Metadata files (``.meta``) are in a relaxed config file format and contain metadata for one or more CCPP entry point schemes.
   There should be one .meta file for each ``.f`` or .``F90`` file.
 
 * For each CCPP compliant scheme, the ``.meta`` file should have this set of lines
@@ -106,14 +117,14 @@ Metadata Rules
 .. code-block:: fortran
 
    [ccpp-arg-table]
-   name =
-   type =
+    name = <name>
+    type = <type>
 
 * ``ccpp-arg-table`` indicates the start of a new metadata section for a given scheme.
 
-* ``name`` is name of the corresponding subroutine/module.
+* ``<name>`` is name of the corresponding subroutine/module.
 
-* ``type`` can be ``scheme``, ``module``, ``DDT``, or ``host``.
+* ``<type>`` can be ``scheme``, ``module``, ``DDT``, or ``host``.
 
 * For empty schemes, the three lines above are sufficient. For non-empty schemes, the metadata should
   describe all input and output arguments to the scheme using the following format:
@@ -121,15 +132,17 @@ Metadata Rules
 .. code-block:: fortran
 
    [varname]
-    standard_name =
-    long_name = 
-    units =
-    rank = 
-    dimensions =
-    type =
-    kind =
-    intent =
-    optional =
+    standard_name = <standard_name>
+    long_name = <long_name>
+    units = <units>
+    rank = <rank>
+    dimensions = <dimensions>
+    type = <type>
+    kind = <kind>
+    intent = <intent>
+    optional = <optional>
+
+* The ``intent`` argument is only valid in ``scheme`` metadata tables, as it is not applicable to the other ``types``.
 
 * The following attributes are optional: ``long_name``, ``kind``, and ``optional``.
 
@@ -139,10 +152,11 @@ Metadata Rules
 
    type = real | kind = kind_phys
 
-* ``varname`` is the local name of the variable in the subroutine.
+* ``<varname>`` is the local name of the variable in the subroutine.
 
-* The dimensions attribute should be empty for scalars or contain the ``standard_name`` for the start and end for
-  each dimension of an array. Default is 1, For example:
+* The dimensions attribute should be empty parentheses for scalars or contain the ``standard_name`` for the start and end for
+  each dimension of an array. ``ccpp_constant_one`` is the assumed start for any dimension which only has a single value.
+  For example:
 
 .. code-block:: fortran
 
@@ -274,7 +288,7 @@ Coding Rules
   or other information needed to initialize the scheme, including stdout and stderr.
   Diagnostic messages are tolerated, but should be minimal.
 
-* Line lengths of up to 120 characters are suggested for better readability 
+* Line lengths of no more than 120 characters are suggested for better readability.
 
 Additional coding rules are listed under the *Coding Standards* section of the NOAA NGGPS
 Overarching System team document on Code, Data, and Documentation Management for NOAA Environmental

@@ -4,41 +4,44 @@
 !
 ! Metadata rules:
 !
-! - metadata files (.meta) are in XML format and contain metada for one or more CCPP entrypoint schemes. 
+! - metadata files (.meta) are in a relaxed config file format and contain metada for one or more CCPP entrypoint schemes. 
 !   There should be one .meta file for each .f or .F90 file
 !
 ! - For each CCPP compliant scheme, the .meta file should have this set of lines
 !   [ccpp-arg-table]
-!   name = 
-!   type =  
+!    name = <name> 
+!    type = <type> 
 !  
 ! - ccpp-arg-table indicates the start of a new metadata section for a given scheme
 !
-! - name can is name of the corresponding subroutine/module
+! - <name> is the name of the corresponding subroutine/module
 !
 ! - type can be scheme, module, DDT, or host
 !
 ! - for empty schemes, the three lines above are sufficient. For non-empty schemes, the metadata should 
 !   describe all input and output arguments to the scheme using the following format:
 !   [varname]
-!     standard_name = 
-!     long_name = 
-!     units = 
-!     dimensions =
-!     type =
-!     kind =  
-!     intent = 
-!     optional = 
+!     standard_name = <standard_name> 
+!     long_name = <long_name>
+!     units = <units>
+!     dimensions = <dimensions>
+!     type = <type>
+!     kind =  <kind>
+!     intent = <intent>
+!     optional = <optional>
+!
+! - the intent argument is only valid in scheme metadata tables, as it is not applicable to the other types.
 !
 ! - the following attributes are optional: long_name, kind, optional
 !
 ! - lines can be combined using | as a separator, e.g., 
 !   type = real | kind = kind_phys
 !
-! - varname is the local name of the variable in the subroutine
+! - <varname> is the local name of the variable in the subroutine
 !
-! - the dimensions attribute should be empty for scalars or contain the standard_name for the start and end for 
-!   each dimension of an array. Default is 1, For example:
+! - the dimensions attribute should be empty parentheses for scalars or contain the standard_name for the start and end for 
+!   each dimension of an array. ccpp_constant_one is the assumed start for any dimension which only has a single value.
+!   For example:
 !    dimensions = ()
 !    dimensions = (ccpp_constant_one:horizontal_loop_extent, vertical_level_dimension)
 !    dimensions = (horizontal_dimension,vertical_dimension)

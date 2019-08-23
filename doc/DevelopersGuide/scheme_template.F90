@@ -8,8 +8,17 @@
 !   have three entry points (subroutines) starting with the name of the module:
 !   module scheme_template -> subroutines scheme_template_{init,finalize,run}
 ! 
-! - each .f or .F90 file with CCPP entry point scheme(s) must be accompanied by a 
+! - each .f or .F90 file with one or more CCPP entry point schemes must be accompanied by a 
 !   .meta file containing metadata for the scheme(s) 
+!
+! - non-empty schemes must be preceded by the three lines below. These are markup comments used by Doxygen,
+!   the software employed to create the scientific documentation, to insert an external file containing metadata
+!   information (in this case, ``schemename_run.html``) in the documentation. See more on this topic in
+!   the CCPP Technical Documentation available at https://dtcenter.org/community-code/common-community-physics-package-ccpp.
+!
+!   !> \section arg_table_schemename_run Argument Table
+!   !! \htmlinclude schemename_run.html
+!   !!
 !
 ! - empty schemes (e.g., scheme_template_init below) do not need metadata
 !
@@ -56,8 +65,7 @@
 ! - schemes are NOT allowed to perform I/O operations (except for reading
 !   lookup tables / other information needed to initialize the scheme)
 !
-! - line lengths of 120 characters are suggested for better readibility
-!   (exception: CCPP metadata argument tables)
+! - line lengths of no more than 120 characters are suggested for better readability
 !
 ! Parallel programming rules:
 !
@@ -84,6 +92,9 @@
       subroutine scheme_template_finalize()
       end subroutine scheme_template_finalize
 
+!> \section arg_table_scheme_template_run Argument Table
+!! \htmlinclude scheme_template_run.html
+!!
       subroutine scheme_template_run (errmsg, errflg)
 
          implicit none
