@@ -16,7 +16,7 @@ incorporated in that model’s build system. In the case of NEMSfv3gfs, ``ccpp_p
 or automatically as a step in the build system.
 
 The :term:`CCPP` *prebuild* script automates several tasks based on the information collected from the metadata
-tables on the host model side and from the individual physics schemes (see :numref:`Figure %s <ccpp_prebuild>`):
+on the host model side and from the individual physics schemes (``.meta`` files; see :numref:`Figure %s <ccpp_prebuild>`):
 
  * Compiles a list of variables required to run all schemes in the :term:`CCPP-Physics` pool.
 
@@ -123,7 +123,7 @@ Running ccpp_prebuild.py
 
 Once the configuration in ``ccpp_prebuild_config.py`` is complete, the ``ccpp_prebuild.py`` script can be run from the top level directory. For the SCM, this script must be run (in dynamic build mode only) to reconcile data provided by the SCM with data required by the physics schemes before compilation and to generate physics caps and makefile segments. For the :term:`UFS` Atmosphere host model, the ``ccpp_prebuild.py`` script is called automatically by the NEMSfv3gfs build system when the :term:`CCPP` build is requested (by running the :term:`CCPP` regression tests or by passing the option CCPP=Y and others to the ``compile.sh`` script; see the compile commands defined in the :term:`CCPP` regression test configurations for further details). 
 
-For developers adding a CCPP-compliant physics scheme, running ``ccpp_prebuild.py`` periodically is recommended to check that the metadata in the argument tables match between the host model and the physics scheme. For the :term:`UFS` Atmosphere, running ``ccpp_prebuild.py`` manually is identical to running it for the SCM (since the relative paths to their respective ``ccpp_prebuild_config.py`` files are identical), except it may be necessary to add the ``--static`` and ``--suites`` command-line arguments for the static option.
+For developers adding a CCPP-compliant physics scheme, running ``ccpp_prebuild.py`` periodically is recommended to check that the metadata provided with the physics schemes matches what the host model provided. For the :term:`UFS` Atmosphere, running ``ccpp_prebuild.py`` manually is identical to running it for the SCM (since the relative paths to their respective ``ccpp_prebuild_config.py`` files are identical), except it may be necessary to add the ``--static`` and ``--suites`` command-line arguments for the static option.
 
 As alluded to above, the ``ccpp_prebuild.py`` script has six command line options, with the path to a host-model specific configuration file (``--config``) being the only necessary input option:
 
@@ -164,7 +164,7 @@ To remove all files created by ``ccpp_prebuild.py``, for example as part of a ho
 Troubleshooting
 =============================
 
-If invoking the ``ccpp_prebuild.py`` script fails, some message other than the success message will be written to the terminal output. Specifically, the terminal output will include informational logging messages generated from the script, any error messages written to the python logging utility, and a Python traceback that pinpoints the line within the script where the error caused failure. Some common errors (minus the typical logging output and traceback output) and solutions are described below, with non-bold font used to denote aspects of the message that will differ depending on the problem encountered. This is not an exhaustive list of possible errors, however. For example, in this version of the code, there is no cross-checking that the information provided in the metadata tables corresponds to the actual Fortran code, so even though ``ccpp_prebuild.py`` may complete successfully, there may be related compilation errors later in the build process. For further help with an undescribed error, please contact gmtb-help@ucar.edu. 
+If invoking the ``ccpp_prebuild.py`` script fails, some message other than the success message will be written to the terminal output. Specifically, the terminal output will include informational logging messages generated from the script, any error messages written to the python logging utility, and a Python traceback that pinpoints the line within the script where the error caused failure. Some common errors (minus the typical logging output and traceback output) and solutions are described below, with non-bold font used to denote aspects of the message that will differ depending on the problem encountered. This is not an exhaustive list of possible errors, however. For example, in this version of the code, there is no cross-checking that the metadata information provided corresponds to the actual Fortran code, so even though ``ccpp_prebuild.py`` may complete successfully, there may be related compilation errors later in the build process. For further help with an undescribed error, please contact gmtb-help@ucar.edu. 
 
 
  #. ``ERROR: Configuration file`` erroneous/path/to/config/file ``not found``
@@ -186,11 +186,9 @@ If invoking the ``ccpp_prebuild.py`` script fails, some message other than the s
  #. ``INFO: Parsing metadata tables for variables provided by host model`` …
 
     ``IOError: [Errno 2] No such file or directory``: 'erroneous_file.f90'
-      * Check that the paths specified in the ``VARIABLE_DEFINITION_FILES`` of the supplied configuration file are valid and contain CCPP-compliant host model variable metadata tables.
- #. ``Exception: Encountered invalid line`` "some fortran" ``in argument table`` variable_metadata_table_name
-      * This is likely the result of not ending a variable metadata table with a line containing only ‘!!’. Check that the formatting of the offending variable metadata table is correct.
+      * Check that the paths specified in the ``VARIABLE_DEFINITION_FILES`` of the supplied configuration file are valid and contain CCPP-compliant host model snippets for insertion of metadata information. (see :ref:`example <SnippetMetadata>`)
  #. ``Exception: Error parsing variable entry`` "erroneous variable metadata table entry data" ``in argument table`` variable_metadata_table_name
-      * Check that the formatting of the metadata entry described in the error message is OK. The number of metadata columns must match the table header and each entry’s columns must be separated by a ‘|’ character (be sure that the ‘!’ character was not used accidentally).
+      * Check that the formatting of the metadata entry described in the error message is OK. 
  #. ``Exception: New entry for variable`` var_name ``in argument table`` variable_metadata_table_name ``is incompatible with existing entry``:
      | ``Existing: Contents of <mkcap.Var object at 0x10299a290> (* = mandatory for compatibility)``:
      |  ``standard_name`` = var_name *
@@ -248,7 +246,7 @@ If invoking the ``ccpp_prebuild.py`` script fails, some message other than the s
      |  ``target``        = None
      |  ``container``     = MODULE_X TYPE_Y
 
-     * This error is associated with physics scheme variable metadata entries that have the same standard name with different mandatory properties (either units, type, rank, or kind currently -- those attributes denoted with a ``*``). This error is distinguished from the error described in 9 above, because the error message mentions “in argument table of subroutine” instead of just “in argument table”.
+     * This error is associated with physics scheme variable metadata entries that have the same standard name with different mandatory properties (either units, type, rank, or kind currently -- those attributes denoted with a ``*``). This error is distinguished from the error described in 8 above, because the error message mentions “in argument table of subroutine” instead of just “in argument table”.
  #. ``ERROR: Check that all subroutines in module`` module_name ``have the same root name``:
      ``i.e. scheme_A_init, scheme_A_run, scheme_A_finalize``
      ``Here is a list of the subroutine names for scheme`` scheme_name: scheme_name_finalize, scheme_name_run
@@ -256,9 +254,9 @@ If invoking the ``ccpp_prebuild.py`` script fails, some message other than the s
  #. ``ERROR: Variable`` X ``requested by MODULE_``\Y ``SCHEME_``\Z ``SUBROUTINE_``\A ``not provided by the model``
      ``Exception: Call to compare_metadata failed.``
 
-     * A variable requested by one or more physics schemes is not being provided by the host model. If the variable exists in the host model but is not being made available for the :term:`CCPP`, an entry must be added to one of the host model variable metadata tables.
+     * A variable requested by one or more physics schemes is not being provided by the host model. If the variable exists in the host model but is not being made available for the :term:`CCPP`, an entry must be added to one of the host model variable metadata sections. 
  #. ``ERROR:   error, variable`` X ``requested by MODULE_``\Y ``SCHEME_``\Z ``SUBROUTINE_``\A ``cannot be identified unambiguously. Multiple definitions in MODULE_``\Y ``TYPE_``\B
-      * A variable is defined in the host model variable metadata tables more than once (with the same standard name). Remove the offending entry or provide a different standard name for one of the duplicates.
+      * A variable is defined in the host model variable metadata more than once (with the same standard name). Remove the offending entry or provide a different standard name for one of the duplicates.
  #. ``ERROR:   incompatible entries in metadata for variable`` var_name:
      | ``provided:  Contents of <mkcap.Var object at 0x104883210> (* = mandatory for compatibility)``:
      |  ``standard_name`` = var_name *
@@ -287,6 +285,6 @@ If invoking the ``ccpp_prebuild.py`` script fails, some message other than the s
  #. ``Exception: Call to compare_metadata failed``.
       * This error indicates a mismatch between the attributes of a variable provided by the host model and what is requested by the physics. Specifically, the units, type, rank, or kind don’t match for a given variable standard name. Double-check that the attributes for the provided and requested mismatched variable are accurate. If after checking the attributes are indeed mismatched, reconcile as appropriate (by adopting the correct variable attributes either on the host or physics side).
 
-Note: One error that the ``ccpp_prebuild.py`` script will not catch is if a physics scheme lists a variable in its actual (Fortran) argument list without a corresponding entry in the subroutine’s variable metadata table. This will lead to a compilation error when the autogenerated scheme cap is compiled:
+Note: One error that the ``ccpp_prebuild.py`` script will not catch is if a physics scheme lists a variable in its actual (Fortran) argument list without a corresponding entry in the subroutine’s variable metadata. This will lead to a compilation error when the autogenerated scheme cap is compiled:
 
 ``Error: Missing actual argument for argument 'X' at (1)``
