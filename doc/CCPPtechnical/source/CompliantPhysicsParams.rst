@@ -152,7 +152,7 @@ Metadata Rules
 
    type = real | kind = kind_phys
 
-* ``<varname>`` is the local name of the variable in the subroutine.
+* ``[varname]`` is the local name of the variable in the subroutine.
 
 * The dimensions attribute should be empty parentheses for scalars or contain the ``standard_name`` for the start and end for
   each dimension of an array. ``ccpp_constant_one`` is the assumed start for any dimension which only has a single value.
