@@ -17,7 +17,7 @@ parser.add_argument('--outputdir', '-o', action='store',
                     help='directory where to write the html files',
                     required=True)
 
-attributes = [ 'standard_name', 'long_name', 'units', 'local_name',
+attributes = [ 'local_name', 'standard_name', 'long_name', 'units',
                'type', 'dimensions', 'kind', 'intent', 'optional' ]
 
 def parse_arguments():
