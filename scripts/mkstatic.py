@@ -357,7 +357,7 @@ end module {module}
     def write_sourcefile(self, source_filename):
         success = True
         filepath = os.path.split(source_filename)[0]
-        if not os.path.isdir(filepath):
+        if filepath and not os.path.isdir(filepath):
             os.makedirs(filepath)
         f = open(source_filename, 'w')
         contents = """# The CCPP static API is defined here.
