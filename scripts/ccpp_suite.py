@@ -1044,14 +1044,16 @@ class Scheme(SuiteObject):
         # End if
         return scheme_mods
 
-    def write(self, outfile, logger, indent):
+    def write(self, outfile, logger, errflg, indent):
         # Unused arguments are for consistent write interface
         # pylint: disable=unused-argument
         "Write code to call this Scheme to <outfile>"
         my_args = self.call_list.call_string(cldict=self.parent,
                                              include_dims=True)
         stmt = 'call {}({})'
-        outfile.write(stmt.format(self._subroutine_name, my_args), indent)
+        outfile.write('if ({} == 0) then'.format(errflg), indent)
+        outfile.write(stmt.format(self._subroutine_name, my_args), indent+1)
+        outfile.write('end if', indent)
 
     def schemes(self):
         'Return self as a list for consistency with subcycle'
@@ -1135,13 +1137,13 @@ class VerticalLoop(SuiteObject):
         # End for
         return scheme_mods
 
-    def write(self, outfile, logger, indent):
+    def write(self, outfile, logger, errflg, indent):
         "Write code for the vertical loop, including contents, to <outfile>"
         outfile.write('do {} = 1, {}'.format(self.name, self.dimension_name),
                       indent)
         # Note that 'scheme' may be a sybcycle or other construct
         for item in self.parts:
-            item.write(outfile, logger, indent+1)
+            item.write(outfile, logger, errflg, indent+1)
         # End for
         outfile.write('end do', 2)
 
@@ -1200,12 +1202,12 @@ class Subcycle(SuiteObject):
         # End for
         return scheme_mods
 
-    def write(self, outfile, logger, indent):
+    def write(self, outfile, logger, errflg, indent):
         "Write code for the subcycle loop, including contents, to <outfile>"
         outfile.write('do {} = 1, {}'.format(self.name, self.loop), indent)
         # Note that 'scheme' may be a sybcycle or other construct
         for item in self.parts:
-            item.write(outfile, logger, indent+1)
+            item.write(outfile, logger, errflg, indent+1)
         # End for
         outfile.write('end do', 2)
 
@@ -1251,11 +1253,11 @@ class TimeSplit(SuiteObject):
         # End for
         return scheme_mods
 
-    def write(self, outfile, logger, indent):
+    def write(self, outfile, logger, errflg, indent):
         """Write code for this TimeSplit section, including contents,
         to <outfile>"""
         for item in self.parts:
-            item.write(outfile, logger, indent)
+            item.write(outfile, logger, errflg, indent)
         # End for
 
 ###############################################################################
@@ -1281,7 +1283,7 @@ class ProcessSplit(SuiteObject):
         # Handle all the suite objects inside of this group
         raise CCPPError('ProcessSplit not yet implemented')
 
-    def write(self, outfile, logger, indent):
+    def write(self, outfile, logger, errflg, indent):
         """Write code for this ProcessSplit section, including contents,
         to <outfile>"""
         raise CCPPError('ProcessSplit not yet implemented')
@@ -1620,7 +1622,7 @@ class Group(SuiteObject):
         # End for
         # Write the scheme and subcycle calls
         for item in self.parts:
-            item.write(outfile, logger, indent + 1)
+            item.write(outfile, logger, errflg, indent + 1)
         # End for
         # Deallocate local arrays
         for lname in allocatable_vars:
