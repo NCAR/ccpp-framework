@@ -12,7 +12,7 @@
   type = integer
   dimensions = ()
 [ pverp ]
-  standard_name = vertical_level_dimension
+  standard_name = vertical_interface_dimension
   type = integer
   units = count
   dimensions = ()
@@ -24,7 +24,7 @@
 [ temp_interfaces ]
   standard_name = potential_temperature_at_interface
   units = K
-  dimensions = (horizontal_dimension, vertical_level_dimension)
+  dimensions = (horizontal_dimension, vertical_interface_dimension)
   type = real | kind = kind_phys
 [ dt ]
   standard_name = time_step_for_physics

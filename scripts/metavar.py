@@ -53,13 +53,13 @@ CCPP_STANDARD_VARS = {
     {'local_name' : 'num_model_layers',
      'standard_name' : 'vertical_layer_dimension', 'units' : 'count',
      'dimensions' : '()', 'type' : 'integer'},
-    'vertical_level_dimension' :
+    'vertical_interface_dimension' :
     {'local_name' : 'num_model_interfaces',
-     'standard_name' : 'vertical_level_dimension', 'units' : 'count',
+     'standard_name' : 'vertical_interface_dimension', 'units' : 'count',
      'dimensions' : '()', 'type' : 'integer'},
-    'vertical_level_index' :
+    'vertical_interface_index' :
     {'local_name' : 'layer_index',
-     'standard_name' : 'vertical_level_index', 'units' : 'count',
+     'standard_name' : 'vertical_interface_index', 'units' : 'count',
      'dimensions' : '()', 'type' : 'integer'}
 }
 
@@ -70,7 +70,7 @@ CCPP_VAR_LOOP_SUBSTS = {}
 # Loop variables only allowed during run phases
 CCPP_LOOP_VAR_STDNAMES = ['horizontal_loop_extent',
                           'horizontal_loop_begin', 'horizontal_loop_end',
-                          'vertical_layer_index', 'vertical_level_index']
+                          'vertical_layer_index', 'vertical_interface_index']
 
 ###############################################################################
 # Supported horizontal dimensions (should be defined in CCPP_STANDARD_VARS)
@@ -82,8 +82,8 @@ CCPP_HORIZONTAL_DIMENSIONS = ['ccpp_constant_one:horizontal_dimension',
 ###############################################################################
 # Supported vertical dimensions (should be defined in CCPP_STANDARD_VARS)
 CCPP_VERTICAL_DIMENSIONS = ['ccpp_constant_one:vertical_layer_dimension',
-                            'ccpp_constant_one:vertical_level_dimension',
-                            'vertical_layer_index', 'vertical_level_index']
+                            'ccpp_constant_one:vertical_interface_dimension',
+                            'vertical_layer_index', 'vertical_interface_index']
 
 ###############################################################################
 # Substituions for run time dimension control
@@ -91,8 +91,8 @@ CCPP_LOOP_DIM_SUBSTS = { 'ccpp_constant_one:horizontal_dimension' :
                          'horizontal_loop_begin:horizontal_loop_end',
                          'ccpp_constant_one:vertical_layer_dimension' :
                          'vertical_layer_index',
-                         'ccpp_constant_one:vertical_level_dimension' :
-                         'vertical_level_index'}
+                         'ccpp_constant_one:vertical_interface_dimension' :
+                         'vertical_interface_index'}
 
 ########################################################################
 def standard_name_to_long_name(prop_dict, context=None):
@@ -203,8 +203,8 @@ def default_vertical_coord(prop_dict, context=None):
     'vertical_index'
     >>> default_vertical_coord({'dimensions':'(horizontal_loop_extent)'})
     'vertical_index'
-    >>> default_vertical_coord({'dimensions':'(ccpp_constant_one:horizontal_loop_extent, ccpp_constant_one:vertical_level_dimension)'})
-    'vertical_level_dimension'
+    >>> default_vertical_coord({'dimensions':'(ccpp_constant_one:horizontal_loop_extent, ccpp_constant_one:vertical_interface_dimension)'})
+    'vertical_interface_dimension'
     >>> default_vertical_coord({'dimensions':'(ccpp_constant_one:horizontal_loop_extent, vertical_layer_dimension)'})
     'vertical_layer_dimension'
     >>> default_vertical_coord({'local_name':'foo'}) #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -228,8 +228,8 @@ def default_vertical_coord(prop_dict, context=None):
         raise CCPPError(errmsg.format(ln=lname, ct=ctx))
     if 'vertical_layer_dimension' in dims:
         vcoord = 'vertical_layer_dimension'
-    elif 'vertical_level_dimension' in dims:
-        vcoord = 'vertical_level_dimension'
+    elif 'vertical_interface_dimension' in dims:
+        vcoord = 'vertical_interface_dimension'
     else:
         vcoord = 'vertical_index'
     # End if
@@ -498,7 +498,7 @@ class Var(object):
                                      optional_in=True, default_in=False),
                     VariableProperty('vertical_coord', str, optional_in=True,
                                      valid_values_in=['vertical_index',
-                                                      'vertical_level_dimension',
+                                                      'vertical_interface_dimension',
                                                       'vertical_layer_dimension'],
                                      default_fn_in=default_vertical_coord),
                     VariableProperty('persistence', str, optional_in=True,
@@ -735,15 +735,15 @@ class Var(object):
         dimension or index, otherwise, return False
         >>> Var.is_vertical_dimension('ccpp_constant_one:vertical_layer_dimension')
         True
-        >>> Var.is_vertical_dimension('ccpp_constant_one:vertical_level_dimension')
+        >>> Var.is_vertical_dimension('ccpp_constant_one:vertical_interface_dimension')
         True
         >>> Var.is_vertical_dimension('vertical_layer_index')
         True
-        >>> Var.is_vertical_dimension('vertical_level_index')
+        >>> Var.is_vertical_dimension('vertical_interface_index')
         True
         >>> Var.is_vertical_dimension('ccpp_constant_one:vertical_layer_index')
         False
-        >>> Var.is_vertical_dimension('ccpp_constant_one:vertical_level_index')
+        >>> Var.is_vertical_dimension('ccpp_constant_one:vertical_interface_index')
         False
         >>> Var.is_vertical_dimension('horizontal_loop_extent')
         False
@@ -1462,9 +1462,9 @@ CCPP_VAR_LOOP_SUBSTS = {
     'vertical_layer_dimension' :
     VarLoopSubst('vertical_layer_dimension',
                  ('vertical_layer_index',), 'layer_index', ''),
-    'vertical_level_dimension' :
-    VarLoopSubst('vertical_level_dimension',
-                 ('vertical_level_index',), 'level_index', '')
+    'vertical_interface_dimension' :
+    VarLoopSubst('vertical_interface_dimension',
+                 ('vertical_interface_index',), 'level_index', '')
 }
 
 ###############################################################################

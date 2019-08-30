@@ -1063,7 +1063,7 @@ class Scheme(SuiteObject):
     def has_vertical_dim(self):
         """Return True if at least one of this Scheme's variables has
         a vertical dimension (vertical_layer_dimension or
-        vertical_level_dimension)
+        vertical_interface_dimension)
         """
         return self._has_vertical_dimension
 

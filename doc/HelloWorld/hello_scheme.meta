@@ -14,7 +14,7 @@
   dimensions = ()
   intent = in
 [ ilev ]
-  standard_name = vertical_level_dimension
+  standard_name = vertical_interface_dimension
   type = integer
   units = count
   dimensions = ()
@@ -30,7 +30,7 @@
 [ temp_level ]
   standard_name = potential_temperature_at_interface
   units = K
-  dimensions = (ccpp_constant_one:horizontal_loop_extent, vertical_level_dimension)
+  dimensions = (ccpp_constant_one:horizontal_loop_extent, vertical_interface_dimension)
   type = real
   kind = kind_phys
   intent = inout
