@@ -19,7 +19,7 @@
   type = integer
   protected = True
   dimensions = ()
-[ pverp ]
+[ pverP ]
   standard_name = vertical_level_dimension
   type = integer
   units = count
@@ -27,6 +27,12 @@
   dimensions = ()
 [ pcnst ]
   standard_name = number_of_tracers
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ DiagDimStart ]
+  standard_name = first_index_of_diag_fields
   type = integer
   units = count
   protected = True
@@ -40,6 +46,18 @@
   standard_name = potential_temperature_at_interface
   units = K
   dimensions = (horizontal_dimension, vertical_level_dimension)
+  type = real | kind = kind_phys
+[ diag1 ]
+  standard_name = diagnostic_stuff_type_1
+  long_name = This is just a test field
+  units = K
+  dimensions = (first_index_of_diag_fields:horizontal_dimension, first_index_of_diag_fields:vertical_layer_dimension)
+  type = real | kind = kind_phys
+[ diag2 ]
+  standard_name = diagnostic_stuff_type_2
+  long_name = This is just a test field
+  units = K
+  dimensions = (first_index_of_diag_fields: horizontal_dimension, first_index_of_diag_fields :vertical_layer_dimension)
   type = real | kind = kind_phys
 [ dt ]
   standard_name = time_step_for_physics

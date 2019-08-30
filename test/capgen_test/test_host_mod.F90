@@ -11,11 +11,15 @@ module test_host_mod
    !!
    integer,         parameter   :: ncols = 10
    integer,         parameter   :: pver = 5
-   integer,         parameter   :: pverp = 6
+   integer,         parameter   :: pverP = 6
    integer,         parameter   :: pcnst = 2
+   integer,         parameter   :: DiagDimStart = 2
    integer,         parameter   :: index_qv = 1
    real(kind_phys), allocatable :: temp_midpoints(:,:)
-   real(kind_phys)              :: temp_interfaces(ncols, pverp)
+   real(kind_phys)              :: temp_interfaces(ncols, pverP)
+   real(kind_phys), dimension(DiagDimStart:ncols, DiagDimStart:pver) ::       &
+        diag1,                                                                &
+        diag2
    real(kind_phys)              :: dt
    real(kind_phys), parameter   :: temp_inc = 0.05_kind_phys
    type(physics_state)          :: phys_state
@@ -24,7 +28,7 @@ module test_host_mod
 
    integer,         parameter   :: num_time_steps = 2
    real(kind_phys), parameter   :: tolerance = 1.0e-13_kind_phys
-   real(kind_phys)              :: tint_save(ncols, pverp)
+   real(kind_phys)              :: tint_save(ncols, pverP)
 
    public :: init_data
    public :: compare_data
@@ -42,7 +46,7 @@ contains
     ! Allocate and initialize temperature
     allocate(temp_midpoints(ncols, pver))
     temp_midpoints = 0.0_kind_phys
-    do lev = 1, pverp
+    do lev = 1, pverP
        offsize = ((cind - 1) * (ncols * pver)) + ((lev - 1) * ncols)
        do col = 1, ncols
           temp_interfaces(col, lev) = real(offsize + col, kind=kind_phys)

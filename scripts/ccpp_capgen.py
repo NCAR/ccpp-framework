@@ -284,7 +284,13 @@ def dims_comp(mheader, mvar, fvar, title, logger, case_sensitive=False):
         # Now, compare the dims
         for dim_ind in range(len(mdims)):
             mdim = mdims[dim_ind]
-            fdim = fdims[dim_ind]
+            if ':' in mdim:
+                mdim = ':'.join([x.strip() for x in mdim.split(':')])
+            # End if
+            fdim = fdims[dim_ind].strip()
+            if ':' in fdim:
+                fdim = ':'.join([x.strip() for x in fdim.split(':')])
+            # End if
             if not case_sensitive:
                 mdim = mdim.lower()
                 fdim = fdim.lower()

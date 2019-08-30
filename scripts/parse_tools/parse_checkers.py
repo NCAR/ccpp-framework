@@ -31,6 +31,8 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
     ['start1:end1', 'start2:end2']
     >>> check_dimensions(['start1:', 'start2:end2'], None, False)
     ['start1:', 'start2:end2']
+    >>> check_dimensions(['start1 :end1', 'start2: end2'], None, False)
+    ['start1 :end1', 'start2: end2']
     >>> check_dimensions(['size(foo)'], None, False)
     ['size(foo)']
     >>> check_dimensions(['size(foo,1) '], None, False)
@@ -67,7 +69,7 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                 break
             # End if
             # Check possible dim styles (a, a:b, a:, :b, :, ::, a:b:c, a::c)
-            tdims = [x for x in isplit if len(x) > 0]
+            tdims = [x.strip() for x in isplit if len(x) > 0]
             for tdim in tdims:
                 # Check numeric value first
                 try:

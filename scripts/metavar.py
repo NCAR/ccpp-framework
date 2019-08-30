@@ -1590,6 +1590,10 @@ class VarDictionary(OrderedDict):
                                                newvar.source.name))
             # End if
             emsg = "(duplicate) standard name in {}"
+            ovar = self.find_variable(standard_name, any_scope=False)
+            if ovar is not None:
+                emsg += ", defined at {}".format(ovar._context)
+            # End if
             raise ParseSyntaxError(emsg.format(self.name),
                                    token=standard_name, context=newvar._context)
         # End if
@@ -1681,7 +1685,7 @@ class VarDictionary(OrderedDict):
         # End if
         return var
 
-    def find_local_name(self, local_name):
+    def find_local_name(self, local_name, any_scope=False):
         """Return a variable in this dictionary with local_name = <local_name>
         or return None if no such variable is currently in the dictionary"""
         pvar = None
@@ -1695,6 +1699,9 @@ class VarDictionary(OrderedDict):
                 raise ParseInternalError(emsg.format(self.name,
                                                      stdname, local_name))
             # End if (no else, pvar is fine)
+        elif any_scope and (self._parent_dict is not None):
+            lvar = self._parent_dict.find_local_name(local_name,
+                                                     any_scope=any_scope)
         # End if
         return pvar
 
@@ -1867,23 +1874,6 @@ class VarDictionary(OrderedDict):
         even if usage requires a loop substitution.
         """
         return var.call_string(self, loop_vars=loop_vars)
-
-    def find_local_name(self, local_name, any_scope=False):
-        """Return the variable in this dictionary with local_name,
-        <local_name>, or None"""
-        lvar = None
-        for var in self.variable_list():
-            tname = var.get_prop_value('local_name')
-            if tname == local_name:
-                lvar = var
-                break
-            # End if
-        # End for
-        if (lvar is None) and any_scope and (self._parent_dict is not None):
-            lvar = self._parent_dict.find_local_name(local_name,
-                                                     any_scope=any_scope)
-        # End if
-        return lvar
 
     def new_internal_variable_name(self, prefix=None, max_len=63):
         """Find a new local variable name for this dictionary.
