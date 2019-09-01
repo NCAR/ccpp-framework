@@ -193,7 +193,7 @@ Input/output Variable (argument) Rules
   The ``local_name`` of a variable can be chosen freely and does not have to match the
   ``local_name`` in the host model.
 
-* All variable information (standard_name, units, dimentions) must match the specifications on
+* All variable information (standard_name, units, dimensions) must match the specifications on
   the host model side, but sub-slices can be used/added in the host model. For example, when
   using the UFS Atmosphere as the host model, tendencies are split in ``GFS_typedefs.meta``
   so they can be used in the necessary physics scheme:

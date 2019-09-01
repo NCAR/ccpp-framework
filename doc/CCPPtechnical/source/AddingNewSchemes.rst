@@ -10,6 +10,8 @@ This chapter contains a brief description on how to add a new scheme to the *CCP
 
     * If the variables are already available, they can be invoked in the scheme’s metadata file and one can skip the rest of this subsection. If the variable required is not available, consider if it can be calculated from the existing variables in the CCPP. If so, an interstitial scheme (such as ``scheme_pre``; see more in :numref:`Chapter %s <CompliantPhysParams>`) can be created to calculate the variable. However, the variable must be defined but not initialized in the host model as the memory for this variable must be allocated on the host model side.  Instructions for how to add variables to the host model side is described in :numref:`Chapter %s <Host-side Coding>`.
 
+    * If new namelist variables need to be added, the ``GFS_control_type`` DDT should be used. In this case, it is also important to modify the namelist file ``input.nml`` to include the new variable.
+
     * It is important to note that not all data types are persistent in memory. Most variables in the interstitial data type are reset (to zero or other initial values) at the beginning of a physics group and do not persist from one set to another or from one group to another. The diagnostic data type is periodically reset because it is used to accumulate variables for given time intervals.  However, there is a small subset of interstitial variables that are set at creation time and are not reset; these are typically dimensions used in other interstitial variables. 
 
      .. note:: If the value of a variable must be remembered from one call to the next, it should not be in the interstitial or diagnostic data types.
@@ -65,7 +67,7 @@ This chapter contains a brief description on how to add a new scheme to the *CCP
     * Check *prebuild* script for success/failure and associated messages.
     * Compile code in DEBUG mode, run through debugger if necessary (gdb, Allinea DDT, totalview, ...).  See :numref:`Chapter %s <BuildingRunningHostModels>` for information on debugging.
     * Use memory check utilities such as valgrind.
-    * Double-check the metadata file associated with your scheme to make sure that the standard names correspond to the correct local variables.
+    * Double-check the metadata file associated with your scheme to make sure that all information, including standard names and units, correspond to the correct local variables.
 
 * Done. Note that no further modifications of the build system are required, since the *CCPP-Framework* will autogenerate the necessary makefiles that allow the host model to compile the scheme.
 
