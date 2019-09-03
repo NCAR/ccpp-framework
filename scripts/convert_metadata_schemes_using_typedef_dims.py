@@ -45,6 +45,7 @@ def parse_metadata_tables_typedefs(model):
         'ccpp_loop_counter'  : [],
         'ccpp_block_number'  : [],
         'ccpp_thread_number' : [],
+        'ccpp_t'             : [],
         }
     for filename in METADATA_TYPEDEFS[model]:
         metadata_headers = MetadataHeader.parse_metadata_file(filename)
@@ -54,6 +55,21 @@ def parse_metadata_tables_typedefs(model):
                 if standard_name in dimensions.keys():
                     raise ValueError("Duplicate standard name {} in type/variable definition metadata tables".format(standard_name))
                 dimensions[standard_name] = var.get_prop_value('dimensions')
+    #
+    # Add missing variables (not used by FV3)
+    dimensions['lw_heating_rate_spectral'] = [ 'horizontal_dimension', 'adjusted_vertical_layer_dimension_for_radiation', 'number_of_aerosol_bands_for_longwave_radiation' ]
+    dimensions['lw_fluxes'] = ['horizontal_dimension', 'adjusted_vertical_level_dimension_for_radiation']
+    dimensions['cloud_optical_depth'] = [ 'horizontal_dimension', 'adjusted_vertical_layer_dimension_for_radiation' ]
+    #
+    dimensions['sw_heating_rate_spectral'] = [ 'horizontal_dimension', 'adjusted_vertical_layer_dimension_for_radiation', 'number_of_aerosol_bands_for_shortwave_radiation' ]
+    dimensions['sw_fluxes'] = ['horizontal_dimension', 'adjusted_vertical_level_dimension_for_radiation']
+    dimensions['cloud_single_scattering_albedo'] = [ 'horizontal_dimension', 'adjusted_vertical_layer_dimension_for_radiation' ]
+    dimensions['cloud_asymmetry_parameter'] = [ 'horizontal_dimension', 'adjusted_vertical_layer_dimension_for_radiation' ]
+    #
+    dimensions['specified_kinematic_surface_upward_sensible_heat_flux'] = [ 'horizontal_dimension' ]
+    dimensions['specified_kinematic_surface_upward_latent_heat_flux'] = [ 'horizontal_dimension' ]
+    dimensions['vonKarman_constant'] = []
+    #
     return dimensions
 
 ########################################################################
