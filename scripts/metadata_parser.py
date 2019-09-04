@@ -368,6 +368,10 @@ def parse_variable_tables(filename):
                     except ValueError:
                         raise Exception('Mandatory column standard_name not found in argument table {0}'.format(table_name))
                     line_counter += 1
+                    # DH* warn or raise error for old metadata format
+                    logging.warn("Old metadata table found for table {}".format(table_name))
+                    #raise Exception("Old metadata table found for table {}".format(table_name))
+                    # *DH
                     continue
                 elif current_line_number == header_line_number + 1 and not new_metadata:
                     # Skip over separator line
@@ -699,6 +703,10 @@ def parse_scheme_tables(filename):
                         standard_name_index = table_header.index('standard_name')
                     except ValueError:
                         raise Exception('Mandatory column standard_name not found in argument table {0}'.format(table_name))
+                    # DH* warn or raise error for old metadata format
+                    logging.warn("Old metadata table found for table {}".format(table_name))
+                    #raise Exception("Old metadata table found for table {}".format(table_name))
+                    # *DH
                     # Get all of the variable information in table
                     end_of_table = False
                     line_number = header_line_number + 2
