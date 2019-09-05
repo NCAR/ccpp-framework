@@ -20,7 +20,7 @@ Some schemes in the CCPP have been implemented using a driver as an entry point.
 a driver is defined as a wrapper that sits on top of the actual scheme and provides the CCPP entry
 points. In order to minimize the layers of code in the CCPP, the implementation of a driver is
 discouraged, that is, it is preferable that the CCPP be composed of atomic parameterizations. One
-example is the implementation of the MG microphysics, in which a simple entrypoint
+example is the implementation of the MG microphysics, in which a simple entry point
 leads to two versions of the scheme, MG2 and MG3.  A cleaner implementation would be to retire MG2
 in favor of MG3, to put MG2 and MG3 as separate schemes, or to create a single scheme that can behave
 as MG2 nd MG3 depending on namelist options.
@@ -59,16 +59,16 @@ General Rules
 =============
 A CCPP-compliant scheme is in the form of Fortran modules. :ref:`Listing 2.1 <scheme_template>` contains
 the template for a CCPP-compliant scheme (``ccpp/framework/doc/DevelopersGuide/scheme_template.F90``),
-which includes four essential components: argument metadata tables, the *_init*, *_run*, and *_finalize*
-subroutines.
+which includes three essential components: the *_init*, *_run*, and *_finalize* subroutines. Each ``.f`` or ``.F90``
+file that contains an entry point(s) for CCPP scheme(s) must be accompanied by a .meta file in the same directory 
+as described in :numref:`Section %s <MetadataRules>`
 
 .. _scheme_template:
-
 .. literalinclude:: ../../DevelopersGuide/scheme_template.F90
    :language: fortran
-   :lines: 78-125
+   :lines: 85-130
 
-*Listing 2.1: Fortran template for a CCPP-compliant scheme showing an argument table and the _init, _run, and _finalize subroutines.*
+*Listing 2.1: Fortran template for a CCPP-compliant scheme showing the _init, _run, and _finalize subroutines.*
 
 More details are found below:
 
@@ -80,29 +80,19 @@ More details are found below:
   must be the same when the subroutine is called multiple times). The _run subroutine contains the
   code to execute the scheme.
 
-* Each non-empty CCPP entrypoint subroutine requires a commented argument table 
-  (:ref:`Listing 2.1 <scheme_template>`).  Empty subroutines do not require an argument table
-  (e.g., `scheme_template_init` in :ref:`Listing 2.1 <scheme_template>`), since no variables need to be passed.
+* Each ``.f`` or ``.F90`` file with one or more CCPP entry point schemes must be accompanied by a a ``.meta`` file containing
+  metadata about the arguments to the scheme(s). For more information, see :numref:`Section %s <MetadataRules>`.
 
-* The argument table contains the metadata of the variables required by the scheme. The table must
-  precede the entry point subroutine (*_init*, *_run*, and *_finalize*) and must start with
-  ``!> \section arg_table_subroutine_name Argument Table`` and end with a line containing only ``!!``
-
-* The current metadata attributes of a variable include ``local_name``, ``standard_name``, ``long_name``,
-  ``units``, ``rank``, ``type``, ``kind``, ``intent``, and ``optional`` (see more in section
-  :ref:`DoxygenModules` of this chapter). 
-
-* If the width of an argument table exceeds 250 characters, the table should be wrapped in C preprocessor directives:
+* Non-empty schemes must be preceded by the three lines below. These are markup comments used by Doxygen,
+  the software employed to create the scientific documentation, to insert an external file containing metadata 
+  information (in this case, ``schemename_run.html``) in the documentation. See more on this topic in 
+  :numref:`Section %s <SciDoc>`.
 
 .. code-block:: fortran
 
-   #if 0
-   !> \section arg_table_scheme_template_run Argument Table
-   !> ...
+   !> \section arg_table_schemename_run Argument Table
+   !! \htmlinclude schemename_run.html
    !!
-   #endif
-
-* For better readability, the columns in the argument table are aligned.
 
 * All external information required by the scheme must be passed in via the argument list. Statements
   such as  ``‘use EXTERNAL_MODULE’`` should not be used for passing in data and all physical constants
@@ -112,9 +102,78 @@ More details are found below:
 
 * Interstitial modules (``scheme_pre`` and ``scheme_post``) can be included if any part of the physics
   scheme must be executed before (``_pre``) or after (``_post``) the ``module scheme`` defined above.
-  These situations are described in more detail in :numref:`Section %s <DynamicBuildCaps>`.
 
 .. _IOVariableRules:
+
+.. _MetadataRules:
+
+Metadata Rules
+==============
+* Metadata files (``.meta``) are in a relaxed config file format and contain metadata for one or more CCPP entry point schemes.
+  There should be one .meta file for each ``.f`` or .``F90`` file.
+
+* For each CCPP compliant scheme, the ``.meta`` file should have this set of lines
+
+.. code-block:: fortran
+
+   [ccpp-arg-table]
+    name = <name>
+    type = <type>
+
+* ``ccpp-arg-table`` indicates the start of a new metadata section for a given scheme.
+
+* ``<name>`` is name of the corresponding subroutine/module.
+
+* ``<type>`` can be ``scheme``, ``module``, ``DDT``, or ``host``.
+
+* For empty schemes, the three lines above are sufficient. For non-empty schemes, the metadata should
+  describe all input and output arguments to the scheme using the following format:
+
+.. code-block:: fortran
+
+   [varname]
+    standard_name = <standard_name>
+    long_name = <long_name>
+    units = <units>
+    rank = <rank>
+    dimensions = <dimensions>
+    type = <type>
+    kind = <kind>
+    intent = <intent>
+    optional = <optional>
+
+* The ``intent`` argument is only valid in ``scheme`` metadata tables, as it is not applicable to the other ``types``.
+
+* The following attributes are optional: ``long_name``, ``kind``, and ``optional``.
+
+* Lines can be combined using | as a separator, e.g.,
+
+.. code-block:: fortran
+
+   type = real | kind = kind_phys
+
+* ``[varname]`` is the local name of the variable in the subroutine.
+
+* The dimensions attribute should be empty parentheses for scalars or contain the ``standard_name`` for the start and end for
+  each dimension of an array. ``ccpp_constant_one`` is the assumed start for any dimension which only has a single value.
+  For example:
+
+.. code-block:: fortran
+
+   dimensions = ()
+   dimensions = (ccpp_constant_one:horizontal_loop_extent, vertical_level_dimension)
+   dimensions = (horizontal_dimension,vertical_dimension)
+   dimensions = (horizontal_dimension,vertical_dimension_of_ozone_forcing_data,number_of_coefficients_in_ozone_forcing_data)
+
+* :ref:`Listing 2.2 <meta_template>` contains the template for a CCPP-compliant scheme 
+  (``ccpp/framework/doc/DevelopersGuide/scheme_template.meta``),
+
+.. _meta_template:
+.. literalinclude:: ../../DevelopersGuide/scheme_template.meta
+   :language: fortran
+   :lines: 51-80
+
+*Listing 2.2: Fortran template for a metadata file accompanying a CCPP-compliant scheme.*
 
 Input/output Variable (argument) Rules
 ======================================
@@ -134,16 +193,34 @@ Input/output Variable (argument) Rules
   The ``local_name`` of a variable can be chosen freely and does not have to match the
   ``local_name`` in the host model.
 
-* All variable information (units, rank, index ordering) must match the specifications on
+* All variable information (standard_name, units, dimensions) must match the specifications on
   the host model side, but sub-slices can be used/added in the host model. For example, when
-  using the UFS Atmosphere as the host model, tendencies are split in ``GFS_typedefs.F90``
+  using the UFS Atmosphere as the host model, tendencies are split in ``GFS_typedefs.meta``
   so they can be used in the necessary physics scheme:
 
 .. code-block:: fortran
 
-   !! | IPD_Data(nb)%Intdiag%dt3dt(:,:,1) | cumulative_change_in_temperature_due_to_longwave_radiation
-   !! | IPD_Data(nb)%Intdiag%dt3dt(:,:,2) | cumulative_change_in_temperature_due_to_shortwave_radiation_and_orographic_gravity_wave_drag
-   !! | IPD_Data(nb)%Intdiag%dt3dt(:,:,3) | cumulative_change_in_temperature_due_to_PBL
+   [dt3dt(:,:,1)]
+     standard_name = cumulative_change_in_temperature_due_to_longwave_radiation
+     long_name = cumulative change in temperature due to longwave radiation
+     units = K
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = real
+     kind = kind_phys
+   [dt3dt(:,:,2)]
+     standard_name = cumulative_change_in_temperature_due_to_shortwave_radiation
+     long_name = cumulative change in temperature due to shortwave radiation
+     units = K
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = real
+     kind = kind_phys
+   [dt3dt(:,:,3)]
+     standard_name = cumulative_change_in_temperature_due_to_PBL
+     long_name = cumulative change in temperature due to PBL
+     units = K
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = real
+     kind = kind_phys
 
 * The two mandatory variables that any scheme-related subroutine must accept as ``intent(out)`` arguments are
   ``errmsg`` and ``errflg`` (see also coding rules in :numref:`Section %s <CodingRules>`).
@@ -211,8 +288,7 @@ Coding Rules
   or other information needed to initialize the scheme, including stdout and stderr.
   Diagnostic messages are tolerated, but should be minimal.
 
-* Line lengths of up to 120 characters are suggested for better readability (exception: CCPP
-  metadata argument tables).
+* Line lengths of no more than 120 characters are suggested for better readability.
 
 Additional coding rules are listed under the *Coding Standards* section of the NOAA NGGPS
 Overarching System team document on Code, Data, and Documentation Management for NOAA Environmental

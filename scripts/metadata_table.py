@@ -183,7 +183,7 @@ class MetadataHeader(ParseSource):
 <meta charset="UTF-8">
 </head>
 <body>
-<table>
+<table border="1">
 {header}{contents}</table>
 </body>
 </html>
