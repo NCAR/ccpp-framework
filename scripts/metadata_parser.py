@@ -455,29 +455,7 @@ def parse_variable_tables(filename):
                                 vars_in_type.append(var_name)
                     logging.debug('Variables in derived type {0}: {1}'.format(type_name, ', '.join(vars_in_type)))
 
-        if debug and len(metadata.keys()) > 0:
-            # Write out the XML for debugging purposes
-            top = ET.Element('definition')
-            top.set('module', module_name)
-            container = encode_container(module_name)
-            for var_name in metadata.keys():
-                for var in metadata[var_name]:
-                    if var.container == container:
-                        sub_var = var.to_xml(ET.SubElement(top, 'variable'))
-            for type_name in registry[module_name].keys():
-                container = encode_container(module_name, type_name)
-                sub_type = ET.SubElement(top, 'type')
-                sub_type.set('type_name', type_name)
-                for var_name in metadata.keys():
-                    for var in metadata[var_name]:
-                        if var.container == container:
-                            sub_var = var.to_xml(ET.SubElement(sub_type, 'variable'))
-            indent(top)
-            tree = ET.ElementTree(top)
-            xmlfile = module_name + '.xml'
-            tree.write(xmlfile, xml_declaration=True, encoding='utf-8', method="xml")
-            logging.info('Parsed variable definition tables in module {0}; output => {1}'.format(module_name, xmlfile))
-        elif len(metadata.keys()) > 0:
+        if len(metadata.keys()) > 0:
             logging.info('Parsed variable definition tables in module {0}'.format(module_name))
 
     return metadata
@@ -804,24 +782,6 @@ def parse_scheme_tables(filename):
                             if var.container == container:
                                 vars_in_subroutine.append(var_name)
                     logging.debug('Variables in subroutine {0}: {1}'.format(subroutine_name, ', '.join(vars_in_subroutine)))
-            # To XML
-            for scheme_name in registry[module_name].keys():
-                top = ET.Element('scheme')
-                top.set('module', scheme_name)
-                for subroutine_name in registry[module_name][scheme_name].keys():
-                    sub_sub = ET.SubElement(top, 'subroutine')
-                    sub_sub.set('name', subroutine_name)
-                    container = encode_container(module_name, scheme_name, subroutine_name)
-                    # Variable output in order of calling arguments
-                    for var_name in arguments[module_name][scheme_name][subroutine_name]:
-                        for var in metadata[var_name]:
-                            if var.container == container:
-                                sub_var = var.to_xml(ET.SubElement(sub_sub, 'variable'))
-                indent(top)
-                tree = ET.ElementTree(top)
-                xmlfile = scheme_name + '.xml'
-                tree.write(xmlfile, xml_declaration=True, encoding='utf-8', method="xml")
-                logging.info('Parsed tables in scheme {0}; output => {1}'.format(scheme_name, xmlfile))
         # Standard output to screen
         elif len(metadata.keys()) > 0:
             for scheme_name in registry[module_name].keys():
