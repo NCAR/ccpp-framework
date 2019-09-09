@@ -22,21 +22,34 @@ At present, only two types of variable definitions are supported by the CCPP-Fra
 .. _VariableTablesHostModel:
 
 ==================================================
-Metadata Variable Tables in the Host Model
+Metadata for Variable in the Host Model
 ==================================================
 
-To establish the link between host model variables and physics scheme variables, the host model must provide metadata tables similar to those presented in :numref:`Section %s <GeneralRules>`. The host model can have multiple metadata tables or just one. For each variable required by the pool of CCPP-Physics schemes, one and only one entry must exist on the host model side. The connection between a variable in the host model and in the physics scheme is made through its ``standard_name``.
+To establish the link between host model variables and physics scheme variables, the host model must provide metadata information similar to those presented in :numref:`Section %s <MetadataRules>`. The host model can have multiple metadata files (``.meta``) with multiple metadata sections in each file 
+(``[ccpp-arg-table]``) or just one. The host model Fortran files contain three-line snippets to indicate the location for insertion of the 
+metadata information contained in the corresponding section in the ``.meta`` file.
 
-The following requirements must be met when defining variables in the host model metadata tables (see also :ref:`Listing 6.1 <example_vardefs>` for examples of host model metadata tables).
+.. _SnippetMetadata:
+
+.. code-block:: fortran
+
+   !!> \section arg_table_example_vardefs
+   !! \htmlinclude example_vardefs.html
+   !!
+
+For each variable required by the pool of CCPP-Physics schemes, one and only one entry must exist on the host model side. The connection between a variable in the host model and in the physics scheme is made through its ``standard_name``.
+
+The following requirements must be met when defining metadata for variables in the host model (see also :ref:`Listing 6.1 <example_vardefs>` 
+and :ref:`Listing 6.2 <example_vardefs_meta>` for examples of host model metadata).
 
 * The ``standard_name`` must match that of the target variable in the physics scheme.
 * The type, kind, shape and size of the variable (as defined in the host model Fortran code) must match that of the target variable.
-* The attributes ``units``, ``rank``, ``type`` and ``kind`` in the host model metadata table must match those in the physics scheme table.
+* The attributes ``units``, ``rank``, ``type`` and ``kind`` in the host model metadata must match those in the physics scheme metadata.
 * The attributes ``optional`` and ``intent`` must be set to ``F`` and ``none``, respectively.
 * The ``local_name`` of the variable must be set to the name the host model cap uses to refer to the variable.
-* The metadata table that exposes a DDT to the CCPP (as opposed to the table that describes the components of a DDT) must be in the same module where the memory for the DDT is allocated. If the DDT is a module variable, then it must be exposed via the module’s metadata table, which must have the same name as the module.
-* Metadata tables describing module variables must be placed inside the module.
-* Metadata tables describing components of DDTs must be placed immediately before the type definition and have the same name as the DDT.
+* The metadata section that exposes a DDT to the CCPP (as opposed to the section that describes the components of a DDT) must be in the same module where the memory for the DDT is allocated. If the DDT is a module variable, then it must be exposed via the module’s metadata section, which must have the same name as the module.
+* Metadata sections describing module variables must be placed inside the module.
+* Metadata sections describing components of DDTs must be placed immediately before the type definition and have the same name as the DDT.
 
 .. _example_vardefs:
 
@@ -45,32 +58,21 @@ The following requirements must be met when defining variables in the host model
        module example_vardefs
  
          implicit none
- 
-   !> \section arg_table_example_vardefs
-   !! | local_name | standard_name | long_name | units | rank | type      | kind   | intent | optional |
-   !! |---------------|---------------|--------------|-------|----|-----------|--------|--------|----------|
-   !! | ex_int     | example_int   | ex. int      | none  |  0 | integer   |        | none   | F        |
-   !! | ex_real1   | example_real1 | ex. real     | m     |  2 | real      | kind=8 | none   | F        |
-   !! | ex_ddt     | ex_ddt        | ex. ddt type | DDT   |  2 | ex_ddt    |        | none   | F        |
-   !! | ext      | ex_ddt_instance | ex. ddt inst | DDT   |  2 | ex_ddt    |        | none   | F        |
-   !! | errmsg     | error_message | err. msg.    | none  |  0 | character | len=64 | none   | F        |
-   !! | errflg     | error_flag    | err. flg.    | flag  |  0 | logical   |        | none   | F        |
+
+   !!> \section arg_table_example_vardefs
+   !! \htmlinclude example_vardefs.html
    !!
+
          integer, parameter           :: r15 = selected_real_kind(15)
          integer                      :: ex_int
          real(kind=8), dimension(:,:) :: ex_real1
          character(len=64)            :: errmsg
          logical                      :: errflg
-    
-   ! Derived data types
-    
-   !> \section arg_table_ex_ddt
-   !! | local_name | standard_name | long_name | units | rank | type      | kind   | intent | optional |
-   !! |------------|---------------|-----------|-------|------|-----------|--------|--------|----------|
-   !! | ext%l      | example_flag  | ex. flag  | flag  |    0 | logical   |        | none   | F        |
-   !! | ext%r      | example_real3 | ex. real  | kg    |    2 | real      | r15    | none   | F        |
-   !! | ext%r(:,1) | example_slice | ex. slice | kg    |    1 | real      | r15    | none   | F        |
+
+   !!> \section arg_table_example_ddt
+   !! \htmlinclude example_ddt.html
    !!
+ 
          type ex_ddt
            logical              :: l
            real, dimension(:,:) :: r
@@ -81,7 +83,84 @@ The following requirements must be met when defining variables in the host model
        end module example_vardefs
 
 
-*Listing 6.1:  Example Host Model Metadata Table.  In this example, both the definition and the declaration (memory allocation) of a DDT* ``ext`` *(of type* ``ex_ddt`` *) are in the same module.*
+*Listing 6.1: Example host model file with reference to metadata. In this example, both the definition and the declaration (memory allocation) of a DDT* ``ext`` *(of type* ``ex_ddt`` *) are in the same module.*
+
+.. _example_vardefs_meta:
+
+.. code-block:: fortran
+
+   [ccpp-arg-table]
+     name = arg_table_example_vardefs
+     type = module
+   [ex_int]
+     standard_name = example_int 
+     long_name = ex. int
+     units = none
+     dimensions = () 
+     type = integer
+     kind = 
+   [ex_real]
+     standard_name = example_real
+     long_name = ex. real
+     units = m
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = real
+     kind = kind=8
+   [ex_ddt]
+     standard_name = example_ddt
+     long_name = ex. ddt
+     units = DDT
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = ex_ddt
+     kind =
+   [ext]
+     standard_name = example_ddt_instance
+     long_name = ex. ddt inst
+     units = DDT
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = ex_ddt
+     kind =
+   [errmsg]
+     standard_name = ccpp_error_message
+     long_name = error message for error handling in CCPP
+     units = none
+     dimensions = ()
+     type = character
+     kind = len=64
+   [errflg]
+     standard_name = ccpp_error_flag
+     long_name = error flag for error handling in CCPP
+     units = flag
+     dimensions = ()
+     type = integer
+
+   ########################################################################
+   [ccpp-arg-table]
+     name = arg_table_example_ddt
+     type = ddt
+   [ext%1]
+     standard_name = example_flag
+     long_name = ex. flag
+     units = flag
+     dimensions = 
+     type = logical
+     kind =
+   [ext%r]
+     standard_name = example_real3
+     long_name = ex. real
+     units = kg
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = real
+     kind = r15
+   [ext%r(;,1)]
+     standard_name = example_slice
+     long_name = ex. slice
+     units = kg
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = real
+     kind = r15
+
+*Listing 6.2: Example host model metadata file (* ``.meta`` *).*
 
 ========================================================
 CCPP Variables in the SCM and UFS Atmosphere Host Models
@@ -106,7 +185,7 @@ While the use of standard Fortran variables is preferred, in the current impleme
 
 The DDT descriptions provide an idea of what physics variables go into which data type.  ``GFS_diag_type`` can contain variables that accumulate over a certain amount of time and are then zeroed out. Variables that require persistence from one timestep to another should not be included in the ``GFS_diag_type`` nor the ``GFS_interstitial_type`` DDTs. Similarly, variables that need to be shared between groups cannot be included in the ``GFS_interstitial_type`` DDT. Although this memory management is somewhat arbitrary, new variables provided by the host model or derived in an interstitial scheme should be put in a DDT with other similar variables.
 
-Each DDT contains a create method that allocates the data defined in the metadata table. For example, the ``GFS_stateout_type`` contains:
+Each DDT contains a create method that allocates the data defined using the metadata. For example, the ``GFS_stateout_type`` contains:
 
 .. code-block:: fortran
 
@@ -122,11 +201,20 @@ Each DDT contains a create method that allocates the data defined in the metadat
       procedure :: create  => stateout_create  !<   allocate array data
   end type GFS_stateout_type
 
-In this example, ``gu0``, ``gv0``, ``gt0``, and ``gq0`` are defined in the host-side metadata table, and when the subroutine ``stateout_create`` is called, these arrays are allocated and initialized to zero.  With the CCPP, it is possible to not only refer to components of DDTs, but also to slices of arrays in the metadata table as long as these are contiguous in memory. An example of an array slice from the ``GFS_stateout_type`` looks like:
+In this example, ``gu0``, ``gv0``, ``gt0``, and ``gq0`` are defined in the host-side metadata section, and when the subroutine ``stateout_create`` is called, these arrays are allocated and initialized to zero.  With the CCPP, it is possible to not only refer to components of DDTs, but also to slices of arrays with provided metadata as long as these are contiguous in memory. An example of an array slice from the ``GFS_stateout_type`` looks like:
 
 .. code-block:: fortran
 
-  !! | GFS_Data(cdata%blk_no)%Stateout%gq0(:,:,GFS_Control%ntsw)    | snow_water_mixing_ratio_updated_by_physics                             | moist (dry+vapor, no condensates) mixing ratio of snow water updated by physics            | kg kg-1 |    2 | real    | kind_phys | none   | F   
+   [ccpp-arg-table]
+     name = GFS_stateout_type
+     type = ddt
+   [gq0(:,:,index_for_snow_water)]
+     standard_name = snow_water_mixing_ratio_updated_by_physics
+     long_name = moist (dry+vapor, no condensates) mixing ratio of snow water updated by physics
+     units = kg kg-1
+     dimensions = (horizontal_dimension,vertical_dimension)
+     type = real
+     kind = kind_phys
 
 Array slices can be used by physics schemes that only require certain values from an array. 
 
@@ -146,7 +234,7 @@ Data Structure to Transfer Variables between Dynamics and Physics
 
 The roles of ``cdata`` structure in dealing with data exchange are not the same between the dynamic and the static builds of the CCPP. For the dynamic build, the ``cdata`` structure handles the data exchange between the host model and the physics schemes. ``cdata`` is a DDT containing a list of pointers to variables and their metadata and is persistent in memory. 
 
-For both the dynamic and static builds, the ``cdata`` structure is used for holding five variables that must always be available to the physics schemes. These variables are listed in a metadata table in ``ccpp/framework/src/ccpp_types.F90`` (:ref:`Listing 6.2 <MandatoryVariables>`). 
+For both the dynamic and static builds, the ``cdata`` structure is used for holding five variables that must always be available to the physics schemes. These variables are listed in a metadata table in ``ccpp/framework/src/ccpp_types.F90`` (:ref:`Listing 6.3 <MandatoryVariables>`). 
 
 
 * Error flag for handling in CCPP (``errmsg``).
@@ -168,7 +256,7 @@ For both the dynamic and static builds, the ``cdata`` structure is used for hold
  !! | cdata%thrd_no                     | ccpp_thread_number        | number of thread for threading in CCPP                | index   |    0 | integer   |          | none   | F        |
  !!
 
-*Listing 6.2: Mandatory variables provided by the CCPP-Framework from* ``ccpp/framework/src/ccpp_types.F90`` *.
+*Listing 6.3: Mandatory variables provided by the CCPP-Framework from* ``ccpp/framework/src/ccpp_types.F90`` *.
 These variables must not be defined by the host model.*
 
 Two of the variables are mandatory and must be passed to every physics scheme: ``errmsg`` and ``errflg``. The variables ``loop_cnt``, ``blk_no``, and ``thrd_no`` can be passed to the schemes if required, but are not mandatory.  For the static build of the CCPP, the ``cdata`` structure is only used to hold these five variables, since the host model variables are directly passed to the physics without the need for an intermediate data structure.
@@ -225,7 +313,6 @@ Typical calls to ``ccpp_init`` are below, where ``ccpp_suite`` is the name of th
 
  call ccpp_init(trim(ccpp_suite), cdata, ierr)
  call ccpp_init(trim(ccpp_suite), cdata2, ierr, [cdata_target=cdata])
-
  call ccpp_init(trim(ccpp_sdf_filepath), cdata, ierr, [is_filename=.true.])
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -357,7 +444,7 @@ The purpose of the host model *cap* is to abstract away the communication betwee
 
 * Providing interfaces to call the CCPP
 
-  * The *cap* must provide functions or subroutines that can be called at the appropriate places in the host model time integration loop and that internally call ``ccpp_init``, ``ccpp_physics_init``, ``ccpp_physics_run``, ``ccpp_physics_finalize`` and ``ccpp_finalize``, and handle any errors returned See :ref:`Listing 6.3 <example_ccpp_host_cap>`. 
+  * The *cap* must provide functions or subroutines that can be called at the appropriate places in the host model time integration loop and that internally call ``ccpp_init``, ``ccpp_physics_init``, ``ccpp_physics_run``, ``ccpp_physics_finalize`` and ``ccpp_finalize``, and handle any errors returned See :ref:`Listing 6.4 <example_ccpp_host_cap>`. 
 
 .. _example_ccpp_host_cap:
 
@@ -430,7 +517,7 @@ The purpose of the host model *cap* is to abstract away the communication betwee
 
  end module example_ccpp_host_cap
 
-*Listing 6.3: Fortran template for a CCPP host model cap from* ``ccpp/framework/doc/DevelopersGuide/host_cap_template.F90``.
+*Listing 6.4: Fortran template for a CCPP host model cap from* ``ccpp/framework/doc/DevelopersGuide/host_cap_template.F90``.
 
 The following sections describe two implementations of host model caps to serve as examples. For each of the functions listed above, a description for how it is implemented in each host model is included.
 
@@ -455,7 +542,7 @@ The host model *cap* is responsible for:
 
 * Allocating memory for variables needed by physics 
 
-  All variables and constants required by the physics are in the host-side metadata tables, ``arg_table_physics_type`` and ``arg_table_gmtb_scm_physical_constants``, which are implemented in ``gmtb_scm_type_defs.f90`` and ``gmtb_scm_physical_constants.f90``. To mimic the UFS Atmosphere and to hopefully reduce code maintenance, currently, the SCM uses GFS DDTs as sub-types within the physics DDT.
+  All variables and constants required by the physics have metadata provided on the host-side, ``arg_table_physics_type`` and ``arg_table_gmtb_scm_physical_constants``, which are implemented in ``gmtb_scm_type_defs.f90`` and ``gmtb_scm_physical_constants.f90``. To mimic the UFS Atmosphere and to hopefully reduce code maintenance, currently, the SCM uses GFS DDTs as sub-types within the physics DDT.
 
   In ``gmtb_scm_type_defs.f90``, the physics DDT has a create type-bound procedure (see subroutine ``physics_create`` and ``type physics_type``), which allocates GFS sub-DDTs and other physics variables and initializes them with zeros. ``physics%create`` is called from ``gmtb_scm.F90`` after the initial SCM state has been set up.
 
@@ -481,7 +568,7 @@ The host model *cap* is responsible for:
 
   * initialization for other variables in physics DDT
 
-  * ini calls for legacy non-ccpp schemes
+  * init calls for legacy non-ccpp schemes
 
  * call ``physics%associate()``: to associate pointers in physics DDT with targets in ``scm_state``, which contains variables that are modified by the SCM “dycore” (i.e. forcing).
 
@@ -553,7 +640,7 @@ The following text describes how the host cap functions listed above are impleme
 
  * When the dynamic mode is used, the ``cdata`` structures are filled with pointers to variables that are used by physics and whose memory is allocated by the host model. This is done using ``ccpp_field_add`` statements contained in the autogenerated include files. For the fast physics, this include file is named ``ccpp_fields_fast_physics.inc`` and is placed after the call to ``ccpp_init`` for ``cdata_tile`` in the ``atmosphere_init`` subroutine of ``atmosphere.F90``. For populating ``cdata_domain`` and ``cdata_block``, IPD data types are initialized in the ``atmos_model_init`` subroutine of ``atmos_model.F90``. The ``Init_parm`` DDT is filled directly in this routine and ``IPD_initialize`` (pointing to ``GFS_initialize`` and for populating diagnostics and restart DDTs) is called in order to fill the GFS DDTs that are used in the physics. Once the IPD data types are filled, they are passed to the ‘init’ step of the ``CCPP_step`` subroutine in ``CCPP_driver.F90`` where ``ccpp_field_add`` statements are included in ``ccpp_fields_slow_physics.inc`` after the calls to ``ccpp_init`` for the ``cdata_domain`` and ``cdata_block`` containers.
 
- * Note: for the static mode, filling of the ``cdata`` containers with pointers to physics variables is not necessary. This is because the autogenerated *caps* for the physics groups (that contain calls to the member schemes) can fill in the argument variables without having to retrieve pointers to the actual data. This is possible because the host model metadata tables (that are known at ccpp_prebuild time) contain all the information needed about the location (DDTs and local names) to pass into the autogenerated *caps* for their direct use.
+ * Note: for the static mode, filling of the ``cdata`` containers with pointers to physics variables is not necessary. This is because the autogenerated *caps* for the physics groups (that contain calls to the member schemes) can fill in the argument variables without having to retrieve pointers to the actual data. This is possible because the metadata about host model variables (that are known at ccpp_prebuild time) contain all the information needed about the location (DDTs and local names) to pass into the autogenerated *caps* for their direct use.
 
 * Providing interfaces to call the CCPP
 

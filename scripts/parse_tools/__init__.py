@@ -32,7 +32,7 @@ from parse_source   import ParseContext, ParseSource
 from parse_source   import ParseSyntaxError, ParseInternalError
 from parse_source   import CCPPError, context_string
 from parse_object   import ParseObject
-from parse_checkers import check_fortran_id, FORTRAN_ID
+from parse_checkers import check_fortran_id, LITERAL, FORTRAN_ID
 from parse_checkers import FORTRAN_DP_RE
 from parse_checkers import check_fortran_ref, FORTRAN_SCALAR_REF
 from parse_checkers import check_fortran_intrinsic

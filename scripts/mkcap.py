@@ -33,12 +33,9 @@ class Var(object):
         self._intent        = None
         self._optional      = None
         self._target        = None
-        self._type_kind_var = False
         self._actions       = { 'in' : None, 'out' : None }
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
-        # Consistency test for special kind/type definition variables
-        self.type_kind_test()
 
     @property
     def standard_name(self):
@@ -94,8 +91,6 @@ class Var(object):
     def rank(self, value):
         if not isinstance(value, int):
             raise TypeError('Invalid type for variable property rank, must be integer')
-        elif self.type == 'character' and value > 0:
-            raise Exception('Arrays of Fortran strings not implemented in CCPP')
         if (value == 0):
             self._rank = ''
         else:
@@ -151,18 +146,6 @@ class Var(object):
         self._container = value
 
     @property
-    def type_kind_var(self):
-        '''Get the type_kind_var flag of the variable.'''
-        return self._type_kind_var
-
-    @type_kind_var.setter
-    def type_kind_var(self, value):
-        if type(value)==bool:
-            self._type_kind_var = value
-        else:
-            raise Exception('Invalid value for variable attribute type_kind_var.')
-
-    @property
     def actions(self):
         '''Get the action strings for the variable.'''
         return self._actions
@@ -177,17 +160,6 @@ class Var(object):
                     raise Exception('Invalid values for variable attribute actions.')
         else:
             raise Exception('Invalid values for variable attribute actions.')
-
-    def type_kind_test(self):
-        """Type and kind definitions are special variables
-        that can be identified by the type being the same
-        as the local name and the standard name of the variable.
-        Make sure that local_name and standard_name are both
-        identical to type, not just one of them."""
-        if self.type == self.local_name and self.type == self.standard_name:
-            self.type_kind_var = True
-        elif self.type == self.local_name or self.type == self.standard_name:
-            raise Exception('Type or kind definitions must have matching local_name, standard_name and type.')
 
     def compatible(self, other):
         """Test if the variable is compatible another variable. This requires
@@ -213,7 +185,7 @@ class Var(object):
         try:
             function = getattr(unit_conversion, function_name)
         except AttributeError:
-            raise Exception('Error, automatic unit conversion from {0} to {1} not implemented'.format(self.units, units))
+            raise Exception('Error, automatic unit conversion from {0} to {1} for {2} in {3} not implemented'.format(self.units, units, self.standard_name, self.container))
         conversion = function()
         self._actions['out'] = function()
 
@@ -223,14 +195,12 @@ class Var(object):
         try:
             function = getattr(unit_conversion, function_name)
         except AttributeError:
-            raise Exception('Error, automatic unit conversion from {1} to {0} not implemented'.format(self.units, units))
+            raise Exception('Error, automatic unit conversion from {1} to {0} for {2} in {3} not implemented'.format(self.units, units, self.standard_name, self.container))
         conversion = function()
         self._actions['in'] = function()
 
     def print_module_use(self):
         '''Print the module use line for the variable.'''
-        if not self.type_kind_var:
-            raise Exception('Variable function print_module_use is only implemented for kind/type definitions')
         for item in self.container.split(' '):
             if item.startswith('MODULE_'):
                 module = item.replace('MODULE_', '')
@@ -419,7 +389,6 @@ class Var(object):
         optional      = {s.optional}
         target        = {s.target}
         container     = {s.container}
-        type_kind_var = {s.type_kind_var}
         actions       = {s.actions}'''
         return str.format(s=self)
 
