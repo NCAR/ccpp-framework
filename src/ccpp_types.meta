@@ -1,0 +1,45 @@
+[ccpp-arg-table]
+  name = ccpp_types
+  type = module
+[ccpp_t]
+  standard_name = ccpp_t
+  long_name = definition of type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t
+
+########################################################################
+[ccpp-arg-table]
+  name = ccpp_t
+  type = scheme
+[errflg]
+  standard_name = ccpp_error_flag
+  long_name = error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+[loop_cnt]
+  standard_name = ccpp_loop_counter
+  long_name = loop counter for subcycling loops in CCPP
+  units = index
+  dimensions = ()
+  type = integer
+[blk_no]
+  standard_name = ccpp_block_number
+  long_name = number of block for explicit data blocking in CCPP
+  units = index
+  dimensions = ()
+  type = integer
+[thrd_no]
+  standard_name = ccpp_thread_number
+  long_name = number of thread for threading in CCPP
+  units = index
+  dimensions = ()
+  type = integer

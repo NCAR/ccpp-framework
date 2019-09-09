@@ -9,6 +9,8 @@ import sys
 CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
 CCPP_LOOP_COUNTER        = 'ccpp_loop_counter'
+CCPP_BLOCK_NUMBER        = 'ccpp_block_number'
+CCPP_THREAD_NUMBER       = 'ccpp_thread_number'
 
 CCPP_TYPE = 'ccpp_t'
 
@@ -16,6 +18,8 @@ CCPP_INTERNAL_VARIABLES = {
     CCPP_ERROR_FLAG_VARIABLE : 'cdata%errflg',
     CCPP_ERROR_MSG_VARIABLE  : 'cdata%errmsg',
     CCPP_LOOP_COUNTER        : 'cdata%loop_cnt',
+    CCPP_BLOCK_NUMBER        : 'cdata%blk_no',
+    CCPP_THREAD_NUMBER       : 'cdata%thrd_no',
     }
 
 STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
