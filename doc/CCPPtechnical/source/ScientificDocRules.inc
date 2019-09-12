@@ -539,7 +539,7 @@ script from the directory above where the CCPP is installed is:
 
 .. code-block:: fortran
 
-   ccpp/framework/scripts/metadata2html.py -m ccpp/physics/physics/file.meta -o ccpp/physics/physics/docs
+   ./ccpp/framework/scripts/metadata2html.py -m ccpp/physics/physics/file.meta -o ccpp/physics/physics/docs
 
 where ``-m`` is used to specify a file with metadata information and ``-o`` is used to specify
 the directory for output. Note that a single input file (``.meta``) may have more than one CCPP entrypoint
@@ -549,8 +549,20 @@ Note that the ``.meta`` files are supplied with the CCPP Physics, and that there
 each Fortran file that contains one or more CCPP entrypoint schemes. The ``.meta`` files are located in the same
 directory as the scheme Fortran files (``ccpp/physics/physics``).
 
-To generate a complete Scientific Documentation, documentation, script ``/ccpp/framework/scripts/metadata2html.py`` 
-must be run separately for each ``.meta`` file available in ccpp/physics/physics.
+To generate a complete Scientific Documentation, documentation, script ``./ccpp/framework/scripts/metadata2html.py``
+must be run separately for each ``.meta`` file available in ``ccpp/physics/physics``. Alternatively, a batch mode exists
+that converts all metadata files associated with schemes and variable definitions in the CCPP prebuild config:
+
+.. code-block:: fortran
+
+   ./ccpp/framework/scripts/metadata2html.py -c ccpp/config/ccpp_prebuild_config.py
+
+Note that the options ``-c`` and ``-m`` are mutually exclusive, but that one of them is required. Option ``-m`` also requires
+to specify ``-o``, while option ``-c`` will ignore ``-o``. For more information, use
+
+.. code-block:: fortran
+
+   ./ccpp/framework/scripts/metadata2html.py --help
 
 Using Doxygen
 -------------------------------
