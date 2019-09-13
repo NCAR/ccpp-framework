@@ -9,9 +9,9 @@ import os
 import re
 import sys
 
-# Local modules
+# CCPP framework imports
 from common import encode_container, decode_container, decode_container_as_dict, execute
-from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE
+from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
 from common import split_var_name_and_array_reference
 from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
@@ -31,15 +31,6 @@ parser.add_argument('--suites',     action='store', help='suite definition files
 
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
-
-# SCRIPTDIR is the directory where the ccpp_prebuild.py and its Python modules are located
-SCRIPTDIR = os.path.abspath(os.path.split(__file__)[0])
-
-# SRCDIR is the directory where the CCPP framework source code (C, Fortran) is located
-SRCDIR = os.path.abspath(os.path.join(SCRIPTDIR, '..', 'src'))
-
-# Definition of variables (metadata tables) that are provided by CCPP
-CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(SRCDIR, 'ccpp_types.F90')
 
 ###############################################################################
 # Functions and subroutines                                                   #
@@ -99,7 +90,7 @@ def import_config(configfile):
     # Template code in host-model dependent CCPP prebuild config script
     config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
 
-    # Add model-intependent, CCPP-internal variable definition files
+    # Add model-independent, CCPP-internal variable definition files
     config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
 
     # To handle new metadata: import DDT references (if exist)
