@@ -127,15 +127,15 @@ def check_cf_standard_name(test_val, error=False):
 
 ########################################################################
 
-# LITERAL is a strin representing a literal value
-LITERAL = r"([0-9]*)"
+# LITERAL_INT is a string representing an integer value
+LITERAL_INT = r"([0-9]*)"
 # FORTRAN_ID is a string representing the regular expression for Fortran names
 FORTRAN_ID = r"([A-Za-z][A-Za-z0-9_]*)"
 __FID_RE = re.compile(FORTRAN_ID+r"$")
 # Note that the scalar array reference expressions below are not really for
 # scalar references because a colon can be a placeholder, unlike in Fortran code
-FORTRAN_SCALAR_ARREF = r"\(\s*(?:"+FORTRAN_ID+r"|"+LITERAL+r"|[:])\s*(?:,\s*(?:"+FORTRAN_ID+r"|"+LITERAL+r"|[:])\s*){0,6}\)"
-FORTRAN_SCALAR_REF = r"(?:"+"(?:"+LITERAL+r"|"+FORTRAN_ID+")"+r"\s*"+"(?:"+LITERAL+r"|"+FORTRAN_SCALAR_ARREF+r")"+r")"
+FORTRAN_SCALAR_ARREF = r"\(\s*(?:"+FORTRAN_ID+r"|"+LITERAL_INT+r"|[:])\s*(?:,\s*(?:"+FORTRAN_ID+r"|"+LITERAL_INT+r"|[:])\s*){0,6}\)"
+FORTRAN_SCALAR_REF = r"(?:"+"(?:"+LITERAL_INT+r"|"+FORTRAN_ID+")"+r"\s*"+"(?:"+LITERAL_INT+r"|"+FORTRAN_SCALAR_ARREF+r")"+r")"
 _FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
                             "double precision", "character" ]

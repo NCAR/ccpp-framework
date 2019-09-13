@@ -126,7 +126,7 @@ Metadata Rules
 
 * ``<type>`` can be ``scheme``, ``module``, ``DDT``, or ``host``.
 
-* For empty schemes, the three lines above are sufficient. For non-empty schemes, the metadata should
+* For empty schemes, the three lines above are sufficient. For non-empty schemes, the metadata must
   describe all input and output arguments to the scheme using the following format:
 
 .. code-block:: fortran
