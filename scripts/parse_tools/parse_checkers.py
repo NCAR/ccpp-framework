@@ -354,13 +354,15 @@ def check_fortran_type(typestr, error=False):
         match = registered_fortran_ddt_name(typestr)
         dt = " derived"
     # End if
-    if match is None:
-        if error:
-            raise CCPPError("'{}' is not a valid{} Fortran type".format(typestr, dt))
-        else:
-            typestr = None
-        # End if
-    # End if
+    # DH* 20190913 - skip checking if a DDT is registered at this time
+    #if match is None:
+    #    if error:
+    #        raise CCPPError("'{}' is not a valid{} Fortran type".format(typestr, dt))
+    #    else:
+    #        typestr = None
+    #    # End if
+    ## End if
+    # *DH 20190913
     return typestr
 
 ########################################################################
