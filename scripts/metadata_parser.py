@@ -8,11 +8,10 @@ from xml.etree import ElementTree as ET
 from common import indent, encode_container
 from mkcap import Var
 
-# DH* 20190420 - work around to parse additional type definitions
 import sys, os
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
 from parse_fortran import Ftype_type_decl
-# *DH 20190420
+from metadata_table import MetadataHeader
 
 # The argument tables for schemes and variable definitions should have the following format:
 # !! \section arg_table_SubroutineName (e.g. SubroutineName = SchemeName_run) OR \section arg_table_DerivedTypeName OR \section arg_table_ModuleName
@@ -81,6 +80,11 @@ CCPP_MANDATORY_VARIABLES = {
                             ),
     }
 
+# Save metadata to avoid repeated parsing of type/variable definition files
+NEW_METADATA_SAVE = {}
+
+###############################################################################
+
 def merge_dictionaries(x, y):
     """Merges two metadata dictionaries. For each list of elements
     (variables = class Var in mkcap.py) in one dictionary, we know
@@ -114,6 +118,55 @@ def merge_dictionaries(x, y):
             z[key] = y[key]
     return z
 
+def read_new_metadata(filename, module_name, table_name, scheme_name = None, subroutine_name = None):
+    """Read metadata in new format and convert output to ccpp_prebuild metadata dictionary"""
+    if not os.path.isfile(filename):
+        raise Exception("New metadata file {0} not found".format(filename))
+
+    # Save metadata, because this routine new_metadata
+    # is called once for every table in that file
+    if filename in NEW_METADATA_SAVE.keys():
+        new_metadata_headers = NEW_METADATA_SAVE[filename]
+    else:
+        new_metadata_headers = MetadataHeader.parse_metadata_file(filename)
+        NEW_METADATA_SAVE[filename] = new_metadata_headers
+
+    # Convert new metadata for requested table to old metadata dictionary
+    metadata = collections.OrderedDict()
+    for new_metadata_header in new_metadata_headers:
+        if not scheme_name:
+            if not new_metadata_header.title == table_name:
+                # Skip this table, since it is not requested right now
+                continue
+            if new_metadata_header.title == module_name:
+                container = encode_container(module_name)
+            else:
+                container = encode_container(module_name, new_metadata_header.title)
+        else:
+            if not new_metadata_header.title == table_name:
+                # Skip this table, since it is not requested right now
+                continue
+            container = encode_container(module_name, scheme_name, table_name)
+        for new_var in new_metadata_header.variable_list():
+            standard_name = new_var.get_prop_value('standard_name')
+            rank = len(new_var.get_prop_value('dimensions'))
+            var = Var(standard_name = standard_name,
+                      long_name     = new_var.get_prop_value('long_name'),
+                      units         = new_var.get_prop_value('units'),
+                      local_name    = new_var.get_prop_value('local_name'),
+                      type          = new_var.get_prop_value('type'),
+                      container     = container,
+                      kind          = new_var.get_prop_value('kind'),
+                      intent        = new_var.get_prop_value('intent'),
+                      optional      = new_var.get_prop_value('optional'),
+                      )
+            # Set rank using integer-setter method
+            var.rank = rank
+            # Check for duplicates in same table
+            if standard_name in metadata.keys():
+                raise Exception("Error, multiple definitions of standard name {0} in new metadata table {1}".format(standard_name, table_name))
+            metadata[standard_name] = [var]
+    return metadata
 
 def parse_variable_tables(filename):
     """Parses metadata tables on the host model side that define the available variables.
@@ -180,6 +233,9 @@ def parse_variable_tables(filename):
         line_counter = 0
         in_type = False
         for line in lines[startline:endline]:
+            # For the purpose of identifying module, type and scheme constructs, remove any trailing comments from line
+            if '!' in line and not line.startswith('!'):
+                line = line[:line.find('!')]
             current_line_number = startline + line_counter
             words = line.split()
             for j in range(len(words)):
@@ -239,6 +295,7 @@ def parse_variable_tables(filename):
         line_counter = 0
         in_table = False
         in_type = False
+        new_metadata = False
         for line in lines[startline:endline]:
             current_line_number = startline + line_counter
 
@@ -262,6 +319,38 @@ def parse_variable_tables(filename):
                 words = line.split('|')
                 # Separate the table headers
                 if current_line_number == header_line_number:
+                    if 'htmlinclude' in line.lower():
+                        words = line.split()
+                        if words[0] == '!!' and words[1] == '\\htmlinclude' and len(words) == 3:
+                            new_metadata = True
+                            filename_parts = filename.split('.')
+                            metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
+                            this_metadata = read_new_metadata(metadata_filename, module_name, table_name)
+                            for var_name in this_metadata.keys():
+                                for var in this_metadata[var_name]:
+                                    if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
+                                        raise Exception('Entry for variable {0}'.format(var_name) + \
+                                                        ' in argument table {0}'.format(table_name) +\
+                                                        ' is incompatible with mandatory variable:\n' +\
+                                                        '    existing: {0}\n'.format(CCPP_MANDATORY_VARIABLES[var_name].print_debug()) +\
+                                                        '     vs. new: {0}'.format(var.print_debug()))
+                                    # Add variable to metadata dictionary
+                                    if not var_name in metadata.keys():
+                                        metadata[var_name] = [var]
+                                    else:
+                                        for existing_var in metadata[var_name]:
+                                            if not existing_var.compatible(var):
+                                                raise Exception('New entry for variable {0}'.format(var_name) + \
+                                                                ' in argument table {0}'.format(table_name) +\
+                                                                ' is incompatible with existing entry:\n' +\
+                                                                '    existing: {0}\n'.format(existing_var.print_debug()) +\
+                                                                '     vs. new: {0}'.format(var.print_debug()))
+
+                                        metadata[var_name].append(var)
+                        else:
+                            raise Exception("Invalid definition of new metadata format in file {0}".format(filename))
+                        line_counter += 1
+                        continue
                     # Check for blank table
                     if len(words) <= 1:
                         logging.debug('Skipping blank table {0}'.format(table_name))
@@ -279,8 +368,12 @@ def parse_variable_tables(filename):
                     except ValueError:
                         raise Exception('Mandatory column standard_name not found in argument table {0}'.format(table_name))
                     line_counter += 1
+                    # DH* warn or raise error for old metadata format
+                    logging.warn("Old metadata table found for table {}".format(table_name))
+                    #raise Exception("Old metadata table found for table {}".format(table_name))
+                    # *DH
                     continue
-                elif current_line_number == header_line_number + 1:
+                elif current_line_number == header_line_number + 1 and not new_metadata:
                     # Skip over separator line
                     line_counter += 1
                     continue
@@ -288,18 +381,29 @@ def parse_variable_tables(filename):
                     if len(words) == 1:
                         # End of table
                         if words[0].strip() == '!!':
+                            if new_metadata and not current_line_number == header_line_number+1:
+                                raise Exception("Invalid definition of new metadata format in file {0}".format(filename))
                             in_table = False
+                            new_metadata = False
                             line_counter += 1
                             continue
                         else:
                             raise Exception('Encountered invalid line "{0}" in argument table {1}'.format(line, table_name))
                     else:
+                        if new_metadata:
+                            raise Exception("Invalid definition of new metadata format in file {0}: {1}".format(filename, words))
                         var_items = [x.strip() for x in words[1:-1]]
                         if not len(var_items) == len(table_header):
                             raise Exception('Error parsing variable entry "{0}" in argument table {1}'.format(var_items, table_name))
                         var_name = var_items[standard_name_index]
                         # Skip variables without a standard_name (i.e. empty cell in column standard_name)
                         if var_name:
+                            # Enforce CF standards: no dashes, no dots (underscores instead)
+                            if "-" in var_name:
+                                raise Exception("Invalid character '-' found in standard name {0} in table {1}".format(var_name, table_name))
+                            elif "." in var_name:
+                                raise Exception("Invalid character '.' found in standard name {0} in table {1}".format(var_name, table_name))
+                            #
                             var = Var.from_table(table_header,var_items)
                             if table_name == module_name:
                                 container = encode_container(module_name)
@@ -351,29 +455,7 @@ def parse_variable_tables(filename):
                                 vars_in_type.append(var_name)
                     logging.debug('Variables in derived type {0}: {1}'.format(type_name, ', '.join(vars_in_type)))
 
-        if debug and len(metadata.keys()) > 0:
-            # Write out the XML for debugging purposes
-            top = ET.Element('definition')
-            top.set('module', module_name)
-            container = encode_container(module_name)
-            for var_name in metadata.keys():
-                for var in metadata[var_name]:
-                    if var.container == container:
-                        sub_var = var.to_xml(ET.SubElement(top, 'variable'))
-            for type_name in registry[module_name].keys():
-                container = encode_container(module_name, type_name)
-                sub_type = ET.SubElement(top, 'type')
-                sub_type.set('type_name', type_name)
-                for var_name in metadata.keys():
-                    for var in metadata[var_name]:
-                        if var.container == container:
-                            sub_var = var.to_xml(ET.SubElement(sub_type, 'variable'))
-            indent(top)
-            tree = ET.ElementTree(top)
-            xmlfile = module_name + '.xml'
-            tree.write(xmlfile, xml_declaration=True, encoding='utf-8', method="xml")
-            logging.info('Parsed variable definition tables in module {0}; output => {1}'.format(module_name, xmlfile))
-        elif len(metadata.keys()) > 0:
+        if len(metadata.keys()) > 0:
             logging.info('Parsed variable definition tables in module {0}'.format(module_name))
 
     return metadata
@@ -435,6 +517,9 @@ def parse_scheme_tables(filename):
     module_lines = {}
     line_counter = 0
     for line in lines:
+        # For the purpose of identifying module constructs, remove any trailing comments from line
+        if '!' in line and not line.startswith('!'):
+            line = line[:line.find('!')]
         words = line.split()
         if len(words) > 1 and words[0].lower() == 'module' and not words[1].lower() == 'procedure':
             module_name = words[1].strip()
@@ -460,6 +545,9 @@ def parse_scheme_tables(filename):
         line_counter = 0
         in_subroutine = False
         for line in lines[startline:endline]:
+            # For the purpose of identifying scheme constructs, remove any trailing comments from line
+            if '!' in line and not line.startswith('!'):
+                line = line[:line.find('!')]
             current_line_number = startline + line_counter
             words = line.split()
             for j in range(len(words)):
@@ -538,6 +626,43 @@ def parse_scheme_tables(filename):
                         break
                 # If an argument table is found, parse it
                 if table_found:
+                    if 'htmlinclude' in lines[header_line_number].lower():
+                        words = lines[header_line_number].split()
+                        if words[0] == '!!' and words[1] == '\\htmlinclude' and len(words) == 3:
+                            new_metadata = True
+                            filename_parts = filename.split('.')
+                            metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
+                            this_metadata = read_new_metadata(metadata_filename, module_name, table_name,
+                                                              scheme_name=scheme_name, subroutine_name=subroutine_name)
+                            for var_name in this_metadata.keys():
+                                # Add standard_name to argument list for this subroutine
+                                arguments[module_name][scheme_name][subroutine_name].append(var_name)
+                                # For all instances of this var (can be only one) in this subroutine's metadata,
+                                # add to global metadata and check for compatibility with existing variables
+                                for var in this_metadata[var_name]:
+                                    if not var_name in metadata.keys():
+                                        metadata[var_name] = [var]
+                                    else:
+                                        for existing_var in metadata[var_name]:
+                                            if not existing_var.compatible(var):
+                                                raise Exception('New entry for variable {0}'.format(var_name) + \
+                                                                ' in argument table of subroutine {0}'.format(subroutine_name) +\
+                                                                ' is incompatible with existing entry:\n' +\
+                                                                '    existing: {0}\n'.format(existing_var.print_debug()) +\
+                                                                '     vs. new: {0}'.format(var.print_debug()))
+                                        metadata[var_name].append(var)
+                        # Next line must denote the end of table,
+                        # i.e. look for a line containing only '!!'
+                        line_number = header_line_number+1
+                        nextline = lines[line_number]
+                        nextwords = nextline.split()
+                        if len(nextwords) == 1 and nextwords[0].strip() == '!!':
+                            end_of_table = True
+                        else:
+                            raise Exception('Encountered invalid format "{0}" of new metadata table hook in table {1}'.format(line, table_name))
+                        line_number += 1
+                        continue
+
                     # Separate the table headers
                     table_header = lines[header_line_number].split('|')
                     # Check for blank table
@@ -556,6 +681,10 @@ def parse_scheme_tables(filename):
                         standard_name_index = table_header.index('standard_name')
                     except ValueError:
                         raise Exception('Mandatory column standard_name not found in argument table {0}'.format(table_name))
+                    # DH* warn or raise error for old metadata format
+                    logging.warn("Old metadata table found for table {}".format(table_name))
+                    #raise Exception("Old metadata table found for table {}".format(table_name))
+                    # *DH
                     # Get all of the variable information in table
                     end_of_table = False
                     line_number = header_line_number + 2
@@ -575,6 +704,12 @@ def parse_scheme_tables(filename):
                             # Column standard_name cannot be left blank in scheme_tables
                             if not var_name:
                                 raise Exception('Encountered line "{0}" without standard name in argument table {1}'.format(line, table_name))
+                            # Enforce CF standards: no dashes, no dots (underscores instead)
+                            if "-" in var_name:
+                                raise Exception("Invalid character '-' found in standard name {0} in table {1}".format(var_name, table_name))
+                            elif "." in var_name:
+                                raise Exception("Invalid character '.' found in standard name {0} in table {1}".format(var_name, table_name))
+                            #
                             # Add standard_name to argument list for this subroutine
                             arguments[module_name][scheme_name][subroutine_name].append(var_name)
                             var = Var.from_table(table_header,var_items)
@@ -647,24 +782,6 @@ def parse_scheme_tables(filename):
                             if var.container == container:
                                 vars_in_subroutine.append(var_name)
                     logging.debug('Variables in subroutine {0}: {1}'.format(subroutine_name, ', '.join(vars_in_subroutine)))
-            # To XML
-            for scheme_name in registry[module_name].keys():
-                top = ET.Element('scheme')
-                top.set('module', scheme_name)
-                for subroutine_name in registry[module_name][scheme_name].keys():
-                    sub_sub = ET.SubElement(top, 'subroutine')
-                    sub_sub.set('name', subroutine_name)
-                    container = encode_container(module_name, scheme_name, subroutine_name)
-                    # Variable output in order of calling arguments
-                    for var_name in arguments[module_name][scheme_name][subroutine_name]:
-                        for var in metadata[var_name]:
-                            if var.container == container:
-                                sub_var = var.to_xml(ET.SubElement(sub_sub, 'variable'))
-                indent(top)
-                tree = ET.ElementTree(top)
-                xmlfile = scheme_name + '.xml'
-                tree.write(xmlfile, xml_declaration=True, encoding='utf-8', method="xml")
-                logging.info('Parsed tables in scheme {0}; output => {1}'.format(scheme_name, xmlfile))
         # Standard output to screen
         elif len(metadata.keys()) > 0:
             for scheme_name in registry[module_name].keys():

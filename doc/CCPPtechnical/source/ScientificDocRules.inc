@@ -1,8 +1,10 @@
+.. _SciDoc:
+
 Scientific Documentation Rules
 ==============================
 
 Technically, scientific documentation is not needed for a parameterization
-to work with the CCPP. However, scientific and technical documentation is
+to work with the CCPP. However, scientific and technical documents are
 important for code maintenance and for fostering understanding among stakeholders.
 As such, it is required of physics schemes in order to be included in the CCPP. This
 section describes the process used for documenting parameterizations in the CCPP.
@@ -14,21 +16,23 @@ updated along with the underlying code. Additionally, inline documentation is
 amenable to version control.
 
 The purpose of this section is to provide an understanding of how to properly
-document a physics scheme using doxygen inline comments. It covers what kind of
+document a physics scheme using doxygen inline comments in the Fortran code
+and metadata information contained in the ``.meta`` files. It covers what kind of
 information should be in the documentation, how to mark up the inline comments
-so that doxygen will parse it correctly, where to put various comments within
-the code, and how to configure and run doxygen to generate HTML (or other format)
-output. Part of this documentation, namely subroutine argument tables, have
-functional significance as part of the CCPP infrastructure. These tables must be
+so that doxygen will parse them correctly, where to put various comments within
+the code, how to include information from the ``.meta`` files, 
+and how to configure and run doxygen to generate HTML
+output. For an example of the HTML rendering of the CCPP Scientific Documentation, see 
+https://dtcenter.org/GMTB/v3.0/sci_doc.
+Part of this documentation, namely metadata about subroutine arguments, has
+functional significance as part of the CCPP infrastructure. The metadata must be
 in a particular format to be parsed by Python scripts that “automatically” generate
 a software cap for a given physics scheme. Although the procedure outlined herein
 is not unique, following it will provide a level of continuity with previous
 documented schemes.
 
 Reviewing the documentation for CCPP parameterizations is a good way of getting
-started in writing documentation for a new scheme. The CCPP Scientific
-Documentation can be converted to html format 
-(see https://dtcenter.org/GMTB/v3.0/sci_doc/).
+started in writing documentation for a new scheme. 
 
 Doxygen Comments and Commands
 -----------------------------
@@ -312,41 +316,28 @@ least the following components:
 
 * A more detailed one or two paragraph description of the function of the subroutine
 
-* An argument table that includes entries for each subroutine argument
-
-   * The argument table content should be immediately preceded by the following line:
-
-.. code-block:: fortran
-
-   !!\section arg_table_SUBROUTINE_NAME
-
-This line is also functional documentation used during the CCPP *prebuild* step.  The
-first line of the table should contain the following “header” names
-
-a. ``local_name``: contains the local subroutine variable name
-b. ``standard_name``: CF-compliant standard name
-c. ``long_name``: a short description
-d. ``units``: format follows “unit exponent”, i.e. m2 s-2 for m:sup:`2`/s:sup:`2` 
-e. ``rank``: 0 for scalar, 1 for 1-D array, 2 for 2-D array, etc.
-f. ``type``: integer, real, logical, character, DDT, etc.
-g. ``kind``: the specified floating point precision ``kind`` (at present, to be
-   extended to different integer kinds in the future)
-h. ``intent``: in, out, inout
-i. ``optional``: T/F
-
-The argument table should be immediately followed by a blank doxygen line “!!”,
-which is needed to denote the end of an argument table. Here is an example :
+* A comment indicating that metadata information about the subroutine arguments follows
+  (in this example, the subroutine is called ``SUBROUTINE_NAME``.  Note that this line is 
+  also functional documentation used during the CCPP *prebuild* step.
 
 .. code-block:: fortran
 
-   !! \section arg_table_scheme_X__run Argument Table
-   !! | local_name | standard_name                            | long_name                                   | units   | rank | type    |    kind   | intent | optional |
-   !! |------------|------------------------------------------|---------------------------------------------|---------|------|---------|-----------|--------|----------|
-   !! | im         | horizontal_loop_extent                   | horizontal loop extent                      | count   |    0 | integer |           | in     | F        |
-   !! | levs       | vertical_dimension                       | vertical layer dimension                    | count   |    0 | integer |           | in     | F        |
+  !! \section arg_table_SUBROUTINE_NAME Argument Table
+ 
+* For subroutines that are non-empty, a second comment indicating that a table
+  of metadata to describe the subroutine arguments will be included from a separate file
+  in HTML format (in this case, file ``SUBROUTINE_NAME.html``). Note that empty
+  subroutines, as is sometimes the case for ``init`` and ``finalize`` subroutines, 
+  do not require the inclusion of a file with metadata information. 
+  Please refer to the section below for information on how to generate the HTML files
+  with metadata information from the ``.meta`` files.
 
-The order of arguments in the table does not have to match the order of actual
-arguments in the subroutine.
+  The argument table should be immediately followed by a blank doxygen line “!!”.
+
+.. code-block:: fortran
+
+   !! \htmlinclude SUBROUTINE_NAME.html
+   !!
 
 * A section called “General Algorithm” with a bullet or numbered list of
   the tasks completed in the subroutine algorithm
@@ -356,8 +347,9 @@ arguments in the subroutine.
   ``“!> @{”`` and ``“!> @}”`` delimiters. This way, any comments explaining detailed
   aspects of the code are automatically included in the “Detailed Algorithm” section.
 
-For subroutines that are not a CCPP entry point to a scheme, no argument table
-is required. But it is suggested that following ``“\\ingroup”`` and ``“\\brief”``, use
+For subroutines that are not a CCPP entry point to a scheme, no inclusion of
+metadata information is required.  
+But it is suggested that following ``“\\ingroup”`` and ``“\\brief”``, use
 ``“\\param”`` to define each argument with local name, a short description and unit, i.e.,
 
 .. code-block:: console
@@ -420,8 +412,8 @@ Doxygen Configuration
 Configuration File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The CCPP contains a doxygen configuration file
-``./ccpp/physics/physics/docs/ccpplatex_dox``, such that you don’t need to
+The CCPP is distributed with a doxygen configuration file
+``./ccpp/physics/physics/docs/ccpp_doxyfile``, such that you don’t need to
 create an additional one.
 
 If starting from scratch, you can generate a default configuration file using the command:
@@ -448,7 +440,7 @@ things you need to pay attention to are:
 
 The following lines should be listed here: the doxygen mainpage text file, the
 scheme pages, and the source codes to be contained in the output. The order in
-which schemes are listed determines the order in the html result.
+which schemes are listed determines the order in the HTML result.
 
 
 * The directory where to put the documentation (if you leave it empty, then the
@@ -464,8 +456,8 @@ which schemes are listed determines the order in the html result.
 
    GENERATE_HTML = YES
 
-If HTML is chosen, the following tells doxygen where to put the html documentation
-relative OUTPUT_DIRECTORY:
+If HTML is chosen, the following tells doxygen where to put the documentation
+relative to the OUTPUT_DIRECTORY:
 
 .. code-block:: console
 
@@ -477,7 +469,7 @@ and
 
    HTML_FILE_EXTENSION = .html
 
-tells what the extension of the html files should be.
+determines the extension of the files.
 
 * Other important settings for a Fortran code project are:
 
@@ -495,7 +487,7 @@ tells what the extension of the html files should be.
                                  *.txt
    GENERATE_TREEVIEW           = yes
 
-Doxygen files for layout (``ccpp_dox_layout.xml``), a html style (``ccpp_dox_extra_style.css``),
+Doxygen files for layout (``ccpp_dox_layout.xml``), a HTML style (``ccpp_dox_extra_style.css``),
 and bibliography (``library.bib``) are provided with the CCPP. Additionally, a 
 configuration file is supplied, with the following variables modified from the default:
 
@@ -527,20 +519,56 @@ the call graph for subroutine *mpdrv* in GFDL cloud microphysics generated by do
 .. figure:: _static/DoxygenCallGraph.png
    :align: center
 
+Including metadata information
+-----------------------------------------------
+
+As described above, a table of metadata information should be included in the documentation
+for every CCPP entrypoint scheme. Before doxygen is run, the table for each scheme must be manually 
+created in separate
+files in HTML format, with one file per non-empty scheme. The HTML files are included in the
+Fortran files using the doygen markup below. 
+
+.. code-block:: fortran
+
+   !! \htmlinclude SUBROUTINE_NAME.html
+   !!
+
+The tables should be created using a Python script distrbuted
+with the CCPP Framework, ``ccpp/framework/scripts/metadata2html.py``. The syntax for running this 
+script from the directory above where the CCPP is installed is:
+
+.. code-block:: fortran
+
+   ccpp/framework/scripts/metadata2html.py -m ccpp/physics/physics/file.meta -o ccpp/physics/physics/docs
+
+where ``-m`` is used to specify a file with metadata information and ``-o`` is used to specify
+the directory for output. Note that a single input file (``.meta``) may have more than one CCPP entrypoint
+scheme, and therefore can be used to generate more than one HTML file.
+
+Note that the ``.meta`` files are supplied with the CCPP Physics, and that there is a ``.meta`` file for
+each Fortran file that contains one or more CCPP entrypoint schemes. The ``.meta`` files are located in the same
+directory as the scheme Fortran files (``ccpp/physics/physics``).
+
+To generate a complete Scientific Documentation, documentation, script ``/ccpp/framework/scripts/metadata2html.py`` 
+must be run separately for each ``.meta`` file available in ccpp/physics/physics.
+
 Using Doxygen
 -------------------------------
 
-In order to generate doxygen-based documentation, one needs to follow four steps:
+In order to generate the doxygen-based documentation, one needs to follow five steps:
 
 #. Have the doxygen executable installed on your computer. For example, for the NOAA
    machine Theia, add the following line into ``.cshrc`` file in your home directory:
 
-   ``alias doxygen/scratch4/BMC/gmtb/doxygen-1.8.10/bin/doxygen``
+   ``alias doxygen /scratch4/BMC/gmtb/doxygen-1.8.10/bin/doxygen``
 
     Source your ``.cshrc`` file. 
 
 #. Document your code, including doxygen main page, scheme pages and inline
    comments within source code as described above.
+
+#. Run ``metadata2html.py`` to create files in HTML format containing metadata
+   information for each CCPP entrypoint scheme.
 
 #. Prepare a Bibliography file in BibTex format for papers referred to in the physics suites. 
 
@@ -548,8 +576,8 @@ In order to generate doxygen-based documentation, one needs to follow four steps
    files and bibliography file get parsed, how the source files get parsed, and to
    customize the output.
 
-#. Run the doxygen command from the command line with the doxygen configuration file
-   given as an argument:
+#. Run doxygen from directory ``ccpp/physics/physics/docs`` using the command line 
+   to specify the doxygen configuration file as an argument:
 
   ``$doxygen $PATH_TO_CONFIG_FILE/<config_file>``
 

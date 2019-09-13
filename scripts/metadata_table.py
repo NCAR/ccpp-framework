@@ -39,13 +39,13 @@ character at the start of each line).
   type = integer
   dimensions = ()
   intent = in
-  [ ix ]
+[ ix ]
   standard_name = horizontal_loop_dimension
   long_name = horizontal dimension
   units = index | type = integer | dimensions = ()
   intent = in
   ...
-  [ errmsg]
+[ errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
   units = none
@@ -53,7 +53,7 @@ character at the start of each line).
   len = *
   dimensions = ()
   intent = out
-  [ ierr ]
+[ ierr ]
   standard_name = ccpp_error_flag
   long_name = error flag for error handling in CCPP
   type = integer
@@ -91,12 +91,13 @@ Notes on the input format:
 
 # Python library imports
 from __future__ import print_function
+import os
 import re
 # CCPP framework imports
 from metavar     import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
-from parse_tools import FORTRAN_ID, FORTRAN_SCALAR_REF
+from parse_tools import LITERAL_INT, FORTRAN_ID, FORTRAN_SCALAR_REF
 from parse_tools import check_fortran_ref
 
 ########################################################################
@@ -171,9 +172,22 @@ class MetadataHeader(ParseSource):
 
     __header_start__ = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
 
-    __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
+    __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL_INT+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
     __blank_line__ = re.compile(r"\s*[#;]")
+
+    __html_template__ = """
+<html>
+<head>
+<title>{title}</title>
+<meta charset="UTF-8">
+</head>
+<body>
+<table border="1">
+{header}{contents}</table>
+</body>
+</html>
+"""
 
     def __init__(self, parse_object=None,
                  title=None, type_in=None, module=None, var_dict=None,
@@ -258,7 +272,7 @@ class MetadataHeader(ParseSource):
         if self.title is None:
             raise ParseSyntaxError("metadata header start, no table name",
                                    token=curr_line, context=self._pobj)
-        elif self._header_type is None:
+        elif self.header_type is None:
             raise ParseSyntaxError("metadata header start, no table type",
                                    token=curr_line, context=self._pobj)
         elif self.header_type == "ddt":
@@ -371,6 +385,36 @@ class MetadataHeader(ParseSource):
     def variable_list(self):
         "Return an ordered list of the header's variables"
         return self._variables.variable_list()
+
+    def to_html(self, outdir, props):
+        """Write html file for metadata table and return filename.
+        Skip metadata headers without variables"""
+        if not self._variables.variable_list():
+            return None
+        # Write table header
+        header = "<tr>"
+        for prop in props:
+            header += "<th>{}</th>".format(prop)
+        header += "</tr>\n"
+        # Write table contents, one row per variable
+        contents = ""
+        for var in self._variables.variable_list():
+            row = "<tr>"
+            for prop in props:
+                value = var.get_prop_value(prop)
+                # Pretty-print for dimensions
+                if prop == 'dimensions':
+                    value = '(' + ', '.join(value) + ')'
+                elif value is None:
+                    value = "n/a"
+                row += "<td>{}</td>".format(value)
+            row += "</tr>\n"
+            contents += row
+        filename = os.path.join(outdir, self.title + '.html')
+        with open(filename,"w") as f:
+            f.writelines(self.__html_template__.format(title=self.title + ' argument table',
+                                                       header=header, contents=contents))
+        return filename
 
     def get_var(self, standard_name=None, intent=None):
         if standard_name is not None:

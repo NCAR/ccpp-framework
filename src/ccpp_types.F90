@@ -20,9 +20,7 @@
 module ccpp_types
 
 !! \section arg_table_ccpp_types
-!! | local_name                        | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
-!! |-----------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
-!! | ccpp_t                            | ccpp_t                    | definition of type ccpp_t                             | DDT     |    0 | ccpp_t    |          | none   | F        |
+!! \htmlinclude ccpp_types.html
 !!
 
     use, intrinsic :: iso_c_binding,                                   &
@@ -151,13 +149,7 @@ module ccpp_types
 
 #if 0
 !! \section arg_table_ccpp_t
-!! | local_name                        | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
-!! |-----------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
-!! | cdata%errflg                      | ccpp_error_flag           | error flag for error handling in CCPP                 | flag    |    0 | integer   |          | none   | F        |
-!! | cdata%errmsg                      | ccpp_error_message        | error message for error handling in CCPP              | none    |    0 | character | len=512  | none   | F        |
-!! | cdata%loop_cnt                    | ccpp_loop_counter         | loop counter for subcycling loops in CCPP             | index   |    0 | integer   |          | none   | F        |
-!! | cdata%blk_no                      | ccpp_block_number         | number of block for explicit data blocking in CCPP    | index   |    0 | integer   |          | none   | F        |
-!! | cdata%thrd_no                     | ccpp_thread_number        | number of thread for threading in CCPP                | index   |    0 | integer   |          | none   | F        |
+!! \htmlinclude ccpp_t.html
 !!
 #endif
     !>

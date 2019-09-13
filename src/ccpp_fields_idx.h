@@ -29,7 +29,7 @@ extern "C"
 #endif
 
 
-#define  CCPP_FIELD_IDX_MAX     1000
+#define  CCPP_FIELD_IDX_MAX     1500
 #define  CCPP_FIELD_IDX_GROW    2
 
 
