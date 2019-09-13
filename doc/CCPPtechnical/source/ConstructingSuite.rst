@@ -8,7 +8,7 @@ Constructing Suites
 Suite Definition File
 ==============================
 
-The :term:`SDF` is a file in XML format used to specify the name of the suite, the physics schemes to run, groups of physics that run together, the order in which to run the physics, and whether subcycling will be used to run any of the parameterizations with shorter timesteps. The :term:`SDF` files are located in ``ccpp/suites/suite_*.xml``.
+The :term:`SDF` is a file in XML format used to specify the name of the suite, the physics schemes to run, groups of physics that run together, the order in which to run the physics, and whether subcycling will be used to run any of the parameterizations with shorter timesteps. The :term:`SDF` files are part of the host model code.
 
 In addition to the primary parameterization categories (such as radiation, boundary layer, deep convection, resolved moist physics, etc.), the :term:`SDF` can have an arbitrary number of interstitial schemes in between the parameterizations to preprocess or postprocess data. In many models, this interstitial code is not obvious to the model user but, with the :term:`SDF`, both the primary parameterizations and the interstitial schemes are listed explicitly.
 

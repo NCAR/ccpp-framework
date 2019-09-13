@@ -293,8 +293,7 @@ class VariableProperty(object):
         elif self.type is bool:
             if isinstance(test_value, str):
                 if test_value.lower() in VariableProperty.__true_vals + VariableProperty.__false_vals:
-                    valid_val = (test_value.lower() in VariableProperty.__true_vals) or \
-                                not (test_value.lower() in VariableProperty.__false_vals)
+                    valid_val = test_value.lower() in VariableProperty.__true_vals
                 else:
                     valid_val = None # i.e., pass
             else:

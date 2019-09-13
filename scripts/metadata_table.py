@@ -97,7 +97,7 @@ import re
 from metavar     import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
-from parse_tools import LITERAL, FORTRAN_ID, FORTRAN_SCALAR_REF
+from parse_tools import LITERAL_INT, FORTRAN_ID, FORTRAN_SCALAR_REF
 from parse_tools import check_fortran_ref
 
 ########################################################################
@@ -172,7 +172,7 @@ class MetadataHeader(ParseSource):
 
     __header_start__ = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
 
-    __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
+    __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL_INT+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
     __blank_line__ = re.compile(r"\s*[#;]")
 
