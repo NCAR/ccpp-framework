@@ -2,6 +2,7 @@
 
 import keyword
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -14,6 +15,16 @@ CCPP_THREAD_NUMBER       = 'ccpp_thread_number'
 
 CCPP_TYPE = 'ccpp_t'
 
+# SCRIPTDIR is the directory where ccpp_prebuild.py and its Python modules are located
+SCRIPTDIR = os.path.abspath(os.path.split(__file__)[0])
+
+# SRCDIR is the directory where the CCPP framework source code (C, Fortran) is located
+SRCDIR = os.path.abspath(os.path.join(SCRIPTDIR, '..', 'src'))
+
+# Definition of variables (metadata tables) that are provided by CCPP
+CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(SRCDIR, 'ccpp_types.F90')
+
+# List of internal variables provided by the CCPP
 CCPP_INTERNAL_VARIABLES = {
     CCPP_ERROR_FLAG_VARIABLE : 'cdata%errflg',
     CCPP_ERROR_MSG_VARIABLE  : 'cdata%errmsg',
