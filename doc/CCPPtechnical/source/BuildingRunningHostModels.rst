@@ -342,7 +342,7 @@ Regression testing is the process of testing changes to the programs to make sur
 Overview of the RTs
 ^^^^^^^^^^^^^^^^^^^
 
-The RT configuration files are located in ``./tests`` relative to the top-level directory of NEMSfv3gfs and have names ``rt*.conf``. The default RT configuration file, supplied with the NEMSfv3gfs master, compares the results from the non-CCPP code to the *official baseline* and is called ``rt.conf``. Before running the RT script ``rt.sh`` in the same directory, the user has to set one or more environment variables and potentially modify the script to change the location of the automatically created run directories. The environment variables are ``ACCNR`` (mandatory unless the user is a member of the default project *nems*; sets the account to be charged for running the RTs), ``NEMS_COMPILER`` (optional for the ``intel`` compiler option, set to ``gnu`` to switch), and potentially ``RUNDIR_ROOT``. ``RUNDIR_ROOT`` allows the user to specify an alternative location for the RT run directories underneath which directories called ``rt_$PID`` are created (``$PID`` is the process identifier of the ``rt.sh`` invocation). This may be required on systems where the user does not have write permissions in the default run directory tree.
+The RT configuration files are located in ``./tests`` relative to the top-level directory of NEMSfv3gfs and have names ``rt*.conf``. The default RT configuration file, supplied with the NEMSfv3gfs master is called ``rt.conf`` and runs four types of configurations: IPD PROD, IPD REPRO, CCPP PROD, and CCPP REPRO. For the IPD configurations, CCPP is not used, that is, the code is compiled with ``CCPP=N``. The PROD configurations use the compiler flags used in NCEP operations for superior performance, while the REPRO configurations remove certain compiler flags to create b4b identical results between CCPP and IPD configurations. Before running the RT script ``rt.sh`` in directory ``./tests``, the user has to set some environment variables on the working shell: ``ACCNR`` (account to be charged for running the RTs), ``NEMS_COMPILER`` (optional for the ``intel`` compiler option, set to ``gnu`` to switch), and potentially ``RUNDIR_ROOT`` (location for the RT run directories), underneath which directories called ``rt_$PID`` are created (``$PID`` is the process identifier of the ``rt.sh`` invocation). This may be required on systems where the user does not have write permissions in the default run directory tree.
 
 .. code-block:: console
 
@@ -356,7 +356,7 @@ Running the full default RT suite defined in ``rt.conf`` using the script ``rt.s
 
     ./rt.sh -f
 
-This command can only be used on a NOAA machine using the Intel compiler, where the output of a non-CCPP build using the default Intel version is compared against the *official baseline*. For information on testing the CCPP code, or using alternate computational platforms, see the following sections.
+This command can only be used on a NOAA machine using the Intel compiler, where an *official baseline* is available. For information on testing the CCPP code, or using alternate computational platforms, see the following sections.
 
 This command and all others below produce log output in ``./tests/log_machine.compiler``. These log files contain information on the location of the run directories that can be used as templates for the user. Each ``rt*.conf`` contains one or more compile commands preceding a number of tests.
 
@@ -364,7 +364,7 @@ This command and all others below produce log output in ``./tests/log_machine.co
 Baselines
 ^^^^^^^^^^^^^^^^^^^
 
-Regression testing is only possible on machines for which baselines exist. EMC maintains *official baselines* of non-CCPP runs on *Jet* and *Wcoss* created with the Intel compiler. GMTB maintains additional baselines on *Theia, Jet, Cheyenne*, and *Gaea*. While GMTB is trying to keep up with changes to the official repositories, baselines maintained by GMTB are not guaranteed to be up-to-date.
+Regression testing is only possible on machines for which baselines exist. EMC maintains *official baselines* on *Theia* and *Wcoss* created with the Intel compiler. GMTB maintains additional baselines on *Jet*, *Cheyenne*, and *Gaea*. While GMTB is trying to keep up with changes to the official repositories, baselines maintained by GMTB are not guaranteed to be up-to-date.
 
 When porting the code to a new machine, it is useful to start by establishing a *personal baseline*. Future runs of the RT can then be compared against the *personal baseline* to ascertain that the results have not been inadvertently affected by code developments. The ``rt.sh -c`` option is used to create a *personal baseline*.
 
@@ -404,7 +404,7 @@ The *official baseline* directory is defined as:
     RTPWD=$DISKNM/trunk-yyyymmdd/${COMPILER} # on Cheyenne
     RTPWD=$DISKNM/trunk-yyyymmdd             # elsewhere
 
-Note that ``yyyymmdd`` is the year, month and day the RT was created.
+Note that ``yyyymmdd`` is the year, month and day the baseline was created using top of master code.
 
 .. warning::  Modifying ``$DISKNM`` will break the RTs!
 
@@ -433,25 +433,6 @@ In case a user does not have write permissions to ``$STMP (/scratch4/NCEPDEV/stm
 
     # Overwrite default RUNDIR_ROOT if environment variable RUNDIR_ROOT is set
     RUNDIR_ROOT=${RUNDIR_ROOT:-${PTMP}/${USER}/FV3_RT}/rt_$$
-
-
-Non-CCPP vs CCPP Tests
-^^^^^^^^^^^^^^^^^^^^^^
-
-While the official EMC RTs do not execute the CCPP code, GMTB provides RTs to exercise the CCPP in its various modes: ``rt_ccpp_standalone.conf`` tests the CCPP with dynamic build and ``rt_ccpp_static.conf`` tests the CCPP with static build. These tests compare the results of runs done using the CCPP against a previously generated *personal baseline* created without the CCPP by running ``rt_ccpp_ref.conf``.  For this comparison, both the non-CCPP *personal baseline* and the tests using the CCPP are performed with code built with the :term:`REPRO` compiler options.
-
-The command below should be used to create a *personal baseline* using non-CCPP code compiled in :term:`REPRO` mode.
-
-.. code-block:: console
-
-    ./rt.sh -l rt_ccpp_ref.conf -c fv3 # create own reg. test baseline
-
-Once the *personal baseline* in REPRO mode has been created, the CCPP tests can be run to compare against it. Use the ``-l`` option to select the test suite and the ``-m`` option to compare against the *personal baseline*.
-
-.. code-block:: console
-
-    ./rt.sh -l rt_ccpp_standalone.conf -m # dynamic build
-    ./rt.sh -l rt_ccpp_static.conf -m     # static build
 
 
 Compatibility between the Code Base, the SDF, and the Namelist in the UFS Atmosphere
