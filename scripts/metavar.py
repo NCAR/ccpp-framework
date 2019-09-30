@@ -1437,11 +1437,28 @@ class VarLoopSubst(VarAction):
 
     @property
     def required_stdnames(self):
+        "Return the _required_stdnames for this object"
         return self._required_stdnames
 
     @property
     def missing_stdname(self):
+        "Return the _missing_stdname for this object"
         return self._missing_stdname
+
+    def __repr__(self):
+        "Return string representing this VarLoopSubst object"
+        action_dict = {}
+        if self._set_action:
+            for stdname in self.required_stdnames:
+                action_dict[stdname] = stdname
+            # End for
+            action_dict[self.missing_stdname] = self.missing_stdname
+        # End if
+        return self._set_action.format(**action_dict)
+
+    def __str__(self):
+        "Return print string for this VarLoopSubst object"
+        return "<{}>".format(self.__repr__())
 
 # Substitutions where a new variable must be created
 CCPP_VAR_LOOP_SUBSTS = {
@@ -1605,7 +1622,13 @@ class VarDictionary(OrderedDict):
                 vintent = cvar.get_prop_value('intent')
                 dintent = newvar.get_prop_value('intent')
                 if vintent != dintent:
-                    raise CCPPError("check intent")
+                    emsg = "intent mismatch: {} ({}){} != {} ({}){}"
+                    nlname = newvar.get_prop_value('local_name')
+                    clname = cvar.get_prop_value('local_name')
+                    nctx = context_string(newvar.context)
+                    cctx = context_string(cvar.context)
+                    raise CCPPError(emsg.format(clname, vintent, cctx,
+                                                nlname, dintent, nctx))
             else:
                 if self._logger is not None:
                     emsg = "Attempt to add incompatible variable, {} from {}"
