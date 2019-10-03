@@ -396,7 +396,7 @@ class SuiteObject(VarDictionary):
                     nlname = newvar.get_prop_value('local_name')
                     plname = pvar.get_prop_value('local_name')
                     raise CCPPError(emsg.format(nlname, newvar.source.name,
-                                                plname, pver.source.name))
+                                                plname, pvar.source.name))
                 # End if
             # End if (no else, variable already in call list)
         else:
@@ -555,7 +555,14 @@ class SuiteObject(VarDictionary):
                     # No match, look for a loop match
                     dim = need_dims[nindex]
                     vmatch = VarDictionary.loop_var_match(dim)
-                    if vmatch is None:
+                    hle = "horizontal_loop_extent"
+                    nd_test = "ccpp_constant_one:{}".format(hle)
+                    hd_test = "ccpp_constant_one:horizontal_dimension"
+                    if ((need_dims[nindex] == nd_test) and
+                        (have_dims[hindex] == hd_test) and
+                        (self.parent.find_variable(hle) is not None)):
+                        pass # We have the variable
+                    elif vmatch is None:
                         match = False
                         break
                     else:
