@@ -8,6 +8,7 @@
 # and use this for ccpp_prebuild.py; create to_html and to_latex routines for it
 
 import logging
+import os
 
 from common import decode_container, escape_tex
 
@@ -65,6 +66,9 @@ def metadata_to_html(metadata, model, filename):
 </html>
 '''
 
+    filepath = os.path.split(os.path.abspath(filename))[0]
+    if not os.path.isdir(filepath):
+        os.makedirs(filepath)
     with open(filename, 'w') as f:
         f.write(html)
 
@@ -167,6 +171,9 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
 \\end{document}
 '''
 
+    filepath = os.path.split(os.path.abspath(filename))[0]
+    if not os.path.isdir(filepath):
+        os.makedirs(filepath)
     with open(filename, 'w') as f:
         f.write(latex)
 
