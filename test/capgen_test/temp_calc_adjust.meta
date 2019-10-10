@@ -22,12 +22,6 @@
   type = real
   kind = kind_phys
   intent = out
-[ temp ]
-  standard_name = index_of_water_vapor_specific_humidity
-  units = index
-  type = integer
-  intent = in
-  dimensions = ()
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

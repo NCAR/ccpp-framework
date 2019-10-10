@@ -461,7 +461,7 @@ class MetadataTable(ParseSource):
         Traceback (most recent call last):
         ParseInternalError: foo has rank 1 but foo(:,:,qux) has 2, in foo.meta
         >>> MetadataTable.check_array_reference('foo(:,:,qux)', {'dimensions':['ccpp_constant_one:bar','ccpp_constant_one:baz']}, ParseContext(filename='foo.meta'))
-        'foo(ccpp_constant_one:bar, ccpp_constant_one:baz, qux)'
+        'foo(:, :, qux)'
         """
         if check_fortran_id(local_name, var_dict, False) is None:
             rmatch = FORTRAN_SCALAR_REF_RE.match(local_name)
@@ -721,7 +721,7 @@ class MetadataTable(ParseSource):
         while curr_line is not None:
             if MetadataTable.table_start(curr_line):
                 new_header = MetadataTable(parse_object=parse_obj,
-                                           known_ddts=known_ddts)
+                                           known_ddts=known_ddts, logger=logger)
                 ntitle = new_header.title
                 if ntitle in header_titles:
                     errmsg = 'Duplicate metadata header, {}, at {}:{}'

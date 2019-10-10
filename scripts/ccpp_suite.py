@@ -392,7 +392,11 @@ class SuiteObject(VarDictionary):
                 else:
                     emsg = 'Attempt to add incompatible variable to call list:'
                     emsg += '\n{} from {} is not compatible with {} from {}'
-                    emsg += '\n{}'.format(reason)
+                    nlreason = newvar.get_prop_value(reason)
+                    plreason = pvar.get_prop_value(reason)
+                    emsg += '\nreason = {} ({} != {})'.format(reason,
+                                                              nlreason,
+                                                              plreason)
                     nlname = newvar.get_prop_value('local_name')
                     plname = pvar.get_prop_value('local_name')
                     raise CCPPError(emsg.format(nlname, newvar.source.name,
@@ -502,7 +506,7 @@ class SuiteObject(VarDictionary):
         (True, ['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end'], None)
         >>> SuiteObject('foo', __api_context__,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, __api_local__),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, __api_local__),Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, __api_local__)],active_call_list=True).dimension_match(['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end','ccpp_constant_one:vertical_layer_dimension'])
         (False, ['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end', 'ccpp_constant_one:vertical_layer_dimension'], 'vertical_layer_index')
-        >>> SuiteObject('foo',__api_context__,VerticalLoop('vertical_layer_dimension',__api_context__,SuiteObject('vbar',__api_context__,None,None,variables=[Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, __api_local__)]),None),None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, __api_local__),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, __api_local__)],active_call_list=True).dimension_match(['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end','ccpp_constant_one:vertical_layer_dimension'])
+        >>> SuiteObject('foo',__api_context__,VerticalLoop('ccpp_constant_one:vertical_layer_dimension',__api_context__,SuiteObject('vbar',__api_context__,None,None,variables=[Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, __api_local__)]),None),None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, __api_local__),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, __api_local__)],active_call_list=True).dimension_match(['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end','ccpp_constant_one:vertical_layer_dimension'])
         (True, ['ccpp_constant_one:horizontal_loop_extent', 'vertical_layer_index'], ['horizontal_loop_begin:horizontal_loop_end', 'ccpp_constant_one:vertical_layer_dimension'], None)
         """
         new_need_dims = list(need_dims)
@@ -560,6 +564,7 @@ class SuiteObject(VarDictionary):
                     hd_test = "ccpp_constant_one:horizontal_dimension"
                     if ((need_dims[nindex] == nd_test) and
                         (have_dims[hindex] == hd_test) and
+                        (self.parent is not None) and
                         (self.parent.find_variable(hle) is not None)):
                         pass # We have the variable
                     elif vmatch is None:

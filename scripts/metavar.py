@@ -542,7 +542,7 @@ class Var(object):
         if isinstance(prop_dict, Var):
             prop_dict = prop_dict.copy_prop_dict()
         # End if
-        if source.type is 'scheme':
+        if source.type == 'scheme':
             required_props = Var.__required_var_props
             mstr_propdict = Var.__var_propdict
         else:
@@ -949,7 +949,15 @@ class Var(object):
         """
         if loop_vars is None:
             call_str = self.get_prop_value('local_name')
-            dims = None
+            # Look for dims in case this is an array selection variable
+            dind = call_str.find('(')
+            if dind > 0:
+                dimstr = call_str[dind+1:].rstrip()[:-1]
+                dims = [x.strip() for x in dimstr.split(',')]
+                call_str = call_str[:dind].strip()
+            else:
+                dims = None
+            # End if
         else:
             call_str, dims = self.handle_array_ref()
         # End if
@@ -957,17 +965,24 @@ class Var(object):
             call_str = call_str + '('
             dsep = ''
             for dim in dims:
-                lname = loop_vars.find_loop_dim_match(dim)
+                if loop_vars:
+                    lname = loop_vars.find_loop_dim_match(dim)
+                else:
+                    lname = None
                 # End if
                 if lname is None:
                     isep = ''
                     lname = ""
                     for item in dim.split(':'):
-                        dvar = var_dict.find_variable(item, any_scope=False)
-                        if dvar is None:
-                            iname = None
+                        if item:
+                            dvar = var_dict.find_variable(item, any_scope=False)
+                            if dvar is None:
+                                iname = None
+                            else:
+                                iname = dvar.get_prop_value('local_name')
+                            # End if
                         else:
-                            iname = dvar.get_prop_value('local_name')
+                            iname = ''
                         # End if
                         if iname is None:
                             errmsg = 'No local variable {} in {}{}'
@@ -1256,12 +1271,6 @@ class VarSpec(object):
 
 __ccpp_parse_context__ = ParseContext(filename='metavar.py')
 
-__ccpp_registry_parse_source__ = ParseSource('VarDictionary', 'module',
-                                             __ccpp_parse_context__)
-
-__ccpp_scheme_parse_source__ = ParseSource('VarDictionary', 'scheme',
-                                           __ccpp_parse_context__)
-
 ###############################################################################
 
 def ccpp_standard_var(std_name, source_type, context=None, intent='out'):
@@ -1269,10 +1278,10 @@ def ccpp_standard_var(std_name, source_type, context=None, intent='out'):
         # Copy the dictionary because Var can change it
         vdict = dict(CCPP_STANDARD_VARS[std_name])
         if context is None:
-            psource = ParseSource('VarDictionary', source_type,
+            psource = ParseSource('ccpp_standard_vars', source_type,
                                   __ccpp_parse_context__)
         else:
-            psource = ParseSource('VarDictionary', source_type, context)
+            psource = ParseSource('ccpp_standard_vars', source_type, context)
         # End if
         if source_type.lower() == 'scheme':
             vdict['intent'] = intent
