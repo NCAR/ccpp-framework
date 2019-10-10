@@ -96,8 +96,8 @@ def import_config(configfile, builddir):
     config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
     config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
     config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
-    config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE
-    config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
+    config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE.format(build_dir=builddir)
+    config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE.format(build_dir=builddir)
     # For static build: location of static API file, and shell script to source
     config['static_api_dir']            = ccpp_prebuild_config.STATIC_API_DIR.format(build_dir=builddir)
     config['static_api_srcfile']        = ccpp_prebuild_config.STATIC_API_SRCFILE.format(build_dir=builddir)
