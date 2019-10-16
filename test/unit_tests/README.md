@@ -30,3 +30,8 @@ For more verbose output:
 ```
 python  test_metadata_table.py -v 
 ```
+If you have `coverage` installed, to get test coverage:
+```
+coverage run test_metadata_table.py
+coverage report -m
+```
