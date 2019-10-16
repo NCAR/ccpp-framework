@@ -45,6 +45,23 @@ class MetadataTableTestCase(unittest.TestCase):
        listToStr = " ".join([str(elem) for elem in result])
        self.assertIn('test_host', listToStr, msg="Header name is not expected 'test_host'")
 
+   def test_good_multi_ccpp_arg_table(self):
+       """Test that good file with 4 ccpp-arg-table returns 4 headers"""
+       known_ddts = list()
+       logger = None
+       filename= sample_files_dir + "/test_multi_ccpp_arg_tables.meta"
+
+       result = MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #Verify that size of returned list equals number of headers in the test file
+       self.assertEqual(len(result), 4)
+       listToStr = " ".join([str(elem) for elem in result])
+       #print(listToStr)
+       self.assertIn('vmr_type', listToStr, msg="Header name is not expected 'vmr_type'")
+       self.assertIn('make_ddt_run', listToStr, msg="Header name is not expected 'make_ddt_run'")
+       self.assertIn('make_ddt_init', listToStr, msg="Header name is not expected 'make_ddt_init'")
+       self.assertIn('make_ddt_finalize', listToStr, msg="Header name is not expected 'make_ddt_finalize'")
+
    def test_bad_type_name(self):
        """Test that `type = banana` returns expected error"""
        #Setup
@@ -59,6 +76,54 @@ class MetadataTableTestCase(unittest.TestCase):
        #Verify
        #print("The exception is", context.exception)
        self.assertTrue('Invalid metadata table type, \'banana' in str(context.exception))
+
+   def test_double_header(self):
+       """Test that a duplicate header returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename= sample_files_dir + "/double_header.meta"
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       self.assertTrue('Duplicate metadata header, test_host' in str(context.exception))
+
+   def test_bad_dimension(self):
+       """Test that `dimension = banana` returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename= sample_files_dir + "/test_bad_dimension.meta"
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       self.assertTrue('Invalid \'dimensions\' property value, \'' in str(context.exception))
+
+   def test_duplicate_variable(self):
+       """Test that a duplicate variable returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename= sample_files_dir + "/test_duplicate_variable.meta"
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       self.assertTrue('Invalid (duplicate) standard name in temp_calc_adjust_run, defined at ' in str(context.exception))
+
+   def test_invalid_intent(self):
+       """Test that an invalid intent returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename= sample_files_dir + "/test_invalid_intent.meta"
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       self.assertTrue('Invalid \'intent\' property value, \'banana\', at ' in str(context.exception))
 
 if __name__ == '__main__':
     unittest.main()
