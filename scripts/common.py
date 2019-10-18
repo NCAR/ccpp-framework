@@ -16,10 +16,10 @@ CCPP_THREAD_NUMBER       = 'ccpp_thread_number'
 CCPP_TYPE = 'ccpp_t'
 
 # SCRIPTDIR is the directory where ccpp_prebuild.py and its Python modules are located
-SCRIPTDIR = os.path.abspath(os.path.split(__file__)[0])
+SCRIPTDIR = os.path.abspath(os.path.dirname(__file__))
 
 # SRCDIR is the directory where the CCPP framework source code (C, Fortran) is located
-SRCDIR = os.path.abspath(os.path.join(SCRIPTDIR, '..', 'src'))
+SRCDIR = os.path.abspath(os.path.join(SCRIPTDIR, os.pardir, 'src'))
 
 # Definition of variables (metadata tables) that are provided by CCPP
 CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(SRCDIR, 'ccpp_types.F90')

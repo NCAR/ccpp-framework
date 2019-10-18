@@ -3,6 +3,7 @@
 # Standard modules
 import argparse
 import collections
+import importlib
 import itertools
 import logging
 import os
@@ -62,10 +63,10 @@ def import_config(configfile):
 
     # Import the host-model specific CCPP prebuild config;
     # split into path and module name for import
-    configpath = os.path.abspath(os.path.split(configfile)[0])
-    configmodule = os.path.split(configfile)[1].rstrip('.py')
+    configpath = os.path.abspath(os.path.dirname(configfile))
+    configmodule = os.path.splitext(os.path.basename(configfile))[0]
     sys.path.append(configpath)
-    ccpp_prebuild_config = __import__(configmodule)
+    ccpp_prebuild_config = importlib.import_module(configmodule)
 
     # Definitions in host-model dependent CCPP prebuild config script
     config['variable_definition_files'] = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
