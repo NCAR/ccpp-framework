@@ -15,7 +15,8 @@ from common import encode_container, decode_container, decode_container_as_dict,
 from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
 from common import split_var_name_and_array_reference
 from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
-from mkcap import Cap, CapsMakefile, CapsCMakefile, SchemesMakefile, SchemesCMakefile
+from mkcap import Cap, CapsMakefile, CapsCMakefile, CapsSourcefile, \
+                  SchemesMakefile, SchemesCMakefile, SchemesSourcefile
 from mkdoc import metadata_to_html, metadata_to_latex
 from mkstatic import API, Suite, Group
 
@@ -29,6 +30,7 @@ parser.add_argument('--clean',      action='store_true', help='remove files crea
 parser.add_argument('--debug',      action='store_true', help='enable debugging output', default=False)
 parser.add_argument('--static',     action='store_true', help='enable a static build for a given suite definition file', default=False)
 parser.add_argument('--suites',     action='store', help='suite definition files to use (comma-separated, for static build only, without path)', default='')
+parser.add_argument('--builddir',   action='store', help='relative path to CCPP build directory', required=False, default='.')
 
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
@@ -49,9 +51,10 @@ def parse_arguments():
         parser.print_help()
         sys.exit(-1)
     sdfs = [ 'suite_{0}.xml'.format(x) for x in args.suites.split(',')]
-    return (success, configfile, clean, debug, static, sdfs)
+    builddir = args.builddir
+    return (success, configfile, clean, debug, static, sdfs, builddir)
 
-def import_config(configfile):
+def import_config(configfile, builddir):
     """Import the configuration from a given configuration file"""
     success = True
     config = {}
@@ -72,22 +75,24 @@ def import_config(configfile):
     config['variable_definition_files'] = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
     config['scheme_files']              = ccpp_prebuild_config.SCHEME_FILES
     config['scheme_files_dependencies'] = ccpp_prebuild_config.SCHEME_FILES_DEPENDENCIES
-    config['schemes_makefile']          = ccpp_prebuild_config.SCHEMES_MAKEFILE
-    config['schemes_cmakefile']         = ccpp_prebuild_config.SCHEMES_CMAKEFILE
+    config['schemes_makefile']          = ccpp_prebuild_config.SCHEMES_MAKEFILE.format(build_dir=builddir)
+    config['schemes_cmakefile']         = ccpp_prebuild_config.SCHEMES_CMAKEFILE.format(build_dir=builddir)
+    config['schemes_sourcefile']        = ccpp_prebuild_config.SCHEMES_SOURCEFILE.format(build_dir=builddir)
     config['target_files']              = ccpp_prebuild_config.TARGET_FILES
-    config['caps_makefile']             = ccpp_prebuild_config.CAPS_MAKEFILE
-    config['caps_cmakefile']            = ccpp_prebuild_config.CAPS_CMAKEFILE
-    config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR
+    config['caps_makefile']             = ccpp_prebuild_config.CAPS_MAKEFILE.format(build_dir=builddir)
+    config['caps_cmakefile']            = ccpp_prebuild_config.CAPS_CMAKEFILE.format(build_dir=builddir)
+    config['caps_sourcefile']           = ccpp_prebuild_config.CAPS_SOURCEFILE.format(build_dir=builddir)
+    config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR.format(build_dir=builddir)
     config['suites_dir']                = ccpp_prebuild_config.SUITES_DIR
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
     config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
     config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
     config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
-    config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE
-    config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE
-    # For static build: location of static API file
-    config['static_api_dir'] = ccpp_prebuild_config.STATIC_API_DIR
-
+    config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE.format(build_dir=builddir)
+    config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE.format(build_dir=builddir)
+    # For static build: location of static API file, and shell script to source
+    config['static_api_dir']            = ccpp_prebuild_config.STATIC_API_DIR.format(build_dir=builddir)
+    config['static_api_srcfile']        = ccpp_prebuild_config.STATIC_API_SRCFILE.format(build_dir=builddir)
     # Template code in host-model dependent CCPP prebuild config script
     config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
 
@@ -126,8 +131,10 @@ def clean_files(config, static):
     files_to_remove = [
         config['schemes_makefile'],
         config['schemes_cmakefile'],
+        config['schemes_sourcefile'],
         config['caps_makefile'],
         config['caps_cmakefile'],
+        config['caps_sourcefile'],
         config['html_vartable_file'],
         config['latex_vartable_file'],
         ]
@@ -605,15 +612,17 @@ def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arg
 def generate_static_api(suites, static_api_dir):
     """Generate API for static build for a given suite"""
     success = True
-    # Change to caps directory
+    # Change to caps directory, create if necessary
+    if not os.path.isdir(static_api_dir):
+        os.makedirs(static_api_dir)
     os.chdir(static_api_dir)
-    api = API(suites=suites)
+    api = API(suites=suites, directory=static_api_dir)
     logging.info('Generating static API {0} in {1} ...'.format(api.filename, static_api_dir))
     api.write()
     os.chdir(BASEDIR)
     return (success, api)
 
-def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile):
+def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile, schemes_sourcefile):
     """Generate makefile/cmakefile snippets for all schemes."""
     logging.info('Generating schemes makefile/cmakefile snippet ...')
     success = True
@@ -621,20 +630,25 @@ def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile):
     makefile.filename = schemes_makefile
     cmakefile = SchemesCMakefile()
     cmakefile.filename = schemes_cmakefile
+    sourcefile = SchemesSourcefile()
+    sourcefile.filename = schemes_sourcefile
     # Adjust relative file path to schemes from caps makefile
     schemes_with_path = []
+    schemes_with_abspath = []
     schemes_makefile_dir = os.path.split(os.path.abspath(schemes_makefile))[0]
     for scheme in schemes:
         (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme))
         relative_path = './{0}'.format(os.path.relpath(scheme_filepath, schemes_makefile_dir))
         schemes_with_path.append(os.path.join(relative_path, scheme_filename))
+        schemes_with_abspath.append(os.path.abspath(scheme))
     makefile.write(schemes_with_path)
     cmakefile.write(schemes_with_path)
-    logging.info('Added {0} schemes to {1} and {2}'.format(
-           len(schemes_with_path), makefile.filename, cmakefile.filename))
+    sourcefile.write(schemes_with_abspath)
+    logging.info('Added {0} schemes to {1}, {2}, {3}'.format(
+           len(schemes_with_path), makefile.filename, cmakefile.filename, sourcefile.filename))
     return success
 
-def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
+def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile, caps_dir):
     """Generate makefile/cmakefile snippets for all caps."""
     logging.info('Generating caps makefile/cmakefile snippet ...')
     success = True
@@ -642,12 +656,16 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
     makefile.filename = caps_makefile
     cmakefile = CapsCMakefile()
     cmakefile.filename = caps_cmakefile
+    sourcefile = CapsSourcefile()
+    sourcefile.filename = caps_sourcefile
     # Adjust relative file path to schemes from caps makefile
     caps_makefile_dir = os.path.split(os.path.abspath(caps_makefile))[0]
     relative_path = './{0}'.format(os.path.relpath(caps_dir, caps_makefile_dir))
     caps_with_path = [ os.path.join(relative_path, cap) for cap in caps]
+    caps_with_abspath = [ os.path.abspath(os.path.join(caps_dir, cap)) for cap in caps]
     makefile.write(caps_with_path)
     cmakefile.write(caps_with_path)
+    sourcefile.write(caps_with_abspath)
     logging.info('Added {0} auto-generated caps to {1} and {2}'.format(
                           len(caps_with_path), makefile.filename, cmakefile.filename))
     return success
@@ -655,7 +673,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_dir):
 def main():
     """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
-    (success, configfile, clean, debug, static, sdfs) = parse_arguments()
+    (success, configfile, clean, debug, static, sdfs, builddir) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -663,7 +681,7 @@ def main():
     if not success:
         raise Exception('Call to setup_logging failed.')
 
-    (success, config) = import_config(configfile)
+    (success, config) = import_config(configfile, builddir)
     if not success:
         raise Exception('Call to import_config failed.')
 
@@ -757,7 +775,8 @@ def main():
 
     # Add filenames of schemes to makefile - add dependencies for schemes
     success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
-                                                    config['schemes_makefile'], config['schemes_cmakefile'])
+                                        config['schemes_makefile'], config['schemes_cmakefile'],
+                                        config['schemes_sourcefile'])
     if not success:
         raise Exception('Call to generate_schemes_makefile failed.')
 
@@ -772,6 +791,9 @@ def main():
         if not success: 
             raise Exception('Call to generate_static_api failed.')
 
+        success = api.write_sourcefile(config['static_api_srcfile'])
+        if not success: 
+            raise Exception("Writing API sourcefile {sourcefile} failed".format(sourcefile=config['static_api_srcfile']))
     else:
         # Generate scheme caps for each individual scheme
         (success, scheme_caps) = generate_scheme_caps(metadata_define, metadata_request, arguments_request,
@@ -784,7 +806,8 @@ def main():
         all_caps = suite_and_group_caps
     else:
         all_caps = scheme_caps
-    success = generate_caps_makefile(all_caps, config['caps_makefile'], config['caps_cmakefile'], config['caps_dir'])
+    success = generate_caps_makefile(all_caps, config['caps_makefile'], config['caps_cmakefile'],
+                                     config['caps_sourcefile'], config['caps_dir'])
     if not success:
         raise Exception('Call to generate_caps_makefile failed.')
 

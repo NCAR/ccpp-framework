@@ -508,6 +508,9 @@ module {module}_cap
 
     def write(self, module, data, ccpp_field_map, metadata_define):
         if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
             f = open(self.filename, 'w')
         else:
             f = sys.stdout
@@ -702,6 +705,51 @@ set(CAPS
     def filename(self, value):
         self._filename = value
 
+class CapsSourcefile(object):
+
+    header='''
+# All CCPP schemes are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+export CCPP_CAPS="'''
+    footer='''"
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, schemes):
+        if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for scheme in schemes:
+            contents += '{0};'.format(scheme)
+        contents = contents.rstrip(';')
+        contents += self.footer
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
 class SchemesMakefile(object):
 
     header='''
@@ -725,6 +773,9 @@ SCHEMES_f90 ='''
 
     def write(self, schemes):
         if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
             f = open(self.filename, 'w')
         else:
             f = sys.stdout
@@ -781,6 +832,9 @@ set(SCHEMES
 
     def write(self, schemes):
         if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if not os.path.isdir(filepath):
+                os.makedirs(filepath)
             f = open(self.filename, 'w')
         else:
             f = sys.stdout
@@ -788,6 +842,51 @@ set(SCHEMES
         contents = self.header
         for scheme in schemes:
             contents += '      {0}\n'.format(scheme)
+        contents += self.footer
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+class SchemesSourcefile(object):
+
+    header='''
+# All CCPP schemes are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+export CCPP_SCHEMES="'''
+    footer='''"
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, schemes):
+        if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for scheme in schemes:
+            contents += '{0};'.format(scheme)
+        contents = contents.rstrip(';')
         contents += self.footer
         f.write(contents)
 
