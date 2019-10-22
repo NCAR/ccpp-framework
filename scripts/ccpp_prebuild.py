@@ -641,8 +641,8 @@ def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile, sche
         relative_path = './{0}'.format(os.path.relpath(scheme_filepath, schemes_makefile_dir))
         schemes_with_path.append(os.path.join(relative_path, scheme_filename))
         schemes_with_abspath.append(os.path.abspath(scheme))
-    makefile.write(schemes_with_path)
-    cmakefile.write(schemes_with_path)
+    makefile.write(schemes_with_abspath)
+    cmakefile.write(schemes_with_abspath)
     sourcefile.write(schemes_with_abspath)
     logging.info('Added {0} schemes to {1}, {2}, {3}'.format(
            len(schemes_with_path), makefile.filename, cmakefile.filename, sourcefile.filename))
@@ -663,8 +663,8 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
     relative_path = './{0}'.format(os.path.relpath(caps_dir, caps_makefile_dir))
     caps_with_path = [ os.path.join(relative_path, cap) for cap in caps]
     caps_with_abspath = [ os.path.abspath(os.path.join(caps_dir, cap)) for cap in caps]
-    makefile.write(caps_with_path)
-    cmakefile.write(caps_with_path)
+    makefile.write(caps_with_abspath)
+    cmakefile.write(caps_with_abspath)
     sourcefile.write(caps_with_abspath)
     logging.info('Added {0} auto-generated caps to {1} and {2}'.format(
                           len(caps_with_path), makefile.filename, cmakefile.filename))
