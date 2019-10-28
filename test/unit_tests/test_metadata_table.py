@@ -42,8 +42,8 @@ class MetadataTableTestCase(unittest.TestCase):
        #Verify that size of returned list equals number of headers in the test file
        #       and that header name is 'test_host'
        self.assertEqual(len(result), 1)
-       listToStr = " ".join([elem.title for elem in result])
-       self.assertIn('test_host', listToStr, msg="Header name 'test_host' is expected but not found")
+       titles = [elem.title for elem in result]
+       self.assertIn('test_host', titles, msg="Header name 'test_host' is expected but not found")
 
    def test_good_multi_ccpp_arg_table(self):
        """Test that good file with 4 ccpp-arg-table returns 4 headers"""
@@ -55,12 +55,12 @@ class MetadataTableTestCase(unittest.TestCase):
 
        #Verify that size of returned list equals number of headers in the test file
        self.assertEqual(len(result), 4)
-       listToStr = " ".join([elem.title for elem in result])
-       #print(listToStr)
-       self.assertIn('vmr_type', listToStr, msg="Header name 'vmr_type' is expected but not found")
-       self.assertIn('make_ddt_run', listToStr, msg="Header name 'make_ddt_run' is expected but not found")
-       self.assertIn('make_ddt_init', listToStr, msg="Header name 'make_ddt_init' is expected but not found")
-       self.assertIn('make_ddt_finalize', listToStr, msg="Header name 'make_ddt_finalize' is expected but not found")
+       titles = [elem.title for elem in result]
+       #print(titles)
+       self.assertIn('vmr_type', titles, msg="Header name 'vmr_type' is expected but not found")
+       self.assertIn('make_ddt_run', titles, msg="Header name 'make_ddt_run' is expected but not found")
+       self.assertIn('make_ddt_init', titles, msg="Header name 'make_ddt_init' is expected but not found")
+       self.assertIn('make_ddt_finalize', titles, msg="Header name 'make_ddt_finalize' is expected but not found")
 
    def test_bad_type_name(self):
        """Test that `type = banana` returns expected error"""
@@ -134,8 +134,8 @@ class MetadataTableTestCase(unittest.TestCase):
        with self.assertRaises(Exception) as context:
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
 
-       print("The exception is", context.exception)
-       #self.assertTrue('Missing \'intent\' for variable \'timestep\', at ' in str(context.exception))
+       #print("The exception is", context.exception)
+       self.assertTrue('Missing \'intent\' for variable \'timestep\', at ' in str(context.exception))
 
 if __name__ == '__main__':
     unittest.main()
