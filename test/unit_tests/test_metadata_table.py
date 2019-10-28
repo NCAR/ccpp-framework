@@ -14,9 +14,9 @@ import os
 import logging
 import unittest
 
-unit_test_dir = os.path.dirname(os.path.abspath(__file__))
-scripts_dir = os.path.join(unit_test_dir, "../../scripts")
-sample_files_dir =  os.path.join(unit_test_dir, "sample_files")
+root_dir = os.path.dirname(os.path.abspath(__file__))
+scripts_dir = os.path.join(root_dir, "../../scripts")
+sample_files_dir = os.path.join(root_dir, "sample_files")
 
 if not os.path.exists(scripts_dir):
     raise ImportError("Cannot find scripts directory")
@@ -36,38 +36,38 @@ class MetadataTableTestCase(unittest.TestCase):
        #Setup
        known_ddts = list()
        logger = None
-       filename= sample_files_dir + "/test_host.meta"
+       filename = os.path.join(sample_files_dir, "test_host.meta")
        #Exercise
        result = MetadataTable.parse_metadata_file(filename, known_ddts, logger)
        #Verify that size of returned list equals number of headers in the test file
        #       and that header name is 'test_host'
        self.assertEqual(len(result), 1)
-       listToStr = " ".join([str(elem) for elem in result])
-       self.assertIn('test_host', listToStr, msg="Header name is not expected 'test_host'")
+       listToStr = " ".join([elem.title for elem in result])
+       self.assertIn('test_host', listToStr, msg="Header name 'test_host' is expected but not found")
 
    def test_good_multi_ccpp_arg_table(self):
        """Test that good file with 4 ccpp-arg-table returns 4 headers"""
        known_ddts = list()
        logger = None
-       filename= sample_files_dir + "/test_multi_ccpp_arg_tables.meta"
+       filename = os.path.join(sample_files_dir, "test_multi_ccpp_arg_tables.meta")
 
        result = MetadataTable.parse_metadata_file(filename, known_ddts, logger)
 
        #Verify that size of returned list equals number of headers in the test file
        self.assertEqual(len(result), 4)
-       listToStr = " ".join([str(elem) for elem in result])
+       listToStr = " ".join([elem.title for elem in result])
        #print(listToStr)
-       self.assertIn('vmr_type', listToStr, msg="Header name is not expected 'vmr_type'")
-       self.assertIn('make_ddt_run', listToStr, msg="Header name is not expected 'make_ddt_run'")
-       self.assertIn('make_ddt_init', listToStr, msg="Header name is not expected 'make_ddt_init'")
-       self.assertIn('make_ddt_finalize', listToStr, msg="Header name is not expected 'make_ddt_finalize'")
+       self.assertIn('vmr_type', listToStr, msg="Header name 'vmr_type' is expected but not found")
+       self.assertIn('make_ddt_run', listToStr, msg="Header name 'make_ddt_run' is expected but not found")
+       self.assertIn('make_ddt_init', listToStr, msg="Header name 'make_ddt_init' is expected but not found")
+       self.assertIn('make_ddt_finalize', listToStr, msg="Header name 'make_ddt_finalize' is expected but not found")
 
    def test_bad_type_name(self):
        """Test that `type = banana` returns expected error"""
        #Setup
        known_ddts = list()
        logger = None
-       filename= sample_files_dir + "/test_bad_type_name.meta"
+       filename = os.path.join(sample_files_dir, "test_bad_type_name.meta")
 
        #Exercise
        with self.assertRaises(Exception) as context:
@@ -81,7 +81,7 @@ class MetadataTableTestCase(unittest.TestCase):
        """Test that a duplicate header returns expected error"""
        known_ddts = list()
        logger = None
-       filename= sample_files_dir + "/double_header.meta"
+       filename = os.path.join(sample_files_dir, "double_header.meta")
 
        with self.assertRaises(Exception) as context:
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
@@ -93,7 +93,7 @@ class MetadataTableTestCase(unittest.TestCase):
        """Test that `dimension = banana` returns expected error"""
        known_ddts = list()
        logger = None
-       filename= sample_files_dir + "/test_bad_dimension.meta"
+       filename = os.path.join(sample_files_dir, "test_bad_dimension.meta")
 
        with self.assertRaises(Exception) as context:
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
@@ -105,7 +105,7 @@ class MetadataTableTestCase(unittest.TestCase):
        """Test that a duplicate variable returns expected error"""
        known_ddts = list()
        logger = None
-       filename= sample_files_dir + "/test_duplicate_variable.meta"
+       filename = os.path.join(sample_files_dir, "test_duplicate_variable.meta")
 
        with self.assertRaises(Exception) as context:
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
@@ -117,7 +117,7 @@ class MetadataTableTestCase(unittest.TestCase):
        """Test that an invalid intent returns expected error"""
        known_ddts = list()
        logger = None
-       filename= sample_files_dir + "/test_invalid_intent.meta"
+       filename = os.path.join(sample_files_dir, "test_invalid_intent.meta")
 
        with self.assertRaises(Exception) as context:
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
