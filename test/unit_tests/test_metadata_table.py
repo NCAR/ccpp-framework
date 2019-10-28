@@ -125,5 +125,17 @@ class MetadataTableTestCase(unittest.TestCase):
        #print("The exception is", context.exception)
        self.assertTrue('Invalid \'intent\' property value, \'banana\', at ' in str(context.exception))
 
+   def test_missing_intent(self):
+       """Test that a missing intent returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_missing_intent.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       print("The exception is", context.exception)
+       #self.assertTrue('Missing \'intent\' for variable \'timestep\', at ' in str(context.exception))
+
 if __name__ == '__main__':
     unittest.main()
