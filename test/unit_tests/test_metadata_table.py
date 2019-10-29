@@ -14,9 +14,9 @@ import os
 import logging
 import unittest
 
-root_dir = os.path.dirname(os.path.abspath(__file__))
-scripts_dir = os.path.join(root_dir, "../../scripts")
-sample_files_dir = os.path.join(root_dir, "sample_files")
+test_dir = os.path.dirname(os.path.abspath(__file__))
+scripts_dir = os.path.abspath(os.path.join(test_dir, os.pardir, os.pardir, "scripts"))
+sample_files_dir = os.path.join(test_dir, "sample_files")
 
 if not os.path.exists(scripts_dir):
     raise ImportError("Cannot find scripts directory")
