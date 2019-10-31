@@ -202,6 +202,7 @@ end module {module}
         self._module      = CCPP_STATIC_API_MODULE
         self._subroutines = None
         self._suites      = []
+        self._directory   = '.'
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -213,6 +214,15 @@ end module {module}
     @filename.setter
     def filename(self, value):
         self._filename = value
+
+    @property
+    def directory(self):
+        '''Get the directory to write API to.'''
+        return self._directory
+
+    @directory.setter
+    def directory(self, value):
+        self._directory = value
 
     @property
     def module(self):
@@ -328,8 +338,11 @@ end module {module}
                                    suite_switch=suite_switch)
 
         # Write output to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
+        if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            f = open(self.filename, 'w')
         else:
             f = sys.stdout
         f.write(API.header.format(module=self._module,
@@ -341,6 +354,22 @@ end module {module}
             f.close()
         return
 
+    def write_sourcefile(self, source_filename):
+        success = True
+        filepath = os.path.split(source_filename)[0]
+        if filepath and not os.path.isdir(filepath):
+            os.makedirs(filepath)
+        f = open(source_filename, 'w')
+        contents = """# The CCPP static API is defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+export CCPP_STATIC_API=\"{filename}\"
+""".format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
+        f.write(contents)
+        f.close()
+        return success
 
 class Suite(object):
 
