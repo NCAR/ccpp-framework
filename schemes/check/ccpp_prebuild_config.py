@@ -31,6 +31,7 @@ SCHEME_FILES = {
 # Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = '/dev/null'
 SCHEMES_CMAKEFILE = '/dev/null'
+SCHEMES_SOURCEFILE = '/dev/null'
 
 # CCPP host cap in which to insert the ccpp_field_add statements;
 # determines the directory to place ccpp_{modules,fields}.inc
@@ -41,6 +42,7 @@ TARGET_FILES = [
 # Auto-generated makefile/cmakefile snippets that contain all caps
 CAPS_MAKEFILE = '/dev/null'
 CAPS_CMAKEFILE = '/dev/null'
+CAPS_SOURCEFILE = '/dev/null'
 
 # Directory where to put all auto-generated physics caps
 CAPS_DIR = '.'
