@@ -3,7 +3,7 @@
 # Description:  Contains unit tests for parse_metadata_file in the class
 #               MetadataTable in scripts file metadata_table.py
 #
-# Assumptions:  
+# Assumptions:
 #
 # Command line arguments: none
 #
@@ -135,7 +135,8 @@ class MetadataTableTestCase(unittest.TestCase):
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
 
        #print("The exception is", context.exception)
-       self.assertTrue('Missing \'intent\' for variable \'timestep\', at ' in str(context.exception))
+       emsg = "Required property, 'intent', missing, at "
+       self.assertTrue(emsg in str(context.exception))
 
 if __name__ == '__main__':
     unittest.main()
