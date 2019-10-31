@@ -71,6 +71,7 @@ FIELDS_INCLUDE_FILE = 'ccpp_fields_{set}.inc'
 
 # Directory where to write static API to
 STATIC_API_DIR = '.'
+STATIC_API_SRCFILE = './CCPP_STATIC_API.sh'
 
 # HTML document containing the model-defined CCPP variables
 HTML_VARTABLE_FILE = 'CCPP_VARIABLES_FV3.html'
