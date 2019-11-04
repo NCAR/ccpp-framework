@@ -183,7 +183,7 @@ module {module}
 {suite_switch}
       else
 
-         write({ccpp_var_name}%errmsg,'(*(a))'), 'Invalid suite ' // trim(suite_name)
+         write({ccpp_var_name}%errmsg,'(*(a))') 'Invalid suite ' // trim(suite_name)
          ierr = 1
 
       end if
@@ -293,7 +293,7 @@ end module {module}
                                                                                    arguments=argument_list_group)
                 group_calls += '''
             else
-               write({ccpp_var_name}%errmsg, '(*(a))') "Group " // trim(group_name) // " not found"
+               write({ccpp_var_name}%errmsg, '(*(a))') 'Group ' // trim(group_name) // ' not found'
                ierr = 1
             end if
 '''.format(ccpp_var_name=ccpp_var.local_name, group_name=group.name)
@@ -434,6 +434,12 @@ end module {module}
         tree = ET.parse(self._sdf_name)
         suite_xml = tree.getroot()
         self._name = suite_xml.get('name')
+        # Validate name of suite in XML tag against filename; could be moved to common.py
+        if not (os.path.basename(self._sdf_name) == 'suite_{}.xml'.format(self._name)):
+            logging.critical("Invalid suite name {0} in suite definition file {1}.".format(
+                                                               self._name, self._sdf_name))
+            success = False
+            return success
 
         # Flattened lists of all schemes and subroutines in SDF
         self._all_schemes_called = []
