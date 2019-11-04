@@ -915,7 +915,7 @@ end module {module}
 {actions_after}
 '''.format(subroutine_name=subroutine_name, args=args, actions_before=actions_before.rstrip('\n'), actions_after=actions_after.rstrip('\n'))
                     error_check = '''if ({target_name_flag}/=0) then
-        write({target_name_msg},'(a)') "An error occured in {subroutine_name}"
+        {target_name_msg} = "An error occured in {subroutine_name}: " // trim({target_name_msg})
         ierr={target_name_flag}
         return
       end if
