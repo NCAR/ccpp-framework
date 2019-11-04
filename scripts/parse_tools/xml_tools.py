@@ -107,7 +107,7 @@ Format must be <integer>.<integer>"""
     return verbits
 
 ###############################################################################
-def validate_xml_file(filename, schema_root, version, logger):
+def validate_xml_file(filename, schema_root, version, logger, schema_path=None):
 ###############################################################################
     """
     Find the appropriate schema and validate the XML file, <filename>,
@@ -119,10 +119,12 @@ def validate_xml_file(filename, schema_root, version, logger):
     elif not os.access(filename, os.R_OK):
         raise CCPPError("validate_xml_file: Cannot open '{}'".format(filename))
     # End if
-    # Find the schema, based on the model version
-    thispath = os.path.abspath(__file__)
-    pdir = os.path.dirname(os.path.dirname(os.path.dirname(thispath)))
-    schema_path = os.path.join(pdir, 'schema')
+    if not schema_path:
+        # Find the schema, based on the model version
+        thispath = os.path.abspath(__file__)
+        pdir = os.path.dirname(os.path.dirname(os.path.dirname(thispath)))
+        schema_path = os.path.join(pdir, 'schema')
+    # End if
     verstring = '_'.join([str(x) for x in version])
     schema_file = os.path.join(schema_path,
                                "{}_v{}.xsd".format(schema_root, verstring))
