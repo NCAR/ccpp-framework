@@ -165,34 +165,35 @@ class MetadataTable(ParseSource):
                        ""], line_start=0)).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid metadata header start, no table type, at foobar.txt:2
-    >>> MetadataTable.__var_start__.match('[ qval ]') #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
-    >>> MetadataTable.__var_start__.match('[ qval(hi_mom) ]') #doctest: +ELLIPSIS
+    >>> MetadataTable.table_start('[ ccpp-arg-table ]')
+    True
+    >>> MetadataTable.table_start('[ qval ]')
+    False
+    >>> MetadataTable.table_start('  local_name = foo')
+    False
+    >>> MetadataTable.variable_start('[ qval ]', ParseContext(filename='foo.meta'))
+    'qval'
+    >>> MetadataTable.variable_start('[ qval(hi_mom) ]', ParseContext(filename='foo.meta'))
+    'qval(hi_mom)'
+    >>> MetadataTable.variable_start('  local_name = foo', ParseContext(filename='foo.meta'))
 
-    >>> MetadataTable.__vref_start__.match('[ qval(hi_mom) ]') #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
-    >>> MetadataTable.__var_start__.match('[ qval ]').group(1)
-    'qval'
-    >>> MetadataTable.__vref_start__.match('[ qval(hi_mom) ]').group(1)
-    'qval'
-    >>> MetadataTable.__vref_start__.match('[ qval(hi_mom) ]').group(2)
-    'hi_mom'
 """
 
-    __header_start__ = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
+    __header_start = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
 
-    __var_start__ = re.compile(r"^\[\s*"+FORTRAN_ID+r"\s*\]$")
+    __var_start = re.compile(r"^\[\s*"+FORTRAN_ID+r"\s*\]$")
 
-    __vref_start__ = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
+    __vref_start = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
 
-    __blank_line__ = re.compile(r"\s*[#;]")
+    __blank_line = re.compile(r"\s*[#;]")
 
-    __header_types__ = ['ddt', 'host', 'module', 'scheme', 'local']
+    __header_types = ['ddt', 'host', 'module', 'scheme', 'local']
 
     def __init__(self, parse_object=None,
                  title=None, type_in=None, module=None, var_dict=None,
                  known_ddts=None, logger=None):
         self._pobj = parse_object
+        self._variables = None # In case __init__ crashes
         """If <parse_object> is not None, initialize from the current file and
         location in <parse_object>.
         If <parse_object> is None, initialize from <title>, <type>, <module>,
@@ -200,24 +201,25 @@ class MetadataTable(ParseSource):
         <type>, <module>, and <var_dict> are ignored.
         """
         if parse_object is None:
-            if title is None:
-                raise ParseInternalError('MetadataTable requires a title')
-            else:
+            if title is not None:
                 self._table_title = title
+            else:
+                raise ParseInternalError('MetadataTable requires a title')
             # End if
             if type_in is None:
                 raise ParseInternalError('MetadataTable requires a header type')
-            elif type_in not in MetadataTable.__header_types__:
+            # End if
+            if type_in in MetadataTable.__header_types:
+                self._header_type = type_in
+            else:
                 raise ParseSyntaxError("metadata table type",
                                        token=type_in,
                                        context=self._pobj)
-            else:
-                self._header_type = type_in
             # End if
-            if module is None:
-                raise ParseInternalError('MetadataTable requires a module name')
-            else:
+            if module is not None:
                 self._module_name = module
+            else:
+                raise ParseInternalError('MetadataTable requires a module name')
             # End if
             #  Initialize our ParseSource parent
             super(MetadataTable, self).__init__(self.title,
@@ -248,47 +250,51 @@ class MetadataTable(ParseSource):
         # End for
 
     def __init_from_file__(self, known_ddts, logger):
-        # Read the table preamble, assume the caller already figured out
-        #  the first line of the header using the table_start method.
-        curr_line, curr_line_num = self._pobj.next_line()
+        """ Read the table preamble, assume the caller already figured out
+        the first line of the header using the table_start method."""
+        curr_line, _ = self._pobj.next_line()
         self._table_title = None
         self._header_type = None
         self._module_name = None
-        while (curr_line is not None) and (not self.variable_start(curr_line)) and (not MetadataTable.table_start(curr_line)):
-            for property in self.parse_config_line(curr_line):
+        while ((curr_line is not None) and
+               (not MetadataTable.variable_start(curr_line, self._pobj)) and
+               (not MetadataTable.table_start(curr_line))):
+            for prop in MetadataTable.parse_config_line(curr_line, self._pobj):
                 # Manually parse name, type, and module properties
-                key = property[0].strip().lower()
-                value = property[1].strip()
+                key = prop[0].strip().lower()
+                value = prop[1].strip()
                 if key == 'name':
                     self._table_title = value
                 elif key == 'type':
-                    if value not in MetadataTable.__header_types__:
+                    if value not in MetadataTable.__header_types:
                         raise ParseSyntaxError("metadata table type",
                                                token=value,
                                                context=self._pobj)
                     # End if
                     self._header_type = value
                 elif key == 'module':
-                    if value == "None":
+                    if value != "None":
+                        self._module_name = value
+                    else:
                         raise ParseSyntaxError("metadata table, no module",
                                                context=self._pobj)
-                    else:
-                        self._module_name = value
                     # End if
                 else:
                     raise ParseSyntaxError("metadata table start property",
                                            token=value, context=self._pobj)
                 # End if
             # End for
-            curr_line, curr_line_num = self._pobj.next_line()
+            curr_line, _ = self._pobj.next_line()
         # End while
         if self.title is None:
             raise ParseSyntaxError("metadata header start, no table name",
                                    token=curr_line, context=self._pobj)
-        elif self._header_type is None:
+        # End if
+        if self._header_type is None:
             raise ParseSyntaxError("metadata header start, no table type",
                                    token=curr_line, context=self._pobj)
-        elif self.header_type == "ddt":
+        # End if
+        if self.header_type == "ddt":
             known_ddts.append(self.title)
         # End if
         # We need a default module if none was listed
@@ -301,9 +307,9 @@ class MetadataTable(ParseSource):
         # End if
         #  Initialize our ParseSource parent
         super(MetadataTable, self).__init__(self.title,
-                                             self.header_type, self._pobj)
+                                            self.header_type, self._pobj)
         # Read the variables
-        valid_lines =  True
+        valid_lines = True
         self._variables = VarDictionary(self.title, logger=logger)
         while valid_lines:
             newvar, curr_line = self.parse_variable(curr_line, known_ddts)
@@ -316,34 +322,16 @@ class MetadataTable(ParseSource):
             # End if
         # End while
 
-    def parse_config_line(self, line):
-        "Parse a config line and return a list of keyword value pairs."
-        parse_items = list()
-        if line is None:
-            pass # No properties on this line
-        elif MetadataTable.is_blank(line):
-            pass # No properties on this line
-        else:
-            properties = line.strip().split('|')
-            for property in properties:
-                pitems = property.split('=', 1)
-                if len(pitems) < 2:
-                    raise ParseSyntaxError("variable property syntax",
-                                           token=property,
-                                           context=self._pobj)
-                else:
-                    parse_items.append(pitems)
-                # End if
-            # End for
-        # End if
-        return parse_items
-
     def parse_variable(self, curr_line, known_ddts):
-        # The header line has the format [ <valid_fortran_symbol> ]
-        # Parse header
-        valid_line = (curr_line is not None) and (not MetadataTable.table_start(curr_line))
+        """Parse a new metadata variable beginning on <curr_line>.
+        The header line has the format [ <valid_fortran_symbol> ].
+        """
+        newvar = None
+        valid_line = ((curr_line is not None) and
+                      (not MetadataTable.table_start(curr_line)))
         if valid_line:
-            local_name = self.variable_start(curr_line) # caller handles exception
+             # variable_start handles exception
+            local_name = MetadataTable.variable_start(curr_line, self._pobj)
         else:
             local_name = None
         # End if
@@ -362,18 +350,20 @@ class MetadataTable(ParseSource):
             var_props = None
         # End if
         while valid_line:
-            curr_line, curr_line_num = self._pobj.next_line()
+            curr_line, _ = self._pobj.next_line()
             valid_line = ((curr_line is not None) and
                           (not MetadataTable.is_blank(curr_line)) and
                           (not MetadataTable.table_start(curr_line)) and
-                          (self.variable_start(curr_line) is None))
+                          (MetadataTable.variable_start(curr_line,
+                                                        self._pobj) is None))
             # A valid line may have multiple properties (separated by '|')
             if valid_line:
-                properties = self.parse_config_line(curr_line)
-                for property in properties:
+                properties = MetadataTable.parse_config_line(curr_line,
+                                                             self._pobj)
+                for prop in properties:
                     try:
-                        pname = property[0].strip().lower()
-                        pval_str = property[1].strip()
+                        pname = prop[0].strip().lower()
+                        pval_str = prop[1].strip()
                         if pname == 'ddt_type':
                             if pval_str in known_ddts:
                                 pval = pval_str
@@ -384,9 +374,9 @@ class MetadataTable(ParseSource):
                             # End if
                         else:
                             # Make sure this is a match
-                            hp = Var.get_prop(pname)
-                            if hp is not None:
-                                pval = hp.valid_value(pval_str)
+                            check_prop = Var.get_prop(pname)
+                            if check_prop is not None:
+                                pval = check_prop.valid_value(pval_str)
                             else:
                                 raise ParseSyntaxError("variable property name",
                                                        token=pname,
@@ -399,8 +389,8 @@ class MetadataTable(ParseSource):
                                                        context=self._pobj)
                             # End if
                         # End if
-                    except ParseSyntaxError as p:
-                        raise p
+                    except ParseSyntaxError as ps_err:
+                        raise ps_err
                     # If we get this far, we have a valid property.
                     # Special case for dimensions, turn them into ranges
                     if pname == 'dimensions':
@@ -419,9 +409,7 @@ class MetadataTable(ParseSource):
                 # End for
             # End if
         # End while
-        if var_props is None:
-            return None, curr_line
-        else:
+        if var_props is not None:
             # Check for array reference
             sub_name = MetadataTable.check_array_reference(local_name,
                                                            var_props, context)
@@ -430,10 +418,35 @@ class MetadataTable(ParseSource):
             # End if (else just leave the local name alone)
             try:
                 newvar = Var(var_props, source=self, context=context)
-            except CCPPError as ve:
-                raise ParseSyntaxError(ve, context=self._pobj)
-            return newvar, curr_line
+            except CCPPError as verr:
+                raise ParseSyntaxError(verr, context=self._pobj)
+            # End try
+        # No else, wil return None for newvar
         # End if
+        return newvar, curr_line
+
+    @classmethod
+    def parse_config_line(cls, line, context):
+        """Parse a config line and return a list of keyword value pairs."""
+        parse_items = list()
+        if line is None:
+            pass # No properties on this line
+        elif MetadataTable.is_blank(line):
+            pass # No properties on this line
+        else:
+            properties = line.strip().split('|')
+            for prop in properties:
+                pitems = prop.split('=', 1)
+                if len(pitems) >= 2:
+                    parse_items.append(pitems)
+                else:
+                    raise ParseSyntaxError("variable property syntax",
+                                           token=prop,
+                                           context=context)
+                # End if
+            # End for
+        # End if
+        return parse_items
 
     @classmethod
     def check_array_reference(cls, local_name, var_dict, context):
@@ -463,6 +476,7 @@ class MetadataTable(ParseSource):
         >>> MetadataTable.check_array_reference('foo(:,:,qux)', {'dimensions':['ccpp_constant_one:bar','ccpp_constant_one:baz']}, ParseContext(filename='foo.meta'))
         'foo(:, :, qux)'
         """
+        retval = None
         if check_fortran_id(local_name, var_dict, False) is None:
             rmatch = FORTRAN_SCALAR_REF_RE.match(local_name)
             if rmatch is None:
@@ -497,19 +511,18 @@ class MetadataTable(ParseSource):
                     sub_dims.append(rind)
                 # End if
             # End for
-            return '{}({})'.format(rname, ', '.join(sub_dims))
-        else:
-            return None
+            retval = '{}({})'.format(rname, ', '.join(sub_dims))
         # End if
+        return retval
 
     def variable_list(self, std_vars=True, loop_vars=True, consts=True):
-        "Return an ordered list of the header's variables"
+        """Return an ordered list of the header's variables"""
         return self._variables.variable_list(recursive=False,
                                              std_vars=std_vars,
                                              loop_vars=loop_vars, consts=consts)
 
     def find_variable(self, std_name, use_local_name=False):
-        "Find a variable in this header's dictionary"
+        """Find a variable in this header's dictionary"""
         var = None
         if use_local_name:
             var = self._variables.find_local_name(std_name)
@@ -535,7 +548,7 @@ class MetadataTable(ParseSource):
             # End if
             for item in dim.split(':'):
                 try:
-                    int_item = int(item)
+                    _ = int(item)
                     dvar = CCPP_CONSTANT_VARS.find_local_name(item)
                     if dvar is not None:
                         # If this integer value is a CCPP standard int, use that
@@ -544,9 +557,9 @@ class MetadataTable(ParseSource):
                         # Some non-standard integer value
                         dname = item
                     # End if
-                except ValueError as ve:
+                except ValueError:
                     # Not an integer, try to find the standard_name
-                    if len(item) == 0:
+                    if not item:
                         # Naked colons are okay
                         dname = ''
                     else:
@@ -570,35 +583,36 @@ class MetadataTable(ParseSource):
                         # End if
                     # End if
                 # End try
-                if dname is None:
+                if dname is not None:
+                    std_dim.append(dname)
+                else:
                     std_dim = None
                     break
-                else: # Should be okay because if not, we broke out of loop
-                    std_dim.append(dname)
                 # End if
             # End for
-            if std_dim is None:
-                break
-            else: # Should be okay because if not, we broke out of loop
+            if std_dim is not None:
                 std_dims.append(':'.join(std_dim))
+            else:
+                break
             # End if
         # End for
 
         return std_dims
 
     def prop_list(self, prop_name):
-        "Return list of <prop_name> values for this scheme's arguments"
+        """Return list of <prop_name> values for this scheme's arguments"""
         return self._variables.prop_list(prop_name)
 
-    def variable_start(self, line):
+    @staticmethod
+    def variable_start(line, context):
         """Return variable name if <line> is an interface metadata table header
         """
         if line is None:
             match = None
         else:
-            match = MetadataTable.__var_start__.match(line)
+            match = MetadataTable.__var_start.match(line)
             if match is None:
-                match = MetadataTable.__vref_start__.match(line)
+                match = MetadataTable.__vref_start.match(line)
                 if match is not None:
                     name = match.group(1)+'('+match.group(2)+')'
                 # End if
@@ -609,7 +623,7 @@ class MetadataTable(ParseSource):
         if match is not None:
             if not MetadataTable.is_scalar_reference(name):
                 raise ParseSyntaxError("local variable name",
-                                       token=name, context=self._pobj)
+                                       token=name, context=context)
             # End if
         else:
             name = None
@@ -651,12 +665,7 @@ class MetadataTable(ParseSource):
         return '{} {} / {} {}'.format(pre, self.module, self.title, post)
 
     def __del__(self):
-        try:
-            del self._variables
-            super(MetadataTable, self).__del__()
-        except Exception as e:
-            pass # Python does not guarantee much about __del__ conditions
-        # End try
+        del self._variables
 
     def start_context(self, with_comma=True, nodir=True):
         'Return a context string for the beginning of the table'
@@ -680,13 +689,14 @@ class MetadataTable(ParseSource):
 
     @property
     def has_variables(self):
-        "Convenience function for finding empty headers"
+        """Convenience function for finding empty headers"""
         return self._variables
 
     @classmethod
     def is_blank(cls, line):
-        "Return True iff <line> is a valid config format blank or comment line"
-        return (len(line) == 0) or (cls.__blank_line__.match(line) is not None)
+        """Return True iff <line> is a valid config format blank or comment
+        line"""
+        return (len(line) == 0) or (cls.__blank_line.match(line) is not None)
 
     @classmethod
     def table_start(cls, line):
@@ -695,24 +705,25 @@ class MetadataTable(ParseSource):
         if (line is None) or cls.is_blank(line):
             match = None
         else:
-            match = MetadataTable.__header_start__.match(line)
+            match = MetadataTable.__header_start.match(line)
         # End if
         return match is not None
 
     @classmethod
     def is_scalar_reference(cls, test_val):
+        """Return True iff <test_val> refers to a Fortran scalar."""
         return check_fortran_ref(test_val, None, False) is not None
 
     @classmethod
     def parse_metadata_file(cls, filename, known_ddts, logger):
-        "Parse <filename> and return list of parsed metadata headers"
+        """Parse <filename> and return list of parsed metadata headers"""
         # Read all lines of the file at once
         meta_headers = list()
         header_titles = list() # Keep track of names in file
         with open(filename, 'r') as file:
             fin_lines = file.readlines()
-            for index in range(len(fin_lines)):
-                fin_lines[index] = fin_lines[index].rstrip('\n')
+            for index, fin_line in enumerate(fin_lines):
+                fin_lines[index] = fin_line.rstrip('\n')
             # End for
         # End with
         # Look for a header start
@@ -723,23 +734,69 @@ class MetadataTable(ParseSource):
                 new_header = MetadataTable(parse_object=parse_obj,
                                            known_ddts=known_ddts, logger=logger)
                 ntitle = new_header.title
-                if ntitle in header_titles:
-                    errmsg = 'Duplicate metadata header, {}, at {}:{}'
-                    ctx = curr_line_num + 1
-                    raise CCPPError(errmsg.format(ntitle, filename, ctx))
-                else:
+                if ntitle not in header_titles:
                     meta_headers.append(new_header)
                     header_titles.append(ntitle)
                     if new_header.header_type == 'ddt':
                         known_ddts.append(ntitle)
                     # End if
+                else:
+                    errmsg = 'Duplicate metadata header, {}, at {}:{}'
+                    ctx = curr_line_num + 1
+                    raise CCPPError(errmsg.format(ntitle, filename, ctx))
+                    # End if
                 # End if
                 curr_line, curr_line_num = parse_obj.curr_line()
-            else:
+            elif MetadataTable.is_blank(curr_line):
                 curr_line, curr_line_num = parse_obj.next_line()
+            else:
+                raise ParseSyntaxError('CCPP metadata line', token=curr_line,
+                                       context=parse_obj)
             # End if
         # End while
         return meta_headers
+
+    @classmethod
+    def find_scheme_names(cls, filename):
+        """Find and return a list of all the physics scheme names in
+        <filename>. A scheme is identified by its run method name.
+        """
+        scheme_names = list()
+        with open(filename, 'r') as file:
+            fin_lines = file.readlines()
+        # End with
+        num_lines = len(fin_lines)
+        context = ParseContext(linenum=1, filename=filename)
+        while context.line_num <= num_lines:
+            if MetadataTable.table_start(fin_lines[context.line_num - 1]):
+                found_start = False
+                while not found_start:
+                    line = fin_lines[context.line_num].strip()
+                    context.line_num += 1
+                    if line and (line[0] == '['):
+                        found_start = True
+                    elif line:
+                        props = MetadataTable.parse_config_line(line, context)
+                        for prop in props:
+                            # Look for name property
+                            key = prop[0].strip().lower()
+                            value = prop[1].strip()
+                            if key == 'name':
+                                if value[-4:] == '_run':
+                                    scheme_names.append(value[0:-4])
+                                # End if
+                            # End if
+                        # End for
+                    # End if
+                    if context.line_num > num_lines:
+                        found_start = True
+                    # End if
+                # End while
+            else:
+                context.line_num += 1
+            # End if
+        # End while
+        return scheme_names
 
 ########################################################################
 

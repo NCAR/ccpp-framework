@@ -86,7 +86,8 @@ class FortranWriter(object):
                     elif outstr[sptr] == '"':
                         in_double_char = True
                     elif outstr[sptr] == '!':
-                        # Commend in non-character context, suck in rest of line
+                        # Comment in non-character context, suck in rest of line
+                        spaces.append(sptr-1)
                         sptr = line_len - 1
                     elif outstr[sptr] == ' ':
                         # Non-quote spaces are where we can break
@@ -102,13 +103,18 @@ class FortranWriter(object):
                     best = self.find_best_break(commas)
                 # End if
                 if len(outstr) > best:
+                    # If next line is just comment, do not use continue
+                    # NB: Is this a Fortran issue or just a gfortran issue?
+                    line_continue = outstr[best+1:].lstrip()[0] != '!'
+                # End if
+                if line_continue:
                     fill = "{}&".format((self._line_fill-best)*' ')
                 else:
                     fill = ''
                 # End if
                 self._file.write("{}{}\n".format(outstr[0:best+1], fill))
                 statement = outstr[best+1:]
-                self.write(statement, indent_level, continue_line=True)
+                self.write(statement, indent_level, continue_line=line_continue)
             else:
                 self._file.write("{}\n".format(outstr))
             # End if

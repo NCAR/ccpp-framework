@@ -6,11 +6,8 @@ Parse a host-model registry XML file and return the captured variables.
 
 # Python library imports
 from __future__ import print_function
-import sys
 import os
 import os.path
-import subprocess
-import xml.etree.ElementTree as ET
 # CCPP framework imports
 from ccpp_suite    import COPYRIGHT, KINDS_MODULE, CCPP_STATE_MACH, API
 from metavar       import Var, VarDictionary, CCPP_CONSTANT_VARS
@@ -18,7 +15,7 @@ from fortran_tools import FortranWriter
 from parse_tools   import CCPPError, ParseSource, ParseContext
 
 ###############################################################################
-header = '''
+_HEADER = '''
 !>
 !! @brief Auto-generated cap for {host_model} calls to CCPP API
 !!
@@ -27,48 +24,48 @@ module {module}
 
 '''
 
-preamble='''
+_PREAMBLE = '''
    implicit none
    private
 
 '''
 
-subhead = '''
+_SUBHEAD = '''
    subroutine {host_model}_ccpp_physics_{stage}({api_vars})
 '''
 
-subfoot = '''
+_SUBFOOT = '''
    end subroutine {host_model}_ccpp_physics_{stage}
 '''
 
-footer = '''
+_FOOTER = '''
 end module {module}
 '''
 
-__api_src_name__ = "CCPP_API"
+_API_SRC_NAME = "CCPP_API"
 
-__api_source__ = ParseSource(__api_src_name__, "MODULE",
-                             ParseContext(filename="host_cap.F90"))
+_API_SOURCE = ParseSource(_API_SRC_NAME, "MODULE",
+                          ParseContext(filename="host_cap.F90"))
 
-__suite_name_var__ = Var({'local_name':'suite_name',
-                          'standard_name':'suite_name',
-                          'intent':'in', 'type':'character',
-                          'kind':'len=*', 'units':'', 'protected':'True',
-                          'dimensions':'()'}, __api_source__)
+_SUITE_NAME_VAR = Var({'local_name':'suite_name',
+                       'standard_name':'suite_name',
+                       'intent':'in', 'type':'character',
+                       'kind':'len=*', 'units':'', 'protected':'True',
+                       'dimensions':'()'}, _API_SOURCE)
 
-__suite_part_var__ = Var({'local_name':'suite_part',
-                          'standard_name':'suite_part',
-                          'intent':'in', 'type':'character',
-                          'kind':'len=*', 'units':'', 'protected':'True',
-                          'dimensions':'()'}, __api_source__)
+_SUITE_PART_VAR = Var({'local_name':'suite_part',
+                       'standard_name':'suite_part',
+                       'intent':'in', 'type':'character',
+                       'kind':'len=*', 'units':'', 'protected':'True',
+                       'dimensions':'()'}, _API_SOURCE)
 
 # Used to prevent loop substitution lookups
-__blank_dict__ = VarDictionary(__api_src_name__)
+_BLANK_DICT = VarDictionary(_API_SRC_NAME)
 
 ###############################################################################
 def suite_part_list(suite, stage):
 ###############################################################################
-    "Return a list of all the suite parts for this stage"
+    """Return a list of all the suite parts for this stage"""
     run_stage = stage == 'run'
     if run_stage:
         spart_list = list()
@@ -85,6 +82,7 @@ def suite_part_list(suite, stage):
 ###############################################################################
 def suite_part_call_list(host_model, suite_part, subst_loop_vars):
 ###############################################################################
+    """Return the <host_model> controlled call list for <suite_part>"""
     spart_args = suite_part.call_list.variable_list(loop_vars=subst_loop_vars)
     hmvars = list() # Host model to spart dummy args
     for sp_var in spart_args:
@@ -108,6 +106,7 @@ def suite_part_call_list(host_model, suite_part, subst_loop_vars):
 ###############################################################################
 def write_host_cap(host_model, api, output_dir, logger):
 ###############################################################################
+    """Write an API to allow <host_model> to call any configured CCPP suite"""
     module_name = "{}_ccpp_cap".format(host_model.name)
     cap_filename = os.path.join(output_dir, '{}.F90'.format(module_name))
     if logger is not None:
@@ -116,8 +115,8 @@ def write_host_cap(host_model, api, output_dir, logger):
     # End if
     with FortranWriter(cap_filename, 'w') as cap:
         cap.write(COPYRIGHT, 0)
-        cap.write(header.format(host_model=host_model.name,
-                                module=module_name), 0)
+        cap.write(_HEADER.format(host_model=host_model.name,
+                                 module=module_name), 0)
         cap.write('   use {kinds}'.format(kinds=KINDS_MODULE), 1)
 
         modules = host_model.variable_locations()
@@ -134,7 +133,7 @@ def write_host_cap(host_model, api, output_dir, logger):
             mspc = (mlen - len(mod[0]))*' '
             cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
         # End for
-        cap.write(preamble.format(host_model=host_model.name), 1)
+        cap.write(_PREAMBLE.format(host_model=host_model.name), 1)
         # CCPP_STATE_MACH.transitions represents the host CCPP interface
         for stage in CCPP_STATE_MACH.transitions():
             stmt = "public :: {host_model}_ccpp_physics_{stage}"
@@ -148,27 +147,27 @@ def write_host_cap(host_model, api, output_dir, logger):
                                                            stage))
             # Create part call lists
             # Look for any loop-variable mismatch
-            spart_list = suite_part_list(suite, stage)
-            for spart in spart_list:
-                spart_args = spart.call_list.variable_list()
-                hmvars = list() # Host model to spart dummy args
-                for sp_var in spart_args:
-                    stdname = sp_var.get_prop_value('standard_name')
-                    hvar = host_model.find_variable(stdname)
-                    if hvar is None:
-                        errmsg = 'No host model variable for {} in {}'
-                        raise CCPPError(errmsg.format(stdname, spart.name))
-                    # End if
-                # End for (loop over part variables)
-            # End for (loop of suite parts
+            for suite in api.suites:
+                spart_list = suite_part_list(suite, stage)
+                for spart in spart_list:
+                    spart_args = spart.call_list.variable_list()
+                    for sp_var in spart_args:
+                        stdname = sp_var.get_prop_value('standard_name')
+                        hvar = host_model.find_variable(stdname)
+                        if hvar is None:
+                            errmsg = 'No host model variable for {} in {}'
+                            raise CCPPError(errmsg.format(stdname, spart.name))
+                        # End if
+                    # End for (loop over part variables)
+                # End for (loop of suite parts)
+            # End for (loop over suites)
             run_stage = stage == 'run'
             # All interfaces need the suite name
-            apivars = [__suite_name_var__]
+            apivars = [_SUITE_NAME_VAR]
             if run_stage:
                 # Only the run phase needs a suite part name
-                apivars.append(__suite_part_var__)
+                apivars.append(_SUITE_PART_VAR)
             # End if
-            apinames = [x.get_prop_value('standard_name') for x in apivars]
             # Create a list of dummy arguments with correct intent settings
             callvars = host_model.call_list(stage) # Host interface dummy args
             hdvars = list()
@@ -181,13 +180,13 @@ def write_host_cap(host_model, api, output_dir, logger):
                     subst_dict['intent'] = 'inout'
                 # End if
                 hdvars.append(hvar.clone(subst_dict,
-                                         source_name=__api_src_name__))
+                                         source_name=_API_SRC_NAME))
             # End for
             lnames = [x.get_prop_value('local_name') for x in apivars + hdvars]
             api_vlist = ", ".join(lnames)
-            cap.write(subhead.format(api_vars=api_vlist,
-                                     host_model=host_model.name,
-                                     stage=stage), 1)
+            cap.write(_SUBHEAD.format(api_vars=api_vlist,
+                                      host_model=host_model.name,
+                                      stage=stage), 1)
             # Write out any suite part use statements
             for suite in api.suites:
                 mspc = (max_suite_len - len(suite.module))*' '
@@ -198,8 +197,8 @@ def write_host_cap(host_model, api, output_dir, logger):
                 # End for
             # End for
             # Write out any host model DDT input var use statements
-            host_model._ddt_lib.write_ddt_use_statements(hdvars, cap, 2,
-                                                         pad=max_suite_len)
+            host_model.ddt_lib.write_ddt_use_statements(hdvars, cap, 2,
+                                                        pad=max_suite_len)
 
             cap.write("", 1)
             # Write out dummy arguments
@@ -256,11 +255,11 @@ def write_host_cap(host_model, api, output_dir, logger):
             cap.write(emsg, 3)
             cap.write("{errflg} = 1".format(errflg=errflg_name), 3)
             cap.write("end if", 2)
-            cap.write(subfoot.format(host_model=host_model.name,
-                                     stage=stage), 1)
+            cap.write(_SUBFOOT.format(host_model=host_model.name,
+                                      stage=stage), 1)
         # End for
         api.write_inspection_routines(cap)
-        cap.write(footer.format(module=module_name), 0)
+        cap.write(_FOOTER.format(module=module_name), 0)
     # End with
     return cap_filename
 
@@ -268,8 +267,8 @@ def write_host_cap(host_model, api, output_dir, logger):
 
 if __name__ == "__main__":
     from parse_tools import init_log, set_log_to_null
-    logger = init_log('host_registry')
-    set_log_to_null(logger)
+    _LOGGER = init_log('host_registry')
+    set_log_to_null(_LOGGER)
     # Run doctest
     import doctest
     doctest.testmod()

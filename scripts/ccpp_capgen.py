@@ -19,28 +19,31 @@ import re
 # CCPP framework imports
 from parse_tools import init_log, set_log_level, context_string
 from parse_tools import CCPPError, ParseInternalError
-from file_utils import check_for_existing_file, check_for_writeable_file
+from file_utils import check_for_writeable_file
 from file_utils import create_file_list
 from fortran_tools import parse_fortran_file, FortranWriter
 from host_model import HostModel
 from host_cap import write_host_cap
-from ccpp_suite import API, Suite, COPYRIGHT, KINDS_MODULE, KINDS_FILENAME
+from ccpp_suite import API, COPYRIGHT, KINDS_MODULE, KINDS_FILENAME
 from metadata_table import MetadataTable
 
 ## Init this now so that all Exceptions can be trapped
-logger = init_log(os.path.basename(__file__))
+_LOGGER = init_log(os.path.basename(__file__))
+
+_EPILOG = '''
+'''
 
 ## Recognized Fortran filename extensions
-__fortran_filename_extensions = ['F90', 'f90', 'F', 'f']
+_FORTRAN_FILENAME_EXTENSIONS = ['F90', 'f90', 'F', 'f']
 
 ## Metadata table types which can have extra variables in Fortran
-__extra_variable_table_types = ['module', 'host', 'ddt']
+_EXTRA_VARIABLE_TABLE_TYPES = ['module', 'host', 'ddt']
 
 ## Metadata table types where order is significant
-__ordered_table_types = ['scheme']
+_ORDERED_TABLE_TYPES = ['scheme']
 
 ## header for kinds file
-kinds_header = '''
+_KINDS_HEADER = '''
 !>
 !! @brief Auto-generated kinds for CCPP
 !!
@@ -51,8 +54,9 @@ kinds_header = '''
 def parse_command_line(args, description):
 ###############################################################################
     "Create an ArgumentParser to parse and return command-line arguments"
+    format = argparse.RawTextHelpFormatter
     parser = argparse.ArgumentParser(description=description,
-                                     formatter_class=argparse.RawTextHelpFormatter)
+                                     formatter_class=format, epilog=_EPILOG)
 
     parser.add_argument("--host-files", metavar='<host files filename>',
                         type=str, required=True,
@@ -75,7 +79,7 @@ Filenames with a '.xml' suffix are treated as suite definition XML files
 Other filenames are treated as containing a list of .xml filenames""")
 
     parser.add_argument("--preproc-directives",
-                        metavar='VARDEF1[,VARDEF2 ...]', type=str, default=None,
+                        metavar='VARDEF1[,VARDEF2 ...]', type=str, default='',
                         help="Proprocessor directives used to correctly parse source files")
 
     parser.add_argument("--cap-pathlist", type=str,
@@ -107,7 +111,7 @@ Other filenames are treated as containing a list of .xml filenames""")
                         metavar='HTML | Latex | HTML,Latex', type=str,
                         help="Generate LaTeX and/or HTML documentation")
 
-    parser.add_argument("--verbose", action='count',
+    parser.add_argument("--verbose", action='count', default=0,
                         help="Log more activity, repeat for increased output")
     pargs = parser.parse_args(args)
     return pargs
@@ -122,7 +126,7 @@ def delete_pathnames_from_file(capfile, logger):
         for line in infile.readlines():
             path = line.strip()
             # Skip blank lines and lines which appear to start with a comment.
-            if (len(path) > 0) and (path[0] != '#') and (path[0] != '!'):
+            if path and (path[0] != '#') and (path[0] != '!'):
                 # Check for an absolute path
                 if not os.path.isabs(path):
                     # Assume relative pathnames are relative to pathsfile
@@ -165,7 +169,7 @@ def find_associated_fortran_file(filename):
     else:
         base = filename[0:lastdot+1]
     # End if
-    for extension in __fortran_filename_extensions:
+    for extension in _FORTRAN_FILENAME_EXTENSIONS:
         test_name = base + extension
         if os.path.exists(test_name):
             fort_filename = test_name
@@ -186,20 +190,20 @@ def create_kinds_file(kind_phys, output_dir, logger):
         msg = 'Writing {} to {}'
         logger.info(msg.format(KINDS_FILENAME, output_dir))
     # End if
-    with FortranWriter(kinds_filepath, "w") as kw:
-        kw.write(COPYRIGHT, 0)
-        kw.write(kinds_header, 0)
-        kw.write('module {}'.format(KINDS_MODULE), 0)
-        kw.write('', 0)
+    with FortranWriter(kinds_filepath, "w") as kindf:
+        kindf.write(COPYRIGHT, 0)
+        kindf.write(_KINDS_HEADER, 0)
+        kindf.write('module {}'.format(KINDS_MODULE), 0)
+        kindf.write('', 0)
         use_stmt = 'use ISO_FORTRAN_ENV, only: kind_phys => {}'
-        kw.write(use_stmt.format(kind_phys), 1)
-        kw.write('', 0)
-        kw.write('implicit none', 1)
-        kw.write('private', 1)
-        kw.write('', 0)
-        kw.write('public kind_phys', 1)
-        kw.write('', 0)
-        kw.write('end module {}'.format(KINDS_MODULE), 0)
+        kindf.write(use_stmt.format(kind_phys), 1)
+        kindf.write('', 0)
+        kindf.write('implicit none', 1)
+        kindf.write('private', 1)
+        kindf.write('', 0)
+        kindf.write('public kind_phys', 1)
+        kindf.write('', 0)
+        kindf.write('end module {}'.format(KINDS_MODULE), 0)
     # End with
     return kinds_filepath
 
@@ -282,8 +286,7 @@ def dims_comp(mheader, mvar, fvar, title, logger, case_sensitive=False):
     # End if
     if comp:
         # Now, compare the dims
-        for dim_ind in range(len(mdims)):
-            mdim = mdims[dim_ind]
+        for dim_ind, mdim in enumerate(mdims):
             if ':' in mdim:
                 mdim = ':'.join([x.strip() for x in mdim.split(':')])
             # End if
@@ -296,7 +299,7 @@ def dims_comp(mheader, mvar, fvar, title, logger, case_sensitive=False):
                 fdim = fdim.lower()
             # End if
             # Naked colon is okay for Fortran side
-            comp = (fdim == ':') or (mdim == fdim)
+            comp = fdim in (':', fdim)
             if not comp:
                 errmsg = 'Error: dim {} mismatch ({} != {}) in {}/{}{}'
                 stdname = mvar.get_prop_value('standard_name')
@@ -322,7 +325,7 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
     fht = fort_header.header_type
     if mht != fht:
         # Special case, host metadata can be in a Fortran module or scheme
-        if (mht != 'host') or ((fht != 'module') and (fht != 'scheme')):
+        if (mht != 'host') or (fht not in ('module', 'scheme')):
             errmsg = 'Metadata table type mismatch for {}, {} != {}{}'
             ctx = meta_header.start_context()
             raise CCPPError(errmsg.format(title, meta_header.header_type,
@@ -344,9 +347,9 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
         # End for
         list_match = mlen == flen
         if not list_match:
-            if fht in __extra_variable_table_types:
+            if fht in _EXTRA_VARIABLE_TABLE_TYPES:
                 if flen > mlen:
-                    list_match= True
+                    list_match = True
                 else:
                     etype = 'Fortran {}'.format(fht)
                 # End if
@@ -361,7 +364,6 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
             errors_found = add_error(errors_found, errmsg.format(title, etype))
         # End if
         for mind, mvar in enumerate(mlist):
-            std_name = mvar.get_prop_value('standard_name')
             lname = mvar.get_prop_value('local_name')
             arrayref = is_arrayspec(lname)
             fvar, find = find_var_in_list(lname, flist)
@@ -385,7 +387,7 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
                 continue
             # End if
             # Check order dependence
-            if fht in __ordered_table_types:
+            if fht in _ORDERED_TABLE_TYPES:
                 if find != mind:
                     errmsg = 'Out of order argument, {} in {}'
                     errors_found = add_error(errors_found,
@@ -434,11 +436,10 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
     NB: This routine destroys the list, <fort_headers> but returns the
        contents in an association dictionary on successful completion."""
     header_dict = {} # Associate a Fortran header for every metadata header
-    for mindex in range(len(meta_headers)):
-        mheader = meta_headers[mindex]
+    for mheader in meta_headers:
         fheader = None
         mtitle = mheader.title
-        for findex in range(len(fort_headers)):
+        for findex in range(len(fort_headers)): #pylint: disable=consider-using-enumerate
             if fort_headers[findex].title == mtitle:
                 fheader = fort_headers.pop(findex)
                 break
@@ -449,11 +450,11 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
             logger.debug("CCPP routines in {}:{}".format(ffilename, tlist))
             errmsg = "No matching Fortran routine found for {} in {}"
             raise CCPPError(errmsg.format(mtitle, ffilename))
-        else:
-            header_dict[mheader] = fheader
+        # End if
+        header_dict[mheader] = fheader
         # End if
     # End while
-    if len(fort_headers) > 0:
+    if fort_headers:
         errmsg = ""
         sep = ""
         for fheader in fort_headers:
@@ -469,7 +470,7 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
     # End if
     # We have a one-to-one set, compare headers
     errors_found = ''
-    for mheader in header_dict.keys():
+    for mheader in header_dict:
         fheader = header_dict[mheader]
         errors_found += compare_fheader_to_mheader(mheader, fheader, logger)
     # End for
@@ -480,8 +481,7 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
                                       's' if num_errors > 1 else '',
                                       mfilename, ffilename))
     # End if
-
-    return header_dict
+    # No return, an exception is raised on error
 
 ###############################################################################
 def parse_host_model_files(host_filenames, preproc_defs, host_name, logger):
@@ -498,14 +498,18 @@ def parse_host_model_files(host_filenames, preproc_defs, host_name, logger):
         mheaders = MetadataTable.parse_metadata_file(filename, known_ddts,
                                                      logger)
         fort_file = find_associated_fortran_file(filename)
-        fheaders = parse_fortran_file(fort_file, preproc_defs==preproc_defs,
+        fheaders = parse_fortran_file(fort_file, preproc_defs=preproc_defs,
                                       logger=logger)
         # Check Fortran against metadata (will raise an exception on error)
-        hdr_dict = check_fortran_against_metadata(mheaders, fheaders,
-                                                  filename, fort_file, logger)
+        check_fortran_against_metadata(mheaders, fheaders,
+                                       filename, fort_file, logger)
         # Check for duplicates, then add to dict
         for header in mheaders:
-            if header.title in meta_headers:
+            if header.title not in meta_headers:
+                meta_headers[header.title] = header
+                if header.header_type == 'ddt':
+                    known_ddts.append(header.title)
+            else:
                 errmsg = "Duplicate {typ}, {title}, found in {file}"
                 edict = {'title':header.title,
                          'file':filename,
@@ -517,15 +521,11 @@ def parse_host_model_files(host_filenames, preproc_defs, host_name, logger):
                     edict['ofile'] = ofile
                 # End if
                 raise CCPPError(errmsg.format(**edict))
-            else:
-                meta_headers[header.title] = header
-                if header.header_type == 'ddt':
-                    known_ddts.append(header.title)
                 # End if
             # End if
         # End for
     # End for
-    if len(host_name) == 0:
+    if not host_name:
         host_name = None
     # End if
     host_model = HostModel(meta_headers.values(), host_name, logger)
@@ -547,11 +547,11 @@ def parse_scheme_files(scheme_filenames, preproc_defs, logger):
         mheaders = MetadataTable.parse_metadata_file(filename, known_ddts,
                                                      logger)
         fort_file = find_associated_fortran_file(filename)
-        fheaders = parse_fortran_file(fort_file, preproc_defs==preproc_defs,
+        fheaders = parse_fortran_file(fort_file, preproc_defs=preproc_defs,
                                       logger=logger)
         # Check Fortran against metadata (will raise an exception on error)
-        hdr_dict = check_fortran_against_metadata(mheaders, fheaders,
-                                                  filename, fort_file, logger)
+        check_fortran_against_metadata(mheaders, fheaders,
+                                       filename, fort_file, logger)
         # Check for duplicates, then add to dict
         for header in mheaders:
             if header.title in header_dict:
@@ -566,16 +566,80 @@ def parse_scheme_files(scheme_filenames, preproc_defs, logger):
                     edict['ofile'] = ofile
                 # End if
                 raise CCPPError(errmsg.format(**edict))
-            else:
-                meta_headers.append(header)
-                header_dict[header.title] = header
-                if header.header_type == 'ddt':
-                    known_ddts.append(header.title)
-                # End if
+            # End if
+            meta_headers.append(header)
+            header_dict[header.title] = header
+            if header.header_type == 'ddt':
+                known_ddts.append(header.title)
             # End if
         # End for
     # End for
     return meta_headers
+
+###############################################################################
+def clean_capgen(cap_output_file, logger):
+###############################################################################
+    """Attempt to remove the files created by the last invocation of capgen"""
+    log_level = logger.getEffectiveLevel()
+    set_log_level(logger, logging.INFO)
+    if os.path.exists(cap_output_file):
+        logger.info("Cleaning capgen files from {}".format(cap_output_file))
+        delete_pathnames_from_file(cap_output_file, logger)
+    else:
+        emsg = "Unable to run clean, {} not found"
+        logger.error(emsg.format(cap_output_file))
+    # End if
+    set_log_level(logger, log_level)
+
+###############################################################################
+def capgen(host_files, scheme_files, suites, cap_output_file, preproc_defs,
+           gen_hostcap, gen_docfiles, output_dir, host_name, kind_phys, logger):
+###############################################################################
+    """Parse indicated host, scheme, and suite files.
+    Generate code to allow host model to run indicated CCPP suites."""
+    # We need to create three lists of files, hosts, schemes, and SDFs
+    host_files = create_file_list(host_files, ['meta'], 'Host', logger)
+    scheme_files = create_file_list(scheme_files, ['meta'], 'Scheme', logger)
+    sdfs = create_file_list(suites, ['xml'], 'Suite', logger)
+    check_for_writeable_file(cap_output_file, "Cap output file")
+    ##XXgoldyXX: Temporary warning
+    if gen_docfiles:
+        raise CCPPError("--generate-docfiles not yet supported")
+    # End if
+    # First up, handle the host files
+    host_model = parse_host_model_files(host_files, preproc_defs,
+                                        host_name, logger)
+    # Next, parse the scheme files
+    scheme_headers = parse_scheme_files(scheme_files, preproc_defs, logger)
+    ddts = host_model.ddt_lib.keys()
+    if ddts:
+        logger.debug("DDT definitions = {}".format(ddts))
+    # End if
+    plist = host_model.prop_list('local_name')
+    logger.debug("{} variables = {}".format(host_model.name, plist))
+    logger.debug("schemes = {}".format([x.title for x in scheme_headers]))
+    # Finally, we can get on with writing suites
+    ccpp_api = API(sdfs, host_model, scheme_headers, logger)
+    cap_filenames = ccpp_api.write(output_dir, logger)
+    if gen_hostcap:
+        # Create a cap file
+        hcap_filename = write_host_cap(host_model, ccpp_api,
+                                       output_dir, logger)
+    else:
+        hcap_filename = None
+    # End if
+    # Create the kinds file
+    kinds_file = create_kinds_file(kind_phys, output_dir, logger)
+    # Finally, create the list of generated files
+    with open(cap_output_file, 'w') as cap_names:
+        for path in cap_filenames:
+            cap_names.write('{}\n'.format(path))
+        # End for
+        if hcap_filename is not None:
+            cap_names.write('{}\n'.format(hcap_filename))
+        # End if
+        cap_names.write('{}\n'.format(kinds_file))
+    # End with
 
 ###############################################################################
 def _main_func():
@@ -585,9 +649,9 @@ def _main_func():
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
     if verbosity > 1:
-        set_log_level(logger, logging.DEBUG)
+        set_log_level(_LOGGER, logging.DEBUG)
     elif verbosity > 0:
-        set_log_level(logger, logging.INFO)
+        set_log_level(_LOGGER, logging.INFO)
     # End if
     # Make sure we know where output is going
     output_dir = os.path.abspath(args.output_root)
@@ -597,82 +661,33 @@ def _main_func():
         cap_output_file = os.path.abspath(os.path.join(output_dir,
                                                        args.cap_pathlist))
     # End if
+    ## A few sanity checks
+    ## Make sure output directory is legit
+    if os.path.exists(output_dir):
+        if not os.path.isdir(output_dir):
+            errmsg = "output-root, '{}', is not a directory"
+            raise CCPPError(errmsg.format(args.output_root))
+        # End if
+        if not os.access(output_dir, os.W_OK):
+            errmsg = "Cannot write files to output-root ({})"
+            raise CCPPError(errmsg.format(args.output_root))
+        # End if (output_dir is okay)
+    else:
+        # Try to create output_dir (let it crash if it fails)
+        os.makedirs(output_dir)
+    # End if
     # Make sure we can create output file lists
     if not os.path.isabs(cap_output_file):
         cap_output_file = os.path.normpath(os.path.join(output_dir,
                                                         cap_output_file))
     # End if
     if args.clean:
-        set_log_level(logger, logging.INFO)
-        if os.path.exists(cap_output_file):
-            logger.info("Cleaning capgen files from {}".format(cap_output_file))
-            delete_pathnames_from_file(cap_output_file, logger)
-        else:
-            emsg = "Unable to run clean, {} not found"
-            logger.error(emsg.format(cap_output_file))
-        # End if
+        clean_capgen(cap_output_file, _LOGGER)
     else:
-        # We need to create three lists of files, hosts, schemes, and SDFs
-        host_files = create_file_list(args.host_files, ['meta'], 'Host', logger)
-        scheme_files = create_file_list(args.scheme_files, ['meta'],
-                                        'Scheme', logger)
-        sdfs = create_file_list(args.suites, ['xml'], 'Suite', logger)
-        preproc_defs = args.preproc_directives
-        gen_hostcap = args.generate_host_cap
-        gen_docfiles = args.generate_docfiles
-        ## A few sanity checks
-        ## Make sure output directory is legit
-        if os.path.exists(output_dir):
-            if not os.path.isdir(output_dir):
-                errmsg = "output-root, '{}', is not a directory"
-                raise CCPPError(errmsg.format(args.output_root))
-            elif not os.access(output_dir, os.W_OK):
-                errmsg = "Cannot write files to output-root ({})"
-                raise CCPPError(errmsg.format(args.output_root))
-            # End if (output_dir is okay)
-        else:
-            # Try to create output_dir (let it crash if it fails)
-            os.makedirs(output_dir)
-        # End if
-        check_for_writeable_file(cap_output_file, "Cap output file")
-        ##XXgoldyXX: Temporary warning
-        if gen_docfiles:
-            raise CCPPError("--gen-docfiles not yet supported")
-        # End if
-        # First up, handle the host files
-        host_model = parse_host_model_files(host_files, preproc_defs,
-                                            args.host_name, logger)
-        # Next, parse the scheme files
-        scheme_headers = parse_scheme_files(scheme_files, preproc_defs, logger)
-        ddts = host_model._ddt_lib.keys()
-        if ddts:
-            logger.debug("DDT definitions = {}".format(ddts))
-        # End if
-        plist = host_model.prop_list('local_name')
-        logger.debug("{} variables = {}".format(host_model.name, plist))
-        logger.debug("schemes = {}".format([x.title for x in scheme_headers]))
-        # Finally, we can get on with writing suites
-        ccpp_api = API(sdfs, host_model, scheme_headers, logger)
-        cap_filenames = ccpp_api.write(output_dir, logger)
-        if gen_hostcap:
-            # Create a cap file
-            hcap_filename = write_host_cap(host_model, ccpp_api,
-                                           output_dir, logger)
-        else:
-            hcap_filename = None
-        # End if
-        # Create the kinds file
-        kinds_file = create_kinds_file(args.kind_phys, output_dir, logger)
-        # Finally, create the list of generated files
-        with open(cap_output_file, 'w') as cap_names:
-            for path in cap_filenames:
-                cap_names.write('{}\n'.format(path))
-            # End for
-            if hcap_filename is not None:
-                cap_names.write('{}\n'.format(hcap_filename))
-            # End if
-            cap_names.write('{}\n'.format(kinds_file))
-        # End with
+        capgen(args.host_files, args.scheme_files, args.suites, cap_output_file,
+               args.preproc_directives, args.generate_host_cap,
+               args.generate_docfiles, output_dir, args.host_name,
+               args.kind_phys, _LOGGER)
     # End if (clean)
 
 ###############################################################################
@@ -682,13 +697,13 @@ if __name__ == "__main__":
         _main_func()
         sys.exit(0)
     except ParseInternalError as pie:
-        logger.exception(pie)
+        _LOGGER.exception(pie)
         sys.exit(-1)
-    except CCPPError as ca:
-        if logger.getEffectiveLevel() <= logging.DEBUG:
-            logger.exception(ca)
+    except CCPPError as ccpp_err:
+        if _LOGGER.getEffectiveLevel() <= logging.DEBUG:
+            _LOGGER.exception(ccpp_err)
         else:
-            logger.error(ca)
+            _LOGGER.error(ccpp_err)
         # End if
         sys.exit(1)
     finally:
