@@ -21,6 +21,9 @@ method.add_argument('--config', '-c', action='store',
                     help='path to CCPP prebuild configuration file')
 method.add_argument('--metafile', '-m', action='store',
                     help='name of metadata file to convert (requires -o)')
+parser.add_argument('--basedir', '-b', action='store',
+                    help='relative path to CCPP directory',
+                    required=False, default='.')
 parser.add_argument('--outputdir', '-o', action='store',
                     help='directory where to write the html files',
                     required='--metafile' in sys.argv or '-m' in sys.argv)
@@ -38,10 +41,11 @@ def parse_arguments():
     args = parser.parse_args()
     config = args.config
     filename = args.metafile
+    basedir = args.basedir
     outdir = args.outputdir
-    return (config, filename, outdir)
+    return (config, filename, outdir, basedir)
 
-def import_config(configfile, logger):
+def import_config(configfile, basedir, logger):
     """Import the configuration from a given configuration file"""
 
     if not os.path.isfile(configfile):
@@ -61,7 +65,7 @@ def import_config(configfile, logger):
     # Add model-independent, CCPP-internal variable definition files
     config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
     # Output directory for converted metadata tables
-    config['metadata_html_output_dir'] = ccpp_prebuild_config.METADATA_HTML_OUTPUT_DIR
+    config['metadata_html_output_dir'] = ccpp_prebuild_config.METADATA_HTML_OUTPUT_DIR.format(build_dir=basedir)
 
     return config
 
@@ -102,9 +106,9 @@ def main():
     logger = init_log('metadata2html')
     set_log_level(logger, logging.INFO)
     # Convert metadata file
-    (configfile, filename, outdir) = parse_arguments()
+    (configfile, filename, outdir, basedir) = parse_arguments()
     if configfile:
-        config = import_config(configfile, logger)
+        config = import_config(configfile, basedir, logger)
         filenames = get_metadata_files_from_config(config, logger)
         outdir = get_output_directory_from_config(config, logger)
         for filename in filenames:
