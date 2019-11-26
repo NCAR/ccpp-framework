@@ -30,7 +30,7 @@ parser.add_argument('--clean',      action='store_true', help='remove files crea
 parser.add_argument('--debug',      action='store_true', help='enable debugging output', default=False)
 parser.add_argument('--static',     action='store_true', help='enable a static build for a given suite definition file', default=False)
 parser.add_argument('--suites',     action='store', help='suite definition files to use (comma-separated, for static build only, without path)', default='')
-parser.add_argument('--builddir',   action='store', help='relative path to CCPP build directory', required=False, default='.')
+parser.add_argument('--builddir',   action='store', help='relative path to CCPP build directory', required=False, default=None)
 
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
@@ -70,6 +70,13 @@ def import_config(configfile, builddir):
     configmodule = os.path.splitext(os.path.basename(configfile))[0]
     sys.path.append(configpath)
     ccpp_prebuild_config = importlib.import_module(configmodule)
+
+    # If the build directory for running ccpp_prebuild.py is not
+    # specified as command line argument, use value from config
+    if not builddir:
+        builddir = os.path.join(BASEDIR, ccpp_prebuild_config.DEFAULT_BUILD_DIR)
+        logging.info('Build directory not specified on command line, ' + \
+                     'use "{}" from CCPP prebuild config'.format(ccpp_prebuild_config.DEFAULT_BUILD_DIR))
 
     # Definitions in host-model dependent CCPP prebuild config script
     config['variable_definition_files'] = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
