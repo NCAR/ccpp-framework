@@ -21,9 +21,6 @@ method.add_argument('--config', '-c', action='store',
                     help='path to CCPP prebuild configuration file')
 method.add_argument('--metafile', '-m', action='store',
                     help='name of metadata file to convert (requires -o)')
-parser.add_argument('--basedir', '-b', action='store',
-                    help='relative path to CCPP directory',
-                    required=False, default='.')
 parser.add_argument('--outputdir', '-o', action='store',
                     help='directory where to write the html files',
                     required='--metafile' in sys.argv or '-m' in sys.argv)
@@ -41,11 +38,10 @@ def parse_arguments():
     args = parser.parse_args()
     config = args.config
     filename = args.metafile
-    basedir = args.basedir
     outdir = args.outputdir
-    return (config, filename, outdir, basedir)
+    return (config, filename, outdir)
 
-def import_config(configfile, basedir, logger):
+def import_config(configfile, logger):
     """Import the configuration from a given configuration file"""
 
     if not os.path.isfile(configfile):
@@ -57,6 +53,12 @@ def import_config(configfile, basedir, logger):
     configmodule = os.path.splitext(os.path.basename(configfile))[0]
     sys.path.append(configpath)
     ccpp_prebuild_config = importlib.import_module(configmodule)
+
+    # Get the base directory for running metadata2html.py from
+    # the default build directory value in the CCPP prebuild config
+    basedir = os.path.join(os.getcwd(), ccpp_prebuild_config.DEFAULT_BUILD_DIR)
+    logger.info('Relative path to CCPP directory from  CCPP prebuild config: {}'.format(
+                                                ccpp_prebuild_config.DEFAULT_BUILD_DIR))
 
     config = {}
     # Definitions in host-model dependent CCPP prebuild config script
@@ -106,9 +108,9 @@ def main():
     logger = init_log('metadata2html')
     set_log_level(logger, logging.INFO)
     # Convert metadata file
-    (configfile, filename, outdir, basedir) = parse_arguments()
+    (configfile, filename, outdir) = parse_arguments()
     if configfile:
-        config = import_config(configfile, basedir, logger)
+        config = import_config(configfile, logger)
         filenames = get_metadata_files_from_config(config, logger)
         outdir = get_output_directory_from_config(config, logger)
         for filename in filenames:
