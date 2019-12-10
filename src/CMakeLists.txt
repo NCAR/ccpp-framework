@@ -6,29 +6,40 @@ endif (NOT PROJECT)
 
 #------------------------------------------------------------------------------
 # Set the sources
-set(SOURCES_C
-    ccpp_dl.h
-    ccpp_dl.c
-    ccpp_fields_idx.h
-    ccpp_fields_idx.c
-    ccpp_utils.h
-    ccpp_utils.c
-    ccpp_xml.h
-    ccpp_xml.c
-)
-set(SOURCES_F90
-    ccpp.F90
-    ccpp_dl.F90
-    ccpp_errors.F90
-    ccpp_fcall.F90
-    ccpp_fields.F90
-    ccpp_strings.F90
-    ccpp_scheme.F90
-    ccpp_suite.F90
-    ccpp_types.F90
-    ccpp_xml.F90
-    ccpp_api.F90
-)
+if(STATIC)
+  set(SOURCES_C)
+  set(SOURCES_F90
+      ccpp_types.F90
+      ccpp_errors.F90
+      ccpp.F90
+      ccpp_api.F90
+  )
+else(STATIC)
+  set(SOURCES_C
+      ccpp_dl.h
+      ccpp_dl.c
+      ccpp_fields_idx.h
+      ccpp_fields_idx.c
+      ccpp_utils.h
+      ccpp_utils.c
+      ccpp_xml.h
+      ccpp_xml.c
+  )
+  set(SOURCES_F90
+      ccpp.F90
+      ccpp_dl.F90
+      ccpp_errors.F90
+      ccpp_fcall.F90
+      ccpp_fields.F90
+      ccpp_strings.F90
+      ccpp_scheme.F90
+      ccpp_suite.F90
+      ccpp_types.F90
+      ccpp_xml.F90
+      ccpp_api.F90
+  )
+endif(STATIC)
+
 # Generate list of Fortran modules from defined sources
 foreach(source_f90 ${SOURCES_F90})
     string(REGEX REPLACE ".F90" ".mod" module_f90 ${source_f90})
@@ -42,7 +53,13 @@ if(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
     if (STATIC)
         list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.a")
     else (STATIC)
-        list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.so")
+        if(APPLE)
+            list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.dylib")
+        elseif(UNIX)
+            list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.so")
+        else (APPLE)
+            message (FATAL_ERROR "Unsupported platform, only Linux and MacOSX are supported at this time.")
+        endif(APPLE)
     endif (STATIC)
 else(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
     find_package(LibXml2 REQUIRED)
@@ -105,8 +122,10 @@ set(${PACKAGE}_LIB_DIRS
      CACHE FILEPATH "${PACKAGE} library directories")
 
 #------------------------------------------------------------------------------
-# Add the tests
+# Add the tests (designed for DYNAMIC build only)
+if(!STATIC)
 add_subdirectory(tests)
+endif(!STATIC)
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
