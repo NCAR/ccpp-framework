@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 import copy
+import logging
 import os
 import sys
 import getopt
@@ -184,6 +185,7 @@ class Var(object):
         function_name = '{0}__to__{1}'.format(string_to_python_identifier(self.units), string_to_python_identifier(units))
         try:
             function = getattr(unit_conversion, function_name)
+            logging.info('Automatic unit conversion from {0} to {1} for {2} before entering {3}'.format(self.units, units, self.standard_name, self.container))
         except AttributeError:
             raise Exception('Error, automatic unit conversion from {0} to {1} for {2} in {3} not implemented'.format(self.units, units, self.standard_name, self.container))
         conversion = function()
@@ -194,6 +196,7 @@ class Var(object):
         function_name = '{1}__to__{0}'.format(string_to_python_identifier(self.units), string_to_python_identifier(units))
         try:
             function = getattr(unit_conversion, function_name)
+            logging.info('Automatic unit conversion from {0} to {1} for {2} after returning from {3}'.format(self.units, units, self.standard_name, self.container))
         except AttributeError:
             raise Exception('Error, automatic unit conversion from {1} to {0} for {2} in {3} not implemented'.format(self.units, units, self.standard_name, self.container))
         conversion = function()

@@ -17,6 +17,10 @@
 !
 module ccpp
 
+#ifdef STATIC
+    use            :: ccpp_types,                                      &
+                      only: ccpp_t
+#else
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_ptr
     use            :: ccpp_types,                                      &
@@ -25,12 +29,14 @@ module ccpp
                       only: ccpp_suite_init, ccpp_suite_finalize
     use            :: ccpp_fields,                                     &
                       only: ccpp_fields_init, ccpp_fields_finalize
+#endif
     use            :: ccpp_errors,                                     &
                       only: ccpp_error, ccpp_debug
 
     implicit none
 
     private
+
     public :: ccpp_init,                                               &
               ccpp_finalize,                                           &
               ccpp_initialized
