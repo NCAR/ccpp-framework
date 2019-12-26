@@ -12,11 +12,11 @@ set(CMAKE_MACOSX_RPATH 1)
 
 if(POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
-    project(ccpp VERSION 3.0.0)
+    project(ccpp VERSION 4.0.0)
 else(POLICY CMP0048)
     project(ccpp)
-    set(PROJECT_VERSION 3.0.0)
-    set(PROJECT_VERSION_MAJOR 3)
+    set(PROJECT_VERSION 4.0.0)
+    set(PROJECT_VERSION_MAJOR 4)
     set(PROJECT_VERSION_MINOR 0)
     set(PROJECT_VERSION_PATCH 0)
 endif(POLICY CMP0048)
@@ -32,7 +32,7 @@ enable_language(Fortran)
 #------------------------------------------------------------------------------
 # Set package definitions
 set(PACKAGE "ccpp-framework")
-set(AUTHORS "Dom Heinzeller" "Timothy Brown" "David Gill")
+set(AUTHORS "Dom Heinzeller" "Grant J. Firl" "Timothy Brown" "David Gill")
 string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
