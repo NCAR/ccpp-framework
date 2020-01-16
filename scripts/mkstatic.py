@@ -37,7 +37,7 @@ def extract_parents_and_indices_from_local_name(local_name):
     # First, extract all variables/indices in parentheses (used for subsetting)
     indices = []
     while '(' in local_name:
-        for i in xrange(len(local_name)):
+        for i in range(len(local_name)):
             if local_name[i] == '(':
                 last_open = i
             elif local_name[i] == ')':
@@ -106,7 +106,7 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
     module_use = []
     var_defs = []
     local_kind_and_type_vars = []
-    for standard_name in variable_dictionary.keys():
+    for standard_name in list(variable_dictionary.keys()):
         # Add variable local name and variable definitions
         arguments.append(variable_dictionary[standard_name].local_name)
         var_defs.append(variable_dictionary[standard_name].print_def_intent())
@@ -115,7 +115,7 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
                 and not variable_dictionary[standard_name].type == STANDARD_CHARACTER_TYPE:
             kind_var_standard_name = variable_dictionary[standard_name].kind
             if not kind_var_standard_name in local_kind_and_type_vars:
-                if not kind_var_standard_name in metadata_define.keys():
+                if not kind_var_standard_name in list(metadata_define.keys()):
                     raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
                 kind_var = metadata_define[kind_var_standard_name][0]
                 module_use.append(kind_var.print_module_use())
@@ -123,7 +123,7 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
         elif not variable_dictionary[standard_name].type in STANDARD_VARIABLE_TYPES:
             type_var_standard_name = variable_dictionary[standard_name].type
             if not type_var_standard_name in local_kind_and_type_vars:
-                if not type_var_standard_name in metadata_define.keys():
+                if not type_var_standard_name in list(metadata_define.keys()):
                     raise Exception("Type {type} not defined by host model".format(type=type_var_standard_name))
                 type_var = metadata_define[type_var_standard_name][0]
                 module_use.append(type_var.print_module_use())
@@ -203,7 +203,7 @@ end module {module}
         self._subroutines = None
         self._suites      = []
         self._directory   = '.'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     @property
@@ -257,7 +257,7 @@ end module {module}
         parent_standard_names = []
         for ccpp_stage in CCPP_STAGES:
             for suite in suites:
-                for parent_standard_name in suite.parents[ccpp_stage].keys():
+                for parent_standard_name in list(suite.parents[ccpp_stage].keys()):
                     if not parent_standard_name in parent_standard_names:
                         parent_var = suite.parents[ccpp_stage][parent_standard_name]
                         # Identify which variable is of type CCPP_TYPE (need local name)
@@ -434,7 +434,7 @@ end module {module}
         self._subroutines = None
         self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
         self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     @property
@@ -512,10 +512,10 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the suite.'''
-        print "ALL SUBROUTINES:"
-        print self._all_subroutines_called
-        print "STRUCTURED:"
-        print self._groups
+        print("ALL SUBROUTINES:")
+        print(self._all_subroutines_called)
+        print("STRUCTURED:")
+        print(self._groups)
         for group in self._groups:
             group.print_debug()
 
@@ -584,7 +584,7 @@ end module {module}
             for subroutine in group.subroutines:
                 module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=subroutine)
             for ccpp_stage in CCPP_STAGES:
-                for parent_standard_name in group.parents[ccpp_stage].keys():
+                for parent_standard_name in list(group.parents[ccpp_stage].keys()):
                     if parent_standard_name in self.parents[ccpp_stage]:
                         if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and \
                             not group.parents[ccpp_stage][parent_standard_name].intent == 'in':
@@ -743,13 +743,13 @@ end module {module}
         self._pset = None
         self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
         self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, metadata_request, metadata_define, arguments):
         # Create an inverse lookup table of local variable names defined (by the host model) and standard names
         standard_name_by_local_name_define = {}
-        for standard_name in metadata_define.keys():
+        for standard_name in list(metadata_define.keys()):
             standard_name_by_local_name_define[metadata_define[standard_name][0].local_name] = standard_name
 
         # First get target names of standard CCPP variables for subcycling and error handling
@@ -805,8 +805,8 @@ end module {module}
                         for var in metadata_request[var_standard_name]:
                             if container == var.container:
                                 break
-                        if not var_standard_name in local_vars.keys():
-                            if not var_standard_name in metadata_define.keys():
+                        if not var_standard_name in list(local_vars.keys()):
+                            if not var_standard_name in list(metadata_define.keys()):
                                 raise Exception('Variable {standard_name} not defined in host model metadata'.format(
                                                                                     standard_name=var_standard_name))
                             var_local_name_define = metadata_define[var_standard_name][0].local_name
@@ -827,13 +827,13 @@ end module {module}
                             for local_name_define in [parent_local_name_define] + parent_local_names_define_indices:
                                 parent_standard_name = None
                                 parent_var = None
-                                for i in xrange(FORTRAN_ARRAY_MAX_DIMS+1):
+                                for i in range(FORTRAN_ARRAY_MAX_DIMS+1):
                                     if i==0:
                                         dims_string = ''
                                     else:
                                         # (:) for i==1, (:,:) for i==2, ...
-                                        dims_string = '(' + ','.join([':' for j in xrange(i)]) + ')'
-                                    if local_name_define+dims_string in standard_name_by_local_name_define.keys():
+                                        dims_string = '(' + ','.join([':' for j in range(i)]) + ')'
+                                    if local_name_define+dims_string in list(standard_name_by_local_name_define.keys()):
                                         parent_standard_name = standard_name_by_local_name_define[local_name_define+dims_string]
                                         parent_var = metadata_define[parent_standard_name][0]
                                         break
@@ -850,7 +850,7 @@ end module {module}
                                 # Add variable to dictionary of parent variables, if not already there.
                                 # Set or update intent, depending on whether the variable is an index
                                 # in var_local_name_define or the actual parent of that variable.
-                                if not parent_standard_name in self.parents[ccpp_stage].keys():
+                                if not parent_standard_name in list(self.parents[ccpp_stage].keys()):
                                     self.parents[ccpp_stage][parent_standard_name] = copy.deepcopy(parent_var)
                                     # Copy the intent of the actual variable being processed
                                     if local_name_define == parent_local_name_define:
@@ -891,7 +891,7 @@ end module {module}
                         # Add necessary actions before/after while populating the subroutine's argument list
                         kind_string = '_' + local_vars[var_standard_name]['kind'] if local_vars[var_standard_name]['kind'] else ''
                         if var.actions['out']:
-                            if local_vars[var_standard_name]['name'] in tmpvars.keys():
+                            if local_vars[var_standard_name]['name'] in list(tmpvars.keys()):
                                 # If the variable already has a local variable (tmpvar), reuse it
                                 tmpvar = tmpvars[local_vars[var_standard_name]['name']]
                             else:
@@ -964,7 +964,7 @@ end module {module}
 
             # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
-                                                           self.parents[ccpp_stage], metadata_define, tmpvars.values())
+                                                           self.parents[ccpp_stage], metadata_define, list(tmpvars.values()))
             sub_argument_list = create_argument_list_wrapped(self.arguments[ccpp_stage])
 
             subroutine = self._suite + '_' + self._name + '_' + ccpp_stage + '_cap'
@@ -1028,7 +1028,7 @@ end module {module}
 
     @init.setter
     def init(self, value):
-        if not type(value) == types.BooleanType:
+        if not type(value) == bool:
             raise Exception("Invalid type {0} of argument value, boolean expected".format(type(value)))
         self._init = value
 
@@ -1039,7 +1039,7 @@ end module {module}
 
     @finalize.setter
     def finalize(self, value):
-        if not type(value) == types.BooleanType:
+        if not type(value) == bool:
             raise Exception("Invalid type {0} of argument value, boolean expected".format(type(value)))
         self._finalize = value
 
@@ -1065,7 +1065,7 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the group.'''
-        print self._name
+        print(self._name)
         for subcycle in self._subcycles:
             subcycle.print_debug()
 
@@ -1102,7 +1102,7 @@ class Subcycle(object):
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
         self._schemes = None
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     @property
@@ -1129,9 +1129,9 @@ class Subcycle(object):
 
     def print_debug(self):
         '''Basic debugging output about the subcycle.'''
-        print self._loop
+        print(self._loop)
         for scheme in self._schemes:
-            print scheme
+            print(scheme)
 
 
 ###############################################################################

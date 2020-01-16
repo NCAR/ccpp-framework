@@ -83,7 +83,7 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
     shading = { 0 : 'darkgray', 1 : 'lightgray' }
     success = True
 
-    var_names = sorted(list(set(metadata_define.keys() + metadata_request.keys())))
+    var_names = sorted(list(set(list(metadata_define.keys()) + list(metadata_request.keys()))))
 
     latex = '''\\documentclass[12pt,letterpaper,oneside,landscape]{{scrbook}}
 
@@ -99,7 +99,7 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
 \\begin{{longtable}}{{l}}'''.format(model=model)
 
     for var_name in var_names:
-        if var_name in metadata_define.keys():
+        if var_name in list(metadata_define.keys()):
             var = metadata_define[var_name][0]
         else:
             var = metadata_request[var_name][0]
@@ -115,7 +115,7 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
 '''
 
     for var_name in var_names:
-        if var_name in metadata_define.keys():
+        if var_name in list(metadata_define.keys()):
             var = metadata_define[var_name][0]
             target = escape_tex(decode_container(var.container))
             local_name = escape_tex(var.local_name)
@@ -123,16 +123,16 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
             var = metadata_request[var_name][0]
             target = 'MISSING'
             local_name = 'MISSING'
-        if var_name in metadata_request.keys():
+        if var_name in list(metadata_request.keys()):
             requested_list = [ escape_tex(decode_container(v.container)) for v in metadata_request[var_name] ]
             # for the purpose of the table, just output the name of the subroutine
-            for i in xrange(len(requested_list)):
+            for i in range(len(requested_list)):
                 entry = requested_list[i]
                 requested_list[i] = entry[entry.find('SUBROUTINE')+len('SUBROUTINE')+1:]
             requested = '\\newline '.join(sorted(requested_list))
         else:
             requested = 'NOT REQUESTED'
-        if var_name in pset_request.keys():
+        if var_name in list(pset_request.keys()):
             pset_list = [ escape_tex(c) for c in pset_request[var_name] ]
             pset = '\\newline '.join(sorted(pset_list))
         else:

@@ -4,7 +4,7 @@
 #
 
 # Python library imports
-from __future__ import print_function
+
 import re
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
@@ -473,7 +473,7 @@ class Var(object):
         # End for
         # Make sure all the variable values are valid
         try:
-            for prop in self._prop_dict.keys():
+            for prop in list(self._prop_dict.keys()):
                 check = Var.get_prop(prop).valid_value(self._prop_dict[prop],
                                                        error=True)
             # End for
@@ -703,9 +703,9 @@ class Var(object):
         dimensions    = {dimensions} *
         kind          = {kind} *
 '''
-        if 'intent' in self.__spec_propdict.keys():
+        if 'intent' in list(self.__spec_propdict.keys()):
             str += '        intent        = {intent}\n'
-        if 'optional' in self.__spec_propdict.keys():
+        if 'optional' in list(self.__spec_propdict.keys()):
             str += '        optional      = {optional}\n'
         if self._context is not None:
             str += '        context       = {}'.format(self._context)
@@ -900,12 +900,12 @@ class VarDictionary(OrderedDict):
                 self.add_variable(var)
             # End for
         elif isinstance(variables, VarDictionary):
-            for stdname in variables.keys():
+            for stdname in list(variables.keys()):
                 self[stdname] = variables[stdname]
             # End for
         elif isinstance(variables, dict):
             # variables will not be in 'order', but we accept them anyway
-            for stdname in variables.keys():
+            for stdname in list(variables.keys()):
                 self[stdname] = variables[stdname]
             # End for
         elif variables is not None:
@@ -951,7 +951,7 @@ class VarDictionary(OrderedDict):
         else:
             vlist = list()
         # End if
-        for sn in self.keys():
+        for sn in list(self.keys()):
             var = self[sn]
             if self.include_var_in_list(var, std_vars=std_vars,
                                         loop_vars=loop_vars, consts=consts):
@@ -1017,7 +1017,7 @@ class VarDictionary(OrderedDict):
         std_vars are variables which are neither constants nor loop variables.
         '''
         plist = list()
-        for standard_name in self.keys():
+        for standard_name in list(self.keys()):
             var = self.find_variable(standard_name, any_scope=False, loop_subst=False)
             if self.include_var_in_list(var, std_vars=std_vars, loop_vars=loop_vars, consts=consts):
                 plist.append(self[standard_name].get_prop_value(prop_name))
@@ -1028,7 +1028,7 @@ class VarDictionary(OrderedDict):
     def declare_variables(self, outfile, indent,
                           std_vars=True, loop_vars=True, consts=True):
         "Write out the declarations for this dictionary's variables"
-        for standard_name in self.keys():
+        for standard_name in list(self.keys()):
             var = self.find_variable(standard_name, any_scope=False, loop_subst=False)
             if self.include_var_in_list(var, std_vars=std_vars, loop_vars=loop_vars, consts=consts):
                 self[standard_name].write_def(outfile, indent, self)
@@ -1042,7 +1042,7 @@ class VarDictionary(OrderedDict):
         # End for
 
     def __str__(self):
-        return "VarDictionary({}, {})".format(self.name, self.keys())
+        return "VarDictionary({}, {})".format(self.name, list(self.keys()))
 
     def __repr__(self):
         srepr = super(VarDictionary, self).__repr__()
@@ -1056,7 +1056,7 @@ class VarDictionary(OrderedDict):
 
     def __del__(self):
         try:
-            for key in self.keys():
+            for key in list(self.keys()):
                 del self[key]
             # End for
         except Exception as e:

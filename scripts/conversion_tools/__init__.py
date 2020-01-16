@@ -5,4 +5,4 @@ __all__ = [
     'units',
     ]
 
-import unit_conversion
+from . import unit_conversion

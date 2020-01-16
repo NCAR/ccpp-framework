@@ -7,5 +7,5 @@ __all__ = [
     'parse_fortran_var_decl'
 ]
 
-from parse_fortran_file import parse_fortran_file
-from parse_fortran      import parse_fortran_var_decl, fortran_type_definition
+from .parse_fortran_file import parse_fortran_file
+from .parse_fortran      import parse_fortran_var_decl, fortran_type_definition

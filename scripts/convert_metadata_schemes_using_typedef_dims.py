@@ -52,7 +52,7 @@ def parse_metadata_tables_typedefs(model):
         for metadata_header in metadata_headers:
             for var in metadata_header.variable_list():
                 standard_name = var.get_prop_value('standard_name')
-                if standard_name in dimensions.keys():
+                if standard_name in list(dimensions.keys()):
                     raise ValueError("Duplicate standard name {} in type/variable definition metadata tables".format(standard_name))
                 dimensions[standard_name] = var.get_prop_value('dimensions')
     #
@@ -109,7 +109,7 @@ class MetadataEntry(OrderedDict):
 
     def write(self, mdfile):
         mdfile.write('[{}]\n'.format(self.local_name))
-        for key in self.keys():
+        for key in list(self.keys()):
             mdfile.write("  {} = {}\n".format(key, self[key]))
         # End for
 
@@ -139,7 +139,7 @@ class MetadataTable(OrderedDict):
     def has(self, varname):
         hasvar = False
         vartest = varname.lower()
-        for name in self.keys():
+        for name in list(self.keys()):
             if vartest == name.lower():
                 hasvar = True
                 break
@@ -150,7 +150,7 @@ class MetadataTable(OrderedDict):
     def get(self, varname):
         var = None
         vartest = varname.lower()
-        for name in self.keys():
+        for name in list(self.keys()):
             if vartest == name.lower():
                 var = self[name]
                 break
@@ -162,7 +162,7 @@ class MetadataTable(OrderedDict):
         mdfile.write('[ccpp-arg-table]\n')
         mdfile.write('  name = {}\n'.format(self._name))
         mdfile.write('  type = {}\n'.format(self._type))
-        for key in self.keys():
+        for key in list(self.keys()):
             self[key].write(mdfile)
 
 ########################################################################
@@ -174,7 +174,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
     if logger:
         logger.info("Converting file {} ...".format(filename_in))
     else:
-        print "Converting file {} ...".format(filename_in)
+        print("Converting file {} ...".format(filename_in))
     current_module = None
     # First, suck in the old file
     do_convert = True
@@ -188,7 +188,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
     # Read all lines of the file at once
     with open(filename_in, 'r') as file:
         fin_lines = file.readlines()
-        for index in xrange(len(fin_lines)):
+        for index in range(len(fin_lines)):
             fin_lines[index] = fin_lines[index].rstrip('\n')
         # End for
     # End with
@@ -236,7 +236,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
                     file.write('!! \htmlinclude {}.html\n'.format(table_name))
                     #
                     table_header = [x.strip() for x in words[1:-1]]
-                    for ind in xrange(len(table_header)):
+                    for ind in range(len(table_header)):
                         header_locs[table_header[ind]] = ind
                     # End for
                     # Find the local_name index (exception if not found)
@@ -273,7 +273,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
                         mdobj = MetadataEntry(var_name)
                         mdtable[var_name] = mdobj
                         # Now, create the rest of the entries
-                        for ind in xrange(len(entries)):
+                        for ind in range(len(entries)):
                             attr_name = table_header[ind]
                             entry = entries[ind]
                             if attr_name == 'local_name':
@@ -283,7 +283,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
                                 attr_name = 'dimensions'
                                 rank = int(entry)
                                 # Search for standard_name key in typedef_dimensions dictionary
-                                if not standard_name in typedef_dimensions.keys():
+                                if not standard_name in list(typedef_dimensions.keys()):
                                     raise ValueError("{} does not have an entry in the in typedef_dimensions dictionary".format(standard_name))
                                 if not rank == len(typedef_dimensions[standard_name]):
                                     raise ValueError("Rank of {} in {} does not match with dimension information in typedef_dimensions".format(
@@ -342,7 +342,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
         spacer = ""
         # First pass: write type definitions,
         # second pass: write module table
-        for count in xrange(2):
+        for count in range(2):
             for table in mdconfig:
                 if (count == 0 and not table.type == 'ddt') or \
                    (count == 1 and table.type == 'ddt'):
@@ -360,9 +360,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, typedef_dimen
 
 def usage(cmd):
     print("Usage:")
-    print("{} <source_file> <target_file> <model>".format(cmd))
+    print(("{} <source_file> <target_file> <model>".format(cmd)))
     print("")
-    print("<model> can be one of '{}'".format(METADATA_TYPEDEFS.keys()))
+    print(("<model> can be one of '{}'".format(list(METADATA_TYPEDEFS.keys()))))
     print("")
     print("Translate the metadata in <source_file> into a new file")
     raise Exception
@@ -383,7 +383,7 @@ if __name__ == "__main__":
         #logger = None
         tbase = os.path.basename(sys.argv[2])
         tdir = os.path.dirname(sys.argv[2])
-        if not sys.argv[3] in METADATA_TYPEDEFS.keys():
+        if not sys.argv[3] in list(METADATA_TYPEDEFS.keys()):
             usage(sys.argv[0])
         mdfilename = "{}.meta".format('.'.join(tbase.split('.')[:-1]))
         dest_mdfile = os.path.join(tdir, mdfilename)

@@ -4,7 +4,7 @@
 # from a scheme xml file.
 #
 
-from __future__ import print_function
+
 import copy
 import logging
 import os
@@ -35,7 +35,7 @@ class Var(object):
         self._optional      = None
         self._target        = None
         self._actions       = { 'in' : None, 'out' : None }
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     @property
@@ -154,7 +154,7 @@ class Var(object):
     @actions.setter
     def actions(self, values):
         if type(value)==dict:
-            for key in values.keys():
+            for key in list(values.keys()):
                 if key in ['in', 'out'] and isstring(values[key]):
                     self._actions[key] = values[key]
                 else:
@@ -506,7 +506,7 @@ module {module}_cap
 
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, module, data, ccpp_field_map, metadata_define):
@@ -518,18 +518,18 @@ module {module}_cap
         else:
             f = sys.stdout
 
-        subs = ','.join(["{0}".format(s) for s in data.keys()])
-        sub_caps = ','.join(["{0}_cap".format(s) for s in data.keys()])
+        subs = ','.join(["{0}".format(s) for s in list(data.keys())])
+        sub_caps = ','.join(["{0}_cap".format(s) for s in list(data.keys())])
 
         # Import variable type definitions for all subroutines (init, run, finalize)
         module_use = []
         local_kind_and_type_vars = []
-        for sub in data.keys():
+        for sub in list(data.keys()):
             for var in data[sub]:
                 if var.type in STANDARD_VARIABLE_TYPES and var.kind and not var.type == STANDARD_CHARACTER_TYPE:
                     kind_var_standard_name = var.kind
                     if not kind_var_standard_name in local_kind_and_type_vars:
-                        if not kind_var_standard_name in metadata_define.keys():
+                        if not kind_var_standard_name in list(metadata_define.keys()):
                             raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
                         kind_var = metadata_define[kind_var_standard_name][0]
                         module_use.append(kind_var.print_module_use())
@@ -537,7 +537,7 @@ module {module}_cap
                 elif not var.type in STANDARD_VARIABLE_TYPES:
                     type_var_standard_name = var.type
                     if not type_var_standard_name in local_kind_and_type_vars:
-                        if not type_var_standard_name in metadata_define.keys():
+                        if not type_var_standard_name in list(metadata_define.keys()):
                             raise Exception("Type {type} not defined by host model".format(type=type_var_standard_name))
                         type_var = metadata_define[type_var_standard_name][0]
                         module_use.append(type_var.print_module_use())
@@ -549,13 +549,13 @@ module {module}_cap
                                   subroutines = subs,
                                   subroutine_caps = sub_caps))
 
-        for sub in data.keys():
+        for sub in list(data.keys()):
             # Treat CCPP internal variables differently: do not retrieve
             # via ccpp_field_get, use them directly via cdata%...
             # (configured in common.py, needs to match what is is ccpp_types.F90)
-            var_defs = "\n".join([" "*8 + x.print_def_pointer() for x in data[sub] if x.standard_name not in CCPP_INTERNAL_VARIABLES.keys()])
+            var_defs = "\n".join([" "*8 + x.print_def_pointer() for x in data[sub] if x.standard_name not in list(CCPP_INTERNAL_VARIABLES.keys())])
             # Use lookup index in cdata from build time for faster retrieval
-            var_gets = "\n".join([x.print_get(ccpp_field_map[x.standard_name]) for x in data[sub]if x.standard_name not in CCPP_INTERNAL_VARIABLES.keys()])
+            var_gets = "\n".join([x.print_get(ccpp_field_map[x.standard_name]) for x in data[sub]if x.standard_name not in list(CCPP_INTERNAL_VARIABLES.keys())])
             # Generate unit conversion statements on input and output. Special handling for
             # unit conversions for intent(in) variables, these don't require defining a
             # temporary variable, instead just pass the conversion function as argument
@@ -585,9 +585,9 @@ module {module}_cap
             args = ''
             length = 0
             for x in data[sub]:
-                if x.standard_name in CCPP_INTERNAL_VARIABLES.keys():
+                if x.standard_name in list(CCPP_INTERNAL_VARIABLES.keys()):
                     arg = "{0}={1},".format(x.local_name, CCPP_INTERNAL_VARIABLES[x.standard_name])
-                elif x.local_name in tmpvars.keys():
+                elif x.local_name in list(tmpvars.keys()):
                     arg = "{0}={1},".format(x.local_name, tmpvars[x.local_name])
                 elif x.actions['in'] and not x.actions['out']:
                     action = x.actions['in'].format(var=x.local_name, kind='_' + x.kind if x.kind else '')
@@ -640,7 +640,7 @@ CAPS_F90 ='''
 
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, caps):
@@ -681,7 +681,7 @@ set(CAPS
 
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, schemes):
@@ -722,7 +722,7 @@ export CCPP_CAPS="'''
 
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, schemes):
@@ -771,7 +771,7 @@ SCHEMES_f90 ='''
 
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, schemes):
@@ -830,7 +830,7 @@ set(SCHEMES
 
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, schemes):
@@ -874,7 +874,7 @@ export CCPP_SCHEMES="'''
 
     def __init__(self, **kwargs):
         self._filename = 'sys.stdout'
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, "_"+key, value)
 
     def write(self, schemes):

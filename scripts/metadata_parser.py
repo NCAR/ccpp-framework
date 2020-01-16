@@ -125,7 +125,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
 
     # Save metadata, because this routine new_metadata
     # is called once for every table in that file
-    if filename in NEW_METADATA_SAVE.keys():
+    if filename in list(NEW_METADATA_SAVE.keys()):
         new_metadata_headers = NEW_METADATA_SAVE[filename]
     else:
         new_metadata_headers = MetadataHeader.parse_metadata_file(filename)
@@ -163,7 +163,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             # Set rank using integer-setter method
             var.rank = rank
             # Check for duplicates in same table
-            if standard_name in metadata.keys():
+            if standard_name in list(metadata.keys()):
                 raise Exception("Error, multiple definitions of standard name {0} in new metadata table {1}".format(standard_name, table_name))
             metadata[standard_name] = [var]
     return metadata
@@ -190,7 +190,7 @@ def parse_variable_tables(filename):
 
     lines = []
     buffer = ''
-    for i in xrange(len(file_lines)):
+    for i in range(len(file_lines)):
         line = file_lines[i].rstrip('\n').strip()
         # Skip empty lines
         if line == '' or line == '&':
@@ -211,7 +211,7 @@ def parse_variable_tables(filename):
         words = line.split()
         if len(words) > 1 and words[0].lower() in ['module', 'program'] and not words[1].lower() == 'procedure':
             module_name = words[1].strip()
-            if module_name in registry.keys():
+            if module_name in list(registry.keys()):
                 raise Exception('Duplicate module name {0}'.format(module_name))
             registry[module_name] = {}
             module_lines[module_name] = { 'startline' : line_counter }
@@ -227,7 +227,7 @@ def parse_variable_tables(filename):
         line_counter += 1
 
     # Parse each module in the file separately
-    for module_name in registry.keys():
+    for module_name in list(registry.keys()):
         startline = module_lines[module_name]['startline']
         endline = module_lines[module_name]['endline']
         line_counter = 0
@@ -283,7 +283,7 @@ def parse_variable_tables(filename):
                         raise Exception('Nested definitions of derived types not supported')
                     in_type = True
                     type_name = type_declaration[0]
-                    if type_name in registry[module_name].keys():
+                    if type_name in list(registry[module_name].keys()):
                         raise Exception('Duplicate derived type name {0} in module {1}'.format(
                                                                        type_name, module_name))
                     registry[module_name][type_name] = [current_line_number]
@@ -306,7 +306,7 @@ def parse_variable_tables(filename):
                 if in_table:
                     raise Exception('Encountered table start for table {0} while still in table {1}'.format(words[2].replace('arg_table_',''), table_name))
                 table_name = words[2].replace('arg_table_','')
-                if not (table_name == module_name or table_name in registry[module_name].keys()):
+                if not (table_name == module_name or table_name in list(registry[module_name].keys())):
                     raise Exception('Encountered table with name {0} without corresponding module or type name'.format(table_name))
                 in_table = True
                 header_line_number = current_line_number + 1
@@ -326,16 +326,16 @@ def parse_variable_tables(filename):
                             filename_parts = filename.split('.')
                             metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
                             this_metadata = read_new_metadata(metadata_filename, module_name, table_name)
-                            for var_name in this_metadata.keys():
+                            for var_name in list(this_metadata.keys()):
                                 for var in this_metadata[var_name]:
-                                    if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
+                                    if var_name in list(CCPP_MANDATORY_VARIABLES.keys()) and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
                                         raise Exception('Entry for variable {0}'.format(var_name) + \
                                                         ' in argument table {0}'.format(table_name) +\
                                                         ' is incompatible with mandatory variable:\n' +\
                                                         '    existing: {0}\n'.format(CCPP_MANDATORY_VARIABLES[var_name].print_debug()) +\
                                                         '     vs. new: {0}'.format(var.print_debug()))
                                     # Add variable to metadata dictionary
-                                    if not var_name in metadata.keys():
+                                    if not var_name in list(metadata.keys()):
                                         metadata[var_name] = [var]
                                     else:
                                         for existing_var in metadata[var_name]:
@@ -411,14 +411,14 @@ def parse_variable_tables(filename):
                                 container = encode_container(module_name, table_name)
                             var.container = container
                             # Check for incompatible definitions with CCPP mandatory variables
-                            if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
+                            if var_name in list(CCPP_MANDATORY_VARIABLES.keys()) and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
                                 raise Exception('Entry for variable {0}'.format(var_name) + \
                                                 ' in argument table {0}'.format(table_name) +\
                                                 ' is incompatible with mandatory variable:\n' +\
                                                 '    existing: {0}\n'.format(CCPP_MANDATORY_VARIABLES[var_name].print_debug()) +\
                                                 '     vs. new: {0}'.format(var.print_debug()))
                             # Add variable to metadata dictionary
-                            if not var_name in metadata.keys():
+                            if not var_name in list(metadata.keys()):
                                 metadata[var_name] = [var]
                             else:
                                 for existing_var in metadata[var_name]:
@@ -436,26 +436,26 @@ def parse_variable_tables(filename):
             line_counter += 1
 
         # Informative output to screen
-        if debug and len(metadata.keys()) > 0:
-            for module_name in registry.keys():
+        if debug and len(list(metadata.keys())) > 0:
+            for module_name in list(registry.keys()):
                 logging.debug('Module name: {0}'.format(module_name))
                 container = encode_container(module_name)
                 vars_in_module = []
-                for var_name in metadata.keys():
+                for var_name in list(metadata.keys()):
                     for var in metadata[var_name]:
                         if var.container == container:
                             vars_in_module.append(var_name)
                 logging.debug('Module variables: {0}'.format(', '.join(vars_in_module)))
-                for type_name in registry[module_name].keys():
+                for type_name in list(registry[module_name].keys()):
                     container = encode_container(module_name, type_name)
                     vars_in_type = []
-                    for var_name in metadata.keys():
+                    for var_name in list(metadata.keys()):
                         for var in metadata[var_name]:
                             if var.container == container:
                                 vars_in_type.append(var_name)
                     logging.debug('Variables in derived type {0}: {1}'.format(type_name, ', '.join(vars_in_type)))
 
-        if len(metadata.keys()) > 0:
+        if len(list(metadata.keys())) > 0:
             logging.info('Parsed variable definition tables in module {0}'.format(module_name))
 
     return metadata
@@ -498,7 +498,7 @@ def parse_scheme_tables(filename):
     lines = []
     original_line_numbers = []
     buffer = ''
-    for i in xrange(len(file_lines)):
+    for i in range(len(file_lines)):
         line = file_lines[i].rstrip('\n').strip()
         # Skip empty lines
         if line == '' or line == '&':
@@ -523,7 +523,7 @@ def parse_scheme_tables(filename):
         words = line.split()
         if len(words) > 1 and words[0].lower() == 'module' and not words[1].lower() == 'procedure':
             module_name = words[1].strip()
-            if module_name in registry.keys():
+            if module_name in list(registry.keys()):
                 raise Exception('Duplicate module name {0}'.format(module_name))
             registry[module_name] = {}
             module_lines[module_name] = { 'startline' : line_counter }
@@ -539,7 +539,7 @@ def parse_scheme_tables(filename):
         line_counter += 1
 
     # Parse each module in the file separately
-    for module_name in registry.keys():
+    for module_name in list(registry.keys()):
         startline = module_lines[module_name]['startline']
         endline = module_lines[module_name]['endline']
         line_counter = 0
@@ -566,9 +566,9 @@ def parse_scheme_tables(filename):
                             if not scheme_name == module_name:
                                 raise Exception('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
                                                                                                              module_name, scheme_name))
-                            if not scheme_name in registry[module_name].keys():
+                            if not scheme_name in list(registry[module_name].keys()):
                                 registry[module_name][scheme_name] = {}
-                            if subroutine_name in registry[module_name][scheme_name].keys():
+                            if subroutine_name in list(registry[module_name][scheme_name].keys()):
                                 raise Exception('Duplicate subroutine name {0} in module {1}'.format(
                                                                        subroutine_name, module_name))
                             registry[module_name][scheme_name][subroutine_name] = [current_line_number]
@@ -590,20 +590,20 @@ def parse_scheme_tables(filename):
             line_counter += 1
 
         # Check that for each registered subroutine the start and end lines were found
-        for scheme_name in registry[module_name].keys():
-            for subroutine_name in registry[module_name][scheme_name].keys():
+        for scheme_name in list(registry[module_name].keys()):
+            for subroutine_name in list(registry[module_name][scheme_name].keys()):
                 if not len(registry[module_name][scheme_name][subroutine_name]) == 2:
                     raise Exception('Error parsing start and end lines for subroutine {0} in module {1}'.format(subroutine_name, module_name))
         logging.debug('Parsing file {0} with registry {1}'.format(filename, registry))
 
-        for scheme_name in registry[module_name].keys():
-            for subroutine_name in registry[module_name][scheme_name].keys():
+        for scheme_name in list(registry[module_name].keys()):
+            for subroutine_name in list(registry[module_name][scheme_name].keys()):
                 # Record the order of variables in the call list to each subroutine in a list
-                if not module_name in arguments.keys():
+                if not module_name in list(arguments.keys()):
                     arguments[module_name] = {}
-                if not scheme_name in arguments[module_name].keys():
+                if not scheme_name in list(arguments[module_name].keys()):
                     arguments[module_name][scheme_name] = {}
-                if not subroutine_name in arguments[module_name][scheme_name].keys():
+                if not subroutine_name in list(arguments[module_name][scheme_name].keys()):
                     arguments[module_name][scheme_name][subroutine_name] = []
                 # Find the argument table corresponding to each subroutine by searching
                 # "upward" from the subroutine definition line for the "arg_table_SubroutineName" section
@@ -634,13 +634,13 @@ def parse_scheme_tables(filename):
                             metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
                             this_metadata = read_new_metadata(metadata_filename, module_name, table_name,
                                                               scheme_name=scheme_name, subroutine_name=subroutine_name)
-                            for var_name in this_metadata.keys():
+                            for var_name in list(this_metadata.keys()):
                                 # Add standard_name to argument list for this subroutine
                                 arguments[module_name][scheme_name][subroutine_name].append(var_name)
                                 # For all instances of this var (can be only one) in this subroutine's metadata,
                                 # add to global metadata and check for compatibility with existing variables
                                 for var in this_metadata[var_name]:
-                                    if not var_name in metadata.keys():
+                                    if not var_name in list(metadata.keys()):
                                         metadata[var_name] = [var]
                                     else:
                                         for existing_var in metadata[var_name]:
@@ -714,7 +714,7 @@ def parse_scheme_tables(filename):
                             arguments[module_name][scheme_name][subroutine_name].append(var_name)
                             var = Var.from_table(table_header,var_items)
                             # Check for incompatible definitions with CCPP mandatory variables
-                            if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
+                            if var_name in list(CCPP_MANDATORY_VARIABLES.keys()) and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
                                 raise Exception('Entry for variable {0}'.format(var_name) + \
                                                 ' in argument table of subroutine {0}'.format(subroutine_name) +\
                                                 ' is incompatible with mandatory variable:\n' +\
@@ -724,7 +724,7 @@ def parse_scheme_tables(filename):
                             container = encode_container(module_name, scheme_name, table_name)
                             var.container = container
                             # Add variable to metadata dictionary
-                            if not var_name in metadata.keys():
+                            if not var_name in list(metadata.keys()):
                                 metadata[var_name] = [var]
                             else:
                                 for existing_var in metadata[var_name]:
@@ -739,52 +739,52 @@ def parse_scheme_tables(filename):
                         line_number += 1
 
                     # After parsing entire metadata table for the subroutine, check that all mandatory CCPP variables are present
-                    for var_name in CCPP_MANDATORY_VARIABLES.keys():
+                    for var_name in list(CCPP_MANDATORY_VARIABLES.keys()):
                         if not var_name in arguments[module_name][scheme_name][subroutine_name]:
                             raise Exception('Mandatory CCPP variable {0} not declared in metadata table of subroutine {1}'.format(
                                                                                                        var_name, subroutine_name))
 
         # For CCPP-compliant files (i.e. files with metadata tables, perform additional checks)
-        if len(metadata.keys()) > 0:
+        if len(list(metadata.keys())) > 0:
             # Check that all subroutine "root" names in the current module are equal to scheme_name
             # and that there are exactly three subroutines for scheme X: X_init, X_run, X_finalize
             message = ''
             abort = False
-            for scheme_name in registry[module_name].keys():
+            for scheme_name in list(registry[module_name].keys()):
                 # Pre-generate error message
                 message += 'Check that all subroutines in module {0} have the same root name:\n'.format(module_name)
                 message += '    i.e. scheme_A_init, scheme_A_run, scheme_A_finalize\n'
                 message += 'Here is a list of the subroutine names for scheme {0}:\n'.format(scheme_name)
                 message += '{0}\n\n'.format(', '.join(sorted(registry[module_name][scheme_name].keys())))
-                if (not len(registry[module_name][scheme_name].keys()) == 3):
+                if (not len(list(registry[module_name][scheme_name].keys())) == 3):
                     logging.exception(message)
                     abort = True
                 else:
                     for suffix in subroutine_suffices:
                         subroutine_name = '{0}_{1}'.format(scheme_name, suffix)
-                        if not subroutine_name in registry[module_name][scheme_name].keys():
+                        if not subroutine_name in list(registry[module_name][scheme_name].keys()):
                             logging.exception(message)
                             abort = True
             if abort:
                 raise Exception(message)
 
         # Debugging output to screen and to XML
-        if debug and len(metadata.keys()) > 0:
+        if debug and len(list(metadata.keys())) > 0:
             # To screen
             logging.debug('Module name: {0}'.format(module_name))
-            for scheme_name in registry[module_name].keys():
+            for scheme_name in list(registry[module_name].keys()):
                 logging.debug('Scheme name: {0}'.format(scheme_name))
-                for subroutine_name in registry[module_name][scheme_name].keys():
+                for subroutine_name in list(registry[module_name][scheme_name].keys()):
                     container = encode_container(module_name, scheme_name, subroutine_name)
                     vars_in_subroutine = []
-                    for var_name in metadata.keys():
+                    for var_name in list(metadata.keys()):
                         for var in metadata[var_name]:
                             if var.container == container:
                                 vars_in_subroutine.append(var_name)
                     logging.debug('Variables in subroutine {0}: {1}'.format(subroutine_name, ', '.join(vars_in_subroutine)))
         # Standard output to screen
-        elif len(metadata.keys()) > 0:
-            for scheme_name in registry[module_name].keys():
+        elif len(list(metadata.keys())) > 0:
+            for scheme_name in list(registry[module_name].keys()):
                 logging.info('Parsed tables in scheme {0}'.format(scheme_name))
 
     # End of loop over all module_names

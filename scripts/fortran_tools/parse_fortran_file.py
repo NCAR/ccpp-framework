@@ -15,7 +15,7 @@ from parse_tools import CCPPError, ParseInternalError, ParseSyntaxError
 from parse_tools import ParseContext, ParseObject, ParseSource, PreprocStack
 from parse_tools import FORTRAN_ID
 from metadata_table import MetadataHeader
-from parse_fortran import parse_fortran_var_decl, fortran_type_definition
+from .parse_fortran import parse_fortran_var_decl, fortran_type_definition
 from metavar import VarDictionary
 
 comment_re = re.compile(r"!.*$")
@@ -342,7 +342,7 @@ def read_file(filename, preproc_defs=None, logger=None):
         # Read all lines of the file at once
         with open(filename, 'r') as file:
             file_lines = file.readlines()
-            for index in xrange(len(file_lines)):
+            for index in range(len(file_lines)):
                 file_lines[index] = file_lines[index].rstrip('\n').rstrip()
             # End for
         # End with
@@ -449,7 +449,7 @@ def parse_use_statement(type_dict, statement, pobj, logger):
     if umatch is None:
         return False
     else:
-        print("use = {}".format(umatch.group(1)))
+        print(("use = {}".format(umatch.group(1))))
         return True
     # End if
 
@@ -813,7 +813,7 @@ if __name__ == "__main__":
         if os.path.exists(fpathname):
             mh = parse_fortran_file(fpathname, preproc_defs={'CCPP':1})
             for h in mh:
-                print('{}: {}'.format(fname, h))
+                print(('{}: {}'.format(fname, h)))
             # End for
         # End if
     # End for

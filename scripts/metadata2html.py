@@ -74,7 +74,7 @@ def import_config(configfile, logger):
 def get_metadata_files_from_config(config, logger):
     """Create a list of metadata filenames for a CCPP prebuild configuration"""
     filenames = []
-    for sourcefile in config['variable_definition_files'] + config['scheme_files'].keys():
+    for sourcefile in config['variable_definition_files'] + list(config['scheme_files'].keys()):
         metafile = os.path.splitext(sourcefile)[0]+'.meta'
         if os.path.isfile(metafile):
             filenames.append(metafile)

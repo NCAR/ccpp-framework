@@ -60,7 +60,7 @@ class MetadataEntry(OrderedDict):
 
     def write(self, mdfile):
         mdfile.write('[{}]\n'.format(self.local_name))
-        for key in self.keys():
+        for key in list(self.keys()):
             mdfile.write("  {} = {}\n".format(key, self[key]))
         # End for
 
@@ -90,7 +90,7 @@ class MetadataTable(OrderedDict):
     def has(self, varname):
         hasvar = False
         vartest = varname.lower()
-        for name in self.keys():
+        for name in list(self.keys()):
             if vartest == name.lower():
                 hasvar = True
                 break
@@ -101,7 +101,7 @@ class MetadataTable(OrderedDict):
     def get(self, varname):
         var = None
         vartest = varname.lower()
-        for name in self.keys():
+        for name in list(self.keys()):
             if vartest == name.lower():
                 var = self[name]
                 break
@@ -113,7 +113,7 @@ class MetadataTable(OrderedDict):
         mdfile.write('[ccpp-arg-table]\n')
         mdfile.write('  name = {}\n'.format(self._name))
         mdfile.write('  type = {}\n'.format(self._type))
-        for key in self.keys():
+        for key in list(self.keys()):
             self[key].write(mdfile)
 
 ########################################################################
@@ -125,7 +125,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
     if logger:
         logger.info("Converting file {} ...".format(filename_in))
     else:
-        print "Converting file {} ...".format(filename_in)
+        print("Converting file {} ...".format(filename_in))
     current_module = None
     # First, suck in the old file
     do_convert = True
@@ -150,7 +150,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
     # Read all lines of the file at once
     with open(filename_in, 'r') as file:
         fin_lines = file.readlines()
-        for index in xrange(len(fin_lines)):
+        for index in range(len(fin_lines)):
             fin_lines[index] = fin_lines[index].rstrip('\n')
             # First loop through file to build dictionary with local names versus standard names
             # and to record array dimensions from allocate statements
@@ -164,7 +164,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                     if not standard_name:
                         continue
                     # No duplicates allowed
-                    if local_name in standard_names.keys():
+                    if local_name in list(standard_names.keys()):
                         raise Exception("Multiple definitions of local name {}".format(local_name))
                     standard_names[local_name] = standard_name
             elif 'allocate' in fin_lines[index]:
@@ -200,12 +200,12 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                             dims = ['im', 'gfs_control%levs', 'oz_coeff+5']
                         elif var == 'ccpp_interstitial%cappa'.lower():
                             dims = ['isd:ied', 'jsd:jed', '1:npzcappa']
-                        elif var in dimensions.keys() and not dims == dimensions[var]:
+                        elif var in list(dimensions.keys()) and not dims == dimensions[var]:
                             raise Exception("Multiple, conflicting allocations of variable with local name {}: {} vs {}".format(
                                             var, dimensions[var], dims))
                     # End model and file-dependent substitutions
                     else:
-                        if var in dimensions.keys() and not dims == dimensions[var]:
+                        if var in list(dimensions.keys()) and not dims == dimensions[var]:
                             raise Exception("Multiple, conflicting allocations of variable with local name {}: {} vs {}".format(
                                             var, dimensions[var], dims))
                     dimensions[var] = dims
@@ -218,8 +218,8 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
     # Begin model and file-dependent substitutions
     if model == 'FV3':
         # Replace local dimensions in GFS_typedefs.F90, CCPP_typedefs.F90 and CCPP_data.F90 with correct standard names
-        for key in dimensions.keys():
-            for i in xrange(len(dimensions[key])):
+        for key in list(dimensions.keys()):
+            for i in range(len(dimensions[key])):
                 dim = dimensions[key][i]
                 if dim == 'im':
                     dimensions[key][i] = 'horizontal_dimension'
@@ -288,7 +288,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                               'n',
                             ]:
                     dimensions[key][i] = dim + "_XX_SubstituteWithStandardName_XX"
-                elif not dim in standard_names.keys():
+                elif not dim in list(standard_names.keys()):
                     raise Exception("Dimension {} not defined".format(dim))
                 else:
                     dimensions[key][i] = standard_names[dim]
@@ -341,7 +341,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                     file.write('!! \htmlinclude {}.html\n'.format(table_name))
                     #
                     table_header = [x.strip() for x in words[1:-1]]
-                    for ind in xrange(len(table_header)):
+                    for ind in range(len(table_header)):
                         header_locs[table_header[ind]] = ind
                     # End for
                     # Find the local_name index (exception if not found)
@@ -395,7 +395,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                                     if match:
                                         continue
                                     else:
-                                        if index.lower() in standard_names.keys():
+                                        if index.lower() in list(standard_names.keys()):
                                             array_reference = array_reference.replace(index, standard_names[index.lower()])
                                         else:
                                             array_reference = array_reference.replace(index, index + "_XX_SubstituteWithStandardName_XX")
@@ -414,9 +414,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                         #
                         if mdtable.type == 'module':
                             ddt_reference = ''
-                        if not current_module in ddt_references.keys():
+                        if not current_module in list(ddt_references.keys()):
                             ddt_references[current_module] = {}
-                        if not table_name in ddt_references[current_module].keys():
+                        if not table_name in list(ddt_references[current_module].keys()):
                             ddt_references[current_module][table_name] = ddt_reference
                         elif not ddt_references[current_module][table_name] == ddt_reference:
                             raise Exception("Conflicting DDT references in table {}: {} vs {}".format(
@@ -425,7 +425,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                         mdobj = MetadataEntry(var_name)
                         mdtable[var_name] = mdobj
                         # Now, create the rest of the entries
-                        for ind in xrange(len(entries)):
+                        for ind in range(len(entries)):
                             attr_name = table_header[ind]
                             entry = entries[ind]
                             if attr_name == 'local_name':
@@ -436,17 +436,17 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                                 rank = int(entry)
                                 if rank>0:
                                     # Search for key in dimensions dictionary
-                                    if local_name.lower() in dimensions.keys():
+                                    if local_name.lower() in list(dimensions.keys()):
                                         dim_key = local_name.lower()
                                     # Begin model and file-dependent substitutions
                                     elif model == 'FV3':
-                                        if local_name.replace("GFS_Data(cdata%blk_no)%","").lower() in dimensions.keys():
+                                        if local_name.replace("GFS_Data(cdata%blk_no)%","").lower() in list(dimensions.keys()):
                                             dim_key = local_name.replace("GFS_Data(cdata%blk_no)%","").lower()
-                                        elif local_name.replace("GFS_Data(cdata%blk_no)%Intdiag%","Diag%").lower() in dimensions.keys():
+                                        elif local_name.replace("GFS_Data(cdata%blk_no)%Intdiag%","Diag%").lower() in list(dimensions.keys()):
                                             dim_key = local_name.replace("GFS_Data(cdata%blk_no)%Intdiag%","Diag%").lower()
-                                        elif local_name.replace("GFS_Interstitial(cdata%thrd_no)%","Interstitial%").lower() in dimensions.keys():
+                                        elif local_name.replace("GFS_Interstitial(cdata%thrd_no)%","Interstitial%").lower() in list(dimensions.keys()):
                                             dim_key = local_name.replace("GFS_Interstitial(cdata%thrd_no)%","Interstitial%").lower()
-                                        elif local_name.replace("CCPP_Interstitial%","Interstitial%").lower() in dimensions.keys():
+                                        elif local_name.replace("CCPP_Interstitial%","Interstitial%").lower() in list(dimensions.keys()):
                                             dim_key = local_name.replace("CCPP_Interstitial%","Interstitial%").lower()
                                         else:
                                             dim_key = None
@@ -652,7 +652,7 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
         spacer = ""
         # First pass: write type definitions,
         # second pass: write module table
-        for count in xrange(2):
+        for count in range(2):
             for table in mdconfig:
                 if (count == 0 and not table.type == 'ddt') or \
                    (count == 1 and table.type == 'ddt'):
@@ -670,9 +670,9 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
         message = """Add the following statement to the CCPP prebuild config (add to existing entry):
 TYPEDEFS_NEW_METADATA = {
 """
-        for module_name in ddt_references.keys():
+        for module_name in list(ddt_references.keys()):
             message += "    '{module_name}' : {{\n".format(module_name=module_name)
-            for table_name in ddt_references[module_name].keys():
+            for table_name in list(ddt_references[module_name].keys()):
                 message += "        '{table_name}' : '{ddt_reference}',\n".format(table_name=table_name,
                                               ddt_reference=ddt_references[module_name][table_name])
             message += "        },\n"
@@ -680,15 +680,15 @@ TYPEDEFS_NEW_METADATA = {
         if logger is not None:
             logger.info(message)
         else:
-            print message
+            print(message)
 
 ########################################################################
 
 def usage(cmd):
     print("Usage:")
-    print("{} <source_file> <target_file> <model>".format(cmd))
+    print(("{} <source_file> <target_file> <model>".format(cmd)))
     print("")
-    print("<model> can be one of '{}'".format(MODELS))
+    print(("<model> can be one of '{}'".format(MODELS)))
     print("")
     print("Translate the metadata in <source_file> into a new file")
     raise Exception
