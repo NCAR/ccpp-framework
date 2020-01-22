@@ -1,0 +1,45 @@
+[ccpp-arg-table]
+  name = temp_calc_adjust_run
+  type = scheme
+[ nbox ]
+  standard_name = horizontal_loop_extent
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ timestep ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = in
+[ temp_calc ]
+  standard_name = potential_temperature_at_previous_timestep
+  units = K |
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+[ temp ]
+  standard_name = index_of_water_vapor_specific_humidity
+  units = index
+  type = integer
+  intent = in
+  dimensions = ()
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out
