@@ -15,40 +15,8 @@
 [ccpp-arg-table]
   name = make_ddt_run
   type = scheme
-[ nbox ]
-  standard_name = horizontal_loop_extent
-  type = integer
-  units = count
-  dimensions = ()
-  intent = in
-[ O3 ]
-  standard_name = ozone
-  units = ppmv
-  dimensions = (horizontal_loop_extent)
-  type = real
-  kind = kind_phys
-  intent = in
-[ HNO3 ]
-  standard_name = nitric_acid
-  units = ppmv
-  dimensions = (horizontal_loop_extent)
-  type = real
-  kind = kind_phys
-  intent = in
 [ vmr ]
   standard_name = volume_mixing_ratio_ddt
   dimensions = ()
   None = None
   intent = inout
-[ errmsg ]
-  standard_name = ccpp_error_message
-  long_name = Error message for error handling in CCPP
-  units = 1 | dimensions = () | type = character | kind = len=512
-  intent = out
-[ errflg ]
-  standard_name = ccpp_error_flag
-  long_name = Error flag for error handling in CCPP
-  units = flag
-  dimensions = ()
-  type = integer
-  intent = out

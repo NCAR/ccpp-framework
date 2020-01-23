@@ -174,7 +174,7 @@ class MetadataTableTestCase(unittest.TestCase):
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
 
        #print("The exception is", context.exception)
-       emsg = "Invalid metadata table start property, \'something\', at "
+       emsg = "Invalid metadata table start property, 'something', at "
        self.assertTrue(emsg in str(context.exception))
 
    def test_bad_line_split(self):
@@ -213,7 +213,7 @@ class MetadataTableTestCase(unittest.TestCase):
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
 
        #print("The exception is", context.exception)
-       emsg = "Invalid variable property name, \'none\', at "
+       emsg = "Invalid variable property name, 'none', at "
        self.assertTrue(emsg in str(context.exception))
 
    def test_no_input(self):
@@ -242,7 +242,7 @@ class MetadataTableTestCase(unittest.TestCase):
                module=None, var_dict=None, known_ddts=None, logger=None)
 
        #print("The exception is", context.exception)
-       emsg = "Invalid metadata table type, \'banana\'"
+       emsg = "Invalid metadata table type, 'banana'"
        self.assertTrue(emsg in str(context.exception))
 
    def test_no_module(self):
