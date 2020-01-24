@@ -28,6 +28,10 @@ SCHEME_FILES = {
     '../../../../../schemes/check/check_test.f90' : [ 'test' ],
     }
 
+# Default build dir, relative to current working directory,
+# if not specified as command-line argument
+DEFAULT_BUILD_DIR = '.'
+
 # Auto-generated makefile/cmakefile snippets that contain all schemes
 SCHEMES_MAKEFILE = '/dev/null'
 SCHEMES_CMAKEFILE = '/dev/null'
@@ -84,9 +88,5 @@ LATEX_VARTABLE_FILE = 'CCPP_VARIABLES_FV3.tex'
 # Template code to generate include files                                     #
 ###############################################################################
 
-# Name of the CCPP data structure in the host model cap;
-# in the case of FV3, this is a 2-dimensional array with
-# the number of blocks as the first and the number of
-# OpenMP threads as the second dimension; nb is the loop
-# index for the current block, nt for the current thread
+# Name of the CCPP data structure in the host model cap
 CCPP_DATA_STRUCTURE = 'cdata'
