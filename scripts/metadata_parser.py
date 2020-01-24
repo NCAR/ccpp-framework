@@ -158,7 +158,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                       container     = container,
                       kind          = new_var.get_prop_value('kind'),
                       intent        = new_var.get_prop_value('intent'),
-                      optional      = new_var.get_prop_value('optional'),
+                      optional      = 'T' if new_var.get_prop_value('optional') else 'F',
                       )
             # Set rank using integer-setter method
             var.rank = rank
