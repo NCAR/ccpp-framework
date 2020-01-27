@@ -264,9 +264,9 @@ class MetadataTableTestCase(unittest.TestCase):
        with self.assertRaises(Exception) as context:
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
 
-       print("The exception is", context.exception)
-       #emsg = "Unknown DDT type, banana, at "
-       #self.assertTrue(emsg in str(context.exception))
+       #print("The exception is", context.exception)
+       emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
+       self.assertTrue(emsg in str(context.exception))
 
    def test_bad_2nd_ccpp_arg_table(self):
        """Test that second arg table named ccpp-farg-table returns expected error"""
