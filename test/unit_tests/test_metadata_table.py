@@ -138,5 +138,148 @@ class MetadataTableTestCase(unittest.TestCase):
        emsg = "Required property, 'intent', missing, at "
        self.assertTrue(emsg in str(context.exception))
 
+   def test_missing_table_type(self):
+       """Test that a missing table type returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_missing_table_type.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid metadata header start, no table type"
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_missing_table_name(self):
+       """Test that a missing table name returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_missing_table_name.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid metadata header start, no table name"
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_bad_table_key(self):
+       """Test that a bad table key returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_bad_table_key.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid metadata table start property, 'something', at "
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_bad_line_split(self):
+       """Test that a bad split line with | returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_bad_line_split.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid variable property syntax, \'\', at "
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_unknown_ddt_type(self):
+       """Test that a ddt_type = banana returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_unknown_ddt_type.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Unknown DDT type, banana, at "
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_bad_var_property_name(self):
+       """Test that a ddt_type = None returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_bad_var_property_name.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid variable property name, 'none', at "
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_no_input(self):
+       """Test that no input returns expected error"""
+       with self.assertRaises(Exception) as context:
+           MetadataTable()
+
+       #print("The exception is", context.exception)
+       emsg = "MetadataTable requires a title"
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_no_header_type(self):
+       """Test that __init__ with type_in=None returns expected error"""
+       with self.assertRaises(Exception) as context:
+           MetadataTable(parse_object=None, title="something", type_in=None, \
+               module=None, var_dict=None, known_ddts=None, logger=None)
+
+       #print("The exception is", context.exception)
+       emsg = "MetadataTable requires a header type"
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_bad_header_type(self):
+       """Test that __init__ with type_in=banana returns expected error"""
+       with self.assertRaises(Exception) as context:
+           MetadataTable(parse_object=None, title="something", type_in="banana", \
+               module=None, var_dict=None, known_ddts=None, logger=None)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid metadata table type, 'banana'"
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_no_module(self):
+       """Test that __init__ with module=None returns expected error"""
+       with self.assertRaises(Exception) as context:
+           MetadataTable(parse_object=None, title="something", type_in="scheme", \
+               module=None, var_dict=None, known_ddts=None, logger=None)
+
+       #print("The exception is", context.exception)
+       emsg = "MetadataTable requires a module name"
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_bad_1st_ccpp_arg_table(self):
+       """Test that first arg table named ccpp-farg-table returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_bad_1st_arg_table_header.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
+       self.assertTrue(emsg in str(context.exception))
+
+   def test_bad_2nd_ccpp_arg_table(self):
+       """Test that second arg table named ccpp-farg-table returns expected error"""
+       known_ddts = list()
+       logger = None
+       filename = os.path.join(sample_files_dir, "test_bad_2nd_arg_table_header.meta")
+
+       with self.assertRaises(Exception) as context:
+           MetadataTable.parse_metadata_file(filename, known_ddts, logger)
+
+       #print("The exception is", context.exception)
+       emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
+       self.assertTrue(emsg in str(context.exception))
+
 if __name__ == '__main__':
     unittest.main()

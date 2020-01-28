@@ -1,3 +1,4 @@
 [ccpp-arg-table]
   name = test_host
-  type = banana
+  type = host
+  banana = something
