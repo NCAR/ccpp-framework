@@ -265,7 +265,7 @@ class MetadataTableTestCase(unittest.TestCase):
            MetadataTable.parse_metadata_file(filename, known_ddts, logger)
 
        #print("The exception is", context.exception)
-       emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
+       emsg = "Invalid CCPP metadata line, '[ccpp-farg-table]', at "
        self.assertTrue(emsg in str(context.exception))
 
    def test_bad_2nd_ccpp_arg_table(self):
