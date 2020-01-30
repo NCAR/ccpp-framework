@@ -1,14 +1,16 @@
 <standard_names name="CCPP Standard Name Library" version="1.0">
   <section name="dimensions"
            comment="Dimension standard names come in sets of six
-                    related standard names for each dimension:
-                    [dim_name]_dimension -- The full dimension size
-                    [dim_name]_loop_extent -- Size of dim for current call
-                    [dim_name]_begin - Start index for dimension
-                    [dim_name]_end - End index for dimension
-                    [dim_name]_index - Single index for dimension
-                    [dim_name]_selection - Array of selected indices
-                    for dimension
+                    related standard names for each dimension:\n
+                    ```\n
+                    [dim_name]_dimension -- The full dimension size\n
+                    [dim_name]_loop_extent -- Size of dim for current call\n
+                    [dim_name]_begin - Start index for dimension\n
+                    [dim_name]_end - End index for dimension\n
+                    [dim_name]_index - Single index for dimension\n
+                    [dim_name]_selection - Array of selected indices for
+                     dimension\n
+                    ```\n
                     Note that the cap generator may substitute among
                     standard names in this category in order to
                     properly call suite parts and individual
@@ -16,23 +18,40 @@
                     the left is the standard_name in the dimensions
                     field of the caller while the name(s) on the right
                     is (are) the standard name(s) of the callee (in
-                    the form used in the subroutine call).
-                    [dim_name]_dimension ==> 1:[dim_name]_loop_extent
-                    [dim_name]_loop_extent ==> 1:[dim_name]_loop_extent
-                    [dim_name]_begin:[dim_name]_end ==> 1:[dim_name]_loop_extent
-                    [dim_name]_begin:[dim_name]_end ==> 1:[dim_name]_dimension
-                    Below are the currently recognized dimension types">
+                    the form used in the subroutine call).\n
+                    ```\n
+                    [dim_name]_dimension ==> 1:[dim_name]_loop_extent\n
+                    [dim_name]_loop_extent ==> 1:[dim_name]_loop_extent\n
+                    [dim_name]_begin:[dim_name]_end ==> 1:[dim_name]_loop_extent\n
+                    [dim_name]_begin:[dim_name]_end ==> 1:[dim_name]_dimension\n
+                    ```\n
+                    Also note that horizontal_dimension should be used in
+                    xxx_[timestep_]init and xxx_[timestep_]final routines
+                    but not in xxx_run routines.\n
+                    Below are the currently recognized dimension types\n">
     <standard_name name="horizontal_dimension"
                    long_name="Size horizontal dimension">
-      <type units="none">integer</type>
+      <type units="count">integer</type>
     </standard_name>
     <standard_name name="vertical_layer_dimension"
                    long_name="number of vertical levels">
-      <type units="none">integer</type>
+      <type units="count">integer</type>
     </standard_name>
-    <standard_name name="vertical_level_dimension"
+    <standard_name name="vertical_interface_dimension"
                    long_name="number of vertical interfaces">
-      <type units="none">integer</type>
+      <type units="count">integer</type>
+    </standard_name>
+    <standard_name name="index_of_bottom_vertical_layer">
+      <type units="index">integer</type>
+    </standard_name>
+    <standard_name name="index_of_top_vertical_layer">
+      <type units="index">integer</type>
+    </standard_name>
+    <standard_name name="index_of_bottom_vertical_interface">
+      <type units="index">integer</type>
+    </standard_name>
+    <standard_name name="index_of_top_vertical_interface">
+      <type units="index">integer</type>
     </standard_name>
     <standard_name name="thread_block_dimension"
                    long_name="Number of thread blocks">
@@ -49,6 +68,9 @@
     <standard_name name="latent_heat_of_vaporization_of_water_at_0c"
                    long_name="latent heat of vaporization of water at 0C">
       <type kind="kind_phys" units="J kg-1">real</type>
+    </standard_name>
+    <standard_name name="density_of dry_air_at_STP">
+      <type kind="kind_phys" units="kg m-3"></type>
     </standard_name>
     <standard_name name="density_of_liquid_water_at_0c"
                    long_name="density of liquid water at 0C">
@@ -67,19 +89,25 @@
     <standard_name name="longitude">
       <type kind="kind_phys" units="radians">real</type>
     </standard_name>
+    <standard_name name="gravitational_acceleration">
+      <type kind="kind_phys" units="m s-2">real</type>
+    </standard_name>
   </section>
   <section name="state_variables"
            comment="Note that appending '_from_previous_timestep' to standard_names in this section yields another valid standard_name">
     <standard_name name="surface_air_pressure">
       <type kind="kind_phys" units="Pa">real</type>
     </standard_name>
-    <standard_name name="dry_surface_pressure">
+    <standard_name name="surface_pressure_of_dry_air">
       <type kind="kind_phys" units="Pa">real</type>
     </standard_name>
-    <standard_name name="surface_geopotential">
+    <standard_name name="geopotential_at_surface">
       <type kind="kind_phys" units="m2 s-2">real</type>
     </standard_name>
     <standard_name name="temperature">
+      <type kind="kind_phys" units="K">real</type>
+    </standard_name>
+    <standard_name name="temperature_from_previous_timestep">
       <type kind="kind_phys" units="K">real</type>
     </standard_name>
     <standard_name name="eastward_wind"
@@ -128,7 +156,7 @@
                    long_name="inverse exner function w.r.t. surface pressure, (ps/p)^(R/cp)">
       <type kind="kind_phys" units="1">real</type>
     </standard_name>
-    <standard_name name="geopotential_height_above_surface_at_midpoints">
+    <standard_name name="geopotential">
       <type kind="kind_phys" units="m">real</type>
     </standard_name>
     <standard_name name="constituent_mixing_ratio">
@@ -137,16 +165,16 @@
     <standard_name name="air_pressure_at_interface">
       <type kind="kind_phys" units="Pa">real</type>
     </standard_name>
-    <standard_name name="interface_pressure_dry">
+    <standard_name name="air_pressure_of_dry_air_at_interface">
       <type kind="kind_phys" units="Pa">real</type>
     </standard_name>
-    <standard_name name="ln_air_pressure_at_interface">
+    <standard_name name="natural_log_of_air_pressure_at_interface">
       <type kind="kind_phys" units="ln(Pa)">real</type>
     </standard_name>
-    <standard_name name="ln_interface_pressure_dry">
+    <standard_name name="natural_log_of_air_pressure_of_dry_air_at_interface">
       <type kind="kind_phys" units="ln(Pa)">real</type>
     </standard_name>
-    <standard_name name="geopotential_height_above_surface_at_interfaces">
+    <standard_name name="geopotential_at_interface">
       <type kind="kind_phys" units="m">real</type>
     </standard_name>
     <standard_name name="vertically_integrated_total_kinetic_and_static_energy_of_initial_state">
@@ -211,6 +239,19 @@
     <standard_name name="potential_temperature"
                    long_name="potential temperature">
       <type kind="kind_phys" units="K">real</type>
+    </standard_name>
+    <standard_name name="pressure_dependent_gas_constant_of_dry_air">
+      <type kind="kind_phys" units="J kg-1 K-1">real</type>
+    </standard_name>
+    <standard_name
+        name="pressure_dependent_ratio_of_dry_air_to_water_vapor_gas_constants_minus_one"
+        long_name="(Rwv / Rdair) - 1.0">
+      <type kind="kind_phys" units="1">real</type>
+    </standard_name>
+  </section>
+  <section name="diagnostics">
+    <standard_name name="total_precipitation_at_surface">
+      <type kind="kind_phys" units="m s-1">real</type>
     </standard_name>
   </section>
   <section name="constituents">
