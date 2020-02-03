@@ -123,9 +123,11 @@ set(${PACKAGE}_LIB_DIRS
 
 #------------------------------------------------------------------------------
 # Add the tests (designed for DYNAMIC build only)
-if(!STATIC)
-add_subdirectory(tests)
-endif(!STATIC)
+if(STATIC)
+    message(STATUS "Skipping tests, defined for dynamic build only")
+else(STATIC)
+    add_subdirectory(tests)
+endif(STATIC)
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
