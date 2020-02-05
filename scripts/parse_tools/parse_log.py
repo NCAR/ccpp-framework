@@ -12,6 +12,8 @@ def init_log(name, level=None):
     llevel = logger.getEffectiveLevel()
     if (level is None) and (llevel == logging.NOTSET):
         logger.setLevel(logging.WARNING)
+    elif level:
+        logger.setLevel(level)
     # End if
     set_log_to_stdout(logger)
     return logger

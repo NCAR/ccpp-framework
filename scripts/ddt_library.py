@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 #
-# Class to hold all information on a CCPP DDT metadata variable
+# Class
 #
+
+"""Module to implement DDT support in the CCPP Framework.
+VarDDT is a class to hold all information on a CCPP DDT metadata variable
+"""
 
 # Python library imports
 from __future__     import print_function
 # CCPP framework imports
-from parse_tools    import check_local_name, check_fortran_type, context_string
-from parse_tools    import FORTRAN_DP_RE, FORTRAN_ID
-from parse_tools    import registered_fortran_ddt_name
-from parse_tools    import ParseInternalError, CCPPError
+from parse_tools    import ParseInternalError, CCPPError, context_string
 from metavar        import Var
 from metadata_table import MetadataTable
 
@@ -48,6 +49,11 @@ class VarDDT(Var):
     def is_ddt(self):
         '''Return True iff <self> is a DDT type.'''
         return True
+
+    def get_parent_prop(self, name):
+        """Return the Var property value for the parent Var object.
+        """
+        return super(VarDDT, self).get_prop_value(name)
 
     def get_prop_value(self, name):
         """Return the Var property value for the leaf Var object.
@@ -94,19 +100,20 @@ class VarDDT(Var):
         # End if
         return call_str
 
-    def write_def(self, outfile, indent, dict, allocatable=False, dummy=False):
+    def write_def(self, outfile, indent, ddict, allocatable=False, dummy=False):
         '''Write the definition line for this DDT.
         The type of this declaration is the type of the Var at the
         end of the chain of references.'''
         if self.field is None:
-            super(VarDDT, self).write_def(outfile, indent, dict,
+            super(VarDDT, self).write_def(outfile, indent, ddict,
                                           allocatable=allocatable, dummy=dummy)
         else:
-            self.field.write_def(outfile, indent, dict,
+            self.field.write_def(outfile, indent, ddict,
                                  allocatable=allocatable, dummy=dummy)
         # End if
 
-    def __var_rep__(self, var, prefix=""):
+    @staticmethod
+    def __var_rep(var, prefix=""):
         """Internal helper function for creating VarDDT representations
         Create a call string from the local_name and dimensions of <var>.
         Optionally, prepend <prefix>%.
@@ -136,10 +143,10 @@ class VarDDT(Var):
         field = self
         while field is not None:
             if isinstance(field, VarDDT):
-                lstr += sep + self.__var_rep__(field.var)
+                lstr += sep + self.__var_rep(field.var)
                 field = field.field
             elif isinstance(field, Var):
-                lstr = self.__var_rep__(field, prefix=lstr)
+                lstr = self.__var_rep(field, prefix=lstr)
                 field = None
             # End if
             sep = '%'
@@ -185,23 +192,25 @@ class DDTLibrary(dict):
             if not isinstance(ddt, MetadataTable):
                 errmsg = 'Invalid DDT metadata table type, {}'
                 raise ParseInternalError(errmsg.format(type(ddt)))
-            elif not ddt.header_type == 'ddt':
+            # End if
+            if not ddt.header_type == 'ddt':
                 errmsg = 'Metadata table header is for a {}, should be DDT'
                 raise ParseInternalError(errmsg.format(ddt.header_type))
-            elif ddt.title in self:
+            # End if
+            if ddt.title in self:
                 errmsg = "Duplicate DDT, {}, found{}, original{}"
                 ctx = context_string(ddt.source.context)
                 octx = context_string(self[ddt.title].source.context)
                 raise CCPPError(errmsg.format(ddt.title, ctx, octx))
-            else:
-                if logger is not None:
-                    lmsg = 'Adding DDT {} to {}'
-                    logger.debug(lmsg.format(ddt.title, self.name))
-                self[ddt.title] = ddt
-                dlen = len(ddt.module)
-                if dlen > self._max_mod_name_len:
-                    self._max_mod_name_len = dlen
-                # End if
+            # End if
+            if logger is not None:
+                lmsg = 'Adding DDT {} to {}'
+                logger.debug(lmsg.format(ddt.title, self.name))
+            # End if
+            self[ddt.title] = ddt
+            dlen = len(ddt.module)
+            if dlen > self._max_mod_name_len:
+                self._max_mod_name_len = dlen
             # End if
         # End for
 
@@ -229,24 +238,25 @@ class DDTLibrary(dict):
             vtype = var.get_prop_value('type')
             if vtype in self:
                 ddt = self[vtype]
-                self.collect_ddt_fields(dest_dict, var, ddt, logger=logger)
+                self.collect_ddt_fields(dest_dict, var, ddt=ddt)
             # End if
         # End for
 
-    def collect_ddt_fields(self, var_dict, var, logger=None):
+    def collect_ddt_fields(self, var_dict, var, ddt=None):
         """Add all the reachable fields from DDT variable <var> of type,
         <ddt> to <var_dict>. Each field is added as a VarDDT.
         """
-        vtype = var.get_prop_value('type')
-        if vtype in self:
-            ddt = self[vtype]
-        else:
-            lname = var.get_prop_value('local_name')
-            ctx = context_string(var.context)
-            errmsg = "Variable, {}, is not a known DDT{}"
-            raise ParseInternalError(errmsg.format(lname, ctx))
+        if ddt is None:
+            vtype = var.get_prop_value('type')
+            if vtype in self:
+                ddt = self[vtype]
+            else:
+                lname = var.get_prop_value('local_name')
+                ctx = context_string(var.context)
+                errmsg = "Variable, {}, is not a known DDT{}"
+                raise ParseInternalError(errmsg.format(lname, ctx))
+            # End if
         # End if
-        stdname = var.get_prop_value('standard_name')
         for dvar in ddt.variable_list():
             subvar = VarDDT(dvar, var)
             dvtype = dvar.get_prop_value('type')
@@ -277,6 +287,8 @@ class DDTLibrary(dict):
         return ddt_mods
 
     def write_ddt_use_statements(self, variable_list, outfile, indent, pad=0):
+        """Write the use statements for all ddt modules needed by
+        <variable_list>"""
         pad = max(pad, self._max_mod_name_len)
         ddt_mods = self.ddt_modules(variable_list)
         for ddt_mod in ddt_mods:

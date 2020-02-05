@@ -41,6 +41,7 @@ subroutine_re = re.compile(r"(?i)\s*"+prefix_spec_re+subname_re+FORTRAN_ID+argli
 end_subroutine_re = re.compile(r"(?i)\s*end\s*"+subname_re+FORTRAN_ID+r"?")
 use_re = re.compile(r"(?i)\s*use\s(?:,\s*intrinsic\s*::)?\s*only\s*:([^!]+)")
 end_type_re = re.compile(r"(?i)\s*end\s*type(?:\s+"+FORTRAN_ID+r")?")
+intent_stmt_re = re.compile(r"(?i),\s*intent\s*[(]")
 
 ########################################################################
 
@@ -461,7 +462,12 @@ def parse_use_statement(type_dict, statement, pobj, logger):
 
 ########################################################################
 
-def is_comment_statement(statement, logger):
+def is_dummy_argument_statement(statement):
+    return intent_stmt_re.search(statement) is not None
+
+########################################################################
+
+def is_comment_statement(statement):
     return statement.lstrip()[0] == '!'
 
 ########################################################################
@@ -487,7 +493,7 @@ def parse_type_def(statements, type_def, mod_name, pobj, logger):
                 seen_contains = True
             elif not seen_contains:
                 # Comment of variable
-                if ((not is_comment_statement(statement, logger)) and
+                if ((not is_comment_statement(statement)) and
                     (not parse_use_statement({}, statement, pobj, logger))):
                     vars = parse_fortran_var_decl(statement, psrc, logger=logger)
                     for var in vars:
@@ -566,7 +572,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
                 active_table = None
             elif active_table is not None:
                 # We should have a variable definition to add
-                if ((not is_comment_statement(statement, logger)) and
+                if ((not is_comment_statement(statement)) and
                     (not parse_use_statement({}, statement, pobj, logger)) and
                     (active_table.lower() == spec_name.lower())):
                     vars = parse_fortran_var_decl(statement, psrc,
@@ -655,9 +661,9 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
                 if esmatch is not None:
                     inpreamble = False
                     insub = False
-                elif ((not is_comment_statement(statement, logger)) and
+                elif ((not is_comment_statement(statement)) and
                       (not parse_use_statement({}, statement, pobj, logger)) and
-                      ('intent' in statement.lower())):
+                      is_dummy_argument_statement(statement)):
                     vars = parse_fortran_var_decl(statement, psrc,
                                                   logger=logger)
                     for var in vars:

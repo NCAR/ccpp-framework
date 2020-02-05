@@ -9,7 +9,20 @@ import os.path
 import logging
 # CCPP framework imports
 
-__sname_num = 0 # Counter for unique standard names
+class _StdNameCounter(object):
+    """Class to hold a global counter to avoid using global keyword"""
+    __SNAME_NUM = 0 # Counter for unique standard names
+
+    @classmethod
+    def new_stdname_number(cls):
+        """Increment and return the global counter."""
+        _StdNameCounter.__SNAME_NUM += 1
+        return _StdNameCounter.__SNAME_NUM
+
+    @classmethod
+    def reset_stdname_counter(cls, reset_val=0):
+        """Reset the global counter to <reset_val>"""
+        _StdNameCounter.__SNAME_NUM = reset_val
 
 ###############################################################################
 def unique_standard_name():
@@ -17,9 +30,7 @@ def unique_standard_name():
     """
     Return a unique standard name.
     """
-    global __sname_num
-    __sname_num = __sname_num + 1
-    return 'enter_standard_name_{}'.format(__sname_num)
+    return 'enter_standard_name_{}'.format(_StdNameCounter.new_stdname_number())
 
 ###############################################################################
 def reset_standard_name_counter():
@@ -28,8 +39,7 @@ def reset_standard_name_counter():
     Reset the unique_standard_name counter so that future calls to
     unique_standard name will restart.
     """
-    global __sname_num
-    __sname_num = 0
+    _StdNameCounter.reset_stdname_counter()
 
 ###############################################################################
 def context_string(context=None, with_comma=True, nodir=False):
@@ -99,8 +109,9 @@ def context_string(context=None, with_comma=True, nodir=False):
 
 ###############################################################################
 class CCPPError(ValueError):
-    "Class so programs can log user errors without backtrace"
+    """Class so programs can log user errors without backtrace"""
     def __init__(self, message):
+        """Initialize this exception"""
         logging.shutdown()
         super(CCPPError, self).__init__(message)
 
@@ -109,6 +120,7 @@ class CCPPError(ValueError):
 class ParseSyntaxError(CCPPError):
     """Exception that is aware of parsing context"""
     def __init__(self, token_type, token=None, context=None):
+        """Initialize this exception"""
         logging.shutdown()
         cstr = context_string(context)
         if token is None:
@@ -125,6 +137,7 @@ class ParseInternalError(Exception):
     Note that this error will not be trapped by programs such as ccpp_capgen
     """
     def __init__(self, errmsg, context=None):
+        """Initialize this exception"""
         logging.shutdown()
         message = "{}{}".format(errmsg, context_string(context))
         super(ParseInternalError, self).__init__(message)
@@ -134,6 +147,7 @@ class ParseInternalError(Exception):
 class ParseContextError(CCPPError):
     """Exception for errors using ParseContext"""
     def __init__(self, errmsg, context):
+        """Initialize this exception"""
         logging.shutdown()
         message = "{}{}".format(errmsg, context_string(context))
         super(ParseContextError, self).__init__(message)
@@ -144,6 +158,7 @@ class ContextRegion(collections.Iterable):
     """Class to imitate the LIFO nature of program language blocks"""
 
     def __init__(self):
+        """Initialize this ContextRegion"""
         self._lifo = list()
 
     def push(self, rtype, rname):
@@ -155,28 +170,21 @@ class ContextRegion(collections.Iterable):
         return self._lifo.pop()
 
     def type_list(self):
-        "Return just the types in the list"
+        """Return just the types in the list"""
         return [x[0] for x in self._lifo]
 
     def __iter__(self):
+        """Local version of iterator"""
         for item in self._lifo:
             yield item[0]
 
     def __len__(self):
+        """Local implementation of len builtin"""
         return len(self._lifo)
 
     def __getitem__(self, index):
+        """Special item getter for a ContextRegion"""
         return self._lifo[index]
-
-    def __del__(self):
-        try:
-            while len(self._lifo) > 0:
-                x = self._lifo.pop()
-                del x
-            # End while
-        except Exception as e:
-            pass # Python does not guarantee much about __del__ conditions
-        # End try
 
 ########################################################################
 
@@ -201,11 +209,18 @@ class ParseContext(object):
     # python 2/3 difference
     try:
         __pstr_types = (str, unicode)
-    except Exception:
+    except NameError:
         __pstr_types = (str,)
     # End try
 
     def __init__(self, linenum=None, filename=None, context=None):
+        """Initialize this ParseContext"""
+        # Set regions first in case of exception
+        if context is not None:
+            self.__regions = copy.deepcopy(context.regions)
+        else:
+            self.__regions = ContextRegion()
+        # End if
         if context is not None:
             # If context is passed, ignore linenum
             linenum = context.line_num
@@ -213,6 +228,7 @@ class ParseContext(object):
             linenum = -1
         elif not isinstance(linenum, int):
             raise CCPPError('ParseContext linenum must be an int')
+        # No else, everything is okay
         # End if
         if context is not None:
             # If context is passed, ignore filename
@@ -221,28 +237,30 @@ class ParseContext(object):
             filename = "<standard input>"
         elif not isinstance(filename, ParseContext.__pstr_types):
             raise CCPPError('ParseContext filename must be a string')
+        # No else, everything is okay
         # End if
         self._linenum = linenum
         self._filename = filename
-        if context is not None:
-            self.regions = copy.deepcopy(context.regions)
-        else:
-            self.regions = ContextRegion()
-        # End if
 
     @property
     def line_num(self):
-        'Return the current line'
+        """Return the current line"""
         return self._linenum
 
     @line_num.setter
     def line_num(self, newnum):
+        """Set a new line number for this context"""
         self._linenum = newnum
 
     @property
     def filename(self):
-        "'Return the object's filename"
+        """Return the object's filename"""
         return self._filename
+
+    @property
+    def regions(self):
+        """Return the object's region list"""
+        return self.__regions
 
     def __format__(self, spec):
         """Return a string representing the location in a file
@@ -258,30 +276,25 @@ class ParseContext(object):
             fname = self._filename
         # End if
         if self._linenum >= 0:
-            return "{}:{}".format(fname, self._linenum+1)
+            fmt_str = "{}:{}".format(fname, self._linenum+1)
         else:
-            return "{}".format(fname)
+            fmt_str = "{}".format(fname)
         # End if
+        return fmt_str
 
     def __str__(self):
         """Return a string representing the location in a file
         Note that self._linenum is zero based.
         """
         if self._linenum >= 0:
-            return "{}:{}".format(self._filename, self._linenum+1)
+            retstr = "{}:{}".format(self._filename, self._linenum+1)
         else:
-            return "{}".format(self._filename)
+            retstr = "{}".format(self._filename)
         # End if
-
-    def __del__(self):
-        try:
-            del self.regions
-        except Exception as e:
-            pass # Python does not guarantee much about __del__ conditions
-        # End try
+        return retstr
 
     def increment(self, inc=1):
-        "Increment the location within a file"
+        """Increment the location within a file"""
         if self._linenum < 0:
             self._linenum = 0
         # End if
@@ -291,51 +304,64 @@ class ParseContext(object):
         """Mark the entry of a region (e.g., DDT, module, function).
         If nested_ok == False, throw an exception if the context is already
         inside a region with the same type."""
-        if (not nested_ok) and (region_type in self.regions.type_list()):
-            raise ParseContextError("Cannot enter a nested {} region".format(region_type), self)
+        if (region_type not in self.__regions.type_list()) or nested_ok:
+            self.__regions.push(region_type, region_name)
         else:
-            self.regions.push(region_type, region_name)
+            emsg = "Cannot enter a nested {} region"
+            raise ParseContextError(emsg.format(region_type), self)
+        # End if
 
     def leave_region(self, region_type, region_name=None):
         """Mark the exit from a region. Check region name if possible"""
-        if len(self.regions) == 0:
-            raise ParseContextError("Cannot exit, not currently in any region", self)
-        else:
-            curr_type, curr_name = self.regions.pop()
+        if self.__regions:
+            curr_type, curr_name = self.__regions.pop()
             if curr_type != region_type:
-                raise ParseContextError("Trying to exit {} region while currently in {} region".format(region_type, curr_type), self)
-            elif (region_name is not None) and (curr_name is not None):
+                emsg = "Trying to exit {} region while currently in {} region"
+                raise ParseContextError(emsg.format(region_type, curr_type),
+                                        self)
+            # End if
+            if (region_name is not None) and (curr_name is not None):
                 if region_name != curr_name:
-                    raise ParseContextError("Trying to exit {} {} while currently in {} {}".format(region_type, region_name, curr_type, curr_name), self)
+                    emsg = "Trying to exit {} {} while currently in {} {}"
+                    raise ParseContextError(emsg.format(region_type,
+                                                        region_name,
+                                                        curr_type,
+                                                        curr_name), self)
                 # End if
             elif (region_name is not None) and (curr_name is None):
-                raise ParseContextError("Trying to exit {} {} while currently in unnamed {} region".format(region_type, region_name, curr_type), self)
+                emsg = "Trying to exit {} {} while currently in unnamed {} region"
+                raise ParseContextError(emsg.format(region_type, region_name,
+                                                    curr_type), self)
             # End if
+        else:
+            raise ParseContextError("Cannot exit, not currently in any region",
+                                    self)
         # End if
 
     def curr_region(self):
         """Return the innermost current region"""
-        if len(self.regions) > 0:
-            return self.regions[-1]
-        else:
-            return None
+        curr = None
+        if self.__regions:
+            curr = self.__regions[-1]
+        # No else, will return None
         # End if
+        return curr
 
     def in_region(self, region_type, region_name=None):
-        "Return True iff we are currently in <region_type> <region_name>"
+        """Return True iff we are currently in <region_type> <region_name>"""
         return self.curr_region() == [region_type, region_name]
 
     def region_str(self):
         """Create a string describing the current region"""
         rgn_str = ""
-        for index in len(self.regions):
-            rtype, rname = self.regions[index]
-            if len(rgn_str) > 0:
-                rgn_str = rgn_str + " ==> "
+        for index in len(self.__regions):
+            rtype, rname = self.__regions[index]
+            if rgn_str:
+                rgn_str += " ==> "
             # End if
-            rgn_str = rgh_str + "{}".format(rtype)
+            rgn_str += "{}".format(rtype)
             if rname is not None:
-                rgn_str = rgh_str + " {}".format(rname)
+                rgn_str += " {}".format(rname)
             # End if
         # End for
         return rgn_str
@@ -356,20 +382,24 @@ class ParseSource(object):
     """
 
     def __init__(self, name_in, type_in, context_in):
+        """Initialize this ParseSource object."""
         self._name = name_in
         self._type = type_in
         self._context = context_in
 
     @property
     def type(self):
+        """Return this source's type"""
         return self._type
 
     @property
     def name(self):
+        """Return this source's name"""
         return self._name
 
     @property
     def context(self):
+        """Return this source's context"""
         return self._context
 
 ########################################################################

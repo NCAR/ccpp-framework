@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+#pylint: disable=anomalous-backslash-in-string
 """
 Create prototype CCPP metadata tables from Fortran files
 
@@ -19,6 +20,7 @@ For a DDT definition, the annotation must appear just before the type statement.
 For module data, the annotation should occur after any module variables
   which should not be included in the metadata file.
 """
+#pylint: enable=anomalous-backslash-in-string
 
 # Python library imports
 from __future__ import absolute_import
@@ -30,9 +32,8 @@ import sys
 import os
 import os.path
 import logging
-import re
 # CCPP framework imports
-from parse_tools import init_log, set_log_level, context_string
+from parse_tools import init_log, set_log_level
 from parse_tools import CCPPError, ParseInternalError
 from parse_tools import reset_standard_name_counter, unique_standard_name
 from fortran_tools import parse_fortran_file
@@ -40,10 +41,10 @@ from file_utils import create_file_list
 from metadata_table import MetadataTable
 
 ## Init this now so that all Exceptions can be trapped
-logger = init_log(os.path.basename(__file__))
+_LOGGER = init_log(os.path.basename(__file__))
 
 ## Recognized Fortran filename extensions
-__fortran_filename_extensions = ['F90', 'f90', 'F', 'f']
+_FORTRAN_FILENAME_EXTENSIONS = ['F90', 'f90', 'F', 'f']
 
 ###############################################################################
 def parse_command_line(args, description):
@@ -60,7 +61,7 @@ Filenames with a '.txt' suffix are treated as containing a list of .meta
 filenames""")
 
     parser.add_argument("--preproc-directives",
-                        metavar='VARDEF1[,VARDEF2 ...]', type=str, default=None,
+                        metavar='VARDEF1[,VARDEF2 ...]', type=str, default='',
                         help="Proprocessor directives used to correctly parse source files")
 
     parser.add_argument("--output-root", type=str,
@@ -88,7 +89,7 @@ def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
     for filename in filenames:
         logger.info('Looking for arg_tables from {}'.format(filename))
         reset_standard_name_counter()
-        fheaders = parse_fortran_file(filename, preproc_defs==preproc_defs,
+        fheaders = parse_fortran_file(filename, preproc_defs=preproc_defs,
                                       logger=logger)
         # Create metadata filename
         filepath = '.'.join(os.path.basename(filename).split('.')[0:-1])
@@ -114,11 +115,15 @@ def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
                         prop = 'enter units'
                     # End if
                     outfile.write('  units = {}\n'.format(prop))
-                    prop = var.get_prop_value('type')
-                    outfile.write('  type = {}'.format(prop))
-                    prop = var.get_prop_value('kind')
-                    if prop:
-                        outfile.write(' | kind = {}'.format(prop))
+                    tprop = var.get_prop_value('type')
+                    kprop = var.get_prop_value('kind')
+                    if tprop == kprop:
+                        outfile.write('  ddt_type = {}'.format(tprop))
+                    else:
+                        outfile.write('  type = {}'.format(tprop.lower()))
+                        if kprop:
+                            outfile.write(' | kind = {}'.format(kprop.lower()))
+                        # End if
                     # End if
                     outfile.write('\n')
                     dims = var.get_dimensions()
@@ -158,9 +163,9 @@ def _main_func():
     args = parse_command_line(sys.argv[1:], __doc__)
     verbosity = args.verbose
     if verbosity > 1:
-        set_log_level(logger, logging.DEBUG)
+        set_log_level(_LOGGER, logging.DEBUG)
     elif verbosity > 0:
-        set_log_level(logger, logging.INFO)
+        set_log_level(_LOGGER, logging.INFO)
     # End if
     # Make sure we know where output is going
     output_dir = os.path.abspath(args.output_root)
@@ -170,8 +175,8 @@ def _main_func():
         emsg = "Illegal section separator, '{}', first character must be # or ;"
         raise CCPPError(emsg.format(section_sep))
     # We need to create a list of input Fortran files
-    fort_files = create_file_list(args.files, __fortran_filename_extensions,
-                                  'Fortran', logger)
+    fort_files = create_file_list(args.files, _FORTRAN_FILENAME_EXTENSIONS,
+                                  'Fortran', _LOGGER)
     preproc_defs = args.preproc_directives
     ## A few sanity checks
     ## Make sure output directory is legit
@@ -179,7 +184,8 @@ def _main_func():
         if not os.path.isdir(output_dir):
             errmsg = "output-root, '{}', is not a directory"
             raise CCPPError(errmsg.format(args.output_root))
-        elif not os.access(output_dir, os.W_OK):
+        # End if
+        if not os.access(output_dir, os.W_OK):
             errmsg = "Cannot write files to output-root ({})"
             raise CCPPError(errmsg.format(args.output_root))
         # End if (output_dir is okay)
@@ -188,8 +194,8 @@ def _main_func():
         os.makedirs(output_dir)
     # End if
     # Parse the files and create metadata
-    meta_files = parse_fortran_files(fort_files, preproc_defs,
-                                     output_dir, section_sep, logger)
+    _ = parse_fortran_files(fort_files, preproc_defs,
+                            output_dir, section_sep, _LOGGER)
 
 ###############################################################################
 
@@ -198,13 +204,13 @@ if __name__ == "__main__":
         _main_func()
         sys.exit(0)
     except ParseInternalError as pie:
-        logger.exception(pie)
+        _LOGGER.exception(pie)
         sys.exit(-1)
-    except CCPPError as ca:
-        if logger.getEffectiveLevel() <= logging.DEBUG:
-            logger.exception(ca)
+    except CCPPError as ccpp_err:
+        if _LOGGER.getEffectiveLevel() <= logging.DEBUG:
+            _LOGGER.exception(ccpp_err)
         else:
-            logger.error(ca)
+            _LOGGER.error(ccpp_err)
         # End if
         sys.exit(1)
     finally:
