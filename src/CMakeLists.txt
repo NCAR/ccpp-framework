@@ -47,29 +47,6 @@ foreach(source_f90 ${SOURCES_F90})
 endforeach()
 
 #------------------------------------------------------------------------------
-# Find/set libXML2
-if(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
-    include_directories(${LIBXML2_INCLUDE_DIR})
-    if (STATIC)
-        list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.a")
-    else (STATIC)
-        if(APPLE)
-            list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.dylib")
-        elseif(UNIX)
-            list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.so")
-        else (APPLE)
-            message (FATAL_ERROR "Unsupported platform, only Linux and MacOSX are supported at this time.")
-        endif(APPLE)
-    endif (STATIC)
-else(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
-    find_package(LibXml2 REQUIRED)
-    if(LIBXML2_FOUND)
-        include_directories(${LIBXML2_INCLUDE_DIR})
-        list(APPEND LIBS ${LIBXML2_LIBRARIES})
-    endif(LIBXML2_FOUND)
-endif(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
-
-#------------------------------------------------------------------------------
 # CMake Modules
 # Set the CMake module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
