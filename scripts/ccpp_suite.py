@@ -9,15 +9,15 @@ import os.path
 import re
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from parse_tools   import ParseContext, ParseSource, context_string
-from parse_tools   import ParseInternalError, CCPPError
-from parse_tools   import read_xml_file, validate_xml_file, find_schema_version
-from metavar       import Var, VarDictionary, VarLoopSubst, ccpp_standard_var
-from metavar       import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
-from ddt_library   import DDTLibrary
+from parse_tools import ParseContext, ParseSource, context_string
+from parse_tools import ParseInternalError, CCPPError
+from parse_tools import read_xml_file, validate_xml_file, find_schema_version
+from metavar import Var, VarDictionary, VarLoopSubst, ccpp_standard_var
+from metavar import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
+from ddt_library import DDTLibrary
 from state_machine import StateMachine
 from fortran_tools import FortranWriter
-from code_block    import CodeBlock
+from code_block import CodeBlock
 
 # pylint: disable=too-many-lines
 

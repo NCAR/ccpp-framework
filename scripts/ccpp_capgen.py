@@ -646,11 +646,11 @@ def _main_func():
     # End if
     # Make sure we know where output is going
     output_dir = os.path.abspath(args.output_root)
-    if os.path.abspath(args.cap_pathlist):
-        datatable_file = args.cap_pathlist
+    if os.path.abspath(args.ccpp_datafile):
+        datatable_file = args.ccpp_datafile
     else:
         datatable_file = os.path.abspath(os.path.join(output_dir,
-                                                       args.cap_pathlist))
+                                                       args.ccpp_datafile))
     # End if
     ## A few sanity checks
     ## Make sure output directory is legit
