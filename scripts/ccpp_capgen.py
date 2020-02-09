@@ -621,15 +621,14 @@ def capgen(host_files, scheme_files, suites, datatable_file, preproc_defs,
     cap_filenames = ccpp_api.write(output_dir, logger)
     if gen_hostcap:
         # Create a cap file
-        hcap_filename = write_host_cap(host_model, ccpp_api,
-                                       output_dir, logger)
+        host_files = [write_host_cap(host_model, ccpp_api, output_dir, logger)]
     else:
-        hcap_filename = None
-    # End if
+        host_files = list()
+    # end if
     # Create the kinds file
     kinds_file = create_kinds_file(kind_phys, output_dir, logger)
     # Finally, create the database of generated files and caps
-    generate_ccpp_datatable(datatable_file, ccpp_api, [hcap_filename],
+    generate_ccpp_datatable(datatable_file, ccpp_api, host_files,
                             cap_filenames, kinds_file)
 
 ###############################################################################
