@@ -204,47 +204,6 @@ def default_kind_val(prop_dict, context=None):
     return kind
 
 ########################################################################
-def default_vertical_coord(prop_dict, context=None):
-########################################################################
-    """Choose a default vertical coordinate based on a variable's
-    dimensions property.
-    >>> default_vertical_coord({'dimensions':'()'})
-    'vertical_index'
-    >>> default_vertical_coord({'dimensions':'(horizontal_loop_extent)'})
-    'vertical_index'
-    >>> default_vertical_coord({'dimensions':'(ccpp_constant_one:horizontal_loop_extent, ccpp_constant_one:vertical_interface_dimension)'})
-    'vertical_interface_dimension'
-    >>> default_vertical_coord({'dimensions':'(ccpp_constant_one:horizontal_loop_extent, vertical_layer_dimension)'})
-    'vertical_layer_dimension'
-    >>> default_vertical_coord({'local_name':'foo'}) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    CCPPError: No dimensions to find default vertical_coord for foo
-    >>> default_vertical_coord({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    CCPPError: No dimensions to find default vertical_coord, at foo.F90:3
-    """
-    if 'dimensions' in prop_dict:
-        dims = prop_dict['dimensions']
-    else:
-        if 'local_name' in prop_dict:
-            lname = prop_dict['local_name']
-            errmsg = 'No dimensions to find default vertical_coord for{ln}{ct}'
-        else:
-            lname = ''
-            errmsg = 'No dimensions to find default vertical_coord{ct}'
-        # end if
-        ctx = context_string(context)
-        raise CCPPError(errmsg.format(ln=lname, ct=ctx))
-    if 'vertical_layer_dimension' in dims:
-        vcoord = 'vertical_layer_dimension'
-    elif 'vertical_interface_dimension' in dims:
-        vcoord = 'vertical_interface_dimension'
-    else:
-        vcoord = 'vertical_index'
-    # end if
-    return vcoord
-
-########################################################################
 
 class VariableProperty(object):
     """Class to represent a single property of a metadata header entry
@@ -514,11 +473,6 @@ class Var(object):
                                      optional_in=True, default_in=False),
                     VariableProperty('allocatable', bool,
                                      optional_in=True, default_in=False),
-                    VariableProperty('vertical_coord', str, optional_in=True,
-                                     valid_values_in=['vertical_index',
-                                                      'vertical_interface_dimension',
-                                                      'vertical_layer_dimension'],
-                                     default_fn_in=default_vertical_coord),
                     VariableProperty('persistence', str, optional_in=True,
                                      valid_values_in=['timestep', 'run'],
                                      default_in='timestep')]
@@ -714,7 +668,15 @@ class Var(object):
         """Add an intent to this Var or adjust its existing intent.
         Note: An existing intent can only be adjusted to 'inout'
         """
-        if 'intent' not in self._prop_dict:
+        if not intent:
+            intent = 'in'
+        # end if
+        if 'intent' in self._prop_dict:
+            my_intent = self.get_prop_value('intent')
+        else:
+            my_intent = None
+        # end if
+        if not my_intent:
             self._prop_dict['intent'] = intent
         elif intent == 'inout':
             self._prop_dict['intent'] = intent

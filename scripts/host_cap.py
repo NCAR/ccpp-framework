@@ -5,14 +5,14 @@ Parse a host-model registry XML file and return the captured variables.
 """
 
 # Python library imports
-from __future__ import print_function
 import os
 import os.path
 # CCPP framework imports
-from ccpp_suite    import COPYRIGHT, KINDS_MODULE, CCPP_STATE_MACH, API
-from metavar       import Var, VarDictionary, CCPP_CONSTANT_VARS
+from ccpp_suite import COPYRIGHT, KINDS_MODULE, CCPP_STATE_MACH, API
+from metavar import Var, VarDictionary, CCPP_CONSTANT_VARS
+from metavar import CCPP_LOOP_VAR_STDNAMES
 from fortran_tools import FortranWriter
-from parse_tools   import CCPPError, ParseSource, ParseContext
+from parse_tools import CCPPError, ParseSource, ParseContext
 
 ###############################################################################
 _HEADER = '''
@@ -174,6 +174,10 @@ def write_host_cap(host_model, api, output_dir, logger):
             subst_dict = {}
             for hvar in callvars:
                 protected = hvar.get_prop_value('protected')
+                stdname = hvar.get_prop_value('standard_name')
+                if stdname in CCPP_LOOP_VAR_STDNAMES:
+                    protected = True # Cannot modify a loop variable
+                # End if
                 if protected:
                     subst_dict['intent'] = 'in'
                 else:

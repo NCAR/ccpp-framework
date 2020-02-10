@@ -174,10 +174,21 @@ class CallList(VarDictionary):
            be found"""
         # Check to see if we have a special call list intent case
         evar = super(CallList, self).find_variable(newvar, any_scope=False)
+        nintent = newvar.get_prop_value('intent')
+        if not nintent:
+            # We must be trying to add a host variable, give it an intent
+            nintent = 'in'
+            newvar.adjust_intent(nintent)
+        # End if
         if evar and (evar.get_prop_value('intent') == 'out'):
-            nintent = newvar.get_prop_value('intent')
             if nintent != 'out':
-                pass
+                elname = evar.get_prop_value('local_name')
+                nlname = newvar.get_prop_value('local_name')
+                ectx = context_string(evar.context)
+                nctx = context_string(newvar.context)
+                emsg = "Call list intent mismatch, existing = {}{}"
+                emsg += ", new = {}{}"
+                raise CCPPError(emsg.format(elname, ectx, nlname, nctx))
         # Add variable
         super(CallList, self).add_variable(newvar, exists_ok=exists_ok,
                                            gen_unique=gen_unique,
@@ -821,7 +832,10 @@ class SuiteObject(VarDictionary):
                 dintent = dict_var.get_prop_value('intent')
                 vintent = var.get_prop_value('intent')
                 if dintent != vintent:
-                    dict_var.adjust_intent('inout')
+                    if not vintent:
+                        vintent = 'in'
+                    # end if
+                    dict_var.adjust_intent(vintent)
                 # end if
             else:
                 found_var = False
