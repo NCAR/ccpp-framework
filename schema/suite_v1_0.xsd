@@ -41,21 +41,65 @@
 
   <!-- definition of suite elements -->
 
+  <xs:element name="time_split">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="time_split"/>
+        <xs:element ref="process_split"/>
+        <xs:element ref="subcycle"/>
+        <xs:element ref="subcol"/>
+        <xs:element name="scheme" type="scheme_type"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="process_split">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="time_split"/>
+        <xs:element ref="process_split"/>
+        <xs:element ref="subcycle"/>
+        <xs:element ref="subcol"/>
+        <xs:element name="scheme" type="scheme_type"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
   <xs:element name="subcycle">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="scheme" type="scheme_type"
-                    minOccurs="1" maxOccurs="unbounded"/>
-      </xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="time_split"/>
+        <xs:element ref="process_split"/>
+        <xs:element ref="subcycle"/>
+        <xs:element ref="subcol"/>
+        <xs:element name="scheme" type="scheme_type"/>
+      </xs:choice>
       <xs:attribute name="loop" type="subcycle_type" use="optional"/>
       <xs:attribute name="name" type="xs:string" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="subcol">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="time_split"/>
+        <xs:element ref="process_split"/>
+        <xs:element ref="subcycle"/>
+        <xs:element ref="subcol"/>
+        <xs:element name="scheme" type="scheme_type"/>
+      </xs:choice>
+      <xs:attribute name="gen" type="fortran_id_type" use="required"/>
+      <xs:attribute name="avg" type="fortran_id_type" use="required"/>
     </xs:complexType>
   </xs:element>
 
   <xs:element name="group">
     <xs:complexType>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="time_split"/>
+        <xs:element ref="process_split"/>
         <xs:element ref="subcycle"/>
+        <xs:element ref="subcol"/>
         <xs:element name="scheme" type="scheme_type"/>
       </xs:choice>
       <xs:attribute name="name" type="xs:string" use="required"/>
