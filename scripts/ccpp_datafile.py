@@ -62,6 +62,9 @@ def _command_line_parser():
     help_str = "Return a list of process types and implementing scheme name"
     group.add_argument("--process-list", action='store_true', default=False,
                        help=help_str)
+    help_str = "Return a list of module names used in this set of suites"
+    group.add_argument("--module-list", action='store_true', default=False,
+                       help=help_str)
     ###
     parser.add_argument("--separator", type=str, required=False, default=",",
                         metavar="SEP", dest="sep",
@@ -125,7 +128,7 @@ def _retrieve_process_list(table):
 ###############################################################################
     result = list()
     schemes = table.find("schemes")
-    if not schemes:
+    if schemes is None:
         raise CCPPDatatableError("Could not find 'schemes' element")
     # end if
     for scheme in schemes:
@@ -138,8 +141,26 @@ def _retrieve_process_list(table):
     return result
 
 ###############################################################################
+def _retrieve_module_list(table):
+###############################################################################
+    result = set()
+    schemes = table.find("schemes")
+    if schemes is None:
+        raise CCPPDatatableError("Could not find 'schemes' element")
+    # end if
+    for scheme in schemes:
+        for phase in scheme:
+            module = phase.get("module")
+            if module is not None:
+                result.add(module)
+            # end if
+        # end for
+    # end for
+    return list(result)
+
+###############################################################################
 def datatable_report(datatable, host_files, suite_files, utility_files,
-                     ccpp_files, process_list, sep):
+                     ccpp_files, process_list, module_list, sep):
 ###############################################################################
     """Perform a lookup action on <datatable> and return the result.
     Each input except for <datatable> and <sep> specifies an action boolean.
@@ -150,7 +171,7 @@ def datatable_report(datatable, host_files, suite_files, utility_files,
     ## Note: This check is only needed for import usage of this function
     ##       but is does not hurt to repeat it.
     num_actions = sum([host_files, suite_files, utility_files, ccpp_files,
-                       process_list])
+                       process_list, module_list])
     if num_actions != 1:
         if num_actions > 1:
             emsg = "datatable_report: Only one action is allowed\n"
@@ -172,6 +193,8 @@ def datatable_report(datatable, host_files, suite_files, utility_files,
         result = _retrieve_ccpp_files(table, file_type="utilities")
     elif process_list:
         result = _retrieve_process_list(table)
+    elif module_list:
+        result = _retrieve_module_list(table)
     else:
         result = ''
     # end if
@@ -338,6 +361,7 @@ if __name__ == "__main__":
     PARGS = parse_command_line(sys.argv[1:])
     REPORT = datatable_report(PARGS.datatable, PARGS.host_files,
                               PARGS.suite_files, PARGS.utility_files,
-                              PARGS.ccpp_files, PARGS.process_list, PARGS.sep)
+                              PARGS.ccpp_files, PARGS.process_list,
+                              PARGS.module_list, PARGS.sep)
     print("{}".format(REPORT))
     sys.exit(0)
