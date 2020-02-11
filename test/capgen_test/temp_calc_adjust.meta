@@ -1,6 +1,7 @@
 [ccpp-arg-table]
   name = temp_calc_adjust_run
   type = scheme
+  process = adjusting
 [ nbox ]
   standard_name = horizontal_loop_extent
   type = integer

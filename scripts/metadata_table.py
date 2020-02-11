@@ -207,7 +207,7 @@ class MetadataTable(ParseSource):
     __scheme_header_type = 'scheme'
     __header_types = ['ddt', 'host', 'module', __scheme_header_type, 'local']
 
-    __unknown_process_type = 'UNKNOWN'
+    unknown_process_type = 'UNKNOWN'
 
     def __init__(self, parse_object=None,
                  title=None, type_in=None, module=None, process_type=None,
@@ -242,7 +242,7 @@ class MetadataTable(ParseSource):
                 raise ParseInternalError("MetadataTable requires a module name")
             # end if
             if process_type is None:
-                self.__process_type = MetadataTable.__unknown_process_type
+                self.__process_type = MetadataTable.unknown_process_type
             else:
                 self.__process_type = process_type
             # end if
@@ -297,7 +297,7 @@ class MetadataTable(ParseSource):
         self.__table_title = None
         self.__header_type = None
         self.__module_name = None
-        self.__process_type = MetadataTable.__unknown_process_type
+        self.__process_type = MetadataTable.unknown_process_type
         while ((curr_line is not None) and
                (not MetadataTable.variable_start(curr_line, self._pobj)) and
                (not MetadataTable.table_start(curr_line))):
@@ -339,7 +339,7 @@ class MetadataTable(ParseSource):
                                    token=curr_line, context=self._pobj)
         # end if
         if ((self.header_type != MetadataTable.__scheme_header_type) and
-            (self.process_type != MetadataTable.__unknown_process_type)):
+            (self.process_type != MetadataTable.unknown_process_type)):
             raise ParseSyntaxError("process keyword only allowed for a scheme",
                                    token=curr_line, context=self._pobj)
         # end if

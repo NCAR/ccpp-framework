@@ -313,7 +313,7 @@ class SuiteObject(VarDictionary):
         # end if
 
     def remove_part(self, index):
-        """Remove the part at index"""
+        """Remove the SuiteObject part at index"""
         plen = len(self.__parts)
         if (0 <= index < plen) or (abs(index) <= plen):
             del self.__parts[index]
@@ -327,7 +327,7 @@ class SuiteObject(VarDictionary):
         # end if
 
     def schemes(self):
-        """Return a flattened list of schemes for this group"""
+        """Return a flattened list of schemes for this SuiteObject"""
         schemes = list()
         for item in self.__parts:
             schemes.extend(item.schemes())
@@ -690,13 +690,13 @@ class SuiteObject(VarDictionary):
                 if hvdim_index < len(new_need_dims):
                     # Insert the vertical loop dimension
                     if hvdim_index > 0:
-                        before = new_needs_dims[0:hvdim_index]
+                        before = new_need_dims[0:hvdim_index]
                         perm_before = perm[0:hvdim_index]
                     else:
                         before = []
                         perm_before = []
                     # end if
-                    after = new_needs_dims[hvdim_index:]
+                    after = new_need_dims[hvdim_index:]
                     new_need_dims = before + [vmatch_dims] + after
                     perm = perm_before + [hvdim_index] + perm[hvdim_index:]
                 else:
@@ -939,6 +939,11 @@ class SuiteObject(VarDictionary):
     def needs_vertical(self):
         """Return the vertical dimension this SuiteObject is missing or None"""
         return self.__needs_vertical
+
+    @property
+    def context(self):
+        """Return the context of this SuiteObject"""
+        return self.__context
 
     @needs_vertical.setter
     def needs_vertical(self, value):
@@ -1404,6 +1409,9 @@ class Group(SuiteObject):
     # end for
 
     def __init__(self, group_xml, transition, parent, context, logger):
+        """Initialize this Group object from <group_xml>.
+        <transition> is the group's phase, <parent> is the group's suite.
+        """
         name = parent.name + '_' + group_xml.get('name')
         if transition not in CCPP_STATE_MACH.transitions():
             errmsg = "Bad transition argument to Group, '{}'"
@@ -1777,6 +1785,8 @@ end module {module}
     __scheme_template = '<scheme>{}</scheme>'
 
     def __init__(self, filename, api, logger):
+        """Initialize this Suite object from the SDF, <filename>.
+        <api> serves as the Suite's parent."""
         self.__logger = logger
         self._name = None
         self._sdf_name = filename

@@ -55,9 +55,9 @@ _KINDS_HEADER = '''
 def parse_command_line(args, description):
 ###############################################################################
     """Create an ArgumentParser to parse and return command-line arguments"""
-    format = argparse.RawTextHelpFormatter
+    ap_format = argparse.RawTextHelpFormatter
     parser = argparse.ArgumentParser(description=description,
-                                     formatter_class=format, epilog=_EPILOG)
+                                     formatter_class=ap_format, epilog=_EPILOG)
 
     parser.add_argument("--host-files", metavar='<host files filename>',
                         type=str, required=True,
@@ -628,8 +628,8 @@ def capgen(host_files, scheme_files, suites, datatable_file, preproc_defs,
     # Create the kinds file
     kinds_file = create_kinds_file(kind_phys, output_dir, logger)
     # Finally, create the database of generated files and caps
-    generate_ccpp_datatable(datatable_file, ccpp_api, host_files,
-                            cap_filenames, kinds_file)
+    generate_ccpp_datatable(datatable_file, ccpp_api, scheme_headers,
+                            host_files, cap_filenames, kinds_file)
 
 ###############################################################################
 def _main_func():
