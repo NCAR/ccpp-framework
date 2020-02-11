@@ -163,7 +163,7 @@ def datatable_report(datatable, host_files, suite_files, utility_files,
 ###
 
 ###############################################################################
-def new_scheme_entry(parent):
+def new_scheme_entry(parent, scheme):
 ###############################################################################
     """Return a new XML entry for <scheme> under <parent>"""
     entry = ET.SubElement(parent, "scheme")
