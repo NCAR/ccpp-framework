@@ -664,13 +664,10 @@ class Var(object):
         # end if
         return compat, reason
 
-    def adjust_intent(self, intent):
+    def adjust_intent(self, intent, src_var=None):
         """Add an intent to this Var or adjust its existing intent.
         Note: An existing intent can only be adjusted to 'inout'
         """
-        if not intent:
-            intent = 'in'
-        # end if
         if 'intent' in self._prop_dict:
             my_intent = self.get_prop_value('intent')
         else:
@@ -678,10 +675,21 @@ class Var(object):
         # end if
         if not my_intent:
             self._prop_dict['intent'] = intent
+        elif not intent:
+            self._prop_dict['intent'] = 'in'
         elif intent == 'inout':
             self._prop_dict['intent'] = intent
-        else:
-            raise ParseInternalError("Can only adjust intent to be 'inout'")
+        elif intent != my_intent:
+            lname = self.get_prop_value('local_name')
+            lctx = context_string(self.context)
+            emsg = "Attempt to set intent of {}{} to {}, only 'inout' allowed."
+            if src_var:
+                slname = src_var.get_prop_value('local_name')
+                sctx = context_string(src_var.context)
+                emsg += "\nintent source: {}{}".format(slname, sctx)
+            # end if
+            raise ParseInternalError(emsg.format(lname, lctx, intent))
+        # no else, intent does not need to change
         # end if
 
     @classmethod
@@ -790,7 +798,7 @@ class Var(object):
         return cprop_dict
 
     def clone(self, subst_dict, source_name=None, source_type=None,
-              context=None, loop_match=False):
+              context=None):
         """Create a clone of this Var object with properties from <subst_dict>
         overriding this variable's properties. <subst_dict> may also be
         a string in which case only the local_name property is changed
@@ -1257,11 +1265,11 @@ class VarSpec(object):
     def __repr__(self):
         """Return a representation of this object"""
         if self._dims is not None:
-            repr = "{}({})".format(self._name, ', '.join(self._dims))
+            repr_str = "{}({})".format(self._name, ', '.join(self._dims))
         else:
-            repr = self._name
+            repr_str = self._name
         # end if
-        return repr
+        return repr_str
 
 ###############################################################################
 
@@ -1442,7 +1450,7 @@ class VarLoopSubst(VarAction):
 
     def write_metadata(self, mfile):
         """Write our properties as metadata to <mfile>"""
-        mfile.write('[ {} ]'.format(self.get_prop_value('local_name')))
+        pass # Currently no properties to write
 
     @property
     def required_stdnames(self):

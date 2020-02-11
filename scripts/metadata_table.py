@@ -239,7 +239,12 @@ class MetadataTable(ParseSource):
             if module is not None:
                 self.__module_name = module
             else:
-                self.__module_name = self._default_module()
+                raise ParseInternalError("MetadataTable requires a module name")
+            # end if
+            if process_type is None:
+                self.__process_type = MetadataTable.__unknown_process_type
+            else:
+                self.__process_type = process_type
             # end if
             #  Initialize our ParseSource parent
             super(MetadataTable, self).__init__(self.title,
