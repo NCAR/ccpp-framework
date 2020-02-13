@@ -41,6 +41,13 @@ string(TIMESTAMP YEAR "%Y")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 #------------------------------------------------------------------------------
+# Static or dynamic CCPP, default is dynamic; standalone build can only be dynamic
+option(STATIC "Build a static CCPP" OFF)
+if (PROJECT STREQUAL "Unknown" AND STATIC)
+    message(FATAL_ERROR "ccpp-framework standalone build can only be dynamic")
+endif(PROJECT STREQUAL "Unknown" AND STATIC)
+
+#------------------------------------------------------------------------------
 # Set OpenMP flags for C/C++/Fortran
 if (OPENMP)
   include(detect_openmp)
