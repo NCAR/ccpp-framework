@@ -18,6 +18,9 @@ import sys
 # CCPP framework imports
 from parse_tools import read_xml_file
 from metadata_table import MetadataTable
+from ccpp_suite import VerticalLoop, Subcycle
+
+_INDENT_STR = "  "
 
 ###
 ### Utilities
@@ -65,16 +68,38 @@ def _command_line_parser():
     help_str = "Return a list of module names used in this set of suites"
     group.add_argument("--module-list", action='store_true', default=False,
                        help=help_str)
+    group.add_argument("--suite-list", action='store_true', default=False,
+                       help="Return a list of configured suite names")
+    help_str = ("Return a list of required "
+                "variable standard names for suite, <SUITE_NAME>")
+    group.add_argument("--required-variables", required=False, type=str,
+                       metavar="SUITE_NAME", default='', help=help_str)
+    help_str = ("Return a list of required input "
+                "variable standard names for suite, <SUITE_NAME>")
+    group.add_argument("--input-variables", required=False, type=str,
+                       metavar="SUITE_NAME", default='', help=help_str)
+    help_str = ("Return a list of required output "
+                "variable standard names for suite, <SUITE_NAME>")
+    group.add_argument("--output-variables", required=False, type=str,
+                       metavar="SUITE_NAME", default='', help=help_str)
+    group.add_argument("--show", action='store_true', default=False,
+                       help='Pretty print the database contents to the screen')
     ###
     parser.add_argument("--separator", type=str, required=False, default=",",
                         metavar="SEP", dest="sep",
                         help="String to separate items in a list")
+    help_str = "Screen width for '--show' line wrapping. -1 means do not wrap."
+    parser.add_argument("--line-wrap", type=int, required=False, default=-1,
+                        metavar="LINE_WIDTH", dest="line_wrap",
+                        help=help_str)
+    parser.add_argument("--indent", type=int, required=False, default=2,
+                        help="Indent depth for '--show' output")
     return parser
 
 ###############################################################################
 def parse_command_line(args):
 ###############################################################################
-    "Create an ArgumentParser to parse and return command-line arguments"
+    """Create an ArgumentParser to parse and return command-line arguments"""
     parser = _command_line_parser()
     pargs = parser.parse_args(args)
     return pargs
@@ -126,6 +151,7 @@ def _retrieve_ccpp_files(table, file_type=None):
 ###############################################################################
 def _retrieve_process_list(table):
 ###############################################################################
+    """Find and return a list of all physics scheme processes in <table>."""
     result = list()
     schemes = table.find("schemes")
     if schemes is None:
@@ -143,6 +169,7 @@ def _retrieve_process_list(table):
 ###############################################################################
 def _retrieve_module_list(table):
 ###############################################################################
+    """Find and return a list of all scheme modules in <table>."""
     result = set()
     schemes = table.find("schemes")
     if schemes is None:
@@ -159,8 +186,102 @@ def _retrieve_module_list(table):
     return list(result)
 
 ###############################################################################
+def _find_var_dictionary(table, dict_name, dict_type):
+###############################################################################
+    """Find and return a var_dictionary named, <dict_name> in <table>.
+    If not found, return None"""
+    var_dicts = table.find("var_dictionaries")
+    target_dict = None
+    for vdict in var_dicts:
+        if ((vdict.get("name") == dict_name) and
+            (vdict.get("type") == dict_type)):
+            target_dict = vdict
+            break
+        # end if
+    # end for
+    return target_dict
+
+###############################################################################
+def _retrieve_suite_list(table):
+###############################################################################
+    """Find and return a list of all suites found in <table>."""
+    result = list()
+    # First, find the API variable dictionary
+    api_elem = table.find("api")
+    if api_elem is not None:
+        suites_elem = api_elem.find("suites")
+        if suites_elem is not None:
+            for suite in suites_elem:
+                result.append(suite.get("name"))
+            # end for
+        # end if
+    # end if
+    return result
+
+###############################################################################
+def _retrieve_suite_group_names(table, suite_name):
+###############################################################################
+    """Find and return a list of the group names for this suite."""
+    result = list()
+    # First, find the API variable dictionary
+    api_elem = table.find("api")
+    if api_elem is not None:
+        suites_elem = api_elem.find("suites")
+        if suites_elem is not None:
+            for suite in suites_elem:
+                if suite.get("name") == suite_name:
+                    for item in suite:
+                        if item.tag == "group":
+                            result.append(item.get("name"))
+                        # end if
+                    # end for
+                # end if
+            # end for
+        # end if
+    # end if
+    return result
+
+###############################################################################
+def _retrieve_variable_list(table, suite_name, intent_type=None):
+###############################################################################
+    """Find and return a list of all the required variables in <suite_name>.
+    If suite, <suite_name>, is not found in <table>, return an empty list.
+    If <intent_type> is present, return only that variable type (input or
+    output)."""
+    # Note that suites do not have call lists so we have to collect
+    # all the variables from the suite's groups.
+    var_set = set()
+    if intent_type is None:
+        allowed_intents = ['in', 'out', 'inout']
+    elif intent_type == "input":
+        allowed_intents = ['in', 'inout']
+    elif intent_type == "output":
+        allowed_intents = ['out', 'inout']
+    else:
+        emsg = "Invalid intent_type, '{}'"
+        raise CCPPDatatableError(emsg.format(intent_type))
+    # end if
+    group_names = _retrieve_suite_group_names(table, suite_name)
+    for group in group_names:
+        cl_name = group + "_call_list"
+        group_dict = _find_var_dictionary(table, cl_name, "group_call_list")
+        if group_dict is not None:
+            vars = group_dict.find("variables")
+            if vars is not None:
+                for var in vars:
+                    if var.get("intent") in allowed_intents:
+                        var_set.add(var.get("name"))
+                    # end if
+                # end for
+            # end if
+        # end if
+    # end for
+    return list(var_set)
+
+###############################################################################
 def datatable_report(datatable, host_files, suite_files, utility_files,
-                     ccpp_files, process_list, module_list, sep):
+                     ccpp_files, process_list, module_list, suite_list,
+                     required_vars, input_vars, output_vars, sep):
 ###############################################################################
     """Perform a lookup action on <datatable> and return the result.
     Each input except for <datatable> and <sep> specifies an action boolean.
@@ -170,8 +291,10 @@ def datatable_report(datatable, host_files, suite_files, utility_files,
     ## Check that exactly one action is specified.
     ## Note: This check is only needed for import usage of this function
     ##       but is does not hurt to repeat it.
-    num_actions = sum([host_files, suite_files, utility_files, ccpp_files,
-                       process_list, module_list])
+    action_list = [host_files, suite_files, utility_files, ccpp_files,
+                   process_list, module_list, suite_list, required_vars,
+                   input_vars, output_vars]
+    num_actions = sum([1 for x in action_list if x])
     if num_actions != 1:
         if num_actions > 1:
             emsg = "datatable_report: Only one action is allowed\n"
@@ -195,6 +318,16 @@ def datatable_report(datatable, host_files, suite_files, utility_files,
         result = _retrieve_process_list(table)
     elif module_list:
         result = _retrieve_module_list(table)
+    elif suite_list:
+        result = _retrieve_suite_list(table)
+    elif required_vars:
+        result = _retrieve_variable_list(table, required_vars)
+    elif input_vars:
+        result = _retrieve_variable_list(table, input_vars,
+                                         intent_type="input")
+    elif output_vars:
+        result = _retrieve_variable_list(table, output_vars,
+                                         intent_type="output")
     else:
         result = ''
     # end if
@@ -203,12 +336,136 @@ def datatable_report(datatable, host_files, suite_files, utility_files,
     # end if
     return result
 
+###############################################################################
+def _indent_str(indent):
+###############################################################################
+    """Return the line start string for indent level, <indent>."""
+    return _INDENT_STR*indent
+
+###############################################################################
+def _format_line(line_in, indent, line_wrap, increase_indent=True):
+###############################################################################
+    """Format <line_in> into separate lines in an attempt to not have the
+    length of any line greater than <line_wrap> characters including any
+    indent (with indent level specified by <indent>).
+    If <increase_indent> is True, increase the indent level for new lines
+    created by the process.
+    A value of <line_wrap> less one means do not wrap the line.
+    """
+    in_squote = False
+    in_dquote = False
+    outline = ''
+    indent_str = _indent_str(indent)
+    curr_indent = len(indent_str)
+    wrap_points = list()
+    line = line_in.strip()
+    llen = len(line)
+    # Do we need to wrap the line?
+    if (line_wrap <= 0) or (llen + curr_indent <= line_wrap):
+        index = llen + 1
+    else:
+        index = 0
+    # end if
+    # Collect possible wrap points
+    while index < llen:
+        inchar = line[index]
+        if in_squote:
+            if inchar == "'":
+                in_squote = False
+            # end if (else do nothing)
+        elif in_dquote:
+            if inchar == '"':
+                in_dquote = False
+            # end if (else do nothing)
+        elif inchar == ' ':
+            wrap_points.append(index + curr_indent)
+        # end if (else it is not an interesting character)
+        index += 1
+    # end while
+    if (line_wrap <= 0) or (llen + curr_indent <= line_wrap):
+        this_line = indent_str + line
+        next_line = ""
+    else:
+        # Find the best break point
+        good_points = [x for x in wrap_points if x <= line_wrap]
+        if increase_indent:
+            indent += 2 # To indent past child tags
+        # end if
+        if good_points:
+            wrap = max(good_points) - curr_indent
+            this_line = indent_str + line[0:wrap]
+            next_line = _format_line(line[wrap+1:], indent, line_wrap,
+                                     increase_indent=False)
+        elif wrap_points:
+            wrap = min(wrap_points) - curr_indent
+            this_line = indent_str + line[0:wrap]
+            next_line = _format_line(line[wrap+1:], indent, line_wrap,
+                                     increase_indent=False)
+        else:
+            this_line = indent_str + line
+            next_line = ""
+        # end if
+    # end if
+    outline = this_line + '\n' + next_line
+    return outline
+
+###############################################################################
+def table_entry_pretty_print(entry, indent, line_wrap=-1):
+###############################################################################
+    """Create and return a pretty print string of the contents of <entry>"""
+    output = ""
+    outline = "<{}".format(entry.tag)
+    for name in entry.attrib:
+        outline += " {}={}".format(name, entry.attrib[name])
+    # end for
+    has_children = len(list(entry)) > 0
+    has_text = entry.text
+    if has_children or has_text:
+        # We have sub-structure, close and print this tag
+        outline += ">"
+        output += _format_line(outline, indent, line_wrap)
+    else:
+        # No sub-structure, we are done with this tag
+        outline += " />"
+        output += _format_line(outline, indent, line_wrap)
+    # end if
+    if has_children:
+        for child in entry:
+            output += table_entry_pretty_print(child, indent+1,
+                                               line_wrap=line_wrap)
+        # end for
+    # end if
+    if has_text:
+        output += _format_line(entry.text, indent+1, line_wrap)
+    # end if
+    if has_children or has_text:
+        # We had sub-structure, print the close tag
+        outline = "</{}>".format(entry.tag)
+        output += _format_line(outline, indent, line_wrap)
+    # end if
+    return output
+
+###############################################################################
+def datatable_pretty_print(datatable, indent, line_wrap):
+###############################################################################
+    """Create and return a pretty print string of the contents of <datatable>"""
+    indent = 0
+    table = _read_datatable(datatable)
+    report = table_entry_pretty_print(table, indent, line_wrap=line_wrap)
+    return report
+
 ###
 ### Functions to create the datatable file
 ###
 
 ###############################################################################
-def new_var_entry(parent, var, full_entry=True):
+def _object_type(pobj):
+###############################################################################
+    """Return an XML-acceptable string for the type of <pobj>."""
+    return pobj.__class__.__name__.lower()
+
+###############################################################################
+def _new_var_entry(parent, var, full_entry=True):
 ###############################################################################
     """Create a variable sub-element of <parent> with information from <var>.
     If <full_entry> is False, only include standard name and intent.
@@ -234,7 +491,7 @@ def new_var_entry(parent, var, full_entry=True):
     # end if
 
 ###############################################################################
-def new_scheme_entry(parent, scheme, group_name, scheme_headers):
+def _new_scheme_entry(parent, scheme, group_name, scheme_headers):
 ###############################################################################
     """Create a new XML entry for <scheme> under <parent>"""
     sch_name = scheme.name
@@ -287,10 +544,10 @@ def new_scheme_entry(parent, scheme, group_name, scheme_headers):
             emsg = 'Could not find metadata header for {}'
             raise CCPPDatatableError(emsg.format(sch_name))
         # end if
-        call_list = ET.SubElement(phase_entry, "calllist")
+        call_list = ET.SubElement(phase_entry, "call_list")
         vlist = scheme.call_list.variable_list()
         for var in vlist:
-            new_var_entry(call_list, var, full_entry=False)
+            _new_var_entry(call_list, var, full_entry=False)
         # end for
     # end if
     if process:
@@ -298,7 +555,43 @@ def new_scheme_entry(parent, scheme, group_name, scheme_headers):
     # end if
 
 ###############################################################################
-def add_generated_files(parent, host_files, suite_files, ccpp_kinds):
+def _new_variable_dictionary(parent, var_dict, dict_type):
+###############################################################################
+    """Create a new XML entry for <var_dict> under <parent>."""
+    dict_entry = ET.SubElement(parent, "var_dictionary")
+    dict_entry.set("name", var_dict.name)
+    dict_entry.set("type", dict_type)
+    if var_dict.parent:
+        dict_entry.set("parent", var_dict.parent.name)
+    # end if
+    sub_dicts = var_dict.sub_dictionaries()
+    if sub_dicts:
+        sd_entry = ET.SubElement(dict_entry, "sub_dictionaries")
+        sd_entry.text = " ".join([x.name for x in sub_dicts])
+    # end if
+    vars_entry = ET.SubElement(dict_entry, "variables")
+    for var in var_dict.variable_list():
+        _new_var_entry(vars_entry, var, full_entry=True)
+    # end for
+
+###############################################################################
+def _add_suite_object_dictionaries(parent, suite_object):
+###############################################################################
+    """Create new XML entries for <suite_object> under <parent>.
+    Add <suite_object>'s dictionary and its call_list dictionary (if present).
+    Recurse to this objects parts."""
+    dict_type = _object_type(suite_object)
+    _new_variable_dictionary(parent, suite_object, dict_type)
+    if suite_object.call_list:
+        dict_type += "_call_list"
+        _new_variable_dictionary(parent, suite_object.call_list, dict_type)
+    # end if
+    for part in suite_object.parts:
+        _add_suite_object_dictionaries(parent, part)
+    # end for
+
+###############################################################################
+def _add_generated_files(parent, host_files, suite_files, ccpp_kinds):
 ###############################################################################
     """Add a section to <parent> that lists all the files generated
     by <api> in sections for host cap, suite caps and ccpp_kinds.
@@ -319,7 +612,28 @@ def add_generated_files(parent, host_files, suite_files, ccpp_kinds):
     # end for
 
 ###############################################################################
-def generate_ccpp_datatable(filename, api, scheme_headers,
+def _add_suite_object(parent, suite_object):
+###############################################################################
+    """Add an entry for <suite_object> under <parent>. This operation is
+    recursive to all the components inside of <suite_object>"""
+    obj_elem = ET.SubElement(parent, _object_type(suite_object))
+    obj_elem.set("name", suite_object.name)
+    ptype = suite_object.phase_type
+    if ptype:
+        obj_elem.set("phase", ptype)
+    # end if
+    if isinstance(suite_object, VerticalLoop):
+        obj_elem.set("dimension_name", suite_object.dimension_name)
+    # end if
+    if isinstance(suite_object, Subcycle):
+        obj_elem.set("loop", suite_object.loop)
+    # end if
+    for obj_part in suite_object.parts:
+        _add_suite_object(obj_elem, obj_part)
+    # end for
+
+###############################################################################
+def generate_ccpp_datatable(filename, host_model, api, scheme_headers,
                             host_files, suite_files, ccpp_kinds):
 ###############################################################################
     """Write a CCPP datatable for <api> to <filename>.
@@ -330,7 +644,7 @@ def generate_ccpp_datatable(filename, api, scheme_headers,
     datatable = ET.Element("ccpp_datatable")
     datatable.set("version", "1.0")
     # Write out the generated files
-    add_generated_files(datatable, host_files, suite_files, ccpp_kinds)
+    _add_generated_files(datatable, host_files, suite_files, ccpp_kinds)
     # Write out scheme info
     schemes = ET.SubElement(datatable, "schemes")
     # Create a dictionary of the scheme headers for easy lookup
@@ -347,7 +661,34 @@ def generate_ccpp_datatable(filename, api, scheme_headers,
         for group in suite.groups:
             gname = group.name
             for scheme in group.schemes():
-                new_scheme_entry(schemes, scheme, gname, scheme_header_dict)
+                _new_scheme_entry(schemes, scheme, gname, scheme_header_dict)
+            # end for
+        # end for
+    # end for
+    # Write the API
+    api_elem = ET.SubElement(datatable, "api")
+    suites_elem = ET.SubElement(api_elem, "suites")
+    for suite in api.suites:
+        suite_elem = ET.SubElement(suites_elem, "suite")
+        suite_elem.set("name", suite.name)
+        suite_elem.set("filename", suite.sdf_name)
+        for group in suite.groups:
+            # Skip empty groups
+            if group.parts:
+                _add_suite_object(suite_elem, group)
+            # end if
+        # end for
+    # end for
+    # Dump the variable dictionaries
+    var_dicts = ET.SubElement(datatable, "var_dictionaries")
+    # First, the top-level dictionaries
+    _new_variable_dictionary(var_dicts, host_model, "host")
+    _new_variable_dictionary(var_dicts, api, "api")
+    # Now, the suite and group namelists, etc. (including call_lists)
+    for suite in api.suites:
+        _new_variable_dictionary(var_dicts, suite, "suite")
+        for group in suite.groups:
+            _add_suite_object_dictionaries(var_dicts, group)
             # end for
         # end for
     # end for
@@ -359,9 +700,18 @@ def generate_ccpp_datatable(filename, api, scheme_headers,
 
 if __name__ == "__main__":
     PARGS = parse_command_line(sys.argv[1:])
-    REPORT = datatable_report(PARGS.datatable, PARGS.host_files,
-                              PARGS.suite_files, PARGS.utility_files,
-                              PARGS.ccpp_files, PARGS.process_list,
-                              PARGS.module_list, PARGS.sep)
-    print("{}".format(REPORT))
+    if PARGS.show:
+        _INDENT_STR = " "*PARGS.indent
+        LINE_WRAP = PARGS.line_wrap
+        REPORT = datatable_pretty_print(PARGS.datatable, 0, line_wrap=LINE_WRAP)
+    else:
+        REPORT = datatable_report(PARGS.datatable, PARGS.host_files,
+                                  PARGS.suite_files, PARGS.utility_files,
+                                  PARGS.ccpp_files, PARGS.process_list,
+                                  PARGS.module_list, PARGS.suite_list,
+                                  PARGS.required_variables,
+                                  PARGS.input_variables, PARGS.output_variables,
+                                  PARGS.sep)
+    # end if
+    print("{}".format(REPORT.rstrip()))
     sys.exit(0)

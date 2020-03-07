@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+"""Types and code for parsing Fortran source code.
+"""
+
 if __name__ == '__main__' and __package__ is None:
     import sys
     import os.path
@@ -19,15 +22,15 @@ from metavar import Var
 ########################################################################
 
 # Fortran ID specifier (do not want a group like FORTRAN_ID from parse_tools)
-_fortran_id_ = r"(?:[A-Za-z][A-Za-z0-9_]*)"
+_FORTRAN_ID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
 # Regular expression for a dimension specifier
-_dimid_ = r"(?:"+_fortran_id_+r"|[0-9]+)"
-_dimcolon_ = r"(?:\s*:\s*"+_dimid_+r"?\s*)"
-_dimcolons_ = r"(?:"+_dimid_+r"?"+_dimcolon_+_dimcolon_+r"?)"
-_dimspec_ = r"(?:"+_dimid_+r"|"+_dimcolons_+r")"
-_dims_list_ = _dimspec_+r"(?:\s*,\s*"+_dimspec_+r"){0,6}"
+_DIMID = r"(?:"+_FORTRAN_ID+r"|[0-9]+)"
+_DIMCOLON = r"(?:\s*:\s*"+_DIMID+r"?\s*)"
+_DIMCOLONS = r"(?:"+_DIMID+r"?"+_DIMCOLON+_DIMCOLON+r"?)"
+_DIMSPEC = r"(?:"+_DIMID+r"|"+_DIMCOLONS+r")"
+_dims_list_ = _DIMSPEC+r"(?:\s*,\s*"+_DIMSPEC+r"){0,6}"
 # Regular expression for a variable name with optional dimensions
-_var_id_re_ = re.compile(r"("+_fortran_id_+r")\s*(\(\s*"+_dims_list_+r"\s*\))?$")
+_VAR_ID_RE = re.compile(r"("+_FORTRAN_ID+r")\s*(\(\s*"+_dims_list_+r"\s*\))?$")
 
 ########################################################################
 
@@ -62,8 +65,8 @@ class Ftype(object):
 
     # Note that "character" is not in intrinsic_types even though it is a
     # Fortran intrinsic. This is because character has its own type.
-    __intrinsic_types__ = [ r"integer", r"real", r"logical",
-                        r"double\s*precision", r"complex" ]
+    __intrinsic_types__ = [r"integer", r"real", r"logical",
+                           r"double\s*precision", r"complex"]
 
     itype_re = re.compile(r"(?i)({})\s*(\([A-Za-z0-9,=_\s]+\))?".format(r"|".join(__intrinsic_types__)))
     kind_re = re.compile(r"(?i)kind\s*(\()?\s*([\'\"])?(.+?)([\'\"])?\s*(\))?")
@@ -316,8 +319,8 @@ class Ftype_character(Ftype):
         elif match.group(2) is not None:
             self._match_len = len(match.group(0))
             # Parse attributes (strip off parentheses)
-            attrs = [ x.strip() for x in match.group(2)[1:-1].split(',') ]
-            if len(attrs) == 0:
+            attrs = [x.strip() for x in match.group(2)[1:-1].split(',')]
+            if not attrs:
                 # Empty parentheses is not allowed
                 raise ParseSyntaxError("char_selector", token=match.group(2), context=context)
             if len(attrs) > 2:
@@ -359,7 +362,7 @@ class Ftype_character(Ftype):
 
     def parse_len_select(self, lenselect, context, len_optional=True):
         """Parse a character type length_selector"""
-        largs = [ x.strip() for x in lenselect.split('=') ]
+        largs = [x.strip() for x in lenselect.split('=')]
         if len(largs) > 2:
             raise ParseSyntaxError("length_selector", token=lenselect, context=context)
         elif (not len_optional) and ((len(largs) != 2) or (largs[0].lower() != 'len')):
@@ -531,33 +534,33 @@ def parse_fortran_var_decl(line, source, logger=None):
 ########################################################################
     """Parse a Fortran variable declaration line and return a list of
     Var objects representing the variables declared on <line>.
-    >>> _var_id_re_.match('foo') #doctest: +ELLIPSIS
+    >>> _VAR_ID_RE.match('foo') #doctest: +ELLIPSIS
     <_sre.SRE_Match object at 0x...>
-    >>> _var_id_re_.match("foo()")
+    >>> _VAR_ID_RE.match("foo()")
 
-    >>> _var_id_re_.match('foo').group(1)
+    >>> _VAR_ID_RE.match('foo').group(1)
     'foo'
-    >>> _var_id_re_.match('foo').group(2)
+    >>> _VAR_ID_RE.match('foo').group(2)
 
-    >>> _var_id_re_.match("foo(bar)").group(1)
+    >>> _VAR_ID_RE.match("foo(bar)").group(1)
     'foo'
-    >>> _var_id_re_.match("foo(bar)").group(2)
+    >>> _VAR_ID_RE.match("foo(bar)").group(2)
     '(bar)'
-    >>> _var_id_re_.match("foo(bar)").group(2)
+    >>> _VAR_ID_RE.match("foo(bar)").group(2)
     '(bar)'
-    >>> _var_id_re_.match("foo(bar, baz)").group(2)
+    >>> _VAR_ID_RE.match("foo(bar, baz)").group(2)
     '(bar, baz)'
-    >>> _var_id_re_.match("foo(bar : baz)").group(2)
+    >>> _VAR_ID_RE.match("foo(bar : baz)").group(2)
     '(bar : baz)'
-    >>> _var_id_re_.match("foo(bar:)").group(2)
+    >>> _VAR_ID_RE.match("foo(bar:)").group(2)
     '(bar:)'
-    >>> _var_id_re_.match("foo(: baz)").group(2)
+    >>> _VAR_ID_RE.match("foo(: baz)").group(2)
     '(: baz)'
-    >>> _var_id_re_.match("foo(:, :,:)").group(2)
+    >>> _VAR_ID_RE.match("foo(:, :,:)").group(2)
     '(:, :,:)'
-    >>> _var_id_re_.match("foo(8)").group(2)
+    >>> _VAR_ID_RE.match("foo(8)").group(2)
     '(8)'
-    >>> _var_id_re_.match("foo(::,a:b,a:,:b)").group(2)
+    >>> _VAR_ID_RE.match("foo(::,a:b,a:,:b)").group(2)
     '(::,a:b,a:,:b)'
     >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('local_name')
     'foo'
