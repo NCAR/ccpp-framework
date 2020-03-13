@@ -122,6 +122,14 @@ class MetadataTable(ParseSource):
                        "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var horizontal_loop_extent: im at 0x...>
     >>> MetadataTable(ParseObject("foobar.txt",                               \
+                      ["name = foobar", "type = scheme", "module = foobar",   \
+                       "process = microphysics", "[ im ]",                    \
+                       "standard_name = horizontal_loop_extent",              \
+                       "long_name = horizontal loop extent, start at 1",      \
+                       "units = index | type = integer",                      \
+                       "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
+    <metavar.Var horizontal_loop_extent: im at 0x...>
+    >>> MetadataTable(ParseObject("foobar.txt",                               \
                       ["name = foobar", "module = foo",                       \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
@@ -165,6 +173,15 @@ class MetadataTable(ParseSource):
                        ""], line_start=0)).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid metadata header start, no table type, at foobar.txt:2
+    >>> MetadataTable(ParseObject("foobar.txt",                               \
+                      ["name = foobar", "foo = bar"                           \
+                       "[ im ]", "standard_name = horizontal loop extent",    \
+                       "long_name = horizontal loop extent, start at 1",      \
+                       "units = index | type = integer",                      \
+                       "dimensions = () |  intent = in",                      \
+                       ""], line_start=0)).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid metadata header start property, 'foo', at foobar.txt:2
     >>> MetadataTable.table_start('[ ccpp-arg-table ]')
     True
     >>> MetadataTable.table_start('[ qval ]')
@@ -187,11 +204,14 @@ class MetadataTable(ParseSource):
 
     __blank_line = re.compile(r"\s*[#;]")
 
-    __header_types = ['ddt', 'host', 'module', 'scheme', 'local']
+    __scheme_header_type = 'scheme'
+    __header_types = ['ddt', 'host', 'module', __scheme_header_type, 'local']
+
+    unknown_process_type = 'UNKNOWN'
 
     def __init__(self, parse_object=None,
-                 title=None, type_in=None, module=None, var_dict=None,
-                 known_ddts=None, logger=None):
+                 title=None, type_in=None, module=None, process_type=None,
+                 var_dict=None, known_ddts=None, logger=None):
         self._pobj = parse_object
         self._variables = None # In case __init__ crashes
         """If <parse_object> is not None, initialize from the current file and
@@ -202,60 +222,82 @@ class MetadataTable(ParseSource):
         """
         if parse_object is None:
             if title is not None:
-                self._table_title = title
+                self.__table_title = title
             else:
                 raise ParseInternalError('MetadataTable requires a title')
-            # End if
+            # end if
             if type_in is None:
                 raise ParseInternalError('MetadataTable requires a header type')
-            # End if
+            # end if
             if type_in in MetadataTable.__header_types:
-                self._header_type = type_in
+                self.__header_type = type_in
             else:
                 raise ParseSyntaxError("metadata table type",
                                        token=type_in,
                                        context=self._pobj)
-            # End if
+            # end if
             if module is not None:
-                self._module_name = module
+                self.__module_name = module
             else:
-                raise ParseInternalError('MetadataTable requires a module name')
-            # End if
+                raise ParseInternalError("MetadataTable requires a module name")
+            # end if
+            if process_type is None:
+                self.__process_type = MetadataTable.unknown_process_type
+            else:
+                self.__process_type = process_type
+            # end if
             #  Initialize our ParseSource parent
             super(MetadataTable, self).__init__(self.title,
                                                 self.header_type, self._pobj)
             self._variables = VarDictionary(self.title, logger=logger)
             for var in var_dict.variable_list(): # Let this crash if no dict
                 self._variables.add_variable(var)
-            # End for
+            # end for
             self._start_context = None
         else:
             if known_ddts is None:
                 known_ddts = list()
-            # End if
+            # end if
             self.__init_from_file__(known_ddts, logger)
             self._start_context = ParseContext(context=self._pobj)
-        # End if
+        # end if
         # Register this header if it is a DDT
         if self.header_type == 'ddt':
             register_fortran_ddt_name(self.title)
-        # End if
+        # end if
         # Categorize the variables
         self._var_intents = {'in' : list(), 'out' : list(), 'inout' : list()}
         for var in self.variable_list():
             intent = var.get_prop_value('intent')
             if intent is not None:
                 self._var_intents[intent].append(var)
-            # End if
-        # End for
+            # end if
+        # end for
+
+    def _default_module(self):
+        """Set a default module for this header"""
+        mfile = self._pobj.file_name
+        if mfile[-5:] == '.meta':
+            # Default value is a Fortran module that matches the filename
+            def_mod = os.path.basename(mfile)[:-5]
+        else:
+            def_mod = os.path.basename(mfile)
+            last_dot = def_mod.rfind('.')
+            if last_dot >= 0:
+                ldef = len(def_mod)
+                def_mod = def_mod[:last_dot-ldef]
+            # end if
+        # end if
+        return def_mod
 
     def __init_from_file__(self, known_ddts, logger):
         """ Read the table preamble, assume the caller already figured out
         the first line of the header using the table_start method."""
         curr_line, _ = self._pobj.next_line()
-        self._table_title = None
-        self._header_type = None
-        self._module_name = None
+        self.__table_title = None
+        self.__header_type = None
+        self.__module_name = None
+        self.__process_type = MetadataTable.unknown_process_type
         while ((curr_line is not None) and
                (not MetadataTable.variable_start(curr_line, self._pobj)) and
                (not MetadataTable.table_start(curr_line))):
@@ -264,47 +306,50 @@ class MetadataTable(ParseSource):
                 key = prop[0].strip().lower()
                 value = prop[1].strip()
                 if key == 'name':
-                    self._table_title = value
+                    self.__table_title = value
                 elif key == 'type':
                     if value not in MetadataTable.__header_types:
                         raise ParseSyntaxError("metadata table type",
                                                token=value,
                                                context=self._pobj)
-                    # End if
-                    self._header_type = value
+                    # end if
+                    self.__header_type = value
                 elif key == 'module':
                     if value != "None":
-                        self._module_name = value
+                        self.__module_name = value
                     else:
                         raise ParseSyntaxError("metadata table, no module",
                                                context=self._pobj)
-                    # End if
+                    # end if
+                elif key == 'process':
+                    self.__process_type = value
                 else:
                     raise ParseSyntaxError("metadata table start property",
                                            token=value, context=self._pobj)
-                # End if
-            # End for
+                # end if
+            # end for
             curr_line, _ = self._pobj.next_line()
-        # End while
+        # end while
         if self.title is None:
             raise ParseSyntaxError("metadata header start, no table name",
                                    token=curr_line, context=self._pobj)
-        # End if
-        if self._header_type is None:
+        # end if
+        if self.header_type is None:
             raise ParseSyntaxError("metadata header start, no table type",
                                    token=curr_line, context=self._pobj)
-        # End if
+        # end if
+        if ((self.header_type != MetadataTable.__scheme_header_type) and
+            (self.process_type != MetadataTable.unknown_process_type)):
+            raise ParseSyntaxError("process keyword only allowed for a scheme",
+                                   token=curr_line, context=self._pobj)
+        # end if
         if self.header_type == "ddt":
             known_ddts.append(self.title)
-        # End if
+        # end if
         # We need a default module if none was listed
-        if self._module_name is None:
-            mfile = self._pobj.file_name
-            if mfile[-5:] == '.meta':
-                # Default value is a Fortran module that matches the filename
-                self._module_name = os.path.basename(mfile)[:-5]
-            # End if
-        # End if
+        if self.module is None:
+            self.__module_name = self._default_module()
+        # end if
         #  Initialize our ParseSource parent
         super(MetadataTable, self).__init__(self.title,
                                             self.header_type, self._pobj)
@@ -319,8 +364,8 @@ class MetadataTable(ParseSource):
                 # Check to see if we hit the end of the table
                 valid_lines = not MetadataTable.table_start(curr_line)
             # No else, we just run off the end of the table
-            # End if
-        # End while
+            # end if
+        # end while
 
     def parse_variable(self, curr_line, known_ddts):
         """Parse a new metadata variable beginning on <curr_line>.
@@ -334,11 +379,11 @@ class MetadataTable(ParseSource):
             local_name = MetadataTable.variable_start(curr_line, self._pobj)
         else:
             local_name = None
-        # End if
+        # end if
         if local_name is None:
             # This is not a valid variable line, punt (should be end of table)
             valid_line = False
-        # End if
+        # end if
         # Parse lines until invalid line is found
         # NB: Header variables cannot have embedded blank lines
         if valid_line:
@@ -348,7 +393,7 @@ class MetadataTable(ParseSource):
             context = ParseContext(context=self.context)
         else:
             var_props = None
-        # End if
+        # end if
         while valid_line:
             curr_line, _ = self._pobj.next_line()
             valid_line = ((curr_line is not None) and
@@ -371,7 +416,7 @@ class MetadataTable(ParseSource):
                                 errmsg = "Unknown DDT type, {}"
                                 raise ParseSyntaxError(errmsg.format(pval_str),
                                                        context=self._pobj)
-                            # End if
+                            # end if
                         else:
                             # Make sure this is a match
                             check_prop = Var.get_prop(pname)
@@ -381,14 +426,14 @@ class MetadataTable(ParseSource):
                                 raise ParseSyntaxError("variable property name",
                                                        token=pname,
                                                        context=self._pobj)
-                            # End if
+                            # end if
                             if pval is None:
                                 errmsg = "'{}' property value"
                                 raise ParseSyntaxError(errmsg.format(pname),
                                                        token=pval_str,
                                                        context=self._pobj)
-                            # End if
-                        # End if
+                            # end if
+                        # end if
                     except ParseSyntaxError as ps_err:
                         raise ps_err
                     # If we get this far, we have a valid property.
@@ -401,28 +446,28 @@ class MetadataTable(ParseSource):
                                 pval.append(dim)
                             else:
                                 pval.append('ccpp_constant_one:{}'.format(dim))
-                            # End if
-                        # End for
-                    # End if
+                            # end if
+                        # end for
+                    # end if
                     # Add the property to our Var dictionary
                     var_props[pname] = pval
-                # End for
-            # End if
-        # End while
+                # end for
+            # end if
+        # end while
         if var_props is not None:
             # Check for array reference
             sub_name = MetadataTable.check_array_reference(local_name,
                                                            var_props, context)
             if sub_name:
                 var_props['local_name'] = sub_name
-            # End if (else just leave the local name alone)
+            # end if (else just leave the local name alone)
             try:
                 newvar = Var(var_props, source=self, context=context)
             except CCPPError as verr:
                 raise ParseSyntaxError(verr, context=self._pobj)
-            # End try
+            # end try
         # No else, wil return None for newvar
-        # End if
+        # end if
         return newvar, curr_line
 
     @classmethod
@@ -443,9 +488,9 @@ class MetadataTable(ParseSource):
                     raise ParseSyntaxError("variable property syntax",
                                            token=prop,
                                            context=context)
-                # End if
-            # End for
-        # End if
+                # end if
+            # end for
+        # end if
         return parse_items
 
     @classmethod
@@ -483,7 +528,7 @@ class MetadataTable(ParseSource):
                 errmsg = 'Invalid scalar reference, {}{}'
                 ctx = context_string(context)
                 raise ParseInternalError(errmsg.format(local_name, ctx))
-            # End if
+            # end if
             rname = rmatch.group(1)
             rdims = [x.strip() for x in rmatch.group(2).split(',')]
             if 'dimensions' in var_dict:
@@ -492,7 +537,7 @@ class MetadataTable(ParseSource):
                 errmsg = 'Missing variable dimensions, {}{}'
                 ctx = context_string(context)
                 raise ParseInternalError(errmsg.format(local_name, ctx))
-            # End if
+            # end if
             colon_rank = len([x for x in rdims if x == ':'])
             if colon_rank != len(vdims):
                 errmsg = '{} has rank {} but {} has {}{}'
@@ -500,7 +545,7 @@ class MetadataTable(ParseSource):
                 raise ParseInternalError(errmsg.format(rname, len(vdims),
                                                        local_name, colon_rank,
                                                        ctx))
-            # End if
+            # end if
             sub_dims = list()
             sindex = 0
             for rind in rdims:
@@ -509,10 +554,10 @@ class MetadataTable(ParseSource):
                     sindex += 1
                 else:
                     sub_dims.append(rind)
-                # End if
-            # End for
+                # end if
+            # end for
             retval = '{}({})'.format(rname, ', '.join(sub_dims))
-        # End if
+        # end if
         return retval
 
     def variable_list(self, std_vars=True, loop_vars=True, consts=True):
@@ -528,7 +573,7 @@ class MetadataTable(ParseSource):
             var = self._variables.find_local_name(std_name)
         else:
             var = self._variables.find_variable(std_name, any_scope=False)
-        # End if
+        # end if
         return var
 
     def convert_dims_to_standard_names(self, var, logger=None, context=None):
@@ -544,8 +589,8 @@ class MetadataTable(ParseSource):
                 if var_one is not None:
                     std = var_one.get_prop_value('standard_name')
                     std_dim.append(std)
-                # End if
-            # End if
+                # end if
+            # end if
             for item in dim.split(':'):
                 try:
                     _ = int(item)
@@ -556,7 +601,7 @@ class MetadataTable(ParseSource):
                     else:
                         # Some non-standard integer value
                         dname = item
-                    # End if
+                    # end if
                 except ValueError:
                     # Not an integer, try to find the standard_name
                     if not item:
@@ -568,8 +613,8 @@ class MetadataTable(ParseSource):
                             dname = dvar.get_prop_value('standard_name')
                         else:
                             dname = None
-                        # End if
-                    # End if
+                        # end if
+                    # end if
                     if dname is None:
                         errmsg = "Unknown dimension element, {}, in {}{}"
                         std = var.get_prop_value('local_name')
@@ -580,22 +625,22 @@ class MetadataTable(ParseSource):
                             dname = unique_standard_name()
                         else:
                             raise CCPPError(errmsg.format(item, std, ctx))
-                        # End if
-                    # End if
-                # End try
+                        # end if
+                    # end if
+                # end try
                 if dname is not None:
                     std_dim.append(dname)
                 else:
                     std_dim = None
                     break
-                # End if
-            # End for
+                # end if
+            # end for
             if std_dim is not None:
                 std_dims.append(':'.join(std_dim))
             else:
                 break
-            # End if
-        # End for
+            # end if
+        # end for
 
         return std_dims
 
@@ -615,19 +660,19 @@ class MetadataTable(ParseSource):
                 match = MetadataTable.__vref_start.match(line)
                 if match is not None:
                     name = match.group(1)+'('+match.group(2)+')'
-                # End if
+                # end if
             else:
                 name = match.group(1)
-            # End if
-        # End if
+            # end if
+        # end if
         if match is not None:
             if not MetadataTable.is_scalar_reference(name):
                 raise ParseSyntaxError("local variable name",
                                        token=name, context=context)
-            # End if
+            # end if
         else:
             name = None
-        # End if
+        # end if
         return name
 
     def write_to_file(self, filename, append=False):
@@ -645,8 +690,8 @@ class MetadataTable(ParseSource):
             mfile.write("  type = {}".format(self.header_type))
             for var in self.variable_list():
                 var.write_metadata(mfile)
-            # End for
-        # End with
+            # end for
+        # end with
 
     def __repr__(self):
         base = super(MetadataTable, self).__repr__()
@@ -655,13 +700,13 @@ class MetadataTable(ParseSource):
             pre = base[0:pind]
         else:
             pre = '<MetadataTable'
-        # End if
+        # end if
         bind = base.find('at 0x')
         if bind >= 0:
             post = base[bind:]
         else:
             post = '>'
-        # End if
+        # end if
         return '{} {} / {} {}'.format(pre, self.module, self.title, post)
 
     def __del__(self):
@@ -675,17 +720,22 @@ class MetadataTable(ParseSource):
     @property
     def title(self):
         'Return the name of the metadata arg_table'
-        return self._table_title
+        return self.__table_title
 
     @property
     def module(self):
         'Return the module name for this header (if it exists)'
-        return self._module_name
+        return self.__module_name
 
     @property
     def header_type(self):
         'Return the type of structure this header documents'
-        return self._header_type
+        return self.__header_type
+
+    @property
+    def process_type(self):
+        'Return the type of physical process this header documents'
+        return self.__process_type
 
     @property
     def has_variables(self):
@@ -706,7 +756,7 @@ class MetadataTable(ParseSource):
             match = None
         else:
             match = MetadataTable.__header_start.match(line)
-        # End if
+        # end if
         return match is not None
 
     @classmethod
@@ -724,8 +774,8 @@ class MetadataTable(ParseSource):
             fin_lines = file.readlines()
             for index, fin_line in enumerate(fin_lines):
                 fin_lines[index] = fin_line.rstrip('\n')
-            # End for
-        # End with
+            # end for
+        # end with
         # Look for a header start
         parse_obj = ParseObject(filename, fin_lines)
         curr_line, curr_line_num = parse_obj.curr_line()
@@ -739,21 +789,21 @@ class MetadataTable(ParseSource):
                     header_titles.append(ntitle)
                     if new_header.header_type == 'ddt':
                         known_ddts.append(ntitle)
-                    # End if
+                    # end if
                 else:
                     errmsg = 'Duplicate metadata header, {}, at {}:{}'
                     ctx = curr_line_num + 1
                     raise CCPPError(errmsg.format(ntitle, filename, ctx))
-                    # End if
-                # End if
+                    # end if
+                # end if
                 curr_line, curr_line_num = parse_obj.curr_line()
             elif MetadataTable.is_blank(curr_line):
                 curr_line, curr_line_num = parse_obj.next_line()
             else:
                 raise ParseSyntaxError('CCPP metadata line', token=curr_line,
                                        context=parse_obj)
-            # End if
-        # End while
+            # end if
+        # end while
         return meta_headers
 
     @classmethod
@@ -764,7 +814,7 @@ class MetadataTable(ParseSource):
         scheme_names = list()
         with open(filename, 'r') as file:
             fin_lines = file.readlines()
-        # End with
+        # end with
         num_lines = len(fin_lines)
         context = ParseContext(linenum=1, filename=filename)
         while context.line_num <= num_lines:
@@ -784,18 +834,18 @@ class MetadataTable(ParseSource):
                             if key == 'name':
                                 if value[-4:] == '_run':
                                     scheme_names.append(value[0:-4])
-                                # End if
-                            # End if
-                        # End for
-                    # End if
+                                # end if
+                            # end if
+                        # end for
+                    # end if
                     if context.line_num > num_lines:
                         found_start = True
-                    # End if
-                # End while
+                    # end if
+                # end while
             else:
                 context.line_num += 1
-            # End if
-        # End while
+            # end if
+        # end while
         return scheme_names
 
 ########################################################################

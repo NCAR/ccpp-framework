@@ -58,7 +58,21 @@ def convert_xml_to_markdown(root, library_name, snl):
         sec_comment = section.get('comment')
         snl.write('## {}\n'.format(sec_name))
         if sec_comment is not None:
-            snl.write('{}\n'.format(sec_comment))
+            # First, squeeze out the spacing
+            while sec_comment.find('  ') >= 0:
+                sec_comment = sec_comment.replace('  ', ' ')
+            # End while
+            while sec_comment:
+                sec_comment = sec_comment.lstrip()
+                cind = sec_comment.find('\\n')
+                if cind > 0:
+                    snl.write('{}\n'.format(sec_comment[0:cind]))
+                    sec_comment = sec_comment[cind+2:]
+                else:
+                    snl.write('{}\n'.format(sec_comment))
+                    sec_comment = ''
+                # End if
+            # End while
         # End if
         for std_name in section:
             stdn_name = std_name.get('name')

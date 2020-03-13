@@ -66,7 +66,7 @@ class VarDDT(Var):
         return pvalue
 
     def clone(self, subst_dict, source_name=None, source_type=None,
-              context=None, loop_match=False):
+              context=None):
         """Create a clone of this VarDDT object's leaf Var with properties
         from <subst_dict> overriding this variable's properties.
         <subst_dict> may also be a string in which case only the local_name
@@ -79,13 +79,12 @@ class VarDDT(Var):
             clone_var = super(VarDDT, self).clone(subst_dict,
                                                   source_name=source_name,
                                                   source_type=source_type,
-                                                  context=context,
-                                                  loop_match=loop_match)
+                                                  context=context)
         else:
             clone_var = self.field.clone(subst_dict,
                                          source_name=source_name,
                                          source_type=source_type,
-                                         context=context, loop_match=loop_match)
+                                         context=context)
         # End if
         return clone_var
 
