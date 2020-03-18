@@ -25,6 +25,10 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif(POLICY CMP0042)
 
+if(POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+endif(POLICY CMP0077)
+
 #------------------------------------------------------------------------------
 # Enable Fortran
 enable_language(Fortran)
