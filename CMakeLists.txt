@@ -25,6 +25,9 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif(POLICY CMP0042)
 
+#Setting this policy was required when building with the SCM. Without it, the
+#    STATIC cmake variable was getting cleared, making this CMakeLists.txt 
+#    assume a dynamic build.
 if(POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif(POLICY CMP0077)
