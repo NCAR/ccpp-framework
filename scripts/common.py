@@ -33,8 +33,9 @@ CCPP_INTERNAL_VARIABLES = {
     CCPP_THREAD_NUMBER       : 'cdata%thrd_no',
     }
 
-STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
 STANDARD_CHARACTER_TYPE = 'character'
+STANDARD_INTEGER_TYPE = 'integer'
+STANDARD_VARIABLE_TYPES = [ STANDARD_CHARACTER_TYPE, STANDARD_INTEGER_TYPE, 'logical', 'real' ]
 
 # For static build
 CCPP_STATIC_API_MODULE = 'ccpp_static_api'
