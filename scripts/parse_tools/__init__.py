@@ -28,20 +28,20 @@ __all__ = [
     'setLogToStdout',
 ]
 
-from parse_source   import ParseContext, ParseSource
-from parse_source   import ParseSyntaxError, ParseInternalError
-from parse_source   import CCPPError, context_string
-from parse_object   import ParseObject
-from parse_checkers import check_fortran_id, LITERAL_INT, FORTRAN_ID
-from parse_checkers import FORTRAN_DP_RE
-from parse_checkers import check_fortran_ref, FORTRAN_SCALAR_REF
-from parse_checkers import check_fortran_intrinsic
-from parse_checkers import check_fortran_type, check_balanced_paren
-from parse_checkers import registered_fortran_ddt_name
-from parse_checkers import register_fortran_ddt_name
-from parse_checkers import check_dimensions, check_cf_standard_name
-from parse_log      import init_log, set_log_level
-from parse_log      import set_log_to_stdout, set_log_to_null
-from parse_log      import set_log_to_file
-from preprocess     import PreprocStack
+from .parse_source   import ParseContext, ParseSource
+from .parse_source   import ParseSyntaxError, ParseInternalError
+from .parse_source   import CCPPError, context_string
+from .parse_object   import ParseObject
+from .parse_checkers import check_fortran_id, LITERAL_INT, FORTRAN_ID
+from .parse_checkers import FORTRAN_DP_RE
+from .parse_checkers import check_fortran_ref, FORTRAN_SCALAR_REF
+from .parse_checkers import check_fortran_intrinsic
+from .parse_checkers import check_fortran_type, check_balanced_paren
+from .parse_checkers import registered_fortran_ddt_name
+from .parse_checkers import register_fortran_ddt_name
+from .parse_checkers import check_dimensions, check_cf_standard_name
+from .parse_log      import init_log, set_log_level
+from .parse_log      import set_log_to_stdout, set_log_to_null
+from .parse_log      import set_log_to_file
+from .preprocess     import PreprocStack
 # End if

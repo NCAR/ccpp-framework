@@ -839,7 +839,7 @@ def main():
         raise Exception('Call to generate_typedefs_makefile failed.')
 
     # Add filenames of schemes to makefile/cmakefile/shell script - add dependencies for schemes
-    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
+    success = generate_schemes_makefile(config['scheme_files_dependencies'] + list(config['scheme_files'].keys()),
                                         config['schemes_makefile'], config['schemes_cmakefile'],
                                         config['schemes_sourcefile'])
     if not success:
