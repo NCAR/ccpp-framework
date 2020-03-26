@@ -781,7 +781,7 @@ def main():
                 raise Exception('Call to generate_include_files failed.')
 
     # Add filenames of schemes to makefile - add dependencies for schemes
-    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
+    success = generate_schemes_makefile(config['scheme_files_dependencies'] + list(config['scheme_files'].keys()),
                                         config['schemes_makefile'], config['schemes_cmakefile'],
                                         config['schemes_sourcefile'])
     if not success:

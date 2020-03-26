@@ -126,7 +126,7 @@ def decode_container(container):
     items = container.split(' ')
     if not len(items) in [1, 2, 3]:
         raise Exception("decode_container not implemented for {0} items".format(len(items)))
-    for i in xrange(len(items)):
+    for i in range(len(items)):
         items[i] = items[i][:items[i].find('_')] + ' ' + items[i][items[i].find('_')+1:]
     return ' '.join(items)
 
@@ -139,7 +139,7 @@ def decode_container_as_dict(container):
     if not len(items) in [1, 2, 3]:
         raise Exception("decode_container not implemented for {0} items".format(len(items)))
     itemsdict = {}
-    for i in xrange(len(items)):
+    for i in range(len(items)):
         key, value = (items[i][:items[i].find('_')], items[i][items[i].find('_')+1:])
         itemsdict[key] = value
     return itemsdict

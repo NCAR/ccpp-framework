@@ -190,7 +190,7 @@ def parse_variable_tables(filename):
 
     lines = []
     buffer = ''
-    for i in xrange(len(file_lines)):
+    for i in range(len(file_lines)):
         line = file_lines[i].rstrip('\n').strip()
         # Skip empty lines
         if line == '' or line == '&':
@@ -498,7 +498,7 @@ def parse_scheme_tables(filename):
     lines = []
     original_line_numbers = []
     buffer = ''
-    for i in xrange(len(file_lines)):
+    for i in range(len(file_lines)):
         line = file_lines[i].rstrip('\n').strip()
         # Skip empty lines
         if line == '' or line == '&':
