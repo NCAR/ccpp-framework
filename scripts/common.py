@@ -33,8 +33,9 @@ CCPP_INTERNAL_VARIABLES = {
     CCPP_THREAD_NUMBER       : 'cdata%thrd_no',
     }
 
-STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
 STANDARD_CHARACTER_TYPE = 'character'
+STANDARD_INTEGER_TYPE = 'integer'
+STANDARD_VARIABLE_TYPES = [ STANDARD_CHARACTER_TYPE, STANDARD_INTEGER_TYPE, 'logical', 'real' ]
 
 # For static build
 CCPP_STATIC_API_MODULE = 'ccpp_static_api'
@@ -126,7 +127,7 @@ def decode_container(container):
     items = container.split(' ')
     if not len(items) in [1, 2, 3]:
         raise Exception("decode_container not implemented for {0} items".format(len(items)))
-    for i in xrange(len(items)):
+    for i in range(len(items)):
         items[i] = items[i][:items[i].find('_')] + ' ' + items[i][items[i].find('_')+1:]
     return ' '.join(items)
 
@@ -139,7 +140,7 @@ def decode_container_as_dict(container):
     if not len(items) in [1, 2, 3]:
         raise Exception("decode_container not implemented for {0} items".format(len(items)))
     itemsdict = {}
-    for i in xrange(len(items)):
+    for i in range(len(items)):
         key, value = (items[i][:items[i].find('_')], items[i][items[i].find('_')+1:])
         itemsdict[key] = value
     return itemsdict

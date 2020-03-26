@@ -37,7 +37,7 @@ def extract_parents_and_indices_from_local_name(local_name):
     # First, extract all variables/indices in parentheses (used for subsetting)
     indices = []
     while '(' in local_name:
-        for i in xrange(len(local_name)):
+        for i in range(len(local_name)):
             if local_name[i] == '(':
                 last_open = i
             elif local_name[i] == ')':
@@ -512,10 +512,10 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the suite.'''
-        print "ALL SUBROUTINES:"
-        print self._all_subroutines_called
-        print "STRUCTURED:"
-        print self._groups
+        print("ALL SUBROUTINES:")
+        print(self._all_subroutines_called)
+        print("STRUCTURED:")
+        print(self._groups)
         for group in self._groups:
             group.print_debug()
 
@@ -827,12 +827,12 @@ end module {module}
                             for local_name_define in [parent_local_name_define] + parent_local_names_define_indices:
                                 parent_standard_name = None
                                 parent_var = None
-                                for i in xrange(FORTRAN_ARRAY_MAX_DIMS+1):
+                                for i in range(FORTRAN_ARRAY_MAX_DIMS+1):
                                     if i==0:
                                         dims_string = ''
                                     else:
                                         # (:) for i==1, (:,:) for i==2, ...
-                                        dims_string = '(' + ','.join([':' for j in xrange(i)]) + ')'
+                                        dims_string = '(' + ','.join([':' for j in range(i)]) + ')'
                                     if local_name_define+dims_string in standard_name_by_local_name_define.keys():
                                         parent_standard_name = standard_name_by_local_name_define[local_name_define+dims_string]
                                         parent_var = metadata_define[parent_standard_name][0]
@@ -1065,7 +1065,7 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the group.'''
-        print self._name
+        print(self._name)
         for subcycle in self._subcycles:
             subcycle.print_debug()
 
@@ -1129,9 +1129,9 @@ class Subcycle(object):
 
     def print_debug(self):
         '''Basic debugging output about the subcycle.'''
-        print self._loop
+        print(self._loop)
         for scheme in self._schemes:
-            print scheme
+            print(scheme)
 
 
 ###############################################################################

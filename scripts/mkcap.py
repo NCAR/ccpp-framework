@@ -684,15 +684,15 @@ set(CAPS
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, schemes):
+    def write(self, caps):
         if (self.filename is not sys.stdout):
             f = open(self.filename, 'w')
         else:
             f = sys.stdout
 
         contents = self.header
-        for scheme in schemes:
-            contents += '      {0}\n'.format(scheme)
+        for cap in caps:
+            contents += '      {0}\n'.format(cap)
         contents += self.footer
         f.write(contents)
 
@@ -711,7 +711,7 @@ set(CAPS
 class CapsSourcefile(object):
 
     header='''
-# All CCPP schemes are defined here.
+# All CCPP caps are defined here.
 #
 # This file is auto-generated using ccpp_prebuild.py
 # at compile time, do not edit manually.
@@ -725,7 +725,7 @@ export CCPP_CAPS="'''
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, schemes):
+    def write(self, caps):
         if (self.filename is not sys.stdout):
             filepath = os.path.split(self.filename)[0]
             if not os.path.isdir(filepath):
@@ -735,8 +735,8 @@ export CCPP_CAPS="'''
             f = sys.stdout
 
         contents = self.header
-        for scheme in schemes:
-            contents += '{0};'.format(scheme)
+        for cap in caps:
+            contents += '{0};'.format(cap)
         contents = contents.rstrip(';')
         contents += self.footer
         f.write(contents)
@@ -889,6 +889,131 @@ export CCPP_SCHEMES="'''
         contents = self.header
         for scheme in schemes:
             contents += '{0};'.format(scheme)
+        contents = contents.rstrip(';')
+        contents += self.footer
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+class TypedefsMakefile(object):
+
+    header='''
+# All CCPP types are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+TYPEDEFS ='''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, typedefs):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for typedef in typedefs:
+            contents += ' \\\n\t   {0}'.format(typedef)
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+class TypedefsCMakefile(object):
+
+    header='''
+# All CCPP types are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+set(TYPEDEFS
+'''
+    footer=''')
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, typedefs):
+        if (self.filename is not sys.stdout):
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for typedef in typedefs:
+            contents += '      {0}\n'.format(typedef)
+        contents += self.footer
+        f.write(contents)
+
+        if (f is not sys.stdout):
+            f.close()
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+class TypedefsSourcefile(object):
+
+    header='''
+# All CCPP types are defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+export CCPP_TYPEDEFS="'''
+    footer='''"
+'''
+
+    def __init__(self, **kwargs):
+        self._filename = 'sys.stdout'
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
+
+    def write(self, typedefs):
+        if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            f = open(self.filename, 'w')
+        else:
+            f = sys.stdout
+
+        contents = self.header
+        for typedef in typedefs:
+            contents += '{0};'.format(typedef)
         contents = contents.rstrip(';')
         contents += self.footer
         f.write(contents)
