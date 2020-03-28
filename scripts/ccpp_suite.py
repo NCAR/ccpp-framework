@@ -2365,53 +2365,38 @@ end module {module}
 
     @classmethod
     def declare_inspection_interfaces(cls, ofile):
-        "Declare the API interfaces for the suite inquiry functions"
+        """Declare the API interfaces for the suite inquiry functions"""
         ofile.write("public :: {}".format(API.__suite_fname), 1)
         ofile.write("public :: {}".format(API.__part_fname), 1)
         ofile.write("public :: {}".format(API.__vars_fname), 1)
 
     def get_errinfo_names(self):
-        "Return a tuple of error output local names"
+        """Return a tuple of error output local names"""
         errmsg_name = self._errmsg_var.get_prop_value('local_name')
         errflg_name = self._errflg_var.get_prop_value('local_name')
         return (errmsg_name, errflg_name)
 
     @staticmethod
-    def write_var_set_loop(ofile, array_name, index_var, array_vals, indent):
-        """Write the allocation of an array variable and assignment of
-        the elements of that array.
-        <ofile>: The destination file
-        <array_name>: The name of the allocatable array
-        <index_var>: A local index variable for looping through the array
-        <array_vals>: The values for the items in the array
-        <indent>: The indentation level of the allocation and loop
-        """
-        nvars = len(array_vals)
-        ofile.write("allocate({}({}))".format(array_name, nvars), indent)
-        ofile.write("do {} = 1, {}".format(index_var, nvars), indent)
-        for val in array_vals:
-            ofile.write("{}({}) = '{}'".format(array_name, index_var, val),
-                        indent+1)
+    def write_var_set_loop(ofile, varlist_name, var_list, indent):
+        """Write code to allocate and set <varlist_name> to <var_list>"""
+        ofile.write("allocate({}({}))".format(varlist_name, len(var_list)),
+                    indent)
+        for ind, var in enumerate(var_list):
+            ofile.write("{}({}) = '{}'".format(varlist_name, ind+1, var),
+                        indent)
         # end for
-        ofile.write("end do", indent)
 
     def write_inspection_routines(self, ofile):
-        "Write the list_suites and list_suite_parts subroutines"
+        """Write the list_suites and list_suite_parts subroutines"""
         errmsg_name, errflg_name = self.get_errinfo_names()
         ofile.write("subroutine {}(suites)".format(API.__suite_fname), 1)
-        nsuites = 0
-        for suite in self.suites:
-            nsuites = nsuites + 1
-        # end for
+        nsuites = len(self.suites)
         oline = "character(len=*), allocatable, intent(out) :: suites(:)"
         ofile.write(oline, 2)
-        ofile.write("\ninteger                                    :: sindex", 2)
         ofile.write("\nallocate(suites({}))".format(nsuites), 2)
-        ofile.write("do sindex = 1, {}".format(nsuites), 2)
-        for suite in self.suites:
-            ofile.write("suites(sindex) = '{}'".format(suite.name), 3)
+        for ind, suite in enumerate(self.suites):
+            ofile.write("suites({}) = '{}'".format(ind+1, suite.name), 2)
         # end for
-        ofile.write("end do", 2)
         ofile.write("end subroutine {}".format(API.__suite_fname), 1)
         # Write out the suite part list subroutine
         oline = "suite_name, part_list, {errmsg}, {errflg}"
@@ -2423,14 +2408,15 @@ end module {module}
         ofile.write(oline, 2)
         self._errmsg_var.write_def(ofile, 2, self)
         self._errflg_var.write_def(ofile, 2, self)
-        ofile.write("\ninteger                                   :: pindex\n",
-                    2)
         else_str = ''
+        ename = self._errflg_var.get_prop_value('local_name')
+        ofile.write("{} = 0".format(ename), 2)
+        ename = self._errmsg_var.get_prop_value('local_name')
+        ofile.write("{} = ''".format(ename), 2)
         for suite in self.suites:
             oline = "{}if(trim(suite_name) == '{}') then"
             ofile.write(oline.format(else_str, suite.name), 2)
-            parts = suite.part_list()
-            API.write_var_set_loop(ofile, 'part_list', 'pindex', parts, 3)
+            API.write_var_set_loop(ofile, 'part_list', suite.part_list(), 3)
             else_str = 'else '
         # end for
         ofile.write("else", 2)
@@ -2457,10 +2443,13 @@ end module {module}
         oline = "logical, optional,             intent(in) :: output_vars_in"
         ofile.write(oline, 2)
         ofile.write("! Local variables", 2)
-        ofile.write("integer {}:: pindex".format(' '*34), 2)
         ofile.write("logical {}:: input_vars".format(' '*34), 2)
         ofile.write("logical {}:: output_vars".format(' '*34), 2)
         ofile.write("\n", 0)
+        ename = self._errflg_var.get_prop_value('local_name')
+        ofile.write("{} = 0".format(ename), 2)
+        ename = self._errmsg_var.get_prop_value('local_name')
+        ofile.write("{} = ''".format(ename), 2)
         ofile.write("if (present(input_vars_in)) then", 2)
         ofile.write("input_vars = input_vars_in", 3)
         ofile.write("else", 2)
@@ -2490,14 +2479,14 @@ end module {module}
             # end for
             ofile.write(oline.format(else_str, suite.name), 2)
             ofile.write("if (input_vars .and. output_vars) then", 3)
-            var_set = suite_vars[0].union(suite_vars[1])
-            API.write_var_set_loop(ofile, 'variable_list', 'pindex', var_set, 4)
+            var_list = list(suite_vars[0].union(suite_vars[1]))
+            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
             ofile.write("else if (input_vars) then", 3)
-            API.write_var_set_loop(ofile, 'variable_list', 'pindex',
-                                   suite_vars[0], 4)
+            var_list = list(suite_vars[0])
+            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
             ofile.write("else if (output_vars) then", 3)
-            API.write_var_set_loop(ofile, 'variable_list', 'pindex',
-                                   suite_vars[1], 4)
+            var_list = list(suite_vars[1])
+            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
             ofile.write("else", 3)
             ofile.write("allocate(variable_list(0))\n", 4)
             ofile.write("end if", 3)
