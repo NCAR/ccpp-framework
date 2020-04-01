@@ -528,14 +528,10 @@ def convert_file(filename_in, filename_out, metadata_filename_out, model, logger
                                             entry = '(10)'
                                         elif local_name in [ 'GFS_Control%crtrh' ]:
                                             entry = '(3)'
-                                        elif local_name in [ 'GFS_Control%pertz0',
-                                                             'GFS_Control%pertzt',
-                                                             'GFS_Control%pertshc',
-                                                             'GFS_Control%pertlai',
-                                                             'GFS_Control%pertalb',
-                                                             'GFS_Control%pertvegf',
+                                        elif local_name in [ 'GFS_Control%lndp_var_list'
+                                                             'GFS_Control%lndp_prt_list'
                                                            ]:
-                                            entry = '(5)'
+                                            entry = '(6)'
                                         elif 'GFS_Interstitial(cdata%thrd_no)%faerlw(:,:,:' in local_name and rank==3:
                                             entry = '(horizontal_dimension,adjusted_vertical_layer_dimension_for_radiation,number_of_aerosol_bands_for_longwave_radiation)'
                                         elif 'GFS_Interstitial(cdata%thrd_no)%faersw(:,:,:' in local_name and rank==3:
