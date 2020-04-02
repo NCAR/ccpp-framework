@@ -1,27 +1,30 @@
 #! /usr/bin/env python
-#-----------------------------------------------------------------------
-# Description:  Test capgen database report python interface
-#
-# Assumptions:
-#
-# Command line arguments: build_dir database_filepath
-#
-# Usage: python test_reports <build_dir> <database_filepath>
-#-----------------------------------------------------------------------
+"""
+-----------------------------------------------------------------------
+ Description:  Test capgen database report python interface
+
+ Assumptions:
+
+ Command line arguments: build_dir database_filepath
+
+ Usage: python test_reports <build_dir> <database_filepath>
+-----------------------------------------------------------------------
+"""
 import sys
 import os
-import logging
-import unittest
 
-test_dir = os.path.dirname(os.path.abspath(__file__))
-scripts_dir = os.path.abspath(os.path.join(test_dir, os.pardir, os.pardir, "scripts"))
+_TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+_SCRIPTS_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir,
+                                           os.pardir, "scripts"))
 
-if not os.path.exists(scripts_dir):
+if not os.path.exists(_SCRIPTS_DIR):
     raise ImportError("Cannot find scripts directory")
 # end if
 
-sys.path.append(scripts_dir)
+sys.path.append(_SCRIPTS_DIR)
+# pylint: disable=wrong-import-position
 from ccpp_datafile import datatable_report, DatatableReport
+# pylint: enable=wrong-import-position
 
 def usage(errmsg=None):
     """Raise an exception with optional error message and usage message"""
@@ -38,12 +41,12 @@ if len(sys.argv) != 3:
 _BUILD_DIR = os.path.abspath(sys.argv[1])
 _DATABASE = os.path.abspath(sys.argv[2])
 if not os.path.isdir(_BUILD_DIR):
-    emsg = "<build_dir> must be an existing build directory"
-    usage(emsg)
+    _EMSG = "<build_dir> must be an existing build directory"
+    usage(_EMSG)
 # end if
 if (not os.path.exists(_DATABASE)) or (not os.path.isfile(_DATABASE)):
-    emsg = "<database_filepath> must be an existing CCPP database file"
-    usage(emsg)
+    _EMSG = "<database_filepath> must be an existing CCPP database file"
+    usage(_EMSG)
 # end if
 
 # Check data

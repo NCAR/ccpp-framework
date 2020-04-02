@@ -228,7 +228,7 @@ check_datatable ${report_prog} ${datafile} "--input-variables"                \
 check_datatable ${report_prog} ${datafile} "--output-variables"               \
                 ${output_vars_temp} "temp_suite"
 echo "Running python interface tests"
-python ${currdir}/test_reports.py ${build_dir} ${datafile}
+python ${scriptdir}/test_reports.py ${build_dir} ${datafile}
 # Run make
 make
 res=$?

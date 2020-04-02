@@ -179,7 +179,7 @@ def _find_table_section(table, elem_type):
     """Look for and return an element type, <elem_type>, in <table>.
     Raise an exception if the element is not found."""
     found = table.find(elem_type)
-    if not found:
+    if found is None:
         emsg = "Element type, '{}', not found in table"
         raise CCPPDatatableError(emsg.format(elem_type))
     # end if
@@ -324,9 +324,9 @@ def _retrieve_variable_list(table, suite_name, intent_type=None):
         cl_name = group + "_call_list"
         group_dict = _find_var_dictionary(table, cl_name, "group_call_list")
         if group_dict is not None:
-            vars = group_dict.find("variables")
-            if vars is not None:
-                for var in vars:
+            gvars = group_dict.find("variables")
+            if gvars is not None:
+                for var in gvars:
                     if var.get("intent") in allowed_intents:
                         var_set.add(var.get("name"))
                     # end if
@@ -747,23 +747,23 @@ if __name__ == "__main__":
         REPORT = datatable_pretty_print(PARGS.datatable, 0, line_wrap=LINE_WRAP)
     else:
         ARG_VARS = vars(PARGS)
-        action = None
-        errmsg = ''
-        esep = ''
+        _ACTION = None
+        _ERRMSG = ''
+        _ESEP = ''
         for opt in ARG_VARS:
             if (opt in DatatableReport.valid_actions()) and ARG_VARS[opt]:
-                if action:
-                    errmsg += esep + "Duplicate action, '{}'".format(opt)
-                    esep = '\n'
+                if _ACTION:
+                    _ERRMSG += _ESEP + "Duplicate action, '{}'".format(opt)
+                    _ESEP = '\n'
                 else:
-                    action = DatatableReport(opt, ARG_VARS[opt])
+                    _ACTION = DatatableReport(opt, ARG_VARS[opt])
                 # end if
             # end if
         # end for
-        if errmsg:
-            raise ValueError(errmsg)
+        if _ERRMSG:
+            raise ValueError(_ERRMSG)
         # end if
-        REPORT = datatable_report(PARGS.datatable, action, PARGS.sep)
+        REPORT = datatable_report(PARGS.datatable, _ACTION, PARGS.sep)
     # end if
     print("{}".format(REPORT.rstrip()))
     sys.exit(0)
