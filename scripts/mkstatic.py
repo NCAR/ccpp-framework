@@ -387,7 +387,9 @@ end module {module}
                 else:
                     # Files are different, replace existing API with
                     # the test API and set update flag to True
-                    os.replace(test_filename, self.filename)
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
                     self.update_api = True
                     logging.warn("Static API: write_to_test_file is True and files are different, set self.update_api = True")
             else:
@@ -429,7 +431,9 @@ export CCPP_STATIC_API=\"{filename}\"
                 logging.warn("Static API source file: write_to_test_file is True, and files are identical")
             else:
                 # Files are different, replace existing file
-                os.replace(test_filename, source_filename)
+                # Python 3 only: os.replace(test_filename, source_filename)
+                os.remove(source_filename)
+                os.rename(test_filename, source_filename)
                 logging.warn("Static API source file: write_to_test_file is True, and files are different")
         else:
             logging.warn("Static API source file: write_to_test_file is False")
@@ -752,7 +756,9 @@ end module {module}
                 else:
                     # Files are different, replace existing cap
                     # with test cap and set flag to True
-                    os.replace(test_filename, self.filename)
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
                     self.update_cap = True
                     logging.warn("Suite {}: write_to_test_file is True and files are different, set self.update_cap = False".format(self.name))
             else:
@@ -1147,7 +1153,9 @@ end module {module}
                 else:
                     # Files are different, replace existing cap
                     # with test cap and set flag to True
-                    os.replace(test_filename, self.filename)
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
                     self.update_cap = True
                     logging.warn("Group {}: write_to_test_file is True and files are different, set self.update_cap = True".format(self.name))
             else:

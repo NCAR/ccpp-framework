@@ -3,6 +3,7 @@
 # Standard modules
 import argparse
 import collections
+import filecmp
 import importlib
 import itertools
 import logging
@@ -141,6 +142,9 @@ def clean_files(config, static):
     logging.info('Performing clean ....')
     # Create list of files to remove, use wildcards where necessary
     files_to_remove = [
+        config['typedefs_makefile'],
+        config['typedefs_cmakefile'],
+        config['typedefs_sourcefile'],
         config['schemes_makefile'],
         config['schemes_cmakefile'],
         config['schemes_sourcefile'],
@@ -153,6 +157,7 @@ def clean_files(config, static):
     if static:
         files_to_remove.append(os.path.join(config['caps_dir'], 'ccpp_*_cap.F90'))
         files_to_remove.append(os.path.join(config['static_api_dir'], '{api}.F90'.format(api=CCPP_STATIC_API_MODULE)))
+        files_to_remove.append(config['static_api_srcfile'])
     else:
         files_to_remove.append(os.path.join(config['caps_dir'], '*_cap.F90'))
         for target_file in config['target_files']:
@@ -679,14 +684,30 @@ def generate_typedefs_makefile(metadata_define, typedefs_makefile, typedefs_cmak
     logging.info('Generating typedefs makefile/cmakefile snippet ...')
     # Write the Fortran modules without path - the build system knows where they are
     makefile = TypedefsMakefile()
-    makefile.filename = typedefs_makefile
+    makefile.filename = typedefs_makefile + '.tmp'
     cmakefile = TypedefsCMakefile()
-    cmakefile.filename = typedefs_cmakefile
+    cmakefile.filename = typedefs_cmakefile + '.tmp'
     sourcefile = TypedefsSourcefile()
-    sourcefile.filename = typedefs_sourcefile
+    sourcefile.filename = typedefs_sourcefile + '.tmp'
     makefile.write(typedefs)
     cmakefile.write(typedefs)
     sourcefile.write(typedefs)
+    if os.path.isfile(typedefs_makefile) and \
+            filecmp.cmp(typedefs_makefile, makefile.filename):
+        os.remove(makefile.filename)
+        os.remove(cmakefile.filename)
+        os.remove(sourcefile.filename)
+    else:
+        if os.path.isfile(typedefs_makefile):
+            os.remove(typedefs_makefile)
+        if os.path.isfile(typedefs_cmakefile):
+            os.remove(typedefs_cmakefile)
+        if os.path.isfile(typedefs_sourcefile):
+            os.remove(typedefs_sourcefile)
+        os.rename(makefile.filename, typedefs_makefile)
+        os.rename(cmakefile.filename, typedefs_cmakefile)
+        os.rename(sourcefile.filename, typedefs_sourcefile)
+    #
     logging.info('Added {0} typedefs to {1}, {2}, {3}'.format(
            len(typedefs), makefile.filename, cmakefile.filename, sourcefile.filename))
     return success
@@ -696,16 +717,32 @@ def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile, sche
     logging.info('Generating schemes makefile/cmakefile snippet ...')
     success = True
     makefile = SchemesMakefile()
-    makefile.filename = schemes_makefile
+    makefile.filename = schemes_makefile + '.tmp'
     cmakefile = SchemesCMakefile()
-    cmakefile.filename = schemes_cmakefile
+    cmakefile.filename = schemes_cmakefile + '.tmp'
     sourcefile = SchemesSourcefile()
-    sourcefile.filename = schemes_sourcefile
+    sourcefile.filename = schemes_sourcefile + '.tmp'
     # Generate list of schemes with absolute path
     schemes_with_abspath = [ os.path.abspath(scheme) for scheme in schemes ]
     makefile.write(schemes_with_abspath)
     cmakefile.write(schemes_with_abspath)
     sourcefile.write(schemes_with_abspath)
+    if os.path.isfile(schemes_makefile) and \
+            filecmp.cmp(schemes_makefile, makefile.filename):
+        os.remove(makefile.filename)
+        os.remove(cmakefile.filename)
+        os.remove(sourcefile.filename)
+    else:
+        if os.path.isfile(schemes_makefile):
+            os.remove(schemes_makefile)
+        if os.path.isfile(schemes_cmakefile):
+            os.remove(schemes_cmakefile)
+        if os.path.isfile(schemes_sourcefile):
+            os.remove(schemes_sourcefile)
+        os.rename(makefile.filename, schemes_makefile)
+        os.rename(cmakefile.filename, schemes_cmakefile)
+        os.rename(sourcefile.filename, schemes_sourcefile)
+    #
     logging.info('Added {0} schemes to {1}, {2}, {3}'.format(
            len(schemes_with_abspath), makefile.filename, cmakefile.filename, sourcefile.filename))
     return success
@@ -715,16 +752,32 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
     logging.info('Generating caps makefile/cmakefile snippet ...')
     success = True
     makefile = CapsMakefile()
-    makefile.filename = caps_makefile
+    makefile.filename = caps_makefile + '.tmp'
     cmakefile = CapsCMakefile()
-    cmakefile.filename = caps_cmakefile
+    cmakefile.filename = caps_cmakefile + '.tmp'
     sourcefile = CapsSourcefile()
-    sourcefile.filename = caps_sourcefile
+    sourcefile.filename = caps_sourcefile + '.tmp'
     # Generate list of caps with absolute path
     caps_with_abspath = [ os.path.abspath(os.path.join(caps_dir, cap)) for cap in caps ]
     makefile.write(caps_with_abspath)
     cmakefile.write(caps_with_abspath)
     sourcefile.write(caps_with_abspath)
+    if os.path.isfile(caps_makefile) and \
+            filecmp.cmp(caps_makefile, makefile.filename):
+        os.remove(makefile.filename)
+        os.remove(cmakefile.filename)
+        os.remove(sourcefile.filename)
+    else:
+        if os.path.isfile(caps_makefile):
+            os.remove(caps_makefile)
+        if os.path.isfile(caps_cmakefile):
+            os.remove(caps_cmakefile)
+        if os.path.isfile(caps_sourcefile):
+            os.remove(caps_sourcefile)
+        os.rename(makefile.filename, caps_makefile)
+        os.rename(cmakefile.filename, caps_cmakefile)
+        os.rename(sourcefile.filename, caps_sourcefile)
+    #
     logging.info('Added {0} auto-generated caps to {1} and {2}, {3}'.format(
            len(caps_with_abspath), makefile.filename, cmakefile.filename, sourcefile.filename))
     return success
