@@ -9,6 +9,6 @@ from .fortran_write      import FortranWriter
 __all__ = [
     'fortran_type_definition',
     'parse_fortran_file',
-    'parse_fortran_var_decl'
+    'parse_fortran_var_decl',
     'FortranWriter'
 ]

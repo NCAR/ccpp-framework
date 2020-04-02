@@ -628,8 +628,10 @@ def capgen(host_files, scheme_files, suites, datatable_file, preproc_defs,
     # Create the kinds file
     kinds_file = create_kinds_file(kind_phys, output_dir, logger)
     # Finally, create the database of generated files and caps
-    generate_ccpp_datatable(datatable_file, ccpp_api, scheme_headers,
-                            host_files, cap_filenames, kinds_file)
+    generate_ccpp_datatable(datatable_file,
+                            host_model, ccpp_api,
+                            scheme_headers, host_files,
+                            cap_filenames, kinds_file)
 
 ###############################################################################
 def _main_func():

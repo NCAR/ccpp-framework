@@ -18,7 +18,7 @@ scripts="${scripts} ${CCPPDIR}/host_cap.py"
 scripts="${scripts} ${CCPPDIR}/host_model.py"
 scripts="${scripts} ${CCPPDIR}/metadata_table.py"
 scripts="${scripts} ${CCPPDIR}/metavar.py"
-scripts="${scripts} /state_machine.py"
+scripts="${scripts} ${CCPPDIR}/state_machine.py"
 ${pylintcmd} ${scripts}
 # Test the fortran_tools module
 ${pylintcmd} ${CCPPDIR}/fortran_tools

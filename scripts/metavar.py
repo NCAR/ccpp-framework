@@ -1196,19 +1196,20 @@ class Var(object):
             comma = ' '
         # end if
         if self.is_ddt():
-            dstr = "type({kind}){cspc}{intent} :: {name}{dims}"
+            dstr = "type({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
             cspc = comma + ' '*(13 - len(kind))
         else:
             if kind:
-                dstr = "{type}({kind}){cspc}{intent} :: {name}{dims}"
+                dstr = "{type}({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
                 cspc = comma + ' '*(17 - len(vtype) - len(kind))
             else:
-                dstr = "{type}{cspc}{intent} :: {name}{dims}"
+                dstr = "{type}{cspc}{intent} :: {name}{dims} ! {sname}"
                 cspc = comma + ' '*(19 - len(vtype))
             # end if
         # end if
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
-                                  name=name, dims=dimstr, cspc=cspc), indent)
+                                  name=name, dims=dimstr, cspc=cspc,
+                                  sname=stdname), indent)
 
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""
@@ -1581,7 +1582,8 @@ class VarDictionary(OrderedDict):
         """Return the parent dictionary of this dictionary"""
         return self._parent_dict
 
-    def include_var_in_list(self, var, std_vars, loop_vars, consts):
+    @staticmethod
+    def include_var_in_list(var, std_vars, loop_vars, consts):
         """Return True iff <var> is of a type allowed by the logicals,
         <std_vars> (not constants or loop_vars),
         <loop_vars> a variable ending in '_extent', '_begin', '_end', or
@@ -1805,6 +1807,10 @@ class VarDictionary(OrderedDict):
     def add_sub_scope(self, sub_dict):
         """Add a child dictionary to enable traversal"""
         self._sub_dicts.append(sub_dict)
+
+    def sub_dictionaries(self):
+        """Return a list of this dictionary's sub-dictionaries"""
+        return list(self._sub_dicts)
 
     def prop_list(self, prop_name, std_vars=True, loop_vars=True, consts=True):
         """Return a list of the <prop_name> property for each variable.

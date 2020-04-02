@@ -770,8 +770,8 @@ class MetadataTable(ParseSource):
         # Read all lines of the file at once
         meta_headers = list()
         header_titles = list() # Keep track of names in file
-        with open(filename, 'r') as file:
-            fin_lines = file.readlines()
+        with open(filename, 'r') as infile:
+            fin_lines = infile.readlines()
             for index, fin_line in enumerate(fin_lines):
                 fin_lines[index] = fin_line.rstrip('\n')
             # end for
@@ -812,8 +812,8 @@ class MetadataTable(ParseSource):
         <filename>. A scheme is identified by its run method name.
         """
         scheme_names = list()
-        with open(filename, 'r') as file:
-            fin_lines = file.readlines()
+        with open(filename, 'r') as infile:
+            fin_lines = infile.readlines()
         # end with
         num_lines = len(fin_lines)
         context = ParseContext(linenum=1, filename=filename)

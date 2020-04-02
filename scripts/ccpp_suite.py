@@ -1423,7 +1423,7 @@ class Group(SuiteObject):
                                     phase_type=transition)
         # Add the items but first make sure we know the process tpye for
         # the group (e.g., TimeSplit or ProcessSplit).
-        if (transition == _RUN_PHASE_NAME) and ((len(group_xml) == 0) or
+        if (transition == _RUN_PHASE_NAME) and ((not len(group_xml)) or
                                                 (group_xml[0].tag not in
                                                  Group.__process_types)):
             # Default is TimeSplit
@@ -2206,6 +2206,7 @@ class API(VarDictionary):
 
     __suite_fname = 'ccpp_physics_suite_list'
     __part_fname = 'ccpp_physics_suite_part_list'
+    __vars_fname = 'ccpp_physics_suite_variables'
 
     __header = '''
 !>
@@ -2364,33 +2365,38 @@ end module {module}
 
     @classmethod
     def declare_inspection_interfaces(cls, ofile):
-        "Declare the API interfaces for the suite inquiry functions"
+        """Declare the API interfaces for the suite inquiry functions"""
         ofile.write("public :: {}".format(API.__suite_fname), 1)
         ofile.write("public :: {}".format(API.__part_fname), 1)
+        ofile.write("public :: {}".format(API.__vars_fname), 1)
 
     def get_errinfo_names(self):
-        "Return a tuple of error output local names"
+        """Return a tuple of error output local names"""
         errmsg_name = self._errmsg_var.get_prop_value('local_name')
         errflg_name = self._errflg_var.get_prop_value('local_name')
         return (errmsg_name, errflg_name)
 
+    @staticmethod
+    def write_var_set_loop(ofile, varlist_name, var_list, indent):
+        """Write code to allocate and set <varlist_name> to <var_list>"""
+        ofile.write("allocate({}({}))".format(varlist_name, len(var_list)),
+                    indent)
+        for ind, var in enumerate(var_list):
+            ofile.write("{}({}) = '{}'".format(varlist_name, ind+1, var),
+                        indent)
+        # end for
+
     def write_inspection_routines(self, ofile):
-        "Write the list_suites and list_suite_parts subroutines"
+        """Write the list_suites and list_suite_parts subroutines"""
         errmsg_name, errflg_name = self.get_errinfo_names()
         ofile.write("subroutine {}(suites)".format(API.__suite_fname), 1)
-        nsuites = 0
-        for suite in self.suites:
-            nsuites = nsuites + 1
-        # end for
+        nsuites = len(self.suites)
         oline = "character(len=*), allocatable, intent(out) :: suites(:)"
         ofile.write(oline, 2)
-        ofile.write("\ninteger                                    :: sindex", 2)
         ofile.write("\nallocate(suites({}))".format(nsuites), 2)
-        ofile.write("do sindex = 1, {}".format(nsuites), 2)
-        for suite in self.suites:
-            ofile.write("suites(sindex) = '{}'".format(suite.name), 3)
+        for ind, suite in enumerate(self.suites):
+            ofile.write("suites({}) = '{}'".format(ind+1, suite.name), 2)
         # end for
-        ofile.write("end do", 2)
         ofile.write("end subroutine {}".format(API.__suite_fname), 1)
         # Write out the suite part list subroutine
         oline = "suite_name, part_list, {errmsg}, {errflg}"
@@ -2402,20 +2408,15 @@ end module {module}
         ofile.write(oline, 2)
         self._errmsg_var.write_def(ofile, 2, self)
         self._errflg_var.write_def(ofile, 2, self)
-        ofile.write("\ninteger                                   :: pindex\n",
-                    2)
         else_str = ''
+        ename = self._errflg_var.get_prop_value('local_name')
+        ofile.write("{} = 0".format(ename), 2)
+        ename = self._errmsg_var.get_prop_value('local_name')
+        ofile.write("{} = ''".format(ename), 2)
         for suite in self.suites:
             oline = "{}if(trim(suite_name) == '{}') then"
             ofile.write(oline.format(else_str, suite.name), 2)
-            parts = suite.part_list()
-            nparts = len(parts)
-            ofile.write("allocate(part_list({}))\n".format(nparts), 3)
-            ofile.write("do pindex = 1, {}".format(nparts), 3)
-            for part in parts:
-                ofile.write("part_list(pindex) = '{}'".format((part)), 4)
-            # end for
-            ofile.write("end do", 3)
+            API.write_var_set_loop(ofile, 'part_list', suite.part_list(), 3)
             else_str = 'else '
         # end for
         ofile.write("else", 2)
@@ -2425,6 +2426,79 @@ end module {module}
         ofile.write("{errflg} = 1".format(errflg=errflg_name), 3)
         ofile.write("end if", 2)
         ofile.write("end subroutine {}".format(API.__part_fname), 1)
+        # Write out the suite required variable subroutine
+        oline = "suite_name, variable_list, {errmsg}, {errflg}"
+        oline += ", input_vars_in, output_vars_in"
+        inargs = oline.format(errmsg=errmsg_name, errflg=errflg_name)
+        ofile.write("\nsubroutine {}({})".format(API.__vars_fname, inargs), 1)
+        ofile.write("! Dummy arguments", 2)
+        oline = "character(len=*),              intent(in)  :: suite_name"
+        ofile.write(oline, 2)
+        oline = "character(len=*), allocatable, intent(out) :: variable_list(:)"
+        ofile.write(oline, 2)
+        self._errmsg_var.write_def(ofile, 2, self)
+        self._errflg_var.write_def(ofile, 2, self)
+        oline = "logical, optional,             intent(in) :: input_vars_in"
+        ofile.write(oline, 2)
+        oline = "logical, optional,             intent(in) :: output_vars_in"
+        ofile.write(oline, 2)
+        ofile.write("! Local variables", 2)
+        ofile.write("logical {}:: input_vars".format(' '*34), 2)
+        ofile.write("logical {}:: output_vars".format(' '*34), 2)
+        ofile.write("\n", 0)
+        ename = self._errflg_var.get_prop_value('local_name')
+        ofile.write("{} = 0".format(ename), 2)
+        ename = self._errmsg_var.get_prop_value('local_name')
+        ofile.write("{} = ''".format(ename), 2)
+        ofile.write("if (present(input_vars_in)) then", 2)
+        ofile.write("input_vars = input_vars_in", 3)
+        ofile.write("else", 2)
+        ofile.write("input_vars = .true.", 3)
+        ofile.write("end if", 2)
+        ofile.write("if (present(output_vars_in)) then", 2)
+        ofile.write("output_vars = output_vars_in", 3)
+        ofile.write("else", 2)
+        ofile.write("output_vars = .true.", 3)
+        ofile.write("end if", 2)
+        else_str = ''
+        for suite in self.suites:
+            # Collect all the suite variables
+            oline = "{}if(trim(suite_name) == '{}') then"
+            suite_vars = [set(), set()] # input, output
+            for part in suite.groups:
+                for var in part.call_list.variable_list():
+                    stdname = var.get_prop_value("standard_name")
+                    intent = var.get_prop_value("intent")
+                    if intent in ['in', 'inout']:
+                        suite_vars[0].add(stdname)
+                    # end if
+                    if intent in ['inout', 'out']:
+                        suite_vars[1].add(stdname)
+                    # end if
+                # end for
+            # end for
+            ofile.write(oline.format(else_str, suite.name), 2)
+            ofile.write("if (input_vars .and. output_vars) then", 3)
+            var_list = list(suite_vars[0].union(suite_vars[1]))
+            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
+            ofile.write("else if (input_vars) then", 3)
+            var_list = list(suite_vars[0])
+            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
+            ofile.write("else if (output_vars) then", 3)
+            var_list = list(suite_vars[1])
+            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
+            ofile.write("else", 3)
+            ofile.write("allocate(variable_list(0))\n", 4)
+            ofile.write("end if", 3)
+            else_str = 'else '
+        # end for
+        ofile.write("else", 2)
+        emsg = "write({errmsg}, '(3a)')".format(errmsg=errmsg_name)
+        emsg += "'No suite named ', trim(suite_name), ' found'"
+        ofile.write(emsg, 3)
+        ofile.write("{errflg} = 1".format(errflg=errflg_name), 3)
+        ofile.write("end if", 2)
+        ofile.write("end subroutine {}".format(API.__vars_fname), 1)
 
 ###############################################################################
 if __name__ == "__main__":

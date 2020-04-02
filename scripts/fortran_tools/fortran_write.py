@@ -21,10 +21,10 @@ class FortranWriter(object):
     ###########################################################################
     # Class variables
     ###########################################################################
-    INDENT          =   3 # Spaces per indent level
-    CONTINUE_INDENT =   5 # Extra spaces on continuation line
-    LINE_FILL       =  97 # Target line length
-    LINE_MAX        = 130 # Max line length
+    INDENT = 3          # Spaces per indent level
+    CONTINUE_INDENT = 5 # Extra spaces on continuation line
+    LINE_FILL = 97      # Target line length
+    LINE_MAX = 130      # Max line length
 
     ###########################################################################
 
@@ -39,12 +39,14 @@ class FortranWriter(object):
     ###########################################################################
 
     def find_best_break(self, choices, last=None):
+        """Find the best line break point given <choices>.
+        If <last> is present, use it as a target line length."""
         if last is None:
             last = self._line_fill
         # End if
-        'Find largest good break'
+        # Find largest good break
         possible = [x for x in choices if x < last]
-        if len(possible) == 0:
+        if not possible:
             best = self._line_max + 1
         else:
             best = max(possible)
@@ -124,31 +126,32 @@ class FortranWriter(object):
 
     def __init__(self, filename, mode, indent=None,
                  continue_indent=None, line_fill=None, line_max=None):
+        """Initialize thie FortranWriter object"""
         # We only handle writing situations (for now) and only text
-        if ('r' in mode):
+        if 'r' in mode:
             raise ValueError('Read mode not allowed in FortranWriter object')
-        elif ('b' in mode):
+        elif 'b' in mode:
             raise ValueError('Binary mode not allowed in FortranWriter object')
         else:
             self._file = open(filename, mode)
         # End if
         if indent is None:
-            self._indent=FortranWriter.INDENT
+            self._indent = FortranWriter.INDENT
         else:
             self._indent = indent
         # End if
         if continue_indent is None:
-            self._continue_indent=FortranWriter.CONTINUE_INDENT
+            self._continue_indent = FortranWriter.CONTINUE_INDENT
         else:
             self._continue_indent = continue_indent
         # End if
         if line_fill is None:
-            self._line_fill=FortranWriter.LINE_FILL
+            self._line_fill = FortranWriter.LINE_FILL
         else:
             self._line_fill = line_fill
         # End if
         if line_max is None:
-            self._line_max=FortranWriter.LINE_MAX
+            self._line_max = FortranWriter.LINE_MAX
         else:
             self._line_max = line_max
         # End if
@@ -174,39 +177,39 @@ if __name__ == "__main__":
     import os
     import os.path
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    name = 'foo'
-    while os.path.exists(name+'.F90'):
-        name = name + 'xo'
+    NAME = 'foo'
+    while os.path.exists(NAME+'.F90'):
+        NAME = NAME + 'xo'
     # End while
-    name = name + '.F90'
+    NAME = NAME + '.F90'
     if os.access(os.getcwd(), os.W_OK):
         check = [('      subroutine foo(long_argument1, long_argument2, '
                   'long_argument3, long_argument4,              &'),
                  '           long_argument5)',
                  '      end subroutine foo']
-        with FortranWriter(name, 'w') as foo:
+        with FortranWriter(NAME, 'w') as foo:
             foo.write(("subroutine foo(long_argument1, long_argument2, "
                        "long_argument3, long_argument4, long_argument5)"), 2)
             foo.write("end subroutine foo", 2)
         # End with
         # Check file
-        with open(name, 'r') as foo:
+        with open(NAME, 'r') as foo:
             statements = foo.readlines()
             if len(statements) != len(check):
-                emsg = "ERROR: File has {} statements, should have {}"
-                print(emsg.format(len(statements), len(check)))
+                EMSG = "ERROR: File has {} statements, should have {}"
+                print(EMSG.format(len(statements), len(check)))
             else:
-                for line_num in range(len(statements)):
-                    if statements[line_num].rstrip() != check[line_num]:
-                        emsg = "ERROR: Line {} does not match"
-                        print(emsg.format(line_num+1))
-                        print("{}".format(statements[line_num].rstrip()))
+                for line_num, statement in enumerate(statements):
+                    if statement.rstrip() != check[line_num]:
+                        EMSG = "ERROR: Line {} does not match"
+                        print(EMSG.format(line_num+1))
+                        print("{}".format(statement.rstrip()))
                         print("{}".format(check[line_num]))
                     # End if
                 # End for
         # End with
-        os.remove(name)
+        os.remove(NAME)
     else:
-        print("WARNING: Unable to write test file, '{}'".format(name))
+        print("WARNING: Unable to write test file, '{}'".format(NAME))
     # End if
 # No else

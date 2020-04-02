@@ -3,6 +3,9 @@
 currdir="`pwd -P`"
 scriptdir="$( cd $( dirname $0 ); pwd -P )"
 
+##
+## Option default values
+##
 build_dir="${currdir}/ct_build"
 cleanup="PASS" # Other supported options are ALWAYS and NEVER
 verbosity=0
@@ -58,9 +61,6 @@ while [ $# -gt 0 ]; do
       if [ -d "${2}" ]; then
         build_dir="$( cd ${2}; pwd -P )"
       fi
-      if [ "${build_dir}" == "${currdir}" ]; then
-        build_dir="${build_dir}/ct_build"
-      fi
       shift
       ;;
     --cleanup)
@@ -91,6 +91,84 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+# Always make sure build_dir is not in the test dir
+if [ "${build_dir}" == "${currdir}" ]; then
+  build_dir="${build_dir}/ct_build"
+fi
+
+##
+## check strings for datafile command-list test
+## NB: This has to be after build_dir is finalized
+##
+host_files="${build_dir}/ccpp/test_host_ccpp_cap.F90"
+suite_files="${build_dir}/ccpp/ccpp_ddt_suite_cap.F90"
+suite_files="${suite_files},${build_dir}/ccpp/ccpp_temp_suite_cap.F90"
+utility_files="${build_dir}/ccpp/ccpp_kinds.F90"
+ccpp_files="${build_dir}/ccpp/ccpp_kinds.F90"
+ccpp_files="${ccpp_files},${build_dir}/ccpp/test_host_ccpp_cap.F90"
+ccpp_files="${ccpp_files},${build_dir}/ccpp/ccpp_ddt_suite_cap.F90"
+ccpp_files="${ccpp_files},${build_dir}/ccpp/ccpp_temp_suite_cap.F90"
+process_list="setter=temp_set,adjusting=temp_calc_adjust"
+module_list="environ_conditions,make_ddt,temp_adjust,temp_calc_adjust,temp_set"
+suite_list="ddt_suite;temp_suite"
+required_vars_ddt="ccpp_error_flag,ccpp_error_message,horizontal_dimension"
+required_vars_ddt="${required_vars_ddt},horizontal_loop_begin"
+required_vars_ddt="${required_vars_ddt},horizontal_loop_end"
+required_vars_ddt="${required_vars_ddt},model_times"
+required_vars_ddt="${required_vars_ddt},number_of_model_times"
+required_vars_ddt="${required_vars_ddt},surface_air_pressure"
+input_vars_ddt="horizontal_dimension,horizontal_loop_begin,horizontal_loop_end"
+input_vars_ddt="${input_vars_ddt},model_times,number_of_model_times"
+input_vars_ddt="${input_vars_ddt},surface_air_pressure"
+output_vars_ddt="ccpp_error_flag,ccpp_error_message"
+output_vars_ddt="${output_vars_ddt},model_times,number_of_model_times"
+required_vars_temp="ccpp_error_flag,ccpp_error_message,horizontal_dimension"
+required_vars_temp="${required_vars_temp},horizontal_loop_begin"
+required_vars_temp="${required_vars_temp},horizontal_loop_end"
+required_vars_temp="${required_vars_temp},potential_temperature"
+required_vars_temp="${required_vars_temp},potential_temperature_at_interface"
+required_vars_temp="${required_vars_temp},potential_temperature_increment"
+required_vars_temp="${required_vars_temp},surface_air_pressure"
+required_vars_temp="${required_vars_temp},time_step_for_physics"
+required_vars_temp="${required_vars_temp},vertical_interface_dimension"
+required_vars_temp="${required_vars_temp},vertical_layer_dimension"
+required_vars_temp="${required_vars_temp},water_vapor_specific_humidity"
+input_vars_temp="horizontal_dimension,horizontal_loop_begin"
+input_vars_temp="${input_vars_temp},horizontal_loop_end,potential_temperature"
+input_vars_temp="${input_vars_temp},potential_temperature_at_interface"
+input_vars_temp="${input_vars_temp},potential_temperature_increment"
+input_vars_temp="${input_vars_temp},surface_air_pressure,time_step_for_physics"
+input_vars_temp="${input_vars_temp},vertical_interface_dimension"
+input_vars_temp="${input_vars_temp},vertical_layer_dimension"
+input_vars_temp="${input_vars_temp},water_vapor_specific_humidity"
+output_vars_temp="ccpp_error_flag,ccpp_error_message,potential_temperature"
+output_vars_temp="${output_vars_temp},potential_temperature_at_interface"
+output_vars_temp="${output_vars_temp},surface_air_pressure"
+output_vars_temp="${output_vars_temp},water_vapor_specific_humidity"
+
+##
+## Run a database report and check the return string
+## $1 is the report program file
+## $2 is the database file
+## $3 is the report string
+## $4 is the check string
+## $5+ are any optional arguments
+##
+check_datatable() {
+  local checkstr=${4}
+  local teststr
+  local prog=${1}
+  local database=${2}
+  local report=${3}
+  shift 4
+  echo "Checking ${report} report"
+  teststr="`${prog} ${database} ${report} $@`"
+  if [ "${teststr}" != "${checkstr}" ]; then
+    perr "datafile check:\nExpected: '${checkstr}'\nGot: '${teststr}'"
+  fi
+}
+
 
 # Create the build directory, if necessary
 if [ ! -d "${build_dir}" ]; then
@@ -124,6 +202,33 @@ res=$?
 if [ $res -ne 0 ]; then
   perr "CMake failed with exit code, ${res}"
 fi
+# Test the datafile user interface
+framework="$( cd $( dirname $( dirname ${scriptdir} ) ); pwd -P )"
+report_prog="${framework}/scripts/ccpp_datafile.py"
+datafile="${build_dir}/ccpp/datatable.xml"
+echo "Running command line tests"
+check_datatable ${report_prog} ${datafile} "--host-files" ${host_files}
+check_datatable ${report_prog} ${datafile} "--suite-files" ${suite_files}
+check_datatable ${report_prog} ${datafile} "--utility-files" ${utility_files}
+check_datatable ${report_prog} ${datafile} "--ccpp-files" ${ccpp_files}
+check_datatable ${report_prog} ${datafile} "--process-list" ${process_list}
+check_datatable ${report_prog} ${datafile} "--module-list" ${module_list}
+check_datatable ${report_prog} ${datafile} "--suite-list" ${suite_list}       \
+                --sep ";"
+check_datatable ${report_prog} ${datafile} "--required-variables"             \
+                ${required_vars_ddt} "ddt_suite"
+check_datatable ${report_prog} ${datafile} "--input-variables"                \
+                ${input_vars_ddt} "ddt_suite"
+check_datatable ${report_prog} ${datafile} "--output-variables"               \
+                ${output_vars_ddt} "ddt_suite"
+check_datatable ${report_prog} ${datafile} "--required-variables"             \
+                ${required_vars_temp} "temp_suite"
+check_datatable ${report_prog} ${datafile} "--input-variables"                \
+                ${input_vars_temp} "temp_suite"
+check_datatable ${report_prog} ${datafile} "--output-variables"               \
+                ${output_vars_temp} "temp_suite"
+echo "Running python interface tests"
+python ${scriptdir}/test_reports.py ${build_dir} ${datafile}
 # Run make
 make
 res=$?
