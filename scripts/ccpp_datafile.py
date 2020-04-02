@@ -11,6 +11,10 @@ The CCPP datafile is a database consisting of several tables:
 - A list of variable entries, keyed by standard name.
 """
 
+## NB: A new report must be added in two places:
+##     1) In the list of DatatableReport._valid_reports
+##     2) As an option in datatable_report
+
 # Python library imports
 import xml.etree.ElementTree as ET
 import argparse
@@ -20,7 +24,44 @@ from parse_tools import read_xml_file
 from metadata_table import MetadataTable
 from ccpp_suite import VerticalLoop, Subcycle
 
+# Global data
 _INDENT_STR = "  "
+
+## datatable_report must have an action for each report type
+_VALID_REPORTS = [{"report" : "host_files", "type" : bool,
+                   "help" :
+                   "Return a list of host CAP files created by capgen"},
+                  {"report" : "suite_files", "type" : bool,
+                   "help" :
+                   "Return a list of suite CAP files created by capgen"},
+                  {"report" : "utility_files", "type" : bool,
+                   "help" : ("Return a list of utility files created by "
+                             "capgen (e.g., ccpp_kinds.F90)")},
+                  {"report" : "ccpp_files", "type" : bool,
+                   "help" : "Return a list of all files created by capgen"},
+                  {"report" : "process_list", "type" : bool,
+                   "help" : ("Return a list of process types and implementing "
+                             "scheme name")},
+                  {"report" : "module_list", "type" : bool,
+                   "help" :
+                   "Return a list of module names used in this set of suites"},
+                  {"report" : "suite_list", "type" : bool,
+                   "help" : "Return a list of configured suite names"},
+                  {"report" : "required_variables", "type" : str,
+                   "help" : ("Return a list of required variable "
+                             "standard names for suite, <SUITE_NAME>"),
+                   "metavar" : "SUITE_NAME"},
+                  {"report" : "input_variables", "type" : str,
+                   "help" : ("Return a list of required input variable "
+                             "standard names for suite, <SUITE_NAME>"),
+                   "metavar" : "SUITE_NAME"},
+                  {"report" : "output_variables", "type" : str,
+                   "help" : ("Return a list of required output variable "
+                             "standard names for suite, <SUITE_NAME>"),
+                   "metavar" : "SUITE_NAME"},
+                  {"report" : "show", "type" : bool,
+                   "help" :
+                   "Pretty print the database contents to the screen"}]
 
 ###
 ### Utilities
@@ -29,6 +70,40 @@ _INDENT_STR = "  "
 class CCPPDatatableError(ValueError):
     """Error specific to errors found in the CCPP capgen datafile"""
     pass
+
+class DatatableReport(object):
+    """A class to hold a database report type and inquiry function"""
+
+    __valid_actions = [x["report"] for x in _VALID_REPORTS]
+
+    def __init__(self, action, value=True):
+        """Initialize this report as report-type, <action>"""
+        if action in DatatableReport.__valid_actions:
+            self.__action = action
+            self.__value = value
+        else:
+            raise ValueError("Invalid action, '{}'".format(action))
+        # end if
+
+    def action_is(self, action):
+        """If <action> matches this report type, return True.
+        Otherwise, return False"""
+        return action == self.__action
+
+    @property
+    def action(self):
+        """Return this action's action"""
+        return self.__action
+
+    @property
+    def value(self):
+        """Return this action's value"""
+        return self.__value
+
+    @classmethod
+    def valid_actions(cls):
+        """Return the list of valid actions for this class"""
+        return cls.__valid_actions
 
 ###
 ### Interface for retrieving datatable information
@@ -49,41 +124,24 @@ def _command_line_parser():
                         help="Path to a data table XML file created by capgen")
     ### Only one action per call
     group = parser.add_mutually_exclusive_group(required=True)
-    help_str = "Return a list of host CAP files created by capgen"
-    group.add_argument("--host-files", action='store_true', default=False,
-                       help=help_str)
-    help_str = "Return a list of suite CAP files created by capgen"
-    group.add_argument("--suite-files", action='store_true', default=False,
-                       help=help_str)
-    help_str = ("Return a list of utility files created by capgen "
-            "(e.g., ccpp_kinds.F90)")
-    group.add_argument("--utility-files", action='store_true', default=False,
-                       help=help_str)
-    help_str = "Return a list of all files created by capgen"
-    group.add_argument("--ccpp-files", action='store_true', default=False,
-                       help=help_str)
-    help_str = "Return a list of process types and implementing scheme name"
-    group.add_argument("--process-list", action='store_true', default=False,
-                       help=help_str)
-    help_str = "Return a list of module names used in this set of suites"
-    group.add_argument("--module-list", action='store_true', default=False,
-                       help=help_str)
-    group.add_argument("--suite-list", action='store_true', default=False,
-                       help="Return a list of configured suite names")
-    help_str = ("Return a list of required "
-                "variable standard names for suite, <SUITE_NAME>")
-    group.add_argument("--required-variables", required=False, type=str,
-                       metavar="SUITE_NAME", default='', help=help_str)
-    help_str = ("Return a list of required input "
-                "variable standard names for suite, <SUITE_NAME>")
-    group.add_argument("--input-variables", required=False, type=str,
-                       metavar="SUITE_NAME", default='', help=help_str)
-    help_str = ("Return a list of required output "
-                "variable standard names for suite, <SUITE_NAME>")
-    group.add_argument("--output-variables", required=False, type=str,
-                       metavar="SUITE_NAME", default='', help=help_str)
-    group.add_argument("--show", action='store_true', default=False,
-                       help='Pretty print the database contents to the screen')
+    for report in _VALID_REPORTS:
+        rep_type = "--{}".format(report["report"].replace("_", "-"))
+        if report["type"] is bool:
+            group.add_argument(rep_type, action='store_true', default=False,
+                               help=report["help"])
+        elif report["type"] is str:
+            if "metavar" in report:
+                group.add_argument(rep_type, required=False, type=str,
+                                   metavar=report["metavar"], default='',
+                                   help=report["help"])
+            else:
+                group.add_argument(rep_type, required=False, type=str,
+                                   default='', help=report["help"])
+            # end if
+        else:
+            raise ValueError("Unknown report type, '{}'".format(report["type"]))
+        # end if
+    # end for
     ###
     parser.add_argument("--separator", type=str, required=False, default=",",
                         metavar="SEP", dest="sep",
@@ -183,7 +241,7 @@ def _retrieve_module_list(table):
             # end if
         # end for
     # end for
-    return list(result)
+    return sorted(result)
 
 ###############################################################################
 def _find_var_dictionary(table, dict_name, dict_type):
@@ -276,57 +334,40 @@ def _retrieve_variable_list(table, suite_name, intent_type=None):
             # end if
         # end if
     # end for
-    return list(var_set)
+    return sorted(var_set)
 
 ###############################################################################
-def datatable_report(datatable, host_files, suite_files, utility_files,
-                     ccpp_files, process_list, module_list, suite_list,
-                     required_vars, input_vars, output_vars, sep):
+def datatable_report(datatable, action, sep):
 ###############################################################################
-    """Perform a lookup action on <datatable> and return the result.
-    Each input except for <datatable> and <sep> specifies an action boolean.
-    Note that only one action is allowed per call so if more than one
-    action is specified, an exception is raised.
+    """Perform a lookup <action> on <datatable> and return the result.
     """
-    ## Check that exactly one action is specified.
-    ## Note: This check is only needed for import usage of this function
-    ##       but is does not hurt to repeat it.
-    action_list = [host_files, suite_files, utility_files, ccpp_files,
-                   process_list, module_list, suite_list, required_vars,
-                   input_vars, output_vars]
-    num_actions = sum([1 for x in action_list if x])
-    if num_actions != 1:
-        if num_actions > 1:
-            emsg = "datatable_report: Only one action is allowed\n"
-        # end if
-        if num_actions < 1:
-            emsg = "datatable_report: An action is required\n"
-        # end if
+    if not action:
+        emsg = "datatable_report: An action is required\n"
         emsg += _command_line_parser().format_usage()
         raise ValueError(emsg)
     # end if
     table = _read_datatable(datatable)
-    if ccpp_files:
+    if action.action_is("ccpp_files"):
         result = _retrieve_ccpp_files(table)
-    elif host_files:
+    elif action.action_is("host_files"):
         result = _retrieve_ccpp_files(table, file_type="host_files")
-    elif suite_files:
+    elif action.action_is("suite_files"):
         result = _retrieve_ccpp_files(table, file_type="suite_files")
-    elif utility_files:
+    elif action.action_is("utility_files"):
         result = _retrieve_ccpp_files(table, file_type="utilities")
-    elif process_list:
+    elif action.action_is("process_list"):
         result = _retrieve_process_list(table)
-    elif module_list:
+    elif action.action_is("module_list"):
         result = _retrieve_module_list(table)
-    elif suite_list:
+    elif action.action_is("suite_list"):
         result = _retrieve_suite_list(table)
-    elif required_vars:
-        result = _retrieve_variable_list(table, required_vars)
-    elif input_vars:
-        result = _retrieve_variable_list(table, input_vars,
+    elif action.action_is("required_variables"):
+        result = _retrieve_variable_list(table, action.value)
+    elif action.action_is("input_variables"):
+        result = _retrieve_variable_list(table, action.value,
                                          intent_type="input")
-    elif output_vars:
-        result = _retrieve_variable_list(table, output_vars,
+    elif action.action_is("output_variables"):
+        result = _retrieve_variable_list(table, action.value,
                                          intent_type="output")
     else:
         result = ''
@@ -705,13 +746,24 @@ if __name__ == "__main__":
         LINE_WRAP = PARGS.line_wrap
         REPORT = datatable_pretty_print(PARGS.datatable, 0, line_wrap=LINE_WRAP)
     else:
-        REPORT = datatable_report(PARGS.datatable, PARGS.host_files,
-                                  PARGS.suite_files, PARGS.utility_files,
-                                  PARGS.ccpp_files, PARGS.process_list,
-                                  PARGS.module_list, PARGS.suite_list,
-                                  PARGS.required_variables,
-                                  PARGS.input_variables, PARGS.output_variables,
-                                  PARGS.sep)
+        ARG_VARS = vars(PARGS)
+        action = None
+        errmsg = ''
+        esep = ''
+        for opt in ARG_VARS:
+            if (opt in DatatableReport.valid_actions()) and ARG_VARS[opt]:
+                if action:
+                    errmsg += esep + "Duplicate action, '{}'".format(opt)
+                    esep = '\n'
+                else:
+                    action = DatatableReport(opt, ARG_VARS[opt])
+                # end if
+            # end if
+        # end for
+        if errmsg:
+            raise ValueError(errmsg)
+        # end if
+        REPORT = datatable_report(PARGS.datatable, action, PARGS.sep)
     # end if
     print("{}".format(REPORT.rstrip()))
     sys.exit(0)
