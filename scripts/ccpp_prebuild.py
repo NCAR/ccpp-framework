@@ -115,10 +115,10 @@ def import_config(configfile, builddir):
     # To handle new metadata: import DDT references (if exist)
     try:
         config['typedefs_new_metadata'] = ccpp_prebuild_config.TYPEDEFS_NEW_METADATA
-        logging.info("Found TYPEDEFS_NEW_METADATA dictionary in config, assume at least some data is in new metadata formet")
+        logging.info("Found TYPEDEFS_NEW_METADATA dictionary in config, assume at least some data is in new metadata format")
     except AttributeError:
         config['typedefs_new_metadata'] = None
-        logging.info("Could not find TYPEDEFS_NEW_METADATA dictionary in config, assume all data is in old metadata formet")
+        logging.info("Could not find TYPEDEFS_NEW_METADATA dictionary in config, assume all data is in old metadata format")
 
     return(success, config)
 

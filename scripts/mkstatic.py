@@ -383,7 +383,6 @@ end module {module}
                     # Files are equal, delete the test API and set update flag to False
                     os.remove(test_filename)
                     self.update_api = False
-                    logging.warn("Static API: write_to_test_file is True and files are identical, set self.update_api = False")
                 else:
                     # Files are different, replace existing API with
                     # the test API and set update flag to True
@@ -391,10 +390,8 @@ end module {module}
                     os.remove(self.filename)
                     os.rename(test_filename, self.filename)
                     self.update_api = True
-                    logging.warn("Static API: write_to_test_file is True and files are different, set self.update_api = True")
             else:
                 self.update_api = True
-                logging.warn("Static API: write_to_test_file is False, set self.update_api = True")
         return
 
     def write_sourcefile(self, source_filename):
@@ -428,15 +425,11 @@ export CCPP_STATIC_API=\"{filename}\"
             if filecmp.cmp(source_filename, test_filename):
                 # Files are equal, delete the test file
                 os.remove(test_filename)
-                logging.warn("Static API source file: write_to_test_file is True, and files are identical")
             else:
                 # Files are different, replace existing file
                 # Python 3 only: os.replace(test_filename, source_filename)
                 os.remove(source_filename)
                 os.rename(test_filename, source_filename)
-                logging.warn("Static API source file: write_to_test_file is True, and files are different")
-        else:
-            logging.warn("Static API source file: write_to_test_file is False")
         return success
 
 
@@ -752,7 +745,6 @@ end module {module}
                     # and set update flag to False
                     os.remove(test_filename)
                     self.update_cap = False
-                    logging.warn("Suite {}: write_to_test_file is True and files are identical, set self.update_cap = False".format(self.name))
                 else:
                     # Files are different, replace existing cap
                     # with test cap and set flag to True
@@ -760,10 +752,8 @@ end module {module}
                     os.remove(self.filename)
                     os.rename(test_filename, self.filename)
                     self.update_cap = True
-                    logging.warn("Suite {}: write_to_test_file is True and files are different, set self.update_cap = False".format(self.name))
             else:
                 self.update_cap = True
-                logging.warn("Suite {}: write_to_test_file is False, set self.update_cap = False".format(self.name))
 
         # Create list of all caps generated (for groups and suite)
         self._caps = [ self.filename ]
@@ -1149,7 +1139,6 @@ end module {module}
                     # and set update flag to False
                     os.remove(test_filename)
                     self.update_cap = False
-                    logging.warn("Group {}: write_to_test_file is True and files are identical, set self.update_cap = False".format(self.name))
                 else:
                     # Files are different, replace existing cap
                     # with test cap and set flag to True
@@ -1157,10 +1146,8 @@ end module {module}
                     os.remove(self.filename)
                     os.rename(test_filename, self.filename)
                     self.update_cap = True
-                    logging.warn("Group {}: write_to_test_file is True and files are different, set self.update_cap = True".format(self.name))
             else:
                 self.update_cap = True
-                logging.warn("Group {}: write_to_test_file is False, set self.update_cap = True".format(self.name))
         return
 
     @property
