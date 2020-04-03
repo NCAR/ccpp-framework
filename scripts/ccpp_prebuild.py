@@ -709,7 +709,7 @@ def generate_typedefs_makefile(metadata_define, typedefs_makefile, typedefs_cmak
         os.rename(sourcefile.filename, typedefs_sourcefile)
     #
     logging.info('Added {0} typedefs to {1}, {2}, {3}'.format(
-           len(typedefs), makefile.filename, cmakefile.filename, sourcefile.filename))
+           len(typedefs), typedefs_makefile, typedefs_cmakefile, typedefs_sourcefile))
     return success
 
 def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile, schemes_sourcefile):
@@ -744,7 +744,7 @@ def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile, sche
         os.rename(sourcefile.filename, schemes_sourcefile)
     #
     logging.info('Added {0} schemes to {1}, {2}, {3}'.format(
-           len(schemes_with_abspath), makefile.filename, cmakefile.filename, sourcefile.filename))
+           len(schemes_with_abspath), schemes_makefile, schemes_cmakefile, schemes_sourcefile))
     return success
 
 def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile, caps_dir):
@@ -779,7 +779,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
         os.rename(sourcefile.filename, caps_sourcefile)
     #
     logging.info('Added {0} auto-generated caps to {1} and {2}, {3}'.format(
-           len(caps_with_abspath), makefile.filename, cmakefile.filename, sourcefile.filename))
+           len(caps_with_abspath), caps_makefile, caps_cmakefile, caps_sourcefile))
     return success
 
 def main():
