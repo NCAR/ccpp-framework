@@ -664,7 +664,7 @@ class Var(object):
         # end if
         return compat, reason
 
-    def adjust_intent(self, intent, src_var=None):
+    def adjust_intent(self, src_var):
         """Add an intent to this Var or adjust its existing intent.
         Note: An existing intent can only be adjusted to 'inout'
         """
@@ -673,23 +673,28 @@ class Var(object):
         else:
             my_intent = None
         # end if
-        if not my_intent:
-            self._prop_dict['intent'] = intent
-        elif not intent:
-            self._prop_dict['intent'] = 'in'
-        elif intent == 'inout':
-            self._prop_dict['intent'] = intent
-        elif intent != my_intent:
+        sv_intent = src_var.get_prop_value('intent')
+        if not sv_intent:
+            sv_intent = 'in'
+        # end if
+        if sv_intent in ['inout', 'out'] and self.get_prop_value('protected'):
             lname = self.get_prop_value('local_name')
             lctx = context_string(self.context)
-            emsg = "Attempt to set intent of {}{} to {}, only 'inout' allowed."
+            emsg = "Attempt to set intent of {}{} to {}, only 'in' allowed "
+            emsg += "for 'protected' variable."
             if src_var:
                 slname = src_var.get_prop_value('local_name')
                 sctx = context_string(src_var.context)
                 emsg += "\nintent source: {}{}".format(slname, sctx)
             # end if
-            raise ParseInternalError(emsg.format(lname, lctx, intent))
-        # no else, intent does not need to change
+            raise CCPPError(emsg.format(lname, lctx, sv_intent))
+        # end if (else, no error)
+        if my_intent:
+            if my_intent != sv_intent:
+                self._prop_dict['intent'] = 'inout'
+            # end if  (no else, intent is okay)
+        else:
+            self._prop_dict['intent'] = sv_intent
         # end if
 
     @classmethod
@@ -1652,10 +1657,10 @@ class VarDictionary(OrderedDict):
                 if vintent != dintent:
                     if adjust_intent:
                         if (vintent == 'in') and (dintent in ['inout', 'out']):
-                            cvar.adjust_intent('inout')
+                            cvar.adjust_intent(newvar)
                         elif ((vintent == 'out') and
                               (dintent in ['inout', 'in'])):
-                            cvar.adjust_intent('inout')
+                            cvar.adjust_intent(newvar)
                         # No else, variables are compatible
                     else:
                         emsg = "Attempt to add incompatible variable to {}"
@@ -1753,7 +1758,7 @@ class VarDictionary(OrderedDict):
                         ctx = context_string(var.context)
                     # end if
                     err_ret += "{}: ".format(self.name)
-                    err_ret += "Cannot find variable for dimension, {} of {}{}"
+                    err_ret += "Cannot find variable for dimension, {}, of {}{}"
                     vstdname = var.get_prop_value('standard_name')
                     err_ret = err_ret.format(dimname, vstdname, ctx)
                 # end if

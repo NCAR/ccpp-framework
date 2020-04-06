@@ -17,7 +17,10 @@ verbosity=0
 help () {
   local hname="Usage: `basename ${0}`"
   local hprefix="`echo ${hname} | tr '[!-~]' ' '`"
-  echo "${hname} [ --build-dir <dir name> ] [ --cleanup <opt> ] [ --verbosity #]"
+  echo "${hname} [ --build-dir <dir name> ] [ --cleanup <opt> ]"
+  echo "${hprefix} [ --verbosity <#> ]"
+  hprefix="    "
+  echo ""
   echo "${hprefix} <dir name>: Directory for building and running the test"
   echo "${hprefix}             default is <current directory>/ct_build"
   echo "${hprefix} <opt>: Cleanup option is ALWAYS, NEVER, or PASS"
@@ -165,7 +168,7 @@ check_datatable() {
   echo "Checking ${report} report"
   teststr="`${prog} ${database} ${report} $@`"
   if [ "${teststr}" != "${checkstr}" ]; then
-    perr "datafile check:\nExpected: '${checkstr}'\nGot: '${teststr}'"
+    perr "datatable check:\nExpected: '${checkstr}'\nGot: '${teststr}'"
   fi
 }
 
@@ -206,29 +209,37 @@ fi
 framework="$( cd $( dirname $( dirname ${scriptdir} ) ); pwd -P )"
 report_prog="${framework}/scripts/ccpp_datafile.py"
 datafile="${build_dir}/ccpp/datatable.xml"
+echo "Running python interface tests"
+python ${scriptdir}/test_reports.py ${build_dir} ${datafile}
+res=$?
+if [ $res -ne 0 ]; then
+  perr "python interface tests failed"
+fi
 echo "Running command line tests"
+echo "Checking required files from command line:"
 check_datatable ${report_prog} ${datafile} "--host-files" ${host_files}
 check_datatable ${report_prog} ${datafile} "--suite-files" ${suite_files}
 check_datatable ${report_prog} ${datafile} "--utility-files" ${utility_files}
 check_datatable ${report_prog} ${datafile} "--ccpp-files" ${ccpp_files}
+echo -e "\nChecking lists from command line"
 check_datatable ${report_prog} ${datafile} "--process-list" ${process_list}
 check_datatable ${report_prog} ${datafile} "--module-list" ${module_list}
 check_datatable ${report_prog} ${datafile} "--suite-list" ${suite_list}       \
                 --sep ";"
+echo -e "\nChecking variables for DDT suite from command line"
 check_datatable ${report_prog} ${datafile} "--required-variables"             \
                 ${required_vars_ddt} "ddt_suite"
 check_datatable ${report_prog} ${datafile} "--input-variables"                \
                 ${input_vars_ddt} "ddt_suite"
 check_datatable ${report_prog} ${datafile} "--output-variables"               \
                 ${output_vars_ddt} "ddt_suite"
+echo -e "\nChecking variables for temp suite from python"
 check_datatable ${report_prog} ${datafile} "--required-variables"             \
                 ${required_vars_temp} "temp_suite"
 check_datatable ${report_prog} ${datafile} "--input-variables"                \
                 ${input_vars_temp} "temp_suite"
 check_datatable ${report_prog} ${datafile} "--output-variables"               \
                 ${output_vars_temp} "temp_suite"
-echo "Running python interface tests"
-python ${scriptdir}/test_reports.py ${build_dir} ${datafile}
 # Run make
 make
 res=$?

@@ -1,4 +1,3 @@
-
 module test_prog
 
    use ccpp_kinds, only: kind_phys
