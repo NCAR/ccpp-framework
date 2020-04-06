@@ -23,7 +23,7 @@ if not os.path.exists(_SCRIPTS_DIR):
 
 sys.path.append(_SCRIPTS_DIR)
 # pylint: disable=wrong-import-position
-from ccpp_datafile import datatable_report, DatatableReport
+from ccpp_datafile import datatable_report, DatatableReport, CCPPDatatableError
 # pylint: enable=wrong-import-position
 
 def usage(errmsg=None):
@@ -92,41 +92,89 @@ _OUTPUT_VARS_TEMP = ["ccpp_error_flag", "ccpp_error_message",
                      "potential_temperature_at_interface",
                      "surface_air_pressure", "water_vapor_specific_humidity"]
 
-def check_datatable(database, report_type, check_list, sep=None):
-    """Run a database report and check the return string"""
-    print("Checking {} report".format(report_type.action))
+def fields_string(field_type, field_list, sep):
+    """Create an error string for <field_type> field(s), <field_list>.
+    <sep> is used to separate items in <field_list>"""
+    indent = ' '*11
+    if field_list:
+        if len(field_list) > 1:
+            field_str = "{} Fields: ".format(field_type)
+        else:
+            field_str = "{} Field: ".format(field_type)
+        # end if
+        fmsg = "\n{}{}{}".format(indent, field_str, sep.join(field_list))
+    else:
+        fmsg = ""
+    # end if
+    return fmsg
+
+def check_datatable(database, report_type, check_list, sep=','):
+    """Run a database report and check the return string.
+    If an error is found, print an error message.
+    Return the number of errors"""
     if sep is None:
         sep = ','
     # end if
     test_str = datatable_report(database, report_type, sep)
-    check_str = sep.join(check_list)
-    if test_str != check_str:
-        vmsg = "datafile check:\nExpected: {}'\nGot: '{}'"
-        raise ValueError(vmsg.format(check_str, test_str))
+    test_list = test_str.split(sep)
+    missing = list()
+    unexpected = list()
+    for item in check_list:
+        if item not in test_list:
+            missing.append(item)
+        # end if
+    # end for
+    for item in test_list:
+        if item not in check_list:
+            unexpected.append(item)
+        # end if
+    # end for
+    if missing or unexpected:
+        vmsg = "ERROR in {} datafile check:".format(report_type.action)
+        vmsg += fields_string("Missing", missing, sep)
+        vmsg += fields_string("Unexpected", unexpected, sep)
+        print(vmsg)
+    else:
+        print(  "{} report okay".format(report_type.action))
     # end if
+    return len(missing) + len(unexpected)
 
-check_datatable(_DATABASE, DatatableReport("host_files"), _HOST_FILES)
-check_datatable(_DATABASE, DatatableReport("suite_files"), _SUITE_FILES)
-check_datatable(_DATABASE, DatatableReport("utility_files"), _UTILITY_FILES)
-check_datatable(_DATABASE, DatatableReport("ccpp_files"), _CCPP_FILES)
-check_datatable(_DATABASE, DatatableReport("process_list"), _PROCESS_LIST)
-check_datatable(_DATABASE, DatatableReport("module_list"), _MODULE_LIST)
-check_datatable(_DATABASE, DatatableReport("suite_list"), _SUITE_LIST)
-check_datatable(_DATABASE, DatatableReport("required_variables",
-                                           value="ddt_suite"),
-                _REQUIRED_VARS_DDT)
-check_datatable(_DATABASE, DatatableReport("input_variables",
-                                           value="ddt_suite"),
-                _INPUT_VARS_DDT)
-check_datatable(_DATABASE, DatatableReport("output_variables",
-                                           value="ddt_suite"),
-                _OUTPUT_VARS_DDT)
-check_datatable(_DATABASE, DatatableReport("required_variables",
-                                           value="temp_suite"),
-                _REQUIRED_VARS_TEMP)
-check_datatable(_DATABASE, DatatableReport("input_variables",
-                                           value="temp_suite"),
-                _INPUT_VARS_TEMP)
-check_datatable(_DATABASE, DatatableReport("output_variables",
-                                           value="temp_suite"),
-                _OUTPUT_VARS_TEMP)
+num_errors = 0
+print("Checking required files from python:")
+num_errors += check_datatable(_DATABASE, DatatableReport("host_files"),
+                              _HOST_FILES)
+num_errors += check_datatable(_DATABASE, DatatableReport("suite_files"),
+                              _SUITE_FILES)
+num_errors += check_datatable(_DATABASE, DatatableReport("utility_files"),
+                              _UTILITY_FILES)
+num_errors += check_datatable(_DATABASE, DatatableReport("ccpp_files"),
+                              _CCPP_FILES)
+print("\nChecking lists from python")
+num_errors += check_datatable(_DATABASE, DatatableReport("process_list"),
+                              _PROCESS_LIST)
+num_errors += check_datatable(_DATABASE, DatatableReport("module_list"),
+                              _MODULE_LIST)
+num_errors += check_datatable(_DATABASE, DatatableReport("suite_list"),
+                              _SUITE_LIST)
+print("\nChecking variables for DDT suite from python")
+num_errors += check_datatable(_DATABASE, DatatableReport("required_variables",
+                                                         value="ddt_suite"),
+                              _REQUIRED_VARS_DDT)
+num_errors += check_datatable(_DATABASE, DatatableReport("input_variables",
+                                                         value="ddt_suite"),
+                              _INPUT_VARS_DDT)
+num_errors += check_datatable(_DATABASE, DatatableReport("output_variables",
+                                                         value="ddt_suite"),
+                              _OUTPUT_VARS_DDT)
+print("\nChecking variables for temp suite from python")
+num_errors += check_datatable(_DATABASE, DatatableReport("required_variables",
+                                                         value="temp_suite"),
+                              _REQUIRED_VARS_TEMP)
+num_errors += check_datatable(_DATABASE, DatatableReport("input_variables",
+                                                         value="temp_suite"),
+                              _INPUT_VARS_TEMP)
+num_errors += check_datatable(_DATABASE, DatatableReport("output_variables",
+                                                         value="temp_suite"),
+                              _OUTPUT_VARS_TEMP)
+
+sys.exit(num_errors)

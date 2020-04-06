@@ -14,12 +14,6 @@
   units = count
   dimensions = ()
   intent = in
-[ ilev ]
-  standard_name = vertical_interface_dimension
-  type = integer
-  units = count
-  dimensions = ()
-  intent = in
 [ timestep ]
   standard_name = time_step_for_physics
   long_name = time step
@@ -106,12 +100,6 @@
   type = scheme
 [ ncol ]
   standard_name = horizontal_dimension
-  type = integer
-  units = count
-  dimensions = ()
-  intent = in
-[ ilev ]
-  standard_name = vertical_interface_dimension
   type = integer
   units = count
   dimensions = ()

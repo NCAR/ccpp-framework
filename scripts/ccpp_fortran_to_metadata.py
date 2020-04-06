@@ -19,6 +19,8 @@ For a scheme, the annotation must appear just before the subroutine statement.
 For a DDT definition, the annotation must appear just before the type statement.
 For module data, the annotation should occur after any module variables
   which should not be included in the metadata file.
+Note that only CCPP interfaces (e.g., <name>_run, <name>_init, <name>_final)
+  will be documented in this manner. All other routines should be left as is.
 """
 #pylint: enable=anomalous-backslash-in-string
 
