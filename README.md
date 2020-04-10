@@ -154,18 +154,16 @@ Total Test time (real) =   0.08 sec
 ## Validating XML
 A suite is defined in XML. There are several test suites defined within
 the `ccpp/src/tests` directory (which are able to test the build and
-installation of the standalone CCPP). In the `ccpp-framework/suites` directory
-there are the XML files that call physical parameterization schemes.
-There is also the XML Schema Definition in
-that directory too. To validate a new test suite, you can use
-`xmllint`. For example to validate `suite_RAP.xml`:
+installation of the standalone CCPP). There is also the XML Schema
+Definition in that directory too. To validate a new test suite, you can
+use `xmllint`. For example to validate `suite_EXAMPLE.xml`:
 ~~~~{.sh}
-cd ccpp-framework/suites
-xmllint --schema suite.xsd --noout suite_RAP.xml
-suite_RAP.xml validates
+cd src/tests
+xmllint --schema suite.xsd --noout suite_EXAMPLE.xml
+suite_EXAMLE.xml validates
 ~~~~
 
-Within the `ccpp/src/tests` directory there is a Fortran file
+Within the `src/tests` directory there is a Fortran file
 `test_init_finalize.f90` which will get built into an executable program
 when the CCPP library is built. This program only calls:
   * `ccpp_init()`
@@ -181,11 +179,11 @@ src/tests/test_init_finalize my_suite.xml
 For this to work, the library that is referenced in the xml file
 must be added to the LD_LIBRARY_PATH (see above). To test the
 correct functionality of CCPP itself, the suite suite_EXAMPLE.xml
-in ccpp-framework/suites can be used.
+in src/tests can be used.
 
 There are two general types of XML files for the CCPP. The first is the
-definition file for a suite. This has been mapped out, is fairly short,
-and examples exist. Below is `ccpp-framework/suites/suite_RAP.xml`
+definition file for a suite. These reside in the host model repositories.
+Here is a fairly short example:
 
 ~~~~{.xml}
 <?xml version="1.0" encoding="UTF-8"?>
@@ -230,8 +228,7 @@ early testing, and is included in the initial release.
     For the initial release, this XML file has not yet been designed.
 
 ## Physics Schemes
-All physics schemes are kept in the repository under the `schemes`
-directory.
+All physics schemes are kept in the GitHub repository ccpp-physics.
 
 To add a new scheme one needs to
 

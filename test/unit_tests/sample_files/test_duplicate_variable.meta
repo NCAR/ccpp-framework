@@ -1,0 +1,15 @@
+[ccpp-arg-table]
+  name = temp_calc_adjust_run
+  type = scheme
+[ temp ]
+  standard_name = index_of_water_vapor_specific_humidity
+  units = index
+  type = integer
+  intent = in
+  dimensions = ()
+[ temp ]
+  standard_name = index_of_water_vapor_specific_humidity
+  units = index
+  type = integer
+  intent = in
+  dimensions = ()

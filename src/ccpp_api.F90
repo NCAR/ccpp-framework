@@ -30,7 +30,6 @@ module ccpp_api
                                   ccpp_physics_finalize
     use ccpp_fields,        only: ccpp_field_add,                      &
                                   ccpp_field_get
-    use ccpp_memory,        only: ccpp_memory_usage
 
     implicit none
 
@@ -44,7 +43,6 @@ module ccpp_api
               ccpp_physics_run,                                        &
               ccpp_physics_finalize,                                   &
               ccpp_field_add,                                          &
-              ccpp_initialized,                                        &
-              ccpp_memory_usage
+              ccpp_initialized
 
 end module ccpp_api

@@ -11,8 +11,6 @@ set(SOURCES_C
     ccpp_dl.c
     ccpp_fields_idx.h
     ccpp_fields_idx.c
-    ccpp_memory.h
-    ccpp_memory.c
     ccpp_utils.h
     ccpp_utils.c
     ccpp_xml.h
@@ -24,7 +22,6 @@ set(SOURCES_F90
     ccpp_errors.F90
     ccpp_fcall.F90
     ccpp_fields.F90
-    ccpp_memory.F90
     ccpp_strings.F90
     ccpp_scheme.F90
     ccpp_suite.F90
@@ -39,12 +36,21 @@ foreach(source_f90 ${SOURCES_F90})
 endforeach()
 
 #------------------------------------------------------------------------------
-# Find libXML2
-find_package(LibXml2 REQUIRED)
-if (LIBXML2_FOUND)
+# Find/set libXML2
+if(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
     include_directories(${LIBXML2_INCLUDE_DIR})
-    list(APPEND LIBS ${LIBXML2_LIBRARIES})
-endif(LIBXML2_FOUND)
+    if (STATIC)
+        list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.a")
+    else (STATIC)
+        list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.so")
+    endif (STATIC)
+else(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
+    find_package(LibXml2 REQUIRED)
+    if(LIBXML2_FOUND)
+        include_directories(${LIBXML2_INCLUDE_DIR})
+        list(APPEND LIBS ${LIBXML2_LIBRARIES})
+    endif(LIBXML2_FOUND)
+endif(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
 
 #------------------------------------------------------------------------------
 # CMake Modules
@@ -104,7 +110,11 @@ add_subdirectory(tests)
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
-add_library(ccpp ${SOURCES_C} ${SOURCES_F90})
+if(STATIC)
+  add_library(ccpp STATIC ${SOURCES_C} ${SOURCES_F90})
+else(STATIC)
+  add_library(ccpp SHARED ${SOURCES_C} ${SOURCES_F90})
+endif(STATIC)
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}

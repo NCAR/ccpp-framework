@@ -1,0 +1,89 @@
+[ccpp-arg-table]
+  name = test_host_mod
+  type = module
+[ index_qv ]
+  standard_name = index_of_water_vapor_specific_humidity
+  units = index
+  type = integer
+  protected = True
+  dimensions = ()
+[ ncols]
+  standard_name = horizontal_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[ pver ]
+  standard_name = vertical_layer_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[ pverP ]
+  standard_name = vertical_interface_dimension
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ pcnst ]
+  standard_name = number_of_tracers
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ DiagDimStart ]
+  standard_name = first_index_of_diag_fields
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ temp_midpoints ]
+  standard_name = potential_temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+[ temp_interfaces ]
+  standard_name = potential_temperature_at_interface
+  units = K
+  dimensions = (horizontal_dimension, vertical_interface_dimension)
+  type = real | kind = kind_phys
+[ diag1 ]
+  standard_name = diagnostic_stuff_type_1
+  long_name = This is just a test field
+  units = K
+  dimensions = (first_index_of_diag_fields:horizontal_dimension, first_index_of_diag_fields:vertical_layer_dimension)
+  type = real | kind = kind_phys
+[ diag2 ]
+  standard_name = diagnostic_stuff_type_2
+  long_name = This is just a test field
+  units = K
+  dimensions = (first_index_of_diag_fields: horizontal_dimension, first_index_of_diag_fields :vertical_layer_dimension)
+  type = real | kind = kind_phys
+[ dt ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real | kind = kind_phys
+[ temp_inc ]
+  standard_name = potential_temperature_increment
+  long_name = Per time step potential temperature increment
+  units = K
+  dimensions = ()
+  type = real | kind = kind_phys
+[ phys_state ]
+  standard_name = physics_state_derived_type
+  long_name = Physics State DDT
+  ddt_type = physics_state
+  dimensions = ()
+[ num_model_times ]
+  standard_name = number_of_model_times
+  type = integer
+  units = count
+  dimensions = ()
+[ model_times ]
+  standard_name = model_times
+  units = seconds
+  dimensions = (number_of_model_times)
+  type = integer
+  allocatable = True

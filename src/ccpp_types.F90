@@ -19,15 +19,11 @@
 !
 module ccpp_types
 
-#if 0
 !! \section arg_table_ccpp_types
-!! | local_name                                              | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
-!! |---------------------------------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
-!! | cdata%errflg (local_name not used)                      | ccpp_error_flag           | error flag for error handling in CCPP                 | flag    |    0 | integer   |          | none   | F        |
-!! | cdata%errmsg (local_name not used)                      | ccpp_error_message        | error message for error handling in CCPP              | none    |    0 | character | len=512  | none   | F        |
-!! | cdata%loop_cnt (local_name not used)                    | ccpp_loop_counter         | loop counter for subcycling loops in CCPP             | index   |    0 | integer   |          | none   | F        |
+!! | local_name                        | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
+!! |-----------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
+!! | ccpp_t                            | ccpp_t                    | definition of type ccpp_t                             | DDT     |    0 | ccpp_t    |          | none   | F        |
 !!
-#endif
 
     use, intrinsic :: iso_c_binding,                                   &
                       only: c_ptr, c_funptr
@@ -64,6 +60,9 @@ module ccpp_types
 
     !> @var The default loop counter indicating outside of a subcycle loop
     integer, parameter :: CCPP_DEFAULT_LOOP_CNT = -999
+
+    !> @var The default values for block and thread numbers indicating invalid data
+    integer, parameter :: CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER = -999
 
     !>
     !! @brief CCPP field type
@@ -150,6 +149,17 @@ module ccpp_types
             type(ccpp_group_t), allocatable, dimension(:)       :: groups
     end type ccpp_suite_t
 
+#if 0
+!! \section arg_table_ccpp_t
+!! | local_name                        | standard_name             | long_name                                             | units   | rank | type      |   kind   | intent | optional |
+!! |-----------------------------------|-------------------------- |-------------------------------------------------------|---------|------|-----------|----------|--------|----------|
+!! | cdata%errflg                      | ccpp_error_flag           | error flag for error handling in CCPP                 | flag    |    0 | integer   |          | none   | F        |
+!! | cdata%errmsg                      | ccpp_error_message        | error message for error handling in CCPP              | none    |    0 | character | len=512  | none   | F        |
+!! | cdata%loop_cnt                    | ccpp_loop_counter         | loop counter for subcycling loops in CCPP             | index   |    0 | integer   |          | none   | F        |
+!! | cdata%blk_no                      | ccpp_block_number         | number of block for explicit data blocking in CCPP    | index   |    0 | integer   |          | none   | F        |
+!! | cdata%thrd_no                     | ccpp_thread_number        | number of thread for threading in CCPP                | index   |    0 | integer   |          | none   | F        |
+!!
+#endif
     !>
     !! @brief CCPP physics type.
     !!
@@ -170,6 +180,8 @@ module ccpp_types
             integer                                             :: errflg = 0
             character(len=512)                                  :: errmsg = ''
             integer                                             :: loop_cnt = CCPP_DEFAULT_LOOP_CNT
+            integer                                             :: blk_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
+            integer                                             :: thrd_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
     end type ccpp_t
 
 contains

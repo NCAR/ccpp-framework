@@ -71,7 +71,7 @@ set (CCPP_MKCAP "${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/ccpp_prebuild.py")
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test_cap.F90
     DEPENDS ${CCPP_MKCAP}
-    COMMAND ${CCPP_MKCAP} --model=TEST --debug
+    COMMAND ${CCPP_MKCAP} --config=${CMAKE_CURRENT_SOURCE_DIR}/ccpp_prebuild_config.py --debug
 )
 list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/test_cap.F90)
 

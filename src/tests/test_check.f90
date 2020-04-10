@@ -82,8 +82,24 @@ program test_check
     u = 0.0
     v = 10.0
 
-    ! Initalize the CCPP framework (with the filename of the suite to load)
-    call ccpp_init(filename, cdata, ierr)
+    ! Initalize the CCPP framework (with the filename
+    ! of the suite to load instead of the suite name)
+    call ccpp_init(trim(filename), cdata, ierr, is_filename=.true.)
+    if (ierr /= 0) then
+        call exit(1)
+    end if
+
+    call ccpp_field_add(cdata, 'ccpp_error_flag', cdata%errflg, ierr, 'flag')
+    if (ierr /= 0) then
+        call exit(1)
+    end if
+
+    call ccpp_field_add(cdata, 'ccpp_error_message', cdata%errmsg, ierr, 'none')
+    if (ierr /= 0) then
+        call exit(1)
+    end if
+
+    call ccpp_field_add(cdata, 'ccpp_loop_counter', cdata%loop_cnt, ierr, 'index')
     if (ierr /= 0) then
         call exit(1)
     end if

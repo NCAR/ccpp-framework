@@ -45,8 +45,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 if (OPENMP)
   include(detect_openmp)
   detect_openmp()
-  set (CMAKE_Fortran_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set (CMAKE_Fortran_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
   message(STATUS "Enable OpenMP support for C/C++/Fortran compiler")
 else (OPENMP)
@@ -86,8 +86,12 @@ if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
 endif()
 
 #------------------------------------------------------------------------------
-# By default we want a shared library
-option(BUILD_SHARED_LIBS "Build a shared library" ON)
+# By default we want a shared library (unless a static build is requested)
+if(STATIC)
+  option(BUILD_SHARED_LIBS "Build a static library" OFF)
+else(STATIC)
+  option(BUILD_SHARED_LIBS "Build a shared library" ON)
+endif(STATIC)
 
 #------------------------------------------------------------------------------
 # Enable code coverage
