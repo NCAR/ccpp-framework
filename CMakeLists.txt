@@ -5,22 +5,14 @@ if(NOT PROJECT)
 endif (NOT PROJECT)
 
 #------------------------------------------------------------------------------
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.0)
+
+project(ccpp
+        VERSION 3.0.0
+        LANGUAGES C CXX Fortran)
 
 # Use rpaths on MacOSX
 set(CMAKE_MACOSX_RPATH 1)
-
-if(POLICY CMP0048)
-    cmake_policy(SET CMP0048 NEW)
-    project(ccpp VERSION 3.0.0)
-else(POLICY CMP0048)
-    project(ccpp)
-    set(PROJECT_VERSION 3.0.0)
-    set(PROJECT_VERSION_MAJOR 3)
-    set(PROJECT_VERSION_MINOR 0)
-    set(PROJECT_VERSION_PATCH 0)
-endif(POLICY CMP0048)
-
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif(POLICY CMP0042)
@@ -31,10 +23,6 @@ endif(POLICY CMP0042)
 if(POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif(POLICY CMP0077)
-
-#------------------------------------------------------------------------------
-# Enable Fortran
-enable_language(Fortran)
 
 #------------------------------------------------------------------------------
 # Set package definitions

@@ -23,6 +23,14 @@ def m__to__mm():
     """Convert meter to millimeter"""
     return '1.0E+3{kind}*{var}'
 
+def cm__to__m():
+    """Convert centimeter to meter"""
+    return '1.0E-2{kind}*{var}'
+
+def m__to__cm():
+    """Convert meter to centimeter"""
+    return '1.0E+2{kind}*{var}'
+
 def um__to__m():
     """Convert micrometer to meter"""
     return '1.0E-6{kind}*{var}'
