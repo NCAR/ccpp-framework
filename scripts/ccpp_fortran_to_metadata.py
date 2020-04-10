@@ -112,7 +112,7 @@ def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
                     lname_dict[lname] = prop
                     prop = var.get_prop_value('units')
                     if not prop:
-                        prop = 'enter units'
+                        prop = 'enter_units'
                     # End if
                     outfile.write('  units = {}\n'.format(prop))
                     tprop = var.get_prop_value('type')
