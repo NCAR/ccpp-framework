@@ -88,7 +88,8 @@ class HostModel(VarDictionary):
                     # End if
                 # End for
             else:
-                errmsg = "Invalid host model metadata header, {} ({}){}"
+                errmsg = "Invalid host model metadata header type, {} ({}){}"
+                errmsg += "\nType must be 'module' or 'host'"
                 ctx = context_string(header.context)
                 raise CCPPError(errmsg.format(header.title,
                                               header.header_type, ctx))
