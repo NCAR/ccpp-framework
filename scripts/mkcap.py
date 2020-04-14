@@ -728,7 +728,7 @@ export CCPP_CAPS="'''
     def write(self, caps):
         if (self.filename is not sys.stdout):
             filepath = os.path.split(self.filename)[0]
-            if not os.path.isdir(filepath):
+            if filepath and not os.path.isdir(filepath):
                 os.makedirs(filepath)
             f = open(self.filename, 'w')
         else:
@@ -836,7 +836,7 @@ set(SCHEMES
     def write(self, schemes):
         if (self.filename is not sys.stdout):
             filepath = os.path.split(self.filename)[0]
-            if not os.path.isdir(filepath):
+            if filepath and not os.path.isdir(filepath):
                 os.makedirs(filepath)
             f = open(self.filename, 'w')
         else:
@@ -880,7 +880,7 @@ export CCPP_SCHEMES="'''
     def write(self, schemes):
         if (self.filename is not sys.stdout):
             filepath = os.path.split(self.filename)[0]
-            if not os.path.isdir(filepath):
+            if filepath and not os.path.isdir(filepath):
                 os.makedirs(filepath)
             f = open(self.filename, 'w')
         else:
@@ -1005,7 +1005,7 @@ export CCPP_TYPEDEFS="'''
     def write(self, typedefs):
         if (self.filename is not sys.stdout):
             filepath = os.path.split(self.filename)[0]
-            if not os.path.isdir(filepath):
+            if filepath and not os.path.isdir(filepath):
                 os.makedirs(filepath)
             f = open(self.filename, 'w')
         else:
