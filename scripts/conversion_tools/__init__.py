@@ -2,6 +2,8 @@
 """
 
 __all__ = [
+    'cm__to__m',
+    'm__to__cm',
     'mm__to__m',
     'm__to__mm',
     'um__to__m',
@@ -26,6 +28,8 @@ __all__ = [
     'erg_cm_minus_2_s_minus_1__to__W_m_minus_2',
     ]
 
+from .unit_conversion import cm__to__m
+from .unit_conversion import m__to__cm
 from .unit_conversion import mm__to__m
 from .unit_conversion import m__to__mm
 from .unit_conversion import um__to__m
