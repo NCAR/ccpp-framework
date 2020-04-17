@@ -5,7 +5,7 @@
 # Python library imports
 import re
 # CCPP framework imports
-from parse_source import CCPPError
+from .parse_source import CCPPError
 
 ########################################################################
 

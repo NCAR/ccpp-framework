@@ -3,6 +3,7 @@
 # Standard modules
 import argparse
 import collections
+import filecmp
 import importlib
 import itertools
 import logging
@@ -13,10 +14,12 @@ import sys
 # CCPP framework imports
 from common import encode_container, decode_container, decode_container_as_dict, execute
 from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
+from common import STANDARD_VARIABLE_TYPES, STANDARD_INTEGER_TYPE, CCPP_TYPE
 from common import split_var_name_and_array_reference
 from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import Cap, CapsMakefile, CapsCMakefile, CapsSourcefile, \
-                  SchemesMakefile, SchemesCMakefile, SchemesSourcefile
+                  SchemesMakefile, SchemesCMakefile, SchemesSourcefile, \
+                  TypedefsMakefile, TypedefsCMakefile, TypedefsSourcefile
 from mkdoc import metadata_to_html, metadata_to_latex
 from mkstatic import API, Suite, Group
 
@@ -80,6 +83,9 @@ def import_config(configfile, builddir):
 
     # Definitions in host-model dependent CCPP prebuild config script
     config['variable_definition_files'] = ccpp_prebuild_config.VARIABLE_DEFINITION_FILES
+    config['typedefs_makefile']         = ccpp_prebuild_config.TYPEDEFS_MAKEFILE.format(build_dir=builddir)
+    config['typedefs_cmakefile']        = ccpp_prebuild_config.TYPEDEFS_CMAKEFILE.format(build_dir=builddir)
+    config['typedefs_sourcefile']       = ccpp_prebuild_config.TYPEDEFS_SOURCEFILE.format(build_dir=builddir)
     config['scheme_files']              = ccpp_prebuild_config.SCHEME_FILES
     config['scheme_files_dependencies'] = ccpp_prebuild_config.SCHEME_FILES_DEPENDENCIES
     config['schemes_makefile']          = ccpp_prebuild_config.SCHEMES_MAKEFILE.format(build_dir=builddir)
@@ -109,10 +115,10 @@ def import_config(configfile, builddir):
     # To handle new metadata: import DDT references (if exist)
     try:
         config['typedefs_new_metadata'] = ccpp_prebuild_config.TYPEDEFS_NEW_METADATA
-        logging.info("Found TYPEDEFS_NEW_METADATA dictionary in config, assume at least some data is in new metadata formet")
+        logging.info("Found TYPEDEFS_NEW_METADATA dictionary in config, assume at least some data is in new metadata format")
     except AttributeError:
         config['typedefs_new_metadata'] = None
-        logging.info("Could not find TYPEDEFS_NEW_METADATA dictionary in config, assume all data is in old metadata formet")
+        logging.info("Could not find TYPEDEFS_NEW_METADATA dictionary in config, assume all data is in old metadata format")
 
     return(success, config)
 
@@ -136,6 +142,9 @@ def clean_files(config, static):
     logging.info('Performing clean ....')
     # Create list of files to remove, use wildcards where necessary
     files_to_remove = [
+        config['typedefs_makefile'],
+        config['typedefs_cmakefile'],
+        config['typedefs_sourcefile'],
         config['schemes_makefile'],
         config['schemes_cmakefile'],
         config['schemes_sourcefile'],
@@ -148,6 +157,7 @@ def clean_files(config, static):
     if static:
         files_to_remove.append(os.path.join(config['caps_dir'], 'ccpp_*_cap.F90'))
         files_to_remove.append(os.path.join(config['static_api_dir'], '{api}.F90'.format(api=CCPP_STATIC_API_MODULE)))
+        files_to_remove.append(config['static_api_srcfile'])
     else:
         files_to_remove.append(os.path.join(config['caps_dir'], '*_cap.F90'))
         for target_file in config['target_files']:
@@ -629,30 +639,112 @@ def generate_static_api(suites, static_api_dir):
     os.chdir(BASEDIR)
     return (success, api)
 
+def generate_typedefs_makefile(metadata_define, typedefs_makefile, typedefs_cmakefile, typedefs_sourcefile):
+    """Generate list of Fortran modules containing CCPP type/kind definitions,
+       and create makefile/cmakefile snippets for host model build system"""
+    logging.info('Generating list of Fortran modules containing CCPP type definitions ...')
+    success = True
+    #
+    typedefs = []
+    # (1) Search for type definitions in the metadata, defined by:
+    #    (a) the type not being a standard type, and
+    #    (b) the type not being the CCPP framework internal type
+    #    (c) the standard_name being identical to the type name
+    # (2) Search for kind definitions in the metadata, defined by:
+    #    (a) the standard_name starting with "kind_"
+    #    (b) the type being integer and the units being none
+    for key in metadata_define.keys():
+        # derived data types
+        if not metadata_define[key][0].type in STANDARD_VARIABLE_TYPES and \
+                not metadata_define[key][0].type == CCPP_TYPE and \
+                metadata_define[key][0].type == metadata_define[key][0].standard_name:
+            container = decode_container_as_dict(metadata_define[key][0].container)
+            if not 'MODULE' in container.keys():
+                logging.error("Invalid type definition for type {}: {}".format(metadata_define[key][0].type, metadata_define[key][0].print_debug()))
+                success = False
+                continue
+            # Fortran modules are lowercase and have the ending ".mod"
+            typedef_fortran_module = "{}.mod".format(container['MODULE']).lower()
+            if not typedef_fortran_module in typedefs:
+                typedefs.append(typedef_fortran_module)
+        # kind definitions
+        elif metadata_define[key][0].standard_name.startswith("kind_") and \
+                metadata_define[key][0].type == STANDARD_INTEGER_TYPE and \
+                metadata_define[key][0].units == 'none':
+            container = decode_container_as_dict(metadata_define[key][0].container)
+            if not 'MODULE' in container.keys():
+                logging.error("Invalid kind definition for kind {}: {}".format(metadata_define[key][0].type, metadata_define[key][0].print_debug()))
+                success = False
+                continue
+            # Fortran modules are lowercase and have the ending ".mod"
+            typedef_fortran_module = "{}.mod".format(container['MODULE']).lower()
+            if not typedef_fortran_module in typedefs:
+                typedefs.append(typedef_fortran_module)
+
+    logging.info('Generating typedefs makefile/cmakefile snippet ...')
+    # Write the Fortran modules without path - the build system knows where they are
+    makefile = TypedefsMakefile()
+    makefile.filename = typedefs_makefile + '.tmp'
+    cmakefile = TypedefsCMakefile()
+    cmakefile.filename = typedefs_cmakefile + '.tmp'
+    sourcefile = TypedefsSourcefile()
+    sourcefile.filename = typedefs_sourcefile + '.tmp'
+    makefile.write(typedefs)
+    cmakefile.write(typedefs)
+    sourcefile.write(typedefs)
+    if os.path.isfile(typedefs_makefile) and \
+            filecmp.cmp(typedefs_makefile, makefile.filename):
+        os.remove(makefile.filename)
+        os.remove(cmakefile.filename)
+        os.remove(sourcefile.filename)
+    else:
+        if os.path.isfile(typedefs_makefile):
+            os.remove(typedefs_makefile)
+        if os.path.isfile(typedefs_cmakefile):
+            os.remove(typedefs_cmakefile)
+        if os.path.isfile(typedefs_sourcefile):
+            os.remove(typedefs_sourcefile)
+        os.rename(makefile.filename, typedefs_makefile)
+        os.rename(cmakefile.filename, typedefs_cmakefile)
+        os.rename(sourcefile.filename, typedefs_sourcefile)
+    #
+    logging.info('Added {0} typedefs to {1}, {2}, {3}'.format(
+           len(typedefs), typedefs_makefile, typedefs_cmakefile, typedefs_sourcefile))
+    return success
+
 def generate_schemes_makefile(schemes, schemes_makefile, schemes_cmakefile, schemes_sourcefile):
     """Generate makefile/cmakefile snippets for all schemes."""
     logging.info('Generating schemes makefile/cmakefile snippet ...')
     success = True
     makefile = SchemesMakefile()
-    makefile.filename = schemes_makefile
+    makefile.filename = schemes_makefile + '.tmp'
     cmakefile = SchemesCMakefile()
-    cmakefile.filename = schemes_cmakefile
+    cmakefile.filename = schemes_cmakefile + '.tmp'
     sourcefile = SchemesSourcefile()
-    sourcefile.filename = schemes_sourcefile
-    # Adjust relative file path to schemes from caps makefile
-    schemes_with_path = []
-    schemes_with_abspath = []
-    schemes_makefile_dir = os.path.split(os.path.abspath(schemes_makefile))[0]
-    for scheme in schemes:
-        (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme))
-        relative_path = './{0}'.format(os.path.relpath(scheme_filepath, schemes_makefile_dir))
-        schemes_with_path.append(os.path.join(relative_path, scheme_filename))
-        schemes_with_abspath.append(os.path.abspath(scheme))
+    sourcefile.filename = schemes_sourcefile + '.tmp'
+    # Generate list of schemes with absolute path
+    schemes_with_abspath = [ os.path.abspath(scheme) for scheme in schemes ]
     makefile.write(schemes_with_abspath)
     cmakefile.write(schemes_with_abspath)
     sourcefile.write(schemes_with_abspath)
+    if os.path.isfile(schemes_makefile) and \
+            filecmp.cmp(schemes_makefile, makefile.filename):
+        os.remove(makefile.filename)
+        os.remove(cmakefile.filename)
+        os.remove(sourcefile.filename)
+    else:
+        if os.path.isfile(schemes_makefile):
+            os.remove(schemes_makefile)
+        if os.path.isfile(schemes_cmakefile):
+            os.remove(schemes_cmakefile)
+        if os.path.isfile(schemes_sourcefile):
+            os.remove(schemes_sourcefile)
+        os.rename(makefile.filename, schemes_makefile)
+        os.rename(cmakefile.filename, schemes_cmakefile)
+        os.rename(sourcefile.filename, schemes_sourcefile)
+    #
     logging.info('Added {0} schemes to {1}, {2}, {3}'.format(
-           len(schemes_with_path), makefile.filename, cmakefile.filename, sourcefile.filename))
+           len(schemes_with_abspath), schemes_makefile, schemes_cmakefile, schemes_sourcefile))
     return success
 
 def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile, caps_dir):
@@ -660,21 +752,34 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
     logging.info('Generating caps makefile/cmakefile snippet ...')
     success = True
     makefile = CapsMakefile()
-    makefile.filename = caps_makefile
+    makefile.filename = caps_makefile + '.tmp'
     cmakefile = CapsCMakefile()
-    cmakefile.filename = caps_cmakefile
+    cmakefile.filename = caps_cmakefile + '.tmp'
     sourcefile = CapsSourcefile()
-    sourcefile.filename = caps_sourcefile
-    # Adjust relative file path to schemes from caps makefile
-    caps_makefile_dir = os.path.split(os.path.abspath(caps_makefile))[0]
-    relative_path = './{0}'.format(os.path.relpath(caps_dir, caps_makefile_dir))
-    caps_with_path = [ os.path.join(relative_path, cap) for cap in caps]
-    caps_with_abspath = [ os.path.abspath(os.path.join(caps_dir, cap)) for cap in caps]
+    sourcefile.filename = caps_sourcefile + '.tmp'
+    # Generate list of caps with absolute path
+    caps_with_abspath = [ os.path.abspath(os.path.join(caps_dir, cap)) for cap in caps ]
     makefile.write(caps_with_abspath)
     cmakefile.write(caps_with_abspath)
     sourcefile.write(caps_with_abspath)
-    logging.info('Added {0} auto-generated caps to {1} and {2}'.format(
-                          len(caps_with_path), makefile.filename, cmakefile.filename))
+    if os.path.isfile(caps_makefile) and \
+            filecmp.cmp(caps_makefile, makefile.filename):
+        os.remove(makefile.filename)
+        os.remove(cmakefile.filename)
+        os.remove(sourcefile.filename)
+    else:
+        if os.path.isfile(caps_makefile):
+            os.remove(caps_makefile)
+        if os.path.isfile(caps_cmakefile):
+            os.remove(caps_cmakefile)
+        if os.path.isfile(caps_sourcefile):
+            os.remove(caps_sourcefile)
+        os.rename(makefile.filename, caps_makefile)
+        os.rename(cmakefile.filename, caps_cmakefile)
+        os.rename(sourcefile.filename, caps_sourcefile)
+    #
+    logging.info('Added {0} auto-generated caps to {1} and {2}, {3}'.format(
+           len(caps_with_abspath), caps_makefile, caps_cmakefile, caps_sourcefile))
     return success
 
 def main():
@@ -780,8 +885,14 @@ def main():
             if not success:
                 raise Exception('Call to generate_include_files failed.')
 
-    # Add filenames of schemes to makefile - add dependencies for schemes
-    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'].keys(),
+    # Add Fortran module files of typedefs to makefile/cmakefile/shell script
+    success = generate_typedefs_makefile(metadata_define, config['typedefs_makefile'],
+                                         config['typedefs_cmakefile'], config['typedefs_sourcefile'])
+    if not success:
+        raise Exception('Call to generate_typedefs_makefile failed.')
+
+    # Add filenames of schemes to makefile/cmakefile/shell script - add dependencies for schemes
+    success = generate_schemes_makefile(config['scheme_files_dependencies'] + list(config['scheme_files'].keys()),
                                         config['schemes_makefile'], config['schemes_cmakefile'],
                                         config['schemes_sourcefile'])
     if not success:
@@ -808,7 +919,7 @@ def main():
         if not success:
             raise Exception('Call to generate_scheme_caps failed.')
 
-    # Add filenames of caps to makefile
+    # Add filenames of caps to makefile/cmakefile/shell script
     if static:
         all_caps = suite_and_group_caps
     else:
