@@ -347,7 +347,7 @@ def datatable_report(datatable, action, sep):
         raise ValueError(emsg)
     # end if
     if not sep:
-        emsg = "datatable_report: An separator character (<sep>) is required\n"
+        emsg = "datatable_report: A separator character (<sep>) is required\n"
         emsg += _command_line_parser().format_usage()
         raise ValueError(emsg)
     # end if
