@@ -456,7 +456,7 @@ class SuiteObject(VarDictionary):
                                       source_type=stype, context=self.context)
             # end if
             self.call_list.add_variable(newvar, exists_ok=exists_ok,
-                                        gen_unique=gen_unique)
+                                        gen_unique=gen_unique, objdict=self)
         elif self.parent is None:
             errmsg = 'No call_list found for {}'.format(newvar)
             raise ParseInternalError(errmsg)
