@@ -1,3 +1,6 @@
+[ccpp-table-properties]
+  name = vmr_type
+  type = ddt
 [ccpp-arg-table]
   name = vmr_type
   type = ddt
@@ -12,6 +15,9 @@
   dimensions = (horizontal_loop_extent, number_of_chemical_species)
   type = real
   kind = kind_phys
+[ccpp-table-properties]
+  name = make_ddt
+  type = scheme
 [ccpp-arg-table]
   name = make_ddt_run
   type = scheme

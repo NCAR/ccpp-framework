@@ -59,6 +59,10 @@ class FortranWriter(object):
     ###########################################################################
 
     def write(self, statement, indent_level, continue_line=False):
+        """Write <statement> to the open file, indenting to <indent_level>
+        (see self.indent).
+        If <continue_line> is True, treat this line as a continuation of
+        a previous statement."""
         if '\n' in statement:
             for stmt in statement.split('\n'):
                 self.write(stmt, indent_level, continue_line)
@@ -108,9 +112,11 @@ class FortranWriter(object):
                     # If next line is just comment, do not use continue
                     # NB: Is this a Fortran issue or just a gfortran issue?
                     line_continue = outstr[best+1:].lstrip()[0] != '!'
+                else:
+                    line_continue = True
                 # End if
                 if line_continue:
-                    fill = "{}&".format((self._line_fill-best)*' ')
+                    fill = "{}&".format((self._line_fill - best)*' ')
                 else:
                     fill = ''
                 # End if
@@ -183,10 +189,10 @@ if __name__ == "__main__":
     # End while
     NAME = NAME + '.F90'
     if os.access(os.getcwd(), os.W_OK):
-        check = [('      subroutine foo(long_argument1, long_argument2, '
-                  'long_argument3, long_argument4,              &'),
-                 '           long_argument5)',
-                 '      end subroutine foo']
+        _CHECK = [('      subroutine foo(long_argument1, long_argument2, '
+                   'long_argument3, long_argument4,              &'),
+                  '           long_argument5)',
+                  '      end subroutine foo']
         with FortranWriter(NAME, 'w') as foo:
             foo.write(("subroutine foo(long_argument1, long_argument2, "
                        "long_argument3, long_argument4, long_argument5)"), 2)
@@ -194,17 +200,17 @@ if __name__ == "__main__":
         # End with
         # Check file
         with open(NAME, 'r') as foo:
-            statements = foo.readlines()
-            if len(statements) != len(check):
+            _STATEMENTS = foo.readlines()
+            if len(_STATEMENTS) != len(_CHECK):
                 EMSG = "ERROR: File has {} statements, should have {}"
-                print(EMSG.format(len(statements), len(check)))
+                print(EMSG.format(len(_STATEMENTS), len(_CHECK)))
             else:
-                for line_num, statement in enumerate(statements):
-                    if statement.rstrip() != check[line_num]:
+                for _line_num, _statement in enumerate(_STATEMENTS):
+                    if _statement.rstrip() != _CHECK[_line_num]:
                         EMSG = "ERROR: Line {} does not match"
-                        print(EMSG.format(line_num+1))
-                        print("{}".format(statement.rstrip()))
-                        print("{}".format(check[line_num]))
+                        print(EMSG.format(_line_num+1))
+                        print("{}".format(_statement.rstrip()))
+                        print("{}".format(_CHECK[_line_num]))
                     # End if
                 # End for
         # End with

@@ -15,8 +15,8 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from metavar import Var, VarDictionary, VarLoopSubst, ccpp_standard_var
 from metavar import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
 from ddt_library import DDTLibrary
-from state_machine import StateMachine
 from fortran_tools import FortranWriter
+from ccpp_state_machine import CCPP_STATE_MACH, RUN_PHASE_NAME
 from code_block import CodeBlock
 
 # pylint: disable=too-many-lines
@@ -24,12 +24,6 @@ from code_block import CodeBlock
 ###############################################################################
 # Module (global) variables
 ###############################################################################
-
-_INIT_ST = r"(?:(?i)init(?:ial(?:ize)?)?)"
-_FINAL_ST = r"(?:(?i)final(?:ize)?)"
-_RUN_ST = r"(?:(?i)run)"
-_TS_INIT_ST = r"(?:(?i)timestep_init(?:ial(?:ize)?)?)"
-_TS_FINAL_ST = r"(?:(?i)timestep_final(?:ize)?)"
 
 _OBJ_LOC_RE = re.compile(r"(0x[0-9A-Fa-f]+)>")
 _BLANK_DIMS_RE = re.compile(r"[(][:](,:)*[)]$")
@@ -47,21 +41,6 @@ _API_LOCAL = ParseSource(_API_SOURCE_NAME, _API_LOCAL_VAR_NAME, _API_CONTEXT)
 _API_GROUP = ParseSource(_API_SOURCE_NAME, _API_GROUP_VAR_NAME, _API_CONTEXT)
 _API_TIMESPLIT_TAG = 'time_split'
 _API_PROCESSSPLIT_TAG = 'process_split'
-
-# Allowed CCPP transitions
-# pylint: disable=bad-whitespace
-_RUN_PHASE_NAME = 'run'
-CCPP_STATE_MACH = StateMachine((('initialize', 'uninitialized',
-                                 'initialized', _INIT_ST),
-                                ('timestep_initial', 'initialized',
-                                 'in_time_step', _TS_INIT_ST),
-                                (_RUN_PHASE_NAME, 'in_time_step',
-                                 'in_time_step', _RUN_ST),
-                                ('timestep_final', 'in_time_step',
-                                 'initialized', _TS_FINAL_ST),
-                                ('finalize', 'initialized',
-                                 'uninitialized', _FINAL_ST)))
-# pylint: enable=bad-whitespace
 
 # Required variables for inclusion in auto-generated schemes
 CCPP_REQUIRED_VARS = [ccpp_standard_var('ccpp_error_flag',
@@ -378,7 +357,7 @@ class SuiteObject(VarDictionary):
 
     def run_phase(self):
         """Return True iff this SuiteObject is in a run phase group"""
-        return self.phase() == _RUN_PHASE_NAME
+        return self.phase() == RUN_PHASE_NAME
 
     def timestep_phase(self):
         '''Return True iff this SuiteObject is in a timestep initial or
@@ -630,13 +609,13 @@ class SuiteObject(VarDictionary):
         (True, ['horizontal_loop_extent'], ['horizontal_loop_extent'], None, None, '')
         >>> SuiteObject('foo', _API_CONTEXT,None, None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type='initialize').match_dimensions(['ccpp_constant_one:horizontal_loop_extent'], ['ccpp_constant_one:horizontal_dimension'])
         (True, ['ccpp_constant_one:horizontal_dimension'], ['ccpp_constant_one:horizontal_dimension'], None, None, '')
-        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=_RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end'])
+        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end'])
         (True, ['horizontal_loop_begin:horizontal_loop_end'], ['horizontal_loop_begin:horizontal_loop_end'], None, None, '')
-        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=_RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end','ccpp_constant_one:vertical_layer_dimension'])
+        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent'], ['horizontal_loop_begin:horizontal_loop_end','ccpp_constant_one:vertical_layer_dimension'])
         (False, ['horizontal_loop_begin:horizontal_loop_end', 'vertical_layer_index'], ['horizontal_loop_begin:horizontal_loop_end', 'ccpp_constant_one:vertical_layer_dimension'], 'vertical_layer_index', None, 'missing vertical dimension')
-        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=_RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent','ccpp_constant_one:vertical_layer_dimension'], ['horizontal_loop_begin:horizontal_loop_end','ccpp_constant_one:vertical_layer_dimension'])
+        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent','ccpp_constant_one:vertical_layer_dimension'], ['horizontal_loop_begin:horizontal_loop_end','ccpp_constant_one:vertical_layer_dimension'])
         (True, ['horizontal_loop_begin:horizontal_loop_end', 'ccpp_constant_one:vertical_layer_dimension'], ['horizontal_loop_begin:horizontal_loop_end', 'ccpp_constant_one:vertical_layer_dimension'], None, None, '')
-        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=_RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent','ccpp_constant_one:vertical_layer_dimension'], ['ccpp_constant_one:vertical_layer_dimension','horizontal_loop_begin:horizontal_loop_end'])
+        >>> SuiteObject('foo', _API_CONTEXT,None,None,variables=[Var({'local_name':'beg','standard_name':'horizontal_loop_begin','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'end','standard_name':'horizontal_loop_end','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL),Var({'local_name':'lev','standard_name':'vertical_layer_dimension','units':'count','dimensions':'()','type':'integer'}, _API_LOCAL)],active_call_list=True,phase_type=RUN_PHASE_NAME).match_dimensions(['ccpp_constant_one:horizontal_loop_extent','ccpp_constant_one:vertical_layer_dimension'], ['ccpp_constant_one:vertical_layer_dimension','horizontal_loop_begin:horizontal_loop_end'])
         (True, ['horizontal_loop_begin:horizontal_loop_end', 'ccpp_constant_one:vertical_layer_dimension'], ['ccpp_constant_one:vertical_layer_dimension', 'horizontal_loop_begin:horizontal_loop_end'], None, [1, 0], '')
         """
         new_need_dims = []
@@ -1466,9 +1445,9 @@ class Group(SuiteObject):
                                     phase_type=transition)
         # Add the items but first make sure we know the process tpye for
         # the group (e.g., TimeSplit or ProcessSplit).
-        if (transition == _RUN_PHASE_NAME) and ((not len(group_xml)) or
-                                                (group_xml[0].tag not in
-                                                 Group.__process_types)):
+        if (transition == RUN_PHASE_NAME) and ((not len(group_xml)) or
+                                               (group_xml[0].tag not in
+                                                Group.__process_types)):
             # Default is TimeSplit
             tsxml = ET.fromstring(Group.__process_xml[_API_TIMESPLIT_TAG])
             time_split = new_suite_object(tsxml, context, self, logger)
@@ -1726,6 +1705,9 @@ class Group(SuiteObject):
             errmsg = "No ccpp_error_message variable for group, {}"
             raise CCPPError(errmsg.format(self.name))
         # end if
+        # Initialize error variables
+        outfile.write("{} = 0".format(errflg), 2)
+        outfile.write("{} = ''".format(errmsg), 2)
         # Output threaded region check (except for run phase)
         if not self.run_phase():
             Group.__thread_check.write(outfile, indent,
@@ -1914,7 +1896,7 @@ end module {module}
         for svar in CCPP_REQUIRED_VARS:
             group.add_call_list_variable(svar)
         # end for
-        if transition != _RUN_PHASE_NAME:
+        if transition != RUN_PHASE_NAME:
             self._full_groups[group.name] = group
             self._full_phases[group.phase()] = group
         # end if
@@ -1966,8 +1948,11 @@ end module {module}
             # Suite item is a group or a suite-wide init or final method
             if item_type == 'group':
                 # Parse a group
-                self._groups.append(self.new_group(suite_item, _RUN_PHASE_NAME))
+                self._groups.append(self.new_group(suite_item, RUN_PHASE_NAME))
             else:
+# XXgoldyXX: v debug only
+                raise ValueError("XXG: '{}', '{}'".format(match_trans, self._full_phases))
+# XXgoldyXX: ^ debug only
                 match_trans = CCPP_STATE_MACH.function_match(item_type)
                 if match_trans is None:
                     emsg = "Unknown CCPP suite component tag type, '{}'"
@@ -2142,7 +2127,7 @@ end module {module}
             if item.name in self._full_groups:
                 phase = self._full_groups[item.name].phase()
             else:
-                phase = _RUN_PHASE_NAME
+                phase = RUN_PHASE_NAME
             # end if
             lmsg = "Group {}, schemes = {}"
             self.__logger.debug(lmsg.format(item.name,
@@ -2291,6 +2276,7 @@ end module {module}
                         'dimensions':'()'}, _API_SOURCE)
 
     def __init__(self, sdfs, host_model, scheme_headers, logger):
+        """Initialize this API"""
         self._module = 'ccpp_physics_api'
         self._host = host_model
         self._suites = list()
@@ -2348,7 +2334,7 @@ end module {module}
         for phase in CCPP_STATE_MACH.transitions():
             self.__call_lists[phase] = CallList('API_' + phase, logger)
             self.__call_lists[phase].add_variable(self.suite_name_var)
-            if phase == _RUN_PHASE_NAME:
+            if phase == RUN_PHASE_NAME:
                 self.__call_lists[phase].add_variable(self.suite_part_var)
             # end if
             for suite in self._suites:
@@ -2505,6 +2491,7 @@ end module {module}
         ofile.write("end if", 2)
         else_str = ''
         for suite in self.suites:
+            parent = suite.parent
             # Collect all the suite variables
             oline = "{}if(trim(suite_name) == '{}') then"
             suite_vars = [set(), set()] # input, output
@@ -2512,7 +2499,14 @@ end module {module}
                 for var in part.call_list.variable_list():
                     stdname = var.get_prop_value("standard_name")
                     intent = var.get_prop_value("intent")
-                    if intent in ['in', 'inout']:
+                    protected = var.get_prop_value("protected")
+                    if (parent is not None) and (not protected):
+                        pvar = parent.find_variable(stdname)
+                        if pvar is not None:
+                            protected = pvar.get_prop_value("protected")
+                        # end if
+                    # end if
+                    if (intent in ['in', 'inout']) and (not protected):
                         suite_vars[0].add(stdname)
                     # end if
                     if intent in ['inout', 'out']:

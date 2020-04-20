@@ -330,14 +330,9 @@ CONTAINS
 
    character(len=cs), target :: test_parts1(1) = (/ 'physics         ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(11) = (/                         &
+   character(len=cm), target :: test_invars1(6) = (/                          &
         'potential_temperature_increment     ',                               &
-        'horizontal_dimension                ',                               &
-        'vertical_interface_dimension        ',                               &
         'potential_temperature               ',                               &
-        'horizontal_loop_begin               ',                               &
-        'horizontal_loop_end                 ',                               &
-        'vertical_layer_dimension            ',                               &
         'time_step_for_physics               ',                               &
         'potential_temperature_at_interface  ',                               &
         'surface_air_pressure                ',                               &
@@ -349,14 +344,9 @@ CONTAINS
         'potential_temperature               ',                               &
         'surface_air_pressure                ',                               &
         'water_vapor_specific_humidity       ' /)
-   character(len=cm), target :: test_reqvars1(13) = (/                        &
+   character(len=cm), target :: test_reqvars1(8) = (/                         &
         'potential_temperature_increment     ',                               &
-        'horizontal_dimension                ',                               &
-        'vertical_interface_dimension        ',                               &
         'potential_temperature               ',                               &
-        'horizontal_loop_begin               ',                               &
-        'horizontal_loop_end                 ',                               &
-        'vertical_layer_dimension            ',                               &
         'time_step_for_physics               ',                               &
         'potential_temperature_at_interface  ',                               &
         'surface_air_pressure                ',                               &
@@ -364,10 +354,7 @@ CONTAINS
         'ccpp_error_message                  ',                               &
         'ccpp_error_flag                     ' /)
 
-   character(len=cm), target :: test_invars2(6) = (/                          &
-        'horizontal_dimension                ',                               &
-        'horizontal_loop_begin               ',                               &
-        'horizontal_loop_end                 ',                               &
+   character(len=cm), target :: test_invars2(3) = (/                          &
         'surface_air_pressure                ',                               &
         'number_of_model_times               ',                               &
         'model_times                         ' /)
@@ -378,10 +365,7 @@ CONTAINS
         'number_of_model_times               ',                               &
         'model_times                         ' /)
 
-   character(len=cm), target :: test_reqvars2(8) = (/                         &
-        'horizontal_dimension                ',                               &
-        'horizontal_loop_begin               ',                               &
-        'horizontal_loop_end                 ',                               &
+   character(len=cm), target :: test_reqvars2(5) = (/                         &
         'surface_air_pressure                ',                               &
         'number_of_model_times               ',                               &
         'model_times                         ',                               &

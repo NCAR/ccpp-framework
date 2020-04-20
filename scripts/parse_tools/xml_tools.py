@@ -49,8 +49,7 @@ def call_command(commands, logger, silent=False):
         if PY3:
             if PYSUBVER > 6:
                 cproc = subprocess.run(commands, check=True,
-                                       capture_output=True,
-                                       stderr=subprocess.STDOUT)
+                                       capture_output=True)
                 if not silent:
                     logger.debug(cproc.stdout)
                 # End if

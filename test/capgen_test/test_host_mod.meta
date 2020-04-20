@@ -1,3 +1,6 @@
+[ccpp-table-properties]
+  name = test_host_mod
+  type = module
 [ccpp-arg-table]
   name = test_host_mod
   type = module

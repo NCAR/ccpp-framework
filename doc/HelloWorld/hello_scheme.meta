@@ -1,3 +1,6 @@
+[ccpp-table-properties]
+  name = hello_scheme
+  type = scheme
 [ccpp-arg-table]
   name = hello_scheme_run
   type = scheme

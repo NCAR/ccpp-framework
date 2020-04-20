@@ -8,7 +8,8 @@ Parse a host-model registry XML file and return the captured variables.
 import os
 import os.path
 # CCPP framework imports
-from ccpp_suite import COPYRIGHT, KINDS_MODULE, CCPP_STATE_MACH, API
+from ccpp_suite import COPYRIGHT, KINDS_MODULE, API
+from ccpp_state_machine import CCPP_STATE_MACH
 from metavar import Var, VarDictionary, CCPP_CONSTANT_VARS
 from metavar import CCPP_LOOP_VAR_STDNAMES
 from fortran_tools import FortranWriter

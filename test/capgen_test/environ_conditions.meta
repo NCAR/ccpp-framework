@@ -1,3 +1,6 @@
+[ccpp-table-properties]
+  name = environ_conditions
+  type = scheme
 [ccpp-arg-table]
   name = environ_conditions_run
   type = scheme

@@ -1,3 +1,6 @@
+[ccpp-table-properties]
+  name = hello_world_mod
+  type = module
 [ccpp-arg-table]
   name = hello_world_mod
   type = module

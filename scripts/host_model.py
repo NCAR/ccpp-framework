@@ -17,13 +17,16 @@ from parse_tools import FORTRAN_SCALAR_REF_RE
 class HostModel(VarDictionary):
     """Class to hold the data from a host model"""
 
-    def __init__(self, meta_headers, name_in, logger):
+    def __init__(self, meta_tables, name_in, logger):
         self.__name = name_in
         self.__var_locations = {} # Local name to module map
         self.__loop_vars = None   # Loop control vars in interface calls
         self.__used_variables = None # Local names which have been requested
         self.__deferred_finds = None # Used variables that were missed at first
         # First, process DDT headers
+        meta_headers = list()
+        [meta_headers.extend(y) for y in
+         [x.sections() for x in meta_tables.values()]]
         self.__ddt_lib = DDTLibrary('{}_ddts'.format(self.name),
                                     ddts=[d for d in meta_headers
                                           if d.header_type == 'ddt'],
@@ -32,6 +35,7 @@ class HostModel(VarDictionary):
                                         logger=logger)
         # Now, process the code headers by type
         varlist = list()
+        self.__metadata_tables = meta_tables
         for header in [h for h in meta_headers if h.header_type != 'ddt']:
             title = header.title
             if logger is not None:
@@ -127,6 +131,10 @@ class HostModel(VarDictionary):
         args = [v.call_string(self)
                 for v in self.variable_list(loop_vars=loop_vars, consts=False)]
         return ', '.join(args)
+
+    def metadata_tables(self):
+        """Return a copy of this host models metadata tables"""
+        return list(self.__metadata_tables)
 
     def host_variable_module(self, local_name):
         """Return the module name for a host variable"""
