@@ -5,7 +5,7 @@ import logging
 import subprocess
 from xml.etree import ElementTree as ET
 
-from common import indent, encode_container
+from common import encode_container
 from mkcap import Var
 
 import sys, os
@@ -13,37 +13,8 @@ sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
 from parse_fortran import Ftype_type_decl
 from metadata_table import MetadataHeader
 
-# The argument tables for schemes and variable definitions should have the following format:
-# !! \section arg_table_SubroutineName (e.g. SubroutineName = SchemeName_run) OR \section arg_table_DerivedTypeName OR \section arg_table_ModuleName
-# !! | local_name     | standard_name                                         | long_name                                | units   | rank | type      |    kind   | intent | optional |
-# !! |----------------|-------------------------------------------------------|------------------------------------------|---------|------|-----------|-----------|--------|----------|
-# !! | im             | horizontal_loop_extent                                | horizontal loop extent, start at 1       | index   |    0 | integer   |           | in     | F        |
-# !! | ix             | horizontal_dimension                                  | horizontal dimension                     | index   |    0 | integer   |           | in     | F        |
-# !! | ...            | ...                                                   |                                          |         |      |           |           |        |          |
-# !! | errmsg         | error_message                                         | error message for error handling in CCPP | none    |    0 | character |           | out    | F        |
-# !! | ierr           | error_flag                                            | error flag for error handling in CCPP    | none    |    0 | integer   |           | out    | F        |
-# !!
-# Notes on the input format:
-# - if the argument table starts a new doxygen section, it should start with !> \section instead of !! \section
-# - the "\section arg_table_{SubroutineName,DerivedTypeName,ModuleName}" command denotes the start of the table
-#      - SubroutineName must match the name of the subroutine that the argument table describes
-#      - DerivedTypeName must match the name of the derived type that the argument table describes
-#      - ModuleName must match the name of the module whose variables the argument table describes
-# - the table must be placed immediately before the subroutine / derived data type,
-#   or immediately before the module variables (but within the module structure)
-# - each line of the table must begin with the doxygen-delimiter '!!'
-# - table headers are the first row, the second row must have the |---|-----| format
-# - after the last row of the table, there must be a blank doxygen line (only '!!') to denote the end of the table
-# - for variable type definitions and module variables, the intent and optional columns must be set to 'none' and 'F'
-# - each argument table (and its subroutine) must accept the following two arguments for error handling:
-#      - character(len=512), intent(out) :: errmsg
-#          - errmsg must be initialized as '' and contains the error message in case an error occurs
-#      - integer, intent(out) :: ierr
-#          - ierr must be initialized as 0 and set to >1 in case of errors
-# Output: This routine converts the argument tables for all subroutines / typedefs / module variables into an XML file
-# suitable to be used with mkcap.py (which generates the fortran code for the scheme cap)
-# - the script generates a separate file for each module within the given files
-
+# Output: This routine converts the argument tables for all subroutines / typedefs / kind / module variables
+# into dictionaries suitable to be used with ccpp_prebuild.py (which generates the fortran code for the caps)
 
 # Items in this dictionary are used for checking valid entries in metadata tables. For columsn with no keys/keys
 # commented out, no check is performed. This is the case for 'type' and 'kind' right now, since models use their
