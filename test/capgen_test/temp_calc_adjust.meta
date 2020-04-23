@@ -16,6 +16,13 @@
   type = real
   kind = kind_phys
   intent = in
+[ temp_level ]
+  standard_name = potential_temperature_at_interface
+  units = K
+  dimensions = (ccpp_constant_one:horizontal_loop_extent, vertical_interface_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
 [ temp_calc ]
   standard_name = potential_temperature_at_previous_timestep
   units = K

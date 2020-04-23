@@ -25,7 +25,7 @@ CONTAINS
     real(kind_phys),    intent(inout) :: qv(:)
     real(kind_phys),    intent(inout) :: ps(:)
     REAL(kind_phys),    intent(in)    :: temp_prev(:)
-    REAL(kind_phys),    intent(inout) :: temp_layer(:)
+    REAL(kind_phys),    intent(inout) :: temp_layer(foo)
     character(len=512), intent(out)   :: errmsg
     integer,            intent(out)   :: errflg
     !----------------------------------------------------------------

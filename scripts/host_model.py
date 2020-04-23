@@ -88,7 +88,8 @@ class HostModel(VarDictionary):
                     # End if
                 # End for
             else:
-                errmsg = "Invalid host model metadata header, {} ({}){}"
+                errmsg = "Invalid host model metadata header type, {} ({}){}"
+                errmsg += "\nType must be 'module' or 'host'"
                 ctx = context_string(header.context)
                 raise CCPPError(errmsg.format(header.title,
                                               header.header_type, ctx))
@@ -206,9 +207,7 @@ class HostModel(VarDictionary):
             if isinstance(my_var, VarDDT):
                 lname = my_var.get_parent_prop('local_name')
             # End if
-            if lname not in self.__used_variables:
-                self.__used_variables.add(lname)
-            # End if
+            self.__used_variables.add(lname)
         # End if
         return my_var
         # pylint: enable=arguments-differ

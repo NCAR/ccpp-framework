@@ -37,12 +37,14 @@ _BLANK_DIMS_RE = re.compile(r"[(][:](,:)*[)]$")
 # Source for internally generated variables.
 _API_SOURCE_NAME = "CCPP_API"
 _API_SUITE_VAR_NAME = "suite"
+_API_GROUP_VAR_NAME = "group"
 _API_SCHEME_VAR_NAME = "scheme"
 _API_LOCAL_VAR_NAME = "local"
 _API_LOCAL_VAR_TYPES = [_API_LOCAL_VAR_NAME, _API_SUITE_VAR_NAME]
 _API_CONTEXT = ParseContext(filename="ccpp_suite.py")
 _API_SOURCE = ParseSource(_API_SOURCE_NAME, _API_SCHEME_VAR_NAME, _API_CONTEXT)
 _API_LOCAL = ParseSource(_API_SOURCE_NAME, _API_LOCAL_VAR_NAME, _API_CONTEXT)
+_API_GROUP = ParseSource(_API_SOURCE_NAME, _API_GROUP_VAR_NAME, _API_CONTEXT)
 _API_TIMESPLIT_TAG = 'time_split'
 _API_PROCESSSPLIT_TAG = 'process_split'
 
@@ -179,8 +181,9 @@ class CallList(VarDictionary):
             # We must be trying to add a host variable, give it an intent
             nintent = 'in'
         # End if
-        if evar and (evar.get_prop_value('intent') == 'out'):
-            if nintent != 'out':
+        if evar:
+            eintent = evar.get_prop_value('intent')
+            if (eintent == 'out') and (nintent != 'out'):
                 elname = evar.get_prop_value('local_name')
                 nlname = newvar.get_prop_value('local_name')
                 ectx = context_string(evar.context)
@@ -190,7 +193,7 @@ class CallList(VarDictionary):
                 raise CCPPError(emsg.format(elname, ectx, nlname, nctx))
             # end if
         # end if
-        newvar.adjust_intent(nintent, src_var=evar)
+        newvar.adjust_intent(evar or newvar)
         # Add variable
         super(CallList, self).add_variable(newvar, exists_ok=exists_ok,
                                            gen_unique=gen_unique,
@@ -400,9 +403,27 @@ class SuiteObject(VarDictionary):
         """Return True iff <var> belongs to our Suite"""
         return var.source.type == _API_SUITE_VAR_NAME
 
-    def add_call_list_variable(self, newvar, exists_ok=False, gen_unique=False):
+    def is_local_variable(self, var):
+        """Return the local variable matching <var> if one is found belonging
+        to this object or any of its SuiteObject parents."""
+        stdname = var.get_prop_value('standard_name')
+        lvar = None
+        obj = self
+        while (not lvar) and (obj is not None) and isinstance(obj, SuiteObject):
+            lvar = obj.find_variable(stdname, any_scope=False,
+                                     search_call_lst=False)
+            if not lvar:
+                obj = obj.parent
+            # end if
+        # end while
+        return lvar
+
+    def add_call_list_variable(self, newvar, exists_ok=False, gen_unique=False,
+                               subst_dict=None):
         """Add <newvar> to this SuiteObject's call_list. If this SuiteObject
-        does not have a call list, recursively try the SuiteObject's parent
+           does not have a call list, recursively try the SuiteObject's parent
+        If <subst_dict> is not None, create a clone using that as a dictionary
+           of substitutions.
         Do not add <newvar> if it exists as a local variable.
         Do not add <newvar> if it is a suite variable"""
         stdname = newvar.get_prop_value('standard_name')
@@ -412,11 +433,27 @@ class SuiteObject(VarDictionary):
             pvar = None
         # end if
         if SuiteObject.is_suite_variable(newvar):
-            pass # Do not add this variable to a call list
+            pass # Do not add suite variable to a call list
+        elif self.is_local_variable(newvar):
+            pass # Do not add to call list, it is owned by a SuiteObject
         elif self.call_list is not None:
             if (stdname in CCPP_LOOP_VAR_STDNAMES) and (not self.run_phase()):
                 errmsg = 'Attempting to use loop variable {} in {} phase'
                 raise CCPPError(errmsg.format(stdname, self.phase()))
+            # end if
+            # Do we need a clone?
+            if isinstance(self, Group):
+                stype = _API_GROUP_VAR_NAME
+            else:
+                stype = None
+            # end if
+            if stype or subst_dict:
+                oldvar = newvar
+                if subst_dict is None:
+                    subst_dict = {}
+                # end if
+                newvar = oldvar.clone(subst_dict, source_name=self.name,
+                                      source_type=stype, context=self.context)
             # end if
             self.call_list.add_variable(newvar, exists_ok=exists_ok,
                                         gen_unique=gen_unique, objdict=self)
@@ -443,18 +480,22 @@ class SuiteObject(VarDictionary):
             # end if (no else, variable already in call list)
         else:
             self.parent.add_call_list_variable(newvar, exists_ok=exists_ok,
-                                               gen_unique=gen_unique)
+                                               gen_unique=gen_unique,
+                                               subst_dict=subst_dict)
         # end if
 
-    def add_variable_to_call_tree(self, var, vmatch=None):
+    def add_variable_to_call_tree(self, var, vmatch=None, subst_dict=None):
         """Add <var> to <self>'s call_list (or a parent if <self> does not
-        have an active call_list).
-        if <vmatch> is not None, also add the loop substitution variables
-        which must be present.
+              have an active call_list).
+        If <vmatch> is not None, also add the loop substitution variables
+           which must be present.
+        If <subst_dict> is not None, create a clone using that as a dictionary
+           of substitutions.
         """
         found_dims = False
         if var is not None:
-            self.add_call_list_variable(var, exists_ok=True, gen_unique=True)
+            self.add_call_list_variable(var, exists_ok=True, gen_unique=True,
+                                        subst_dict=subst_dict)
             found_dims = True
         # end if
         if vmatch is not None:
@@ -722,13 +763,15 @@ class SuiteObject(VarDictionary):
         # end if
         return match, new_need_dims, new_have_dims, missing_vert_dim, perm, reason
 
-    def find_variable(self, standard_name, any_scope=True, clone=False):
+    # pylint: disable=arguments-differ
+    def find_variable(self, standard_name, any_scope=True,
+                      search_call_lst=True):
         """Find a matching variable to <var>, create a local clone (if
         <clone> is True), or return None.
         First search the SuiteObject's internal dictionary, then its
-        call list, then any parent dictionary (if <any_scope> is True).
+        call list (unless <skip_call_list> is True, then any parent
+        dictionary (if <any_scope> is True).
         <var> can be a Var object or a standard_name string.
-
         """
         if isinstance(standard_name, Var):
             stdname = standard_name.get_prop_value('standard_name')
@@ -736,33 +779,26 @@ class SuiteObject(VarDictionary):
             stdname = standard_name
         # end if
         # First, search our local dictionary
-        local_var = super(SuiteObject, self).find_variable(stdname,
+        found_var = super(SuiteObject, self).find_variable(stdname,
                                                            any_scope=False)
-        if self.call_list is not None:
-            call_var = self.call_list.find_variable(stdname, any_scope=False)
-        else:
-            call_var = None
+        if (not found_var) and (self.call_list is not None) and search_call_lst:
+            found_var = self.call_list.find_variable(stdname, any_scope=False)
         # end if
         loop_okay = VarDictionary.loop_var_okay(stdname, self.run_phase())
         if not loop_okay:
             any_scope = False
         # end if
-        if (local_var is None) and (call_var is None) and any_scope:
+        if (found_var is None) and any_scope and (self.parent is not None):
             # We do not have the variable, look to parents.
-            call_var = super(SuiteObject, self).find_variable(stdname,
-                                                              any_scope=True)
-        # end if
-        if local_var is not None:
-            found_var = local_var
-        elif call_var is not None:
-            found_var = call_var
-        elif clone:
-            msg = "ERROR: SuiteObject variable clone is not implemented"
-            raise ParseInternalError(msg)
-        else:
-            found_var = None
+            if isinstance(self.parent, SuiteObject):
+                scl = search_call_lst
+                found_var = self.parent.find_variable(stdname, any_scope=True,
+                                                      search_call_lst=scl)
+            else:
+                found_var = self.parent.find_variable(stdname, any_scope=True)
         # end if
         return found_var
+    # pylint: enable=arguments-differ
 
     def match_variable(self, var, vstdname=None, vdims=None):
         """Try to find a source for <var> in this SuiteObject's dictionary
@@ -823,21 +859,13 @@ class SuiteObject(VarDictionary):
             # end if
             # Add the variable to the parent call tree
             if dict_dims == new_dict_dims:
-                subst_dict = {}
+                sdict = {}
             else:
-                subst_dict = {'dimensions':new_dict_dims}
+                sdict = {'dimensions':new_dict_dims}
             # end if
-            clone = var.clone(subst_dict)
-            found_var = self.parent.add_variable_to_call_tree(clone)
-            if match:
-                # Maybe adjust the intent of the existing variable
-                dintent = dict_var.get_prop_value('intent')
-                vintent = var.get_prop_value('intent')
-                if ((dict_var.source.type == _API_SCHEME_VAR_NAME) and
-                    (dintent != vintent)):
-                    dict_var.adjust_intent(vintent, src_var=var)
-                # end if
-            else:
+            found_var = self.parent.add_variable_to_call_tree(var,
+                                                              subst_dict=sdict)
+            if not match:
                 found_var = False
                 if not missing_vert:
                     nctx = context_string(var.context)
@@ -1031,6 +1059,20 @@ class Scheme(SuiteObject):
         super(Scheme, self).__init__(name, context, parent,
                                      logger, active_call_list=True)
 
+    def update_group_call_list_variable(self, var):
+        """If <var> is in our group's call list, update its intent"""
+        stdname = var.get_prop_value('standard_name')
+        gvar = self.__group.call_list.find_variable(stdname, any_scope=False)
+        if gvar:
+            self.__group.add_call_list_variable(var, exists_ok=True)
+        # end if
+
+    def is_local_variable(self, var):
+        """Return None as we never consider <var> to be in our local
+        dictionary.
+        This is an override of the SuiteObject version"""
+        return None
+
     def analyze(self, phase, group, scheme_library, suite_vars, level, logger):
         # Unused arguments are for consistent analyze interface
         # pylint: disable=unused-argument
@@ -1076,6 +1118,7 @@ class Scheme(SuiteObject):
                     subst_dict = {'dimensions':new_dims}
                     clone = var.clone(subst_dict)
                     self.add_call_list_variable(clone, exists_ok=True)
+                    self.update_group_call_list_variable(clone)
                 # end if
             else:
                 if missing_vert is not None:
@@ -1092,7 +1135,7 @@ class Scheme(SuiteObject):
                     self.__group.manage_variable(var)
                     # We still need it in our call list but declared the
                     # same way our Group did
-                    gvar = group.find_variable(vstdname, any_scope=False)
+                    gvar = self.__group.find_variable(vstdname, any_scope=False)
                     if gvar is None:
                         errmsg = 'Group managed variable, {}, not found'
                         raise ParseInternalError(errmsg.format(vstdname))
