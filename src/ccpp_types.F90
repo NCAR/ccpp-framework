@@ -23,38 +23,10 @@ module ccpp_types
 !! \htmlinclude ccpp_types.html
 !!
 
-    use, intrinsic :: iso_c_binding,                                   &
-                      only: c_ptr, c_funptr
-
     implicit none
 
     private
-    public :: CCPP_STR_LEN,                                            &
-              CCPP_STAGES,                                             &
-              CCPP_DEFAULT_STAGE,                                      &
-              CCPP_DEFAULT_LOOP_CNT,                                   &
-              CCPP_GENERIC_KIND,                                       &
-              ccpp_t,                                                  &
-              ccpp_field_t,                                            &
-              ccpp_scheme_t,                                           &
-              ccpp_suite_t,                                            &
-              ccpp_group_t,                                            &
-              ccpp_subcycle_t
-
-    !> @var CCPP_STR_LEN Parameter defined for string lengths.
-    integer, parameter   :: CCPP_STR_LEN = 256
-    
-    !> @var The stages=functions that are defined for each scheme.
-    character(len=*), dimension(1:3), parameter :: CCPP_STAGES =       &
-                                                    & (/ 'init    ',   &
-                                                    &    'run     ',   &
-                                                    &    'finalize' /)
-
-    !> @var The default stage if not specified
-    character(len=*), parameter :: CCPP_DEFAULT_STAGE = 'run'
-
-    !> @var The default "kind" for a generic pointer / derived data type
-    integer, parameter :: CCPP_GENERIC_KIND = -999
+    public :: ccpp_t
 
     !> @var The default loop counter indicating outside of a subcycle loop
     integer, parameter :: CCPP_DEFAULT_LOOP_CNT = -999
@@ -62,96 +34,9 @@ module ccpp_types
     !> @var The default values for block and thread numbers indicating invalid data
     integer, parameter :: CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER = -999
 
-    !>
-    !! @brief CCPP field type
-    !!
-    !! The field type contains all the information/meta-data and data
-    !! for fields that need to be passed between the atmosphere driver
-    !! and the physics drivers.
-    type :: ccpp_field_t
-            character(len=CCPP_STR_LEN)                       :: standard_name
-            character(len=CCPP_STR_LEN)                       :: long_name
-            character(len=CCPP_STR_LEN)                       :: units
-            integer                                           :: rank
-            integer, allocatable, dimension(:)                :: dims
-            integer                                           :: kind
-            type(c_ptr)                                       :: ptr
-    end type ccpp_field_t
-
-    !>
-    !! @brief CCPP scheme function type
-    !!
-    !! The scheme function type contains one function of a scheme.
-    !
-    type :: ccpp_function_t
-            character(:), allocatable                         :: name
-            type(c_ptr)                                       :: function_hdl
-            type(c_ptr)                                       :: library_hdl
-    end type ccpp_function_t
-
-    !>
-    !! @brief CCPP scheme type
-    !!
-    !! The scheme type contains all the scheme information.
-    !
-    type :: ccpp_scheme_t
-            character(:), allocatable                         :: name
-            character(:), allocatable                         :: library
-            character(:), allocatable                         :: version
-            integer                                           :: functions_max
-            type(ccpp_function_t), allocatable, dimension(:)  :: functions
-            logical                                           :: initialized = .false.
-        contains
-            procedure :: get_function_name => scheme_get_function_name
-    end type ccpp_scheme_t
-
-    !>
-    !! @brief CCPP subcycle type
-    !!
-    !! The subcycle type contains all the scheme names and the number of
-    !! times the subcycle will loop. It is a direct mapping to the group
-    !! suite subcycle XML.
-    !
-    type :: ccpp_subcycle_t
-            integer                                           :: loops_max
-            integer                                           :: schemes_max
-            type(ccpp_scheme_t), allocatable, dimension(:)    :: schemes
-    end type ccpp_subcycle_t
-
-    !>
-    !! @brief CCPP group type
-    !!
-    !! The group type contains all the subcycles and the name of
-    !! the group call. It is a direct mapping to the group element in XML.
-    !
-    type :: ccpp_group_t
-            character(:), allocatable                           :: name
-            integer                                             :: subcycles_max
-            type(ccpp_subcycle_t), allocatable, dimension(:)    :: subcycles
-    end type ccpp_group_t
-
-    !>
-    !! @brief CCPP suite type
-    !!
-    !! The suite type contains all the group parts names and number of
-    !! times the subcycle will loop. It is a direct mapping to the
-    !! suite element in XML.
-    !
-    type :: ccpp_suite_t
-            character(:), allocatable                           :: name
-            character(:), allocatable                           :: library
-            character(:), allocatable                           :: version
-            type(ccpp_scheme_t)                                 :: init
-            type(ccpp_scheme_t)                                 :: finalize
-            integer                                             :: groups_max
-            type(ccpp_group_t), allocatable, dimension(:)       :: groups
-    end type ccpp_suite_t
-
-#if 0
 !! \section arg_table_ccpp_t
 !! \htmlinclude ccpp_t.html
 !!
-#endif
     !>
     !! @brief CCPP physics type.
     !!
@@ -162,41 +47,29 @@ module ccpp_types
     !! - The suite definitions in a ccpp_suite_t type.
     !
     type :: ccpp_t
-            type(c_ptr)                                         :: fields_idx
-            type(ccpp_field_t), allocatable, dimension(:)       :: fields
-            type(ccpp_suite_t), pointer                         :: suite => null()
-            type(ccpp_suite_t)                                  :: suite_target
-            logical                                             :: suite_iscopy
-            logical                                             :: initialized = .false.
-            ! CCPP-internal variables for physics schemes
-            integer                                             :: errflg = 0
-            character(len=512)                                  :: errmsg = ''
-            integer                                             :: loop_cnt = CCPP_DEFAULT_LOOP_CNT
-            integer                                             :: blk_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
-            integer                                             :: thrd_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
+       ! CCPP-internal variables for physics schemes
+       integer                                             :: errflg = 0
+       character(len=512)                                  :: errmsg = ''
+       integer                                             :: loop_cnt = CCPP_DEFAULT_LOOP_CNT
+       integer                                             :: blk_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
+       integer                                             :: thrd_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
+
+    contains
+
+       procedure :: initialized  => ccpp_t_initialized
+
     end type ccpp_t
 
 contains
 
-    !>
-    !! @brief Internal routine that returns the name of
-    !!        a function for a given scheme and stage
-    !!
-    !! @param[in   ] scheme         The ccpp_scheme_t type
-    !! @param[in   ] stage          The current stage
-    !! @return       function_name  The name of the function
-    !
-    pure function scheme_get_function_name(s, stage) result(function_name)
-
-        implicit none
-
-        class(ccpp_scheme_t), intent(in) :: s
-        character(len=*),     intent(in) :: stage
-
-        character(:), allocatable        :: function_name
-
-        function_name = trim(s%name) // '_' // trim(stage)
-
-    end function scheme_get_function_name
+    function ccpp_t_initialized(ccpp_d) result(initialized)
+       implicit none
+       !
+       class(ccpp_t) :: ccpp_d
+       logical :: initialized
+       !
+       initialized = (ccpp_d%blk_no /= CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER .and. &
+                      ccpp_d%thrd_no /= CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER)
+    end function ccpp_t_initialized
 
 end module ccpp_types

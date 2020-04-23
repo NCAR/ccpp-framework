@@ -69,23 +69,6 @@ def execute(cmd, abort = True):
             logging.error(message)
     return (status, stdout.rstrip('\n'), stderr.rstrip('\n'))
 
-def indent(elem, level=0):
-    """Subroutine for writing "pretty" XML; copied from
-    http://effbot.org/zone/element-lib.htm#prettyprint"""
-    i = "\n" + level*"  "
-    if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + "  "
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-        for elem in elem:
-            indent(elem, level+1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-    else:
-        if level and (not elem.tail or not elem.tail.strip()):
-          elem.tail = i
-
 def split_var_name_and_array_reference(var_name):
     """Split an expression like foo(:,a,1:ddt%ngas)
     into components foo and (:,a,1:ddt%ngas)."""

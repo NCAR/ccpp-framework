@@ -18,35 +18,10 @@
 !
 module ccpp_api
 
-    use ccpp_types,         only: CCPP_STR_LEN,                        &
-                                  ccpp_t
-    use ccpp_errors,        only: ccpp_error,                          &
-                                  ccpp_debug
-    use ccpp,               only: ccpp_init,                           &
-                                  ccpp_finalize,                       &
-                                  ccpp_initialized
-#ifndef STATIC
-    use ccpp_fcall,         only: ccpp_physics_init,                   &
-                                  ccpp_physics_run,                    &
-                                  ccpp_physics_finalize
-    use ccpp_fields,        only: ccpp_field_add,                      &
-                                  ccpp_field_get
-#endif
+    use ccpp_types, only: ccpp_t
 
     implicit none
 
-    public :: CCPP_STR_LEN,                                            &
-              ccpp_t,                                                  &
-              ccpp_error,                                              &
-              ccpp_debug,                                              &
-              ccpp_init,                                               &
-              ccpp_finalize
-#ifndef STATIC
-    public :: ccpp_physics_init,                                       &
-              ccpp_physics_run,                                        &
-              ccpp_physics_finalize,                                   &
-              ccpp_field_add,                                          &
-              ccpp_initialized
-#endif
+    public :: ccpp_t
 
 end module ccpp_api
