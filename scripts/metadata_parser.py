@@ -319,7 +319,7 @@ def parse_variable_tables(filename):
 
                                         metadata[var_name].append(var)
                         else:
-                            raise Exception("Invalid definition of new metadata format in file {0}".format(filename))
+                            raise Exception("Invalid definition of new metadata format in file {}, \htmlinclude must be preceeded by '!! ' : {}".format(filename, line))
                         line_counter += 1
                         continue
                     # Check for blank table
@@ -622,6 +622,8 @@ def parse_scheme_tables(filename):
                                                                 '    existing: {0}\n'.format(existing_var.print_debug()) +\
                                                                 '     vs. new: {0}'.format(var.print_debug()))
                                         metadata[var_name].append(var)
+                        else:
+                            raise Exception("Invalid definition of new metadata format in file {}, \htmlinclude must be preceeded by '!! ' : {}".format(filename, lines[header_line_number]))
                         # Next line must denote the end of table,
                         # i.e. look for a line containing only '!!'
                         line_number = header_line_number+1
