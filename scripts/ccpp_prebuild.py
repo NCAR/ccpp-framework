@@ -15,6 +15,7 @@ import sys
 from common import encode_container, decode_container, decode_container_as_dict, execute
 from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
 from common import STANDARD_VARIABLE_TYPES, STANDARD_INTEGER_TYPE, CCPP_TYPE
+from common import SUITE_DEFINITION_FILENAME_PATTERN
 from common import split_var_name_and_array_reference
 from metadata_parser import merge_dictionaries, parse_scheme_tables, parse_variable_tables
 from mkcap import CapsMakefile, CapsCMakefile, CapsSourcefile, \
@@ -48,10 +49,10 @@ def parse_arguments():
     configfile = args.config
     clean = args.clean
     debug = args.debug
-    if not args.suites:
-        parser.print_help()
-        sys.exit(-1)
-    sdfs = [ 'suite_{0}.xml'.format(x) for x in args.suites.split(',')]
+    if args.suites:
+        sdfs = [ 'suite_{0}.xml'.format(x) for x in args.suites.split(',')]
+    else:
+        sdfs = None
     builddir = args.builddir
     return (success, configfile, clean, debug, sdfs, builddir)
 
@@ -159,6 +160,19 @@ def clean_files(config):
     cmd = 'rm -vf {0}'.format(' '.join(files_to_remove))
     execute(cmd)
     return success
+
+def get_all_suites(suites_dir):
+    success = False
+    logging.info("No suites were given, compiling a list of all suites")
+    sdfs = []
+    for f in os.listdir(suites_dir):
+        match = SUITE_DEFINITION_FILENAME_PATTERN.match(f)
+        if match:
+            logging.info('Adding suite definition file {}'.format(f))
+            sdfs.append(f)
+    if sdfs:
+        success = True
+    return (success, sdfs)
 
 def parse_suites(suites_dir, sdfs):
     """Parse suite definition files for prebuild"""
@@ -694,6 +708,12 @@ def main():
         success = clean_files(config)
         logging.info('CCPP prebuild clean completed successfully, exiting.')
         sys.exit(0)
+
+    # If no suite definition files were given, get all of them
+    if not sdfs:
+        (success, sdfs) = get_all_suites(config['suites_dir'])
+        if not success:
+            raise Exception('Call to get_all_sdfs failed.')
 
     # Parse suite definition files for prebuild
     (success, suites) = parse_suites(config['suites_dir'], sdfs)
