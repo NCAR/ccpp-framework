@@ -157,7 +157,10 @@ def parse_variable_tables(filename):
 
     # Read all lines of the file at once
     with (open(filename, 'r')) as file:
-        file_lines = file.readlines()
+        try:
+            file_lines = file.readlines()
+        except UnicodeDecodeError:
+            raise Exception("Decoding error while trying to read file {}, check that the file only contains ASCII characters".format(filename))
 
     lines = []
     buffer = ''
@@ -464,7 +467,10 @@ def parse_scheme_tables(filename):
 
     # Read all lines of the file at once
     with (open(filename, 'r')) as file:
-        file_lines = file.readlines()
+        try:
+            file_lines = file.readlines()
+        except UnicodeDecodeError:
+            raise Exception("Decoding error while trying to read file {}, check that the file only contains ASCII characters".format(filename))
 
     lines = []
     original_line_numbers = []
