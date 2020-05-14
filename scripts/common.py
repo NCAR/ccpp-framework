@@ -59,18 +59,19 @@ def execute(cmd, abort = True):
     status = p.returncode
     if debug:
         message = 'Execution of "{0}" returned with exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.decode('ascii').rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.decode('ascii').rstrip('\n'))
+        message += '    stdout: "{0}"\n'.format(stdout.decode('ascii', 'ignore').rstrip('\n'))
+        message += '    stderr: "{0}"'.format(stderr.decode('ascii', 'ignore').rstrip('\n'))
         logging.debug(message)
     if not status == 0:
         message = 'Execution of command {0} failed, exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.decode('ascii').rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.decode('ascii').rstrip('\n'))
+        message += '    stdout: "{0}"\n'.format(stdout.decode('ascii', 'ignore').rstrip('\n'))
+        message += '    stderr: "{0}"'.format(stderr.decode('ascii', 'ignore').rstrip('\n'))
         if abort:
             raise Exception(message)
         else:
             logging.error(message)
-    return (status, stdout.decode('ascii').rstrip('\n'), stderr.decode('ascii').rstrip('\n'))
+    return (status, stdout.decode('ascii', 'ignore').rstrip('\n'),
+                    stderr.decode('ascii', 'ignore').rstrip('\n'))
 
 def split_var_name_and_array_reference(var_name):
     """Split an expression like foo(:,a,1:ddt%ngas)
