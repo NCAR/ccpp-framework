@@ -33,12 +33,16 @@ CCPP_INTERNAL_VARIABLES = {
     CCPP_THREAD_NUMBER       : 'cdata%thrd_no',
     }
 
-STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
 STANDARD_CHARACTER_TYPE = 'character'
+STANDARD_INTEGER_TYPE = 'integer'
+STANDARD_VARIABLE_TYPES = [ STANDARD_CHARACTER_TYPE, STANDARD_INTEGER_TYPE, 'logical', 'real' ]
 
 # For static build
 CCPP_STATIC_API_MODULE = 'ccpp_static_api'
 CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
+
+# Filename pattern for suite definition files
+SUITE_DEFINITION_FILENAME_PATTERN = re.compile('^suite_(.*)\.xml$')
 
 def execute(cmd, abort = True):
     """Runs a local command in a shell. Waits for completion and
@@ -55,35 +59,18 @@ def execute(cmd, abort = True):
     status = p.returncode
     if debug:
         message = 'Execution of "{0}" returned with exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.rstrip('\n'))
+        message += '    stdout: "{0}"\n'.format(stdout.decode('ascii').rstrip('\n'))
+        message += '    stderr: "{0}"'.format(stderr.decode('ascii').rstrip('\n'))
         logging.debug(message)
     if not status == 0:
         message = 'Execution of command {0} failed, exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.rstrip('\n'))
+        message += '    stdout: "{0}"\n'.format(stdout.decode('ascii').rstrip('\n'))
+        message += '    stderr: "{0}"'.format(stderr.decode('ascii').rstrip('\n'))
         if abort:
             raise Exception(message)
         else:
             logging.error(message)
-    return (status, stdout.rstrip('\n'), stderr.rstrip('\n'))
-
-def indent(elem, level=0):
-    """Subroutine for writing "pretty" XML; copied from
-    http://effbot.org/zone/element-lib.htm#prettyprint"""
-    i = "\n" + level*"  "
-    if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + "  "
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-        for elem in elem:
-            indent(elem, level+1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-    else:
-        if level and (not elem.tail or not elem.tail.strip()):
-          elem.tail = i
+    return (status, stdout.decode('ascii').rstrip('\n'), stderr.decode('ascii').rstrip('\n'))
 
 def split_var_name_and_array_reference(var_name):
     """Split an expression like foo(:,a,1:ddt%ngas)
@@ -126,7 +113,7 @@ def decode_container(container):
     items = container.split(' ')
     if not len(items) in [1, 2, 3]:
         raise Exception("decode_container not implemented for {0} items".format(len(items)))
-    for i in xrange(len(items)):
+    for i in range(len(items)):
         items[i] = items[i][:items[i].find('_')] + ' ' + items[i][items[i].find('_')+1:]
     return ' '.join(items)
 
@@ -139,7 +126,7 @@ def decode_container_as_dict(container):
     if not len(items) in [1, 2, 3]:
         raise Exception("decode_container not implemented for {0} items".format(len(items)))
     itemsdict = {}
-    for i in xrange(len(items)):
+    for i in range(len(items)):
         key, value = (items[i][:items[i].find('_')], items[i][items[i].find('_')+1:])
         itemsdict[key] = value
     return itemsdict
