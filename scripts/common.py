@@ -135,7 +135,8 @@ def escape_tex(text):
     """Substitutes characters for generating LaTeX sources files from Python."""
     return text.replace(
                 '%', '\%').replace(
-                '_', '\_')
+                '_', '\_').replace(
+                '&', '\&')
 
 def isstring(s):
     """Return true if a variable is a string"""

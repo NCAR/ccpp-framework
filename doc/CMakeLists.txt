@@ -25,3 +25,7 @@ if(BUILD_DOCUMENTATION)
         VERBATIM)
 endif()
 
+set(gmtb_sty_in ${CMAKE_CURRENT_SOURCE_DIR}/DevelopersGuide/gmtb.sty)
+set(gmtb_sty ${CMAKE_CURRENT_BINARY_DIR}/DevelopersGuide/gmtb.sty)
+
+configure_file(${gmtb_sty_in} ${gmtb_sty} @ONLY)
