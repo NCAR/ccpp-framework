@@ -4,6 +4,7 @@
 import collections
 import copy
 import getopt
+import filecmp
 import logging
 import os
 import sys
@@ -37,7 +38,7 @@ def extract_parents_and_indices_from_local_name(local_name):
     # First, extract all variables/indices in parentheses (used for subsetting)
     indices = []
     while '(' in local_name:
-        for i in xrange(len(local_name)):
+        for i in range(len(local_name)):
             if local_name[i] == '(':
                 last_open = i
             elif local_name[i] == ')':
@@ -203,6 +204,7 @@ end module {module}
         self._subroutines = None
         self._suites      = []
         self._directory   = '.'
+        self._update_api  = True
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -223,6 +225,15 @@ end module {module}
     @directory.setter
     def directory(self, value):
         self._directory = value
+
+    @property
+    def update_api(self):
+        '''Get the update_api flag.'''
+        return self._update_api
+
+    @update_api.setter
+    def update_api(self, value):
+        self._update_api = value
 
     @property
     def module(self):
@@ -342,7 +353,21 @@ end module {module}
             filepath = os.path.split(self.filename)[0]
             if filepath and not os.path.isdir(filepath):
                 os.makedirs(filepath)
-            f = open(self.filename, 'w')
+            # If the file exists, write to temporary file first and compare them:
+            # - if identical, delete the temporary file and keep the existing one
+            #   and set the API update flag to false
+            # - if different, replace existing file with temporary file and set
+            #   the API update flag to true (default value)
+            # - always replace the file if any of the suite caps has changed
+            # If the file does not exist, write the API an set the flag to true
+            if os.path.isfile(self.filename) and \
+                    not any([suite.update_cap for suite in suites]):
+                write_to_test_file = True
+                test_filename = self.filename + '.test'
+                f = open(test_filename, 'w')
+            else:
+                write_to_test_file = False
+                f = open(self.filename, 'w')
         else:
             f = sys.stdout
         f.write(API.header.format(module=self._module,
@@ -352,6 +377,21 @@ end module {module}
         f.write(Suite.footer.format(module=self._module))
         if (f is not sys.stdout):
             f.close()
+            # See comment above on updating the API or not
+            if write_to_test_file:
+                if filecmp.cmp(self.filename, test_filename):
+                    # Files are equal, delete the test API and set update flag to False
+                    os.remove(test_filename)
+                    self.update_api = False
+                else:
+                    # Files are different, replace existing API with
+                    # the test API and set update flag to True
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
+                    self.update_api = True
+            else:
+                self.update_api = True
         return
 
     def write_sourcefile(self, source_filename):
@@ -359,7 +399,18 @@ end module {module}
         filepath = os.path.split(source_filename)[0]
         if filepath and not os.path.isdir(filepath):
             os.makedirs(filepath)
-        f = open(source_filename, 'w')
+        # If the file exists, write to temporary file first and compare them:
+        # - if identical, delete the temporary file and keep the existing one
+        # - if different, replace existing file with temporary file
+        # - however, always replace the file if the API update flag is true
+        if os.path.isfile(source_filename) and not self.update_api:
+            write_to_test_file = True
+            test_filename = source_filename + '.test'
+            f = open(test_filename, 'w')
+        else:
+            write_to_test_file = False
+            f = open(source_filename, 'w')
+        # Contents of shell/source file
         contents = """# The CCPP static API is defined here.
 #
 # This file is auto-generated using ccpp_prebuild.py
@@ -369,7 +420,18 @@ export CCPP_STATIC_API=\"{filename}\"
 """.format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
         f.write(contents)
         f.close()
+        # See comment above on updating the API or not
+        if write_to_test_file:
+            if filecmp.cmp(source_filename, test_filename):
+                # Files are equal, delete the test file
+                os.remove(test_filename)
+            else:
+                # Files are different, replace existing file
+                # Python 3 only: os.replace(test_filename, source_filename)
+                os.remove(source_filename)
+                os.rename(test_filename, source_filename)
         return success
+
 
 class Suite(object):
 
@@ -426,6 +488,7 @@ end module {module}
 
     def __init__(self, **kwargs):
         self._name = None
+        self._filename = sys.stdout
         self._sdf_name = None
         self._all_schemes_called = None
         self._all_subroutines_called = None
@@ -434,6 +497,7 @@ end module {module}
         self._subroutines = None
         self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
         self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
+        self._update_cap = True
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -450,6 +514,24 @@ end module {module}
     @sdf_name.setter
     def sdf_name(self, value):
         self._sdf_name = value
+
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+    @property
+    def update_cap(self):
+        '''Get the update_cap flag.'''
+        return self._update_cap
+
+    @update_cap.setter
+    def update_cap(self, value):
+        self._update_cap = value
 
     def parse(self):
         '''Parse the suite definition file.'''
@@ -512,10 +594,10 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the suite.'''
-        print "ALL SUBROUTINES:"
-        print self._all_subroutines_called
-        print "STRUCTURED:"
-        print self._groups
+        print("ALL SUBROUTINES:")
+        print(self._all_subroutines_called)
+        print("STRUCTURED:")
+        print(self._groups)
         for group in self._groups:
             group.print_debug()
 
@@ -572,7 +654,7 @@ end module {module}
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
         self._module = 'ccpp_{suite_name}_cap'.format(suite_name=self._name)
-        self._filename = '{module_name}.F90'.format(module_name=self._module)
+        self.filename = '{module_name}.F90'.format(module_name=self._module)
         # Init
         self._subroutines = []
         # Write group caps and generate module use statements; combine the argument lists
@@ -627,8 +709,26 @@ end module {module}
                                      body=body)
 
         # Write cap to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
+        if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            # If the file exists, write to temporary file first and compare them:
+            # - if identical, delete the temporary file and keep the existing one
+            #   and set the suite cap update flag to false
+            # - if different, replace existing file with temporary file and set
+            #   the suite cap update flag to true (default value)
+            # - however, if any of the group caps has changed, rewrite the suite
+            #   cap as well and set the suite cap update flag to true
+            # If the file does not exist, write the cap an set the flag to true
+            if os.path.isfile(self.filename) and \
+                    not any([group.update_cap for group in self._groups]):
+                write_to_test_file = True
+                test_filename = self.filename + '.test'
+                f = open(test_filename, 'w')
+            else:
+                write_to_test_file = False
+                f = open(self.filename, 'w')
         else:
             f = sys.stdout
         f.write(Suite.header.format(module=self._module,
@@ -638,9 +738,25 @@ end module {module}
         f.write(Suite.footer.format(module=self._module))
         if (f is not sys.stdout):
             f.close()
+            # See comment above on updating the suite cap or not
+            if write_to_test_file:
+                if filecmp.cmp(self.filename, test_filename):
+                    # Files are equal, delete the test cap
+                    # and set update flag to False
+                    os.remove(test_filename)
+                    self.update_cap = False
+                else:
+                    # Files are different, replace existing cap
+                    # with test cap and set flag to True
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
+                    self.update_cap = True
+            else:
+                self.update_cap = True
 
         # Create list of all caps generated (for groups and suite)
-        self._caps = [ self._filename ]
+        self._caps = [ self.filename ]
         for group in self._groups:
             self._caps.append(group.filename)
 
@@ -735,7 +851,7 @@ end module {module}
     def __init__(self, **kwargs):
         self._name = ''
         self._suite = None
-        self._filename = 'sys.stdout'
+        self._filename = sys.stdout
         self._init = False
         self._finalize = False
         self._module = None
@@ -743,6 +859,7 @@ end module {module}
         self._pset = None
         self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
         self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
+        self._update_cap = True
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -827,12 +944,12 @@ end module {module}
                             for local_name_define in [parent_local_name_define] + parent_local_names_define_indices:
                                 parent_standard_name = None
                                 parent_var = None
-                                for i in xrange(FORTRAN_ARRAY_MAX_DIMS+1):
+                                for i in range(FORTRAN_ARRAY_MAX_DIMS+1):
                                     if i==0:
                                         dims_string = ''
                                     else:
                                         # (:) for i==1, (:,:) for i==2, ...
-                                        dims_string = '(' + ','.join([':' for j in xrange(i)]) + ')'
+                                        dims_string = '(' + ','.join([':' for j in range(i)]) + ')'
                                     if local_name_define+dims_string in standard_name_by_local_name_define.keys():
                                         parent_standard_name = standard_name_by_local_name_define[local_name_define+dims_string]
                                         parent_var = metadata_define[parent_standard_name][0]
@@ -989,7 +1106,22 @@ end module {module}
 
         # Write output to stdout or file
         if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            # If the file exists, write to temporary file first and compare them:
+            # - if identical, delete the temporary file and keep the existing one
+            #   and set the group cap update flag to false
+            # - if different, replace existing file with temporary file and set
+            #   the group cap update flag to true (default value)
+            # If the file does not exist, write the cap an set the flag to true
+            if os.path.isfile(self.filename):
+                write_to_test_file = True
+                test_filename = self.filename + '.test'
+                f = open(test_filename, 'w')
+            else:
+                write_to_test_file = False
+                f = open(self.filename, 'w')
         else:
             f = sys.stdout
         f.write(Group.header.format(group=self._name,
@@ -1000,7 +1132,22 @@ end module {module}
         f.write(Group.footer.format(module=self._module))
         if (f is not sys.stdout):
             f.close()
-
+            # See comment above on updating the group cap or not
+            if write_to_test_file:
+                if filecmp.cmp(self.filename, test_filename):
+                    # Files are equal, delete the test cap
+                    # and set update flag to False
+                    os.remove(test_filename)
+                    self.update_cap = False
+                else:
+                    # Files are different, replace existing cap
+                    # with test cap and set flag to True
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
+                    self.update_cap = True
+            else:
+                self.update_cap = True
         return
 
     @property
@@ -1020,6 +1167,15 @@ end module {module}
     @filename.setter
     def filename(self, value):
         self._filename = value
+
+    @property
+    def update_cap(self):
+        '''Get the update_cap flag.'''
+        return self._update_cap
+
+    @update_cap.setter
+    def update_cap(self, value):
+        self._update_cap = value
 
     @property
     def init(self):
@@ -1065,7 +1221,7 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the group.'''
-        print self._name
+        print(self._name)
         for subcycle in self._subcycles:
             subcycle.print_debug()
 
@@ -1129,9 +1285,9 @@ class Subcycle(object):
 
     def print_debug(self):
         '''Basic debugging output about the subcycle.'''
-        print self._loop
+        print(self._loop)
         for scheme in self._schemes:
-            print scheme
+            print(scheme)
 
 
 ###############################################################################
