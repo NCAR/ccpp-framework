@@ -362,6 +362,46 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
     for each subroutine."""
     logging.info('Checking optional arguments in physics schemes ...')
     success = True
+
+    # First make sure that the CCPP prebuild config entry doesn't contain any variables that are unknown
+    # (by standard name), or that it lists variables as optional arguments that aren't declared as optional
+    for module_name in optional_arguments.keys():
+        # Skip modules that have been filtered out (because they are not used by the selected suites, for example)
+        if module_name in arguments.keys():
+            # DH* 2020-05-26
+            # This is a test/workaround for some legacy code. It is actually required that
+            # module_name == scheme_name (see metadata_parser.py, around line 528).
+            for scheme_name in arguments[module_name].keys():
+                if not scheme_name == module_name:
+                    raise Exception("Found example for scheme_name /= module_name: {} vs. {}".format(module_name, scheme_name))
+            scheme_name = module_name
+            # *DH 2020-05-26
+            for subroutine_name in optional_arguments[module_name].keys():
+                # If optional arguments are listed individually, check each of them
+                if type(optional_arguments[module_name][subroutine_name]) is list:
+                    for var_name in optional_arguments[module_name][subroutine_name]:
+                        if not var_name in arguments[module_name][scheme_name][subroutine_name]:
+                            raise Exception("Explicitly requested optional argument '{}' not known to {}/{}".format(
+                                                                            var_name, module_name, subroutine_name))
+                        else:
+                            for var in metadata[var_name][:]:
+                                for item in var.container.split(' '):
+                                    subitems = item.split('_')
+                                    if subitems[0] == 'MODULE':
+                                        module_name_test = '_'.join(subitems[1:])
+                                    elif subitems[0] == 'SCHEME':
+                                        scheme_name_test = '_'.join(subitems[1:])
+                                    elif subitems[0] == 'SUBROUTINE':
+                                        subroutine_name_test = '_'.join(subitems[1:])
+                                    else:
+                                        success = False
+                                        logging.error('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
+                                                                                                 subitems[0], var.container, var_name))
+                                if module_name_test == module_name and scheme_name_test == scheme_name \
+                                        and subroutine_name_test == subroutine_name and not var.optional in ['t', 'T']:
+                                    raise Exception("Variable {} in {} / {}".format(var_name, module_name, subroutine_name) + \
+                                                " is not an optional argument, but listed as such in the CCPP prebuild config")
+
     for var_name in sorted(metadata.keys()):
         # The notation metadata[var_name][:] is a convenient way to make a copy
         # of the metadata[var_name] list, which allows removing items as we go
@@ -376,14 +416,12 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
                     elif subitems[0] == 'SUBROUTINE':
                         subroutine_name = '_'.join(subitems[1:])
                     else:
-                        success = False
-                        logging.error('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
-                                                                                 subitems[0], var.container, var_name))
+                        raise Exception('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
+                                                                                   subitems[0], var.container, var_name))
                 if not module_name in optional_arguments.keys() or not \
                         subroutine_name in optional_arguments[module_name].keys():
-                    success = False
-                    logging.error('No entry found in optional_arguments dictionary for optional argument ' + \
-                                  '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, module_name))
+                    raise Exception('No entry found in optional_arguments dictionary for optional argument ' + \
+                                    '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, module_name))
                 if type(optional_arguments[module_name][subroutine_name]) is list:
                     if var_name in optional_arguments[module_name][subroutine_name]:
                         logging.debug('Optional argument {0} to subroutine {1} in module {2} is required, keep in list'.format(
