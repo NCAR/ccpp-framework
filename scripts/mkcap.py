@@ -191,13 +191,11 @@ class Var(object):
                    (self.kind.startswith('len=') and other.kind == 'len=*'):
                 return self.standard_name == other.standard_name \
                     and self.type == other.type \
-                    and self.rank == other.rank \
-                    and self.active == other.active
+                    and self.rank == other.rank
         return self.standard_name == other.standard_name \
             and self.type == other.type \
             and self.kind == other.kind \
-            and self.rank == other.rank \
-            and self.active == other.active
+            and self.rank == other.rank
 
     def convert_to(self, units):
         """Generate action to convert data in the variable's units to other units"""
@@ -284,7 +282,7 @@ class Var(object):
         kind          = {s.kind} *
         intent        = {s.intent}
         optional      = {s.optional}
-        active        = {s.active} *
+        active        = {s.active}
         target        = {s.target}
         container     = {s.container}
         actions       = {s.actions}'''

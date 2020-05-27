@@ -963,9 +963,7 @@ end module {module}
                                     additional_variables_required.append(CCPP_HORIZONTAL_DIMENSION)
 
                         # If the variable is only active/used under certain conditions, add necessary variables
-                        # also record the conditional for later use in unit conversions / blocked data conversions
-                        # Check if the variable is only used/allocated under certain conditions
-                        logging.critical('{}: active = "{}"'.format(var_standard_name, var.active))
+                        # also record the conditional for later use in unit conversions / blocked data conversions.
                         if var.active == 'T':
                             conditional = '.true.'
                         elif var.active == 'F':
@@ -980,16 +978,21 @@ end module {module}
                                 if item in FORTRAN_CONDITIONAL_REGEX_WORDS:
                                     conditional += item
                                 else:
-                                    if not item in metadata_define.keys():
-                                        raise Exception("Variable {} used in conditional for {} not known to host model".format(
-                                                                                                       item, var_standard_name))
-                                    var2 = metadata_define[item][0]
-                                    conditional += var2.local_name
-                                    # Add to list of required variables for the cap
-                                    if not item in local_vars.keys() \
-                                            and not item in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
-                                        logging.debug("Adding variable {} for handling conditionals".format(item))
-                                        additional_variables_required.append(item)
+                                    # Detect integers, following Python's "easier to ask forgiveness than permission" mentality
+                                    try:
+                                        int(item)
+                                        conditional += item
+                                    except ValueError:
+                                        if not item in metadata_define.keys():
+                                            raise Exception("Variable {} used in conditional for {} not known to host model".format(
+                                                                                                           item, var_standard_name))
+                                        var2 = metadata_define[item][0]
+                                        conditional += var2.local_name
+                                        # Add to list of required variables for the cap
+                                        if not item in local_vars.keys() \
+                                                and not item in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
+                                            logging.debug("Adding variable {} for handling conditionals".format(item))
+                                            additional_variables_required.append(item)
                         # Conditionals are identical per requirement, no need to test for consistency again
                         if not var_standard_name in conditionals.keys():
                             conditionals[var_standard_name] = conditional

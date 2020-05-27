@@ -18,7 +18,9 @@ CCPP_THREAD_NUMBER       = 'ccpp_thread_number'
 CCPP_HORIZONTAL_LOOP_EXTENT = 'horizontal_loop_extent'
 CCPP_HORIZONTAL_DIMENSION   = 'horizontal_dimension'
 
-FORTRAN_CONDITIONAL_REGEX_WORDS = [' ', '(', ')', '==', '/=', '<=', '>=', '<', '>', '.true.','.false.','.lt.','.le.','.eq.','.ge.','.gt.','.ne.','.and.','.or.']
+FORTRAN_CONDITIONAL_REGEX_WORDS = [' ', '(', ')', '==', '/=', '<=', '>=', '<', '>', '.eqv.', '.neqv.',
+                                   '.true.', '.false.', '.lt.', '.le.', '.eq.', '.ge.', '.gt.', '.ne.',
+                                   '.not.', '.and.', '.or.', '.xor.']
 FORTRAN_CONDITIONAL_REGEX = re.compile(r"[\w']+|" + "|".join([word.replace('(','\(').replace(')', '\)') for word in FORTRAN_CONDITIONAL_REGEX_WORDS]))
 
 CCPP_TYPE = 'ccpp_t'
