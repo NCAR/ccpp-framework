@@ -28,11 +28,12 @@ class Var(object):
         self._units         = None
         self._local_name    = None
         self._type          = None
-        self._rank          = None
+        self._dimensions    = []
         self._container     = None
         self._kind          = None
         self._intent        = None
         self._optional      = None
+        self._active        = None
         self._target        = None
         self._actions       = { 'in' : None, 'out' : None }
         for key, value in kwargs.items():
@@ -84,18 +85,23 @@ class Var(object):
         self._type = value
 
     @property
+    def dimensions(self):
+        '''Get the dimensions of the variable.'''
+        return self._dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        if not type(value) is list:
+            raise TypeError('Invalid type for variable property dimensions, must be a list')
+        self._dimensions = value
+
+    @property
     def rank(self):
         '''Get the rank of the variable.'''
-        return self._rank
-
-    @rank.setter
-    def rank(self, value):
-        if not isinstance(value, int):
-            raise TypeError('Invalid type for variable property rank, must be integer')
-        if (value == 0):
-            self._rank = ''
+        if len(self._dimensions) == 0:
+            return ''
         else:
-            self._rank = '('+ ','.join([':'] * value) +')'
+            return '('+ ','.join([':'] * len(self._dimensions)) +')'
 
     @property
     def kind(self):
@@ -119,7 +125,7 @@ class Var(object):
 
     @property
     def optional(self):
-        '''Get the optional of the variable.'''
+        '''Get the optional attribute of the variable.'''
         return self._optional
 
     @optional.setter
@@ -127,6 +133,17 @@ class Var(object):
         if not value in ['T', 'F']:
             raise ValueError('Invalid value {0} for variable property optional'.format(value))
         self._optional = value
+
+    @property
+    def active(self):
+        '''Get the active attribute of the variable.'''
+        return self._active
+
+    @active.setter
+    def active(self, value):
+        if not isinstance(value, str):
+            raise ValueError('Invalid value {0} for variable property active, must be a string'.format(value))
+        self._active = value
 
     @property
     def target(self):
@@ -153,7 +170,7 @@ class Var(object):
 
     @actions.setter
     def actions(self, values):
-        if type(value)==dict:
+        if type(values)==dict:
             for key in values.keys():
                 if key in ['in', 'out'] and isstring(values[key]):
                     self._actions[key] = values[key]
@@ -174,11 +191,13 @@ class Var(object):
                    (self.kind.startswith('len=') and other.kind == 'len=*'):
                 return self.standard_name == other.standard_name \
                     and self.type == other.type \
-                    and self.rank == other.rank
+                    and self.rank == other.rank \
+                    and self.active == other.active
         return self.standard_name == other.standard_name \
             and self.type == other.type \
             and self.kind == other.kind \
-            and self.rank == other.rank
+            and self.rank == other.rank \
+            and self.active == other.active
 
     def convert_to(self, units):
         """Generate action to convert data in the variable's units to other units"""
@@ -260,28 +279,16 @@ class Var(object):
         units         = {s.units} *
         local_name    = {s.local_name}
         type          = {s.type} *
+        dimensions    = {s.dimensions}
         rank          = {s.rank} *
         kind          = {s.kind} *
         intent        = {s.intent}
         optional      = {s.optional}
+        active        = {s.active} *
         target        = {s.target}
         container     = {s.container}
         actions       = {s.actions}'''
         return str.format(s=self)
-
-    @classmethod
-    def from_table(cls, columns, data):
-        var = cls()
-        var.standard_name = data[columns.index('standard_name')]
-        var.long_name     = data[columns.index('long_name')]
-        var.units         = data[columns.index('units')]
-        var.local_name    = data[columns.index('local_name')]
-        var.rank          = int(data[columns.index('rank')])
-        var.type          = data[columns.index('type')]
-        var.kind          = data[columns.index('kind')]
-        var.intent        = data[columns.index('intent')]
-        var.optional      = data[columns.index('optional')]
-        return var
 
 class CapsMakefile(object):
 
