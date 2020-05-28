@@ -1028,7 +1028,7 @@ end module {module}
                             # if they are registered (i.e. if there is a standard name for it). Note that
                             # the output of extract_parents_and_indices_from_local_name is stripped of any
                             # array subset information, i.e. a local name 'Atm(:)%...' will produce a
-                            # parent local name 'Atm'. Since the rank of tha parent variable is not known
+                            # parent local name 'Atm'. Since the rank of the parent variable is not known
                             # at this point and since the local name in the host model metadata table could
                             # contain '(:)', '(:,:)', ... (up to the rank of the array), we search for the
                             # maximum number of dimensions allowed by the Fortran standard.
