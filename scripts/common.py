@@ -11,7 +11,17 @@ CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
 CCPP_LOOP_COUNTER        = 'ccpp_loop_counter'
 CCPP_BLOCK_NUMBER        = 'ccpp_block_number'
+CCPP_BLOCK_COUNT         = 'ccpp_block_count'
+CCPP_BLOCK_SIZES         = 'ccpp_block_sizes'
 CCPP_THREAD_NUMBER       = 'ccpp_thread_number'
+
+CCPP_HORIZONTAL_LOOP_EXTENT = 'horizontal_loop_extent'
+CCPP_HORIZONTAL_DIMENSION   = 'horizontal_dimension'
+
+FORTRAN_CONDITIONAL_REGEX_WORDS = [' ', '(', ')', '==', '/=', '<=', '>=', '<', '>', '.eqv.', '.neqv.',
+                                   '.true.', '.false.', '.lt.', '.le.', '.eq.', '.ge.', '.gt.', '.ne.',
+                                   '.not.', '.and.', '.or.', '.xor.']
+FORTRAN_CONDITIONAL_REGEX = re.compile(r"[\w']+|" + "|".join([word.replace('(','\(').replace(')', '\)') for word in FORTRAN_CONDITIONAL_REGEX_WORDS]))
 
 CCPP_TYPE = 'ccpp_t'
 
@@ -135,7 +145,8 @@ def escape_tex(text):
     """Substitutes characters for generating LaTeX sources files from Python."""
     return text.replace(
                 '%', '\%').replace(
-                '_', '\_')
+                '_', '\_').replace(
+                '&', '\&')
 
 def isstring(s):
     """Return true if a variable is a string"""
