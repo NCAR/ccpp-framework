@@ -55,18 +55,19 @@ def execute(cmd, abort = True):
     status = p.returncode
     if debug:
         message = 'Execution of "{0}" returned with exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.rstrip('\n'))
+        message += '    stdout: "{0}"\n'.format(stdout.decode(encoding='ascii', errors='ignore').rstrip('\n'))
+        message += '    stderr: "{0}"'.format(stderr.decode(encoding='ascii', errors='ignore').rstrip('\n'))
         logging.debug(message)
     if not status == 0:
         message = 'Execution of command {0} failed, exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.rstrip('\n'))
+        message += '    stdout: "{0}"\n'.format(stdout.decode(encoding='ascii', errors='ignore').rstrip('\n'))
+        message += '    stderr: "{0}"'.format(stderr.decode(encoding='ascii', errors='ignore').rstrip('\n'))
         if abort:
             raise Exception(message)
         else:
             logging.error(message)
-    return (status, stdout.rstrip('\n'), stderr.rstrip('\n'))
+    return (status, stdout.decode(encoding='ascii', errors='ignore').rstrip('\n'),
+                    stderr.decode(encoding='ascii', errors='ignore').rstrip('\n'))
 
 def indent(elem, level=0):
     """Subroutine for writing "pretty" XML; copied from
