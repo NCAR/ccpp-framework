@@ -52,7 +52,7 @@ _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _SCRIPTS_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir,
                                             os.pardir, "scripts"))
 if not os.path.exists(_SCRIPTS_DIR):
-   raise ImportError("Cannot find scripts directory")
+    raise ImportError("Cannot find scripts directory")
 
 sys.path.append(_SCRIPTS_DIR)
 
@@ -61,45 +61,46 @@ from ccpp_capgen import parse_scheme_files
 # pylint: enable=wrong-import-position
 
 class MetadataHeaderTestCase(unittest.TestCase):
+    """Unit tests for parse_scheme_files"""
 
-   def setUp(self):
-      """Setup important directories and logging"""
-      self._sample_files_dir = os.path.join(_TEST_DIR, "sample_scheme_files")
-      self._logger = logging.getLogger(self.__class__.__name__)
+    def setUp(self):
+        """Setup important directories and logging"""
+        self._sample_files_dir = os.path.join(_TEST_DIR, "sample_scheme_files")
+        self._logger = logging.getLogger(self.__class__.__name__)
 
-   def test_good_scheme_file(self):
-      """Test that good metadata file matches the Fortran, with routines in the same order """
-      #Setup
-      scheme_files = [os.path.join(self._sample_files_dir, "temp_adjust.meta")]
-      preproc_defs={}
-      #Exercise
-      scheme_headers = parse_scheme_files(scheme_files, preproc_defs,
+    def test_good_scheme_file(self):
+        """Test that good metadata file matches the Fortran, with routines in the same order """
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "temp_adjust.meta")]
+        preproc_defs = {}
+        #Exercise
+        scheme_headers = parse_scheme_files(scheme_files, preproc_defs,
                                           self._logger)
-      #Verify size of returned list equals number of scheme headers in the test file
-      #       and that header (subroutine) names are 'temp_adjust_[init,run,finalize]'
-      self.assertEqual(len(scheme_headers), 3)
-      #Verify header titles
-      titles = [elem.title for elem in scheme_headers]
-      self.assertTrue('temp_adjust_init' in titles)
-      self.assertTrue('temp_adjust_run' in titles)
-      self.assertTrue('temp_adjust_finalize' in titles)
+        #Verify size of returned list equals number of scheme headers in the test file
+        #       and that header (subroutine) names are 'temp_adjust_[init,run,finalize]'
+        self.assertEqual(len(scheme_headers), 3)
+        #Verify header titles
+        titles = [elem.title for elem in scheme_headers]
+        self.assertTrue('temp_adjust_init' in titles)
+        self.assertTrue('temp_adjust_run' in titles)
+        self.assertTrue('temp_adjust_finalize' in titles)
 
-   def test_reordered_scheme_file(self):
-      """Test that metadata file matches the Fortran when the routines are not in the same order """
-      #Setup
-      scheme_files = [os.path.join(self._sample_files_dir, "reorder.meta")]
-      preproc_defs={}
-      #Exercise
-      scheme_headers = parse_scheme_files(scheme_files, preproc_defs,
-                                          self._logger)
-      #Verify size of returned list equals number of scheme headers in the test file
-      #       and that header (subroutine) names are 'reorder_[init,run,finalize]'
-      self.assertEqual(len(scheme_headers), 3)
-      #Verify header titles
-      titles = [elem.title for elem in scheme_headers]
-      self.assertTrue('reorder_init' in titles)
-      self.assertTrue('reorder_run' in titles)
-      self.assertTrue('reorder_finalize' in titles)
+    def test_reordered_scheme_file(self):
+        """Test that metadata file matches the Fortran when the routines are not in the same order """
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "reorder.meta")]
+        preproc_defs = {}
+        #Exercise
+        scheme_headers = parse_scheme_files(scheme_files, preproc_defs,
+                                            self._logger)
+        #Verify size of returned list equals number of scheme headers in the test file
+        #       and that header (subroutine) names are 'reorder_[init,run,finalize]'
+        self.assertEqual(len(scheme_headers), 3)
+        #Verify header titles
+        titles = [elem.title for elem in scheme_headers]
+        self.assertTrue('reorder_init' in titles)
+        self.assertTrue('reorder_run' in titles)
+        self.assertTrue('reorder_finalize' in titles)
 
 if __name__ == '__main__':
     unittest.main()
