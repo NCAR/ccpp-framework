@@ -8,7 +8,7 @@ endif (NOT PROJECT)
 cmake_minimum_required(VERSION 3.0)
 
 project(ccpp
-        VERSION 3.0.0
+        VERSION 4.0.0
         LANGUAGES C CXX Fortran)
 
 # Use rpaths on MacOSX
@@ -17,30 +17,16 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif(POLICY CMP0042)
 
-#Setting this policy was required when building with the SCM. Without it, the
-#    STATIC cmake variable was getting cleared, making this CMakeLists.txt 
-#    assume a dynamic build.
-if(POLICY CMP0077)
-    cmake_policy(SET CMP0077 NEW)
-endif(POLICY CMP0077)
-
 #------------------------------------------------------------------------------
 # Set package definitions
 set(PACKAGE "ccpp-framework")
-set(AUTHORS "Dom Heinzeller" "Timothy Brown" "David Gill")
+set(AUTHORS "Dom Heinzeller" "Grant Firl" "Laurie Carson")
 string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
 # CMake Modules
 # Set the CMake module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
-#------------------------------------------------------------------------------
-# Static or dynamic CCPP, default is dynamic; standalone build can only be dynamic
-option(STATIC "Build a static CCPP" OFF)
-if (PROJECT STREQUAL "Unknown" AND STATIC)
-    message(FATAL_ERROR "ccpp-framework standalone build can only be dynamic")
-endif(PROJECT STREQUAL "Unknown" AND STATIC)
 
 #------------------------------------------------------------------------------
 # Set OpenMP flags for C/C++/Fortran
@@ -88,12 +74,8 @@ if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
 endif()
 
 #------------------------------------------------------------------------------
-# By default we want a shared library (unless a static build is requested)
-if(STATIC)
-  option(BUILD_SHARED_LIBS "Build a static library" OFF)
-else(STATIC)
-  option(BUILD_SHARED_LIBS "Build a shared library" ON)
-endif(STATIC)
+# Request a static build
+option(BUILD_SHARED_LIBS "Build a static library" OFF)
 
 #------------------------------------------------------------------------------
 # Enable code coverage
@@ -112,8 +94,6 @@ enable_testing()
 add_subdirectory(src)
 # Documentation
 add_subdirectory(doc)
-# All schemes
-add_subdirectory(schemes)
 
 #------------------------------------------------------------------------------
 # Configure and enable packaging
