@@ -102,5 +102,66 @@ class MetadataHeaderTestCase(unittest.TestCase):
         self.assertTrue('reorder_run' in titles)
         self.assertTrue('reorder_finalize' in titles)
 
+    def test_missing_metadata_header(self):
+        """Test that a missing metadata header (aka arg table) is corretly detected """
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "missing_arg_table.meta")]
+        preproc_defs = {}
+        #Exercise
+        with self.assertRaises(Exception) as context:
+            parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify correct error message returned
+        emsg = "No matching metadata header found for missing_arg_table_run in"
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_missing_fortran_header(self):
+        """Test that a missing fortran header is corretly detected """
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "missing_fort_header.meta")]
+        preproc_defs = {}
+        #Exercise
+        with self.assertRaises(Exception) as context:
+            parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify correct error message returned
+        emsg = "No matching Fortran routine found for missing_fort_header_run in"
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_mismatch_intent(self):
+        """Test that differing intent, kind, rank, and type between metadata and fortran is corretly detected """
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "mismatch_intent.meta")]
+        preproc_defs = {}
+        #Exercise
+        with self.assertRaises(Exception) as context:
+            parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify 4 correct error messages returned
+        self.assertTrue('intent mismatch (in != inout) in mismatch_intent_run, at' in str(context.exception))
+        self.assertTrue('kind mismatch (kind_fizz != kind_phys) in mismatch_intent_run, at' in str(context.exception))
+        self.assertTrue('rank mismatch in mismatch_intent_run/potential_temperature (0 != 1), at' in str(context.exception))
+        self.assertTrue('type mismatch (integer != real) in mismatch_intent_run, at' in str(context.exception))
+        self.assertTrue('4 errors found comparing' in str(context.exception))
+
+    def test_invalid_subr_stmnt(self):
+        """Test that invalid Fortran subroutine statements are correctly detected """
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "invalid_subr_stmnt.meta")]
+        preproc_defs = {}
+        #Exercise
+        with self.assertRaises(Exception) as context:
+            parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify correct error message returned
+        self.assertTrue("Invalid dummy argument, 'temp_prev', at" in str(context.exception))
+
+    def test_invalid_dummy_arg(self):
+        """Test that invalid dummy argument statements are correctly detected """
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "invalid_dummy_arg.meta")]
+        preproc_defs = {}
+        #Exercise
+        with self.assertRaises(Exception) as context:
+            parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify correct error message returned
+        self.assertTrue("Invalid dummy argument, 'woohoo', at" in str(context.exception))
+
 if __name__ == '__main__':
     unittest.main()
