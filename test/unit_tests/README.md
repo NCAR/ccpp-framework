@@ -37,3 +37,9 @@ If you have `coverage` installed, to get test coverage:
 coverage run test_metadata_table.py
 coverage report -m
 ```
+To check source code quality with pylint:
+```
+cd <root>
+env PYTHONPATH=scripts:${PYTHONPATH} pylint --rcfile ./test/.pylintrc ./test/unit_tests/test_metadata_table.py
+env PYTHONPATH=scripts:${PYTHONPATH} pylint --rcfile ./test/.pylintrc ./test/unit_tests/test_metadata_scheme_file.py
+```

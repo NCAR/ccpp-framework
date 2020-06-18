@@ -8,9 +8,7 @@ MODULE invalid_dummy_arg
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: invalid_dummy_arg_init
   PUBLIC :: invalid_dummy_arg_run
-  PUBLIC :: invalid_dummy_arg_finalize
 
 CONTAINS
 
@@ -41,35 +39,5 @@ CONTAINS
     end do
 
   END SUBROUTINE invalid_dummy_arg_run
-
-  !> \section arg_table_invalid_dummy_arg_init  Argument Table
-  !! \htmlinclude arg_table_invalid_dummy_arg_init.html
-  !!
-  subroutine invalid_dummy_arg_init (errmsg, errflg)
-
-    character(len=512),      intent(out)   :: errmsg
-    integer,                 intent(out)   :: errflg
-
-    ! This routine currently does nothing
-
-    errmsg = ''
-    errflg = 0
-
-  end subroutine invalid_dummy_arg_init
-
-  !> \section arg_table_invalid_dummy_arg_finalize  Argument Table
-  !! \htmlinclude arg_table_invalid_dummy_arg_finalize.html
-  !!
-  subroutine invalid_dummy_arg_finalize (errmsg, errflg)
-
-    character(len=512),      intent(out)   :: errmsg
-    integer,                 intent(out)   :: errflg
-
-    ! This routine currently does nothing
-
-    errmsg = ''
-    errflg = 0
-
-  end subroutine invalid_dummy_arg_finalize
 
 END MODULE invalid_dummy_arg

@@ -150,7 +150,7 @@ class MetadataHeaderTestCase(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             parse_scheme_files(scheme_files, preproc_defs, self._logger)
         #Verify correct error message returned
-        self.assertTrue("Invalid dummy argument, 'temp_prev', at" in str(context.exception))
+        self.assertTrue("Invalid dummy argument, 'errmsg', at" in str(context.exception))
 
     def test_invalid_dummy_arg(self):
         """Test that invalid dummy argument statements are correctly detected """
