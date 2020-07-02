@@ -92,6 +92,30 @@ def d__to__s():
     return '8.64E+4{kind}*{var}'
 
 ##################
+# Temperature    #
+##################
+
+def K__to__C():
+    """Convert Kelvin to Celcius"""
+    return '{var}-273.15{kind}'
+
+def C__to__K():
+    """Convert Celcius to Kelvin"""
+    return '{var}+273.15{kind}'
+
+##################
+# Mass           #
+##################
+
+def kg_kg_minus_1__to__g_kg_minus_1():
+    """Convert kilogram per kilogram to gram per kilogram"""
+    return '1.0E+3{kind}*{var}'
+
+def g_kg_minus_1__to__kg_kg_minus_1():
+    """Convert gram per kilogram to kilogram per kilogram"""
+    return '{var}/1.0E+3{kind}'
+
+##################
 # Composed units #
 ##################
 
