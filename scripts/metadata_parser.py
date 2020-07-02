@@ -34,20 +34,24 @@ CCPP_MANDATORY_VARIABLES = {
                                long_name     = 'error message for error handling in CCPP',
                                units         = 'none',
                                type          = 'character',
+                               dimensions    = [],
                                rank          = '',
                                kind          = 'len=*',
                                intent        = 'out',
-                               optional      = 'F'
+                               optional      = 'F',
+                               active        = 'T',
                                ),
     'ccpp_error_flag' : Var(local_name    = 'ierr',
                             standard_name = 'ccpp_error_flag',
                             long_name     = 'error flag for error handling in CCPP',
                             units         = 'flag',
                             type          = 'integer',
+                            dimensions    = [],
                             rank          = '',
                             kind          = '',
                             intent        = 'out',
-                            optional      = 'F'
+                            optional      = 'F',
+                            active        = 'T',
                             ),
     }
 
@@ -120,22 +124,56 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             container = encode_container(module_name, scheme_name, table_name)
         for new_var in new_metadata_header.variable_list():
             standard_name = new_var.get_prop_value('standard_name')
-            rank = len(new_var.get_prop_value('dimensions'))
+            # DH* 2020-05-26
+            # Legacy extension for inconsistent metadata (use of horizontal_dimension versus horizontal_loop_extent).
+            # Since horizontal_dimension and horizontal_loop_extent have the same attributes (otherwise it doesn't
+            # make sense), we swap the standard name and add a note to the long name
+            legacy_note = ''
+            if standard_name == 'horizontal_loop_extent' and scheme_name and \
+                    (table_name.endswith("_init") or table_name.endswith("finalize")):
+                logging.warn("Legacy extension - replacing variable 'horizontal_loop_extent'" + \
+                             " with 'horizontal_dimension' in table {}".format(table_name))
+                standard_name = 'horizontal_dimension'
+                legacy_note = ' replaced by horizontal dimension (legacy extension)'
+            elif standard_name == 'horizontal_dimension' and scheme_name and table_name.endswith("_run"):
+                logging.warn("Legacy extension - replacing variable 'horizontal_dimension' " + \
+                             "with 'horizontal_loop_extent' in table {}".format(table_name))
+                standard_name = 'horizontal_loop_extent'
+                legacy_note = ' replaced by horizontal loop extent (legacy extension)'
+            # Adjust dimensions
+            dimensions = new_var.get_prop_value('dimensions')
+            if scheme_name and (table_name.endswith("_init") or table_name.endswith("finalize")) \
+                    and 'horizontal_loop_extent' in dimensions:
+                logging.warn("Legacy extension - replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
+                             "for variable {} in table {}".format(standard_name,table_name))
+                dimensions = ['horizontal_dimension' if x=='horizontal_loop_extent' else x for x in dimensions]
+            elif scheme_name and table_name.endswith("_run") and 'horizontal_dimension' in dimensions:
+                logging.warn("Legacy extension - replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
+                             "for variable {} in table {}".format(standard_name,table_name))
+                dimensions = ['horizontal_loop_extent' if x=='horizontal_dimension' else x for x in dimensions]
+            # *DH  2020-05-26
+            if new_var.get_prop_value('active').lower() == '.true.':
+                active = 'T'
+            elif new_var.get_prop_value('active').lower() == '.false.':
+                active = 'F'
+            else:
+                # Replace multiple whitespaces and use lowercase throughout
+                active = ' '.join(new_var.get_prop_value('active').lower().split())
             var = Var(standard_name = standard_name,
-                      long_name     = new_var.get_prop_value('long_name'),
+                      long_name     = new_var.get_prop_value('long_name') + legacy_note,
                       units         = new_var.get_prop_value('units'),
                       local_name    = new_var.get_prop_value('local_name'),
                       type          = new_var.get_prop_value('type'),
+                      dimensions    = dimensions,
                       container     = container,
                       kind          = new_var.get_prop_value('kind'),
                       intent        = new_var.get_prop_value('intent'),
                       optional      = 'T' if new_var.get_prop_value('optional') else 'F',
+                      active        = active,
                       )
-            # Set rank using integer-setter method
-            var.rank = rank
             # Check for duplicates in same table
             if standard_name in metadata.keys():
-                raise Exception("Error, multiple definitions of standard name {0} in new metadata table {1}".format(standard_name, table_name))
+               raise Exception("Error, multiple definitions of standard name {0} in new metadata table {1}".format(standard_name, table_name))
             metadata[standard_name] = [var]
     return metadata
 
@@ -269,7 +307,6 @@ def parse_variable_tables(filename):
         line_counter = 0
         in_table = False
         in_type = False
-        new_metadata = False
         for line in lines[startline:endline]:
             current_line_number = startline + line_counter
 
@@ -296,7 +333,6 @@ def parse_variable_tables(filename):
                     if 'htmlinclude' in line.lower():
                         words = line.split()
                         if words[0] == '!!' and words[1] == '\\htmlinclude' and len(words) == 3:
-                            new_metadata = True
                             filename_parts = filename.split('.')
                             metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
                             this_metadata = read_new_metadata(metadata_filename, module_name, table_name)
@@ -347,65 +383,19 @@ def parse_variable_tables(filename):
                     #raise Exception("Old metadata table found for table {}".format(table_name))
                     # *DH
                     continue
-                elif current_line_number == header_line_number + 1 and not new_metadata:
-                    # Skip over separator line
-                    line_counter += 1
-                    continue
                 else:
                     if len(words) == 1:
                         # End of table
                         if words[0].strip() == '!!':
-                            if new_metadata and not current_line_number == header_line_number+1:
+                            if not current_line_number == header_line_number+1:
                                 raise Exception("Invalid definition of new metadata format in file {0}".format(filename))
                             in_table = False
-                            new_metadata = False
                             line_counter += 1
                             continue
                         else:
                             raise Exception('Encountered invalid line "{0}" in argument table {1}'.format(line, table_name))
                     else:
-                        if new_metadata:
-                            raise Exception("Invalid definition of new metadata format in file {0}: {1}".format(filename, words))
-                        var_items = [x.strip() for x in words[1:-1]]
-                        if not len(var_items) == len(table_header):
-                            raise Exception('Error parsing variable entry "{0}" in argument table {1}'.format(var_items, table_name))
-                        var_name = var_items[standard_name_index]
-                        # Skip variables without a standard_name (i.e. empty cell in column standard_name)
-                        if var_name:
-                            # Enforce CF standards: no dashes, no dots (underscores instead)
-                            if "-" in var_name:
-                                raise Exception("Invalid character '-' found in standard name {0} in table {1}".format(var_name, table_name))
-                            elif "." in var_name:
-                                raise Exception("Invalid character '.' found in standard name {0} in table {1}".format(var_name, table_name))
-                            #
-                            var = Var.from_table(table_header,var_items)
-                            if table_name == module_name:
-                                container = encode_container(module_name)
-                            else:
-                                container = encode_container(module_name, table_name)
-                            var.container = container
-                            # Check for incompatible definitions with CCPP mandatory variables
-                            if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
-                                raise Exception('Entry for variable {0}'.format(var_name) + \
-                                                ' in argument table {0}'.format(table_name) +\
-                                                ' is incompatible with mandatory variable:\n' +\
-                                                '    existing: {0}\n'.format(CCPP_MANDATORY_VARIABLES[var_name].print_debug()) +\
-                                                '     vs. new: {0}'.format(var.print_debug()))
-                            # Add variable to metadata dictionary
-                            if not var_name in metadata.keys():
-                                metadata[var_name] = [var]
-                            else:
-                                for existing_var in metadata[var_name]:
-                                    if not existing_var.compatible(var):
-                                        raise Exception('New entry for variable {0}'.format(var_name) + \
-                                                        ' in argument table {0}'.format(table_name) +\
-                                                        ' is incompatible with existing entry:\n' +\
-                                                        '    existing: {0}\n'.format(existing_var.print_debug()) +\
-                                                        '     vs. new: {0}'.format(var.print_debug()))
-
-                                metadata[var_name].append(var)
-                        #else:
-                        #    logging.debug('Skipping variable entry "{0}" without a standard_name'.format(var_items))
+                        raise Exception("Invalid definition of metadata in file {0}: {1}".format(filename, words))
 
             line_counter += 1
 
@@ -606,7 +596,6 @@ def parse_scheme_tables(filename):
                     if 'htmlinclude' in lines[header_line_number].lower():
                         words = lines[header_line_number].split()
                         if words[0] == '!!' and words[1] == '\\htmlinclude' and len(words) == 3:
-                            new_metadata = True
                             filename_parts = filename.split('.')
                             metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
                             this_metadata = read_new_metadata(metadata_filename, module_name, table_name,
@@ -640,88 +629,23 @@ def parse_scheme_tables(filename):
                         else:
                             raise Exception('Encountered invalid format "{0}" of new metadata table hook in table {1}'.format(line, table_name))
                         line_number += 1
-                        continue
 
-                    # Separate the table headers
-                    table_header = lines[header_line_number].split('|')
-                    # Check for blank table
-                    if len(table_header) <= 1:
-                        logging.debug('Skipping blank table {0}'.format(table_name))
-                        table_found = False
-                        continue
-                    # Extract table header
-                    table_header = [x.strip() for x in table_header[1:-1]]
-                    # Check that only valid table headers are used
-                    for item in table_header:
-                        if not item in VALID_ITEMS['header']:
-                            raise Exception('Invalid column header {0} in argument table {1}'.format(item, table_name))
-                    # Locate mandatory column 'standard_name'
-                    try:
-                        standard_name_index = table_header.index('standard_name')
-                    except ValueError:
-                        raise Exception('Mandatory column standard_name not found in argument table {0}'.format(table_name))
-                    # DH* warn or raise error for old metadata format
-                    logging.warn("Old metadata table found for table {}".format(table_name))
-                    #raise Exception("Old metadata table found for table {}".format(table_name))
-                    # *DH
-                    # Get all of the variable information in table
-                    end_of_table = False
-                    line_number = header_line_number + 2
-                    while not end_of_table:
-                        line = lines[line_number]
-                        words = line.split('|')
-                        if len(words) == 1:
-                            if words[0].strip() == '!!':
-                                end_of_table = True
-                            else:
-                                raise Exception('Encountered invalid line "{0}" in argument table {1}'.format(line, table_name))
+                    else:
+                        words = lines[header_line_number].split()
+                        if len(words) == 1 and words[0].strip() == '!!':
+                            logging.info("Legacy extension - skip empty table for {}".format(table_name))
+                            end_of_table = True
+                            line_number += 1
                         else:
-                            var_items = [x.strip() for x in words[1:-1]]
-                            if not len(var_items) == len(table_header):
-                                raise Exception('Error parsing variable entry "{0}" in argument table {1}'.format(var_items, table_name))
-                            var_name = var_items[standard_name_index]
-                            # Column standard_name cannot be left blank in scheme_tables
-                            if not var_name:
-                                raise Exception('Encountered line "{0}" without standard name in argument table {1}'.format(line, table_name))
-                            # Enforce CF standards: no dashes, no dots (underscores instead)
-                            if "-" in var_name:
-                                raise Exception("Invalid character '-' found in standard name {0} in table {1}".format(var_name, table_name))
-                            elif "." in var_name:
-                                raise Exception("Invalid character '.' found in standard name {0} in table {1}".format(var_name, table_name))
-                            #
-                            # Add standard_name to argument list for this subroutine
-                            arguments[module_name][scheme_name][subroutine_name].append(var_name)
-                            var = Var.from_table(table_header,var_items)
-                            # Check for incompatible definitions with CCPP mandatory variables
-                            if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
-                                raise Exception('Entry for variable {0}'.format(var_name) + \
-                                                ' in argument table of subroutine {0}'.format(subroutine_name) +\
-                                                ' is incompatible with mandatory variable:\n' +\
-                                                '    existing: {0}\n'.format(CCPP_MANDATORY_VARIABLES[var_name].print_debug()) +\
-                                                '     vs. new: {0}'.format(var.print_debug()))
-                            # Record the location of this variable: module, scheme, table
-                            container = encode_container(module_name, scheme_name, table_name)
-                            var.container = container
-                            # Add variable to metadata dictionary
-                            if not var_name in metadata.keys():
-                                metadata[var_name] = [var]
-                            else:
-                                for existing_var in metadata[var_name]:
-                                    if not existing_var.compatible(var):
-                                        raise Exception('New entry for variable {0}'.format(var_name) + \
-                                                        ' in argument table of subroutine {0}'.format(subroutine_name) +\
-                                                        ' is incompatible with existing entry:\n' +\
-                                                        '    existing: {0}\n'.format(existing_var.print_debug()) +\
-                                                        '     vs. new: {0}'.format(var.print_debug()))
-                                metadata[var_name].append(var)
+                            raise Exception("Invalid definition of metadata in file {0}: {1}".format(filename, words))
 
-                        line_number += 1
-
-                    # After parsing entire metadata table for the subroutine, check that all mandatory CCPP variables are present
-                    for var_name in CCPP_MANDATORY_VARIABLES.keys():
-                        if not var_name in arguments[module_name][scheme_name][subroutine_name]:
-                            raise Exception('Mandatory CCPP variable {0} not declared in metadata table of subroutine {1}'.format(
-                                                                                                       var_name, subroutine_name))
+                    # After parsing entire metadata table for the subroutine, check that all
+                    # mandatory CCPP variables are present - skip empty tables.
+                    if arguments[module_name][scheme_name][subroutine_name]:
+                        for var_name in CCPP_MANDATORY_VARIABLES.keys():
+                            if not var_name in arguments[module_name][scheme_name][subroutine_name]:
+                                raise Exception('Mandatory CCPP variable {0} not declared in metadata table of subroutine {1}'.format(
+                                                                                                           var_name, subroutine_name))
 
         # For CCPP-compliant files (i.e. files with metadata tables, perform additional checks)
         if len(metadata.keys()) > 0:
