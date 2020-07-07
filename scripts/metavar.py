@@ -340,6 +340,10 @@ class Var(object):
 
     >>> Var.get_prop('dimensions').valid_value(['Bob', 'Ray'])
     ['Bob', 'Ray']
+    >>> Var.get_prop('active')
+    '.true.'
+    >>> Var.get_prop('active').valid_value('flag_for_aerosol_physics')
+    'flag_for_aerosol_physics'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('long_name')
     'Hi mom'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('intent')
@@ -381,7 +385,9 @@ class Var(object):
                                      optional_in=True, default_in=False),
                     VariableProperty('persistence', str, optional_in=True,
                                      valid_values_in=['timestep', 'run'],
-                                     default_in='timestep')]
+                                     default_in='timestep'),
+                    VariableProperty('active', str, optional_in=True,
+                                     default_in='.true.')]
 
     # __var_props contains properties which are not in __spec_props
     __var_props = [VariableProperty('optional', bool,
