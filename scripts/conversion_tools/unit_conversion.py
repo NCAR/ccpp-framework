@@ -113,7 +113,35 @@ def kg_kg_minus_1__to__g_kg_minus_1():
 
 def g_kg_minus_1__to__kg_kg_minus_1():
     """Convert gram per kilogram to kilogram per kilogram"""
-    return '{var}/1.0E+3{kind}'
+    return '1.0E-3{kind}*{var}'
+
+##################
+# Plane angle    #
+##################
+
+def radian__to__degrees():
+    """Convert radian to degrees"""
+    return '57.295779513{kind}*{var}'
+
+def degrees__to__radian():
+    """Convert degrees to radian"""
+    return '{var}/57.295779513{kind}'
+
+def radian__to__degrees_north():
+    """Convert radian to degrees north"""
+    return radian__to__degrees()
+
+def degrees_north__to__radian():
+    """Convert degrees north to radian"""
+    return degrees__to__radian()
+
+def radian__to__degrees_east():
+    """Convert radian to degrees east"""
+    return radian__to__degrees()
+
+def degrees_east__to__radian():
+    """Convert degrees east to radian"""
+    return degrees__to__radian()
 
 ##################
 # Composed units #
