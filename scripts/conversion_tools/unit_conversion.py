@@ -119,29 +119,29 @@ def g_kg_minus_1__to__kg_kg_minus_1():
 # Plane angle    #
 ##################
 
-def radian__to__degrees():
-    """Convert radian to degrees"""
+def radian__to__degree():
+    """Convert radian to degree"""
     return '57.295779513{kind}*{var}'
 
-def degrees__to__radian():
-    """Convert degrees to radian"""
+def degree__to__radian():
+    """Convert degree to radian"""
     return '{var}/57.295779513{kind}'
 
-def radian__to__degrees_north():
-    """Convert radian to degrees north"""
-    return radian__to__degrees()
+def radian__to__degree_north():
+    """Convert radian to degree north"""
+    return radian__to__degree()
 
-def degrees_north__to__radian():
-    """Convert degrees north to radian"""
-    return degrees__to__radian()
+def degree_north__to__radian():
+    """Convert degree north to radian"""
+    return degree__to__radian()
 
-def radian__to__degrees_east():
-    """Convert radian to degrees east"""
-    return radian__to__degrees()
+def radian__to__degree_east():
+    """Convert radian to degree east"""
+    return radian__to__degree()
 
-def degrees_east__to__radian():
-    """Convert degrees east to radian"""
-    return degrees__to__radian()
+def degree_east__to__radian():
+    """Convert degree east to radian"""
+    return degree__to__radian()
 
 ##################
 # Composed units #
