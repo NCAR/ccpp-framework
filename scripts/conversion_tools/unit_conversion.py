@@ -92,6 +92,58 @@ def d__to__s():
     return '8.64E+4{kind}*{var}'
 
 ##################
+# Temperature    #
+##################
+
+def K__to__C():
+    """Convert Kelvin to Celcius"""
+    return '{var}-273.15{kind}'
+
+def C__to__K():
+    """Convert Celcius to Kelvin"""
+    return '{var}+273.15{kind}'
+
+##################
+# Mass           #
+##################
+
+def kg_kg_minus_1__to__g_kg_minus_1():
+    """Convert kilogram per kilogram to gram per kilogram"""
+    return '1.0E+3{kind}*{var}'
+
+def g_kg_minus_1__to__kg_kg_minus_1():
+    """Convert gram per kilogram to kilogram per kilogram"""
+    return '1.0E-3{kind}*{var}'
+
+##################
+# Plane angle    #
+##################
+
+def radian__to__degree():
+    """Convert radian to degree"""
+    return '57.295779513{kind}*{var}'
+
+def degree__to__radian():
+    """Convert degree to radian"""
+    return '{var}/57.295779513{kind}'
+
+def radian__to__degree_north():
+    """Convert radian to degree north"""
+    return radian__to__degree()
+
+def degree_north__to__radian():
+    """Convert degree north to radian"""
+    return degree__to__radian()
+
+def radian__to__degree_east():
+    """Convert radian to degree east"""
+    return radian__to__degree()
+
+def degree_east__to__radian():
+    """Convert degree east to radian"""
+    return degree__to__radian()
+
+##################
 # Composed units #
 ##################
 

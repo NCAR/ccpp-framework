@@ -188,15 +188,6 @@ def parse_suites(suites_dir, sdfs):
         suites.append(suite)
     return (success, suites)
 
-def check_unique_pset_per_scheme(scheme_files):
-    """Check that each scheme belongs to one and only one physics set"""
-    success = True
-    for scheme_file in scheme_files.keys():
-        if len(scheme_files[scheme_file])>1:
-            logging.error("Scheme file {0} belongs to multiple physics sets: {1}".format(scheme_file, ','.join(scheme_files[scheme_file])))
-            success = False
-    return success
-
 def convert_local_name_from_new_metadata(metadata, standard_name, typedefs_new_metadata, converted_variables):
     """Convert local names in new metadata format (no old-style DDT references, array references as
     standard names) to old metadata format (with old-style DDT references, array references as local names)."""
@@ -319,33 +310,24 @@ def collect_physics_subroutines(scheme_files):
     # Parse all scheme files
     metadata_request = {}
     arguments_request = {}
-    pset_request = {}
-    pset_schemes = {}
-    for scheme_file in scheme_files.keys():
+    for scheme_file in scheme_files:
         (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme_file))
         # Change to directory where scheme_file lives
         os.chdir(scheme_filepath)
         (metadata, arguments) = parse_scheme_tables(scheme_filename)
-        # The different psets for the variables used by schemes in scheme_file
-        pset = { var_name : scheme_files[scheme_file] for var_name in metadata.keys() }
-        # The different psets for the schemes in scheme_file
-        for scheme_name in arguments.keys():
-            pset_schemes[scheme_name] = scheme_files[scheme_file]
-        # Merge metadata and pset, append to arguments
+        # Merge metadata, append to arguments
         metadata_request = merge_dictionaries(metadata_request, metadata)
-        pset_request = merge_dictionaries(pset_request, pset)
         arguments_request.update(arguments)
         os.chdir(BASEDIR)
     # Return to BASEDIR
     os.chdir(BASEDIR)
-    return (success, metadata_request, pset_request, arguments_request, pset_schemes)
+    return (success, metadata_request, arguments_request)
 
-def filter_metadata(metadata, pset, arguments, suites):
+def filter_metadata(metadata, arguments, suites):
     """Remove all variables from metadata that are not used in the given suite"""
     success = True
     # Output: filtered dictionaries
     metadata_filtered = {}
-    pset_filtered = {}
     arguments_filtered = {}
     # Loop through all variables and check if the calling subroutine is in list of subroutines
     for var_name in sorted(metadata.keys()):
@@ -361,7 +343,6 @@ def filter_metadata(metadata, pset, arguments, suites):
                 break
         if keep:
             metadata_filtered[var_name] = metadata[var_name]
-            pset_filtered[var_name] = pset[var_name]
         else:
             logging.info("filtering out variable {0}".format(var_name))
     for scheme in arguments.keys():
@@ -370,7 +351,7 @@ def filter_metadata(metadata, pset, arguments, suites):
                 arguments_filtered[scheme] = arguments[scheme]
                 break
 
-    return (success, metadata_filtered, pset_filtered, arguments_filtered)
+    return (success, metadata_filtered, arguments_filtered)
 
 def check_optional_arguments(metadata, arguments, optional_arguments):
     """Check if for each subroutine with optional arguments, an entry exists in the
@@ -381,6 +362,46 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
     for each subroutine."""
     logging.info('Checking optional arguments in physics schemes ...')
     success = True
+
+    # First make sure that the CCPP prebuild config entry doesn't contain any variables that are unknown
+    # (by standard name), or that it lists variables as optional arguments that aren't declared as optional
+    for module_name in optional_arguments.keys():
+        # Skip modules that have been filtered out (because they are not used by the selected suites, for example)
+        if module_name in arguments.keys():
+            # DH* 2020-05-26
+            # This is a test/workaround for some legacy code. It is actually required that
+            # module_name == scheme_name (see metadata_parser.py, around line 528).
+            for scheme_name in arguments[module_name].keys():
+                if not scheme_name == module_name:
+                    raise Exception("Found example for scheme_name /= module_name: {} vs. {}".format(module_name, scheme_name))
+            scheme_name = module_name
+            # *DH 2020-05-26
+            for subroutine_name in optional_arguments[module_name].keys():
+                # If optional arguments are listed individually, check each of them
+                if isinstance(optional_arguments[module_name][subroutine_name], list):
+                    for var_name in optional_arguments[module_name][subroutine_name]:
+                        if not var_name in arguments[module_name][scheme_name][subroutine_name]:
+                            raise Exception("Explicitly requested optional argument '{}' not known to {}/{}".format(
+                                                                            var_name, module_name, subroutine_name))
+                        else:
+                            for var in metadata[var_name][:]:
+                                for item in var.container.split(' '):
+                                    subitems = item.split('_')
+                                    if subitems[0] == 'MODULE':
+                                        module_name_test = '_'.join(subitems[1:])
+                                    elif subitems[0] == 'SCHEME':
+                                        scheme_name_test = '_'.join(subitems[1:])
+                                    elif subitems[0] == 'SUBROUTINE':
+                                        subroutine_name_test = '_'.join(subitems[1:])
+                                    else:
+                                        success = False
+                                        logging.error('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
+                                                                                                 subitems[0], var.container, var_name))
+                                if module_name_test == module_name and scheme_name_test == scheme_name \
+                                        and subroutine_name_test == subroutine_name and not var.optional in ['t', 'T']:
+                                    raise Exception("Variable {} in {} / {}".format(var_name, module_name, subroutine_name) + \
+                                                " is not an optional argument, but listed as such in the CCPP prebuild config")
+
     for var_name in sorted(metadata.keys()):
         # The notation metadata[var_name][:] is a convenient way to make a copy
         # of the metadata[var_name] list, which allows removing items as we go
@@ -395,14 +416,12 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
                     elif subitems[0] == 'SUBROUTINE':
                         subroutine_name = '_'.join(subitems[1:])
                     else:
-                        success = False
-                        logging.error('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
-                                                                                 subitems[0], var.container, var_name))
+                        raise Exception('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
+                                                                                   subitems[0], var.container, var_name))
                 if not module_name in optional_arguments.keys() or not \
                         subroutine_name in optional_arguments[module_name].keys():
-                    success = False
-                    logging.error('No entry found in optional_arguments dictionary for optional argument ' + \
-                                  '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, module_name))
+                    raise Exception('No entry found in optional_arguments dictionary for optional argument ' + \
+                                    '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, module_name))
                 if type(optional_arguments[module_name][subroutine_name]) is list:
                     if var_name in optional_arguments[module_name][subroutine_name]:
                         logging.debug('Optional argument {0} to subroutine {1} in module {2} is required, keep in list'.format(
@@ -427,7 +446,7 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
 
     return (success, metadata, arguments)
 
-def compare_metadata(metadata_define, metadata_request, pset_request, psets_merged):
+def compare_metadata(metadata_define, metadata_request):
     """Compare the requested metadata to the defined one. For each requested entry, a
     single (i.e. non-ambiguous entry) must be present in the defined entries. All optional
     arguments that are still in the list of required variables for a scheme are needed,
@@ -435,7 +454,7 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
 
     logging.info('Comparing metadata for requested and provided variables ...')
     success = True
-    modules = { x : [] for x in psets_merged }
+    modules = []
     metadata = {}
     for var_name in sorted(metadata_request.keys()):
         # Check that variable is provided by the model
@@ -486,9 +505,8 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
         for item in var.container.split(' '):
             subitems = item.split('_')
             if subitems[0] == 'MODULE':
-                # Add to list of required modules for each pset the requested variable falls under
-                for pset in pset_request[var_name]:
-                    modules[pset].append('_'.join(subitems[1:]))
+                # Add to list of required modules
+                modules.append('_'.join(subitems[1:]))
             elif subitems[0] == 'TYPE':
                 pass
             else:
@@ -502,16 +520,15 @@ def compare_metadata(metadata_define, metadata_request, pset_request, psets_merg
         for var in metadata[var_name]:
             var.target = target
             logging.debug('Requested variable {0} in {1} matched to target {2} in module {3}'.format(
-                          var_name, var.container, target, modules[pset_request[var_name][0]][-1]))
+                          var_name, var.container, target, modules[-1]))
             # Update len=* for character variables
             if var.type == 'character' and var.kind == 'len=*':
                 logging.debug('Update kind information for requested variable {0} in {1} from {2} to {3}'.format(var_name,
                                                                                            var.container, var.kind, kind))
                 var.kind = kind
 
-    # Remove duplicated from list of modules
-    for pset in psets_merged:
-        modules[pset] = sorted(list(set(modules[pset])))
+    # Remove duplicates from list of modules
+    modules = sorted(list(set(modules)))
     return (success, modules, metadata)
 
 def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arguments, caps_dir):
@@ -720,13 +737,6 @@ def main():
     if not success:
         raise Exception('Parsing suite definition files failed.')
 
-    # Check that each scheme only belongs to one set of physics
-    # this is required for using the optimized version of ccpp_field_get
-    # that supplies the build-time derived index in the array
-    success = check_unique_pset_per_scheme(config['scheme_files'])
-    if not success:
-        raise Exception('Call to check_unique_pset_per_scheme failed.')
-
     # Variables defined by the host model
     (success, metadata_define) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
     if not success:
@@ -738,13 +748,12 @@ def main():
         raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
-    (success, metadata_request, pset_request, arguments_request, pset_schemes) = collect_physics_subroutines(config['scheme_files'])
+    (success, metadata_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
-    # Filter metadata/pset/arguments - remove whatever is not included in suite definition files
-    (success, metadata_request, pset_request, arguments_request) = filter_metadata(metadata_request, pset_request,
-                                                                                        arguments_request, suites)
+    # Filter metadata/arguments - remove whatever is not included in suite definition files
+    (success, metadata_request, arguments_request) = filter_metadata(metadata_request, arguments_request, suites)
     if not success:
         raise Exception('Call to filter_metadata failed.')
 
@@ -755,15 +764,12 @@ def main():
         raise Exception('Call to check_optional_arguments failed.')
 
     # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
-    success = metadata_to_latex(metadata_define, metadata_request, pset_request, config['host_model'], config['latex_vartable_file'])
+    success = metadata_to_latex(metadata_define, metadata_request, config['host_model'], config['latex_vartable_file'])
     if not success:
         raise Exception('Call to metadata_to_latex failed.')
 
-    # Flatten list of list of psets for all variables
-    psets_merged = list(set(itertools.chain(*pset_request.values())))
-
     # Check requested against defined arguments to generate metadata (list/dict of variables for CCPP)
-    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request, pset_request, psets_merged)
+    (success, modules, metadata) = compare_metadata(metadata_define, metadata_request)
     if not success:
         raise Exception('Call to compare_metadata failed.')
 
@@ -774,7 +780,7 @@ def main():
         raise Exception('Call to generate_typedefs_makefile failed.')
 
     # Add filenames of schemes to makefile/cmakefile/shell script - add dependencies for schemes
-    success = generate_schemes_makefile(config['scheme_files_dependencies'] + list(config['scheme_files'].keys()),
+    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'],
                                         config['schemes_makefile'], config['schemes_cmakefile'],
                                         config['schemes_sourcefile'])
     if not success:
