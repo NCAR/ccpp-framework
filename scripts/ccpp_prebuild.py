@@ -378,7 +378,7 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
             # *DH 2020-05-26
             for subroutine_name in optional_arguments[module_name].keys():
                 # If optional arguments are listed individually, check each of them
-                if type(optional_arguments[module_name][subroutine_name]) is list:
+                if isinstance(optional_arguments[module_name][subroutine_name], list):
                     for var_name in optional_arguments[module_name][subroutine_name]:
                         if not var_name in arguments[module_name][scheme_name][subroutine_name]:
                             raise Exception("Explicitly requested optional argument '{}' not known to {}/{}".format(
