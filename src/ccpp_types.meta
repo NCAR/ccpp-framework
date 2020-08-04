@@ -11,7 +11,7 @@
 ########################################################################
 [ccpp-arg-table]
   name = ccpp_t
-  type = scheme
+  type = ddt
 [errflg]
   standard_name = ccpp_error_flag
   long_name = error flag for error handling in CCPP
