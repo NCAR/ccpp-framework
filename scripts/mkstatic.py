@@ -13,6 +13,7 @@ import types
 import xml.etree.ElementTree as ET
 
 from common import encode_container
+from common import CCPP_STAGES
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_INTERNAL_VARIABLES
 from common import CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
@@ -22,12 +23,6 @@ from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
 from mkcap import Var
 
 ###############################################################################
-
-#STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
-
-#CCPP_ERROR_FLAG_VARIABLE = 'error_flag'
-
-CCPP_STAGES = [ 'init', 'run', 'finalize' ]
 
 # Maximum number of dimensions of an array allowed by the Fortran 2008 standard
 FORTRAN_ARRAY_MAX_DIMS = 15
@@ -921,7 +916,7 @@ end module {module}
                     subroutine_name = scheme_name + '_' + ccpp_stage
                     container = encode_container(module_name, scheme_name, subroutine_name)
                     # Skip entirely empty routines
-                    if not arguments[module_name][scheme_name][subroutine_name]:
+                    if not arguments[scheme_name][subroutine_name]:
                         continue
                     error_check = ''
                     args = ''
@@ -930,7 +925,7 @@ end module {module}
                     # First identify all dimensions needed to handle the arguments
                     # and add them to the list of required variables for the cap
                     additional_variables_required = []
-                    for var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                    for var_standard_name in arguments[scheme_name][subroutine_name]:
                         if not var_standard_name in metadata_define.keys():
                             raise Exception('Variable {standard_name} not defined in host model metadata'.format(
                                                                                 standard_name=var_standard_name))
@@ -943,22 +938,22 @@ end module {module}
                                     dim = int(dim)
                                 except ValueError:
                                     if not dim in local_vars.keys() and \
-                                            not dim in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
+                                            not dim in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                         logging.debug("Adding dimension {} for variable {}".format(dim, var_standard_name))
                                         additional_variables_required.append(dim)
 
                         # If blocked data structures need to be converted, add necessary variables
                         if ccpp_stage in ['init', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in var.local_name:
                             if not CCPP_BLOCK_COUNT in local_vars.keys() \
-                                    and not CCPP_BLOCK_COUNT in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
+                                    and not CCPP_BLOCK_COUNT in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                     logging.debug("Adding variable {} for handling blocked data structures".format(CCPP_BLOCK_COUNT))
                                     additional_variables_required.append(CCPP_BLOCK_COUNT)
                             if not CCPP_HORIZONTAL_LOOP_EXTENT in local_vars.keys() \
-                                    and not CCPP_HORIZONTAL_LOOP_EXTENT in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
+                                    and not CCPP_HORIZONTAL_LOOP_EXTENT in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                     logging.debug("Adding variable {} for handling blocked data structures".format(CCPP_HORIZONTAL_LOOP_EXTENT))
                                     additional_variables_required.append(CCPP_HORIZONTAL_LOOP_EXTENT)
                             if not CCPP_HORIZONTAL_DIMENSION in local_vars.keys() \
-                                    and not CCPP_HORIZONTAL_DIMENSION in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
+                                    and not CCPP_HORIZONTAL_DIMENSION in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                     logging.debug("Adding variable {} for handling blocked data structures".format(CCPP_HORIZONTAL_DIMENSION))
                                     additional_variables_required.append(CCPP_HORIZONTAL_DIMENSION)
 
@@ -990,7 +985,7 @@ end module {module}
                                         conditional += var2.local_name
                                         # Add to list of required variables for the cap
                                         if not item in local_vars.keys() \
-                                                and not item in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
+                                                and not item in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                             logging.debug("Adding variable {} for handling conditionals".format(item))
                                             additional_variables_required.append(item)
                         # Conditionals are identical per requirement, no need to test for consistency again
@@ -998,10 +993,10 @@ end module {module}
                             conditionals[var_standard_name] = conditional
 
                     # Extract all variables needed (including indices for components/slices of arrays)
-                    for var_standard_name in additional_variables_required + arguments[module_name][scheme_name][subroutine_name]:
+                    for var_standard_name in additional_variables_required + arguments[scheme_name][subroutine_name]:
                         # Pick the correct variable for this module/scheme/subroutine
                         # from the list of requested variable, if it is in that list
-                        if var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                        if var_standard_name in arguments[scheme_name][subroutine_name]:
                             for var in metadata_request[var_standard_name]:
                                 if container == var.container:
                                     break
@@ -1105,7 +1100,7 @@ end module {module}
 
                         # The remainder of this loop deals with adding variables to the argument list
                         # for this subroutine, not required for the additional dimensions and variables
-                        if not var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                        if not var_standard_name in arguments[scheme_name][subroutine_name]:
                             continue
 
                         # kind_string is used for automated unit conversions, i.e. foo_kind_phys
@@ -1258,7 +1253,7 @@ end module {module}
            actions_out=actions_out.rstrip('\n'))
 
                             # Add to argument list if required
-                            if var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                            if var_standard_name in arguments[scheme_name][subroutine_name]:
                                 arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
 
                         # Unit conversions without converting blocked data structures
@@ -1308,11 +1303,11 @@ end module {module}
            actions_out=actions_out.rstrip('\n'))
 
                             # Add to argument list if required
-                            if var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                            if var_standard_name in arguments[scheme_name][subroutine_name]:
                                 arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
 
                         # Ordinary variables, no blocked data or unit conversions
-                        elif var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                        elif var_standard_name in arguments[scheme_name][subroutine_name]:
                             # Add to argument list if required
                             arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
                                                                     var_name=local_vars[var_standard_name]['name'])
@@ -1321,7 +1316,7 @@ end module {module}
                         args += arg
                         length += len(arg)
                         # Split args so that lines don't exceed 260 characters (for PGI)
-                        if length > 70 and not var_standard_name == arguments[module_name][scheme_name][subroutine_name][-1]:
+                        if length > 70 and not var_standard_name == arguments[scheme_name][subroutine_name][-1]:
                             args += ' &\n                  '
                             length = 0
                     args = args.rstrip(',')

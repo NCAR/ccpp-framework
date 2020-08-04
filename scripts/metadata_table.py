@@ -29,6 +29,11 @@ a vertical bar.
 An example argument table is shown below (aside from the python comment
 character at the start of each line).
 
+[ccpp-scheme-properties]
+  name = <name>
+  type = properties
+  dependencies = <dependencies>
+
 [ccpp-arg-table]
   name = <name>
   type = scheme
@@ -94,6 +99,7 @@ from __future__ import print_function
 import os
 import re
 # CCPP framework imports
+from common      import CCPP_STAGES
 from metavar     import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
@@ -170,7 +176,7 @@ class MetadataHeader(ParseSource):
     <_sre.SRE_Match object at 0x...>
 """
 
-    __header_start__ = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
+    __header_start__ = re.compile(r"(?i)\s*\[\s*(ccpp-scheme-properties|ccpp-arg-table)\s*\]")
 
     __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL_INT+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
@@ -249,7 +255,7 @@ class MetadataHeader(ParseSource):
                 if key == 'name':
                     self._table_title = value
                 elif key == 'type':
-                    if value not in ['module', 'scheme', 'ddt']:
+                    if value not in ['module', 'scheme', 'ddt', 'properties']:
                         raise ParseSyntaxError("metadata table type",
                                                token=value,
                                                context=self._pobj)
@@ -262,6 +268,13 @@ class MetadataHeader(ParseSource):
                     else:
                         self._module_name = value
                     # End if
+                elif key == 'dependencies':
+                    if value == "None" or value == "":
+                        # Empty list of dependencies
+                        self._dependencies = []
+                    else:
+                        # Remove white spaces from each list element
+                        self._dependencies = [ v.strip() for v in value.split(",") ]
                 else:
                     raise ParseSyntaxError("metadata table start property",
                                            token=value, context=self._pobj)
@@ -277,6 +290,16 @@ class MetadataHeader(ParseSource):
                                    token=curr_line, context=self._pobj)
         elif self.header_type == "ddt":
             register_fortran_ddt_name(self.title)
+        elif self.header_type == 'properties':
+            # Consistency check for [ccpp-scheme-properties] tables: name must not end with a CCPP stage
+            if self.title.split('_')[-1] in CCPP_STAGES:
+                raise ParseSyntaxError("metadata header start, table [ccpp-scheme-properties] has invalid name",
+                                       token=self.title, context=self._pobj)
+        elif self.header_type == 'scheme':
+            # Consistency check for scheme tables: title must end with a valid CCPP stage
+            if not self.title.split('_')[-1] in CCPP_STAGES:
+                raise ParseSyntaxError("metadata header start, table [ccpp-arg-table] has invalid name",
+                                       token=self.title, context=self._pobj)
         # End if
         #  Initialize our ParseSource parent
         super(MetadataHeader, self).__init__(self.title,
@@ -489,6 +512,11 @@ class MetadataHeader(ParseSource):
     def header_type(self):
         'Return the type of structure this header documents'
         return self._header_type
+
+    @property
+    def dependencies(self):
+        'Return the dependencies of the metadata scheme properties table'
+        return self._dependencies
 
     @classmethod
     def is_blank(cls, line):
