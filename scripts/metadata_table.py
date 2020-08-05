@@ -295,6 +295,11 @@ class MetadataHeader(ParseSource):
             if self.title.split('_')[-1] in CCPP_STAGES:
                 raise ParseSyntaxError("metadata header start, table [ccpp-scheme-properties] has invalid name",
                                        token=self.title, context=self._pobj)
+            # Set mandatory properties to default if not yet set
+            try:
+                self.dependencies
+            except AttributeError:
+                self._dependencies = []
         elif self.header_type == 'scheme':
             # Consistency check for scheme tables: title must end with a valid CCPP stage
             if not self.title.split('_')[-1] in CCPP_STAGES:

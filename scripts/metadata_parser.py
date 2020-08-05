@@ -107,6 +107,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
         NEW_METADATA_SAVE[filename] = new_metadata_headers
 
     # Record dependencies for the metadata table (only applies to schemes)
+    has_scheme_properties = False
     dependencies = []
 
     # Convert new metadata for requested table to old metadata dictionary
@@ -125,6 +126,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             if not new_metadata_header.header_type == 'properties':
                 raise Exception("Unsupported header_type '{}' for scheme-wide metadata")
             dependencies += new_metadata_header.dependencies
+            has_scheme_properties = True
         else:
             if not new_metadata_header.title == table_name:
                 # Skip this table, since it is not requested right now
@@ -181,8 +183,13 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                       )
             # Check for duplicates in same table
             if standard_name in metadata.keys():
-               raise Exception("Error, multiple definitions of standard name {0} in new metadata table {1}".format(standard_name, table_name))
+               raise Exception("Error, multiple definitions of standard name {} in new metadata table {}".format(standard_name, table_name))
             metadata[standard_name] = [var]
+
+    if scheme_name and not has_scheme_properties:
+        raise Exception("Metadata file {} for scheme {} does not have a [ccpp-scheme-properties] section,".format(filename, scheme_name) + \
+                                                                  " or the 'name = ...' attribute in the [ccpp-scheme-properties] is wrong")
+
     return (metadata, dependencies)
 
 def parse_variable_tables(filename):
