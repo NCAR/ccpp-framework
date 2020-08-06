@@ -86,27 +86,21 @@ def import_config(configfile, builddir):
     config['typedefs_cmakefile']        = ccpp_prebuild_config.TYPEDEFS_CMAKEFILE.format(build_dir=builddir)
     config['typedefs_sourcefile']       = ccpp_prebuild_config.TYPEDEFS_SOURCEFILE.format(build_dir=builddir)
     config['scheme_files']              = ccpp_prebuild_config.SCHEME_FILES
-    config['scheme_files_dependencies'] = ccpp_prebuild_config.SCHEME_FILES_DEPENDENCIES
     config['schemes_makefile']          = ccpp_prebuild_config.SCHEMES_MAKEFILE.format(build_dir=builddir)
     config['schemes_cmakefile']         = ccpp_prebuild_config.SCHEMES_CMAKEFILE.format(build_dir=builddir)
     config['schemes_sourcefile']        = ccpp_prebuild_config.SCHEMES_SOURCEFILE.format(build_dir=builddir)
-    config['target_files']              = ccpp_prebuild_config.TARGET_FILES
     config['caps_makefile']             = ccpp_prebuild_config.CAPS_MAKEFILE.format(build_dir=builddir)
     config['caps_cmakefile']            = ccpp_prebuild_config.CAPS_CMAKEFILE.format(build_dir=builddir)
     config['caps_sourcefile']           = ccpp_prebuild_config.CAPS_SOURCEFILE.format(build_dir=builddir)
     config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR.format(build_dir=builddir)
     config['suites_dir']                = ccpp_prebuild_config.SUITES_DIR
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
-    config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
-    config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
     config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
     config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE.format(build_dir=builddir)
     config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE.format(build_dir=builddir)
     # Location of static API file, and shell script to source
     config['static_api_dir']            = ccpp_prebuild_config.STATIC_API_DIR.format(build_dir=builddir)
     config['static_api_srcfile']        = ccpp_prebuild_config.STATIC_API_SRCFILE.format(build_dir=builddir)
-    # Template code in host-model dependent CCPP prebuild config script
-    config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
 
     # Add model-independent, CCPP-internal variable definition files
     config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
@@ -806,13 +800,8 @@ def main():
     if not success:
         raise Exception('Call to generate_typedefs_makefile failed.')
 
-    # Add filenames of schemes and dependencies to makefile/cmakefile/shell script
-    # DH* temporary - for testing and during transition period, still compile all dependencies in ccpp_prebuild_config;
-    # when this is removed, also remove the unnecessary "removal of duplicates" in generate_schemes_makefile and all
-    # occurences of config['scheme_files_dependencies'] in this script.
-    #success = generate_schemes_makefile(schemes_and_dependencies_to_compile,
-    # *DH
-    success = generate_schemes_makefile(schemes_and_dependencies_to_compile + config['scheme_files_dependencies'],
+    # Add filenames of schemes and variable definition files (types) to makefile/cmakefile/shell script
+    success = generate_schemes_makefile(schemes_and_dependencies_to_compile + config['variable_definition_files'],
                                         config['schemes_makefile'], config['schemes_cmakefile'],
                                         config['schemes_sourcefile'])
     if not success:
