@@ -91,7 +91,7 @@ class Var(object):
 
     @dimensions.setter
     def dimensions(self, value):
-        if not type(value) is list:
+        if not isinstance(value, list):
             raise TypeError('Invalid type for variable property dimensions, must be a list')
         self._dimensions = value
 
@@ -170,7 +170,7 @@ class Var(object):
 
     @actions.setter
     def actions(self, values):
-        if type(values)==dict:
+        if isinstance(values, dict):
             for key in values.keys():
                 if key in ['in', 'out'] and isstring(values[key]):
                     self._actions[key] = values[key]
