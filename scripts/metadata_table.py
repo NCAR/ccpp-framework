@@ -29,9 +29,10 @@ a vertical bar.
 An example argument table is shown below (aside from the python comment
 character at the start of each line).
 
-[ccpp-scheme-properties]
+[ccpp-table-properties]
   name = <name>
-  type = properties
+  type = scheme
+  relative_path = <relative path>
   dependencies = <dependencies>
 
 [ccpp-arg-table]
@@ -176,7 +177,7 @@ class MetadataHeader(ParseSource):
     <_sre.SRE_Match object at 0x...>
 """
 
-    __header_start__ = re.compile(r"(?i)\s*\[\s*(ccpp-scheme-properties|ccpp-arg-table)\s*\]")
+    __header_start__ = re.compile(r"(?i)\s*\[\s*(ccpp-table-properties|ccpp-arg-table)\s*\]")
 
     __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL_INT+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
@@ -247,6 +248,9 @@ class MetadataHeader(ParseSource):
         self._table_title = None
         self._header_type = None
         self._module_name = None
+        self._dependencies = []
+        relative_path_local = ''
+        self._table_properties = False
         while (curr_line is not None) and (not self.variable_start(curr_line)) and (not MetadataHeader.table_start(curr_line)):
             for property in self.parse_config_line(curr_line):
                 # Manually parse name, type, and module properties
@@ -255,7 +259,7 @@ class MetadataHeader(ParseSource):
                 if key == 'name':
                     self._table_title = value
                 elif key == 'type':
-                    if value not in ['module', 'scheme', 'ddt', 'properties']:
+                    if value not in ['module', 'scheme', 'ddt']:
                         raise ParseSyntaxError("metadata table type",
                                                token=value,
                                                context=self._pobj)
@@ -269,12 +273,12 @@ class MetadataHeader(ParseSource):
                         self._module_name = value
                     # End if
                 elif key == 'dependencies':
-                    if value == "None" or value == "":
-                        # Empty list of dependencies
-                        self._dependencies = []
-                    else:
-                        # Remove white spaces from each list element
-                        self._dependencies = [ v.strip() for v in value.split(",") ]
+                    self._table_properties = True
+                    if not(value == "None" or value == ""):
+                        # Remove trailing comma, remove white spaces from each list element
+                        self._dependencies += [ v.strip() for v in value.rstrip(",").split(",") ]
+                elif key == 'relative_path':
+                    relative_path_local = value.strip()
                 else:
                     raise ParseSyntaxError("metadata table start property",
                                            token=value, context=self._pobj)
@@ -290,22 +294,10 @@ class MetadataHeader(ParseSource):
                                    token=curr_line, context=self._pobj)
         elif self.header_type == "ddt":
             register_fortran_ddt_name(self.title)
-        elif self.header_type == 'properties':
-            # Consistency check for [ccpp-scheme-properties] tables: name must not end with a CCPP stage
-            if self.title.split('_')[-1] in CCPP_STAGES:
-                raise ParseSyntaxError("metadata header start, table [ccpp-scheme-properties] has invalid name",
-                                       token=self.title, context=self._pobj)
-            # Set mandatory properties to default if not yet set
-            try:
-                self.dependencies
-            except AttributeError:
-                self._dependencies = []
-        elif self.header_type == 'scheme':
-            # Consistency check for scheme tables: title must end with a valid CCPP stage
-            if not self.title.split('_')[-1] in CCPP_STAGES:
-                raise ParseSyntaxError("metadata header start, table [ccpp-arg-table] has invalid name",
-                                       token=self.title, context=self._pobj)
         # End if
+        # Add relative path to dependencies
+        if self.dependencies and relative_path_local:
+            self._dependencies = [ os.path.join(relative_path_local, v) for v in self.dependencies]
         #  Initialize our ParseSource parent
         super(MetadataHeader, self).__init__(self.title,
                                              self.header_type, self._pobj)
@@ -522,6 +514,11 @@ class MetadataHeader(ParseSource):
     def dependencies(self):
         'Return the dependencies of the metadata scheme properties table'
         return self._dependencies
+
+    @property
+    def table_properties(self):
+        'Return True iff table is a ccpp-table-properties table'
+        return self._table_properties
 
     @classmethod
     def is_blank(cls, line):

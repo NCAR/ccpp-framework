@@ -265,12 +265,14 @@ def gather_variable_definitions(variable_definition_files, typedefs_new_metadata
     logging.info('Parsing metadata tables for variables provided by host model ...')
     success = True
     metadata_define = {}
+    dependencies_define = {}
     for variable_definition_file in variable_definition_files:
-        (filedir, filename) = os.path.split(variable_definition_file)
+        (filedir, filename) = os.path.split(os.path.abspath(variable_definition_file))
         # Change to directory of variable_definition_file and parse it
         os.chdir(os.path.join(BASEDIR,filedir))
-        metadata = parse_variable_tables(filename)
+        (metadata, dependencies) = parse_variable_tables(filedir, filename)
         metadata_define = merge_dictionaries(metadata_define, metadata)
+        dependencies_define.update(dependencies)
         # Return to BASEDIR
         os.chdir(BASEDIR)
     #
@@ -295,7 +297,7 @@ def gather_variable_definitions(variable_definition_files, typedefs_new_metadata
                                                metadata_define[key][0].local_name, local_name))
                 metadata_define[key][0].local_name = local_name
     #
-    return (success, metadata_define)
+    return (success, metadata_define, dependencies_define)
 
 def collect_physics_subroutines(scheme_files):
     """Scan all Fortran source files in scheme_files for subroutines with argument tables."""
@@ -368,13 +370,14 @@ def filter_metadata(metadata, arguments, dependencies, schemes_in_files, suites)
                 schemes_in_files_filtered[scheme] = schemes_in_files[scheme]
     return (success, metadata_filtered, arguments_filtered, dependencies_filtered, schemes_in_files_filtered)
 
-def generate_list_of_schemes_and_dependencies_to_compile(schemes_in_files, dependencies):
-    """Generate a flat list of schemes and dependencies to compile"""
+def generate_list_of_schemes_and_dependencies_to_compile(schemes_in_files, dependencies1, dependencies2):
+    """Generate a flat list of schemes and dependencies in two dependency dictionaries to compile"""
     success = True
     # schemes_in_files is a dictionary with key scheme_name and value scheme_file
     # dependencies is a dictionary with key scheme_name and value "list of dependencies"
     schemes_and_dependencies_to_compile = schemes_in_files.values() + \
-            [dependency for dependency_list in dependencies.values() for dependency in dependency_list]
+            [dependency for dependency_list in dependencies1.values() for dependency in dependency_list] + \
+            [dependency for dependency_list in dependencies2.values() for dependency in dependency_list]
     # Remove duplicates
     return (success, list(set(schemes_and_dependencies_to_compile)))
 
@@ -754,7 +757,7 @@ def main():
         raise Exception('Parsing suite definition files failed.')
 
     # Variables defined by the host model
-    (success, metadata_define) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
+    (success, metadata_define, dependencies_define) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
@@ -774,7 +777,8 @@ def main():
     if not success:
         raise Exception('Call to filter_metadata failed.')
 
-    (success, schemes_and_dependencies_to_compile) = generate_list_of_schemes_and_dependencies_to_compile(schemes_in_files, dependencies_request)
+    (success, schemes_and_dependencies_to_compile) = generate_list_of_schemes_and_dependencies_to_compile(
+                                              schemes_in_files, dependencies_request, dependencies_define)
     if not success:
         raise Exception('Call to generate_list_of_schemes_and_dependencies_to_compile failed.')
 
