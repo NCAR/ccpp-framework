@@ -107,7 +107,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
         NEW_METADATA_SAVE[filename] = new_metadata_headers
 
     # Record dependencies for the metadata table (only applies to schemes)
-    has_table_properties = False
+    has_property_table = False
     dependencies = []
 
     # Convert new metadata for requested table to old metadata dictionary
@@ -116,24 +116,24 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
         # Module or DDT tables
         if not scheme_name:
             # Module property tables
-            if new_metadata_header.table_properties and new_metadata_header.title == module_name:
+            if new_metadata_header.property_table and new_metadata_header.title == module_name:
                 # If this is a ccpp-table-properties table for a module, it can only contain dependencies;
                 # ensure that for module tables, the header type is "module"
                 if not new_metadata_header.header_type == 'module':
                     raise Exception("Unsupported header_type '{}' for table properties for modules".format(
                                                                           new_metadata_header.header_type))
                 dependencies += new_metadata_header.dependencies
-                has_table_properties = True
+                has_property_table = True
                 continue
             # DDT property tables
-            elif new_metadata_header.table_properties:
+            elif new_metadata_header.property_table:
                 # If this is a ccpp-table-properties table for a DDT, it can only contain dependencies;
                 # ensure that for DDT tables, the header type is "ddt"
                 if not new_metadata_header.header_type == 'ddt':
                     raise Exception("Unsupported header_type '{}' for table properties for DDTs".format(
                                                                         new_metadata_header.header_type))
                 dependencies += new_metadata_header.dependencies
-                has_table_properties = True
+                has_property_table = True
                 continue
             # Module or DDT argument tables
             else:
@@ -146,15 +146,16 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 else:
                     container = encode_container(module_name, new_metadata_header.title)
         else:
+            logging.warning("DH DEBUG: new_metadata_header.property_table, new_metadata_header.title, scheme_name: {} {} {}".format(new_metadata_header.property_table, new_metadata_header.title, scheme_name))
             # Scheme property tables
-            if new_metadata_header.table_properties and new_metadata_header.title == scheme_name:
+            if new_metadata_header.property_table and new_metadata_header.title == scheme_name:
                 # If this is a ccpp-table-properties table for a scheme, it can only contain dependencies;
                 # ensure that for scheme tables, the header type is "scheme"
                 if not new_metadata_header.header_type == 'scheme':
                     raise Exception("Unsupported header_type '{}' for table properties for schemes".format(
                                                                           new_metadata_header.header_type))
                 dependencies += new_metadata_header.dependencies
-                has_table_properties = True
+                has_property_table = True
                 continue
             # Scheme argument tables
             else:
@@ -217,7 +218,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             metadata[standard_name] = [var]
 
     # CCPP property tables are mandatory
-    if not has_table_properties:
+    if not has_property_table:
         if scheme_name:
             raise Exception("Metadata file {} for scheme {} does not have a [ccpp-table-properties] section,".format(filename, scheme_name) + \
                                                                       " or the 'name = ...' attribute in the [ccpp-table-properties] is wrong")
