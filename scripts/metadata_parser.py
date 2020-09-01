@@ -198,8 +198,8 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             elif new_var.get_prop_value('active').lower() == '.false.':
                 active = 'F'
             else:
-                # Replace multiple whitespaces and use lowercase throughout
-                active = ' '.join(new_var.get_prop_value('active').lower().split())
+                # Replace multiple whitespaces, preserve case
+                active = ' '.join(new_var.get_prop_value('active').split())
             var = Var(standard_name = standard_name,
                       long_name     = new_var.get_prop_value('long_name') + legacy_note,
                       units         = new_var.get_prop_value('units'),

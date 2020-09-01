@@ -968,7 +968,7 @@ end module {module}
                             conditional = ''
                             # Find all words in the conditional, for each of them look for a matching
                             # standard name in the list of known variables
-                            items = FORTRAN_CONDITIONAL_REGEX.findall(var.active.lower())
+                            items = FORTRAN_CONDITIONAL_REGEX.findall(var.active)
                             for item in items:
                                 if item in FORTRAN_CONDITIONAL_REGEX_WORDS:
                                     conditional += item
