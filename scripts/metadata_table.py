@@ -29,6 +29,12 @@ a vertical bar.
 An example argument table is shown below (aside from the python comment
 character at the start of each line).
 
+[ccpp-table-properties]
+  name = <name>
+  type = scheme
+  relative_path = <relative path>
+  dependencies = <dependencies>
+
 [ccpp-arg-table]
   name = <name>
   type = scheme
@@ -94,6 +100,7 @@ from __future__ import print_function
 import os
 import re
 # CCPP framework imports
+from common      import CCPP_STAGES
 from metavar     import Var, VarDictionary
 from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
@@ -170,7 +177,7 @@ class MetadataHeader(ParseSource):
     <_sre.SRE_Match object at 0x...>
 """
 
-    __header_start__ = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
+    __header_start__ = re.compile(r"(?i)\s*\[\s*(ccpp-table-properties|ccpp-arg-table)\s*\]")
 
     __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL_INT+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
 
@@ -191,7 +198,7 @@ class MetadataHeader(ParseSource):
 
     def __init__(self, parse_object=None,
                  title=None, type_in=None, module=None, var_dict=None,
-                 logger=None):
+                 property_table=False, logger=None):
         self._pobj = parse_object
         """If <parse_object> is not None, initialize from the current file and
         location in <parse_object>.
@@ -223,7 +230,7 @@ class MetadataHeader(ParseSource):
                 self._variables.add_variable(var)
             # End for
         else:
-            self.__init_from_file__(parse_object, logger)
+            self.__init_from_file__(parse_object, property_table, logger)
         # End if
         # Categorize the variables
         self._var_intents = {'in' : list(), 'out' : list(), 'inout' : list()}
@@ -234,13 +241,16 @@ class MetadataHeader(ParseSource):
             # End if
         # End for
 
-    def __init_from_file__(self, parse_object, logger):
+    def __init_from_file__(self, parse_object, property_table, logger):
         # Read the table preamble, assume the caller already figured out
         #  the first line of the header using the table_start method.
         curr_line, curr_line_num = self._pobj.next_line()
         self._table_title = None
         self._header_type = None
         self._module_name = None
+        self._dependencies = []
+        relative_path_local = ''
+        self._property_table = property_table
         while (curr_line is not None) and (not self.variable_start(curr_line)) and (not MetadataHeader.table_start(curr_line)):
             for property in self.parse_config_line(curr_line):
                 # Manually parse name, type, and module properties
@@ -262,6 +272,12 @@ class MetadataHeader(ParseSource):
                     else:
                         self._module_name = value
                     # End if
+                elif key == 'dependencies':
+                    if not(value == "None" or value == ""):
+                        # Remove trailing comma, remove white spaces from each list element
+                        self._dependencies += [ v.strip() for v in value.rstrip(",").split(",") ]
+                elif key == 'relative_path':
+                    relative_path_local = value.strip()
                 else:
                     raise ParseSyntaxError("metadata table start property",
                                            token=value, context=self._pobj)
@@ -278,6 +294,9 @@ class MetadataHeader(ParseSource):
         elif self.header_type == "ddt":
             register_fortran_ddt_name(self.title)
         # End if
+        # Add relative path to dependencies
+        if self.dependencies and relative_path_local:
+            self._dependencies = [ os.path.join(relative_path_local, v) for v in self.dependencies]
         #  Initialize our ParseSource parent
         super(MetadataHeader, self).__init__(self.title,
                                              self.header_type, self._pobj)
@@ -490,6 +509,16 @@ class MetadataHeader(ParseSource):
         'Return the type of structure this header documents'
         return self._header_type
 
+    @property
+    def dependencies(self):
+        'Return the dependencies of the metadata scheme properties table'
+        return self._dependencies
+
+    @property
+    def property_table(self):
+        'Return True iff table is a ccpp-table-properties table'
+        return self._property_table
+
     @classmethod
     def is_blank(cls, line):
         "Return True iff <line> is a valid config format blank or comment line"
@@ -526,7 +555,10 @@ class MetadataHeader(ParseSource):
         curr_line, curr_line_num = parse_obj.curr_line()
         while curr_line is not None:
             if MetadataHeader.table_start(curr_line):
-                mheaders.append(MetadataHeader(parse_obj))
+                if '[ccpp-table-properties]' in curr_line:
+                    mheaders.append(MetadataHeader(parse_obj, property_table=True))
+                else:
+                    mheaders.append(MetadataHeader(parse_obj))
                 curr_line, curr_line_num = parse_obj.curr_line()
             else:
                 curr_line, curr_line_num = parse_obj.next_line()

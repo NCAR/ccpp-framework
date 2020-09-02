@@ -420,7 +420,7 @@ class Var(object):
         of a Var object with invalid properties.
         In order to prevent silent failures, invalid_ok requires a logger
         in order to take effect."""
-        if source.type is 'SCHEME':
+        if source.type == 'SCHEME':
             required_props = Var.__required_var_props
             master_propdict = Var.__var_propdict
         else:

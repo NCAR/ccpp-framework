@@ -86,27 +86,21 @@ def import_config(configfile, builddir):
     config['typedefs_cmakefile']        = ccpp_prebuild_config.TYPEDEFS_CMAKEFILE.format(build_dir=builddir)
     config['typedefs_sourcefile']       = ccpp_prebuild_config.TYPEDEFS_SOURCEFILE.format(build_dir=builddir)
     config['scheme_files']              = ccpp_prebuild_config.SCHEME_FILES
-    config['scheme_files_dependencies'] = ccpp_prebuild_config.SCHEME_FILES_DEPENDENCIES
     config['schemes_makefile']          = ccpp_prebuild_config.SCHEMES_MAKEFILE.format(build_dir=builddir)
     config['schemes_cmakefile']         = ccpp_prebuild_config.SCHEMES_CMAKEFILE.format(build_dir=builddir)
     config['schemes_sourcefile']        = ccpp_prebuild_config.SCHEMES_SOURCEFILE.format(build_dir=builddir)
-    config['target_files']              = ccpp_prebuild_config.TARGET_FILES
     config['caps_makefile']             = ccpp_prebuild_config.CAPS_MAKEFILE.format(build_dir=builddir)
     config['caps_cmakefile']            = ccpp_prebuild_config.CAPS_CMAKEFILE.format(build_dir=builddir)
     config['caps_sourcefile']           = ccpp_prebuild_config.CAPS_SOURCEFILE.format(build_dir=builddir)
     config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR.format(build_dir=builddir)
     config['suites_dir']                = ccpp_prebuild_config.SUITES_DIR
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
-    config['module_include_file']       = ccpp_prebuild_config.MODULE_INCLUDE_FILE
-    config['fields_include_file']       = ccpp_prebuild_config.FIELDS_INCLUDE_FILE
     config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
     config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE.format(build_dir=builddir)
     config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE.format(build_dir=builddir)
     # Location of static API file, and shell script to source
     config['static_api_dir']            = ccpp_prebuild_config.STATIC_API_DIR.format(build_dir=builddir)
     config['static_api_srcfile']        = ccpp_prebuild_config.STATIC_API_SRCFILE.format(build_dir=builddir)
-    # Template code in host-model dependent CCPP prebuild config script
-    config['ccpp_data_structure']            = ccpp_prebuild_config.CCPP_DATA_STRUCTURE
 
     # Add model-independent, CCPP-internal variable definition files
     config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
@@ -271,12 +265,14 @@ def gather_variable_definitions(variable_definition_files, typedefs_new_metadata
     logging.info('Parsing metadata tables for variables provided by host model ...')
     success = True
     metadata_define = {}
+    dependencies_define = {}
     for variable_definition_file in variable_definition_files:
-        (filedir, filename) = os.path.split(variable_definition_file)
+        (filedir, filename) = os.path.split(os.path.abspath(variable_definition_file))
         # Change to directory of variable_definition_file and parse it
         os.chdir(os.path.join(BASEDIR,filedir))
-        metadata = parse_variable_tables(filename)
+        (metadata, dependencies) = parse_variable_tables(filedir, filename)
         metadata_define = merge_dictionaries(metadata_define, metadata)
+        dependencies_define.update(dependencies)
         # Return to BASEDIR
         os.chdir(BASEDIR)
     #
@@ -301,34 +297,44 @@ def gather_variable_definitions(variable_definition_files, typedefs_new_metadata
                                                metadata_define[key][0].local_name, local_name))
                 metadata_define[key][0].local_name = local_name
     #
-    return (success, metadata_define)
+    return (success, metadata_define, dependencies_define)
 
 def collect_physics_subroutines(scheme_files):
     """Scan all Fortran source files in scheme_files for subroutines with argument tables."""
     logging.info('Parsing metadata tables in physics scheme files ...')
     success = True
-    # Parse all scheme files
+    # Parse all scheme files: record metadata, argument list, dependencies, and which scheme is in which file
     metadata_request = {}
     arguments_request = {}
+    dependencies_request = {}
+    schemes_in_files = {}
     for scheme_file in scheme_files:
-        (scheme_filepath, scheme_filename) = os.path.split(os.path.abspath(scheme_file))
+        scheme_file_with_abs_path = os.path.abspath(scheme_file)
+        (scheme_filepath, scheme_filename) = os.path.split(scheme_file_with_abs_path)
         # Change to directory where scheme_file lives
         os.chdir(scheme_filepath)
-        (metadata, arguments) = parse_scheme_tables(scheme_filename)
-        # Merge metadata, append to arguments
+        (metadata, arguments, dependencies) = parse_scheme_tables(scheme_filepath, scheme_filename)
+        # Record which scheme is in which file
+        for scheme in arguments.keys():
+            schemes_in_files[scheme] = scheme_file_with_abs_path
+        # Merge metadata, append to arguments and dependencies
         metadata_request = merge_dictionaries(metadata_request, metadata)
         arguments_request.update(arguments)
+        dependencies_request.update(dependencies)
         os.chdir(BASEDIR)
     # Return to BASEDIR
     os.chdir(BASEDIR)
-    return (success, metadata_request, arguments_request)
+    return (success, metadata_request, arguments_request, dependencies_request, schemes_in_files)
 
-def filter_metadata(metadata, arguments, suites):
-    """Remove all variables from metadata that are not used in the given suite"""
+def filter_metadata(metadata, arguments, dependencies, schemes_in_files, suites):
+    """Remove all variables from metadata that are not used in the given suite;
+    also remove information on argument lists, dependencies and schemes in files"""
     success = True
     # Output: filtered dictionaries
     metadata_filtered = {}
     arguments_filtered = {}
+    dependencies_filtered = {}
+    schemes_in_files_filtered = {}
     # Loop through all variables and check if the calling subroutine is in list of subroutines
     for var_name in sorted(metadata.keys()):
         keep = False
@@ -345,13 +351,35 @@ def filter_metadata(metadata, arguments, suites):
             metadata_filtered[var_name] = metadata[var_name]
         else:
             logging.info("filtering out variable {0}".format(var_name))
+    # Filter argument lists
     for scheme in arguments.keys():
         for suite in suites:
             if scheme in suite.all_schemes_called:
                 arguments_filtered[scheme] = arguments[scheme]
                 break
+    # Filter dependencies
+    for scheme in dependencies.keys():
+        for suite in suites:
+            if scheme in suite.all_schemes_called:
+                dependencies_filtered[scheme] = dependencies[scheme]
+                break
+    # Filter schemes_in_files
+    for scheme in schemes_in_files.keys():
+        for suite in suites:
+            if scheme in suite.all_schemes_called:
+                schemes_in_files_filtered[scheme] = schemes_in_files[scheme]
+    return (success, metadata_filtered, arguments_filtered, dependencies_filtered, schemes_in_files_filtered)
 
-    return (success, metadata_filtered, arguments_filtered)
+def generate_list_of_schemes_and_dependencies_to_compile(schemes_in_files, dependencies1, dependencies2):
+    """Generate a flat list of schemes and dependencies in two dependency dictionaries to compile"""
+    success = True
+    # schemes_in_files is a dictionary with key scheme_name and value scheme_file
+    # dependencies is a dictionary with key scheme_name and value "list of dependencies"
+    schemes_and_dependencies_to_compile = schemes_in_files.values() + \
+            [dependency for dependency_list in dependencies1.values() for dependency in dependency_list] + \
+            [dependency for dependency_list in dependencies2.values() for dependency in dependency_list]
+    # Remove duplicates
+    return (success, list(set(schemes_and_dependencies_to_compile)))
 
 def check_optional_arguments(metadata, arguments, optional_arguments):
     """Check if for each subroutine with optional arguments, an entry exists in the
@@ -365,22 +393,14 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
 
     # First make sure that the CCPP prebuild config entry doesn't contain any variables that are unknown
     # (by standard name), or that it lists variables as optional arguments that aren't declared as optional
-    for module_name in optional_arguments.keys():
+    for scheme_name in optional_arguments.keys():
         # Skip modules that have been filtered out (because they are not used by the selected suites, for example)
-        if module_name in arguments.keys():
-            # DH* 2020-05-26
-            # This is a test/workaround for some legacy code. It is actually required that
-            # module_name == scheme_name (see metadata_parser.py, around line 528).
-            for scheme_name in arguments[module_name].keys():
-                if not scheme_name == module_name:
-                    raise Exception("Found example for scheme_name /= module_name: {} vs. {}".format(module_name, scheme_name))
-            scheme_name = module_name
-            # *DH 2020-05-26
-            for subroutine_name in optional_arguments[module_name].keys():
+        if scheme_name in arguments.keys():
+            for subroutine_name in optional_arguments[scheme_name].keys():
                 # If optional arguments are listed individually, check each of them
-                if isinstance(optional_arguments[module_name][subroutine_name], list):
-                    for var_name in optional_arguments[module_name][subroutine_name]:
-                        if not var_name in arguments[module_name][scheme_name][subroutine_name]:
+                if isinstance(optional_arguments[scheme_name][subroutine_name], list):
+                    for var_name in optional_arguments[scheme_name][subroutine_name]:
+                        if not var_name in arguments[scheme_name][subroutine_name]:
                             raise Exception("Explicitly requested optional argument '{}' not known to {}/{}".format(
                                                                             var_name, module_name, subroutine_name))
                         else:
@@ -397,9 +417,8 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
                                         success = False
                                         logging.error('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
                                                                                                  subitems[0], var.container, var_name))
-                                if module_name_test == module_name and scheme_name_test == scheme_name \
-                                        and subroutine_name_test == subroutine_name and not var.optional in ['t', 'T']:
-                                    raise Exception("Variable {} in {} / {}".format(var_name, module_name, subroutine_name) + \
+                                if scheme_name_test == scheme_name and subroutine_name_test == subroutine_name and not var.optional in ['t', 'T']:
+                                    raise Exception("Variable {} in {} / {}".format(var_name, scheme_name, subroutine_name) + \
                                                 " is not an optional argument, but listed as such in the CCPP prebuild config")
 
     for var_name in sorted(metadata.keys()):
@@ -418,26 +437,26 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
                     else:
                         raise Exception('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
                                                                                    subitems[0], var.container, var_name))
-                if not module_name in optional_arguments.keys() or not \
-                        subroutine_name in optional_arguments[module_name].keys():
+                if not scheme_name in optional_arguments.keys() or not \
+                        subroutine_name in optional_arguments[scheme_name].keys():
                     raise Exception('No entry found in optional_arguments dictionary for optional argument ' + \
-                                    '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, module_name))
-                if type(optional_arguments[module_name][subroutine_name]) is list:
-                    if var_name in optional_arguments[module_name][subroutine_name]:
+                                    '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, scheme_name))
+                if type(optional_arguments[scheme_name][subroutine_name]) is list:
+                    if var_name in optional_arguments[scheme_name][subroutine_name]:
                         logging.debug('Optional argument {0} to subroutine {1} in module {2} is required, keep in list'.format(
-                                                                                       var_name, subroutine_name, module_name))
+                                                                                       var_name, subroutine_name, scheme_name))
                     else:
                         logging.debug('Optional argument {0} to subroutine {1} in module {2} is not required, remove from list'.format(
-                                                                                               var_name, subroutine_name, module_name))
+                                                                                               var_name, subroutine_name, scheme_name))
                         # Remove this var instance from list of var instances for this var_name
                         metadata[var_name].remove(var)
                         # Remove var_name from list of calling arguments for that subroutine
                         # (unless that module has been filtered out because none of the suites uses it)
-                        if module_name in arguments.keys():
-                            arguments[module_name][scheme_name][subroutine_name].remove(var_name)
-                elif optional_arguments[module_name][subroutine_name] == 'all':
+                        if scheme_name in arguments.keys():
+                            arguments[scheme_name][subroutine_name].remove(var_name)
+                elif optional_arguments[scheme_name][subroutine_name] == 'all':
                     logging.debug('optional argument {0} to subroutine {1} in module {2} is required, keep in list'.format(
-                                                                                   var_name, subroutine_name, module_name))
+                                                                                   var_name, subroutine_name, scheme_name))
 
         # If metadata[var_name] is now empty, i.e. the variable is not
         # requested at all by the model, remove the entry from metadata
@@ -738,7 +757,7 @@ def main():
         raise Exception('Parsing suite definition files failed.')
 
     # Variables defined by the host model
-    (success, metadata_define) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
+    (success, metadata_define, dependencies_define) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
@@ -748,14 +767,20 @@ def main():
         raise Exception('Call to metadata_to_html failed.')
 
     # Variables requested by the CCPP physics schemes
-    (success, metadata_request, arguments_request) = collect_physics_subroutines(config['scheme_files'])
+    (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
 
     # Filter metadata/arguments - remove whatever is not included in suite definition files
-    (success, metadata_request, arguments_request) = filter_metadata(metadata_request, arguments_request, suites)
+    (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = filter_metadata(
+                         metadata_request, arguments_request, dependencies_request, schemes_in_files, suites)
     if not success:
         raise Exception('Call to filter_metadata failed.')
+
+    (success, schemes_and_dependencies_to_compile) = generate_list_of_schemes_and_dependencies_to_compile(
+                                              schemes_in_files, dependencies_request, dependencies_define)
+    if not success:
+        raise Exception('Call to generate_list_of_schemes_and_dependencies_to_compile failed.')
 
     # Process optional arguments based on configuration in above dictionary optional_arguments
     (success, metadata_request, arguments_request) = check_optional_arguments(metadata_request,arguments_request,
@@ -779,8 +804,8 @@ def main():
     if not success:
         raise Exception('Call to generate_typedefs_makefile failed.')
 
-    # Add filenames of schemes to makefile/cmakefile/shell script - add dependencies for schemes
-    success = generate_schemes_makefile(config['scheme_files_dependencies'] + config['scheme_files'],
+    # Add filenames of schemes and variable definition files (types) to makefile/cmakefile/shell script
+    success = generate_schemes_makefile(schemes_and_dependencies_to_compile + config['variable_definition_files'],
                                         config['schemes_makefile'], config['schemes_cmakefile'],
                                         config['schemes_sourcefile'])
     if not success:
