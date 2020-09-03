@@ -1,3 +1,8 @@
+[ccpp-table-properties]
+  name = ccpp_types
+  type = module
+  dependencies =
+
 [ccpp-arg-table]
   name = ccpp_types
   type = module
@@ -9,9 +14,14 @@
   type = ccpp_t
 
 ########################################################################
+[ccpp-table-properties]
+  name = ccpp_t
+  type = ddt
+  dependencies =
+
 [ccpp-arg-table]
   name = ccpp_t
-  type = scheme
+  type = ddt
 [errflg]
   standard_name = ccpp_error_flag
   long_name = error flag for error handling in CCPP

@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 
+CCPP_STAGES = [ 'init', 'run', 'finalize' ]
+
 CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
 CCPP_LOOP_COUNTER        = 'ccpp_loop_counter'
