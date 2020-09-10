@@ -196,5 +196,68 @@ class MetadataHeaderTestCase(unittest.TestCase):
         self.assertTrue('Out of order argument, errmsg in preproc_defs_test2_run' in str(context.exception))
         self.assertTrue('3 errors found comparing' in str(context.exception))
 
+    def test_preproc_defs_test3(self):
+        """Test positive case of a variable that IS PRESENT the subroutine argument list
+           (due to a pre-processor directive: #ifdef CCPP), and IS PRESENT in meta file"""
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test3.meta")]
+        preproc_defs = {'CCPP':1}  # Set CCPP directive
+        #Exercise
+        scheme_headers = parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify size of returned list equals number of scheme headers in the test file (1)
+        #       and that header (subroutine) name is 'preproc_defs_test3_run'
+        self.assertEqual(len(scheme_headers), 1)
+        #Verify header titles
+        titles = [elem.title for elem in scheme_headers]
+        self.assertTrue('preproc_defs_test3_run' in titles)
+
+    def test_preproc_defs_test4(self):
+        """Test positive case of a variable that IS PRESENT the subroutine argument list
+           (due to a pre-processor directive: #if CCPP > 1), and IS PRESENT in meta file"""
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test4.meta")]
+        preproc_defs = {'CCPP':2}  # Set CCPP directive to > 1
+        #Exercise
+        scheme_headers = parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify size of returned list equals number of scheme headers in the test file (1)
+        #       and that header (subroutine) name is 'preproc_defs_test4_init'
+        self.assertEqual(len(scheme_headers), 1)
+        #Verify header titles
+        titles = [elem.title for elem in scheme_headers]
+        self.assertTrue('preproc_defs_test4_init' in titles)
+
+    def test_preproc_defs_test4a(self):
+        """Test correct detection of a variable that IS NOT PRESENT the subroutine argument list
+           (due to a pre-processor directive: #if CCPP > 1), but IS PRESENT in meta file"""
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test4.meta")]
+        preproc_defs = {'CCPP':1}  # Set CCPP directive to 1
+        #Exercise
+        with self.assertRaises(Exception) as context:
+            parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify 3 correct error messages returned
+        self.assertTrue('Variable mismatch in preproc_defs_test4_init, variables missing from Fortran scheme.'
+                        in str(context.exception))
+        self.assertTrue('Variable mismatch in preproc_defs_test4_init, no Fortran variable bar.'
+                        in str(context.exception))
+        self.assertTrue('Out of order argument, errmsg in preproc_defs_test4_init' in str(context.exception))
+        self.assertTrue('3 errors found comparing' in str(context.exception))
+
+    def test_preproc_defs_test5(self):
+        """Test correct detection of a variable that IS PRESENT the subroutine argument list
+           (due to a pre-processor directive: #ifdef CCPP), and IS NOT PRESENT in meta file"""
+        #Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test5.meta")]
+        preproc_defs = {'CCPP':1}  # Set CCPP directive
+        #Exercise
+        with self.assertRaises(Exception) as context:
+            parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        #Verify 3 correct error messages returned
+        self.assertTrue('Variable mismatch in preproc_defs_test5_finalize, variables missing from metadata header.'
+                         in str(context.exception))
+        self.assertTrue('Out of order argument, errmsg in preproc_defs_test5_finalize' in str(context.exception))
+        self.assertTrue('Out of order argument, errflg in preproc_defs_test5_finalize' in str(context.exception))
+        self.assertTrue('3 errors found comparing' in str(context.exception))
+
 if __name__ == '__main__':
     unittest.main()
