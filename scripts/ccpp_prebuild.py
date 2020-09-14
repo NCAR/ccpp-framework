@@ -375,9 +375,9 @@ def generate_list_of_schemes_and_dependencies_to_compile(schemes_in_files, depen
     success = True
     # schemes_in_files is a dictionary with key scheme_name and value scheme_file
     # dependencies is a dictionary with key scheme_name and value "list of dependencies"
-    schemes_and_dependencies_to_compile = schemes_in_files.values() + \
-            [dependency for dependency_list in dependencies1.values() for dependency in dependency_list] + \
-            [dependency for dependency_list in dependencies2.values() for dependency in dependency_list]
+    schemes_and_dependencies_to_compile = list(schemes_in_files.values()) + \
+            [dependency for dependency_list in list(dependencies1.values()) for dependency in dependency_list] + \
+            [dependency for dependency_list in list(dependencies2.values()) for dependency in dependency_list]
     # Remove duplicates
     return (success, list(set(schemes_and_dependencies_to_compile)))
 
