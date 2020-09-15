@@ -1,3 +1,6 @@
+[ccpp-table-properties]
+  name = physics_state
+  type = ddt
 [ccpp-arg-table]
   name = physics_state
   type = ddt

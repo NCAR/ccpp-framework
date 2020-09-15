@@ -87,7 +87,7 @@ elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
   ADD_COMPILE_OPTIONS(-Mfptrap)
   ADD_COMPILE_OPTIONS(-Mpreprocess)
 else (${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
-  message (FATAL_ERROR "This program has only been compiled with gfortran, pgf90 and ifort. If another compiler is needed, the appropriate flags must be added in ${CMAKE_SOURCE_DIR}/CMakeLists.txt")
+  message (WARNING "This program has only been compiled with gfortran, pgf90 and ifort. If another compiler is needed, the appropriate flags SHOULD be added in ${CMAKE_SOURCE_DIR}/CMakeLists.txt")
 endif (${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
 
 #------------------------------------------------------------------------------

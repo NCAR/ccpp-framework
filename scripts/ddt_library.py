@@ -12,7 +12,7 @@ from __future__     import print_function
 # CCPP framework imports
 from parse_tools    import ParseInternalError, CCPPError, context_string
 from metavar        import Var
-from metadata_table import MetadataTable
+from metadata_table import MetadataSection
 
 ###############################################################################
 
@@ -188,8 +188,8 @@ class DDTLibrary(dict):
         # End if
         # Add all the DDT headers, then process
         for ddt in ddts:
-            if not isinstance(ddt, MetadataTable):
-                errmsg = 'Invalid DDT metadata table type, {}'
+            if not isinstance(ddt, MetadataSection):
+                errmsg = 'Invalid DDT metadata type, {}'
                 raise ParseInternalError(errmsg.format(type(ddt)))
             # End if
             if not ddt.header_type == 'ddt':

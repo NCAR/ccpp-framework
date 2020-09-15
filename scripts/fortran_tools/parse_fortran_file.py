@@ -485,7 +485,8 @@ def parse_type_def(statements, type_def, mod_name, pobj, logger):
             pmatch = end_type_re.match(statement)
             if pmatch is not None:
                 # We hit the end of the type, make a header
-                mheader = MetadataTable(title=type_def[0], type_in='ddt',
+                mheader = MetadataTable(table_name_in=type_def[0],
+                                        table_type_in='ddt',
                                         module=mod_name, var_dict=var_dict,
                                         logger=logger)
                 inspec = False
@@ -543,14 +544,15 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
                 # Put statement back so caller knows where we are
                 statements.insert(0, statement)
                 # Add the header (even if we found no variables)
-                mheader = MetadataTable(title=spec_name, type_in='module',
+                mheader = MetadataTable(table_name_in=spec_name,
+                                        table_type_in='module',
                                         module=spec_name,
                                         var_dict=var_dict, logger=logger)
                 mheaders.append(mheader)
                 if logger is not None:
                     ctx = context_string(pobj, nodir=True)
                     msg = 'Adding header {}{}'
-                    logger.debug(msg.format(mheader.title, ctx))
+                    logger.debug(msg.format(mheader.table_name, ctx))
                 break
             elif ((type_def is not None) and
                   (type_def[0].lower() == active_table.lower())):
@@ -567,7 +569,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
                 if logger is not None:
                     ctx = context_string(pobj, nodir=True)
                     msg = 'Adding DDT {}{}'
-                    logger.debug(msg.format(ddt.title, ctx))
+                    logger.debug(msg.format(ddt.table_name, ctx))
                 # End if
                 active_table = None
             elif active_table is not None:
@@ -705,9 +707,9 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
     # End if
     var_dict = VarDictionary(scheme_name, variables=vdict)
     if (scheme_name is not None) and (var_dict is not None):
-        mheader = MetadataTable(title=scheme_name, type_in='scheme',
-                                module=spec_name, var_dict=var_dict,
-                                logger=logger)
+        mheader = MetadataTable(table_name_in=scheme_name,
+                                table_type_in='scheme', module=spec_name,
+                                var_dict=var_dict, logger=logger)
     # End if
     return statements, mheader
 
@@ -757,7 +759,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
     # End if
 
     inspec = True
-    mheaders = list()
+    mtables = list()
     while inspec and (statements is not None):
         while len(statements) > 0:
             statement = statements.pop(0)
@@ -771,21 +773,21 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
             elif asmatch is not None:
                 # Put table statement back to re-read
                 statements.insert(0, statement)
-                statements, new_hdrs = parse_preamble_data(statements,
+                statements, new_tbls = parse_preamble_data(statements,
                                                            pobj, spec_name,
                                                            endmatch, logger)
-                for hdr in new_hdrs:
-                    title = hdr.title
-                    if title in mheaders:
-                        errmsg = duplicate_header(mheaders[title], hdr)
+                for tbl in new_tbls:
+                    title = tbl.table_name
+                    if title in mtables:
+                        errmsg = duplicate_header(mtables[title], tbl)
                         raise CCPPError(errmsg)
                     elif logger is not None:
-                        ctx = hdr.start_context()
-                        mtype = hdr.header_type
+                        ctx = tbl.start_context()
+                        mtype = tbl.table_type
                         msg = "Adding metadata from {}, {}{}"
                         logger.debug(msg.format(mtype, title, ctx))
                     # End if
-                    mheaders.append(hdr)
+                    mtables.append(tbl)
                 # End if
                 inspec = pobj.in_region('MODULE', region_name=mod_name)
                 break
@@ -798,7 +800,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
             statements = read_statements(pobj)
         # End if
     # End while
-    return statements, mheaders
+    return statements, mtables
 
 ########################################################################
 
@@ -816,7 +818,9 @@ def parse_program(pobj, statements, logger=None):
         logger.debug(msg.format(prog_name, ctx))
     # End if
     # After the program name is the specification part
-    statements, mheaders = parse_specification(pobj, statements[1:], prog_name=prog_name, logger=logger)
+    statements, mtables = parse_specification(pobj, statements[1:],
+                                              prog_name=prog_name,
+                                              logger=logger)
     # We really cannot have tables inside a program's executable section
     # Just read until end
     statements = read_statements(pobj, statements)
@@ -836,7 +840,7 @@ def parse_program(pobj, statements, logger=None):
             statements = read_statements(pobj)
         # End if
     # End while
-    return statements, mheaders
+    return statements, mtables
 
 ########################################################################
 
@@ -854,7 +858,7 @@ def parse_module(pobj, statements, logger=None):
         logger.debug(msg.format(mod_name, ctx))
     # End if
     # After the module name is the specification part
-    statements, mheaders = parse_specification(pobj, statements[1:], mod_name=mod_name, logger=logger)
+    statements, mtables = parse_specification(pobj, statements[1:], mod_name=mod_name, logger=logger)
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inmodule = pobj.in_region('MODULE', region_name=mod_name)
@@ -874,20 +878,21 @@ def parse_module(pobj, statements, logger=None):
                 break
             elif active_table is not None:
                 statements, mheader = parse_scheme_metadata(statements, pobj,
-                                                            mod_name, active_table,
+                                                            mod_name,
+                                                            active_table,
                                                             logger)
                 if mheader is not None:
-                    title = mheader.title
-                    if title in mheaders:
-                        errmsg = duplicate_header(mheaders[title], mheader)
+                    title = mheader.table_name
+                    if title in mtables:
+                        errmsg = duplicate_header(mtables[title], mheader)
                         raise CCPPError(errmsg)
                     elif logger is not None:
-                        mtype = mheader.header_type
+                        mtype = mheader.table_type
                         ctx = mheader.start_context()
                         msg = "Adding metadata from {}, {}{}"
                         logger.debug(msg.format(mtype, title, ctx))
                     # End if
-                    mheaders.append(mheader)
+                    mtables.append(mheader)
                 # End if
                 active_table = None
                 inmodule = pobj.in_region('MODULE', region_name=mod_name)
@@ -898,12 +903,12 @@ def parse_module(pobj, statements, logger=None):
             statements = read_statements(pobj)
         # End if
     # End while
-    return statements, mheaders
+    return statements, mtables
 
 ########################################################################
 
 def parse_fortran_file(filename, preproc_defs=None, logger=None):
-    mheaders = list()
+    mtables = list()
     type_dict = {}
     pobj = read_file(filename, preproc_defs=preproc_defs, logger=logger)
     pobj.reset_pos()
@@ -917,19 +922,19 @@ def parse_fortran_file(filename, preproc_defs=None, logger=None):
         if program_re.match(statement) is not None:
             # push statement back so parse_program can use it
             statements.insert(0, statement)
-            statements, pheaders = parse_program(pobj, statements, logger=logger)
-            mheaders.extend(pheaders)
+            statements, ptables = parse_program(pobj, statements, logger=logger)
+            mtables.extend(ptables)
         elif module_re.match(statement) is not None:
             # push statement back so parse_module can use it
             statements.insert(0, statement)
-            statements, pheaders = parse_module(pobj, statements, logger=logger)
-            mheaders.extend(pheaders)
+            statements, ptables = parse_module(pobj, statements, logger=logger)
+            mtables.extend(ptables)
         # End if
         if (statements is not None) and (len(statements) == 0):
             statements = read_statements(pobj)
         # End if
     # End while
-    return mheaders
+    return mtables
 
 ########################################################################
 

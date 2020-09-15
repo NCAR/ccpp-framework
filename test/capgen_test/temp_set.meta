@@ -1,3 +1,6 @@
+[ccpp-table-properties]
+  name = temp_set
+  type = scheme
 [ccpp-arg-table]
   name = temp_set_run
   type = scheme

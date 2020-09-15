@@ -24,7 +24,6 @@ CONTAINS
     use HelloWorld_ccpp_cap, only: ccpp_physics_suite_part_list
     use hello_world_mod,     only: init_temp, compare_temp
 
-
     integer                         :: col_start, col_end
     integer                         :: index
     character(len=128), allocatable :: part_names(:)
