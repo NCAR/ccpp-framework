@@ -1,21 +1,21 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE preproc_defs_test1
+MODULE CCPPnotset_var_missing_in_meta
 
   USE ccpp_kinds, ONLY: kind_phys
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: preproc_defs_test1_run
+  PUBLIC :: CCPPnotset_var_missing_in_meta_run
 
 CONTAINS
 
-  !> \section arg_table_preproc_defs_test1_run  Argument Table
-  !! \htmlinclude arg_table_preproc_defs_test1_run.html
+  !> \section arg_table_CCPPnotset_var_missing_in_meta_run  Argument Table
+  !! \htmlinclude arg_table_CCPPnotset_var_missing_in_meta_run.html
   !!
-  subroutine preproc_defs_test1_run (foo, &
+  subroutine CCPPnotset_var_missing_in_meta_run (foo, &
 #ifndef CCPP
                                      bar, &
 #endif
@@ -33,6 +33,6 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  end subroutine preproc_defs_test1_run
+  end subroutine CCPPnotset_var_missing_in_meta_run
 
-END MODULE preproc_defs_test1
+END MODULE CCPPnotset_var_missing_in_meta

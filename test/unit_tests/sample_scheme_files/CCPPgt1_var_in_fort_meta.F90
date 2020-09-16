@@ -1,28 +1,28 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE preproc_defs_test3
+MODULE CCPPgt1_var_in_fort_meta
 
   USE ccpp_kinds, ONLY: kind_phys
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: preproc_defs_test3_run
+  PUBLIC :: CCPPgt1_var_in_fort_meta_init
 
 CONTAINS
 
-  !> \section arg_table_preproc_defs_test3_run  Argument Table
-  !! \htmlinclude arg_table_preproc_defs_test3_run.html
+  !> \section arg_table_CCPPgt1_var_in_fort_meta_init  Argument Table
+  !! \htmlinclude arg_table_CCPPgt1_var_in_fort_meta_init.html
   !!
-  subroutine preproc_defs_test3_run (foo, &
-#ifdef CCPP
+  subroutine CCPPgt1_var_in_fort_meta_init (foo, &
+#if CCPP > 1
                                      bar, &
 #endif
                                      errmsg, errflg)
 
     integer,            intent(in)    :: foo
-#ifdef CCPP
+#if CCPP > 1
     real(kind_phys),    intent(in)    :: bar
 #endif
     character(len=512), intent(out)   :: errmsg
@@ -33,6 +33,6 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  end subroutine preproc_defs_test3_run
+  end subroutine CCPPgt1_var_in_fort_meta_init
 
-END MODULE preproc_defs_test3
+END MODULE CCPPgt1_var_in_fort_meta

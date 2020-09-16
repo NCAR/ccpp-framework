@@ -1,3 +1,9 @@
+[ccpp-table-properties]
+  name = invalid_dummy_arg
+  type = scheme
+  dependencies = 
+  
+########################################################################
 [ccpp-arg-table]
   name = invalid_dummy_arg_run
   type = scheme

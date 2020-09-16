@@ -1,21 +1,21 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE preproc_defs_test5
+MODULE CCPPeq1_var_in_fort_meta
 
   USE ccpp_kinds, ONLY: kind_phys
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: preproc_defs_test5_finalize
+  PUBLIC :: CCPPeq1_var_in_fort_meta_run
 
 CONTAINS
 
-  !> \section arg_table_preproc_defs_test5_finalize  Argument Table
-  !! \htmlinclude arg_table_preproc_defs_test5_finalize.html
+  !> \section arg_table_CCPPeq1_var_in_fort_meta_run  Argument Table
+  !! \htmlinclude arg_table_CCPPeq1_var_in_fort_meta_run.html
   !!
-  subroutine preproc_defs_test5_finalize (foo, &
+  subroutine CCPPeq1_var_in_fort_meta_run (foo, &
 #ifdef CCPP
                                      bar, &
 #endif
@@ -33,6 +33,6 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  end subroutine preproc_defs_test5_finalize
+  end subroutine CCPPeq1_var_in_fort_meta_run
 
-END MODULE preproc_defs_test5
+END MODULE CCPPeq1_var_in_fort_meta

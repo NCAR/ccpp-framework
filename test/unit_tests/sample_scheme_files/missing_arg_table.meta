@@ -1,3 +1,9 @@
+[ccpp-table-properties]
+  name = missing_arg_table
+  type = scheme
+  dependencies = 
+  
+########################################################################
 [ccpp-arg-table]
   name = missing_arg_table_init
   type = scheme

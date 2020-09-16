@@ -1,28 +1,28 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE preproc_defs_test4
+MODULE CCPPeq1_var_missing_in_meta
 
   USE ccpp_kinds, ONLY: kind_phys
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: preproc_defs_test4_init
+  PUBLIC :: CCPPeq1_var_missing_in_meta_finalize
 
 CONTAINS
 
-  !> \section arg_table_preproc_defs_test4_init  Argument Table
-  !! \htmlinclude arg_table_preproc_defs_test4_init.html
+  !> \section arg_table_CCPPeq1_var_missing_in_meta_finalize  Argument Table
+  !! \htmlinclude arg_table_CCPPeq1_var_missing_in_meta_finalize.html
   !!
-  subroutine preproc_defs_test4_init (foo, &
-#if CCPP > 1
+  subroutine CCPPeq1_var_missing_in_meta_finalize (foo, &
+#ifdef CCPP
                                      bar, &
 #endif
                                      errmsg, errflg)
 
     integer,            intent(in)    :: foo
-#if CCPP > 1
+#ifdef CCPP
     real(kind_phys),    intent(in)    :: bar
 #endif
     character(len=512), intent(out)   :: errmsg
@@ -33,6 +33,6 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  end subroutine preproc_defs_test4_init
+  end subroutine CCPPeq1_var_missing_in_meta_finalize
 
-END MODULE preproc_defs_test4
+END MODULE CCPPeq1_var_missing_in_meta

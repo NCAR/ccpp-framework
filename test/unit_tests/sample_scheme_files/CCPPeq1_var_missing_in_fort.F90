@@ -1,21 +1,21 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE preproc_defs_test2
+MODULE CCPPeq1_var_missing_in_fort
 
   USE ccpp_kinds, ONLY: kind_phys
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: preproc_defs_test2_run
+  PUBLIC :: CCPPeq1_var_missing_in_fort_run
 
 CONTAINS
 
-  !> \section arg_table_preproc_defs_test2_run  Argument Table
-  !! \htmlinclude arg_table_preproc_defs_test2_run.html
+  !> \section arg_table_CCPPeq1_var_missing_in_fort_run  Argument Table
+  !! \htmlinclude arg_table_CCPPeq1_var_missing_in_fort_run.html
   !!
-  subroutine preproc_defs_test2_run (foo, &
+  subroutine CCPPeq1_var_missing_in_fort_run (foo, &
 #ifndef CCPP
                                      bar, &
 #endif
@@ -33,6 +33,6 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  end subroutine preproc_defs_test2_run
+  end subroutine CCPPeq1_var_missing_in_fort_run
 
-END MODULE preproc_defs_test2
+END MODULE CCPPeq1_var_missing_in_fort

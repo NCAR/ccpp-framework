@@ -1,5 +1,11 @@
+[ccpp-table-properties]
+  name = CCPPeq1_var_missing_in_fort
+  type = scheme
+  dependencies = 
+  
+########################################################################
 [ccpp-arg-table]
-  name = preproc_defs_test4_init
+  name = CCPPeq1_var_missing_in_fort_run
   type = scheme
 [ foo ]
   standard_name = horizontal_loop_extent
