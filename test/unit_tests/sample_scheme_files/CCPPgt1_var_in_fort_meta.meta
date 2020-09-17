@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = CCPPgt1_var_in_fort_meta
   type = scheme
-  dependencies = 
   
 ########################################################################
 [ccpp-arg-table]

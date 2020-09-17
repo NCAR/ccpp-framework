@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = CCPPeq1_var_missing_in_fort
   type = scheme
-  dependencies = 
   
 ########################################################################
 [ccpp-arg-table]

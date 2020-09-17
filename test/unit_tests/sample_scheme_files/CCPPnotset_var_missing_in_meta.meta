@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = CCPPnotset_var_missing_in_meta
   type = scheme
-  dependencies = 
   
 ########################################################################
 [ccpp-arg-table]

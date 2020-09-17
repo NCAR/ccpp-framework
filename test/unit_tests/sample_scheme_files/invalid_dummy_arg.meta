@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = invalid_dummy_arg
   type = scheme
-  dependencies = 
   
 ########################################################################
 [ccpp-arg-table]

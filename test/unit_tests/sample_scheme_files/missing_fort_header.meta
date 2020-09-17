@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = missing_fort_header
   type = scheme
-  dependencies = 
   
 ########################################################################
 [ccpp-arg-table]

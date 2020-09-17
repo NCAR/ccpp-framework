@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = temp_adjust
   type = scheme
-  dependencies = 
   
 ########################################################################
 [ccpp-arg-table]

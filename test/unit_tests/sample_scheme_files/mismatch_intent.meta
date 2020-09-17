@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = mismatch_intent
   type = scheme
-  dependencies = 
   
 ########################################################################
 [ccpp-arg-table]
