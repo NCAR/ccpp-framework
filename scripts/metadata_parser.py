@@ -146,7 +146,6 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 else:
                     container = encode_container(module_name, new_metadata_header.title)
         else:
-            logging.warning("DH DEBUG: new_metadata_header.property_table, new_metadata_header.title, scheme_name: {} {} {}".format(new_metadata_header.property_table, new_metadata_header.title, scheme_name))
             # Scheme property tables
             if new_metadata_header.property_table and new_metadata_header.title == scheme_name:
                 # If this is a ccpp-table-properties table for a scheme, it can only contain dependencies;
@@ -171,7 +170,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             # make sense), we swap the standard name and add a note to the long name
             legacy_note = ''
             if standard_name == 'horizontal_loop_extent' and scheme_name and \
-                    (table_name.endswith("_init") or table_name.endswith("finalize")):
+                    (table_name.endswith("_init") or table_name.endswith("_finalize")):
                 logging.warn("Legacy extension - replacing variable 'horizontal_loop_extent'" + \
                              " with 'horizontal_dimension' in table {}".format(table_name))
                 standard_name = 'horizontal_dimension'
