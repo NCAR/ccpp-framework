@@ -106,22 +106,63 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
         new_metadata_headers = MetadataHeader.parse_metadata_file(filename)
         NEW_METADATA_SAVE[filename] = new_metadata_headers
 
+    # Record dependencies for the metadata table (only applies to schemes)
+    has_property_table = False
+    dependencies = []
+
     # Convert new metadata for requested table to old metadata dictionary
     metadata = collections.OrderedDict()
     for new_metadata_header in new_metadata_headers:
+        # Module or DDT tables
         if not scheme_name:
-            if not new_metadata_header.title == table_name:
-                # Skip this table, since it is not requested right now
+            # Module property tables
+            if new_metadata_header.property_table and new_metadata_header.title == module_name:
+                # If this is a ccpp-table-properties table for a module, it can only contain dependencies;
+                # ensure that for module tables, the header type is "module"
+                if not new_metadata_header.header_type == 'module':
+                    raise Exception("Unsupported header_type '{}' for table properties for modules".format(
+                                                                          new_metadata_header.header_type))
+                dependencies += new_metadata_header.dependencies
+                has_property_table = True
                 continue
-            if new_metadata_header.title == module_name:
-                container = encode_container(module_name)
+            # DDT property tables
+            elif new_metadata_header.property_table:
+                # If this is a ccpp-table-properties table for a DDT, it can only contain dependencies;
+                # ensure that for DDT tables, the header type is "ddt"
+                if not new_metadata_header.header_type == 'ddt':
+                    raise Exception("Unsupported header_type '{}' for table properties for DDTs".format(
+                                                                        new_metadata_header.header_type))
+                dependencies += new_metadata_header.dependencies
+                has_property_table = True
+                continue
+            # Module or DDT argument tables
             else:
-                container = encode_container(module_name, new_metadata_header.title)
+                if not new_metadata_header.title == table_name:
+                    # Skip this table, since it is not requested right now
+                    continue
+                # Distinguish between module argument tables and DDT argument tables
+                if new_metadata_header.title == module_name:
+                    container = encode_container(module_name)
+                else:
+                    container = encode_container(module_name, new_metadata_header.title)
         else:
-            if not new_metadata_header.title == table_name:
-                # Skip this table, since it is not requested right now
+            logging.warning("DH DEBUG: new_metadata_header.property_table, new_metadata_header.title, scheme_name: {} {} {}".format(new_metadata_header.property_table, new_metadata_header.title, scheme_name))
+            # Scheme property tables
+            if new_metadata_header.property_table and new_metadata_header.title == scheme_name:
+                # If this is a ccpp-table-properties table for a scheme, it can only contain dependencies;
+                # ensure that for scheme tables, the header type is "scheme"
+                if not new_metadata_header.header_type == 'scheme':
+                    raise Exception("Unsupported header_type '{}' for table properties for schemes".format(
+                                                                          new_metadata_header.header_type))
+                dependencies += new_metadata_header.dependencies
+                has_property_table = True
                 continue
-            container = encode_container(module_name, scheme_name, table_name)
+            # Scheme argument tables
+            else:
+                if not new_metadata_header.title == table_name:
+                    # Skip this table, since it is not requested right now
+                    continue
+                container = encode_container(module_name, scheme_name, table_name)
         for new_var in new_metadata_header.variable_list():
             standard_name = new_var.get_prop_value('standard_name')
             # DH* 2020-05-26
@@ -157,8 +198,8 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             elif new_var.get_prop_value('active').lower() == '.false.':
                 active = 'F'
             else:
-                # Replace multiple whitespaces and use lowercase throughout
-                active = ' '.join(new_var.get_prop_value('active').lower().split())
+                # Replace multiple whitespaces, preserve case
+                active = ' '.join(new_var.get_prop_value('active').split())
             var = Var(standard_name = standard_name,
                       long_name     = new_var.get_prop_value('long_name') + legacy_note,
                       units         = new_var.get_prop_value('units'),
@@ -173,11 +214,21 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                       )
             # Check for duplicates in same table
             if standard_name in metadata.keys():
-               raise Exception("Error, multiple definitions of standard name {0} in new metadata table {1}".format(standard_name, table_name))
+               raise Exception("Error, multiple definitions of standard name {} in new metadata table {}".format(standard_name, table_name))
             metadata[standard_name] = [var]
-    return metadata
 
-def parse_variable_tables(filename):
+    # CCPP property tables are mandatory
+    if not has_property_table:
+        if scheme_name:
+            raise Exception("Metadata file {} for scheme {} does not have a [ccpp-table-properties] section,".format(filename, scheme_name) + \
+                                                                      " or the 'name = ...' attribute in the [ccpp-table-properties] is wrong")
+        else:
+            raise Exception("Metadata file {} for table {} does not have a [ccpp-table-properties] section,".format(filename, table_name) + \
+                                                                      " or the 'name = ...' attribute in the [ccpp-table-properties] is wrong")
+
+    return (metadata, dependencies)
+
+def parse_variable_tables(filepath, filename):
     """Parses metadata tables on the host model side that define the available variables.
     Metadata tables can refer to variables inside a module or as part of a derived
     datatype, which itself is defined inside a module (depending on the location of the
@@ -192,6 +243,9 @@ def parse_variable_tables(filename):
 
     # Registry of modules and derived data types in file
     registry = collections.OrderedDict()
+
+    # List of dependencies for this scheme
+    dependencies = collections.OrderedDict()
 
     # Read all lines of the file at once
     with (open(filename, 'r')) as file:
@@ -320,6 +374,8 @@ def parse_variable_tables(filename):
                 if not (table_name == module_name or table_name in registry[module_name].keys()):
                     raise Exception('Encountered table with name {0} without corresponding module or type name'.format(table_name))
                 in_table = True
+                if not table_name in dependencies.keys():
+                    dependencies[table_name] = []
                 header_line_number = current_line_number + 1
                 line_counter += 1
                 continue
@@ -335,7 +391,10 @@ def parse_variable_tables(filename):
                         if words[0] == '!!' and words[1] == '\\htmlinclude' and len(words) == 3:
                             filename_parts = filename.split('.')
                             metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
-                            this_metadata = read_new_metadata(metadata_filename, module_name, table_name)
+                            (this_metadata, these_dependencies) = read_new_metadata(metadata_filename, module_name, table_name)
+                            if these_dependencies:
+                                # Remove duplicates when combining lists
+                                dependencies[table_name] = list(set(dependencies[table_name] + these_dependencies))
                             for var_name in this_metadata.keys():
                                 for var in this_metadata[var_name]:
                                     if var_name in CCPP_MANDATORY_VARIABLES.keys() and not CCPP_MANDATORY_VARIABLES[var_name].compatible(var):
@@ -422,10 +481,18 @@ def parse_variable_tables(filename):
         if len(metadata.keys()) > 0:
             logging.info('Parsed variable definition tables in module {0}'.format(module_name))
 
-    return metadata
+    # Add absolute path to dependencies
+    for table_name in dependencies.keys():
+        if dependencies[table_name]:
+            dependencies[table_name] = [ os.path.join(filepath, x) for x in dependencies[table_name]]
+            for dependency in dependencies[table_name]:
+                if not os.path.isfile(dependency):
+                    raise Exception("Dependency {} for variable table {} does not exit".format(dependency, table_name))
+
+    return (metadata, dependencies)
 
 
-def parse_scheme_tables(filename):
+def parse_scheme_tables(filepath, filename):
     """Parses metadata tables for a physics scheme that requests/requires variables as
     input arguments. Metadata tables can only describe variables required by a subroutine
     'subroutine_name' of scheme 'scheme_name' inside a module 'module_name'. Each variable
@@ -454,6 +521,9 @@ def parse_scheme_tables(filename):
 
     # Argument lists of each subroutine in the file
     arguments = collections.OrderedDict()
+
+    # List of Dependencies for this scheme
+    dependencies = collections.OrderedDict()
 
     # Read all lines of the file at once
     with (open(filename, 'r')) as file:
@@ -564,14 +634,15 @@ def parse_scheme_tables(filename):
         logging.debug('Parsing file {0} with registry {1}'.format(filename, registry))
 
         for scheme_name in registry[module_name].keys():
+            # Record the dependencies for the scheme
+            if not scheme_name in dependencies.keys():
+                dependencies[scheme_name] = []
             for subroutine_name in registry[module_name][scheme_name].keys():
                 # Record the order of variables in the call list to each subroutine in a list
-                if not module_name in arguments.keys():
-                    arguments[module_name] = {}
-                if not scheme_name in arguments[module_name].keys():
-                    arguments[module_name][scheme_name] = {}
-                if not subroutine_name in arguments[module_name][scheme_name].keys():
-                    arguments[module_name][scheme_name][subroutine_name] = []
+                if not scheme_name in arguments.keys():
+                    arguments[scheme_name] = {}
+                if not subroutine_name in arguments[scheme_name].keys():
+                    arguments[scheme_name][subroutine_name] = []
                 # Find the argument table corresponding to each subroutine by searching
                 # "upward" from the subroutine definition line for the "arg_table_SubroutineName" section
                 table_found = False
@@ -598,11 +669,14 @@ def parse_scheme_tables(filename):
                         if words[0] == '!!' and words[1] == '\\htmlinclude' and len(words) == 3:
                             filename_parts = filename.split('.')
                             metadata_filename = '.'.join(filename_parts[0:len(filename_parts)-1]) + '.meta'
-                            this_metadata = read_new_metadata(metadata_filename, module_name, table_name,
-                                                              scheme_name=scheme_name, subroutine_name=subroutine_name)
+                            (this_metadata, these_dependencies) = read_new_metadata(metadata_filename, module_name, table_name,
+                                                                                    scheme_name=scheme_name, subroutine_name=subroutine_name)
+                            if these_dependencies:
+                                # Remove duplicates when combining lists
+                                dependencies[scheme_name] = list(set(dependencies[scheme_name] + these_dependencies))
                             for var_name in this_metadata.keys():
                                 # Add standard_name to argument list for this subroutine
-                                arguments[module_name][scheme_name][subroutine_name].append(var_name)
+                                arguments[scheme_name][subroutine_name].append(var_name)
                                 # For all instances of this var (can be only one) in this subroutine's metadata,
                                 # add to global metadata and check for compatibility with existing variables
                                 for var in this_metadata[var_name]:
@@ -641,9 +715,9 @@ def parse_scheme_tables(filename):
 
                     # After parsing entire metadata table for the subroutine, check that all
                     # mandatory CCPP variables are present - skip empty tables.
-                    if arguments[module_name][scheme_name][subroutine_name]:
+                    if arguments[scheme_name][subroutine_name]:
                         for var_name in CCPP_MANDATORY_VARIABLES.keys():
-                            if not var_name in arguments[module_name][scheme_name][subroutine_name]:
+                            if not var_name in arguments[scheme_name][subroutine_name]:
                                 raise Exception('Mandatory CCPP variable {0} not declared in metadata table of subroutine {1}'.format(
                                                                                                            var_name, subroutine_name))
 
@@ -674,9 +748,10 @@ def parse_scheme_tables(filename):
         # Debugging output to screen and to XML
         if debug and len(metadata.keys()) > 0:
             # To screen
-            logging.debug('Module name: {0}'.format(module_name))
+            logging.debug('Module name: {}'.format(module_name))
             for scheme_name in registry[module_name].keys():
-                logging.debug('Scheme name: {0}'.format(scheme_name))
+                logging.debug('Scheme name: {}'.format(scheme_name))
+                logging.debug('Scheme dependencies: {}'.format(dependencies[scheme_name]))
                 for subroutine_name in registry[module_name][scheme_name].keys():
                     container = encode_container(module_name, scheme_name, subroutine_name)
                     vars_in_subroutine = []
@@ -684,12 +759,23 @@ def parse_scheme_tables(filename):
                         for var in metadata[var_name]:
                             if var.container == container:
                                 vars_in_subroutine.append(var_name)
-                    logging.debug('Variables in subroutine {0}: {1}'.format(subroutine_name, ', '.join(vars_in_subroutine)))
+                    logging.debug('Variables in subroutine {}: {}'.format(subroutine_name, ', '.join(vars_in_subroutine)))
         # Standard output to screen
         elif len(metadata.keys()) > 0:
             for scheme_name in registry[module_name].keys():
-                logging.info('Parsed tables in scheme {0}'.format(scheme_name))
+                if dependencies[scheme_name]:
+                    logging.info('Parsed tables in scheme {} with dependencies {}'.format(scheme_name, dependencies[scheme_name]))
+                else:
+                    logging.info('Parsed tables in scheme {}'.format(scheme_name))
 
     # End of loop over all module_names
 
-    return (metadata, arguments)
+    # Add absolute path to dependencies
+    for scheme_name in dependencies.keys():
+        if dependencies[scheme_name]:
+            dependencies[scheme_name] = [ os.path.join(filepath, x) for x in dependencies[scheme_name]]
+            for dependency in dependencies[scheme_name]:
+                if not os.path.isfile(dependency):
+                    raise Exception("Dependency {} for scheme table {} does not exit".format(dependency, scheme_name))
+
+    return (metadata, arguments, dependencies)
