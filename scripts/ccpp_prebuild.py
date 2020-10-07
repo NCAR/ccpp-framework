@@ -511,6 +511,7 @@ def compare_metadata(metadata_define, metadata_request):
             if var.units == metadata_define[var_name][0].units:
                 continue
             # Register conversion, depending on the intent for this subroutine.
+            logging.debug('Registering unit conversion for variable {0} in {1}'.format(var_name, var.container))
             if var.intent=='inout':
                 var.convert_from(metadata_define[var_name][0].units)
                 var.convert_to(metadata_define[var_name][0].units)
