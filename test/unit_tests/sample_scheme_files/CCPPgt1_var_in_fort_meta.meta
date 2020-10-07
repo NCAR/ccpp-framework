@@ -1,5 +1,10 @@
+[ccpp-table-properties]
+  name = CCPPgt1_var_in_fort_meta
+  type = scheme
+  
+########################################################################
 [ccpp-arg-table]
-  name = preproc_defs_test2_run
+  name = CCPPgt1_var_in_fort_meta_init
   type = scheme
 [ foo ]
   standard_name = horizontal_loop_extent

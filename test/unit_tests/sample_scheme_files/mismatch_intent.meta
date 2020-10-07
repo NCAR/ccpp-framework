@@ -1,3 +1,8 @@
+[ccpp-table-properties]
+  name = mismatch_intent
+  type = scheme
+  
+########################################################################
 [ccpp-arg-table]
   name = mismatch_intent_run
   type = scheme

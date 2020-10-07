@@ -1,19 +1,16 @@
+[ccpp-table-properties]
+  name = CCPPnotset_var_missing_in_meta
+  type = scheme
+  
+########################################################################
 [ccpp-arg-table]
-  name = preproc_defs_test3_run
+  name = CCPPnotset_var_missing_in_meta_run
   type = scheme
 [ foo ]
   standard_name = horizontal_loop_extent
   type = integer
   units = count
   dimensions = ()
-  intent = in
-[ bar ]
-  standard_name = time_step_for_physics
-  long_name = time step
-  units = s
-  dimensions = ()
-  type = real
-  kind = kind_phys
   intent = in
 [ errmsg ]
   standard_name = ccpp_error_message

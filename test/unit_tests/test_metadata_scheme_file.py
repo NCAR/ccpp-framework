@@ -74,8 +74,8 @@ class MetadataHeaderTestCase(unittest.TestCase):
         scheme_files = [os.path.join(self._sample_files_dir, "temp_adjust.meta")]
         preproc_defs = {}
         #Exercise
-        scheme_headers = parse_scheme_files(scheme_files, preproc_defs,
-                                          self._logger)
+        scheme_headers, table_dict = parse_scheme_files(scheme_files, preproc_defs,
+                                                  self._logger)
         #Verify size of returned list equals number of scheme headers in the test file
         #       and that header (subroutine) names are 'temp_adjust_[init,run,finalize]'
         self.assertEqual(len(scheme_headers), 3)
@@ -84,6 +84,9 @@ class MetadataHeaderTestCase(unittest.TestCase):
         self.assertTrue('temp_adjust_init' in titles)
         self.assertTrue('temp_adjust_run' in titles)
         self.assertTrue('temp_adjust_finalize' in titles)
+        #Verify size and name of table_dict matches scheme name
+        self.assertEqual(len(table_dict), 1)
+        self.assertTrue('temp_adjust' in table_dict)
 
     def test_reordered_scheme_file(self):
         """Test that metadata file matches the Fortran when the routines are not in the same order """
@@ -91,8 +94,8 @@ class MetadataHeaderTestCase(unittest.TestCase):
         scheme_files = [os.path.join(self._sample_files_dir, "reorder.meta")]
         preproc_defs = {}
         #Exercise
-        scheme_headers = parse_scheme_files(scheme_files, preproc_defs,
-                                            self._logger)
+        scheme_headers, table_dict = parse_scheme_files(scheme_files, preproc_defs,
+                                                  self._logger)
         #Verify size of returned list equals number of scheme headers in the test file
         #       and that header (subroutine) names are 'reorder_[init,run,finalize]'
         self.assertEqual(len(scheme_headers), 3)
@@ -101,6 +104,9 @@ class MetadataHeaderTestCase(unittest.TestCase):
         self.assertTrue('reorder_init' in titles)
         self.assertTrue('reorder_run' in titles)
         self.assertTrue('reorder_finalize' in titles)
+        #Verify size and name of table_dict matches scheme name
+        self.assertEqual(len(table_dict), 1)
+        self.assertTrue('reorder' in table_dict)
 
     def test_missing_metadata_header(self):
         """Test that a missing metadata header (aka arg table) is corretly detected """
@@ -163,101 +169,112 @@ class MetadataHeaderTestCase(unittest.TestCase):
         #Verify correct error message returned
         self.assertTrue("Invalid dummy argument, 'woohoo', at" in str(context.exception))
 
-    def test_preproc_defs_test1(self):
+# pylint: disable=invalid-name
+    def test_CCPPnotset_var_missing_in_meta(self):
         """Test for correct detection of a variable that REMAINS in the subroutine argument list
            (due to an undefined pre-processor directive: #ifndef CCPP), BUT IS NOT PRESENT in meta file"""
         #Setup
-        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test1.meta")]
+        scheme_files = [os.path.join(self._sample_files_dir, "CCPPnotset_var_missing_in_meta.meta")]
         preproc_defs = {}          # CCPP directive is not set
         #Exercise
         with self.assertRaises(Exception) as context:
             parse_scheme_files(scheme_files, preproc_defs, self._logger)
         #Verify 3 correct error messages returned
-        self.assertTrue('Variable mismatch in preproc_defs_test1_run, variables missing from metadata header.'
+        self.assertTrue('Variable mismatch in CCPPnotset_var_missing_in_meta_run, variables missing from metadata header.'
                          in str(context.exception))
-        self.assertTrue('Out of order argument, errmsg in preproc_defs_test1_run' in str(context.exception))
-        self.assertTrue('Out of order argument, errflg in preproc_defs_test1_run' in str(context.exception))
+        self.assertTrue('Out of order argument, errmsg in CCPPnotset_var_missing_in_meta_run' in str(context.exception))
+        self.assertTrue('Out of order argument, errflg in CCPPnotset_var_missing_in_meta_run' in str(context.exception))
         self.assertTrue('3 errors found comparing' in str(context.exception))
 
-    def test_preproc_defs_test2(self):
+    def test_CCPPeq1_var_missing_in_fort(self):
         """Test for correct detection of a variable that IS REMOVED the subroutine argument list
            (due to a pre-processor directive: #ifndef CCPP), but IS PRESENT in meta file"""
         #Setup
-        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test2.meta")]
+        scheme_files = [os.path.join(self._sample_files_dir, "CCPPeq1_var_missing_in_fort.meta")]
         preproc_defs = {'CCPP':1}  # Set CCPP directive
         #Exercise
         with self.assertRaises(Exception) as context:
             parse_scheme_files(scheme_files, preproc_defs, self._logger)
         #Verify 3 correct error messages returned
-        self.assertTrue('Variable mismatch in preproc_defs_test2_run, variables missing from Fortran scheme.'
+        self.assertTrue('Variable mismatch in CCPPeq1_var_missing_in_fort_run, variables missing from Fortran scheme.'
                         in str(context.exception))
-        self.assertTrue('Variable mismatch in preproc_defs_test2_run, no Fortran variable bar.'
+        self.assertTrue('Variable mismatch in CCPPeq1_var_missing_in_fort_run, no Fortran variable bar.'
                         in str(context.exception))
-        self.assertTrue('Out of order argument, errmsg in preproc_defs_test2_run' in str(context.exception))
+        self.assertTrue('Out of order argument, errmsg in CCPPeq1_var_missing_in_fort_run' in str(context.exception))
         self.assertTrue('3 errors found comparing' in str(context.exception))
 
-    def test_preproc_defs_test3(self):
+    def test_CCPPeq1_var_in_fort_meta(self):
         """Test positive case of a variable that IS PRESENT the subroutine argument list
            (due to a pre-processor directive: #ifdef CCPP), and IS PRESENT in meta file"""
         #Setup
-        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test3.meta")]
+        scheme_files = [os.path.join(self._sample_files_dir, "CCPPeq1_var_in_fort_meta.meta")]
         preproc_defs = {'CCPP':1}  # Set CCPP directive
         #Exercise
-        scheme_headers = parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        scheme_headers, table_dict = parse_scheme_files(scheme_files, preproc_defs, self._logger)
         #Verify size of returned list equals number of scheme headers in the test file (1)
-        #       and that header (subroutine) name is 'preproc_defs_test3_run'
+        #       and that header (subroutine) name is 'CCPPeq1_var_in_fort_meta_run'
         self.assertEqual(len(scheme_headers), 1)
         #Verify header titles
         titles = [elem.title for elem in scheme_headers]
-        self.assertTrue('preproc_defs_test3_run' in titles)
+        self.assertTrue('CCPPeq1_var_in_fort_meta_run' in titles)
 
-    def test_preproc_defs_test4(self):
+        #Verify size and name of table_dict matches scheme name
+        self.assertEqual(len(table_dict), 1)
+        self.assertTrue('CCPPeq1_var_in_fort_meta' in table_dict)
+
+    def test_CCPPgt1_var_in_fort_meta(self):
         """Test positive case of a variable that IS PRESENT the subroutine argument list
            (due to a pre-processor directive: #if CCPP > 1), and IS PRESENT in meta file"""
         #Setup
-        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test4.meta")]
+        scheme_files = [os.path.join(self._sample_files_dir, "CCPPgt1_var_in_fort_meta.meta")]
         preproc_defs = {'CCPP':2}  # Set CCPP directive to > 1
         #Exercise
-        scheme_headers = parse_scheme_files(scheme_files, preproc_defs, self._logger)
+        scheme_headers, table_dict = parse_scheme_files(scheme_files, preproc_defs, self._logger)
         #Verify size of returned list equals number of scheme headers in the test file (1)
-        #       and that header (subroutine) name is 'preproc_defs_test4_init'
+        #       and that header (subroutine) name is 'CCPPgt1_var_in_fort_meta_init'
         self.assertEqual(len(scheme_headers), 1)
         #Verify header titles
         titles = [elem.title for elem in scheme_headers]
-        self.assertTrue('preproc_defs_test4_init' in titles)
+        self.assertTrue('CCPPgt1_var_in_fort_meta_init' in titles)
 
-    def test_preproc_defs_test4a(self):
+        #Verify size and name of table_dict matches scheme name
+        self.assertEqual(len(table_dict), 1)
+        self.assertTrue('CCPPgt1_var_in_fort_meta' in table_dict)
+
+    def test_CCPPgt1_var_in_fort_meta2(self):
         """Test correct detection of a variable that IS NOT PRESENT the subroutine argument list
            (due to a pre-processor directive: #if CCPP > 1), but IS PRESENT in meta file"""
         #Setup
-        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test4.meta")]
+        scheme_files = [os.path.join(self._sample_files_dir, "CCPPgt1_var_in_fort_meta.meta")]
         preproc_defs = {'CCPP':1}  # Set CCPP directive to 1
         #Exercise
         with self.assertRaises(Exception) as context:
             parse_scheme_files(scheme_files, preproc_defs, self._logger)
         #Verify 3 correct error messages returned
-        self.assertTrue('Variable mismatch in preproc_defs_test4_init, variables missing from Fortran scheme.'
+        self.assertTrue('Variable mismatch in CCPPgt1_var_in_fort_meta_init, variables missing from Fortran scheme.'
                         in str(context.exception))
-        self.assertTrue('Variable mismatch in preproc_defs_test4_init, no Fortran variable bar.'
+        self.assertTrue('Variable mismatch in CCPPgt1_var_in_fort_meta_init, no Fortran variable bar.'
                         in str(context.exception))
-        self.assertTrue('Out of order argument, errmsg in preproc_defs_test4_init' in str(context.exception))
+        self.assertTrue('Out of order argument, errmsg in CCPPgt1_var_in_fort_meta_init' in str(context.exception))
         self.assertTrue('3 errors found comparing' in str(context.exception))
 
-    def test_preproc_defs_test5(self):
+    def test_CCPPeq1_var_missing_in_meta(self):
         """Test correct detection of a variable that IS PRESENT the subroutine argument list
            (due to a pre-processor directive: #ifdef CCPP), and IS NOT PRESENT in meta file"""
         #Setup
-        scheme_files = [os.path.join(self._sample_files_dir, "preproc_defs_test5.meta")]
+        scheme_files = [os.path.join(self._sample_files_dir, "CCPPeq1_var_missing_in_meta.meta")]
         preproc_defs = {'CCPP':1}  # Set CCPP directive
         #Exercise
         with self.assertRaises(Exception) as context:
             parse_scheme_files(scheme_files, preproc_defs, self._logger)
         #Verify 3 correct error messages returned
-        self.assertTrue('Variable mismatch in preproc_defs_test5_finalize, variables missing from metadata header.'
+        self.assertTrue('Variable mismatch in CCPPeq1_var_missing_in_meta_finalize, variables missing from metadata header.'
                          in str(context.exception))
-        self.assertTrue('Out of order argument, errmsg in preproc_defs_test5_finalize' in str(context.exception))
-        self.assertTrue('Out of order argument, errflg in preproc_defs_test5_finalize' in str(context.exception))
+        self.assertTrue('Out of order argument, errmsg in CCPPeq1_var_missing_in_meta_finalize' in str(context.exception))
+        self.assertTrue('Out of order argument, errflg in CCPPeq1_var_missing_in_meta_finalize' in str(context.exception))
         self.assertTrue('3 errors found comparing' in str(context.exception))
+
+# pylint: enable=invalid-name
 
 if __name__ == '__main__':
     unittest.main()

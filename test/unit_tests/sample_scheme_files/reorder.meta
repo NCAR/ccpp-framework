@@ -1,3 +1,8 @@
+[ccpp-table-properties]
+  name = reorder
+  type = scheme
+  
+########################################################################
 [ccpp-arg-table]
   name = reorder_finalize
   type = scheme

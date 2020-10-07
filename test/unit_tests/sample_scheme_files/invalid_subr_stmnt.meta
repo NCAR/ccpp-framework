@@ -1,3 +1,8 @@
+[ccpp-table-properties]
+  name = invalid_subr_stmnt
+  type = scheme
+  
+########################################################################
 [ccpp-arg-table]
   name = invalid_subr_stmnt_init
   type = scheme

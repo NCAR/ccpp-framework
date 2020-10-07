@@ -1,5 +1,10 @@
+[ccpp-table-properties]
+  name = CCPPeq1_var_missing_in_meta
+  type = scheme
+  
+########################################################################
 [ccpp-arg-table]
-  name = preproc_defs_test1_run
+  name = CCPPeq1_var_missing_in_meta_finalize
   type = scheme
 [ foo ]
   standard_name = horizontal_loop_extent
