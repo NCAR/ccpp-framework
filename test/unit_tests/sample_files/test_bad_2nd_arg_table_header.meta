@@ -1,3 +1,9 @@
+[ccpp-table-properties]
+  name = vmr_type
+  type = ddt
+  dependencies =
+
+########################################################################
 [ccpp-arg-table]
   name = vmr_type
   type = ddt
