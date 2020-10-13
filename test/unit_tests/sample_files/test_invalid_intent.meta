@@ -1,3 +1,9 @@
+[ccpp-table-properties]
+  name = temp_calc_adjust
+  type = scheme
+  dependencies =
+
+########################################################################
 [ccpp-arg-table]
   name = temp_calc_adjust_run
   type = scheme
