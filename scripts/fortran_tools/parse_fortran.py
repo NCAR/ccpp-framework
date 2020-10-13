@@ -244,16 +244,16 @@ class Ftype(object):
 class Ftype_character(Ftype):
     """Ftype_character is a type that represents character types
     >>> Ftype_character.type_match('character') #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
+    <_sre.SRE_Match object; span=(0, 9), match='character'>
     >>> Ftype_character.type_match('CHARACTER') #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
+    <_sre.SRE_Match object; span=(0, 9), match='CHARACTER'>
     >>> Ftype_character.type_match('chaRActer (len=*)') #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
+    <_sre.SRE_Match object; span=(0, 17), match='chaRActer (len=*)'>
     >>> Ftype_character.type_match('integer')
 
     >>> Ftype_character('character', ParseContext(169, 'foo.F90')).__str__()
     Traceback (most recent call last):
-    ParseSyntaxError: Invalid character declaration, 'character', at foo.F90:170
+    parse_source.ParseSyntaxError: Invalid character declaration, 'character', at foo.F90:170
     >>> Ftype_character('character ::', ParseContext(171, 'foo.F90')).__str__()
     'character(len=1)'
     >>> Ftype_character('CHARACTER(len=*)', ParseContext(174, 'foo.F90')).__str__()
@@ -399,7 +399,7 @@ class Ftype_type_decl(Ftype):
     >>> Ftype_type_decl.type_match('character')
 
     >>> Ftype_type_decl.type_match('type(foo)') #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
+    <_sre.SRE_Match object; span=(0, 9), match='type(foo)'>
     >>> Ftype_type_decl.type_def_line('type GFS_statein_type')
     ['GFS_statein_type', None, None]
     >>> Ftype_type_decl.type_def_line('type GFS_statein_type (n, m) ')
@@ -535,7 +535,7 @@ def parse_fortran_var_decl(line, source, logger=None):
     """Parse a Fortran variable declaration line and return a list of
     Var objects representing the variables declared on <line>.
     >>> _VAR_ID_RE.match('foo') #doctest: +ELLIPSIS
-    <_sre.SRE_Match object at 0x...>
+    <_sre.SRE_Match object; span=(0, 3), match='foo'>
     >>> _VAR_ID_RE.match("foo()")
 
     >>> _VAR_ID_RE.match('foo').group(1)

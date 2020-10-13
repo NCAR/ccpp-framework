@@ -136,11 +136,11 @@ class FortranWriter(object):
         # We only handle writing situations (for now) and only text
         if 'r' in mode:
             raise ValueError('Read mode not allowed in FortranWriter object')
-        elif 'b' in mode:
+        # end if
+        if 'b' in mode:
             raise ValueError('Binary mode not allowed in FortranWriter object')
-        else:
-            self._file = open(filename, mode)
         # End if
+        self._file = open(filename, mode)
         if indent is None:
             self._indent = FortranWriter.INDENT
         else:

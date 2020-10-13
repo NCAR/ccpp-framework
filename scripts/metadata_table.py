@@ -120,7 +120,7 @@ Notes on the input format:
 """
 
 # Python library imports
-from __future__ import print_function
+import difflib
 import os.path
 import re
 # CCPP framework imports
@@ -255,7 +255,7 @@ def find_scheme_names(filename):
 
 ########################################################################
 
-class MetadataTable(ParseSource):
+class MetadataTable():
     """Class to hold a CCPP Metadata table including the table header
     (ccpp-table-properties section) and all of the associated table
     sections (ccpp-arg-table sections)."""
@@ -342,6 +342,8 @@ class MetadataTable(ParseSource):
         the first line of the header using the header_start method."""
         curr_line, _ = self.__pobj.next_line()
         in_properties_header = True
+        skip_rest_of_section = False
+        self.__dependencies = list() # Default is no dependencies
         # Process lines until the end of the file or start of the next table.
         while ((curr_line is not None) and
                (not MetadataTable.table_start(curr_line))):
@@ -360,26 +362,40 @@ class MetadataTable(ParseSource):
                         self.__table_name = value
                     elif key == 'type':
                         if value not in TABLE_TYPES:
-                            raise ParseSyntaxError("metadata table type",
-                                                   token=value,
-                                                   context=self.__pobj)
+                            self.__pobj.add_syntax_err("metadata table type",
+                                                       token=value)
                         # end if
                         self.__table_type = value
                     elif key == 'dependencies':
-                        if value.lower() != "none":
-                            self.__dependencies = value
+                        if value.lower() == "none":
+                            if self.__dependencies:
+                                emsg = "dependencies = {} is ".format(value)
+                                depends = ", ".join(self.__dependencies)
+                                emsg += "incompatible with {}".format(depends)
+                                self.__pobj.add_syntax_err(emsg)
+                            else:
+                                self.__dependencies = None
+                            # end if
+                        elif self.__dependencies is None:
+                            emsg = "Cannot add dependencies, they have "
+                            emsg += "already been declared as None"
+                            self.__pobj.add_syntax_err(emsg)
+                        else:
+                            depends = [x.strip() for x in value.split(',')]
+                            self.__dependencies.extend(depends)
                         # end if
                     elif key == 'relative_path':
                         self.__relative_path = value
                     else:
-                        raise ParseSyntaxError("metadata table start property",
-                                               token=value, context=self.__pobj)
+                        tok_type = "metadata table start property"
+                        self.__pobj.add_syntax_err(tok_type, token=value)
                     # end if
                 # end for
                 curr_line, _ = self.__pobj.next_line()
             else:
                 # Process a metadata section
                 if MetadataSection.header_start(curr_line):
+                    skip_rest_of_section = False
                     section = MetadataSection(self.table_name, self.table_type,
                                               parse_object=self.__pobj,
                                               known_ddts=known_ddts,
@@ -389,28 +405,35 @@ class MetadataTable(ParseSource):
                         (self.table_type in _SINGLETON_TABLE_TYPES)):
                         prev_title = self.__sections[0].title
                         emsg = "{}, '{}', table already contains '{}'"
-                        raise ParseSyntaxError(emsg.format(self.table_type,
-                                                           section.title,
-                                                           prev_title),
-                                               context=self.__pobj)
+                        self.__pobj.add_syntax_err(emsg.format(self.table_type,
+                                                               section.title,
+                                                               prev_title))
                     # end if
                     self.__sections.append(section)
                     # Note: Do not read next line, we are already on it.
                     curr_line, _ = self.__pobj.curr_line()
                 elif not _is_blank(curr_line):
-                    raise ParseSyntaxError("metadata file line",
-                                           token=curr_line, context=self.__pobj)
+                    if not skip_rest_of_section:
+                        self.__pobj.add_syntax_err("metadata file line",
+                                                   token=curr_line)
+                        skip_rest_of_section = True
+                    # end if
+                    curr_line, _ = self.__pobj.next_line()
                 else:
                     curr_line, _ = self.__pobj.next_line()
                 # end if
             # end if
         # end while
+        if self.__pobj.error_message:
+            # Time to dump out error messages
+            raise CCPPError(self.__pobj.error_message)
+        # end if
         if self.table_type == "ddt":
             known_ddts.append(self.table_name)
         # end if
-        #  Initialize our ParseSource parent
-        super(MetadataTable, self).__init__(self.table_name,
-                                            self.table_type, self.__pobj)
+        if self.__dependencies is None:
+            self.__dependencies = list()
+        # end if
 
     def start_context(self, with_comma=True, nodir=True):
         """Return a context string for the beginning of the table"""
@@ -468,21 +491,24 @@ class MetadataTable(ParseSource):
 
 class MetadataSection(ParseSource):
     """Class to hold all information from a metadata header
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "type = scheme", "module = foo",      \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])) #doctest: +ELLIPSIS
     <__main__.MetadataSection foo / foobar at 0x...>
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "type = scheme", "module = foobar",   \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var horizontal_loop_extent: im at 0x...>
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "type = scheme", "module = foobar",   \
                        "process = microphysics", "[ im ]",                    \
                        "standard_name = horizontal_loop_extent",              \
@@ -490,7 +516,8 @@ class MetadataSection(ParseSource):
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var horizontal_loop_extent: im at 0x...>
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "module = foo",                       \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
@@ -498,8 +525,9 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        "  subroutine foo()"])).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    ParseSyntaxError: Missing metadata header type, at foobar.txt:7
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+    parse_source.ParseSyntaxError: Invalid variable property syntax, 'subroutine foo()', at foobar.txt:8
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "type = scheme", "module=foobar",     \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
@@ -507,53 +535,53 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        ""], line_start=0)).find_variable('horizontal_loop_extent').get_prop_value('local_name')
     'im'
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "type = scheme"                       \
                        "[ im ]", "standard_name = horizontal loop extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in",                      \
-                       ""], line_start=0)).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ParseSyntaxError: Invalid variable property value, 'horizontal loop extent', at foobar.txt:2
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+                       ""], line_start=0)).find_variable('horizontal_loop_extent')
+
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["[ccpp-arg-table]", "name = foobar", "type = scheme"   \
                        "[ im ]", "standard_name = horizontal loop extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in",                      \
-                       ""], line_start=0)).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ParseSyntaxError: Invalid property syntax, '[ccpp-arg-table]', at foobar.txt:1
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+                       ""], line_start=0)).find_variable('horizontal_loop_extent')
+
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "module = foo"                        \
                        "[ im ]", "standard_name = horizontal loop extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in",                      \
-                       ""], line_start=0)).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ParseSyntaxError: Invalid metadata header start, no table type, at foobar.txt:2
-    >>> MetadataSection(ParseObject("foobar.txt",                             \
+                       ""], line_start=0)).find_variable('horizontal_loop_extent')
+
+    >>> MetadataSection("footable", "scheme",                                 \
+                      parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "foo = bar"                           \
                        "[ im ]", "standard_name = horizontal loop extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in",                      \
-                       ""], line_start=0)).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ParseSyntaxError: Invalid metadata header start property, 'foo', at foobar.txt:2
+                       ""], line_start=0)).find_variable('horizontal_loop_extent')
+
     >>> MetadataSection.header_start('[ ccpp-arg-table ]')
     True
     >>> MetadataSection.header_start('[ qval ]')
     False
     >>> MetadataSection.header_start('  local_name = foo')
     False
-    >>> MetadataSection.variable_start('[ qval ]', ParseContext(filename='foo.meta'))
+    >>> MetadataSection.variable_start('[ qval ]', ParseObject('foo.meta', []))
     'qval'
-    >>> MetadataSection.variable_start('[ qval(hi_mom) ]', ParseContext(filename='foo.meta'))
+    >>> MetadataSection.variable_start('[ qval(hi_mom) ]', ParseObject('foo.meta', []))
     'qval(hi_mom)'
-    >>> MetadataSection.variable_start('  local_name = foo', ParseContext(filename='foo.meta'))
+    >>> MetadataSection.variable_start('  local_name = foo', ParseContext(filename='foo.meta', linenum=1))
 
 """
 
@@ -582,6 +610,7 @@ class MetadataSection(ParseSource):
         self.__header_type = None
         self.__module_name = None
         self.__process_type = UNKNOWN_PROCESS_TYPE
+        self.__section_valid = True
         if parse_object is None:
             if title is not None:
                 self.__section_title = title
@@ -595,9 +624,14 @@ class MetadataSection(ParseSource):
             if type_in in HEADER_TYPES:
                 self.__header_type = type_in
             else:
-                raise ParseSyntaxError("metadata arg table type",
-                                       token=type_in,
-                                       context=self.__pobj)
+                self.__pobj.add_syntax_err("metadata arg table type",
+                                           token=type_in)
+                self.__section_valid = False
+            # end if
+            mismatch = self.section_table_mismatch(table_name, table_type)
+            if mismatch:
+                self.__pobj.add_syntax_err(mismatch)
+                self.__section_valid = False
             # end if
             mismatch = self.section_table_mismatch(table_name, table_type)
             if mismatch:
@@ -607,7 +641,8 @@ class MetadataSection(ParseSource):
                 self.__module_name = module
             else:
                 perr = "MetadataSection requires a module name"
-                raise ParseInternalError(perr)
+                self.__pobj.add_syntax_err(perr)
+                self.__section_valid = False
             # end if
             if process_type is None:
                 self.__process_type = UNKNOWN_PROCESS_TYPE
@@ -675,47 +710,64 @@ class MetadataSection(ParseSource):
                     self.__section_title = value
                 elif key == 'type':
                     if value not in HEADER_TYPES:
-                        raise ParseSyntaxError("metadata table type",
-                                               token=value,
-                                               context=self.__pobj)
+                        self.__pobj.add_syntax_err("metadata table type",
+                                                   token=value)
+                        self.__section_valid = False
+                        close = difflib.get_close_matches(value, HEADER_TYPES)
+                        if close:
+                            self.__header_type = close[0] # Allow error continue
+                        # end if
+                    else:
+                        self.__header_type = value
                     # end if
-                    self.__header_type = value
                 elif key == 'module':
                     if value != "None":
                         self.__module_name = value
                     else:
-                        raise ParseSyntaxError("metadata table, no module",
-                                               context=self.__pobj)
+                        self.__pobj.add_syntax_err("metadata table, no module")
+                        self.__module_name = 'INVALID' # Allow error continue
+                        self.__section_valid = False
                     # end if
                 elif key == 'process':
                     self.__process_type = value
                 else:
-                    raise ParseSyntaxError("metadata table start property",
-                                           token=value, context=self.__pobj)
+                    self.__pobj.add_syntax_err("metadata table start property",
+                                               token=value)
+                    self.__process_type = 'INVALID' # Allow error continue
+                    self.__section_valid = False
                 # end if
             # end for
             curr_line, _ = self.__pobj.next_line()
         # end while
         if self.title is None:
-            raise ParseSyntaxError("metadata header start, no table name",
-                                   token=curr_line, context=self.__pobj)
+            self.__pobj.add_syntax_err("metadata header start, no table name",
+                                       token=curr_line)
+            self.__section_valid = False
         # end if
         if self.header_type is None:
-            raise ParseSyntaxError("metadata header start, no table type",
-                                   token=curr_line, context=self.__pobj)
+            self.__pobj.add_syntax_err("metadata header start, no table type",
+                                       token=curr_line)
+            self.__section_valid = False
         # end if
         if ((self.header_type != SCHEME_HEADER_TYPE) and
             (self.process_type != UNKNOWN_PROCESS_TYPE)):
-            raise ParseSyntaxError("process keyword only allowed for a scheme",
-                                   token=curr_line, context=self.__pobj)
+            emsg = "process keyword only allowed for a scheme"
+            self.__pobj.add_syntax_err(emsg, token=curr_line)
+            self.__process_type = UNKNOWN_PROCESS_TYPE # Allow error continue
+            self.__section_valid = False
         # end if
         mismatch = self.section_table_mismatch(table_name, table_type)
         if mismatch:
-            raise CCPPError(mismatch)
+            self.__pobj.add_syntax_err(mismatch)
+            self.__section_valid = False
         # end if
         if logger:
             logger.info("Parsing {} {}{}".format(self.header_type,
                                                  self.title, start_ctx))
+        # end if
+        mismatch = self.section_table_mismatch(table_name, table_type)
+        if mismatch:
+            raise CCPPError(mismatch)
         # end if
         if self.header_type == "ddt":
             known_ddts.append(self.title)
@@ -742,7 +794,11 @@ class MetadataSection(ParseSource):
                 self.__variables.add_variable(newvar)
                 # Check to see if we hit the end of the table
                 valid_lines = not MetadataSection.header_start(curr_line)
-            # No else, we just run off the end of the table
+            else:
+                # We have a bad variable, see if we have more variables
+                lname = MetadataSection.variable_start(curr_line, self.__pobj)
+                valid_lines = lname is not None
+                # end while
             # end if
         # end while
 
@@ -751,6 +807,7 @@ class MetadataSection(ParseSource):
         The header line has the format [ <valid_fortran_symbol> ].
         """
         newvar = None
+        var_ok = True # Set to False if an error is detected
         valid_line = ((curr_line is not None) and
                       (not MetadataSection.header_start(curr_line)) and
                       (not MetadataTable.table_start(curr_line)))
@@ -770,7 +827,7 @@ class MetadataSection(ParseSource):
             var_props = {}
             var_props['local_name'] = local_name
             # Grab context that points at beginning of definition
-            context = ParseContext(context=self.context)
+            context = ParseContext(context=self.__pobj)
         else:
             var_props = None
         # end if
@@ -786,55 +843,58 @@ class MetadataSection(ParseSource):
             if valid_line:
                 properties = _parse_config_line(curr_line, self.__pobj)
                 for prop in properties:
-                    try:
-                        pname = prop[0].strip().lower()
-                        pval_str = prop[1].strip()
-                        if pname == 'ddt_type':
-                            if pval_str in known_ddts:
-                                pval = pval_str
-                            else:
-                                errmsg = "Unknown DDT type, {}"
-                                raise ParseSyntaxError(errmsg.format(pval_str),
-                                                       context=self.__pobj)
-                            # end if
+                    pname = prop[0].strip().lower()
+                    pval_str = prop[1].strip()
+                    if pname == 'ddt_type':
+                        if pval_str in known_ddts:
+                            pval = pval_str
                         else:
-                            # Make sure this is a match
-                            check_prop = Var.get_prop(pname)
-                            if check_prop is not None:
-                                pval = check_prop.valid_value(pval_str)
-                            else:
-                                raise ParseSyntaxError("variable property name",
-                                                       token=pname,
-                                                       context=self.__pobj)
-                            # end if
-                            if pval is None:
-                                errmsg = "'{}' property value"
-                                raise ParseSyntaxError(errmsg.format(pname),
-                                                       token=pval_str,
-                                                       context=self.__pobj)
-                            # end if
+                            errmsg = "Unknown DDT type, {}".format(pval_str)
+                            self.__pobj.add_syntax_err(errmsg)
+                            self.__section_valid = False
+                            var_ok = False
                         # end if
-                    except ParseSyntaxError as ps_err:
-                        raise ps_err
-                    # If we get this far, we have a valid property.
-                    # Special case for dimensions, turn them into ranges
-                    if pname == 'dimensions':
-                        porig = pval
-                        pval = list()
-                        for dim in porig:
-                            if ':' in dim:
-                                pval.append(dim)
-                            else:
-                                pval.append('ccpp_constant_one:{}'.format(dim))
-                            # end if
-                        # end for
+                    else:
+                        # Make sure this is a match
+                        check_prop = Var.get_prop(pname)
+                        if check_prop is not None:
+                            pval = check_prop.valid_value(pval_str)
+                        else:
+                            emsg = "variable property name"
+                            self.__pobj.add_syntax_err(emsg, token=pname)
+                            self.__section_valid = False
+                            var_ok = False
+                        # end if
+                        if pval is None:
+                            errmsg = "'{}' property value"
+                            self.__pobj.add_syntax_err(errmsg.format(pname),
+                                                       token=pval_str)
+                            self.__section_valid = False
+                            var_ok = False
+                        # end if
                     # end if
-                    # Add the property to our Var dictionary
-                    var_props[pname] = pval
+                    if var_ok:
+                        # If we get this far, we have a valid property.
+                        # Special case for dimensions, turn them into ranges
+                        if pname == 'dimensions':
+                            porig = pval
+                            pval = list()
+                            for dim in porig:
+                                if ':' in dim:
+                                    pval.append(dim)
+                                else:
+                                    cone_str = 'ccpp_constant_one:{}'
+                                    pval.append(cone_str.format(dim))
+                                # end if
+                            # end for
+                        # end if
+                        # Add the property to our Var dictionary
+                        var_props[pname] = pval
+                    # end if
                 # end for
             # end if
         # end while
-        if var_props is not None:
+        if var_ok and (var_props is not None):
             # Check for array reference
             sub_name = MetadataSection.check_array_reference(local_name,
                                                              var_props, context)
@@ -844,9 +904,11 @@ class MetadataSection(ParseSource):
             try:
                 newvar = Var(var_props, source=self, context=context)
             except CCPPError as verr:
-                raise ParseSyntaxError(verr, context=self.__pobj)
+                self.__pobj.add_syntax_err(verr, skip_context=True)
+                var_ok = False
+                self.__section_valid = False
             # end try
-        # No else, wil return None for newvar
+        # No else, will return None for newvar
         # end if
         return newvar, curr_line
 
@@ -1056,6 +1118,45 @@ class MetadataSection(ParseSource):
                 mismatch += '\n'
             # end if
             mstr = 'Section name, {}, does not match table title, {}'
+            mismatch += mstr.format(sect_func, table_title)
+            if table_title.split("_")[-1][0:5] in ["init", "inita",
+                                                   "run", "final"]:
+                mismatch += "\nccpp-table-properties name should not contain"
+                mstr = " phase (e.g., '_{}')"
+                mismatch += mstr.format(table_title.split("_")[-1])
+            # end if
+        # end if
+        if mismatch:
+            mismatch += context_string(self.__pobj)
+        # end if
+        return mismatch
+
+    def section_table_mismatch(self, table_title, table_type):
+        """Return  an error string if this arg table does not match its
+        metadata table parent. If they match , return an empty string."""
+        mismatch = ""
+        # The header type must match its table's type
+        if table_type != self.header_type:
+            mstr = 'Section type, {}, does not match table type, {}'
+            mismatch += mstr.format(self.header_type, table_type)
+        # end if
+        if self.header_type == SCHEME_HEADER_TYPE:
+            # For schemes, strip off the scheme function phase (e.g., _init)
+            sect_func, _, _ = CCPP_STATE_MACH.function_match(self.title)
+        else:
+            sect_func = self.title
+        # end if
+        # The Fortran parser cannot tell a scheme from a host subroutine
+        # Detect this and adjust
+        if sect_func is None:
+            sect_func = self.title
+        # end if
+        # The header name (minus phase) must match its table's name
+        if table_title != sect_func:
+            if mismatch:
+                mismatch += '\n'
+            # end if
+            mstr = 'Section name, {}, does not match table title, {}'
             mismatch += mstr.format(self.title, table_title)
         # end if
         if mismatch:
@@ -1064,7 +1165,7 @@ class MetadataSection(ParseSource):
         return mismatch
 
     @staticmethod
-    def variable_start(line, context):
+    def variable_start(line, pobj):
         """Return variable name if <line> is an interface metadata table header
         """
         if line is None:
@@ -1082,8 +1183,8 @@ class MetadataSection(ParseSource):
         # end if
         if match is not None:
             if not MetadataSection.is_scalar_reference(name):
-                raise ParseSyntaxError("local variable name",
-                                       token=name, context=context)
+                pobj.add_syntax_err("local variable name", token=name)
+                name = None
             # end if
         else:
             name = None
@@ -1125,7 +1226,10 @@ class MetadataSection(ParseSource):
         return '{} {} / {} {}'.format(pre, self.module, self.title, post)
 
     def __del__(self):
-        del self.__variables
+        try:
+            del self.__variables
+        except AttributeError:
+            pass
 
     def start_context(self, with_comma=True, nodir=True):
         """Return a context string for the beginning of the table"""
@@ -1157,10 +1261,11 @@ class MetadataSection(ParseSource):
         """Convenience function for finding empty headers"""
         return self.__variables
 
-    def __repr__(self):
-        '''Print representation for MetadataSection objects'''
-        return "<{} {} @ 0X{:X}>".format(self.__class__.__name__,
-                                         self.title, id(self))
+    @property
+    def valid(self):
+        """Return True iff we did not encounter an error creating
+        this section"""
+        return self.__section_valid
 
     def __str__(self):
         '''Print string for MetadataSection objects'''

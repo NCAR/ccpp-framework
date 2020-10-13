@@ -15,10 +15,12 @@ from parse_checkers import FORTRAN_DP_RE
 from parse_checkers import FORTRAN_SCALAR_REF, FORTRAN_SCALAR_REF_RE
 from parse_checkers import check_fortran_ref, check_fortran_literal
 from parse_checkers import check_fortran_intrinsic, check_local_name
+from parse_checkers import check_diagnostic_id, check_diagnostic_fixed
 from parse_checkers import check_fortran_type, check_balanced_paren
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
 from parse_checkers import check_dimensions, check_cf_standard_name
+from parse_checkers import check_default_value, check_valid_values
 from parse_log      import init_log, set_log_level, flush_log
 from parse_log      import set_log_to_stdout, set_log_to_null
 from parse_log      import set_log_to_file
@@ -30,6 +32,9 @@ __all__ = [
     'CCPPError',
     'check_balanced_paren',
     'check_cf_standard_name',
+    'check_default_value',
+    'check_diagnostic_id',
+    'check_diagnostic_fixed',
     'check_dimensions',
     'check_fortran_id',
     'check_fortran_intrinsic',
@@ -37,6 +42,7 @@ __all__ = [
     'check_fortran_ref',
     'check_fortran_type',
     'check_local_name',
+    'check_valid_values',
     'context_string',
     'find_schema_file',
     'find_schema_version',

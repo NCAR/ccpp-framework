@@ -59,9 +59,10 @@ CONTAINS
 !> \section arg_table_temp_set_init  Argument Table
 !! \htmlinclude arg_table_temp_set_init.html
 !!
-  subroutine temp_set_init(temp_inc_in, temp_inc_set, errmsg, errflg)
+  subroutine temp_set_init(temp_inc_in, fudge, temp_inc_set, errmsg, errflg)
 
     real(kind_phys),         intent(in)    :: temp_inc_in
+    real(kind_phys),         intent(in)    :: fudge
     real(kind_phys),         intent(out)   :: temp_inc_set
     character(len=512),      intent(out)   :: errmsg
     integer,                 intent(out)   :: errflg

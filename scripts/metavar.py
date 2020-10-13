@@ -19,6 +19,8 @@ from collections import OrderedDict
 from parse_tools import check_local_name, check_fortran_type, context_string
 from parse_tools import FORTRAN_DP_RE, FORTRAN_SCALAR_REF_RE
 from parse_tools import check_dimensions, check_cf_standard_name
+from parse_tools import check_diagnostic_id, check_diagnostic_fixed
+from parse_tools import check_default_value, check_valid_values
 from parse_tools import ParseContext, ParseSource
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 
@@ -254,7 +256,7 @@ class VariableProperty(object):
     ['x:y']
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,y:z)')
     ['w:x', 'y:z']
-    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('size(foo)')
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value(['size(foo)'])
     ['size(foo)']
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,x:y:z:q)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
@@ -270,7 +272,9 @@ class VariableProperty(object):
     'q(:,:,index_of_water_vapor_specific_humidity)'
     """
 
-    def __init__(self, name_in, type_in, valid_values_in=None, optional_in=False, default_in=None, default_fn_in=None, check_fn_in=None):
+    def __init__(self, name_in, type_in, valid_values_in=None,
+                 optional_in=False, default_in=None, default_fn_in=None,
+                 check_fn_in=None, mult_entry_ok=False):
         """Conduct sanity checks and initialize this variable property."""
         self._name = name_in
         self._type = type_in
@@ -296,6 +300,7 @@ class VariableProperty(object):
             emsg = 'default_fn_in is not a valid property for {} because it is not optional'
             raise CCPPError(emsg.format(name_in))
         self._check_fn = check_fn_in
+        self._add_multiple_ok = mult_entry_ok
 
     @property
     def name(self):
@@ -325,6 +330,14 @@ class VariableProperty(object):
     def optional(self):
         """Return True iff this variable property is optional"""
         return self._optional
+
+    @property
+    def add_multiple(self):
+        """Return True iff multiple entries of this property should be
+        accumulated. If False, it should either be an error or new
+        instances should replace the old, however, this functionality
+        must be implemented by the calling routine (e.g., Var)"""
+        return self._add_multiple_ok
 
     def is_match(self, test_name):
         """Return True iff <test_name> is the name of this property"""
@@ -450,6 +463,8 @@ class Var(object):
     ParseSyntaxError: Invalid intent variable property, 'ino', at <standard input>:1
     """
 
+    ## Prop lists below define all the allowed CCPP Metadata attributes
+
     # __spec_props are for variables defined in a specification
     __spec_props = [VariableProperty('local_name', str,
                                      check_fn_in=check_local_name),
@@ -473,9 +488,24 @@ class Var(object):
                                      optional_in=True, default_in=False),
                     VariableProperty('allocatable', bool,
                                      optional_in=True, default_in=False),
+                    VariableProperty('diagnostic_name', str,
+                                     optional_in=True, default_in='',
+                                     check_fn_in=check_diagnostic_id),
+                    VariableProperty('diagnostic_name_fixed', str,
+                                     optional_in=True, default_in='',
+                                     check_fn_in=check_diagnostic_fixed),
+                    VariableProperty('default_value', str,
+                                     optional_in=True, default_in='',
+                                     check_fn_in=check_default_value),
                     VariableProperty('persistence', str, optional_in=True,
                                      valid_values_in=['timestep', 'run'],
                                      default_in='timestep')]
+
+# XXgoldyXX: v debug only
+    __to_add = VariableProperty('valid_values', str,
+                                optional_in=True, default_in='',
+                                check_fn_in=check_valid_values)
+# XXgoldyXX: ^ debug only
 
     # __var_props contains properties which are not in __spec_props
     __var_props = [VariableProperty('intent', str,

@@ -1,3 +1,9 @@
+[ccpp-table-properties]
+  name = test_host
+  type = scheme
+  dependencies =
+
+########################################################################
 [ccpp-arg-table]
   name = test_host
   type = banana
