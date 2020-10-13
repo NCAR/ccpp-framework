@@ -295,5 +295,59 @@ class MetadataTableTestCase(unittest.TestCase):
         emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
         self.assertTrue(emsg in str(context.exception))
 
+    def test_section_table_title(self):
+        """Test that mismatched section name and table title returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_section_table_title.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Section name, test_host, does not match table title, banana, at "
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_double_table_properties(self):
+        """Test that duplicate ccpp-table-properties returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "double_table_properties.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Duplicate metadata table, test_host, at "
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_missing_table_properties(self):
+        """Test that a missing ccpp-table-properties returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "missing_table_properties.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Invalid CCPP metadata line, '[ccpp-arg-table]', at "
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_dependencies_rel_path(self):
+        """Test that relative_path and dependencies from ccpp-table-properties are read in correctly"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_dependencies_rel_path.meta")
+
+        result = parse_metadata_file(filename, known_ddts, logger)
+
+        dependencies = result[0].dependencies
+        rel_path = result[0].relative_path
+        titles = [elem.table_name for elem in result]
+        print (dependencies)
+        print (rel_path)
+        print (titles)
+
 if __name__ == '__main__':
     unittest.main()
