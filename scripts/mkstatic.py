@@ -1249,6 +1249,10 @@ end module {module}
                             if var_standard_name in arguments[scheme_name][subroutine_name]:
                                 arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
 
+                        # Variables stored in blocked data structures but without horizontal dimension not supported at this time (doesn't make sense anyway)
+                        elif ccpp_stage in ['init', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name']:
+                            raise Exception("Variables stored in blocked data structures but without horizontal dimension not supported at this time: {}".format(var_standard_name))
+
                         # Unit conversions without converting blocked data structures
                         elif var.actions['in'] or var.actions['out']:
                             actions_in = ''
