@@ -345,9 +345,24 @@ class MetadataTableTestCase(unittest.TestCase):
         dependencies = result[0].dependencies
         rel_path = result[0].relative_path
         titles = [elem.table_name for elem in result]
-        print (dependencies)
-        print (rel_path)
-        print (titles)
+        print (dependencies)  # This will fail due to multiple lines of dependencies
+        self.assertIn('machine.F,physcons.F90,radlw_param.f,radsw_param.f' in dependencies)
+        self.assertIn(rel_path, "../../ccpp/physics/physics")
+        self.assertEqual(len(result), 1)
+        self.assertIn('test_host', titles, msg="Table name 'test_host' is expected but not found")
+
+    def test_table_type_mismatch(self):
+        """Test that a mismatched ccpp-table-properties and ccpp-arg-table type returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_table_type_mismatch.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Invalid metadata table type, 'banana', at "
+        self.assertTrue(emsg in str(context.exception))
 
 if __name__ == '__main__':
     unittest.main()
