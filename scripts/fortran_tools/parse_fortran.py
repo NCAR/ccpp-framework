@@ -3,16 +3,21 @@
 """Types and code for parsing Fortran source code.
 """
 
+# pylint: disable=wrong-import-position
 if __name__ == '__main__' and __package__ is None:
     import sys
     import os.path
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
 from parse_tools import ParseSyntaxError, ParseInternalError
-from parse_tools import ParseContext, ParseSource, context_string
-from parse_tools import check_fortran_intrinsic, check_fortran_type
+from parse_tools import ParseContext, context_string
+from parse_tools import check_fortran_intrinsic
 from parse_tools import check_balanced_paren, unique_standard_name
+#pylint: disable=unused-import
+from parse_tools import ParseSource # Used in doctest
+#pylint: enable=unused-import
 from metavar import Var
+# pylint: enable=wrong-import-position
 
 # A collection of types and tools for parsing Fortran code to support
 # CCPP metadata parsing. The purpose of this code is limited to type
@@ -68,24 +73,29 @@ class Ftype(object):
     __intrinsic_types__ = [r"integer", r"real", r"logical",
                            r"double\s*precision", r"complex"]
 
-    itype_re = re.compile(r"(?i)({})\s*(\([A-Za-z0-9,=_\s]+\))?".format(r"|".join(__intrinsic_types__)))
-    kind_re = re.compile(r"(?i)kind\s*(\()?\s*([\'\"])?(.+?)([\'\"])?\s*(\))?")
+    __itype_re = re.compile(r"(?i)({})\s*(\([A-Za-z0-9,=_\s]+\))?".format(r"|".join(__intrinsic_types__)))
+    __kind_re = re.compile(r"(?i)kind\s*(\()?\s*([\'\"])?(.+?)([\'\"])?\s*(\))?")
 
-    __attr_spec__ = ['allocatable', 'asynchronous', 'dimension', 'external',
-                     'intent', 'intrinsic', 'bind', 'optional', 'parameter',
-                     'pointer', 'private', 'protected', 'public', 'save',
-                     'target', 'value', 'volatile']
+    __attr_spec = ['allocatable', 'asynchronous', 'dimension', 'external',
+                   'intent', 'intrinsic', 'bind', 'optional', 'parameter',
+                   'pointer', 'private', 'protected', 'public', 'save',
+                   'target', 'value', 'volatile']
 
-    def __init__(self, typestr_in=None, kind_in=None, line_in=None, context=None):
+    def __init__(self, typestr_in=None, kind_in=None,
+                 line_in=None, context=None):
+        """Initialize  this FType object, either using <typestr_in> and
+        <kind_in>, OR using line_in."""
         if context is None:
             self._context = ParseContext()
         else:
             self._context = ParseContext(context=context)
+        # end if
         # We have to distinguish which type of initialization we have
         if typestr_in is not None:
             if line_in is not None:
-                raise ParseInternalError("typestr_in and line_in cannot both be used in a single call", self._context)
-            # End if
+                emsg = "Cannot pass both typestr_in and line_in as arguments"
+                raise ParseInternalError(emsg, self._context)
+            # end if
             self._typestr = typestr_in
             self.default_kind = kind_in is None
             if kind_in is None:
@@ -97,74 +107,92 @@ class Ftype(object):
                 # The kind has already been parsed for us (e.g., by character)
                 self._kind = kind_in
         elif kind_in is not None:
-            raise ParseInternalError("kind_in cannot be passed without typestr_in", self._context)
+            emsg = "kind_in cannot be passed without typestr_in"
+            raise ParseInternalError(emsg, self._context)
         elif line_in is not None:
             match = Ftype.type_match(line_in)
             self._match_len = len(match.group(0))
             if match is None:
-                raise ParseSyntaxError("type declaration", token=line_in, context=self._context)
-            elif check_fortran_intrinsic(match.group(1)):
+                emsg = "type declaration"
+                raise ParseSyntaxError(emsg, token=line_in,
+                                       context=self._context)
+            # end if
+            if check_fortran_intrinsic(match.group(1)):
                 self._typestr = match.group(1)
                 if match.group(2) is not None:
                     # Parse kind section
-                    self._kind = self.parse_kind_selector(match.group(2).strip())
+                    kmatch = match.group(2).strip()
+                    self._kind = self.parse_kind_selector(kmatch)
                 else:
                     self._kind = None
-                # End if
+                # end if
                 self.default_kind = self._kind is None
             else:
-                raise ParseSyntaxError("type declaration", token=line_in, context=self._context)
+                raise ParseSyntaxError("type declaration",
+                                       token=line_in, context=self._context)
+            # end if
         else:
-            raise ParseInternalError("At least one of typestr_in or line must be passed", self._context)
+            emsg = "At least one of typestr_in or line_in must be passed"
+            raise ParseInternalError(emsg, self._context)
+        # end if
 
     def parse_kind_selector(self, kind_selector, context=None):
+        """Find and return the 'kind' value from <kind_selector>
+        '(foo)' and '(kind=foo)' both return 'foo'"""
         if context is None:
             if hasattr(self, 'context'):
                 context = self._context
             else:
                 context = ParseContext()
-            # End if
+            # end if
         kind = None
         if (kind_selector[0] == '(') and (kind_selector[-1] == ')'):
             args = kind_selector[1:-1].split('=')
         else:
             args = kind_selector.split('=')
-        # End if
+        # end if
         if (len(args) > 2) or (len(args) < 1):
-            raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
+            raise ParseSyntaxError("kind_selector",
+                                   token=kind_selector, context=context)
         elif len(args) == 1:
             kind = args[0].strip()
         elif args[0].strip().lower() != 'kind':
             # We have two args, the first better be kind
-            raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
+            raise ParseSyntaxError("kind_selector",
+                                   token=kind_selector, context=context)
         else:
             # We have two args and the second is our kind string
             kind = args[1].strip()
-        # End if
+        # end if
         # One last check for missing right paren
-        match = Ftype.kind_re.search(kind)
+        match = Ftype.__kind_re.search(kind)
         if match is not None:
             if match.group(2) is not None:
                 if match.group(2) != match.group(4):
-                    raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
-                elif (match.group(1) is None) and (match.group(5) is not None):
-                    raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
-                elif (match.group(1) is not None) and (match.group(5) is None):
-                    raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
-                else:
-                    pass
+                    raise ParseSyntaxError("kind_selector",
+                                           token=kind_selector, context=context)
+                # end if
+                if (match.group(1) is None) and (match.group(5) is not None):
+                    raise ParseSyntaxError("kind_selector",
+                                           token=kind_selector, context=context)
+                # end if
+                if (match.group(1) is not None) and (match.group(5) is None):
+                    raise ParseSyntaxError("kind_selector",
+                                           token=kind_selector, context=context)
+                # end if
             else:
                 pass
         elif kind[0:4].lower() == "kind":
-            raise ParseSyntaxError("kind_selector", token=kind_selector, context=context)
-        else:
-            pass
+            # Got 'something' == 'kind'??
+            raise ParseSyntaxError("kind_selector",
+                                   token=kind_selector, context=context)
+        # end if
         return kind
 
     @classmethod
     def type_match(cls, line):
         """Return an RE match if <line> represents an Ftype declaration"""
-        match = Ftype.itype_re.match(line.strip())
+        match = Ftype.__itype_re.match(line.strip())
         return match
 
     @classmethod
@@ -177,32 +205,32 @@ class Ftype(object):
         >>> Ftype.reassemble_parens("dimension(size(Grid%xlon,1),NSPC1),  intent(in)", 'spec', ParseContext())
         ['dimension(size(Grid%xlon,1),NSPC1)', 'intent(in)']
         """
-        vars = list()
+        var_list = list()
         proplist = propstr.split(splitstr)
         while len(proplist) > 0:
             var = proplist.pop(0)
             while var.count('(') != var.count(')'):
                 if len(proplist) == 0:
                     raise ParseSyntaxError(errstr, token=propstr, context=context)
-                # End if
+                # end if
                 var = var + ',' + proplist.pop(0)
-            # End while
+            # end while
             var = var.strip()
             if len(var) > 0:
-                vars.append(var)
-            # End if
-        # End while
-        return vars
+                var_list.append(var)
+            # end if
+        # end while
+        return var_list
 
     @classmethod
     def parse_attr_specs(cls, propstring, context):
-        'Return a list of variable properties'
+        """Return a list of variable properties"""
         properties = list()
         # Remove leading comma
         propstring = propstring.strip()
-        if (len(propstring) > 0) and (propstring[0] == ','):
+        if propstring and (propstring[0] == ','):
             propstring = propstring[1:].lstrip()
-        # End if
+        # end if
         proplist = cls.reassemble_parens(propstring, 'attr_spec', context)
         for prop in proplist:
             prop = prop.strip().lower()
@@ -211,22 +239,25 @@ class Ftype(object):
                 pval = prop[0:prop.index('(')].strip()
             else:
                 pval = prop
-            # End if
-            if pval not in cls.__attr_spec__:
+            # end if
+            if pval not in cls.__attr_spec:
                 raise ParseSyntaxError('attr_spec', token=prop, context=context)
-            # End if
+            # end if
             properties.append(prop)
-        # End for
+        # end for
         return properties
 
     def typestr(self):
+        """ Return this FType's type string"""
         return self._typestr
 
     def kind(self):
+        """ Return this FType's kind string"""
         return self._kind
 
     @property
     def type_len(self):
+        """ Return the length of this FType's kind string"""
         return self._match_len
 
     def __str__(self):
@@ -290,12 +321,13 @@ class Ftype_character(Ftype):
 
     @classmethod
     def type_match(cls, line):
-        """Return an RE match if <line> represents an Ftype_character declaration"""
+        """Return an RE match if <line> represents an Ftype_character
+        declaration"""
         # Try old style first to eliminate as a possibility
         match = Ftype_character.oldchar_re.match(line.strip())
         if match is None:
             match = Ftype_character.char_re.match(line.strip())
-        # End if
+        # end if
         return match
 
     def __init__(self, line, context):
@@ -315,7 +347,7 @@ class Ftype_character(Ftype):
                 raise ParseSyntaxError("character declaration", token=line, context=context)
             else:
                 clen = match.group(3)
-            # End if
+            # end if
         elif match.group(2) is not None:
             self._match_len = len(match.group(0))
             # Parse attributes (strip off parentheses)
@@ -339,16 +371,16 @@ class Ftype_character(Ftype):
             else:
                 # We just a len argument
                 clen = self.parse_len_select(attrs[0], context, len_optional=True)
-            # End if
+            # end if
         else:
             self._match_len = len(match.group(0))
             # We had better check the training characters
             if Ftype_character.chartrail_re.match(line.strip()[len(match.group(0)):]) is None:
                 raise ParseSyntaxError("character declaration", token=line, context=context)
-        # End if
+        # end if
         if clen is None:
             clen = 1
-        # End if
+        # end if
         self.lenstr = "{}".format(clen)
         super(Ftype_character, self).__init__(typestr_in=match.group(1), kind_in=kind, context=context)
 
@@ -382,7 +414,7 @@ class Ftype_character(Ftype):
             kind_str = ""
         else:
             kind_str = ", kind={}".format(super(Ftype_character, self).kind())
-        # End if
+        # end if
         return "len={}{}".format(self.lenstr, kind_str)
 
     def __str__(self):
@@ -426,13 +458,13 @@ class Ftype_type_decl(Ftype):
             self._class = match.group(1)
             self._typestr = match.group(2)
             self._kind = self.typestr()
-        # End if
+        # end if
 
     @classmethod
     def type_match(cls, line):
         """Return an RE match if <line> represents an Ftype_type_decl declaration"""
         match = Ftype_type_decl.__type_decl_re__.match(line.strip())
-        # End if
+        # end if
         return match
 
     @classmethod
@@ -445,7 +477,7 @@ class Ftype_type_decl(Ftype):
                 sline = line[0:line.index('!')].strip()
             else:
                 sline = line.strip()
-            # End if
+            # end if
             if sline.lower()[0:4] == 'type':
                 if '::' in sline:
                     elements = sline.split('::')
@@ -455,17 +487,17 @@ class Ftype_type_decl(Ftype):
                     # Plain type decl
                     type_name = sline.split(' ', 1)[1].strip()
                     type_props = None
-                # End if
+                # end if
                 if '(' in type_name:
                     tnstr = type_name.split('(')
                     type_name = tnstr[0].strip()
                     type_params = '(' + tnstr[1].rstrip()
                 else:
                     type_params = None
-                # End if
+                # end if
                 type_def = [type_name, type_props, type_params]
-            # End if
-        # End if
+            # end if
+        # end if
         return type_def
 
     def __str__(self):
@@ -479,7 +511,7 @@ def Ftype_factory(line, context):
     # Strip comments first (might have an = character)
     if '!' in line:
         line = line[0:line.index('!')].rstrip()
-    # End if
+    # end if
     ppos = line.find('(')
     cpos = line.find(',')
     if ppos >= 0:
@@ -496,32 +528,32 @@ def Ftype_factory(line, context):
                     depth = depth + 1
                 elif line[pepos] == ')':
                     depth = depth - 1
-                # End if
+                # end if
                 pepos = pepos + 1
-            # End while
+            # end while
             line = line[0:pepos+1]
-        # End if
+        # end if
     elif cpos >= 0:
         line = line[0:cpos]
-    # End if
+    # end if
     tmatch = Ftype.type_match(line)
     if tmatch is None:
         tobj = None
     else:
         tobj = Ftype(line_in=line, context=context)
-    # End if
+    # end if
     if tmatch is None:
         tmatch = Ftype_character.type_match(line)
         if tmatch is not None:
             tobj = Ftype_character(line, context)
-        # End if
-    # End if
+        # end if
+    # end if
     if tmatch is None:
         tmatch = Ftype_type_decl.type_match(line)
         if tmatch is not None:
             tobj = Ftype_type_decl(line, context)
-        # End if
-    # End if
+        # end if
+    # end if
     return tobj
 
 ########################################################################
@@ -601,7 +633,7 @@ def parse_fortran_var_decl(line, source, logger=None):
     # Strip comments first
     if '!' in sline:
         sline = sline[0:sline.index('!')].rstrip()
-    # End if
+    # end if
     tobject = Ftype_factory(sline, context)
     newvars = list()
     if tobject is not None:
@@ -626,28 +658,28 @@ def parse_fortran_var_decl(line, source, logger=None):
                         else:
                             raise ParseSyntaxError(errmsg.format(sline, typ),
                                                    context=context)
-                        # End if
+                        # end if
                     else:
                         intent = prop[6:].strip()[1:-1].strip()
-                    # End if
+                    # end if
                 elif prop[0:9:] == 'dimension':
                     dimensions = prop[9:].strip()
-                # End if
-            # End for
+                # end if
+            # end for
         else:
             # No attr_specs
             varlist = varprops
             varprops = list()
-        # End if
+        # end if
         # Create Vars from these pieces
         # We may need to reassemble multi-dimensional specs
-        vars = Ftype.reassemble_parens(varlist, 'variable_list', context)
-        for var in vars:
+        var_list = Ftype.reassemble_parens(varlist, 'variable_list', context)
+        for var in var_list:
             prop_dict = {}
             if '=' in var:
                 # We do not care about initializers
                 var = var[0:var.rindex('=')].rstrip()
-            # End if
+            # end if
             # Scan <var> and gather variable pieces
             inchar = None # Character context
             var_len = len(var)
@@ -666,11 +698,11 @@ def parse_fortran_var_decl(line, source, logger=None):
                     else:
                         raise ParseSyntaxError('variable declaration',
                                                token=var, context=context)
-                    # End if
+                    # end if
                 else:
                     dimspec = var[begin:end+1]
-                # End if
-            # End if
+                # end if
+            # end if
             prop_dict['local_name'] = varname
             prop_dict['standard_name'] = unique_standard_name()
             prop_dict['units'] = ''
@@ -678,32 +710,32 @@ def parse_fortran_var_decl(line, source, logger=None):
                 prop_dict['ddt_type'] = tobject.typestr()
             else:
                 prop_dict['type'] = tobject.typestr()
-            # End if
+            # end if
             if tobject.kind() is not None:
                 prop_dict['kind'] = tobject.kind()
-            # End if
+            # end if
             if 'optional' in varprops:
                 prop_dict['optional'] = 'True'
-            # End if
+            # end if
             if 'allocatable' in varprops:
                 prop_dict['allocatable'] = 'True'
-            # End if
+            # end if
             if intent is not None:
                 prop_dict['intent'] = intent
-            # End if
+            # end if
             if dimspec is not None:
                 prop_dict['dimensions'] = dimspec
             elif dimensions is not None:
                 prop_dict['dimensions'] = dimensions
             else:
                 prop_dict['dimensions'] = '()'
-            # End if
+            # end if
             # XXgoldyXX: I am nervous about allowing invalid Var objects here
             newvars.append(Var(prop_dict, source,
                                invalid_ok=(logger is not None), logger=logger))
-        # End for
+        # end for
     # No else (not a variable declaration)
-    # End if
+    # end if
     return newvars
 
 ########################################################################

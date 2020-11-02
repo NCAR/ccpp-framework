@@ -493,15 +493,15 @@ class MetadataSection(ParseSource):
     """Class to hold all information from a metadata header
     >>> MetadataSection("footable", "scheme",                                 \
                       parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "type = scheme", "module = foo",      \
+                      ["name = footable", "type = scheme", "module = foo",    \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])) #doctest: +ELLIPSIS
-    <__main__.MetadataSection foo / foobar at 0x...>
+    <__main__.MetadataSection foo / footable at 0x...>
     >>> MetadataSection("footable", "scheme",                                 \
                       parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "type = scheme", "module = foobar",   \
+                      ["name = footable", "type = scheme", "module = foobar", \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
@@ -509,7 +509,7 @@ class MetadataSection(ParseSource):
     <metavar.Var horizontal_loop_extent: im at 0x...>
     >>> MetadataSection("footable", "scheme",                                 \
                       parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "type = scheme", "module = foobar",   \
+                      ["name = footable", "type = scheme", "module = foobar", \
                        "process = microphysics", "[ im ]",                    \
                        "standard_name = horizontal_loop_extent",              \
                        "long_name = horizontal loop extent, start at 1",      \
@@ -518,17 +518,17 @@ class MetadataSection(ParseSource):
     <metavar.Var horizontal_loop_extent: im at 0x...>
     >>> MetadataSection("footable", "scheme",                                 \
                       parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "module = foo",                       \
+                      ["name = footable", "type=scheme", "module = foo",      \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in",                      \
                        "  subroutine foo()"])).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    parse_source.ParseSyntaxError: Invalid variable property syntax, 'subroutine foo()', at foobar.txt:8
+    parse_source.ParseSyntaxError: Invalid variable property syntax, 'subroutine foo()', at foobar.txt:9
     >>> MetadataSection("footable", "scheme",                                 \
                       parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "type = scheme", "module=foobar",     \
+                      ["name = footable", "type = scheme", "module=foobar",   \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
@@ -537,8 +537,8 @@ class MetadataSection(ParseSource):
     'im'
     >>> MetadataSection("footable", "scheme",                                 \
                       parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "type = scheme"                       \
-                       "[ im ]", "standard_name = horizontal loop extent",    \
+                      ["name = footable", "type = scheme"                     \
+                       "[ im ]", "standard_name = horizontalloop extent",     \
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in",                      \
@@ -553,7 +553,7 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("foobar", "scheme",                                   \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "module = foo"                        \
                        "[ im ]", "standard_name = horizontal loop extent",    \
@@ -562,7 +562,7 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("foobar", "scheme",                                   \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "foo = bar"                           \
                        "[ im ]", "standard_name = horizontal loop extent",    \
@@ -694,7 +694,7 @@ class MetadataSection(ParseSource):
         return def_mod
 
     def __init_from_file(self, table_name, table_type, known_ddts, logger):
-        """ Read the table preamble, assume the caller already figured out
+        """ Read the section preamble, assume the caller already figured out
         the first line of the header using the header_start method."""
         start_ctx = context_string(self.__pobj)
         curr_line, _ = self.__pobj.next_line()
@@ -717,9 +717,9 @@ class MetadataSection(ParseSource):
                         if close:
                             self.__header_type = close[0] # Allow error continue
                         # end if
-                    else:
-                        self.__header_type = value
                     # end if
+                    # Set value even if error so future error msgs make sense
+                    self.__header_type = value
                 elif key == 'module':
                     if value != "None":
                         self.__module_name = value
@@ -764,10 +764,6 @@ class MetadataSection(ParseSource):
         if logger:
             logger.info("Parsing {} {}{}".format(self.header_type,
                                                  self.title, start_ctx))
-        # end if
-        mismatch = self.section_table_mismatch(table_name, table_type)
-        if mismatch:
-            raise CCPPError(mismatch)
         # end if
         if self.header_type == "ddt":
             known_ddts.append(self.title)
@@ -1097,8 +1093,11 @@ class MetadataSection(ParseSource):
         metadata table parent. If they match , return an empty string."""
         mismatch = ""
         # The header type must match its table's type
-        if table_type != self.header_type:
-            mstr = 'Section type, {}, does not match table type, {}'
+        if self.header_type is None:
+            mstr = "Invalid section type, 'None'"
+            mismatch += mstr.format(self.header_type, table_type)
+        elif table_type != self.header_type:
+            mstr = "Section type, '{}', does not match table type, '{}'"
             mismatch += mstr.format(self.header_type, table_type)
         # end if
         if self.header_type == SCHEME_HEADER_TYPE:
@@ -1117,46 +1116,7 @@ class MetadataSection(ParseSource):
             if mismatch:
                 mismatch += '\n'
             # end if
-            mstr = 'Section name, {}, does not match table title, {}'
-            mismatch += mstr.format(sect_func, table_title)
-            if table_title.split("_")[-1][0:5] in ["init", "inita",
-                                                   "run", "final"]:
-                mismatch += "\nccpp-table-properties name should not contain"
-                mstr = " phase (e.g., '_{}')"
-                mismatch += mstr.format(table_title.split("_")[-1])
-            # end if
-        # end if
-        if mismatch:
-            mismatch += context_string(self.__pobj)
-        # end if
-        return mismatch
-
-    def section_table_mismatch(self, table_title, table_type):
-        """Return  an error string if this arg table does not match its
-        metadata table parent. If they match , return an empty string."""
-        mismatch = ""
-        # The header type must match its table's type
-        if table_type != self.header_type:
-            mstr = 'Section type, {}, does not match table type, {}'
-            mismatch += mstr.format(self.header_type, table_type)
-        # end if
-        if self.header_type == SCHEME_HEADER_TYPE:
-            # For schemes, strip off the scheme function phase (e.g., _init)
-            sect_func, _, _ = CCPP_STATE_MACH.function_match(self.title)
-        else:
-            sect_func = self.title
-        # end if
-        # The Fortran parser cannot tell a scheme from a host subroutine
-        # Detect this and adjust
-        if sect_func is None:
-            sect_func = self.title
-        # end if
-        # The header name (minus phase) must match its table's name
-        if table_title != sect_func:
-            if mismatch:
-                mismatch += '\n'
-            # end if
-            mstr = 'Section name, {}, does not match table title, {}'
+            mstr = "Section name, '{}', does not match table title, '{}'"
             mismatch += mstr.format(self.title, table_title)
         # end if
         if mismatch:

@@ -5,6 +5,7 @@ import sys
 import os.path
 sys.path.insert(0, os.path.dirname(__file__))
 
+# pylint: disable=wrong-import-position
 from parse_source   import ParseContext, ParseSource
 from parse_source   import ParseSyntaxError, ParseInternalError
 from parse_source   import CCPPError, context_string
@@ -27,6 +28,7 @@ from parse_log      import set_log_to_file
 from preprocess     import PreprocStack
 from xml_tools      import find_schema_file, find_schema_version
 from xml_tools      import read_xml_file, validate_xml_file
+# pylint: enable=wrong-import-position
 
 __all__ = [
     'CCPPError',

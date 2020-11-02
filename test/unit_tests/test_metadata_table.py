@@ -86,7 +86,7 @@ class MetadataTableTestCase(unittest.TestCase):
 
         #Verify
         #print("The exception is", context.exception)
-        self.assertTrue('Invalid metadata table type, \'banana' in str(context.exception))
+        self.assertTrue("Section type, 'banana', does not match table type, 'scheme'" in str(context.exception))
 
     def test_double_header(self):
         """Test that a duplicate header returns expected error"""
@@ -159,7 +159,20 @@ class MetadataTableTestCase(unittest.TestCase):
             parse_metadata_file(filename, known_ddts, logger)
 
         #print("The exception is", context.exception)
-        emsg = "Invalid metadata header start, no table type"
+        emsg = "Invalid section type, 'None'"
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_bad_table_type(self):
+        """Test that a mismatched table type returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_bad_table_type.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Section type, 'host', does not match table type, 'scheme'"
         self.assertTrue(emsg in str(context.exception))
 
     def test_missing_table_name(self):
@@ -172,7 +185,7 @@ class MetadataTableTestCase(unittest.TestCase):
             parse_metadata_file(filename, known_ddts, logger)
 
         #print("The exception is", context.exception)
-        emsg = "Invalid metadata header start, no table name"
+        emsg = "Section name, 'None', does not match table title, 'test_missing_table_name'"
         self.assertTrue(emsg in str(context.exception))
 
     def test_bad_table_key(self):
