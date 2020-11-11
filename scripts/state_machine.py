@@ -29,8 +29,8 @@ class StateMachine(object):
     'a'
     >>> StateMachine([('ab','a','b','a')]).final_state('ab')
     'b'
-    >>> StateMachine([('ab','a','b','a')]).transition_regex('ab') #doctest: +ELLIPSIS
-    <_sre.SRE_Pattern object at 0x...>
+    >>> StateMachine([('ab','a','b','a')]).transition_regex('ab')
+    re.compile('a$')
     >>> StateMachine([('ab','a','b','a')]).function_match('foo_a', transition='ab')
     ('foo', 'a', 'ab')
     >>> StateMachine([('ab','a','b',r'ax?')]).function_match('foo_a', transition='ab')
@@ -84,21 +84,28 @@ class StateMachine(object):
         # End if
 
     def add_transition(self, name, init_state, final_state, regex):
+        """Add a transition to this state machine.
+        See __setitem__ for implementation details."""
         self[name] = (init_state, final_state, regex)
 
     def transitions(self):
-        return self.__stt__.keys()
+        """Return a list of transition names"""
+        return list(self.__stt__.keys())
 
     def initial_state(self, transition):
+        """Return the initial (before) state for <transition>"""
         return self.__stt__[transition][0]
 
     def final_state(self, transition):
+        """Return the final (after) state for <transition>"""
         return self.__stt__[transition][1]
 
     def transition_regex(self, transition):
+        """Return the compiled regex for <transition>"""
         return self.__stt__[transition][2]
 
     def function_regex(self, transition):
+        """Return the compiled functino regex for <transition>"""
         return self.__stt__[transition][3]
 
     def transition_match(self, test_str, transition=None):
@@ -152,13 +159,13 @@ class StateMachine(object):
     def __setitem__(self, key, value):
         if key in self.__stt__:
             raise ValueError("ERROR: transition, '{}', already exists".format(key))
-        elif len(value) != 3:
+        # end if
+        if len(value) != 3:
             raise ValueError("Invalid transition ({}), should be of the form (inital_state, final_state, regex).".format(value))
-        else:
-            regex = re.compile(value[2] + r"$")
-            function = re.compile(FORTRAN_ID + r"_(" + value[2] + r")$")
-            self.__stt__[key] = (value[0], value[1], regex, function)
         # End if
+        regex = re.compile(value[2] + r"$")
+        function = re.compile(FORTRAN_ID + r"_(" + value[2] + r")$")
+        self.__stt__[key] = (value[0], value[1], regex, function)
 
     def __delitem__(self, key):
         del self.__stt__[key]

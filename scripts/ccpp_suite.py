@@ -1083,7 +1083,9 @@ class Scheme(SuiteObject):
         scheme_mods.add((my_header.module, self.subroutine_name))
         for var in my_header.variable_list():
             vstdname = var.get_prop_value('standard_name')
+            def_val = var.get_prop_value('default_value')
             vdims = var.get_dimensions()
+            vintent = var.get_prop_value('intent')
             args = self.match_variable(var, vstdname=vstdname, vdims=vdims)
             found, vert_dim, new_dims, missing_vert = args
             if found:
@@ -1105,7 +1107,7 @@ class Scheme(SuiteObject):
                     self.needs_vertical = missing_vert
                     break # Deal with this and come back
                 # end if
-                if var.get_prop_value('intent') == 'out':
+                if vintent == 'out':
                     if self.__group is None:
                         errmsg = 'Group not defined for {}'.format(self.name)
                         raise ParseInternalError(errmsg)
@@ -1120,6 +1122,21 @@ class Scheme(SuiteObject):
                         raise ParseInternalError(errmsg.format(vstdname))
                     # end if
                     self.add_call_list_variable(gvar)
+                elif def_val and (vintent != 'out'):
+                    if self.__group is None:
+                        errmsg = 'Group not defined for {}'.format(self.name)
+                        raise ParseInternalError(errmsg)
+                    # end if
+                    # The Group will manage this variable
+                    self.__group.manage_variable(var)
+                    # We still need it in our call list but clone it
+                    # to make sure it is kept as a local Group variable
+                    gvar = self.__group.find_variable(vstdname, any_scope=False)
+                    if gvar is None:
+                        errmsg = 'Group managed variable, {}, not found'
+                        raise ParseInternalError(errmsg.format(vstdname))
+                    # end if
+                    self.add_call_list_variable(gvar.clone({}))
                 else:
                     errmsg = 'Input argument for {}, {}, not found.'
                     if self.find_variable(vstdname) is not None:

@@ -18,6 +18,7 @@ perr() {
 cd ${scripts}
 perr $? "Cannot cd to scripts directory, '${scripts}'"
 
+export PYTHONPATH="${scripts}:${PYTHONPATH}"
 # Find all python scripts that have doctest
 for pyfile in $(find . -name \*.py); do
   if [ -f "${pyfile}" ]; then

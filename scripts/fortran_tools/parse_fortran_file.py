@@ -11,6 +11,7 @@ import os.path
 if __name__ == '__main__' and __package__ is None:
     import sys
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# end if
 import re
 from collections import OrderedDict
 # CCPP framework imports
@@ -18,30 +19,34 @@ from parse_tools import CCPPError, ParseInternalError, ParseSyntaxError
 from parse_tools import ParseContext, ParseObject, ParseSource, PreprocStack
 from parse_tools import FORTRAN_ID, context_string
 from metadata_table import MetadataTable
-from .parse_fortran import parse_fortran_var_decl, fortran_type_definition
+try:
+    from parse_fortran import parse_fortran_var_decl, fortran_type_definition
+except ModuleNotFoundError:
+    from .parse_fortran import parse_fortran_var_decl, fortran_type_definition
+# end try
 from metavar import VarDictionary
 
-comment_re = re.compile(r"!.*$")
-fixed_comment_re = re.compile(r"(?i)([C*]|(?:[ ]{0,4}!))")
-program_re = re.compile(r"(?i)\s*program\s+"+FORTRAN_ID)
-endprogram_re = re.compile(r"(?i)\s*end\s*program\s+"+FORTRAN_ID+r"?")
-module_re = re.compile(r"(?i)\s*module\s+"+FORTRAN_ID)
-endmodule_re = re.compile(r"(?i)\s*end\s*module\s+"+FORTRAN_ID+r"?")
-contains_re = re.compile(r"(?i)\s*contains")
-continue_re = re.compile(r"(?i)&\s*(!.*)?$")
-fixed_continue_re = re.compile(r"(?i)     [^0 ]")
-blank_re = re.compile(r"\s+")
-arg_table_start_re = re.compile(r"(?i)\s*![!>]\s*(?:\\section)?\s*arg_table_"+FORTRAN_ID)
-arg_table_end_re = re.compile(r"(?i)![!>]\s*end_arg_table_"+FORTRAN_ID)
-prefix_specs = [r"(?:recursive)", r"(?:pure)", r"(?:elemental)"]
-prefix_spec_re = r"(?:{})?\s*".format('|'.join(prefix_specs))
-subname_re = r"(?i)subroutine\s*"
-arglist_re = r"\s*(?:[(]\s*([^)]*)[)])?"
-subroutine_re = re.compile(r"(?i)\s*"+prefix_spec_re+subname_re+FORTRAN_ID+arglist_re)
-end_subroutine_re = re.compile(r"(?i)\s*end\s*"+subname_re+FORTRAN_ID+r"?")
-use_re = re.compile(r"(?i)\s*use\s(?:,\s*intrinsic\s*::)?\s*only\s*:([^!]+)")
-end_type_re = re.compile(r"(?i)\s*end\s*type(?:\s+"+FORTRAN_ID+r")?")
-intent_stmt_re = re.compile(r"(?i),\s*intent\s*[(]")
+_COMMENT_RE = re.compile(r"!.*$")
+_FIXED_COMMENT_RE = re.compile(r"(?i)([C*]|(?:[ ]{0,4}!))")
+_PROGRAM_RE = re.compile(r"(?i)\s*program\s+"+FORTRAN_ID)
+_ENDPROGRAM_RE = re.compile(r"(?i)\s*end\s*program\s+"+FORTRAN_ID+r"?")
+_MODULE_RE = re.compile(r"(?i)\s*module\s+"+FORTRAN_ID)
+_ENDMODULE_RE = re.compile(r"(?i)\s*end\s*module\s+"+FORTRAN_ID+r"?")
+_CONTAINS_RE = re.compile(r"(?i)\s*contains")
+_CONTINUE_RE = re.compile(r"(?i)&\s*(!.*)?$")
+_FIXED_CONTINUE_RE = re.compile(r"(?i)     [^0 ]")
+_BLANK_RE = re.compile(r"\s+")
+_ARG_TABLE_START_RE = re.compile(r"(?i)\s*![!>]\s*(?:\\section)?\s*arg_table_"+FORTRAN_ID)
+_ARG_TABLE_END_RE = re.compile(r"(?i)![!>]\s*end_arg_table_"+FORTRAN_ID)
+_PREFIX_SPECS = [r"(?:recursive)", r"(?:pure)", r"(?:elemental)"]
+_PREFIX_SPEC_RE = r"(?:{})?\s*".format('|'.join(_PREFIX_SPECS))
+_SUBNAME_RE = r"(?i)subroutine\s*"
+_ARGLIST_RE = r"\s*(?:[(]\s*([^)]*)[)])?"
+_SUBROUTINE_RE = re.compile(r"(?i)\s*"+_PREFIX_SPEC_RE+_SUBNAME_RE+FORTRAN_ID+_ARGLIST_RE)
+_END_SUBROUTINE_RE = re.compile(r"(?i)\s*end\s*"+_SUBNAME_RE+FORTRAN_ID+r"?")
+_USE_RE = re.compile(r"(?i)\s*use\s(?:,\s*intrinsic\s*::)?\s*only\s*:([^!]+)")
+_END_TYPE_RE = re.compile(r"(?i)\s*end\s*type(?:\s+"+FORTRAN_ID+r")?")
+_INTENT_STMT_RE = re.compile(r"(?i),\s*intent\s*[(]")
 
 ########################################################################
 
@@ -107,7 +112,7 @@ def line_statements(line):
 def read_statements(pobj, statements=None):
     """Retrieve the next line and break it into statements"""
     while (statements is None) or (sum([len(x) for x in statements]) == 0):
-        nline, nline_num = pobj.next_line()
+        nline, _ = pobj.next_line()
         if nline is None:
             statements = None
             break
@@ -150,9 +155,9 @@ def scan_fixed_line(line, in_single_char, in_double_char, context):
     """
 
     # Check if comment or continue statement
-    cmatch = fixed_comment_re.match(line)
-    is_comment =  cmatch is not None
-    is_continue = fixed_continue_re.match(line) is not None
+    cmatch = _FIXED_COMMENT_RE.match(line)
+    is_comment = cmatch is not None
+    is_continue = _FIXED_CONTINUE_RE.match(line) is not None
     # A few sanity checks
     if (in_single_char or in_double_char) and (not is_continue):
         raise ParseSyntaxError("Cannot start line in character context if not a continued line", context=context)
@@ -177,11 +182,11 @@ def scan_fixed_line(line, in_single_char, in_double_char, context):
     last_ind = len(line.rstrip()) - 1
     # Process the line
     while index <= last_ind:
-        blank = blank_re.match(line[index:])
+        blank = _BLANK_RE.match(line[index:])
         if blank is not None:
             index = index + len(blank.group(0)) - 1 # +1 at end of loop
         elif in_single_char:
-            if line[index:min(index+1,last_ind)] == "''":
+            if line[index:min(index+1, last_ind)] == "''":
                 # Embedded single quote
                 index = index + 1 # +1 and end of loop
             elif line[index] == "'":
@@ -189,7 +194,7 @@ def scan_fixed_line(line, in_single_char, in_double_char, context):
                 # End if
             # End if (just ignore any other character)
         elif in_double_char:
-            if line[index:min(index+1,last_ind)] == '""':
+            if line[index:min(index+1, last_ind)] == '""':
                 # Embedded double quote
                 index = index + 1 # +1 and end of loop
             elif line[index] == '"':
@@ -247,10 +252,10 @@ def scan_free_line(line, in_continue, in_single_char, in_double_char, context):
     ParseSyntaxError: Cannot end non-continued line in a character context, in <standard input>
     >>> scan_free_line("int :: inde&", False, True, False, ParseContext())
     Traceback (most recent call last):
-    ParseSyntaxError: Cannot start line in character context if not a continued line, in <standard input>
+    parse_source.ParseSyntaxError: Cannot start line in character context if not a continued line, in <standard input>
     >>> scan_free_line("int :: inde&", True, True, True, ParseContext())
     Traceback (most recent call last):
-    ParseSyntaxError: Cannot be both in an apostrophe character context and a quote character context, in <standard input>
+    parse_source.ParseSyntaxError: Cannot be both in an apostrophe character context and a quote character context, in <standard input>
     """
 
     # A few sanity checks
@@ -276,22 +281,22 @@ def scan_free_line(line, in_continue, in_single_char, in_double_char, context):
         # End if
     # Process rest of line
     while index <= last_ind:
-        blank = blank_re.match(line[index:])
+        blank = _BLANK_RE.match(line[index:])
         if blank is not None:
             index = index + len(blank.group(0)) - 1 # +1 at end of loop
         elif in_single_char:
-            if line[index:min(index+1,last_ind)] == "''":
+            if line[index:min(index+1, last_ind)] == "''":
                 # Embedded single quote
                 index = index + 1 # +1 and end of loop
             elif line[index] == "'":
                 in_single_char = False
-            elif (line[index] == '&'):
+            elif line[index] == '&':
                 if index == last_ind:
                     continue_out_col = index
                 # End if
             # End if (just ignore any other character)
         elif in_double_char:
-            if line[index:min(index+1,last_ind)] == '""':
+            if line[index:min(index+1, last_ind)] == '""':
                 # Embedded double quote
                 index = index + 1 # +1 and end of loop
             elif line[index] == '"':
@@ -314,7 +319,7 @@ def scan_free_line(line, in_continue, in_single_char, in_double_char, context):
         elif line[index] == '&':
             # If we got here, we are not in a character context, note continue
             # First make sure this is a valid continue
-            match = continue_re.match(line[index:])
+            match = _CONTINUE_RE.match(line[index:])
             if match is not None:
                 continue_out_col = index
             else:
@@ -349,8 +354,8 @@ def read_file(filename, preproc_defs=None, logger=None):
         # Read all lines of the file at once
         with open(filename, 'r') as file:
             file_lines = file.readlines()
-            for index in range(len(file_lines)):
-                file_lines[index] = file_lines[index].rstrip('\n').rstrip()
+            for index, line in enumerate(file_lines):
+                file_lines[index] = line.rstrip('\n').rstrip()
             # End for
         # End with
         # create a parse object and context for this file
@@ -366,7 +371,8 @@ def read_file(filename, preproc_defs=None, logger=None):
             skip_line = False
             if len(curr_line.strip()) == 0:
                 skip_line = True
-            elif fixed_form and (fixed_comment_re.match(curr_line) is not None):
+            elif (fixed_form and
+                  (_FIXED_COMMENT_RE.match(curr_line) is not None)):
                 skip_line = True
             elif curr_line.lstrip()[0] == '!':
                 skip_line = True
@@ -451,28 +457,36 @@ def read_file(filename, preproc_defs=None, logger=None):
 
 ########################################################################
 
-def parse_use_statement(type_dict, statement, pobj, logger):
-    umatch = use_re.match(statement)
+def parse_use_statement(statement, logger):
+    """Return True iff <statement> is a use statement"""
+    umatch = _USE_RE.match(statement)
     if umatch is None:
         return False
     else:
-        print("use = {}".format(umatch.group(1)))
+        if logger:
+            logger.debug("use = {}".format(umatch.group(1)))
+        # end if
         return True
     # End if
 
 ########################################################################
 
 def is_dummy_argument_statement(statement):
-    return intent_stmt_re.search(statement) is not None
+    """Return True iff <statement> is a dummy argument declaration"""
+    return _INTENT_STMT_RE.search(statement) is not None
 
 ########################################################################
 
 def is_comment_statement(statement):
+    """Return True iff <statement> is a Fortran comment"""
     return statement.lstrip()[0] == '!'
 
 ########################################################################
 
 def parse_type_def(statements, type_def, mod_name, pobj, logger):
+    """Parse a type definition from <statements> and return the
+    remaining statements along with a MetadataTable object representing
+    the type's variables."""
     psrc = ParseSource(mod_name, 'ddt', pobj)
     seen_contains = False
     mheader = None
@@ -482,7 +496,7 @@ def parse_type_def(statements, type_def, mod_name, pobj, logger):
         while len(statements) > 0:
             statement = statements.pop(0)
             # End program or module
-            pmatch = end_type_re.match(statement)
+            pmatch = _END_TYPE_RE.match(statement)
             if pmatch is not None:
                 # We hit the end of the type, make a header
                 mheader = MetadataTable(table_name_in=type_def[0],
@@ -495,7 +509,7 @@ def parse_type_def(statements, type_def, mod_name, pobj, logger):
             elif not seen_contains:
                 # Comment of variable
                 if ((not is_comment_statement(statement)) and
-                    (not parse_use_statement({}, statement, pobj, logger))):
+                    (not parse_use_statement(statement, logger))):
                     vars = parse_fortran_var_decl(statement, psrc, logger=logger)
                     for var in vars:
                         var_dict.add_variable(var)
@@ -533,7 +547,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
             statement = statements.pop(0)
             # End program or module
             pmatch = endmatch.match(statement)
-            asmatch = arg_table_start_re.match(statement)
+            asmatch = _ARG_TABLE_START_RE.match(statement)
             type_def = fortran_type_definition(statement)
             if asmatch is not None:
                 active_table = asmatch.group(1)
@@ -575,7 +589,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, logger):
             elif active_table is not None:
                 # We should have a variable definition to add
                 if ((not is_comment_statement(statement)) and
-                    (not parse_use_statement({}, statement, pobj, logger)) and
+                    (not parse_use_statement(statement, logger)) and
                     (active_table.lower() == spec_name.lower())):
                     vars = parse_fortran_var_decl(statement, psrc,
                                                   logger=logger)
@@ -612,10 +626,10 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
     while insub and (statements is not None):
         while statements:
             statement = statements.pop(0)
-            smatch = subroutine_re.match(statement)
-            esmatch = end_subroutine_re.match(statement)
-            pmatch = endmodule_re.match(statement)
-            asmatch = arg_table_start_re.match(statement)
+            smatch = _SUBROUTINE_RE.match(statement)
+            esmatch = _END_SUBROUTINE_RE.match(statement)
+            pmatch = _ENDMODULE_RE.match(statement)
+            asmatch = _ARG_TABLE_START_RE.match(statement)
             if asmatch is not None:
                 # We have run off the end of something, hope that is okay
                 # Put this statement back for the caller to deal with
@@ -664,7 +678,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
                     inpreamble = False
                     insub = False
                 elif ((not is_comment_statement(statement)) and
-                      (not parse_use_statement({}, statement, pobj, logger)) and
+                      (not parse_use_statement(statement, logger)) and
                       is_dummy_argument_statement(statement)):
                     vars = parse_fortran_var_decl(statement, psrc,
                                                   logger=logger)
@@ -718,7 +732,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, logger):
 def is_contains_statement(statement, in_module):
     "Return True iff <statement> is an executable Fortran statement"
     # Fill this in when we need to parse programs or subroutines
-    if in_module and (contains_re.match(statement.strip()) is not None):
+    if in_module and (_CONTAINS_RE.match(statement.strip()) is not None):
         return True
     else:
         return False
@@ -743,11 +757,11 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
         raise ParseInternalError("<mod_name> and <prog_name> cannot both be used")
     elif mod_name is not None:
         spec_name = mod_name
-        endmatch = endmodule_re
+        endmatch = _ENDMODULE_RE
         inmod = True
     elif prog_name is not None:
         spec_name = prog_name
-        endmatch = endprogram_re
+        endmatch = _ENDPROGRAM_RE
         inmod = False
     else:
         raise ParseInternalError("One of <mod_name> or <prog_name> must be used")
@@ -765,7 +779,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
             statement = statements.pop(0)
             # End program or module
             pmatch = endmatch.match(statement)
-            asmatch = arg_table_start_re.match(statement)
+            asmatch = _ARG_TABLE_START_RE.match(statement)
             if pmatch is not None:
                 # We never found a contains statement
                 inspec = False
@@ -806,7 +820,7 @@ def parse_specification(pobj, statements, mod_name=None, prog_name=None, logger=
 
 def parse_program(pobj, statements, logger=None):
     # The first statement should be a program statement, grab the name
-    pmatch = program_re.match(statements[0])
+    pmatch = _PROGRAM_RE.match(statements[0])
     if pmatch is None:
         raise ParseSyntaxError('PROGRAM statement', statements[0])
     # End if
@@ -829,7 +843,7 @@ def parse_program(pobj, statements, logger=None):
         while len(statements) > 0:
             statement = statements.pop(0)
             # End program
-            pmatch = endprogram_re.match(statement)
+            pmatch = _ENDPROGRAM_RE.match(statement)
             if pmatch is not None:
                 prog_name = pmatch.group(1)
                 pobj.leave_region('PROGRAM', region_name=prog_name)
@@ -846,7 +860,7 @@ def parse_program(pobj, statements, logger=None):
 
 def parse_module(pobj, statements, logger=None):
     # The first statement should be a module statement, grab the name
-    pmatch = module_re.match(statements[0])
+    pmatch = _MODULE_RE.match(statements[0])
     if pmatch is None:
         raise ParseSyntaxError('MODULE statement', statements[0])
     # End if
@@ -867,8 +881,8 @@ def parse_module(pobj, statements, logger=None):
         while statements:
             statement = statements.pop(0)
             # End module
-            pmatch = endmodule_re.match(statement)
-            asmatch = arg_table_start_re.match(statement)
+            pmatch = _ENDMODULE_RE.match(statement)
+            asmatch = _ARG_TABLE_START_RE.match(statement)
             if asmatch is not None:
                 active_table = asmatch.group(1)
             elif pmatch is not None:
@@ -919,12 +933,12 @@ def parse_fortran_file(filename, preproc_defs=None, logger=None):
             statements = read_statements(pobj)
         # End if
         statement = statements.pop(0)
-        if program_re.match(statement) is not None:
+        if _PROGRAM_RE.match(statement) is not None:
             # push statement back so parse_program can use it
             statements.insert(0, statement)
             statements, ptables = parse_program(pobj, statements, logger=logger)
             mtables.extend(ptables)
-        elif module_re.match(statement) is not None:
+        elif _MODULE_RE.match(statement) is not None:
             # push statement back so parse_module can use it
             statements.insert(0, statement)
             statements, ptables = parse_module(pobj, statements, logger=logger)
