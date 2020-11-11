@@ -149,6 +149,19 @@ class MetadataTableTestCase(unittest.TestCase):
         emsg = "Required property, 'intent', missing, at "
         self.assertTrue(emsg in str(context.exception))
 
+    def test_missing_units(self):
+        """Test that a missing units attribute returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_missing_units.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Required property, 'units', missing, at"
+        self.assertTrue(emsg in str(context.exception))
+
     def test_missing_table_type(self):
         """Test that a missing table type returns expected error"""
         known_ddts = list()
