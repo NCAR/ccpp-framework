@@ -318,7 +318,7 @@ class MetadataTableTestCase(unittest.TestCase):
             parse_metadata_file(filename, known_ddts, logger)
 
         #print("The exception is", context.exception)
-        emsg = "Section name, test_host, does not match table title, banana, at "
+        emsg = "Section name, 'test_host', does not match table title, 'banana', at "
         self.assertTrue(emsg in str(context.exception))
 
     def test_double_table_properties(self):
@@ -358,8 +358,13 @@ class MetadataTableTestCase(unittest.TestCase):
         dependencies = result[0].dependencies
         rel_path = result[0].relative_path
         titles = [elem.table_name for elem in result]
-        print (dependencies)  # This will fail due to multiple lines of dependencies
-        self.assertIn('machine.F,physcons.F90,radlw_param.f,radsw_param.f' in dependencies)
+
+        self.assertIn('machine.F', dependencies, msg="Dependency 'machine.F' is expected but not found")
+        self.assertIn('physcons.F90', dependencies, msg="Dependency 'physcons.F90' is expected but not found")
+        self.assertIn('GFDL_parse_tracers.F90', dependencies, msg="Dependency 'GFDL_parse_tracers.F90' is expected but not found")
+        self.assertIn('rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90', dependencies, \
+                       msg="Header name 'rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90' is expected but not found")
+
         self.assertIn(rel_path, "../../ccpp/physics/physics")
         self.assertEqual(len(result), 1)
         self.assertIn('test_host', titles, msg="Table name 'test_host' is expected but not found")
