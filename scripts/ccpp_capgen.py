@@ -484,15 +484,15 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
 ###############################################################################
 def duplicate_item_error(title, filename, itype, orig_item):
 ###############################################################################
+    """Raise an error indicating a duplicate item of type, <itype>"""
     errmsg = "Duplicate {typ}, {title}, found in {file}"
     edict = {'title':title, 'file':filename, 'typ':itype}
     ofile = orig_item.context.filename
     if ofile is not None:
         errmsg = errmsg + ", original found in {ofile}"
         edict['ofile'] = ofile
-        # end if
-        raise CCPPError(errmsg.format(**edict))
     # end if
+    raise CCPPError(errmsg.format(**edict))
 
 ###############################################################################
 def parse_host_model_files(host_filenames, preproc_defs, host_name, logger):
@@ -513,9 +513,13 @@ def parse_host_model_files(host_filenames, preproc_defs, host_name, logger):
                                      logger=logger)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
-        [mheaders.extend(y) for y in [x.sections() for x in mtables]]
+        for sect in [x.sections() for x in mtables]:
+            mheaders.extend(sect)
+        # end for
         fheaders = list()
-        [fheaders.extend(y) for y in [x.sections() for x in ftables]]
+        for sect in [x.sections() for x in ftables]:
+            fheaders.extend(sect)
+        # end for
         check_fortran_against_metadata(mheaders, fheaders,
                                        filename, fort_file, logger)
         # Check for duplicate tables, then add to dict
@@ -565,9 +569,13 @@ def parse_scheme_files(scheme_filenames, preproc_defs, logger):
                                      logger=logger)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
-        [mheaders.extend(y) for y in [x.sections() for x in mtables]]
+        for sect in [x.sections() for x in mtables]:
+            mheaders.extend(sect)
+        # end for
         fheaders = list()
-        [fheaders.extend(y) for y in [x.sections() for x in ftables]]
+        for sect in [x.sections() for x in ftables]:
+            fheaders.extend(sect)
+        # end for
         check_fortran_against_metadata(mheaders, fheaders,
                                        filename, fort_file, logger)
         # Check for duplicate tables, then add to dict
@@ -678,9 +686,8 @@ def capgen(host_files, scheme_files, suites, datatable_file, preproc_defs,
     # Create the kinds file
     kinds_file = create_kinds_file(kind_phys, output_dir, logger)
     # Finally, create the database of generated files and caps
-    generate_ccpp_datatable(datatable_file,
-                            host_model, ccpp_api,
-                            scheme_headers, host_files,
+    generate_ccpp_datatable(datatable_file, host_model, ccpp_api,
+                            scheme_headers, scheme_tdict, host_files,
                             cap_filenames, kinds_file)
 
 ###############################################################################

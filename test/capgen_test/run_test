@@ -114,6 +114,7 @@ ccpp_files="${ccpp_files},${build_dir}/ccpp/ccpp_ddt_suite_cap.F90"
 ccpp_files="${ccpp_files},${build_dir}/ccpp/ccpp_temp_suite_cap.F90"
 process_list="setter=temp_set,adjusting=temp_calc_adjust"
 module_list="environ_conditions,make_ddt,temp_adjust,temp_calc_adjust,temp_set"
+dependencies="bar.F90,foo.F90,qux.F90"
 suite_list="ddt_suite;temp_suite"
 required_vars_ddt="ccpp_error_flag,ccpp_error_message"
 required_vars_ddt="${required_vars_ddt},model_times"
@@ -213,6 +214,7 @@ check_datatable ${report_prog} ${datafile} "--ccpp-files" ${ccpp_files}
 echo -e "\nChecking lists from command line"
 check_datatable ${report_prog} ${datafile} "--process-list" ${process_list}
 check_datatable ${report_prog} ${datafile} "--module-list" ${module_list}
+check_datatable ${report_prog} ${datafile} "--dependencies" ${dependencies}
 check_datatable ${report_prog} ${datafile} "--suite-list" ${suite_list}       \
                 --sep ";"
 echo -e "\nChecking variables for DDT suite from command line"

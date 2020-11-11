@@ -74,6 +74,15 @@
   type = real
   kind = kind_phys
   intent = in
+[ fudge ]
+  standard_name = random_fudge_factor
+  long_name = Ignore this
+  units = 1
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = in
+  default_value = 1.0_kind_phys
 [ temp_inc_set ]
   standard_name = test_potential_temperature_increment
   long_name = Per time step potential temperature increment

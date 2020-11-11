@@ -54,6 +54,9 @@ _VALID_REPORTS = [{"report" : "host_files", "type" : bool,
                   {"report" : "module_list", "type" : bool,
                    "help" :
                    "Return a list of module names used in this set of suites"},
+                  {"report" : "dependencies", "type" : bool,
+                   "help" : ("Return a list of scheme and host "
+                             "dependency module names")},
                   {"report" : "suite_list", "type" : bool,
                    "help" : "Return a list of configured suite names"},
                   {"report" : "required_variables", "type" : str,
@@ -343,6 +346,23 @@ def _retrieve_module_list(table):
     return sorted(result)
 
 ###############################################################################
+def _retrieve_dependencies(table):
+###############################################################################
+    """Find and return a list of all host and scheme dependencies."""
+    result = set()
+    depends = table.find("dependencies")
+    if depends is None:
+        raise CCPPDatatableError("Could not find 'dependencies' element")
+    # end if
+    for dependency in depends:
+        dep_file = dependency.text
+        if dep_file is not None:
+            result.add(dep_file)
+        # end if
+    # end for
+    return sorted(result)
+
+###############################################################################
 def _find_var_dictionary(table, dict_name, dict_type=None):
 ###############################################################################
     """Find and return a var_dictionary named, <dict_name> in <table>.
@@ -490,6 +510,8 @@ def datatable_report(datatable, action, sep):
         result = _retrieve_process_list(table)
     elif action.action_is("module_list"):
         result = _retrieve_module_list(table)
+    elif action.action_is("dependencies"):
+        result = _retrieve_dependencies(table)
     elif action.action_is("suite_list"):
         result = _retrieve_suite_list(table)
     elif action.action_is("required_variables"):
@@ -644,13 +666,15 @@ def _new_var_entry(parent, var, full_entry=True):
     """
     prop_list = ["intent"]
     if full_entry:
-        prop_list.extend(["local_name", "type", "kind", "units", "protected"])
+        prop_list.extend(["local_name", "type", "kind", "units",
+                          "diagnostic_name", "diagnostic_name_fixed",
+                          "default_value", "protected"])
     # end if
     ventry = ET.SubElement(parent, "var")
     ventry.set("name", var.get_prop_value("standard_name"))
     for prop in prop_list:
         value = var.get_prop_value(prop)
-        if prop:
+        if value:
             ventry.set(prop, str(value))
         # end if
     # end for
@@ -765,6 +789,22 @@ def _add_suite_object_dictionaries(dictionaries, suite_object):
     # end for
 
 ###############################################################################
+def _add_dependencies(parent, scheme_depends, host_depends):
+###############################################################################
+    """Add a section to <parent> that lists all the dependencies
+    required by schemes or the host model.
+    """
+    file_entry = ET.SubElement(parent, "dependencies")
+    for hfile in host_depends:
+        entry = ET.SubElement(file_entry, "dependency")
+        entry.text = hfile
+    # end for
+    for sfile in scheme_depends:
+        entry = ET.SubElement(file_entry, "dependency")
+        entry.text = sfile
+    # end for
+
+###############################################################################
 def _add_generated_files(parent, host_files, suite_files, ccpp_kinds):
 ###############################################################################
     """Add a section to <parent> that lists all the files generated
@@ -808,7 +848,7 @@ def _add_suite_object(parent, suite_object):
 
 ###############################################################################
 def generate_ccpp_datatable(filename, host_model, api, scheme_headers,
-                            host_files, suite_files, ccpp_kinds):
+                            scheme_tdict, host_files, suite_files, ccpp_kinds):
 ###############################################################################
     """Write a CCPP datatable for <api> to <filename>.
     The datatable includes the generated filenames for the host cap,
@@ -866,6 +906,21 @@ def generate_ccpp_datatable(filename, host_model, api, scheme_headers,
             # end for
         # end for
     # end for
+    # Add in all dependencies
+    scheme_depends = set()
+    for table in scheme_tdict:
+        for dep_file in scheme_tdict[table].dependencies:
+            scheme_depends.add(dep_file)
+        # end for
+    # end for
+    host_depends = set()
+    host_tables = host_model.metadata_tables()
+    for table in host_tables:
+        for dep_file in host_tables[table].dependencies:
+            host_depends.add(dep_file)
+        # end for
+    # end for
+    _add_dependencies(datatable, scheme_depends, host_depends)
     # Write tree
     datatable_tree = PrettyElementTree(datatable)
     datatable_tree.write(filename)

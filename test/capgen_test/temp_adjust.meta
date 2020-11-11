@@ -32,6 +32,7 @@
   type = real
   kind = kind_phys
   intent = inout
+  diagnostic_name = temperature
 [ qv ]
   standard_name = water_vapor_specific_humidity
   units = kg kg-1
@@ -39,6 +40,7 @@
   type = real
   kind = kind_phys
   intent = inout
+  diagnostic_name_fixed = Q
 [ ps ]
   standard_name = surface_air_pressure
   state_variable = true

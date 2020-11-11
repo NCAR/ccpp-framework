@@ -1,6 +1,8 @@
 [ccpp-table-properties]
   name = temp_calc_adjust
   type = scheme
+  dependencies = foo.F90, bar.F90
+  dependencies = qux.F90
 [ccpp-arg-table]
   name = temp_calc_adjust_run
   type = scheme

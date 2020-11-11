@@ -25,8 +25,9 @@ class HostModel(VarDictionary):
         self.__deferred_finds = None # Used variables that were missed at first
         # First, process DDT headers
         meta_headers = list()
-        [meta_headers.extend(y) for y in
-         [x.sections() for x in meta_tables.values()]]
+        for sect in [x.sections() for x in meta_tables.values()]:
+            meta_headers.extend(sect)
+        # end for
         self.__ddt_lib = DDTLibrary('{}_ddts'.format(self.name),
                                     ddts=[d for d in meta_headers
                                           if d.header_type == 'ddt'],
@@ -134,7 +135,7 @@ class HostModel(VarDictionary):
 
     def metadata_tables(self):
         """Return a copy of this host models metadata tables"""
-        return list(self.__metadata_tables)
+        return dict(self.__metadata_tables)
 
     def host_variable_module(self, local_name):
         """Return the module name for a host variable"""

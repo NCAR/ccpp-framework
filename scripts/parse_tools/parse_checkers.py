@@ -169,8 +169,8 @@ __REPEAT_DIM = r"(?:,\s*"+__FORT_DIM+r"\s*)"
 __FORTRAN_SCALAR_ARREF = r"[(]\s*("+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6})[)]"
 FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+__FORTRAN_SCALAR_ARREF+r")"
 FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
-FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
-                            "double precision", "character" ]
+FORTRAN_INTRINSIC_TYPES = ["integer", "real", "logical", "complex",
+                           "double precision", "character"]
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
 FORTRAN_TYPE_RE = re.compile(r"(?i)type\s*\(\s*("+FORTRAN_ID+r")\s*\)")
 
@@ -642,6 +642,218 @@ def check_fortran_literal(value, typestr, kind):
     # End if
     return valid
 
+def check_default_value(test_val, prop_dict, error):
+    """Return <test_val> if a valid default value for a CCPP field,
+         otherwise, None.
+    If <error> is True, raise an Exception if <value> is not valid.
+    A valid value is determined by the 'type' of the variable. It is an
+    error for there to be no 'type' property in <prop_dict>.
+    >>> check_default_value('314', {'type':'integer'}, False)
+    '314'
+    >>> check_default_value('314', {'type':'integer'}, True)
+    '314'
+    >>> check_default_value('314', {'type':'integer', 'kind':'ikind'}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 314 is not a valid Fortran integer of kind, ikind
+    >>> check_default_value('314_ikind', {'type':'integer', 'kind':'ikind'}, True)
+    '314_ikind'
+    >>> check_default_value('314', {'type':'real'}, False)
+
+    >>> check_default_value('314', {'type':'real'}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 314 is not a valid Fortran real
+    >>> check_default_value('3.14', {'type':'real'}, False)
+    '3.14'
+    >>> check_default_value('314', {'tipe':'integer'}, False)
+
+    >>> check_default_value('314', {'local_name':'foo'}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: foo does not have a 'type' attribute
+    >>> check_default_value('314', {'tipe':'integer'}, False)
+
+    >>> check_default_value('314', None, True)
+    '314'
+    """
+    valid = None
+    if prop_dict and ('type' in prop_dict):
+        valid = test_val
+        var_type = prop_dict['type'].lower().strip()
+        if 'kind' in prop_dict:
+            vkind = prop_dict['kind'].lower().strip()
+        else:
+            vkind = ''
+        # end if
+        if not check_fortran_literal(test_val, var_type, vkind):
+            valid = None
+            if error:
+                emsg = '{} is not a valid Fortran {}'
+                if vkind:
+                    emsg += ' of kind, {}'
+                raise CCPPError(emsg.format(test_val, var_type, vkind))
+            # end if
+        # end if (no else, <test_val> is okay)
+    elif prop_dict is None:
+        # Special case for checks during parsing, always pass
+        valid = test_val
+    elif error:
+        emsg = "{} does not have a 'type' attribute"
+        if 'local_name' in prop_dict:
+            lname = prop_dict['local_name']
+        else:
+            lname = 'UNKNOWN'
+        # end if
+        raise CCPPError(emsg.format(lname))
+    # end if
+    return valid
+
+def check_valid_values(test_val, prop_dict, error):
+    """Return <test_val> if a valid 'valid_values' attribute value,
+         otherwise, None.
+    If <error> is True, raise an Exception if <value> is not valid.
+    """
+    raise ParseInternalError("NOT IMPLEMENTED")
+
+def check_diagnostic_fixed(test_val, prop_dict, error):
+    """Return <test_val> if a valid descriptor for a CCPP diagnostic,
+         otherwise, None.
+    If <error> is True, raise an Exception if <value> is not valid.
+    A fixed diagnostic name is any Fortran identifier, however, it is
+    an error to specify both 'diagnostic_name' and 'diagnostic_name_fixed'.
+    >>> check_diagnostic_fixed("foo", {'diagnostic_name_fixed' : 'foo'}, False)
+    'foo'
+    >>> check_diagnostic_fixed("foo", {'diagnostic_name_fixed' : 'foo'}, True)
+    'foo'
+    >>> check_diagnostic_fixed("foo", {'diagnostic_name' : 'foo'}, False)
+
+    >>> check_diagnostic_fixed("foo", {'diagnostic_name':'','local_name':'hi','standard_name':'mom'}, True)
+    'foo'
+    >>> check_diagnostic_fixed("foo", {'diagnostic_name':'foo','local_name':'hi','standard_name':'mom'}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: hi (mom) cannot have both 'diagnostic_name' and 'diagnostic_name_fixed' attributes
+    >>> check_diagnostic_fixed("2foo", {'diagnostic_name_fixed':'foo','local_name':'hi','standard_name':'mom'}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '2foo' (hi) is not a valid fixed diagnostic name
+    """
+    valid = test_val
+    if (prop_dict and ('diagnostic_name' in prop_dict) and
+        prop_dict['diagnostic_name']):
+        valid = None
+        if error:
+            emsg = "{} ({}) cannot have both 'diagnostic_name' and "
+            emsg += "'diagnostic_name_fixed' attributes"
+            if 'local_name' in prop_dict:
+                lname = prop_dict['local_name']
+            else:
+                lname = 'UNKNOWN'
+            # end if
+            if 'standard_name' in prop_dict:
+                sname = prop_dict['standard_name']
+            else:
+                sname = 'UNKNOWN'
+            # end if
+            raise CCPPError(emsg.format(lname, sname))
+        # end if
+    elif check_fortran_id(test_val, prop_dict, False) is None:
+        valid = None
+        if error:
+            emsg = "'{}' ({}) is not a valid fixed diagnostic name"
+            if 'local_name' in prop_dict:
+                lname = prop_dict['local_name']
+            else:
+                lname = 'UNKNOWN'
+            # end if
+            raise CCPPError(emsg.format(test_val, lname))
+        # end if
+    # end if
+    return valid
+
+########################################################################
+
+_DIAG_PRE = r"("+FORTRAN_ID+")?"
+_DIAG_SUFF = r"([_0-9A-Za-z]+)?"
+_DIAG_PROP = r"((\${process}|\${scheme_name})"+_DIAG_SUFF+r")"
+_DIAG_RE = re.compile(_DIAG_PRE+_DIAG_PROP+r"?$")
+
+def check_diagnostic_id(test_val, prop_dict, error):
+    """Return <test_val> if a valid descriptor for a CCPP diagnostic,
+        otherwise, None.
+    If <error> is True, raise an Exception if <value> is not valid.
+    A diagnostic name is a Fortran identifier with the optional
+       addition of one variable substitution.
+    A variable substitution is a substring of the form of either:
+       ${process}: The scheme process name will be substituted for this
+          substring. If this substring is included, it is an error for
+          there to be no process specified by the scheme (although this
+          error cannot be detected by this routine).
+       ${scheme_name}: The scheme name will be substituted for this substring.
+    It is an error to specify both 'diagnostic_name' and
+       'diagnostic_name_fixed'.
+    >>> check_diagnostic_id("foo", {'diagnostic_name' : 'foo'}, False)
+    'foo'
+    >>> check_diagnostic_id("foo", {'diagnostic_name' : 'foo'}, True)
+    'foo'
+    >>> check_diagnostic_id("foo", {'diagnostic_name_fixed' : 'foo'}, False)
+
+    >>> check_diagnostic_id("foo_${process}", {}, False)
+    'foo_${process}'
+    >>> check_diagnostic_id("foo_${process}_2bad", {}, False)
+    'foo_${process}_2bad'
+    >>> check_diagnostic_id("${process}_2bad", {}, False)
+    '${process}_2bad'
+    >>> check_diagnostic_id("foo_${scheme_name}", {}, False)
+    'foo_${scheme_name}'
+    >>> check_diagnostic_id("foo_${scheme_name}_2bad", {}, False)
+    'foo_${scheme_name}_2bad'
+    >>> check_diagnostic_id("${scheme_name}_suff", {}, False)
+    '${scheme_name}_suff'
+    >>> check_diagnostic_id("pref_${scheme}_suff", {}, False)
+
+    >>> check_diagnostic_id("pref_${scheme_name_suff", {}, False)
+
+    >>> check_diagnostic_id("pref_$scheme_name}_suff", {}, False)
+
+    >>> check_diagnostic_id("pref_{scheme_name}_suff", {}, False)
+
+    >>> check_diagnostic_id("foo", {'diagnostic_name_fixed':'','local_name':'hi','standard_name':'mom'}, True)
+    'foo'
+    >>> check_diagnostic_id("foo", {'diagnostic_name_fixed':'foo','local_name':'hi','standard_name':'mom'}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: hi (mom) cannot have both 'diagnostic_name' and 'diagnostic_name_fixed' attributes
+    >>> check_diagnostic_id("2foo", {'diagnostic_name':'foo','local_name':'hi','standard_name':'mom'}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '2foo' (hi) is not a valid diagnostic name
+    """
+    if (prop_dict and ('diagnostic_name_fixed' in prop_dict) and
+        prop_dict['diagnostic_name_fixed']):
+        valid = None
+        if error:
+            emsg = "{} ({}) cannot have both 'diagnostic_name' and "
+            emsg += "'diagnostic_name_fixed' attributes"
+            if 'local_name' in prop_dict:
+                lname = prop_dict['local_name']
+            else:
+                lname = 'UNKNOWN'
+            # end if
+            if 'standard_name' in prop_dict:
+                sname = prop_dict['standard_name']
+            else:
+                sname = 'UNKNOWN'
+            # end if
+            raise CCPPError(emsg.format(lname, sname))
+        # end if
+    else:
+        match = _DIAG_RE.match(test_val)
+        if match is None:
+            valid = None
+            if error:
+                emsg = "'{}' is not a valid diagnostic_name value"
+                raise CCPPError(emsg.format(test_val))
+            # end if
+        else:
+            valid = test_val
+        # end if
+    # end if
+    return valid
 
 ########################################################################
 
