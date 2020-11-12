@@ -321,11 +321,11 @@ class MetadataTableTestCase(unittest.TestCase):
         emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
         self.assertTrue(emsg in str(context.exception))
 
-    def test_section_table_title(self):
+    def test_mismatch_section_table_title(self):
         """Test that mismatched section name and table title returns expected error"""
         known_ddts = list()
         logger = None
-        filename = os.path.join(SAMPLE_FILES_DIR, "test_section_table_title.meta")
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_mismatch_section_table_title.meta")
 
         with self.assertRaises(Exception) as context:
             parse_metadata_file(filename, known_ddts, logger)
@@ -382,11 +382,11 @@ class MetadataTableTestCase(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertIn('test_host', titles, msg="Table name 'test_host' is expected but not found")
 
-    def test_table_type_mismatch(self):
-        """Test that a mismatched ccpp-table-properties and ccpp-arg-table type returns expected error"""
+    def test_invalid_table_properties_type(self):
+        """Test that an invalid ccpp-table-properties type returns expected error"""
         known_ddts = list()
         logger = None
-        filename = os.path.join(SAMPLE_FILES_DIR, "test_table_type_mismatch.meta")
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_invalid_table_properties_type.meta")
 
         with self.assertRaises(Exception) as context:
             parse_metadata_file(filename, known_ddts, logger)
