@@ -149,6 +149,19 @@ class MetadataTableTestCase(unittest.TestCase):
         emsg = "Required property, 'intent', missing, at "
         self.assertTrue(emsg in str(context.exception))
 
+    def test_missing_units(self):
+        """Test that a missing units attribute returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_missing_units.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Required property, 'units', missing, at"
+        self.assertTrue(emsg in str(context.exception))
+
     def test_missing_table_type(self):
         """Test that a missing table type returns expected error"""
         known_ddts = list()
@@ -306,6 +319,80 @@ class MetadataTableTestCase(unittest.TestCase):
 
         #print("The exception is", context.exception)
         emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_mismatch_section_table_title(self):
+        """Test that mismatched section name and table title returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_mismatch_section_table_title.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Section name, 'test_host', does not match table title, 'banana', at "
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_double_table_properties(self):
+        """Test that duplicate ccpp-table-properties returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "double_table_properties.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Duplicate metadata table, test_host, at "
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_missing_table_properties(self):
+        """Test that a missing ccpp-table-properties returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "missing_table_properties.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Invalid CCPP metadata line, '[ccpp-arg-table]', at "
+        self.assertTrue(emsg in str(context.exception))
+
+    def test_dependencies_rel_path(self):
+        """Test that relative_path and dependencies from ccpp-table-properties are read in correctly"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_dependencies_rel_path.meta")
+
+        result = parse_metadata_file(filename, known_ddts, logger)
+
+        dependencies = result[0].dependencies
+        rel_path = result[0].relative_path
+        titles = [elem.table_name for elem in result]
+
+        self.assertIn('machine.F', dependencies, msg="Dependency 'machine.F' is expected but not found")
+        self.assertIn('physcons.F90', dependencies, msg="Dependency 'physcons.F90' is expected but not found")
+        self.assertIn('GFDL_parse_tracers.F90', dependencies, msg="Dependency 'GFDL_parse_tracers.F90' is expected but not found")
+        self.assertIn('rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90', dependencies, \
+                       msg="Header name 'rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90' is expected but not found")
+
+        self.assertIn(rel_path, "../../ccpp/physics/physics")
+        self.assertEqual(len(result), 1)
+        self.assertIn('test_host', titles, msg="Table name 'test_host' is expected but not found")
+
+    def test_invalid_table_properties_type(self):
+        """Test that an invalid ccpp-table-properties type returns expected error"""
+        known_ddts = list()
+        logger = None
+        filename = os.path.join(SAMPLE_FILES_DIR, "test_invalid_table_properties_type.meta")
+
+        with self.assertRaises(Exception) as context:
+            parse_metadata_file(filename, known_ddts, logger)
+
+        #print("The exception is", context.exception)
+        emsg = "Invalid metadata table type, 'banana', at "
         self.assertTrue(emsg in str(context.exception))
 
 if __name__ == '__main__':
