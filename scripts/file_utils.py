@@ -8,6 +8,7 @@ Utilities for checking and manipulating file status
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import filecmp
 import glob
 import os
 # CCPP framework imports
@@ -40,7 +41,8 @@ def check_for_writeable_file(filename, description):
     an error. <description> is a description of <filename>."""
     if os.path.exists(filename) and not os.access(filename, os.W_OK):
         raise CCPPError("Cannot write {}, '{}'".format(description, filename))
-    elif not os.access(os.path.dirname(filename), os.W_OK):
+    # end if
+    if not os.access(os.path.dirname(filename), os.W_OK):
         raise CCPPError("Cannot write {}, '{}'".format(description, filename))
     # end if (else just return)
 
@@ -215,3 +217,86 @@ def create_file_list(files, suffices, file_type, logger, root_path=None):
         raise CCPPError(emsg.format(file_type, '\n  '.join(errors)))
     # end if
     return master_list
+
+###############################################################################
+def replace_paths(dir_list, src_dir, dest_dir):
+###############################################################################
+    """For every path in <dir_list>, replace instances of <src_dir> with
+    <dest_dir>"""
+    for index, path in enumerate(dir_list):
+        dir_list[index] = path.replace(src_dir, dest_dir)
+    # end for
+
+###############################################################################
+def remove_dir(src_dir, force=False):
+###############################################################################
+    """Remove <src_dir> and its children. This operation can only succeed if
+    <src_dir> contains no files or if <force> is True."""
+    currdir = os.getcwd()
+    src_parent = os.path.split(src_dir)[0]
+    src_rel = os.path.relpath(src_dir, src_parent)
+    os.chdir(src_parent) # Prevent removing the parent of src_dir
+    if force:
+        leaf_dirs = set()
+        for root, dirs, files in os.walk(src_rel):
+            for file in files:
+                os.remove(os.path.join(root, file))
+            # end for
+            if not dirs:
+                leaf_dirs.add(root)
+            # end if
+        # end for
+        for ldir in leaf_dirs:
+            os.removedirs(ldir)
+        # end for
+    # end if (no else, always try to remove top level
+    try:
+        os.removedirs(src_rel)
+    except OSError:
+        pass # Ignore error, fail silently
+    # end try
+    os.chdir(currdir)
+
+###############################################################################
+def move_modified_files(src_dir, dest_dir, overwrite=False, remove_src=False):
+###############################################################################
+    """For each file in <src_dir>, move it to <dest_dir> if that file is
+    different in the two locations.
+    if <overwrite> is True, move all files to <dest_dir>, even if unchanged.
+    If <remove_src> is True, remove <src_dir> when complete."""
+    src_files = {} # All files in <src_dir>
+    if os.path.normpath(src_dir) != os.path.normpath(dest_dir):
+        for root, _, files in os.walk(src_dir):
+            for file in files:
+                src_path = os.path.join(root, file)
+                if file in src_files:
+                    # We do not allow two files with the same name
+                    emsg = "Duplicate CCPP file found, '{}', original is '{}'"
+                    raise CCPPError(emsg.format(src_path, src_files[file]))
+                # end if
+                src_files[file] = src_path
+            # end for
+        # end for
+        for file in src_files:
+            src_path = src_files[file]
+            src_file = os.path.relpath(src_path, start=src_dir)
+            dest_path = os.path.join(dest_dir, src_file)
+            if os.path.exists(dest_path):
+                if overwrite:
+                    fmove = True
+                else:
+                    fmove = filecmp.cmp(src_path, dest_path, shallow=False)
+                # end if
+            else:
+                fmove = True
+            # end if
+            if fmove:
+                os.replace(src_path, dest_path)
+            else:
+                os.remove(src_path)
+            # end if
+        # end for
+        if remove_src:
+            remove_dir(src_dir, force=True)
+        # end if
+    # end if (no else, take no action if the directories are identical)
