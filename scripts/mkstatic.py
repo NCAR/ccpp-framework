@@ -1106,8 +1106,9 @@ end module {module}
                         # kind_string is used for automated unit conversions, i.e. foo_kind_phys
                         kind_string = '_' + local_vars[var_standard_name]['kind'] if local_vars[var_standard_name]['kind'] else ''
 
-                        # Convert blocked data in init and finalize steps
-                        if ccpp_stage in ['init', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name']:
+                        # Convert blocked data in init and finalize steps - only required for variables with block number and horizontal_dimension
+                        if ccpp_stage in ['init', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name'] \
+                            and CCPP_HORIZONTAL_DIMENSION in var.dimensions:
                             # Reuse existing temporary variable, if possible
                             if local_vars[var_standard_name]['name'] in tmpvars.keys():
                                 # If the variable already has a local variable (tmpvar), reuse it
@@ -1122,59 +1123,50 @@ end module {module}
                                 tmpvar_cnt += 1
                                 tmpvar = copy.deepcopy(var)
                                 tmpvar.local_name = 'tmpvar{0}'.format(tmpvar_cnt)
-                                # Only variables that contain a horizontal dimension are supported at this time.
-                                if not tmpvar.dimensions:
-                                    #actions_in = ???
-                                    #actions_out = ???
-                                    raise Exception("Cannot handle blocked data for variables w/o a horizontal dimension: {}".format(
-                                                                                                                  var_standard_name))
-                                else:
-                                    # Create string for allocating the temporary array by converting the dimensions
-                                    # (in standard_name format) to local names as known to the host model
-                                    alloc_dimensions = []
-                                    for dim in tmpvar.dimensions:
-                                        # This is not supported/implemented: tmpvar would have one dimension less
-                                        # than the original array, and the metadata requesting the variable would
-                                        # not pass the initial test that host model variables and scheme variables
-                                        # have the same rank.
-                                        if dim == CCPP_BLOCK_NUMBER:
-                                            raise Exception("{} cannot be part of the dimensions of variable {}".format(
-                                                                                  CCPP_BLOCK_NUMBER, var_standard_name))
+                                #
+                                # Create string for allocating the temporary array by converting the dimensions
+                                # (in standard_name format) to local names as known to the host model
+                                alloc_dimensions = []
+                                for dim in tmpvar.dimensions:
+                                    # This is not supported/implemented: tmpvar would have one dimension less
+                                    # than the original array, and the metadata requesting the variable would
+                                    # not pass the initial test that host model variables and scheme variables
+                                    # have the same rank.
+                                    if dim == CCPP_BLOCK_NUMBER:
+                                        raise Exception("{} cannot be part of the dimensions of variable {}".format(
+                                                                              CCPP_BLOCK_NUMBER, var_standard_name))
+                                    else:
+                                        # Handle dimensions like "A:B", "A:3", "-1:Z"
+                                        if ':' in dim:
+                                            dims = dim.split(':')
+                                            try:
+                                                dim0 = int(dims[0])
+                                            except ValueError:
+                                                dim0 = metadata_define[dims[0]][0].local_name
+                                            try:
+                                                dim1 = int(dims[1])
+                                            except ValueError:
+                                                dim1 = metadata_define[dims[1]][0].local_name
+                                        # Single dimensions
                                         else:
-                                            # Handle dimensions like "A:B", "A:3", "-1:Z"
-                                            if ':' in dim:
-                                                dims = dim.split(':')
-                                                try:
-                                                    dim0 = int(dims[0])
-                                                except ValueError:
-                                                    dim0 = metadata_define[dims[0]][0].local_name
-                                                try:
-                                                    dim1 = int(dims[1])
-                                                except ValueError:
-                                                    dim1 = metadata_define[dims[1]][0].local_name
-                                            # Single dimensions
-                                            else:
-                                                dim0 = 1
-                                                try:
-                                                    dim1 = int(dim)
-                                                except ValueError:
-                                                    dim1 = metadata_define[dim][0].local_name
-                                            alloc_dimensions.append('{}:{}'.format(dim0,dim1))
+                                            dim0 = 1
+                                            try:
+                                                dim1 = int(dim)
+                                            except ValueError:
+                                                dim1 = metadata_define[dim][0].local_name
+                                        alloc_dimensions.append('{}:{}'.format(dim0,dim1))
 
-                                    # Padding of additional dimensions - before and after the horizontal dimension;
-                                    # same as for scalars, variables w/o a horizontal dimension are not supported.
-                                    try:
-                                        hdim_index = tmpvar.dimensions.index(CCPP_HORIZONTAL_DIMENSION)
-                                    except ValueError:
-                                        raise Exception("Cannot handle blocked data for variables w/o a horizontal dimension: {}".format(
-                                                                                                                      var_standard_name))
-                                    dimpad_before = '' + ':,'*(len(tmpvar.dimensions[:hdim_index]))
-                                    dimpad_after  = '' + ',:'*(len(tmpvar.dimensions[hdim_index+1:]))
-                                    # Add necessary local variables for looping over blocks
-                                    var_defs_manual.append('integer :: ib, nb')
-                                    # Define actions before, depending on intent
-                                    if var.intent in [ 'in', 'inout' ]:
-                                        actions_in = '''
+                                # Padding of additional dimensions - before and after the horizontal dimension
+                                hdim_index = tmpvar.dimensions.index(CCPP_HORIZONTAL_DIMENSION)
+                                dimpad_before = '' + ':,'*(len(tmpvar.dimensions[:hdim_index]))
+                                dimpad_after  = '' + ',:'*(len(tmpvar.dimensions[hdim_index+1:]))
+
+                                # Add necessary local variables for looping over blocks
+                                var_defs_manual.append('integer :: ib, nb')
+
+                                # Define actions before, depending on intent
+                                if var.intent in [ 'in', 'inout' ]:
+                                    actions_in = '''
         allocate({tmpvar}({dims}))
         ib = 1
         do nb=1,{block_count}
@@ -1189,15 +1181,16 @@ end module {module}
            dimpad_before=dimpad_before,
            dimpad_after=dimpad_after,
            )
-                                    else:
-                                        actions_in = '''
+                                else:
+                                    actions_in = '''
         allocate({tmpvar}({dims}))
 '''.format(tmpvar=tmpvar.local_name,
            dims=','.join(alloc_dimensions),
            )
-                                    # Define actions after, depending on intent
-                                    if var.intent in [ 'inout', 'out' ]:
-                                        actions_out = '''
+
+                                # Define actions after, depending on intent
+                                if var.intent in [ 'inout', 'out' ]:
+                                    actions_out = '''
         ib = 1
         do nb=1,{block_count}
           {var} = {tmpvar}({dimpad_before}ib:ib+{block_size}-1{dimpad_after})
@@ -1211,8 +1204,8 @@ end module {module}
            dimpad_before=dimpad_before,
            dimpad_after=dimpad_after,
            )
-                                    else:
-                                        actions_out = '''
+                                else:
+                                    actions_out = '''
         deallocate({tmpvar})
 '''.format(tmpvar=tmpvar.local_name)
 
@@ -1255,6 +1248,10 @@ end module {module}
                             # Add to argument list if required
                             if var_standard_name in arguments[scheme_name][subroutine_name]:
                                 arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
+
+                        # Variables stored in blocked data structures but without horizontal dimension not supported at this time (doesn't make sense anyway)
+                        elif ccpp_stage in ['init', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name']:
+                            raise Exception("Variables stored in blocked data structures but without horizontal dimension not supported at this time: {}".format(var_standard_name))
 
                         # Unit conversions without converting blocked data structures
                         elif var.actions['in'] or var.actions['out']:
