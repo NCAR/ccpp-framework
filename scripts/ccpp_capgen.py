@@ -13,14 +13,13 @@ from __future__ import print_function
 import argparse
 import sys
 import os
-import os.path
 import logging
 import re
 # CCPP framework imports
 from parse_tools import init_log, set_log_level, context_string
 from parse_tools import CCPPError, ParseInternalError
-from file_utils import check_for_writeable_file
-from file_utils import create_file_list
+from file_utils import check_for_writeable_file, remove_dir, replace_paths
+from file_utils import create_file_list, move_modified_files
 from fortran_tools import parse_fortran_file, FortranWriter
 from host_model import HostModel
 from host_cap import write_host_cap
@@ -97,9 +96,8 @@ Other filenames are treated as containing a list of .xml filenames""")
                         help='''Name of host model to use in CCPP API
 If this option is passed, a host model cap is generated''')
 
-    parser.add_argument("--clean", action='store_true',
-                        help='Remove files created by this script, then exit',
-                        default=False)
+    parser.add_argument("--clean", action='store_true', default=False,
+                        help='Remove files created by this script, then exit')
 
     parser.add_argument("--kind-phys", type=str, default='REAL64',
                         metavar="kind_phys",
@@ -109,6 +107,9 @@ If this option is passed, a host model cap is generated''')
                         metavar='HTML | Latex | HTML,Latex', type=str,
                         help="Generate LaTeX and/or HTML documentation")
 
+    parser.add_argument("--force-overwrite", action='store_true', default=False,
+                        help="""Overwrite all CCPP-generated files, even
+if unmodified""")
     parser.add_argument("--verbose", action='count', default=0,
                         help="Log more activity, repeat for increased output")
     pargs = parser.parse_args(args)
@@ -619,7 +620,8 @@ def clean_capgen(cap_output_file, logger):
 
 ###############################################################################
 def capgen(host_files, scheme_files, suites, datatable_file, preproc_defs,
-           gen_hostcap, gen_docfiles, output_dir, host_name, kind_phys, logger):
+           gen_hostcap, gen_docfiles, output_dir, host_name, kind_phys,
+           force_overwrite, logger):
 ###############################################################################
     """Parse indicated host, scheme, and suite files.
     Generate code to allow host model to run indicated CCPP suites."""
@@ -675,17 +677,45 @@ def capgen(host_files, scheme_files, suites, datatable_file, preproc_defs,
     logger.debug("{} variables = {}".format(host_model.name, plist))
     logger.debug("schemes = {}".format([x.title for x in scheme_headers]))
     # Finally, we can get on with writing suites
+    # Make sure to write to temporary location if files exist in <output_dir>
+    if not os.path.exists(output_dir):
+        # Try to create output_dir (let it crash if it fails)
+        os.makedirs(output_dir)
+        # Nothing here, use it for output
+        outtemp_dir = output_dir
+    elif not os.listdir(output_dir):
+        # Nothing here, use it for output
+        outtemp_dir = output_dir
+    else:
+        # We need to create a temporary staging area, create it here
+        outtemp_name = "ccpp_temp_scratch_dir"
+        outtemp_dir = os.path.join(output_dir, outtemp_name)
+        if os.path.exists(outtemp_dir):
+            remove_dir(outtemp_dir, force=True)
+        # end if
+        os.makedirs(outtemp_dir)
+    # end if
     ccpp_api = API(sdfs, host_model, scheme_headers, logger)
-    cap_filenames = ccpp_api.write(output_dir, logger)
+    cap_filenames = ccpp_api.write(outtemp_dir, logger)
     if gen_hostcap:
         # Create a cap file
-        host_files = [write_host_cap(host_model, ccpp_api, output_dir, logger)]
+        host_files = [write_host_cap(host_model, ccpp_api, outtemp_dir, logger)]
     else:
         host_files = list()
     # end if
     # Create the kinds file
-    kinds_file = create_kinds_file(kind_phys, output_dir, logger)
+    kinds_file = create_kinds_file(kind_phys, outtemp_dir, logger)
+    # Move any changed files to output_dir and remove outtemp_dir
+    move_modified_files(outtemp_dir, output_dir,
+                        overwrite=force_overwrite, remove_src=True)
+    # We have to rename the files we created
+    if outtemp_dir != output_dir:
+        replace_paths(cap_filenames, outtemp_dir, output_dir)
+        replace_paths(host_files, outtemp_dir, output_dir)
+        kinds_file = kinds_file.replace(outtemp_dir, output_dir)
+    # end if
     # Finally, create the database of generated files and caps
+    # This can be directly in output_dir because it will not affect dependencies
     generate_ccpp_datatable(datatable_file, host_model, ccpp_api,
                             scheme_headers, scheme_tdict, host_files,
                             cap_filenames, kinds_file)
@@ -728,7 +758,7 @@ def _main_func():
     # Make sure we can create output file lists
     if not os.path.isabs(datatable_file):
         datatable_file = os.path.normpath(os.path.join(output_dir,
-                                                        datatable_file))
+                                                       datatable_file))
     # end if
     if args.clean:
         clean_capgen(datatable_file, _LOGGER)
@@ -738,7 +768,7 @@ def _main_func():
         capgen(args.host_files, args.scheme_files, args.suites, datatable_file,
                preproc_defs, generate_host_cap,
                args.generate_docfiles, output_dir, args.host_name,
-               args.kind_phys, _LOGGER)
+               args.kind_phys, args.force_overwrite, _LOGGER)
     # end if (clean)
 
 ###############################################################################
