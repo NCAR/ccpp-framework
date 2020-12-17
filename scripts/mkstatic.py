@@ -106,6 +106,7 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
     module_use = []
     var_defs = []
     local_kind_and_type_vars = []
+
     for standard_name in variable_dictionary.keys():
         # Add variable local name and variable definitions
         arguments.append(variable_dictionary[standard_name].local_name)
@@ -128,11 +129,22 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
                 type_var = metadata_define[type_var_standard_name][0]
                 module_use.append(type_var.print_module_use())
                 local_kind_and_type_vars.append(type_var_standard_name)
+
     # Add any local variables (required for unit conversions, array transformations, ...)
     if tmpvars:
         var_defs.append('! Local variables for unit conversions, array transformations, ...')
         for tmpvar in tmpvars:
             var_defs.append(tmpvar.print_def_local())
+            # Add special kind variables
+            if tmpvar.type in STANDARD_VARIABLE_TYPES and tmpvar.kind and not tmpvar.type == STANDARD_CHARACTER_TYPE:
+                kind_var_standard_name = tmpvar.kind
+                if not kind_var_standard_name in local_kind_and_type_vars:
+                    if not kind_var_standard_name in metadata_define.keys():
+                        raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
+                    kind_var = metadata_define[kind_var_standard_name][0]
+                    module_use.append(kind_var.print_module_use())
+                    local_kind_and_type_vars.append(kind_var_standard_name)
+
     return (arguments, module_use, var_defs)
 
 class API(object):
@@ -265,7 +277,7 @@ end module {module}
         # which comes in as a scalar for any potential block/thread via the argument list.
         ccpp_var = None
         parent_standard_names = []
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             for suite in suites:
                 for parent_standard_name in suite.parents[ccpp_stage].keys():
                     if not parent_standard_name in parent_standard_names:
@@ -288,7 +300,7 @@ end module {module}
         # Create a subroutine for each stage
         self._subroutines=[]
         subs = ''
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             suite_switch = ''
             for suite in suites:
                 # Calls to groups of schemes for this stage
@@ -309,7 +321,7 @@ end module {module}
                ierr = {suite_name}_{group_name}_{stage}_cap({arguments})'''.format(clause=clause,
                                                                                    suite_name=group.suite,
                                                                                    group_name=group.name,
-                                                                                   stage=ccpp_stage,
+                                                                                   stage=CCPP_STAGES[ccpp_stage],
                                                                                    arguments=argument_list_group)
                 group_calls += '''
             else
@@ -324,7 +336,7 @@ end module {module}
                 argument_list_suite = create_argument_list_wrapped_explicit(suite.arguments[ccpp_stage])
                 suite_call = '''
            ierr = {suite_name}_{stage}_cap({arguments})
-'''.format(suite_name=suite.name, stage=ccpp_stage, arguments=argument_list_suite)
+'''.format(suite_name=suite.name, stage=CCPP_STAGES[ccpp_stage], arguments=argument_list_suite)
 
                 # Add call to all groups of this suite and to the entire suite
                 if not suite_switch:
@@ -494,8 +506,8 @@ end module {module}
         self._caps = None
         self._module = None
         self._subroutines = None
-        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
-        self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
+        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES.keys() }
+        self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES.keys() }
         self._update_cap = True
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
@@ -580,7 +592,7 @@ end module {module}
                     schemes.append(scheme_xml.text)
                     loop=int(subcycle_xml.get('loop'))
                     for ccpp_stage in CCPP_STAGES:
-                        self._all_subroutines_called.append(scheme_xml.text + '_' + ccpp_stage)
+                        self._all_subroutines_called.append(scheme_xml.text + '_' + CCPP_STAGES[ccpp_stage])
                 subcycles.append(Subcycle(loop=loop, schemes=schemes))
 
             self._groups.append(Group(name=group_xml.get('name'), subcycles=subcycles, suite=self._name))
@@ -664,7 +676,7 @@ end module {module}
             group.write(metadata_request, metadata_define, arguments)
             for subroutine in group.subroutines:
                 module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=subroutine)
-            for ccpp_stage in CCPP_STAGES:
+            for ccpp_stage in CCPP_STAGES.keys():
                 for parent_standard_name in group.parents[ccpp_stage].keys():
                     if parent_standard_name in self.parents[ccpp_stage]:
                         if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and \
@@ -676,7 +688,7 @@ end module {module}
                     else:
                         self.parents[ccpp_stage][parent_standard_name] = copy.deepcopy(group.parents[ccpp_stage][parent_standard_name])
         subs = ''
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             # Create a wrapped argument list for calling the suite,
             # get module use statements and variable definitions
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = \
@@ -696,9 +708,9 @@ end module {module}
                 body += '''
       ierr = {suite_name}_{group_name}_{stage}_cap({arguments})
       if (ierr/=0) return
-'''.format(suite_name=self._name, group_name=group.name, stage=ccpp_stage, arguments=argument_list_group)
+'''.format(suite_name=self._name, group_name=group.name, stage=CCPP_STAGES[ccpp_stage], arguments=argument_list_group)
             # Add name of subroutine in the suite cap to list of subroutine names
-            subroutine = '{name}_{stage}_cap'.format(name=self._name, stage=ccpp_stage)
+            subroutine = '{name}_{stage}_cap'.format(name=self._name, stage=CCPP_STAGES[ccpp_stage])
             self._subroutines.append(subroutine)
             # Add subroutine to output
             subs += Suite.sub.format(subroutine=subroutine,
@@ -826,9 +838,23 @@ end module {module}
         'init' : '''
       if (initialized) return
 ''',
+        'timestep_init' : '''
+      if (.not.initialized) then
+        write({target_name_msg},'(*(a))') '{name}_timestep_init called before {name}_init'
+        {target_name_flag} = 1
+        return
+      end if
+''',
         'run' : '''
       if (.not.initialized) then
         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
+        {target_name_flag} = 1
+        return
+      end if
+''',
+        'timestep_finalize' : '''
+      if (.not.initialized) then
+        write({target_name_msg},'(*(a))') '{name}_timestep_finalize called before {name}_init'
         {target_name_flag} = 1
         return
       end if
@@ -842,7 +868,9 @@ end module {module}
         'init' : '''
       initialized = .true.
 ''',
+        'timestep_init' : '',
         'run' : '',
+        'timestep_finalize' : '',
         'finalize' : '''
       initialized = .false.
 ''',
@@ -880,7 +908,7 @@ end module {module}
         self._subroutines = []
         local_subs = ''
         #
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             # The special init and finalize routines are only run in that stage
             if self._init and not ccpp_stage == 'init':
                 continue
@@ -915,8 +943,8 @@ end module {module}
                     module_name = scheme_name
                     subroutine_name = scheme_name + '_' + ccpp_stage
                     container = encode_container(module_name, scheme_name, subroutine_name)
-                    # Skip entirely empty routines
-                    if not arguments[scheme_name][subroutine_name]:
+                    # Skip entirely empty routines or non-existent routines
+                    if not subroutine_name in arguments[scheme_name].keys() or not arguments[scheme_name][subroutine_name]:
                         continue
                     error_check = ''
                     args = ''
@@ -925,6 +953,7 @@ end module {module}
                     # First identify all dimensions needed to handle the arguments
                     # and add them to the list of required variables for the cap
                     additional_variables_required = []
+                    #
                     for var_standard_name in arguments[scheme_name][subroutine_name]:
                         if not var_standard_name in metadata_define.keys():
                             raise Exception('Variable {standard_name} not defined in host model metadata'.format(
@@ -943,7 +972,7 @@ end module {module}
                                         additional_variables_required.append(dim)
 
                         # If blocked data structures need to be converted, add necessary variables
-                        if ccpp_stage in ['init', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in var.local_name:
+                        if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in var.local_name:
                             if not CCPP_BLOCK_COUNT in local_vars.keys() \
                                     and not CCPP_BLOCK_COUNT in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                     logging.debug("Adding variable {} for handling blocked data structures".format(CCPP_BLOCK_COUNT))
@@ -1107,21 +1136,19 @@ end module {module}
                         kind_string = '_' + local_vars[var_standard_name]['kind'] if local_vars[var_standard_name]['kind'] else ''
 
                         # Convert blocked data in init and finalize steps
-                        if ccpp_stage in ['init', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name']:
+                        if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
+                                CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name']:
                             # Reuse existing temporary variable, if possible
                             if local_vars[var_standard_name]['name'] in tmpvars.keys():
                                 # If the variable already has a local variable (tmpvar), reuse it
                                 tmpvar = tmpvars[local_vars[var_standard_name]['name']]
                                 actions_in  = tmpvar.actions['in']
                                 actions_out = tmpvar.actions['out']
-                                # DH* 2020-05-26
-                                raise Exception("Reusing temporary variables used for blocking has not been tested yet")
-                                # *DH 2020-05-26
                             else:
                                 # Add a local variable (tmpvar) for this variable
                                 tmpvar_cnt += 1
                                 tmpvar = copy.deepcopy(var)
-                                tmpvar.local_name = 'tmpvar{0}'.format(tmpvar_cnt)
+                                tmpvar.local_name = '{0}_local'.format(var.local_name)
                                 # Only variables that contain a horizontal dimension are supported at this time.
                                 if not tmpvar.dimensions:
                                     #actions_in = ???
@@ -1174,8 +1201,7 @@ end module {module}
                                     var_defs_manual.append('integer :: ib, nb')
                                     # Define actions before, depending on intent
                                     if var.intent in [ 'in', 'inout' ]:
-                                        actions_in = '''
-        allocate({tmpvar}({dims}))
+                                        actions_in = '''        allocate({tmpvar}({dims}))
         ib = 1
         do nb=1,{block_count}
           {tmpvar}({dimpad_before}ib:ib+{block_size}-1{dimpad_after}) = {var}
@@ -1190,15 +1216,13 @@ end module {module}
            dimpad_after=dimpad_after,
            )
                                     else:
-                                        actions_in = '''
-        allocate({tmpvar}({dims}))
+                                        actions_in = '''        allocate({tmpvar}({dims}))
 '''.format(tmpvar=tmpvar.local_name,
            dims=','.join(alloc_dimensions),
            )
                                     # Define actions after, depending on intent
                                     if var.intent in [ 'inout', 'out' ]:
-                                        actions_out = '''
-        ib = 1
+                                        actions_out = '''        ib = 1
         do nb=1,{block_count}
           {var} = {tmpvar}({dimpad_before}ib:ib+{block_size}-1{dimpad_after})
           ib = ib+{block_size}
@@ -1212,8 +1236,7 @@ end module {module}
            dimpad_after=dimpad_after,
            )
                                     else:
-                                        actions_out = '''
-        deallocate({tmpvar})
+                                        actions_out = '''        deallocate({tmpvar})
 '''.format(tmpvar=tmpvar.local_name)
 
                                 # Set/update actions for this temporary variable
@@ -1354,14 +1377,19 @@ end module {module}
             # Remove duplicates from additional manual variable definitions
             var_defs_manual = list(set(var_defs_manual))
 
-            # Write cap
-            subroutine = self._suite + '_' + self._name + '_' + ccpp_stage + '_cap'
+            # Write cap - shorten certain ccpp_stages to stay under the 63 character limit for Fortran function names
+            subroutine = self._suite + '_' + self._name + '_' + CCPP_STAGES[ccpp_stage] + '_cap'
             self._subroutines.append(subroutine)
-            # Test and set blocks for initialization status
-            initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
-                                        target_name_flag=ccpp_error_flag_target_name,
-                                        target_name_msg=ccpp_error_msg_target_name,
-                                        name=self._name)
+            # Test and set blocks for initialization status - check that at least
+            # the mandatory CCPP error handling arguments are present (i.e. there is
+            # at least one subroutine that gets called from this group), or skip.
+            if self.arguments[ccpp_stage]:
+                initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
+                                            target_name_flag=ccpp_error_flag_target_name,
+                                            target_name_msg=ccpp_error_msg_target_name,
+                                            name=self._name)
+            else:
+                initialized_test_block = ''
             initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
                                         target_name_flag=ccpp_error_flag_target_name,
                                         target_name_msg=ccpp_error_msg_target_name,
