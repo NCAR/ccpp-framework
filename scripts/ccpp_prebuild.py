@@ -405,7 +405,7 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
                     for var_name in optional_arguments[scheme_name][subroutine_name]:
                         if not var_name in arguments[scheme_name][subroutine_name]:
                             raise Exception("Explicitly requested optional argument '{}' not known to {}/{}".format(
-                                                                            var_name, module_name, subroutine_name))
+                                                                            var_name, scheme_name, subroutine_name))
                         else:
                             for var in metadata[var_name][:]:
                                 for item in var.container.split(' '):
