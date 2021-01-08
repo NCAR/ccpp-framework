@@ -13,7 +13,7 @@ import sys
 
 # CCPP framework imports
 from common import encode_container, decode_container, decode_container_as_dict, execute
-from common import CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
+from common import CCPP_STAGES, CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
 from common import STANDARD_VARIABLE_TYPES, STANDARD_INTEGER_TYPE, CCPP_TYPE
 from common import SUITE_DEFINITION_FILENAME_PATTERN
 from common import split_var_name_and_array_reference
@@ -341,6 +341,9 @@ def filter_metadata(metadata, arguments, dependencies, schemes_in_files, suites)
         for var in metadata[var_name][:]:
             container_string = decode_container(var.container)
             subroutine = container_string[container_string.find('SUBROUTINE')+len('SUBROUTINE')+1:]
+            # Replace the full CCPP stage name with the abbreviated version
+            for ccpp_stage in CCPP_STAGES.keys():
+                subroutine = subroutine.replace(ccpp_stage, CCPP_STAGES[ccpp_stage])
             for suite in suites:
                 if subroutine in suite.all_subroutines_called:
                     keep = True
