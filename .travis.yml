@@ -1,100 +1,28 @@
-#======================================================================
-# Project settings
-#======================================================================
-# Only build master.
+language: python
+
+python:
+  - "2.7"
+  - "3.6"
+  - "3.7"
+
 branches:
   only:
-      - master
-      - develop
+    - feature/capgen
 
-language: fortran
-
-#======================================================================
-# Environment
-#======================================================================
-
-# Code is Fortran. While docs need doxygen and graphviz to build
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - cmake
-      - gcc-6
-      - gfortran-6
-      - g++-6
-      - doxygen
-      - graphviz
-      - lcov
-
-#======================================================================
-# Build Matrix
-#======================================================================
-matrix:
-   include:
-     - os: linux
-       compiler: gcc
-       sudo: false
-       dist: trusty
-     - os: osx
-       compiler: gcc
-       osx_image: xcode9.4
-
-#======================================================================
-# Building
-#======================================================================
-before_install:
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
-          brew install gcc@7 || true;
-          brew link --overwrite gcc@7;
-      fi
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
-          pip install --user cpp-coveralls
-      fi
-
-before_script:
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
-          export CC="clang" FC="gfortran-7" CXX="clang++" ;
-      fi
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
-          export CC="gcc-6" FC="gfortran-6" CXX="g++-6" ;
-      fi
-#  - export CC="gcc-6" FC="gfortran-6" CXX="g++-6" ;
+install:
+  - pip install pylint
 
 script:
-  - mkdir build && cd build && cmake .. && make
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
-          export LD_LIBRARY_PATH=${PWD}/schemes/check/src/check-build
-          make test
-      fi
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
-          export DYLD_LIBRARY_PATH=${PWD}/schemes/check/src/check-build
-          ctest
-      fi
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
-          make clean
-          alias gcov="/usr/bin/gcov-6"
-          cmake -DCMAKE_BUILD_TYPE=Coverage .. && make coverage
-      fi
+  - env PYTHONPATH=scripts:${PYTHONPATH} pylint --rcfile ./test/.pylintrc ./test/unit_tests/test_metadata_table.py
+  - env PYTHONPATH=scripts:${PYTHONPATH} pylint --rcfile ./test/.pylintrc ./test/unit_tests/test_metadata_scheme_file.py
+  - python test/unit_tests/test_metadata_table.py
+  - python test/unit_tests/test_metadata_scheme_file.py
 
-after_success:
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
-          bash <(curl -s https://codecov.io/bash)
-      fi
-
-#======================================================================
-# Notifications
-#======================================================================
 notifications:
   email:
-    recipients: dom.heinzeller@noaa.gov
-    on_success: change
-    on_failure: always
+    recipients:
+      - schramm@ucar.edu
+      - dom.heinzeller@noaa.gov
+      - goldy@ucar.edu
+    on_success: always # default: change
+    on_failure: always # default: always
