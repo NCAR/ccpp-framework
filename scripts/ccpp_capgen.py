@@ -27,6 +27,9 @@ from ccpp_suite import API, COPYRIGHT, KINDS_MODULE, KINDS_FILENAME
 from metadata_table import parse_metadata_file, SCHEME_HEADER_TYPE
 from ccpp_datafile import generate_ccpp_datatable
 
+## Capture the Framework root
+__SCRIPT_PATH = os.path.dirname(__file__)
+__FRAMEWORK_ROOT = os.path.abspath(os.path.join(__SCRIPT_PATH, os.pardir))
 ## Init this now so that all Exceptions can be trapped
 _LOGGER = init_log(os.path.basename(__file__))
 
@@ -345,6 +348,20 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
             # end if
         # end for
         list_match = mlen == flen
+        # Check for optional Fortran variables that are not in metadata
+        if flen > mlen:
+            for find, fvar in enumerate(flist):
+                lname = fvar.get_prop_value('local_name')
+                _, mind = find_var_in_list(lname, mlist)
+                if mind < 0:
+                    if fvar.get_prop_value('optional'):
+                        # This is an optional variable
+                        flen -= 1
+                    # end if
+                # end if
+            # end for
+            list_match = mlen == flen
+        # end if
         if not list_match:
             if fht in _EXTRA_VARIABLE_TABLE_TYPES:
                 if flen > mlen:
@@ -716,9 +733,10 @@ def capgen(host_files, scheme_files, suites, datatable_file, preproc_defs,
     # end if
     # Finally, create the database of generated files and caps
     # This can be directly in output_dir because it will not affect dependencies
+    src_dir = os.path.join(__FRAMEWORK_ROOT, "src")
     generate_ccpp_datatable(datatable_file, host_model, ccpp_api,
                             scheme_headers, scheme_tdict, host_files,
-                            cap_filenames, kinds_file)
+                            cap_filenames, kinds_file, src_dir)
 
 ###############################################################################
 def _main_func():

@@ -1,0 +1,32 @@
+[ccpp-table-properties]
+  name = physics_state
+  type = ddt
+[ccpp-arg-table]
+  name = physics_state
+  type = ddt
+[ ps ]
+  standard_name = surface_air_pressure
+  state_variable = true
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_dimension)
+[ Temp ]
+  standard_name = temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+[ q ]
+  standard_name = constituent_mixing_ratio
+  state_variable = true
+  type = real
+  kind = kind_phys
+  units = kg/kg moist or dry air depending on type
+  dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_tracers)
+[ q(:,:,index_of_water_vapor_specific_humidity) ]
+  standard_name = water_vapor_specific_humidity
+  state_variable = true
+  type = real
+  kind = kind_phys
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)

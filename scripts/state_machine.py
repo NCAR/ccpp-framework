@@ -77,11 +77,10 @@ class StateMachine(object):
             for trans in sorted(initial_data, key=lambda x: len(x[3]) if len(x) > 3 else 0, reverse=True):
                 if len(trans) != 4:
                     raise ValueError("Invalid initial_data transition ({}), should be of the form (name, inital_state, final_state, regex).".format(trans))
-                else:
-                    self.add_transition(trans[0], trans[1], trans[2], trans[3])
-                # End if
-            # End for
-        # End if
+                # end if
+                self.add_transition(trans[0], trans[1], trans[2], trans[3])
+            # end for
+        # end if
 
     def add_transition(self, name, init_state, final_state, regex):
         """Add a transition to this state machine.
@@ -116,15 +115,15 @@ class StateMachine(object):
             trans_list = self.transitions()
         else:
             trans_list = [transition]
-        # End if
+        # end if
         for trans in trans_list:
             regex = self.transition_regex(trans)
             match = regex.match(test_str)
             if match is not None:
                 match_trans = trans
                 break
-            # End if
-        # End for
+            # end if
+        # end for
         return match_trans
 
     def function_match(self, test_str, transition=None):
@@ -137,7 +136,7 @@ class StateMachine(object):
             trans_list = self.transitions()
         else:
             trans_list = [transition]
-        # End if
+        # end if
         func_id = None
         trans_id = None
         match_trans = None
@@ -149,8 +148,8 @@ class StateMachine(object):
                 trans_id = match.group(2)
                 match_trans = trans
                 break
-            # End if
-        # End for
+            # end if
+        # end for
         return func_id, trans_id, match_trans
 
     def __getitem__(self, key):
@@ -162,7 +161,7 @@ class StateMachine(object):
         # end if
         if len(value) != 3:
             raise ValueError("Invalid transition ({}), should be of the form (inital_state, final_state, regex).".format(value))
-        # End if
+        # end if
         regex = re.compile(value[2] + r"$")
         function = re.compile(FORTRAN_ID + r"_(" + value[2] + r")$")
         self.__stt__[key] = (value[0], value[1], regex, function)

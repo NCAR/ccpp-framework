@@ -88,7 +88,8 @@ def suite_part_call_list(host_model, suite_part, subst_loop_vars):
     hmvars = list() # Host model to spart dummy args
     for sp_var in spart_args:
         stdname = sp_var.get_prop_value('standard_name')
-        hvar = host_model.find_variable(stdname)
+        sp_lname = sp_var.get_prop_value('local_name')
+        hvar = host_model.find_variable(standard_name=stdname)
         if hvar is None:
             errmsg = 'No host model variable for {} in {}'
             raise CCPPError(errmsg.format(stdname, suite_part.name))
@@ -99,7 +100,7 @@ def suite_part_call_list(host_model, suite_part, subst_loop_vars):
             else:
                 lname = host_model.var_call_string(hvar, loop_vars=False)
             # End if
-            hmvars.append(lname)
+            hmvars.append("{}={}".format(sp_lname, lname))
         # End if
     # End for
     return ', '.join(hmvars)
@@ -154,7 +155,7 @@ def write_host_cap(host_model, api, output_dir, logger):
                     spart_args = spart.call_list.variable_list()
                     for sp_var in spart_args:
                         stdname = sp_var.get_prop_value('standard_name')
-                        hvar = host_model.find_variable(stdname)
+                        hvar = host_model.find_variable(standard_name=stdname)
                         if hvar is None:
                             errmsg = 'No host model variable for {} in {}'
                             raise CCPPError(errmsg.format(stdname, spart.name))
