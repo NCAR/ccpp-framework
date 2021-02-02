@@ -145,7 +145,7 @@ _BLANK_LINE = re.compile(r"\s*[#;]")
 def _is_blank(line):
     """Return True iff <line> is a valid config format blank or comment
         line"""
-    return (len(line) == 0) or (_BLANK_LINE.match(line) is not None)
+    return (not line) or (_BLANK_LINE.match(line) is not None)
 
 ########################################################################
 
@@ -889,6 +889,8 @@ class MetadataSection(ParseSource):
                     # end if
                 # end for
             # end if
+            if curr_line and _is_blank(curr_line):
+                valid_line = True
         # end while
         if var_ok and (var_props is not None):
             # Check for array reference

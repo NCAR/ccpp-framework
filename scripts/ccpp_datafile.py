@@ -22,9 +22,10 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 # CCPP framework imports
+from ccpp_suite import VerticalLoop, Subcycle
 from parse_tools import read_xml_file
 from metadata_table import UNKNOWN_PROCESS_TYPE
-from ccpp_suite import VerticalLoop, Subcycle
+from metavar import Var
 
 # Find python version
 PY3 = sys.version_info[0] > 2
@@ -669,6 +670,7 @@ def _new_var_entry(parent, var, full_entry=True):
         prop_list.extend(["local_name", "type", "kind", "units",
                           "diagnostic_name", "diagnostic_name_fixed",
                           "default_value", "protected"])
+        prop_list.extend(Var.constituent_property_names())
     # end if
     ventry = ET.SubElement(parent, "var")
     ventry.set("name", var.get_prop_value("standard_name"))
@@ -805,15 +807,17 @@ def _add_dependencies(parent, scheme_depends, host_depends):
     # end for
 
 ###############################################################################
-def _add_generated_files(parent, host_files, suite_files, ccpp_kinds):
+def _add_generated_files(parent, host_files, suite_files, ccpp_kinds, src_dir):
 ###############################################################################
     """Add a section to <parent> that lists all the files generated
-    by <api> in sections for host cap, suite caps and ccpp_kinds.
+    by <api> in sections for host cap, suite caps, ccpp_kinds, and source files.
     """
     file_entry = ET.SubElement(parent, "ccpp_files")
     utilities = ET.SubElement(file_entry, "utilities")
     entry = ET.SubElement(utilities, "file")
     entry.text = ccpp_kinds
+    entry = ET.SubElement(utilities, "file")
+    entry.text = os.path.join(src_dir, "ccpp_constituent_prop_mod.F90")
     host_elem = ET.SubElement(file_entry, "host_files")
     for hfile in host_files:
         entry = ET.SubElement(host_elem, "file")
@@ -848,17 +852,19 @@ def _add_suite_object(parent, suite_object):
 
 ###############################################################################
 def generate_ccpp_datatable(filename, host_model, api, scheme_headers,
-                            scheme_tdict, host_files, suite_files, ccpp_kinds):
+                            scheme_tdict, host_files, suite_files,
+                            ccpp_kinds, source_dir):
 ###############################################################################
     """Write a CCPP datatable for <api> to <filename>.
     The datatable includes the generated filenames for the host cap,
-    the suite caps, and the ccpp_kinds module.
+    the suite caps, the ccpp_kinds module, and source code files.
     """
     # Define new tree
     datatable = ET.Element("ccpp_datatable")
     datatable.set("version", "1.0")
     # Write out the generated files
-    _add_generated_files(datatable, host_files, suite_files, ccpp_kinds)
+    _add_generated_files(datatable, host_files, suite_files,
+                         ccpp_kinds, source_dir)
     # Write out scheme info
     schemes = ET.SubElement(datatable, "schemes")
     # Create a dictionary of the scheme headers for easy lookup

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 -----------------------------------------------------------------------
- Description:  Test capgen database report python interface
+ Description:  Test advection database report python interface
 
  Assumptions:
 
@@ -15,8 +15,7 @@ import os
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _FRAMEWORK_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir, os.pardir))
-_SCRIPTS_DIR = os.path.join(_FRAMEWORK_DIR, "scripts")
-_SRC_DIR = os.path.join(_FRAMEWORK_DIR, "src")
+_SCRIPTS_DIR = os.path.abspath(os.path.join(_FRAMEWORK_DIR, "scripts"))
 
 if not os.path.exists(_SCRIPTS_DIR):
     raise ImportError("Cannot find scripts directory")
@@ -52,43 +51,21 @@ if (not os.path.exists(_DATABASE)) or (not os.path.isfile(_DATABASE)):
 
 # Check data
 _HOST_FILES = [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90")]
-_SUITE_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_ddt_suite_cap.F90"),
-                os.path.join(_BUILD_DIR, "ccpp", "ccpp_temp_suite_cap.F90")]
+_SUITE_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_cld_suite_cap.F90")]
 _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
-                  os.path.join(_SRC_DIR, "ccpp_constituent_prop_mod.F90")]
-
-_CCPP_FILES = _UTILITY_FILES + \
-              [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
-               os.path.join(_BUILD_DIR, "ccpp", "ccpp_ddt_suite_cap.F90"),
-               os.path.join(_BUILD_DIR, "ccpp", "ccpp_temp_suite_cap.F90")]
-_PROCESS_LIST = ["setter=temp_set", "adjusting=temp_calc_adjust"]
-_MODULE_LIST = ["environ_conditions", "make_ddt", "temp_adjust",
-                "temp_calc_adjust", "temp_set"]
-_SUITE_LIST = ["ddt_suite", "temp_suite"]
-_REQUIRED_VARS_DDT = ["ccpp_error_flag", "ccpp_error_message", "model_times",
-                      "number_of_model_times", "surface_air_pressure",
-                      "horizontal_dimension"]
-_INPUT_VARS_DDT = ["model_times", "number_of_model_times",
-                   "surface_air_pressure", "horizontal_dimension"]
-_OUTPUT_VARS_DDT = ["ccpp_error_flag", "ccpp_error_message", "model_times",
+                  os.path.join(_FRAMEWORK_DIR, "src",
+                               "ccpp_constituent_prop_mod.F90")]
+_CCPP_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
+               os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
+               os.path.join(_BUILD_DIR, "ccpp", "ccpp_cld_suite_cap.F90")]
+_PROCESS_LIST = list()
+_MODULE_LIST = ["cld_ice", "cld_liq"]
+_SUITE_LIST = ["cld_suite"]
+_REQUIRED_VARS_CLD = ["ccpp_error_flag", "ccpp_error_message", "model_times",
+                      "number_of_model_times", "surface_air_pressure"]
+_INPUT_VARS_CLD = ["horizontal_loop_extent", ]
+_OUTPUT_VARS_CLD = ["ccpp_error_flag", "ccpp_error_message", "model_times",
                     "number_of_model_times"]
-_REQUIRED_VARS_TEMP = ["ccpp_error_flag", "ccpp_error_message",
-                       "potential_temperature",
-                       "potential_temperature_at_interface",
-                       "potential_temperature_increment",
-                       "surface_air_pressure", "time_step_for_physics",
-                       "water_vapor_specific_humidity",
-                       "horizontal_dimension", "vertical_layer_dimension"]
-_INPUT_VARS_TEMP = ["potential_temperature",
-                    "potential_temperature_at_interface",
-                    "potential_temperature_increment",
-                    "surface_air_pressure", "time_step_for_physics",
-                    "water_vapor_specific_humidity",
-                    "horizontal_dimension", "vertical_layer_dimension"]
-_OUTPUT_VARS_TEMP = ["ccpp_error_flag", "ccpp_error_message",
-                     "potential_temperature",
-                     "potential_temperature_at_interface",
-                     "surface_air_pressure", "water_vapor_specific_humidity"]
 
 def fields_string(field_type, field_list, sep):
     """Create an error string for <field_type> field(s), <field_list>.
@@ -154,25 +131,15 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("module_list"),
                               _MODULE_LIST)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("suite_list"),
                               _SUITE_LIST)
-print("\nChecking variables for DDT suite from python")
+print("\nChecking variables for CLD suite from python")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="ddt_suite"),
-                              _REQUIRED_VARS_DDT)
+                              _REQUIRED_VARS_CLD)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
                                                          value="ddt_suite"),
-                              _INPUT_VARS_DDT)
+                              _INPUT_VARS_CLD)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
                                                          value="ddt_suite"),
-                              _OUTPUT_VARS_DDT)
-print("\nChecking variables for temp suite from python")
-NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
-                                                         value="temp_suite"),
-                              _REQUIRED_VARS_TEMP)
-NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
-                                                         value="temp_suite"),
-                              _INPUT_VARS_TEMP)
-NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
-                                                         value="temp_suite"),
-                              _OUTPUT_VARS_TEMP)
+                              _OUTPUT_VARS_CLD)
 
 sys.exit(NUM_ERRORS)

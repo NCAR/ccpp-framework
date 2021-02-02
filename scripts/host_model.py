@@ -9,7 +9,7 @@ from __future__ import print_function
 # CCPP framework imports
 from metavar import VarDictionary
 from ddt_library import VarDDT, DDTLibrary
-from parse_tools import ParseContext, CCPPError
+from parse_tools import ParseContext, CCPPError, ParseInternalError
 from parse_tools import context_string
 from parse_tools import FORTRAN_SCALAR_REF_RE
 
@@ -28,14 +28,16 @@ class HostModel(VarDictionary):
         for sect in [x.sections() for x in meta_tables.values()]:
             meta_headers.extend(sect)
         # end for
+        # Initialize our dictionaries
+        # Initialize variable dictionary
+        super(HostModel, self).__init__(self.name, logger=logger)
         self.__ddt_lib = DDTLibrary('{}_ddts'.format(self.name),
                                     ddts=[d for d in meta_headers
                                           if d.header_type == 'ddt'],
                                     logger=logger)
         self.__ddt_dict = VarDictionary("{}_ddt_vars".format(self.name),
-                                        logger=logger)
+                                        parent_dict=self, logger=logger)
         # Now, process the code headers by type
-        varlist = list()
         self.__metadata_tables = meta_tables
         for header in [h for h in meta_headers if h.header_type != 'ddt']:
             title = header.title
@@ -44,15 +46,15 @@ class HostModel(VarDictionary):
                 logger.debug(msg.format(header.header_type, title))
             # End if
             if header.header_type == 'module':
-                varlist.extend(header.variable_list())
                 # Set the variable modules
                 modname = header.title
                 for var in header.variable_list():
+                    self.add_variable(var)
                     lname = var.get_prop_value('local_name')
                     self.__var_locations[lname] = modname
-                    self.__ddt_lib.check_ddt_type(var, header, lname=lname)
+                    self.ddt_lib.check_ddt_type(var, header, lname=lname)
                     if var.is_ddt():
-                        self.__ddt_lib.collect_ddt_fields(self.__ddt_dict, var)
+                        self.ddt_lib.collect_ddt_fields(self.__ddt_dict, var)
                     # End if
                 # End for
             elif header.header_type == 'host':
@@ -60,11 +62,11 @@ class HostModel(VarDictionary):
                     # Grab the first host name we see
                     self.__name = header.name
                 # End if
-                varlist.extend(header.variable_list())
                 for var in header.variable_list():
-                    self.__ddt_lib.check_ddt_type(var, header)
+                    self.add_variable(var)
+                    self.ddt_lib.check_ddt_type(var, header)
                     if var.is_ddt():
-                        self.__ddt_lib.collect_ddt_fields(self.__ddt_dict, var)
+                        self.ddt_lib.collect_ddt_fields(self.__ddt_dict, var)
                     # End if
                 # End for
                 loop_vars = header.variable_list(std_vars=False,
@@ -104,9 +106,6 @@ class HostModel(VarDictionary):
             errmsg = 'No name found for host model, add a host metadata entry'
             raise CCPPError(errmsg)
         # End if
-        # Initialize variable dictionary
-        super(HostModel, self).__init__(self.name, variables=varlist,
-                                        logger=logger)
         # Finally, turn on the use meter so we know which module variables
         #    to 'use' in a host cap.
         self.__used_variables = set() # Local names which have been requested
@@ -153,7 +152,7 @@ class HostModel(VarDictionary):
         # Attempt to realize deferred lookups
         if self.__deferred_finds is not None:
             for std_name in list(self.__deferred_finds):
-                var = self.find_variable(std_name)
+                var = self.find_variable(standard_name=std_name)
                 if var is not None:
                     self.__deferred_finds.remove(std_name)
                 # End if
@@ -170,16 +169,31 @@ class HostModel(VarDictionary):
         # End for
         return varset
 
-    # pylint: disable=arguments-differ
-    def find_variable(self, standard_name, any_scope=False, loop_subst=False):
+    def find_variable(self, standard_name=None, source_var=None,
+                      any_scope=False, clone=None,
+                      search_call_list=False, loop_subst=False):
         """Return the host model variable matching <standard_name> or None
-        If loop_subst is True, substitute a begin:end range for an extent.
+        If <loop_subst> is True, substitute a begin:end range for an extent.
         """
-        my_var = super(HostModel, self).find_variable(standard_name,
-                                                      any_scope=any_scope)
+        my_var = super(HostModel,
+                       self).find_variable(standard_name=standard_name,
+                                           source_var=source_var,
+                                           any_scope=any_scope, clone=clone,
+                                           search_call_list=search_call_list,
+                                           loop_subst=loop_subst)
         if my_var is None:
             # Check our DDT library
-            my_var = self.__ddt_dict.find_variable(standard_name)
+            if standard_name is None:
+                if source_var is None:
+                    emsg = ("One of <standard_name> or <source_var> " +
+                            "must be passed.")
+                    raise ParseInternalError(emsg)
+                # end if
+                standard_name = source_var.get_prop_value('standard_name')
+            # end if
+            # Since we are the parent of the DDT library, only check that dict
+            my_var = self.__ddt_dict.find_variable(standard_name=standard_name,
+                                                   any_scope=False)
         # End if
         if loop_subst:
             if my_var is None:
@@ -210,7 +224,7 @@ class HostModel(VarDictionary):
                 vdims = [x.strip() for x in imatch.group(2).split(',')
                          if ':' not in x]
                 for vname in vdims:
-                    _ = self.find_variable(vname)
+                    _ = self.find_variable(standard_name=vname)
                 # End for
             # End if
             if isinstance(my_var, VarDDT):
@@ -219,7 +233,33 @@ class HostModel(VarDictionary):
             self.__used_variables.add(lname)
         # End if
         return my_var
-        # pylint: enable=arguments-differ
+
+    def add_variable(self, newvar, exists_ok=False, gen_unique=False,
+                     adjust_intent=False):
+        """Add <newvar> if it does not conflict with existing entries.
+        For the host model, this includes entries in used DDT variables.
+        If <exists_ok> is True, attempting to add an identical copy is okay.
+        If <gen_unique> is True, a new local_name will be created if a
+        local_name collision is detected.
+        if <adjust_intent> is True, adjust conflicting intents to inout."""
+        standard_name = newvar.get_prop_value('standard_name')
+        cvar = self.find_variable(standard_name=standard_name, any_scope=False)
+        if cvar is None:
+            # Check the DDT dictionary
+            cvar = self.__ddt_dict.find_variable(standard_name=standard_name,
+                                                 any_scope=False)
+        # end if
+        if cvar and (not exists_ok):
+            emsg = "Attempt to add duplicate host model variable, {}{}."
+            emsg += "\nVariable originally defined{}"
+            ntx = context_string(newvar.context)
+            ctx = context_string(cvar.context)
+            raise CCPPError(emsg.format(standard_name, ntx, ctx))
+        # end if
+        # No collision, proceed normally
+        super(HostModel, self).add_variable(newvar=newvar, exists_ok=exists_ok,
+                                            gen_unique=gen_unique,
+                                            adjust_intent=False)
 
     def add_host_variable_module(self, local_name, module, logger=None):
         """Add a module name location for a host variable"""

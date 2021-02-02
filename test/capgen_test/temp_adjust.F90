@@ -18,16 +18,19 @@ CONTAINS
   !! \htmlinclude arg_table_temp_adjust_run.html
   !!
   subroutine temp_adjust_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
-       errmsg, errflg)
+       errmsg, errflg, innie, outie, optsie)
 
-    integer,            intent(in)    :: foo
-    real(kind_phys),    intent(in)    :: timestep
-    real(kind_phys),    intent(inout) :: qv(:)
-    real(kind_phys),    intent(inout) :: ps(:)
-    REAL(kind_phys),    intent(in)    :: temp_prev(:)
-    REAL(kind_phys),    intent(inout) :: temp_layer(foo)
-    character(len=512), intent(out)   :: errmsg
-    integer,            intent(out)   :: errflg
+    integer,                   intent(in)    :: foo
+    real(kind_phys),           intent(in)    :: timestep
+    real(kind_phys),           intent(inout) :: qv(:)
+    real(kind_phys),           intent(inout) :: ps(:)
+    REAL(kind_phys),           intent(in)    :: temp_prev(:)
+    REAL(kind_phys),           intent(inout) :: temp_layer(foo)
+    character(len=512),        intent(out)   :: errmsg
+    integer,                   intent(out)   :: errflg
+    real(kind_phys), optional, intent(in)    :: innie
+    real(kind_phys), optional, intent(out)   :: outie
+    real(kind_phys), optional, intent(inout) :: optsie
     !----------------------------------------------------------------
 
     integer :: col_index
@@ -39,6 +42,10 @@ CONTAINS
        temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)
        qv(col_index) = qv(col_index) + 1.0_kind_phys
     end do
+    if (present(innie) .and. present(outie) .and. present(optsie)) then
+       outie = innie * optsie
+       optsie = optsie + 1.0_kind_phys
+    end if
 
   END SUBROUTINE temp_adjust_run
 

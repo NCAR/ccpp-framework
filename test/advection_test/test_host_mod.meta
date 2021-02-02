@@ -1,0 +1,64 @@
+[ccpp-table-properties]
+  name = test_host_mod
+  type = module
+[ccpp-arg-table]
+  name = test_host_mod
+  type = module
+[ ncols]
+  standard_name = horizontal_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[ pver ]
+  standard_name = vertical_layer_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[ pverP ]
+  standard_name = vertical_interface_dimension
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ ncnst ]
+  standard_name = number_of_tracers
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ index_qv ]
+  standard_name = index_of_water_vapor_specific_humidity
+  units = index
+  type = integer
+  protected = True
+  dimensions = ()
+[ dt ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real | kind = kind_phys
+[ tfreeze ]
+  standard_name = water_temperature_at_freezing
+  long_name = Freezing temperature of water at sea level
+  units = K
+  dimensions = ()
+  type = real | kind = kind_phys
+[ phys_state ]
+  standard_name = physics_state_derived_type
+  long_name = Physics State DDT
+  ddt_type = physics_state
+  dimensions = ()
+[ num_model_times ]
+  standard_name = number_of_model_times
+  type = integer
+  units = count
+  dimensions = ()
+[ model_times ]
+  standard_name = model_times
+  units = seconds
+  dimensions = (number_of_model_times)
+  type = integer
+  allocatable = True

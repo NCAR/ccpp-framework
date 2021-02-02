@@ -230,17 +230,6 @@ class DDTLibrary(dict):
             # End if
         # End if (no else needed)
 
-    def collect_fields_from_ddt(self, source_dict, dest_dict, logger=None):
-        """Add all the reachable fields from each DDT var in <source_dict> to
-        <dest_dict>. Each field is added as a VarDDT."""
-        for var in source_dict.variable_list():
-            vtype = var.get_prop_value('type')
-            if vtype in self:
-                ddt = self[vtype]
-                self.collect_ddt_fields(dest_dict, var, ddt=ddt)
-            # End if
-        # End for
-
     def collect_ddt_fields(self, var_dict, var, ddt=None):
         """Add all the reachable fields from DDT variable <var> of type,
         <ddt> to <var_dict>. Each field is added as a VarDDT.
@@ -264,6 +253,18 @@ class DDTLibrary(dict):
                 subddt = self[dvtype]
                 self.collect_ddt_fields(var_dict, subvar, subddt)
             else:
+                # add_variable only checks the current dictionary. For a
+                # DDT, the variable also cannot be in our parent dictionaries.
+                stdname = dvar.get_prop_value('standard_name')
+                pvar = var_dict.find_variable(standard_name=stdname,
+                                              any_scope=True)
+                if pvar:
+                    emsg = "Attempt to add duplicate DDT sub-variable, {}{}."
+                    emsg += "\nVariable originally defined{}"
+                    ntx = context_string(dvar.context)
+                    ctx = context_string(pvar.context)
+                    raise CCPPError(emsg.format(stdname, ntx, ctx))
+                # end if
                 # Add this intrinsic to <var_dict>
                 var_dict.add_variable(subvar)
         # End for
