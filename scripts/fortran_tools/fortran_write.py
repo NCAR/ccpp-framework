@@ -10,10 +10,10 @@ from __future__ import print_function
 
 class FortranWriter(object):
     """Class to turn output into properly continued and indented Fortran code
-    >>> FortranWriter("foo.F90", 'r') #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> FortranWriter("foo.F90", 'r', 'test', 'mod_name') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ValueError: Read mode not allowed in FortranWriter object
-    >>> FortranWriter("foo.F90", 'wb') #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> FortranWriter("foo.F90", 'wb', 'test', 'mod_name') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ValueError: Binary mode not allowed in FortranWriter object
     """
@@ -21,10 +21,43 @@ class FortranWriter(object):
     ###########################################################################
     # Class variables
     ###########################################################################
-    INDENT = 3          # Spaces per indent level
-    CONTINUE_INDENT = 5 # Extra spaces on continuation line
-    LINE_FILL = 97      # Target line length
-    LINE_MAX = 130      # Max line length
+    __INDENT = 3          # Spaces per indent level
+
+    __CONTINUE_INDENT = 5 # Extra spaces on continuation line
+
+    __LINE_FILL = 97      # Target line length
+
+    __LINE_MAX = 130      # Max line length
+
+    # CCPP copyright statement to be included in all generated Fortran files
+    __COPYRIGHT = '''!
+! This work (Common Community Physics Package Framework), identified by
+! NOAA, NCAR, CU/CIRES, is free of known copyright restrictions and is
+! placed in the public domain.
+!
+! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+! THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+'''
+
+    __MOD_HEADER = '''
+!>
+!! @brief Auto-generated {file_desc}
+!!
+!
+module {module}
+'''
+
+    __MOD_PREAMBLE = ["implicit none", "private"]
+
+    __CONTAINS = '''
+CONTAINS'''
+
+    __MOD_FOOTER = '''
+end module {module}'''
 
     ###########################################################################
 
@@ -130,9 +163,13 @@ class FortranWriter(object):
 
     ###########################################################################
 
-    def __init__(self, filename, mode, indent=None,
-                 continue_indent=None, line_fill=None, line_max=None):
-        """Initialize thie FortranWriter object"""
+    def __init__(self, filename, mode, file_description, module_name,
+                 indent=None, continue_indent=None,
+                 line_fill=None, line_max=None):
+        """Initialize thie FortranWriter object.
+        Some boilerplate is written automatically."""
+        self.__file_desc = file_description
+        self.__module = module_name
         # We only handle writing situations (for now) and only text
         if 'r' in mode:
             raise ValueError('Read mode not allowed in FortranWriter object')
@@ -142,36 +179,71 @@ class FortranWriter(object):
         # End if
         self._file = open(filename, mode)
         if indent is None:
-            self._indent = FortranWriter.INDENT
+            self._indent = FortranWriter.__INDENT
         else:
             self._indent = indent
         # End if
         if continue_indent is None:
-            self._continue_indent = FortranWriter.CONTINUE_INDENT
+            self._continue_indent = FortranWriter.__CONTINUE_INDENT
         else:
             self._continue_indent = continue_indent
         # End if
         if line_fill is None:
-            self._line_fill = FortranWriter.LINE_FILL
+            self._line_fill = FortranWriter.__LINE_FILL
         else:
             self._line_fill = line_fill
         # End if
         if line_max is None:
-            self._line_max = FortranWriter.LINE_MAX
+            self._line_max = FortranWriter.__LINE_MAX
         else:
             self._line_max = line_max
         # End if
 
     ###########################################################################
 
+    def write_preamble(self):
+        """Write the module boilerplate that goes between use statements
+        and module declarations."""
+        self.write("", 0)
+        for stmt in FortranWriter.__MOD_PREAMBLE:
+            self.write(stmt, 1)
+        # end for
+        self.write("", 0)
+
+    ###########################################################################
+
+    def end_module_header(self):
+        """Write the module contains statement."""
+        self.write(FortranWriter.__CONTAINS, 0)
+
+    ###########################################################################
+
     def __enter__(self, *args):
+        self.write(FortranWriter.__COPYRIGHT, 0)
+        self.write(self.module_header(), 0)
         return self
 
     ###########################################################################
 
     def __exit__(self, *args):
+        self.write(FortranWriter.__MOD_FOOTER.format(module=self.__module), 0)
         self._file.close()
         return False
+
+    ###########################################################################
+
+    def module_header(self):
+        """Return the standard Fortran module header for <filename> and
+        <module>"""
+        return FortranWriter.__MOD_HEADER.format(file_desc=self.__file_desc,
+                                                 module=self.__module)
+
+    ###########################################################################
+
+    @classmethod
+    def copyright(cls):
+        """Return the standard Fortran file copyright string"""
+        return cls.__COPYRIGHT
 
 ###############################################################################
 if __name__ == "__main__":
@@ -189,15 +261,22 @@ if __name__ == "__main__":
     # End while
     NAME = NAME + '.F90'
     if os.access(os.getcwd(), os.W_OK):
-        _CHECK = [('      subroutine foo(long_argument1, long_argument2, '
-                   'long_argument3, long_argument4,              &'),
-                  '           long_argument5)',
-                  '      end subroutine foo']
-        with FortranWriter(NAME, 'w') as foo:
+        _CHECK = FortranWriter.copyright().split('\n')
+        with FortranWriter(NAME, 'w', 'doctest', 'foo') as foo:
+            foo.write_preamble()
+            foo.end_module_header()
             foo.write(("subroutine foo(long_argument1, long_argument2, "
                        "long_argument3, long_argument4, long_argument5)"), 2)
             foo.write("end subroutine foo", 2)
+            _CHECK.extend(foo.module_header().rstrip().split('\n'))
         # End with
+        _CHECK.extend(["", "", "   implicit none", "   private",
+                       "", "", "CONTAINS"])
+        _CHECK.extend([('      subroutine foo(long_argument1, long_argument2, '
+                        'long_argument3, long_argument4,              &'),
+                       '           long_argument5)',
+                       '      end subroutine foo', '',
+                       'end module foo'])
         # Check file
         with open(NAME, 'r') as foo:
             _STATEMENTS = foo.readlines()

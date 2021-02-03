@@ -10,7 +10,6 @@ MODULE cld_liq
 
    PUBLIC :: cld_liq_init
    PUBLIC :: cld_liq_run
-   PUBLIC :: cld_liq_finalize
 
 CONTAINS
 
@@ -33,7 +32,7 @@ CONTAINS
 
       integer         :: icol
       integer         :: ilev
-      real(kind_phys) :: surplus
+      real(kind_phys) :: cond
 
       errmsg = ''
       errflg = 0
@@ -41,12 +40,13 @@ CONTAINS
       ! Apply state-of-the-art thermodynamics :)
       do icol = 1, ncol
          do ilev = 1, size(temp, 2)
-            if (temp(icol, ilev) >= tcld) then
-               surplus = MAX(qv(icol, ilev) - 0.9_kind_phys, 0.0_kind_phys)
-               cld_liq(icol, ilev) = cld_liq(icol, ilev) + surplus
-               qv(icol, ilev) = qv(icol, ilev) - surplus
-               if (surplus > 0.0_kind_phys) then
-                  temp(icol, ilev) = temp(icol, ilev) + 0.5_kind_phys
+            if ( (qv(icol, ilev) > 0.0_kind_phys) .and.                       &
+                 (temp(icol, ilev) <= tcld)) then
+               cond = MIN(qv(icol, ilev), 0.1_kind_phys)
+               cld_liq(icol, ilev) = cld_liq(icol, ilev) + cond
+               qv(icol, ilev) = qv(icol, ilev) - cond
+               if (cond > 0.0_kind_phys) then
+                  temp(icol, ilev) = temp(icol, ilev) + (cond * 5.0_kind_phys)
                end if
             end if
          end do
@@ -59,9 +59,9 @@ CONTAINS
    !!
    subroutine cld_liq_init(tfreeze, cld_liq, tcld, errmsg, errflg)
 
-      real,               intent(in)  :: tfreeze
+      real(kind_phys),    intent(in)  :: tfreeze
       real(kind_phys),    intent(out) :: cld_liq(:,:)
-      real,               intent(out) :: tcld
+      real(kind_phys),    intent(out) :: tcld
       character(len=512), intent(out) :: errmsg
       integer,            intent(out) :: errflg
 

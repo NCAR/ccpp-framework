@@ -56,9 +56,11 @@ significant except inside of strings.
 Variable attribute statements may be combined on a line if separated by
 a vertical bar.
 
-An example argument table is shown below (aside from the python comment
-character at the start of each line).
+An example argument table is shown below.
 
+[ccpp-table-properties]
+  name = <name>
+  type = scheme
 [ccpp-arg-table]
   name = <name>
   type = scheme
@@ -142,9 +144,10 @@ UNKNOWN_PROCESS_TYPE = 'UNKNOWN'
 
 _BLANK_LINE = re.compile(r"\s*[#;]")
 
-def _is_blank(line):
-    """Return True iff <line> is a valid config format blank or comment
-        line"""
+def blank_metadata_line(line):
+    """Return True if <line> is a valid config format blank or comment
+    line. Also return True if we have reached the end of the file
+    (no line)"""
     return (not line) or (_BLANK_LINE.match(line) is not None)
 
 ########################################################################
@@ -154,7 +157,7 @@ def _parse_config_line(line, context):
     parse_items = list()
     if line is None:
         pass # No properties on this line
-    elif _is_blank(line):
+    elif blank_metadata_line(line):
         pass # No properties on this line
     else:
         properties = line.strip().split('|')
@@ -203,7 +206,7 @@ def parse_metadata_file(filename, known_ddts, logger):
                 raise CCPPError(errmsg.format(ntitle, filename, ctx))
             # end if
             curr_line, curr_line_num = parse_obj.curr_line()
-        elif _is_blank(curr_line):
+        elif blank_metadata_line(curr_line):
             curr_line, curr_line_num = parse_obj.next_line()
         else:
             raise ParseSyntaxError('CCPP metadata line', token=curr_line,
@@ -350,7 +353,7 @@ class MetadataTable():
             if MetadataSection.header_start(curr_line):
                 in_properties_header = False
             # end if
-            if _is_blank(curr_line):
+            if blank_metadata_line(curr_line):
                 curr_line, _ = self.__pobj.next_line()
             elif in_properties_header:
                 # Process the properties in this table header line
@@ -412,7 +415,7 @@ class MetadataTable():
                     self.__sections.append(section)
                     # Note: Do not read next line, we are already on it.
                     curr_line, _ = self.__pobj.curr_line()
-                elif not _is_blank(curr_line):
+                elif not blank_metadata_line(curr_line):
                     if not skip_rest_of_section:
                         self.__pobj.add_syntax_err("metadata file line",
                                                    token=curr_line)
@@ -480,7 +483,7 @@ class MetadataTable():
     def table_start(cls, line):
         """Return True iff <line> is a ccpp-table-properties header statement.
         """
-        if (line is None) or _is_blank(line):
+        if (line is None) or blank_metadata_line(line):
             match = None
         else:
             match = cls.__table_start.match(line)
@@ -697,7 +700,7 @@ class MetadataSection(ParseSource):
         """ Read the section preamble, assume the caller already figured out
         the first line of the header using the header_start method."""
         start_ctx = context_string(self.__pobj)
-        curr_line, _ = self.__pobj.next_line()
+        curr_line, _ = self.__pobj.next_line() # Skip past [ccpp-arg-table]
         while ((curr_line is not None) and
                (not MetadataSection.variable_start(curr_line, self.__pobj)) and
                (not MetadataSection.header_start(curr_line)) and
@@ -830,7 +833,6 @@ class MetadataSection(ParseSource):
         while valid_line:
             curr_line, _ = self.__pobj.next_line()
             valid_line = ((curr_line is not None) and
-                          (not _is_blank(curr_line)) and
                           (not MetadataSection.header_start(curr_line)) and
                           (not MetadataTable.table_start(curr_line)) and
                           (MetadataSection.variable_start(curr_line,
@@ -889,8 +891,6 @@ class MetadataSection(ParseSource):
                     # end if
                 # end for
             # end if
-            if curr_line and _is_blank(curr_line):
-                valid_line = True
         # end while
         if var_ok and (var_props is not None):
             # Check for array reference
@@ -1237,7 +1237,7 @@ class MetadataSection(ParseSource):
     def header_start(cls, line):
         """Return True iff <line> is a Metadata section header (ccpp-arg-table).
         """
-        if (line is None) or _is_blank(line):
+        if (line is None) or blank_metadata_line(line):
             match = None
         else:
             match = cls.__header_start.match(line)

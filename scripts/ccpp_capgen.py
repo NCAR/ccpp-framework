@@ -16,16 +16,17 @@ import os
 import logging
 import re
 # CCPP framework imports
-from parse_tools import init_log, set_log_level, context_string
-from parse_tools import CCPPError, ParseInternalError
+from ccpp_datafile import generate_ccpp_datatable
+from ccpp_suite import API
 from file_utils import check_for_writeable_file, remove_dir, replace_paths
 from file_utils import create_file_list, move_modified_files
+from file_utils import KINDS_FILENAME, KINDS_MODULE
 from fortran_tools import parse_fortran_file, FortranWriter
-from host_model import HostModel
 from host_cap import write_host_cap
-from ccpp_suite import API, COPYRIGHT, KINDS_MODULE, KINDS_FILENAME
+from host_model import HostModel
 from metadata_table import parse_metadata_file, SCHEME_HEADER_TYPE
-from ccpp_datafile import generate_ccpp_datatable
+from parse_tools import init_log, set_log_level, context_string
+from parse_tools import CCPPError, ParseInternalError
 
 ## Capture the Framework root
 __SCRIPT_PATH = os.path.dirname(__file__)
@@ -44,14 +45,6 @@ _EXTRA_VARIABLE_TABLE_TYPES = ['module', 'host', 'ddt']
 
 ## Metadata table types where order is significant
 _ORDERED_TABLE_TYPES = [SCHEME_HEADER_TYPE]
-
-## header for kinds file
-_KINDS_HEADER = '''
-!>
-!! @brief Auto-generated kinds for CCPP
-!!
-!
-'''
 
 ###############################################################################
 def parse_command_line(args, description):
@@ -192,20 +185,12 @@ def create_kinds_file(kind_phys, output_dir, logger):
         msg = 'Writing {} to {}'
         logger.info(msg.format(KINDS_FILENAME, output_dir))
     # end if
-    with FortranWriter(kinds_filepath, "w") as kindf:
-        kindf.write(COPYRIGHT, 0)
-        kindf.write(_KINDS_HEADER, 0)
-        kindf.write('module {}'.format(KINDS_MODULE), 0)
-        kindf.write('', 0)
+    with FortranWriter(kinds_filepath, "w",
+                       "kinds for CCPP", KINDS_MODULE) as kindf:
         use_stmt = 'use ISO_FORTRAN_ENV, only: kind_phys => {}'
         kindf.write(use_stmt.format(kind_phys), 1)
-        kindf.write('', 0)
-        kindf.write('implicit none', 1)
-        kindf.write('private', 1)
-        kindf.write('', 0)
+        kindf.write_preamble()
         kindf.write('public kind_phys', 1)
-        kindf.write('', 0)
-        kindf.write('end module {}'.format(KINDS_MODULE), 0)
     # end with
     return kinds_filepath
 

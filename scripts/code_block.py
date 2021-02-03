@@ -116,7 +116,7 @@ if __name__ == "__main__":
     import os
     from fortran_tools import FortranWriter
     outfile_name = "__code_block_temp.F90"
-    with FortranWriter(outfile_name, 'w') as outfile:
+    with FortranWriter(outfile_name, 'w', 'test file', 'test_mod') as outfile:
         doctest.testmod()
     # end with
     if os.path.exists(outfile_name):

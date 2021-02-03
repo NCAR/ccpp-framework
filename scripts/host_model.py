@@ -126,6 +126,13 @@ class HostModel(VarDictionary):
         """Return this host model's DDT library"""
         return self.__ddt_lib
 
+# XXgoldyXX: v needed?
+    @property
+    def constituent_module(self):
+        """Return the name of host model constituent module"""
+        return "{}_ccpp_constituents".format(self.name)
+# XXgoldyXX: ^ needed?
+
     def argument_list(self, loop_vars=True):
         """Return a string representing the host model variable arg list"""
         args = [v.call_string(self)
@@ -203,6 +210,8 @@ class HostModel(VarDictionary):
                 # If we get here, the host does not have the requested
                 # variable but does have a replacement set. Create a new
                 # variable to use to send to suites.
+                ##XXgoldyXX: This cannot be working since find_loop_subst
+                ##           returns a tuple
                 new_name = self.new_internal_variable_name(prefix=self.name)
                 ctx = ParseContext(filename='host_model.py')
                 new_var = my_var.clone(new_name, source_name=self.name,
@@ -273,17 +282,6 @@ class HostModel(VarDictionary):
             emsg = "Host variable, {}, already located in module"
             raise CCPPError(emsg.format(self.__var_locations[local_name]))
         # End if
-
-    def var_call_string(self, var, loop_vars=None):
-        """Construct the actual argument string for <var> by translating
-        standard names to local names. String includes array bounds.
-        """
-        if loop_vars is None:
-            loop_vars = self.loop_vars
-        elif loop_vars is False:
-            loop_vars = None
-        # End if
-        return super(HostModel, self).var_call_string(var, loop_vars=loop_vars)
 
     def call_list(self, phase):
         "Return the list of variables passed by the host model to the host cap"

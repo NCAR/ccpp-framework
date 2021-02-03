@@ -14,6 +14,10 @@ import os
 # CCPP framework imports
 from parse_tools import CCPPError, ParseInternalError
 
+# Standardize name of generated kinds file and module
+KINDS_MODULE = 'ccpp_kinds'
+KINDS_FILENAME = '{}.F90'.format(KINDS_MODULE)
+
 ###############################################################################
 def check_for_existing_file(filename, description, readable=True):
 ###############################################################################

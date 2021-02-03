@@ -164,7 +164,8 @@ __FID_RE = re.compile(FORTRAN_ID+r"$")
 # Note that the scalar array reference expressions below are not really for
 # scalar references because a colon can be a placeholder, unlike in Fortran code
 __FORTRAN_AID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
-__FORT_DIM = r"(?:"+__FORTRAN_AID+r"|[:])"
+__FORT_INT = r"[0-9]+"
+__FORT_DIM = r"(?:"+__FORTRAN_AID+r"|[:]|"+__FORT_INT+r")"
 __REPEAT_DIM = r"(?:,\s*"+__FORT_DIM+r"\s*)"
 __FORTRAN_SCALAR_ARREF = r"[(]\s*("+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6})[)]"
 FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+__FORTRAN_SCALAR_ARREF+r")"
@@ -218,6 +219,36 @@ def check_fortran_id(test_val, prop_dict, error, max_len=0):
         # End if
     # End if
     return test_val
+
+########################################################################
+
+def fortran_list_match(test_str):
+    """Check if <test_str> could be a list of Fortran expressions.
+    The list must be enclosed in parentheses and separated by commas.
+    If the list appears okay, return the items (for further checking)
+    >>> fortran_list_match('(ccpp_constant_one:dim1)')
+    ['ccpp_constant_one:dim1']
+    >>> fortran_list_match('(foo, bar)')
+    ['foo', 'bar']
+    >>> fortran_list_match('()')
+    ['']
+    >>> fortran_list_match('(foo, ,)')
+
+    >>> fortran_list_match('foo, bar')
+
+    >>> fortran_list_match('(foo, bar')
+
+    """
+    parens, parene = check_balanced_paren(test_str)
+    if (parens >= 0) and (parene > parens):
+        litems = [x.strip() for x in test_str[parens+1:parene].split(',')]
+        if (len(litems) > 1) and (min([len(x) for x in litems]) == 0):
+            litems = None
+        # end if
+    else:
+        litems = None
+    # end if
+    return litems
 
 ########################################################################
 
@@ -864,7 +895,7 @@ def check_balanced_paren(string, start=0, error=False):
     Return start and end indices if found
     If no parentheses are found, return (-1, -1).
     If a left parenthesis is found but no balancing right, return (begin, -1)
-    where begin
+    where begin is the index where the left parenthesis was found.
     If error is True, raise a CCPPError.
     >>> check_balanced_paren("foo")
     (-1, -1)

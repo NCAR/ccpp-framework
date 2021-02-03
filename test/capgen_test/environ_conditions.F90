@@ -52,9 +52,9 @@ CONTAINS
 
     ! This may be replaced with MusicBox json environmental conditions reader???
 
-    do i=1,nbox
-      O3(i)   = i * 1.e-6
-      HNO3(i) = i * 1.e-9
+    do i = 1, nbox
+      O3(i)   = real(i, kind_phys) * 1.e-6_kind_phys
+      HNO3(i) = real(i, kind_phys) * 1.e-9_kind_phys
     end do
 
     ntimes = input_model_times
