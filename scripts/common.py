@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from collections import OrderedDict
 import keyword
 import logging
 import os
@@ -7,7 +8,16 @@ import re
 import subprocess
 import sys
 
-CCPP_STAGES = [ 'init', 'run', 'finalize' ]
+# This dictionary contains short names for the different CCPP stages,
+# because Fortran does not allow subroutine names with more than 63 characters
+# Important: 'timestep_init' and 'timestep_finalize' need to come first so that
+# a pattern match won't pick "init" for a CCPP subroutine name "xyz_timestep_init"
+CCPP_STAGES = OrderedDict()
+CCPP_STAGES['timestep_init']     = 'tsinit'
+CCPP_STAGES['timestep_finalize'] = 'tsfinal'
+CCPP_STAGES['init']              = 'init'
+CCPP_STAGES['run']               = 'run'
+CCPP_STAGES['finalize']          = 'final'
 
 CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
