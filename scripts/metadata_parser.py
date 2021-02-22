@@ -2,13 +2,15 @@
 
 import collections
 import logging
+import os
+import re
 import subprocess
+import sys
 from xml.etree import ElementTree as ET
 
-from common import encode_container
+from common import encode_container, CCPP_STAGES
 from mkcap import Var
 
-import sys, os
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
 from parse_fortran import Ftype_type_decl
 from metadata_table import MetadataHeader
@@ -182,7 +184,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 legacy_note = ' replaced by horizontal loop extent (legacy extension)'
             # Adjust dimensions
             dimensions = new_var.get_prop_value('dimensions')
-            if scheme_name and (table_name.endswith("_init") or table_name.endswith("finalize")) \
+            if scheme_name and (table_name.endswith("_init") or table_name.endswith("_finalize")) \
                     and 'horizontal_loop_extent' in dimensions:
                 logging.warn("Legacy extension - replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
                              "for variable {} in table {}".format(standard_name,table_name))
@@ -508,9 +510,6 @@ def parse_scheme_tables(filepath, filename):
     # Set debug to true if logging level is debug
     debug = logging.getLogger().getEffectiveLevel() == logging.DEBUG
 
-    # Valid suffices for physics scheme routines
-    subroutine_suffices = [ 'init', 'run', 'finalize']
-
     # Final metadata container for all variables in file
     metadata = collections.OrderedDict()
 
@@ -596,9 +595,16 @@ def parse_scheme_tables(filepath, filename):
                     subroutine_name = words[j+1].split('(')[0].strip()
                     # Consider the last substring separated by a '_' of the subroutine name as a 'postfix'
                     if subroutine_name.find('_') >= 0:
-                        subroutine_suffix = subroutine_name.split('_')[-1]
-                        if subroutine_suffix in subroutine_suffices:
-                            scheme_name = subroutine_name[0:subroutine_name.rfind('_')]
+                        scheme_name = None
+                        subroutine_suffix = None
+                        for ccpp_stage in CCPP_STAGES:
+                            pattern = '^(.*)_{}$'.format(ccpp_stage)
+                            match = re.match(pattern, subroutine_name)
+                            if match:
+                                scheme_name = match.group(1)
+                                subroutine_suffix = ccpp_stage
+                                break
+                        if match:
                             if not scheme_name == module_name:
                                 raise Exception('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
                                                                                                              module_name, scheme_name))
@@ -719,30 +725,6 @@ def parse_scheme_tables(filepath, filename):
                             if not var_name in arguments[scheme_name][subroutine_name]:
                                 raise Exception('Mandatory CCPP variable {0} not declared in metadata table of subroutine {1}'.format(
                                                                                                            var_name, subroutine_name))
-
-        # For CCPP-compliant files (i.e. files with metadata tables, perform additional checks)
-        if len(metadata.keys()) > 0:
-            # Check that all subroutine "root" names in the current module are equal to scheme_name
-            # and that there are exactly three subroutines for scheme X: X_init, X_run, X_finalize
-            message = ''
-            abort = False
-            for scheme_name in registry[module_name].keys():
-                # Pre-generate error message
-                message += 'Check that all subroutines in module {0} have the same root name:\n'.format(module_name)
-                message += '    i.e. scheme_A_init, scheme_A_run, scheme_A_finalize\n'
-                message += 'Here is a list of the subroutine names for scheme {0}:\n'.format(scheme_name)
-                message += '{0}\n\n'.format(', '.join(sorted(registry[module_name][scheme_name].keys())))
-                if (not len(registry[module_name][scheme_name].keys()) == 3):
-                    logging.exception(message)
-                    abort = True
-                else:
-                    for suffix in subroutine_suffices:
-                        subroutine_name = '{0}_{1}'.format(scheme_name, suffix)
-                        if not subroutine_name in registry[module_name][scheme_name].keys():
-                            logging.exception(message)
-                            abort = True
-            if abort:
-                raise Exception(message)
 
         # Debugging output to screen and to XML
         if debug and len(metadata.keys()) > 0:
