@@ -492,7 +492,8 @@ def check_fortran_type(typestr, prop_dict, error):
     # End if
     if match is None:
         if error:
-            raise CCPPError("'{}' is not a valid{} Fortran type".format(typestr, dt))
+            emsg = "'{}' is not a valid{} Fortran type"
+            raise CCPPError(emsg.format(typestr, dt))
         else:
             typestr = None
         # End if
