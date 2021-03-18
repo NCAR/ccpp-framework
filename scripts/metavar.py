@@ -17,7 +17,7 @@ import re
 from collections import OrderedDict
 # CCPP framework imports
 from parse_tools import check_local_name, check_fortran_type, context_string
-from parse_tools import FORTRAN_DP_RE, FORTRAN_SCALAR_REF_RE
+from parse_tools import FORTRAN_DP_RE, FORTRAN_SCALAR_REF_RE, fortran_list_match
 from parse_tools import check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
@@ -26,7 +26,6 @@ from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 
 ###############################################################################
 _REAL_SUBST_RE = re.compile(r"(.*\d)p(\d.*)")
-_LIST_RE = re.compile(r"[(]([^)]*)[)]\s*$")
 
 # Dictionary of standard CCPP variables
 CCPP_STANDARD_VARS = {
@@ -34,17 +33,21 @@ CCPP_STANDARD_VARS = {
     'ccpp_constant_one' :
     {'local_name' : '1', 'protected' : 'True',
      'standard_name' : 'ccpp_constant_one',
+     'long_name' : "CCPP constant one",
      'units' : '1', 'dimensions' : '()', 'type' : 'integer'},
     'ccpp_error_flag' :
     {'local_name' : 'errflg', 'standard_name' : 'ccpp_error_flag',
+     'long_name' : "CCPP error flag",
      'units' : 'flag', 'dimensions' : '()', 'type' : 'integer'},
     'ccpp_error_message' :
     {'local_name' : 'errmsg', 'standard_name' : 'ccpp_error_message',
+     'long_name' : "CCPP error message",
      'units' : '1', 'dimensions' : '()', 'type' : 'character',
      'kind' : 'len=512'},
     'horizontal_dimension' :
     {'local_name' : 'total_columns',
      'standard_name' : 'horizontal_dimension', 'units' : 'count',
+     'long_name' : "total number of columns",
      'dimensions' : '()', 'type' : 'integer'},
     'horizontal_loop_extent' :
     {'local_name' : 'horz_loop_ext',
@@ -284,6 +287,8 @@ class VariableProperty(object):
         # end if
         self._valid_values = valid_values_in
         self._optional = optional_in
+        self._default = None
+        self._default_fn = None
         if self.optional:
             if (default_in is None) and (default_fn_in is None):
                 emsg = 'default_in or default_fn_in is a required property for {} because it is optional'
@@ -312,10 +317,15 @@ class VariableProperty(object):
         """Return the type of the property"""
         return self._type
 
+    @property
+    def has_default_func(self):
+        """Return True iff this variable property has a default function"""
+        return self._default_fn is not None
+
     def get_default_val(self, prop_dict, context=None):
         """Return this variable property's default value or raise an
         exception if there is no default value or default value function."""
-        if self._default_fn is not None:
+        if self.has_default_func:
             return self._default_fn(prop_dict, context)
         # end if
         if self._default is not None:
@@ -364,15 +374,10 @@ class VariableProperty(object):
                 valid_val = None # Redundant but more expressive than pass
         elif self.type is list:
             if isinstance(test_value, str):
-                match = _LIST_RE.match(test_value)
-                if match is None:
-                    tval = None
-                else:
-                    tval = [x.strip() for x in match.group(1).split(',')]
-                    if (len(tval) == 1) and (not tval[0]):
-                        # Scalar
-                        tval = list()
-                    # end if
+                tval = fortran_list_match(test_value)
+                if tval and (len(tval) == 1) and (not tval[0]):
+                    # Scalar
+                    tval = list()
                 # end if
             else:
                 tval = test_value
@@ -512,18 +517,21 @@ class Var(object):
                                     valid_values_in=['in', 'out', 'inout'])]
 
     # __constituent_props contains properties associated only with constituents
+    # Note that all constituent properties must be optional and contain either
+    #   a default value or default function.
     __constituent_props = [VariableProperty('advected', bool,
                                             optional_in=True, default_in=False)]
+
+    __constituent_prop_dict = {x.name : x for x in __constituent_props}
 
     # __no_metadata_props__ contains properties to omit from metadata
     __no_metadata_props__ = ['local_name']
 
-    __spec_propdict = {}
-    __var_propdict = {}
+    __spec_propdict = {p.name : p for p in __spec_props}
+    __var_propdict = {p.name : p for p in __spec_props + __var_props}
     __required_spec_props = list()
     __required_var_props = list()
     for p in __spec_props:
-        __spec_propdict[p.name] = p
         __var_propdict[p.name] = p
         if not p.optional:
             __required_spec_props.append(p.name)
@@ -531,20 +539,21 @@ class Var(object):
         # end if
     # end for
     for p in __var_props:
-        __spec_propdict[p.name] = p
-        __var_propdict[p.name] = p
+# XXgoldyXX: v why?
+#        __spec_propdict[p.name] = p
+# XXgoldyXX: ^ why?
+#        __var_propdict[p.name] = p
         if not p.optional:
             __required_var_props.append(p.name)
         # end if
     # end for
-    for p in __constituent_props:
-        __var_propdict[p.name] = p
-        # All constituent props are optional so no check
-    # end for
+    __var_propdict.update({p.name : p for p in __constituent_props})
+    # All constituent props are optional so no check
 
     def __init__(self, prop_dict, source, context=None,
                  invalid_ok=False, logger=None):
-        """NB: invalid_ok=True is dangerous because it allows creation
+        """Initialize a new Var object.
+        NB: invalid_ok=True is dangerous because it allows creation
         of a Var object with invalid properties.
         In order to prevent silent failures, invalid_ok requires a logger
         in order to take effect.
@@ -554,11 +563,15 @@ class Var(object):
             prop_dict = prop_dict.copy_prop_dict()
         # end if
         if source.type == 'scheme':
-            required_props = Var.__required_var_props
-            mstr_propdict = Var.__var_propdict
+            self.__required_props = Var.__required_var_props
+# XXgoldyXX: v don't fill in default properties?
+#            mstr_propdict = Var.__var_propdict
+# XXgoldyXX: ^ don't fill in default properties?
         else:
-            required_props = Var.__required_spec_props
+            self.__required_props = Var.__required_spec_props
+# XXgoldyXX: v don't fill in default properties?
             mstr_propdict = Var.__spec_propdict
+# XXgoldyXX: ^ don't fill in default properties?
         # end if
         self._source = source
         # Grab a frozen copy of the context
@@ -578,9 +591,9 @@ class Var(object):
             # end if
             prop_dict['kind'] = prop_dict['ddt_type']
             del prop_dict['ddt_type']
-            self._intrinsic = False
+            self.__intrinsic = False
         else:
-            self._intrinsic = True
+            self.__intrinsic = True
         # end if
         for key in prop_dict:
             if Var.get_prop(key) is None:
@@ -588,13 +601,15 @@ class Var(object):
             # end if
         # end for
         # Make sure required properties are present
-        for propname in required_props:
+        for propname in self.__required_props:
             if propname not in prop_dict:
                 if invalid_ok and (logger is not None):
                     ctx = context_string(self.context)
                     logger.warning("Required property, '{}', missing{}".format(propname, ctx))
                 else:
-                    raise ParseSyntaxError("Required property, '{}', missing".format(propname), context=self.context)
+                    emsg = "Required property, '{}', missing"
+                    raise ParseSyntaxError(emsg.format(propname),
+                                           context=self.context)
                 # end if
             # end if
         # end for
@@ -614,17 +629,29 @@ class Var(object):
                 # end if
             # end if
         # end if
-        # Steal dict from caller
-        self._prop_dict = prop_dict
-        # Fill in default values for missing properties
-        for propname in mstr_propdict:
-            if (propname not in prop_dict) and mstr_propdict[propname].optional:
-                mval = mstr_propdict[propname]
-                def_val = mval.get_default_val(self._prop_dict,
-                                               context=self.context)
-                self._prop_dict[propname] = def_val
+        # Look for any constituent properties
+        self.__is_constituent = False
+        for name, prop in Var.__constituent_prop_dict.items():
+            if (name in prop_dict) and                                         \
+               (prop_dict[name] != prop.get_default_val(prop_dict,
+                                                        context=self.context)):
+                self.__is_constituent = True
+                break
             # end if
         # end for
+        # Steal dict from caller
+        self._prop_dict = prop_dict
+# XXgoldyXX: v don't fill in default properties?
+#        # Fill in default values for missing properties
+#        for propname in mstr_propdict:
+#            if (propname not in prop_dict) and mstr_propdict[propname].optional:
+#                mval = mstr_propdict[propname]
+#                def_val = mval.get_default_val(self._prop_dict,
+#                                               context=self.context)
+#                self._prop_dict[propname] = def_val
+#            # end if
+#        # end for
+# XXgoldyXX: ^ don't fill in default properties?
         # Make sure all the variable values are valid
         try:
             for prop_name, prop_val in self.var_properties():
@@ -864,7 +891,7 @@ class Var(object):
         # end if
         cprop_dict = self.copy_prop_dict(subst_dict=subst_dict)
         if remove_intent and ('intent' in cprop_dict):
-            del subst_dict['intent']
+            del cprop_dict['intent']
         # end if
         if source_name is None:
             source_name = self.source.name
@@ -876,14 +903,26 @@ class Var(object):
             context = self._context
         # end if
         psource = ParseSource(source_name, source_type, context)
+
         return Var(cprop_dict, psource)
 
     def get_prop_value(self, name):
         """Return the value of key, <name> if <name> is in this variable's
-        property dictionary, otherwise, return None
+        property dictionary.
+        If <name> is not in the prop dict but does have a <default_fn_in>
+           property, return the value specified by calling that function.
+        Otherwise, return None
         """
         if name in self._prop_dict:
             pvalue = self._prop_dict[name]
+        elif name in Var.__var_propdict:
+            vprop = Var.__var_propdict[name]
+            if vprop.has_default_func:
+                pvalue = vprop.get_default_val(self._prop_dict,
+                                               context=self.context)
+            else:
+                pvalue = None
+            # end if
         else:
             pvalue = None
         # end if
@@ -950,11 +989,15 @@ class Var(object):
         # end if
         return lname, dimlist
 
-    def call_dimstring(self, var_dicts=None, explicit_dims=False):
+    def call_dimstring(self, var_dicts=None,
+                       explicit_dims=False, loop_subst=False):
         """Return the dimensions string for a variable call.
         If <var_dict> is present, find and substitute a local_name for
         each standard_name in this variable's dimensions.
         If <var_dict> is not present, return a colon for each dimension.
+        If <explicit_dims> is True, include the variable's dimensions.
+        If <loop_subst> is True, apply a loop substitution, if found for any
+           missing dimension.
         """
         emsg = ''
         _, dims = self.handle_array_ref()
@@ -962,22 +1005,35 @@ class Var(object):
             dimlist = []
             sepstr = ''
             for dim in dims:
-                dstdnames = dim.split(':')
                 # Decide whether to list all dimensions or to replace
                 # a range with a colon.
+                dstdnames = dim.split(':')
                 add_dims = explicit_dims or (len(dstdnames) == 1)
-                dnames = []
-                for stdname in dstdnames:
-                    if add_dims:
+                dvar = None
+                if add_dims and loop_subst:
+                    for vdict in var_dicts:
+                        dvar = vdict.find_loop_dim_match(dim)
+                        if dvar is not None:
+                            break
+                        # end if
+                    # end for
+                    if dvar:
+                        dimlist.append(dvar)
+                    # end if
+                if (not dvar) and add_dims:
+                    dnames = []
+                    for stdname in dstdnames:
                         for vdict in var_dicts:
-                            dvar = vdict.find_variable(standard_name=stdname)
+                            dvar = vdict.find_variable(standard_name=stdname,
+                                                       any_scope=False)
                             if dvar is not None:
                                 break
                             # end if
                         # end for
                         if dvar:
                             dnames.append(dvar.get_prop_value('local_name'))
-                        else:
+                        # end if
+                        if not dvar:
                             emsg += sepstr + "No variable found in "
                             vnames = [x.name for x in var_dicts]
                             if len(vnames) > 2:
@@ -992,11 +1048,11 @@ class Var(object):
                             emsg += stdname + "' in {vlnam}"
                             sepstr = '\n'
                         # end if
-                    else:
-                        dnames.append('')
-                    # end if
-                # end for
-                dimlist.append(':'.join(dnames))
+                    # end for
+                    dimlist.append(':'.join(dnames))
+                elif not add_dims:
+                    dimlist.append(':')
+                # end if (no else needed, we must have found loop substitution)
             # end for
         else:
             dimlist = [':']*len(dims)
@@ -1114,6 +1170,11 @@ class Var(object):
         match = FORTRAN_SCALAR_REF_RE.match(local_name)
         return match
 
+    @classmethod
+    def constituent_property_names(cls):
+        """Return a list of the names of constituent properties"""
+        return Var.__constituent_prop_dict.keys()
+
     @property
     def parent(self):
         """Return this variable's parent variable (or None)"""
@@ -1212,8 +1273,14 @@ class Var(object):
         # end if
         return Var.find_vertical_dimension(vdims)[0]
 
-    def write_def(self, outfile, indent, wdict, allocatable=False, dummy=False):
-        """Write the definition line for the variable."""
+    def write_def(self, outfile, indent, wdict, allocatable=False,
+                  dummy=False, add_intent=None):
+        """Write the definition line for the variable to <outfile>.
+        If <dummy> is True, include the variable's intent.
+        If <dummy> is True but the variable has no intent, add the
+        intent indicated by <add_intent>. This is intended for host model
+        variables and it is an error to not pass <add_intent> if <dummy>
+        is True and the variable has no intent property."""
         stdname = self.get_prop_value('standard_name')
         if stdname in CCPP_CONSTANT_VARS:
             # There is no declaration line for a constant
@@ -1240,12 +1307,24 @@ class Var(object):
             dimstr = ''
         # end if
         protected = self.get_prop_value('protected')
-        intent = self.get_prop_value('intent')
+        if dummy:
+            intent = self.get_prop_value('intent')
+        else:
+            intent = None
+        # end if
         if protected and allocatable:
             errmsg = 'Cannot create allocatable variable from protected, {}'
             raise CCPPError(errmsg.format(name))
         # end if
-        if protected:
+        if dummy and (intent is None):
+            if add_intent is not None:
+                intent = add_intent
+            else:
+                errmsg = "<add_intent> is missing for dummy argument, {}"
+                raise CCPPError(errmsg.format(name))
+            # end if
+        # end if
+        if protected and dummy:
             intent_str = 'intent(in)   '
         elif allocatable:
             if dimstr:
@@ -1261,6 +1340,8 @@ class Var(object):
                 intent_str = 'intent({}){}'.format(intent,
                                                    ' '*(5 - len(intent)))
             # end if
+        elif not dummy:
+            intent_str = ''
         else:
             intent_str = ' '*13
         # end if
@@ -1287,12 +1368,11 @@ class Var(object):
 
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""
-        return not self._intrinsic
+        return not self.__intrinsic
 
-    @staticmethod
-    def constituent_property_names():
-        """Return a list of the names of the constituent properties"""
-        return [x.name for x in Var.__constituent_props]
+    def is_constituent(self):
+        """Return True iff <self> is a constituent variable."""
+        return self.__is_constituent
 
     def __str__(self):
         """Print representation or string for Var objects"""
@@ -1928,6 +2008,39 @@ class VarDictionary(OrderedDict):
         # end if
         return pvar
 
+    def find_error_variables(self, any_scope=False, clone_as_out=False):
+        """Find and return a consistent set of error variables in this
+        dictionary.
+        First, attempt to find the set of errflg and errmsg.
+        Currently, there is no alternative but it will be inserted here.
+        If a consistent set is not found, return an empty list.
+        """
+        err_vars = list()
+        # Look for the combo of errflg and errmsg
+        errflg = self.find_variable(standard_name="ccpp_error_flag",
+                                    any_scope=any_scope)
+        errmsg = self.find_variable(standard_name="ccpp_error_message",
+                                    any_scope=any_scope)
+        if (errflg is not None) and (errmsg is not None):
+            if clone_as_out:
+                eout = errmsg.get_prop_value('intent')
+                if eout != 'out':
+                    subst_dict = {'intent':'out'}
+                    errmsg = errmsg.clone(subst_dict)
+                # end if
+            # end if
+            err_vars.append(errmsg)
+            if clone_as_out:
+                eout = errflg.get_prop_value('intent')
+                if eout != 'out':
+                    subst_dict = {'intent':'out'}
+                    errflg = errflg.clone(subst_dict)
+                # end if
+            # end if
+            err_vars.append(errflg)
+        # end if
+        return err_vars
+
     def add_sub_scope(self, sub_dict):
         """Add a child dictionary to enable traversal"""
         self._sub_dicts.append(sub_dict)
@@ -2087,7 +2200,8 @@ class VarDictionary(OrderedDict):
                                              context_string(context))
                 # end if
             else:
-                my_vars = [self.find_variable(standard_name=x)
+                my_vars = [self.find_variable(standard_name=x,
+                                              any_scope=any_scope)
                            for x in loop_var]
                 if None not in my_vars:
                     my_var = tuple(my_vars)

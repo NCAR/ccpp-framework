@@ -10,7 +10,6 @@ MODULE cld_ice
 
    PUBLIC :: cld_ice_init
    PUBLIC :: cld_ice_run
-   PUBLIC :: cld_ice_finalize
 
    real(kind_phys), private :: tcld = HUGE(1.0_kind_phys)
 
@@ -34,7 +33,7 @@ CONTAINS
 
       integer         :: icol
       integer         :: ilev
-      real(kind_phys) :: surplus
+      real(kind_phys) :: frz
 
       errmsg = ''
       errflg = 0
@@ -43,10 +42,10 @@ CONTAINS
       do icol = 1, ncol
          do ilev = 1, size(temp, 2)
             if (temp(icol, ilev) < tcld) then
-               surplus = MAX(qv(icol, ilev) - 0.5_kind_phys, 0.0_kind_phys)
-               cld_ice(icol, ilev) = cld_ice(icol, ilev) + surplus
-               qv(icol, ilev) = qv(icol, ilev) - surplus
-               if (surplus > 0.0_kind_phys) then
+               frz = MAX(qv(icol, ilev) - 0.5_kind_phys, 0.0_kind_phys)
+               cld_ice(icol, ilev) = cld_ice(icol, ilev) + frz
+               qv(icol, ilev) = qv(icol, ilev) - frz
+               if (frz > 0.0_kind_phys) then
                   temp(icol, ilev) = temp(icol, ilev) + 1.0_kind_phys
                end if
             end if
@@ -60,12 +59,10 @@ CONTAINS
    !!
    subroutine cld_ice_init(tfreeze, cld_ice, errmsg, errflg)
 
-      real,               intent(in)    :: tfreeze
+      real(kind_phys),    intent(in)    :: tfreeze
       real(kind_phys),    intent(inout) :: cld_ice(:,:)
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
-
-      ! This routine currently does nothing
 
       errmsg = ''
       errflg = 0

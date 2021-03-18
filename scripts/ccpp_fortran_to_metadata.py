@@ -40,7 +40,7 @@ from parse_tools import CCPPError, ParseInternalError
 from parse_tools import reset_standard_name_counter, unique_standard_name
 from fortran_tools import parse_fortran_file
 from file_utils import create_file_list
-from metadata_table import MetadataTable
+from metadata_table import blank_metadata_line
 
 ## Init this now so that all Exceptions can be trapped
 _LOGGER = init_log(os.path.basename(__file__))
@@ -173,7 +173,7 @@ def _main_func():
     output_dir = os.path.abspath(args.output_root)
     # Optional table separator comment
     section_sep = args.section_separator
-    if not MetadataTable.is_blank(section_sep):
+    if not blank_metadata_line(section_sep):
         emsg = "Illegal section separator, '{}', first character must be # or ;"
         raise CCPPError(emsg.format(section_sep))
     # We need to create a list of input Fortran files

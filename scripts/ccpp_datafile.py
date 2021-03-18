@@ -636,7 +636,8 @@ def table_entry_pretty_print(entry, indent, line_wrap=-1):
     if has_children or has_text:
         # We had sub-structure, print the close tag
         outline = "</{}>".format(entry.tag)
-        output += _format_line(outline, indent, line_wrap)
+        output = output.rstrip() + '\n' + _format_line(outline,
+                                                       indent, line_wrap)
     # end if
     return output
 
@@ -811,6 +812,7 @@ def _add_generated_files(parent, host_files, suite_files, ccpp_kinds, src_dir):
 ###############################################################################
     """Add a section to <parent> that lists all the files generated
     by <api> in sections for host cap, suite caps, ccpp_kinds, and source files.
+    Also add existing utility files which are always needed by the framework.
     """
     file_entry = ET.SubElement(parent, "ccpp_files")
     utilities = ET.SubElement(file_entry, "utilities")
@@ -818,6 +820,10 @@ def _add_generated_files(parent, host_files, suite_files, ccpp_kinds, src_dir):
     entry.text = ccpp_kinds
     entry = ET.SubElement(utilities, "file")
     entry.text = os.path.join(src_dir, "ccpp_constituent_prop_mod.F90")
+    entry = ET.SubElement(utilities, "file")
+    entry.text = os.path.join(src_dir, "ccpp_hashable.F90")
+    entry = ET.SubElement(utilities, "file")
+    entry.text = os.path.join(src_dir, "ccpp_hash_table.F90")
     host_elem = ET.SubElement(file_entry, "host_files")
     for hfile in host_files:
         entry = ET.SubElement(host_elem, "file")

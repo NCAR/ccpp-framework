@@ -26,7 +26,10 @@ module test_host_mod
 
    public :: init_data
    public :: compare_data
-   public :: check_model_times
+   public :: twist_array
+
+   real(kind_phys), private, allocatable :: check_vals(:,:,:)
+   real(kind_phys), private              :: check_temp(ncols, pver)
 
 contains
 
@@ -37,6 +40,7 @@ contains
       integer             :: col
       integer             :: lev
       integer             :: cind
+      integer             :: itime
       real(kind_phys)     :: qmax
 
       ! Allocate and initialize state
@@ -44,8 +48,10 @@ contains
       ! water vapor is initialized in odd columns to different amounts
       ncnst = num_advected + num_host_advected
       call allocate_physics_state(ncols, pver, ncnst, phys_state)
+      allocate(check_vals(ncols, pver, ncnst))
+      check_vals(:,:,:) = 0.0_kind_phys
       do lev = 1, pver
-         phys_state%temp(:, lev) = tfreeze + (10.0_kind_phys * (lev - 2))
+         phys_state%temp(:, lev) = tfreeze + (10.0_kind_phys * (lev - 3))
          qmax = real(lev, kind_phys)
          do col = 1, ncols
             if (mod(col, 2) == 1) then
@@ -55,50 +61,75 @@ contains
             end if
          end do
       end do
+      check_vals(:,:,index_qv) = phys_state%q(:,:,index_qv)
+      check_temp(:,:) = phys_state%temp(:,:)
+      ! Do timestep 1
+      do col = 1, ncols, 2
+         check_temp(col, 1) = check_temp(col, 1) + 0.5_kind_phys
+         check_vals(col, 1, 1) = check_vals(col, 1, 1) - 0.1_kind_phys
+         check_vals(col, 1, 3) = check_vals(col, 1, 3) + 0.1_kind_phys
+      end do
+      do itime = 1, num_time_steps
+         do cind = 1, ncnst
+            call twist_array(check_vals(:,:,cind))
+         end do
+      end do
 
    end subroutine init_data
 
-   logical function check_model_times()
+   subroutine twist_array(array)
+      ! Dummy argument
+      real(kind_phys), intent(inout) :: array(:,:)
 
-      check_model_times = (num_model_times > 0)
-      if (check_model_times) then
-         check_model_times = (size(model_times) == num_model_times)
-         if (.not. check_model_times) then
-            write(6, '(2(a,i0))') 'model_times size mismatch, ',              &
-                 size(model_times), ' should be ', num_model_times
-         end if
-      else
-         write(6, '(a,i0,a)') 'num_model_times mismatch, ',num_model_times,   &
-              ' should be greater than zero'
-      end if
+       ! Local variables
+       integer         :: q_ind      ! Constituent index
+       integer         :: icol, ilev ! Field coordinates
+       integer         :: idir       ! 'w' sign
+       integer         :: levb, leve ! Starting and ending level indices
+       real(kind_phys) :: last_val, next_val
 
-   end function check_model_times
+       idir = 1
+       leve = (pver * mod(ncols, 2)) + mod(ncols-1, 2)
+       last_val = array(ncols, leve)
+       do icol = 1, ncols
+          levb = ((pver * (1 - idir)) + (1 + idir)) / 2
+          leve = ((pver * (1 + idir)) + (1 - idir)) / 2
+          do ilev = levb, leve, idir
+             next_val = array(icol, ilev)
+             array(icol, ilev) = last_val
+             last_val = next_val
+          end do
+          idir = -1 * idir
+       end do
 
-   logical function compare_data()
+   end subroutine twist_array
+
+   logical function compare_data(ncnst)
+
+      integer, intent(in) :: ncnst
 
       integer            :: col
       integer            :: lev
       integer            :: cind
-      integer            :: offsize
+      integer            :: nind
       logical            :: need_header
-      real(kind_phys)    :: avg
-      integer, parameter :: cincrements(ncnst) = (/ 1, 0 /)
+      real(kind_phys)    :: check
+      real(kind_phys)    :: denom
 
       compare_data = .true.
 
       need_header = .true.
       do lev = 1, pver
          do col = 1, ncols
-            avg = (tint_save(col,lev) + tint_save(col,lev+1))
-            avg = 1.0_kind_phys + (avg / 2.0_kind_phys)
-            avg = avg + (temp_inc * num_time_steps)
-            if (abs((temp_midpoints(col, lev) - avg) / avg) > tolerance) then
+            check = check_temp(col, lev)
+            if (abs((phys_state%temp(col, lev) - check) / check) >            &
+                 tolerance) then
                if (need_header) then
                   write(6, '("  COL  LEV      T MIDPOINTS        EXPECTED")')
                   need_header = .false.
                end if
                write(6, '(2i5,2(3x,es15.7))') col, lev,                       &
-                    temp_midpoints(col, lev), avg
+                    phys_state%temp(col, lev), check
                compare_data = .false.
             end if
          end do
@@ -107,11 +138,14 @@ contains
       need_header = .true.
       do cind = 1, ncnst
          do lev = 1, pver
-            offsize = ((cind - 1) * (ncols * pver)) + ((lev - 1) * ncols)
             do col = 1, ncols
-               avg = real(offsize + col + (cincrements(cind) * num_time_steps),&
-                    kind=kind_phys)
-               if (abs((phys_state%q(col, lev, cind) - avg) / avg) >          &
+               check = check_vals(col, lev, cind)
+               if (check < tolerance) then
+                  denom = 1.0_kind_phys
+               else
+                  denom = check
+               end if
+               if (abs((phys_state%q(col, lev, cind) - check) / denom) >      &
                     tolerance) then
                   if (need_header) then
                      write(6, '(2(2x,a),3x,a,10x,a,14x,a)')                   &
@@ -119,7 +153,7 @@ contains
                      need_header = .false.
                   end if
                   write(6, '(3i5,2(3x,es15.7))') col, lev, cind,              &
-                       phys_state%q(col, lev, cind), avg
+                       phys_state%q(col, lev, cind), check
                   compare_data = .false.
                end if
             end do

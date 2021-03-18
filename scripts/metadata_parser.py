@@ -11,7 +11,7 @@ from mkcap import Var
 # DH* 20190420 - work around to parse additional type definitions
 import sys, os
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
-from parse_fortran import Ftype_type_decl
+from parse_fortran import FtypeTypeDecl
 # *DH 20190420
 
 # The argument tables for schemes and variable definitions should have the following format:
@@ -219,10 +219,10 @@ def parse_variable_tables(filename):
                 # If type is not the first word, ignore the word
                 elif j>0:
                     continue
-                # Detect type definition using Ftype_type_decl class, routine
+                # Detect type definition using FtypeTypeDecl class, routine
                 # type_def_line and extract type_name
                 else:
-                    type_declaration = Ftype_type_decl.type_def_line(line.strip())
+                    type_declaration = FtypeTypeDecl.type_def_line(line.strip())
                     if in_type:
                         raise Exception('Nested definitions of derived types not supported')
                     in_type = True

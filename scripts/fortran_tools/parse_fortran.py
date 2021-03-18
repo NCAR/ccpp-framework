@@ -42,7 +42,7 @@ _VAR_ID_RE = re.compile(r"("+_FORTRAN_ID+r")\s*(\(\s*"+_dims_list_+r"\s*\))?$")
 class Ftype(object):
     """Ftype is the base class for all Fortran types
     It is also the final type for intrinsic types except for character
-    >>> Ftype('integer').typestr()
+    >>> Ftype('integer').typestr
     'integer'
     >>> Ftype('integer', kind_in='( kind= I8').__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
@@ -81,59 +81,72 @@ class Ftype(object):
                    'pointer', 'private', 'protected', 'public', 'save',
                    'target', 'value', 'volatile']
 
-    def __init__(self, typestr_in=None, kind_in=None,
+    def __init__(self, typestr_in=None, kind_in=None, match_len_in=None,
                  line_in=None, context=None):
         """Initialize  this FType object, either using <typestr_in> and
         <kind_in>, OR using line_in."""
         if context is None:
-            self._context = ParseContext()
+            self.__context = ParseContext()
         else:
-            self._context = ParseContext(context=context)
+            self.__context = ParseContext(context=context)
         # end if
         # We have to distinguish which type of initialization we have
+        self.__typestr = typestr_in
         if typestr_in is not None:
             if line_in is not None:
                 emsg = "Cannot pass both typestr_in and line_in as arguments"
-                raise ParseInternalError(emsg, self._context)
+                raise ParseInternalError(emsg, self.__context)
             # end if
-            self._typestr = typestr_in
-            self.default_kind = kind_in is None
+            self.__default_kind = kind_in is None
             if kind_in is None:
-                self._kind = None
+                self.__kind = None
             elif kind_in[0] == '(':
                 # Parse an explicit kind declaration
-                self._kind = self.parse_kind_selector(kind_in)
+                self.__kind = self.parse_kind_selector(kind_in)
             else:
                 # The kind has already been parsed for us (e.g., by character)
-                self._kind = kind_in
+                self.__kind = kind_in
+            # end if
+            if match_len_in is not None:
+                self.__match_len = match_len_in
+            else:
+                self.__match_len = len(self.typestr)
+                if kind_in is not None:
+                    self.__match_len += len(self.__kind) + 2
+                # end if
+            # end if
         elif kind_in is not None:
             emsg = "kind_in cannot be passed without typestr_in"
-            raise ParseInternalError(emsg, self._context)
+            raise ParseInternalError(emsg, self.__context)
         elif line_in is not None:
             match = Ftype.type_match(line_in)
-            self._match_len = len(match.group(0))
             if match is None:
                 emsg = "type declaration"
                 raise ParseSyntaxError(emsg, token=line_in,
-                                       context=self._context)
+                                       context=self.__context)
+            # end if
+            if match_len_in is not None:
+                self.__match_len = match_len_in
+            else:
+                self.__match_len = len(match.group(0))
             # end if
             if check_fortran_intrinsic(match.group(1)):
-                self._typestr = match.group(1)
+                self.__typestr = match.group(1)
                 if match.group(2) is not None:
                     # Parse kind section
                     kmatch = match.group(2).strip()
-                    self._kind = self.parse_kind_selector(kmatch)
+                    self.__kind = self.parse_kind_selector(kmatch)
                 else:
-                    self._kind = None
+                    self.__kind = None
                 # end if
-                self.default_kind = self._kind is None
+                self.__default_kind = self.__kind is None
             else:
                 raise ParseSyntaxError("type declaration",
-                                       token=line_in, context=self._context)
+                                       token=line_in, context=self.__context)
             # end if
         else:
             emsg = "At least one of typestr_in or line_in must be passed"
-            raise ParseInternalError(emsg, self._context)
+            raise ParseInternalError(emsg, self.__context)
         # end if
 
     def parse_kind_selector(self, kind_selector, context=None):
@@ -141,7 +154,7 @@ class Ftype(object):
         '(foo)' and '(kind=foo)' both return 'foo'"""
         if context is None:
             if hasattr(self, 'context'):
-                context = self._context
+                context = self.__context
             else:
                 context = ParseContext()
             # end if
@@ -154,13 +167,15 @@ class Ftype(object):
         if (len(args) > 2) or (len(args) < 1):
             raise ParseSyntaxError("kind_selector",
                                    token=kind_selector, context=context)
-        elif len(args) == 1:
+        # end if
+        if len(args) == 1:
             kind = args[0].strip()
         elif args[0].strip().lower() != 'kind':
             # We have two args, the first better be kind
             raise ParseSyntaxError("kind_selector",
                                    token=kind_selector, context=context)
-        else:
+        # end if
+        if kind is None:
             # We have two args and the second is our kind string
             kind = args[1].strip()
         # end if
@@ -247,69 +262,76 @@ class Ftype(object):
         # end for
         return properties
 
+    @property
     def typestr(self):
-        """ Return this FType's type string"""
-        return self._typestr
+        """ Return this FType object's type string"""
+        return self.__typestr
+
+    @property
+    def default_kind(self):
+        """Return True iff this FType object is of default kind."""
+        return self.__default_kind
 
     def kind(self):
         """ Return this FType's kind string"""
-        return self._kind
+        return self.__kind
 
     @property
     def type_len(self):
         """ Return the length of this FType's kind string"""
-        return self._match_len
+        return self.__match_len
 
     def __str__(self):
         """Return a string of the declaration of the type"""
         if self.default_kind:
-            return self.typestr()
-        elif check_fortran_intrinsic(self.typestr()):
-            return "{}(kind={})".format(self.typestr(), self._kind)
-        else:
-            # Derived type
-            return "{}({})".format(self.typestr(), self._kind)
+            return self.typestr
+        # end if
+        if check_fortran_intrinsic(self.typestr):
+            return "{}(kind={})".format(self.typestr, self.__kind)
+        # end if
+        # Derived type
+        return "{}({})".format(self.typestr, self.__kind)
 
 ########################################################################
 
-class Ftype_character(Ftype):
-    """Ftype_character is a type that represents character types
-    >>> Ftype_character.type_match('character') #doctest: +ELLIPSIS
+class FtypeCharacter(Ftype):
+    """FtypeCharacter is a type that represents character types
+    >>> FtypeCharacter.type_match('character') #doctest: +ELLIPSIS
     <re.Match object; span=(0, 9), match='character'>
-    >>> Ftype_character.type_match('CHARACTER') #doctest: +ELLIPSIS
+    >>> FtypeCharacter.type_match('CHARACTER') #doctest: +ELLIPSIS
     <re.Match object; span=(0, 9), match='CHARACTER'>
-    >>> Ftype_character.type_match('chaRActer (len=*)') #doctest: +ELLIPSIS
+    >>> FtypeCharacter.type_match('chaRActer (len=*)') #doctest: +ELLIPSIS
     <re.Match object; span=(0, 17), match='chaRActer (len=*)'>
-    >>> Ftype_character.type_match('integer')
+    >>> FtypeCharacter.type_match('integer')
 
-    >>> Ftype_character('character', ParseContext(169, 'foo.F90')).__str__()
+    >>> FtypeCharacter('character', ParseContext(169, 'foo.F90')).__str__()
     Traceback (most recent call last):
     parse_source.ParseSyntaxError: Invalid character declaration, 'character', at foo.F90:170
-    >>> Ftype_character('character ::', ParseContext(171, 'foo.F90')).__str__()
+    >>> FtypeCharacter('character ::', ParseContext(171, 'foo.F90')).__str__()
     'character(len=1)'
-    >>> Ftype_character('CHARACTER(len=*)', ParseContext(174, 'foo.F90')).__str__()
+    >>> FtypeCharacter('CHARACTER(len=*)', ParseContext(174, 'foo.F90')).__str__()
     'CHARACTER(len=*)'
-    >>> Ftype_character('CHARACTER(len=:)', None).__str__()
+    >>> FtypeCharacter('CHARACTER(len=:)', None).__str__()
     'CHARACTER(len=:)'
-    >>> Ftype_character('Character(len=512)', None).__str__()
+    >>> FtypeCharacter('Character(len=512)', None).__str__()
     'Character(len=512)'
-    >>> Ftype_character('character(*)', None).__str__()
+    >>> FtypeCharacter('character(*)', None).__str__()
     'character(len=*)'
-    >>> Ftype_character('character*7', None).__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> FtypeCharacter('character*7', None).__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid character declaration, 'character*7', at <standard input>:1
-    >>> Ftype_character('character*7,', None).__str__()
+    >>> FtypeCharacter('character*7,', None).__str__()
     'character(len=7)'
-    >>> Ftype_character("character (kind=kind('a')", None).__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> FtypeCharacter("character (kind=kind('a')", None).__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid kind_selector, 'kind=kind('a'', at <standard input>:1
-    >>> Ftype_character("character (kind=kind('a'))", None).__str__()
+    >>> FtypeCharacter("character (kind=kind('a'))", None).__str__()
     "character(len=1, kind=kind('a'))"
-    >>> Ftype_character("character  (13, kind=kind('a'))", None).__str__()
+    >>> FtypeCharacter("character  (13, kind=kind('a'))", None).__str__()
     "character(len=13, kind=kind('a'))"
-    >>> Ftype_character("character  (len=13, kind=kind('a'))", None).__str__()
+    >>> FtypeCharacter("character  (len=13, kind=kind('a'))", None).__str__()
     "character(len=13, kind=kind('a'))"
-    >>> Ftype_character("character  (kind=kind('b'), len=15)", None).__str__()
+    >>> FtypeCharacter("character  (kind=kind('b'), len=15)", None).__str__()
     "character(len=15, kind=kind('b'))"
     """
 
@@ -321,12 +343,12 @@ class Ftype_character(Ftype):
 
     @classmethod
     def type_match(cls, line):
-        """Return an RE match if <line> represents an Ftype_character
+        """Return an RE match if <line> represents an FtypeCharacter
         declaration"""
         # Try old style first to eliminate as a possibility
-        match = Ftype_character.oldchar_re.match(line.strip())
+        match = FtypeCharacter.oldchar_re.match(line.strip())
         if match is None:
-            match = Ftype_character.char_re.match(line.strip())
+            match = FtypeCharacter.char_re.match(line.strip())
         # end if
         return match
 
@@ -335,85 +357,105 @@ class Ftype_character(Ftype):
 
         clen = None
         kind = None # This will be interpreted as default kind
-        match = Ftype_character.type_match(line)
+        match = FtypeCharacter.type_match(line)
         if match is None:
             raise ParseSyntaxError("character declaration", token=line, context=context)
-        elif len(match.groups()) == 3:
-            self._match_len = len(match.group(0))
+        # end if
+        match_len = len(match.group(0))
+        if len(match.groups()) == 3:
             # We have an old style character declaration
             if match.group(2) != '*':
                 raise ParseSyntaxError("character declaration", token=line, context=context)
-            elif Ftype_character.oldchartrail_re.match(line.strip()[len(match.group(0)):]) is None:
-                raise ParseSyntaxError("character declaration", token=line, context=context)
-            else:
-                clen = match.group(3)
             # end if
+            if FtypeCharacter.oldchartrail_re.match(line.strip()[len(match.group(0)):]) is None:
+                raise ParseSyntaxError("character declaration",
+                                       token=line, context=context)
+            # end if
+            clen = match.group(3)
         elif match.group(2) is not None:
-            self._match_len = len(match.group(0))
             # Parse attributes (strip off parentheses)
             attrs = [x.strip() for x in match.group(2)[1:-1].split(',')]
             if not attrs:
                 # Empty parentheses is not allowed
-                raise ParseSyntaxError("char_selector", token=match.group(2), context=context)
+                raise ParseSyntaxError("char_selector",
+                                       token=match.group(2), context=context)
+            # end if
             if len(attrs) > 2:
                 # Too many attributes!
-                raise ParseSyntaxError("char_selector", token=match.group(2), context=context)
-            elif attrs[0][0:4].lower() == "kind":
+                raise ParseSyntaxError("char_selector",
+                                       token=match.group(2), context=context)
+            # end if
+            if attrs[0][0:4].lower() == "kind":
                 # The first arg is kind, try to parse it
                 kind = self.parse_kind_selector(attrs[0], context=context)
                 # If there is a second arg, it must be of form len=<length_selector>
                 if len(attrs) == 2:
-                    clen = self.parse_len_select(attrs[1], context, len_optional=False)
+                    clen = self.parse_len_select(attrs[1],
+                                                 context, len_optional=False)
             elif len(attrs) == 2:
                 # We have both a len and a kind, len first
-                clen = self.parse_len_select(attrs[0], context, len_optional=True)
+                clen = self.parse_len_select(attrs[0],
+                                             context, len_optional=True)
                 kind = self.parse_kind_selector(attrs[1], context)
             else:
                 # We just a len argument
-                clen = self.parse_len_select(attrs[0], context, len_optional=True)
+                clen = self.parse_len_select(attrs[0],
+                                             context, len_optional=True)
             # end if
         else:
-            self._match_len = len(match.group(0))
             # We had better check the training characters
-            if Ftype_character.chartrail_re.match(line.strip()[len(match.group(0)):]) is None:
-                raise ParseSyntaxError("character declaration", token=line, context=context)
+            if FtypeCharacter.chartrail_re.match(line.strip()[len(match.group(0)):]) is None:
+                raise ParseSyntaxError("character declaration",
+                                       token=line, context=context)
+            # end if
         # end if
         if clen is None:
             clen = 1
         # end if
         self.lenstr = "{}".format(clen)
-        super(Ftype_character, self).__init__(typestr_in=match.group(1), kind_in=kind, context=context)
+        super(FtypeCharacter, self).__init__(typestr_in=match.group(1),
+                                             kind_in=kind,
+                                             match_len_in=match_len,
+                                             context=context)
 
     def parse_len_token(self, token, context):
         """Check to make sure token is a valid length identifier"""
-        match = Ftype_character.len_token_re.match(token)
+        match = FtypeCharacter.len_token_re.match(token)
         if match is not None:
             return match.group(1)
-        else:
-            raise ParseSyntaxError("length type-param-value", token=token, context=context)
+        # end if
+        raise ParseSyntaxError("length type-param-value",
+                               token=token, context=context)
+        # end if
 
     def parse_len_select(self, lenselect, context, len_optional=True):
         """Parse a character type length_selector"""
         largs = [x.strip() for x in lenselect.split('=')]
         if len(largs) > 2:
             raise ParseSyntaxError("length_selector", token=lenselect, context=context)
-        elif (not len_optional) and ((len(largs) != 2) or (largs[0].lower() != 'len')):
+        # end if
+        if (not len_optional) and ((len(largs) != 2) or (largs[0].lower() != 'len')):
             raise ParseSyntaxError("length_selector when len= is required", token=lenselect, context=context)
-        elif len(largs) == 2:
+        # end if
+        if len(largs) == 2:
             if largs[0].lower() != 'len':
                 raise ParseSyntaxError("length_selector", token=lenselect, context=context)
-            else:
-                return self.parse_len_token(largs[1], context)
+            # end if
+            return self.parse_len_token(largs[1], context)
         elif len_optional:
             return self.parse_len_token(largs[0], context)
         else:
             raise ParseSyntaxError("length_selector when len= is required", token=lenselect, context=context)
+        # end if
 
     def kind(self):
+        """Return a kind metadata declaration if this Ftype object is of
+        a non-default kind.
+        Otherwise, return an empty string."""
         if self.default_kind:
             kind_str = ""
         else:
-            kind_str = ", kind={}".format(super(Ftype_character, self).kind())
+            kind_str = ", kind={}".format(super(FtypeCharacter, self).kind())
         # end if
         return "len={}{}".format(self.lenstr, kind_str)
 
@@ -421,26 +463,26 @@ class Ftype_character(Ftype):
         """Return a string of the declaration of the type
         For characters, we will always print an explicit len modifier
         """
-        return "{}({})".format(self.typestr(), self.kind())
+        return "{}({})".format(self.typestr, self.kind())
 
 ########################################################################
 
-class Ftype_type_decl(Ftype):
-    """Ftype_type_decl is a type that represents derived Fortran type
+class FtypeTypeDecl(Ftype):
+    """FtypeTypeDecl is a type that represents derived Fortran type
     declarations.
-    >>> Ftype_type_decl.type_match('character')
+    >>> FtypeTypeDecl.type_match('character')
 
-    >>> Ftype_type_decl.type_match('type(foo)') #doctest: +ELLIPSIS
+    >>> FtypeTypeDecl.type_match('type(foo)') #doctest: +ELLIPSIS
     <re.Match object; span=(0, 9), match='type(foo)'>
-    >>> Ftype_type_decl.type_def_line('type GFS_statein_type')
+    >>> FtypeTypeDecl.type_def_line('type GFS_statein_type')
     ['GFS_statein_type', None, None]
-    >>> Ftype_type_decl.type_def_line('type GFS_statein_type (n, m) ')
+    >>> FtypeTypeDecl.type_def_line('type GFS_statein_type (n, m) ')
     ['GFS_statein_type', None, '(n, m)']
-    >>> Ftype_type_decl.type_def_line('type, public, extends(foo) :: GFS_statein_type')
+    >>> FtypeTypeDecl.type_def_line('type, public, extends(foo) :: GFS_statein_type')
     ['GFS_statein_type', ['public', 'extends(foo)'], None]
-    >>> Ftype_type_decl.type_def_line('type(foo) :: bar')
+    >>> FtypeTypeDecl.type_def_line('type(foo) :: bar')
 
-    >>> Ftype_type_decl.type_def_line('type foo ! This is a comment')
+    >>> FtypeTypeDecl.type_def_line('type foo ! This is a comment')
     ['foo', None, None]
     """
 
@@ -450,20 +492,21 @@ class Ftype_type_decl(Ftype):
 
     def __init__(self, line, context):
         """Initialize an extended type from a declaration line"""
-        match = Ftype_type_decl.type_match(line)
+        match = FtypeTypeDecl.type_match(line)
         if match is None:
-            raise ParseSyntaxError("type declaration", token=line, context=context)
-        else:
-            self._match_len = len(match.group(0))
-            self._class = match.group(1)
-            self._typestr = match.group(2)
-            self._kind = self.typestr()
+            raise ParseSyntaxError("type declaration",
+                                   token=line, context=context)
         # end if
+        super(FtypeTypeDecl, self).__init__(typestr_in=match.group(2),
+                                            kind_in=match.group(2),
+                                            match_len_in=len(match.group(0)),
+                                            context=context)
+        self.__class = match.group(1)
 
     @classmethod
     def type_match(cls, line):
-        """Return an RE match if <line> represents an Ftype_type_decl declaration"""
-        match = Ftype_type_decl.__type_decl_re__.match(line.strip())
+        """Return an RE match if <line> represents an FtypeTypeDecl declaration"""
+        match = FtypeTypeDecl.__type_decl_re__.match(line.strip())
         # end if
         return match
 
@@ -501,10 +544,11 @@ class Ftype_type_decl(Ftype):
         return type_def
 
     def __str__(self):
-        return '{}({})'.format(self._class, self.typestr())
+        """Return a printable string for this Ftype object"""
+        return '{}({})'.format(self.__class, self.typestr)
 
 ########################################################################
-def Ftype_factory(line, context):
+def ftype_factory(line, context):
 ########################################################################
     "Return an appropriate type object if there is a match, otherwise None"
     # We have to cut off the line at the end of any possible type info
@@ -515,7 +559,7 @@ def Ftype_factory(line, context):
     ppos = line.find('(')
     cpos = line.find(',')
     if ppos >= 0:
-        if (cpos >= 0) and (cpos < ppos):
+        if 0 <= cpos < ppos:
             # Whatever parentheses there are, they are not part of type
             line = line[0:cpos]
         else:
@@ -543,15 +587,15 @@ def Ftype_factory(line, context):
         tobj = Ftype(line_in=line, context=context)
     # end if
     if tmatch is None:
-        tmatch = Ftype_character.type_match(line)
+        tmatch = FtypeCharacter.type_match(line)
         if tmatch is not None:
-            tobj = Ftype_character(line, context)
+            tobj = FtypeCharacter(line, context)
         # end if
     # end if
     if tmatch is None:
-        tmatch = Ftype_type_decl.type_match(line)
+        tmatch = FtypeTypeDecl.type_match(line)
         if tmatch is not None:
-            tobj = Ftype_type_decl(line, context)
+            tobj = FtypeTypeDecl(line, context)
         # end if
     # end if
     return tobj
@@ -559,7 +603,9 @@ def Ftype_factory(line, context):
 ########################################################################
 def fortran_type_definition(line):
 ########################################################################
-    return Ftype_type_decl.type_def_line(line)
+    """Return a type information if <line> represents the start
+        of a type definition"""
+    return FtypeTypeDecl.type_def_line(line)
 
 ########################################################################
 def parse_fortran_var_decl(line, source, logger=None):
@@ -599,7 +645,7 @@ def parse_fortran_var_decl(line, source, logger=None):
     >>> parse_fortran_var_decl("integer :: foo = 0", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('local_name')
     'foo'
     >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('optional')
-    False
+
     >>> parse_fortran_var_decl("integer, optional :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('optional')
     'True'
     >>> parse_fortran_var_decl("integer, dimension(:) :: foo", ParseSource('foo.F90', 'module', ParseContext()))[0].get_prop_value('dimensions')
@@ -634,7 +680,7 @@ def parse_fortran_var_decl(line, source, logger=None):
     if '!' in sline:
         sline = sline[0:sline.index('!')].rstrip()
     # end if
-    tobject = Ftype_factory(sline, context)
+    tobject = ftype_factory(sline, context)
     newvars = list()
     if tobject is not None:
         varprops = sline[tobject.type_len:].strip()
@@ -654,7 +700,7 @@ def parse_fortran_var_decl(line, source, logger=None):
                         if logger is not None:
                             ctx = context_string(context)
                             errmsg = "WARNING: " + errmsg + "{}"
-                            logger.warning(errmsg.format(var, typ, ctx))
+                            logger.warning(errmsg.format(sline, typ, ctx))
                         else:
                             raise ParseSyntaxError(errmsg.format(sline, typ),
                                                    context=context)
@@ -706,10 +752,10 @@ def parse_fortran_var_decl(line, source, logger=None):
             prop_dict['local_name'] = varname
             prop_dict['standard_name'] = unique_standard_name()
             prop_dict['units'] = ''
-            if isinstance(tobject, Ftype_type_decl):
-                prop_dict['ddt_type'] = tobject.typestr()
+            if isinstance(tobject, FtypeTypeDecl):
+                prop_dict['ddt_type'] = tobject.typestr
             else:
-                prop_dict['type'] = tobject.typestr()
+                prop_dict['type'] = tobject.typestr
             # end if
             if tobject.kind() is not None:
                 prop_dict['kind'] = tobject.kind()
@@ -743,7 +789,7 @@ def parse_fortran_var_decl(line, source, logger=None):
 
 ########################################################################
 # Future classes
-#class Ftype_type_def(Ftype_type_decl) # Not sure about that super class
+#class Ftype_type_def(FtypeTypeDecl) # Not sure about that super class
 #class Fmodule_spec(object) # vars and types from a module specification part
 # Fmodule_spec will contain a list of documented variables and a list of
 # documented type definitions

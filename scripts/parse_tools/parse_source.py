@@ -2,12 +2,22 @@
 
 """Classes to aid the parsing process"""
 
+import sys
+# Find python version
+PY3 = sys.version_info[0] > 2
+
+# pylint: disable=wrong-import-position
 # Python library imports
-import collections
+if PY3:
+    from collections.abc import Iterable
+else:
+    from collections import Iterable
+# end if
 import copy
 import os.path
 import logging
 # CCPP framework imports
+# pylint: enable=wrong-import-position
 
 class _StdNameCounter(object):
     """Class to hold a global counter to avoid using global keyword"""
@@ -154,7 +164,7 @@ class ParseContextError(CCPPError):
 
 ########################################################################
 
-class ContextRegion(collections.Iterable):
+class ContextRegion(Iterable):
     """Class to imitate the LIFO nature of program language blocks"""
 
     def __init__(self):
