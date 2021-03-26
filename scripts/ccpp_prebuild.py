@@ -50,7 +50,7 @@ def parse_arguments():
     clean = args.clean
     debug = args.debug
     if args.suites:
-        sdfs = [ 'suite_{0}.xml'.format(x) for x in args.suites.split(',')]
+        sdfs = ['suite_{0}.xml'.format(x) for x in args.suites.split(',')]
     else:
         sdfs = None
     builddir = args.builddir
@@ -264,8 +264,8 @@ def gather_variable_definitions(variable_definition_files, typedefs_new_metadata
     #
     logging.info('Parsing metadata tables for variables provided by host model ...')
     success = True
-    metadata_define = {}
-    dependencies_define = {}
+    metadata_define = collections.OrderedDict()
+    dependencies_define = collections.OrderedDict()
     for variable_definition_file in variable_definition_files:
         (filedir, filename) = os.path.split(os.path.abspath(variable_definition_file))
         # Change to directory of variable_definition_file and parse it
@@ -304,10 +304,10 @@ def collect_physics_subroutines(scheme_files):
     logging.info('Parsing metadata tables in physics scheme files ...')
     success = True
     # Parse all scheme files: record metadata, argument list, dependencies, and which scheme is in which file
-    metadata_request = {}
-    arguments_request = {}
-    dependencies_request = {}
-    schemes_in_files = {}
+    metadata_request = collections.OrderedDict()
+    arguments_request = collections.OrderedDict()
+    dependencies_request = collections.OrderedDict()
+    schemes_in_files = collections.OrderedDict()
     for scheme_file in scheme_files:
         scheme_file_with_abs_path = os.path.abspath(scheme_file)
         (scheme_filepath, scheme_filename) = os.path.split(scheme_file_with_abs_path)
@@ -331,10 +331,10 @@ def filter_metadata(metadata, arguments, dependencies, schemes_in_files, suites)
     also remove information on argument lists, dependencies and schemes in files"""
     success = True
     # Output: filtered dictionaries
-    metadata_filtered = {}
-    arguments_filtered = {}
-    dependencies_filtered = {}
-    schemes_in_files_filtered = {}
+    metadata_filtered = collections.OrderedDict()
+    arguments_filtered = collections.OrderedDict()
+    dependencies_filtered = collections.OrderedDict()
+    schemes_in_files_filtered = collections.OrderedDict()
     # Loop through all variables and check if the calling subroutine is in list of subroutines
     for var_name in sorted(metadata.keys()):
         keep = False
@@ -421,8 +421,8 @@ def check_optional_arguments(metadata, arguments, optional_arguments):
                                         logging.error('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
                                                                                                  subitems[0], var.container, var_name))
                                 if scheme_name_test == scheme_name and subroutine_name_test == subroutine_name and not var.optional in ['t', 'T']:
-                                    raise Exception("Variable {} in {} / {}".format(var_name, scheme_name, subroutine_name) + \
-                                                " is not an optional argument, but listed as such in the CCPP prebuild config")
+                                    raise Exception("Variable {} in {}/{}".format(var_name, scheme_name, subroutine_name) + \
+                                              " is not an optional argument, but listed as such in the CCPP prebuild config")
 
     for var_name in sorted(metadata.keys()):
         # The notation metadata[var_name][:] is a convenient way to make a copy
@@ -477,7 +477,7 @@ def compare_metadata(metadata_define, metadata_request):
     logging.info('Comparing metadata for requested and provided variables ...')
     success = True
     modules = []
-    metadata = {}
+    metadata = collections.OrderedDict()
     for var_name in sorted(metadata_request.keys()):
         # Check that variable is provided by the model
         if not var_name in metadata_define.keys():
@@ -635,6 +635,9 @@ def generate_typedefs_makefile(metadata_define, typedefs_makefile, typedefs_cmak
     cmakefile.filename = typedefs_cmakefile + '.tmp'
     sourcefile = TypedefsSourcefile()
     sourcefile.filename = typedefs_sourcefile + '.tmp'
+    # Sort typedefs so that the order remains the same (for cmake to avoid) recompiling
+    typedefs.sort()
+    # Generate list of type definitions
     makefile.write(typedefs)
     cmakefile.write(typedefs)
     sourcefile.write(typedefs)
@@ -705,6 +708,8 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
     cmakefile.filename = caps_cmakefile + '.tmp'
     sourcefile = CapsSourcefile()
     sourcefile.filename = caps_sourcefile + '.tmp'
+    # Sort caps so that the order remains the same (for cmake to avoid) recompiling
+    caps.sort()
     # Generate list of caps with absolute path
     caps_with_abspath = [ os.path.abspath(os.path.join(caps_dir, cap)) for cap in caps ]
     makefile.write(caps_with_abspath)
