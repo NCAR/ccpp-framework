@@ -132,6 +132,7 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
 
     # Add any local variables (required for unit conversions, array transformations, ...)
     if tmpvars:
+        var_defs.append('')
         var_defs.append('! Local variables for unit conversions, array transformations, ...')
         for tmpvar in tmpvars:
             var_defs.append(tmpvar.print_def_local())
@@ -506,7 +507,7 @@ end module {module}
         self._caps = None
         self._module = None
         self._subroutines = None
-        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES.keys() }
+        self._parents = { ccpp_stage : collections.OrderedDict() for ccpp_stage in CCPP_STAGES.keys() }
         self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES.keys() }
         self._update_cap = True
         for key, value in kwargs.items():
@@ -885,7 +886,7 @@ end module {module}
         self._module = None
         self._subroutines = None
         self._pset = None
-        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
+        self._parents = { ccpp_stage : collections.OrderedDict() for ccpp_stage in CCPP_STAGES }
         self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
         self._update_cap = True
         for key, value in kwargs.items():
@@ -893,7 +894,7 @@ end module {module}
 
     def write(self, metadata_request, metadata_define, arguments):
         # Create an inverse lookup table of local variable names defined (by the host model) and standard names
-        standard_name_by_local_name_define = {}
+        standard_name_by_local_name_define = collections.OrderedDict()
         for standard_name in metadata_define.keys():
             standard_name_by_local_name_define[metadata_define[standard_name][0].local_name] = standard_name
 
@@ -915,10 +916,10 @@ end module {module}
             elif self._finalize and not ccpp_stage == 'finalize':
                 continue
             # For mapping local variable names to standard names
-            local_vars = {}
+            local_vars = collections.OrderedDict()
             # For mapping temporary variable names (for unit conversions, etc) to local variable names
             tmpvar_cnt = 0
-            tmpvars    = {}
+            tmpvars    = collections.OrderedDict()
             #
             body = ''
             # Variable definitions automatically added for subroutines
