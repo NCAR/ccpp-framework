@@ -68,12 +68,12 @@ def merge_dictionaries(x, y):
     that all entries are compatible. If one or more elements exist
     in both x and y, we therefore have to test compatibility of
     one of the items in each dictionary only."""
-    z = {}
+    z = collections.OrderedDict()
     x_keys = sorted(x.keys())
     y_keys = sorted(y.keys())
     z_keys = sorted(list(set(x_keys + y_keys)))
     for key in z_keys:
-        z[key] = {}
+        z[key] = collections.OrderedDict()
         if key in x_keys and key in y_keys:
             # Metadata dictionaries containing lists of variables of type Var for each key=standard_name
             if isinstance(x[key][0], Var):
@@ -272,7 +272,7 @@ def parse_variable_tables(filepath, filename):
     del file_lines
 
     # Find all modules within the file, and save the start and end lines
-    module_lines = {}
+    module_lines = collections.OrderedDict()
     line_counter = 0
     for line in lines:
         words = line.split()
@@ -280,7 +280,7 @@ def parse_variable_tables(filepath, filename):
             module_name = words[1].strip()
             if module_name in registry.keys():
                 raise Exception('Duplicate module name {0}'.format(module_name))
-            registry[module_name] = {}
+            registry[module_name] = collections.OrderedDict()
             module_lines[module_name] = { 'startline' : line_counter }
         elif len(words) > 1 and words[0].lower() == 'end' and words[1].lower() in ['module', 'program']:
             try:
@@ -514,7 +514,6 @@ def parse_scheme_tables(filepath, filename):
     metadata = collections.OrderedDict()
 
     # Registry of modules and derived data types in file
-    #registry = {}
     registry = collections.OrderedDict()
 
     # Argument lists of each subroutine in the file
@@ -549,7 +548,7 @@ def parse_scheme_tables(filepath, filename):
     del file_lines
 
     # Find all modules within the file, and save the start and end lines
-    module_lines = {}
+    module_lines = collections.OrderedDict()
     line_counter = 0
     for line in lines:
         # For the purpose of identifying module constructs, remove any trailing comments from line
@@ -560,7 +559,7 @@ def parse_scheme_tables(filepath, filename):
             module_name = words[1].strip()
             if module_name in registry.keys():
                 raise Exception('Duplicate module name {0}'.format(module_name))
-            registry[module_name] = {}
+            registry[module_name] = collections.OrderedDict()
             module_lines[module_name] = { 'startline' : line_counter }
         elif len(words) > 1 and words[0].lower() == 'end' and words[1].lower() == 'module':
             try:
@@ -609,7 +608,7 @@ def parse_scheme_tables(filepath, filename):
                                 raise Exception('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
                                                                                                              module_name, scheme_name))
                             if not scheme_name in registry[module_name].keys():
-                                registry[module_name][scheme_name] = {}
+                                registry[module_name][scheme_name] = collections.OrderedDict()
                             if subroutine_name in registry[module_name][scheme_name].keys():
                                 raise Exception('Duplicate subroutine name {0} in module {1}'.format(
                                                                        subroutine_name, module_name))
@@ -645,7 +644,7 @@ def parse_scheme_tables(filepath, filename):
             for subroutine_name in registry[module_name][scheme_name].keys():
                 # Record the order of variables in the call list to each subroutine in a list
                 if not scheme_name in arguments.keys():
-                    arguments[scheme_name] = {}
+                    arguments[scheme_name] = collections.OrderedDict()
                 if not subroutine_name in arguments[scheme_name].keys():
                     arguments[scheme_name][subroutine_name] = []
                 # Find the argument table corresponding to each subroutine by searching
@@ -725,6 +724,8 @@ def parse_scheme_tables(filepath, filename):
                             if not var_name in arguments[scheme_name][subroutine_name]:
                                 raise Exception('Mandatory CCPP variable {0} not declared in metadata table of subroutine {1}'.format(
                                                                                                            var_name, subroutine_name))
+            # Sort the dependencies to avoid differences in the auto-generated code
+            dependencies[scheme_name].sort()
 
         # Debugging output to screen and to XML
         if debug and len(metadata.keys()) > 0:
