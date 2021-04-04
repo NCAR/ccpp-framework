@@ -72,19 +72,19 @@ _INPUT_VARS_DDT = ["model_times", "number_of_model_times",
 _OUTPUT_VARS_DDT = ["ccpp_error_flag", "ccpp_error_message", "model_times",
                     "number_of_model_times"]
 _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT
+_PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
+                   "horizontal_dimension", "vertical_layer_dimension"]
 _REQUIRED_VARS_TEMP = ["ccpp_error_flag", "ccpp_error_message",
                        "potential_temperature",
                        "potential_temperature_at_interface",
                        "potential_temperature_increment",
                        "surface_air_pressure", "time_step_for_physics",
-                       "water_vapor_specific_humidity",
-                       "horizontal_dimension", "vertical_layer_dimension"]
+                       "water_vapor_specific_humidity"]
 _INPUT_VARS_TEMP = ["potential_temperature",
                     "potential_temperature_at_interface",
                     "potential_temperature_increment",
                     "surface_air_pressure", "time_step_for_physics",
-                    "water_vapor_specific_humidity",
-                    "horizontal_dimension", "vertical_layer_dimension"]
+                    "water_vapor_specific_humidity"]
 _OUTPUT_VARS_TEMP = ["ccpp_error_flag", "ccpp_error_message",
                      "potential_temperature",
                      "potential_temperature_at_interface",
@@ -106,14 +106,15 @@ def fields_string(field_type, field_list, sep):
     # end if
     return fmsg
 
-def check_datatable(database, report_type, check_list, sep=','):
+def check_datatable(database, report_type, check_list,
+                    sep=',', excl_prot=False):
     """Run a database report and check the return string.
     If an error is found, print an error message.
     Return the number of errors"""
     if sep is None:
         sep = ','
     # end if
-    test_str = datatable_report(database, report_type, sep)
+    test_str = datatable_report(database, report_type, sep, excl_prot=excl_prot)
     test_list = [x for x in test_str.split(sep) if x]
     missing = list()
     unexpected = list()
@@ -167,10 +168,16 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
 print("\nChecking variables for temp suite from python")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="temp_suite"),
-                              _REQUIRED_VARS_TEMP)
+                              _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP)
+NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
+                                                         value="temp_suite"),
+                              _REQUIRED_VARS_TEMP, excl_prot=True)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
                                                          value="temp_suite"),
-                              _INPUT_VARS_TEMP)
+                              _INPUT_VARS_TEMP + _PROT_VARS_TEMP)
+NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
+                                                         value="temp_suite"),
+                              _INPUT_VARS_TEMP, excl_prot=True)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
                                                          value="temp_suite"),
                               _OUTPUT_VARS_TEMP)

@@ -96,7 +96,11 @@ end module {module}'''
         (see self.indent).
         If <continue_line> is True, treat this line as a continuation of
         a previous statement."""
-        if '\n' in statement:
+        if isinstance(statement, list):
+            for stmt in statement:
+                self.write(stmt, indent_level, continue_line)
+            # End for
+        elif '\n' in statement:
             for stmt in statement.split('\n'):
                 self.write(stmt, indent_level, continue_line)
             # End for
@@ -134,6 +138,9 @@ end module {module}'''
                     elif outstr[sptr] == ',':
                         # Non-quote commas are where we can break
                         commas.append(sptr)
+                    elif outstr[sptr:sptr+2] == '//':
+                        # Non-quote commas are where we can break
+                        commas.append(sptr + 1)
                     # End if (no else, other characters will be ignored)
                     sptr = sptr + 1
                 # End while
@@ -141,7 +148,11 @@ end module {module}'''
                 if best >= self._line_fill:
                     best = self.find_best_break(commas)
                 # End if
-                if len(outstr) > best:
+                if best > self._line_max:
+                    # This is probably a bad situation that might not
+                    # compile, just write the line and hope for the best.
+                    line_continue = False
+                elif len(outstr) > best:
                     # If next line is just comment, do not use continue
                     # NB: Is this a Fortran issue or just a gfortran issue?
                     line_continue = outstr[best+1:].lstrip()[0] != '!'
