@@ -380,8 +380,6 @@ def parse_variable_tables(filepath, filename):
                 header_line_number = current_line_number + 1
                 line_counter += 1
                 continue
-            elif (words[0].startswith('!!') or words[0].startswith('!>')) and '\section' in words[0]:
-                raise Exception("Malformatted table found in {0} / {1} / {2}".format(filename, module_name, table_name))
             # If an argument table is found, parse it
             if in_table:
                 words = line.split('|')
