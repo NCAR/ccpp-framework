@@ -1192,9 +1192,8 @@ end module {module}
                                 # Add necessary local variables for looping over blocks
                                 var_defs_manual.append('integer :: ib, nb')
 
-                                # Define actions before, depending on intent
-                                if var.intent in [ 'in', 'inout' ]:
-                                    actions_in = '''        allocate({tmpvar}({dims}))
+                                # Define actions before. Always copy data in, independent of intent.
+                                actions_in = '''        allocate({tmpvar}({dims}))
         ib = 1
         do nb=1,{block_count}
           {tmpvar}({dimpad_before}ib:ib+{block_size}-1{dimpad_after}) = {var}
@@ -1208,12 +1207,7 @@ end module {module}
            dimpad_before=dimpad_before,
            dimpad_after=dimpad_after,
            )
-                                else:
-                                    actions_in = '''        allocate({tmpvar}({dims}))
-'''.format(tmpvar=tmpvar.local_name,
-           dims=','.join(alloc_dimensions),
-           )
-                                # Define actions after, depending on intent
+                                # Define actions after, depending on intent.
                                 if var.intent in [ 'inout', 'out' ]:
                                     actions_out = '''        ib = 1
         do nb=1,{block_count}
