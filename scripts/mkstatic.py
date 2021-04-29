@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 from common import encode_container
 from common import CCPP_STAGES
-from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
+from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_INTERNAL_VARIABLES
 from common import CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
@@ -900,6 +900,10 @@ end module {module}
 
         # First get target names of standard CCPP variables for subcycling and error handling
         ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
+        if CCPP_LOOP_EXTENT in metadata_request.keys():
+            ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
+        else:
+            ccpp_loop_extent_target_name = None
         ccpp_error_flag_target_name = metadata_request[CCPP_ERROR_FLAG_VARIABLE][0].target
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
         #
@@ -930,10 +934,8 @@ end module {module}
             conditionals = {}
             #
             for subcycle in self._subcycles:
-                if subcycle.loop > 1 and ccpp_stage == 'run':
-                    body += '''
-      associate(cnt => {loop_var_name})
-      do cnt=1,{loop_cnt}\n\n'''.format(loop_var_name=ccpp_loop_counter_target_name,loop_cnt=subcycle.loop)
+                subcycle_body = ''
+                # Call all schemes
                 for scheme_name in subcycle.schemes:
                     # actions_before and actions_after capture operations such
                     # as unit conversions, transformations that have to happen
@@ -1348,18 +1350,43 @@ end module {module}
         return
       end if
 '''.format(target_name_flag=ccpp_error_flag_target_name, target_name_msg=ccpp_error_msg_target_name, subroutine_name=subroutine_name)
-                    body += '''
+                    subcycle_body += '''
       {subroutine_call}
       {error_check}
     '''.format(subroutine_call=subroutine_call, error_check=error_check)
 
                     module_use += '   use {m}, only: {s}\n'.format(m=module_name, s=subroutine_name)
 
-                if subcycle.loop > 1 and ccpp_stage == 'run':
-                    body += '''
+                # If this subcycle calls any schemes, i.e. has any variables registered
+                # that need to be passed to the group for this stage, then handle the
+                # subcycle loops by prepending/appending the necessary code to subcycle_body
+                subcycle_body_prefix = '''
+      ! Start of next subcycle
+'''
+                subcycle_body_suffix = ''
+                if self.parents[ccpp_stage]:
+                    # Set subcycle loop extent if requested by any scheme
+                    if ccpp_loop_extent_target_name and ccpp_stage == 'run':
+                        subcycle_body_prefix += '''
+      ! Set loop extent variable for the following subcycle
+      {loop_extent_var_name} = {loop_cnt_max}\n\n'''.format(loop_extent_var_name=ccpp_loop_extent_target_name,
+                                                                                   loop_cnt_max=subcycle.loop)
+                    elif ccpp_loop_extent_target_name:
+                        subcycle_body_prefix += '''
+      ! Set loop extent variable for the following subcycle
+      {loop_extent_var_name} = 1\n\n'''.format(loop_extent_var_name=ccpp_loop_extent_target_name)
+                    # Create subcycle (Fortran do loop) if needed
+                    if subcycle.loop > 1 and ccpp_stage == 'run':
+                        subcycle_body_prefix += '''
+      associate(cnt => {loop_var_name})
+      do cnt=1,{loop_cnt_max}\n\n'''.format(loop_var_name=ccpp_loop_counter_target_name,
+                                                             loop_cnt_max=subcycle.loop)
+                        subcycle_body_suffix += '''
       end do
       end associate
 '''
+                # Add this subcycle's Fortran body to the group body
+                body += subcycle_body_prefix + subcycle_body + subcycle_body_suffix
 
             # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
