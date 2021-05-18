@@ -13,6 +13,9 @@ Provide a clear and concise description of the bug and what behavior you are exp
 
 ## Steps to Reproduce
 
+Provide the tag or hash of the CCPP Framework used to reproduce the bug
+Have you make any modifications to the CCPP Framework code?
+
 Please provide detailed steps for reproducing the issue.
 
 1. step 1
