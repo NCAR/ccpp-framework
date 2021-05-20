@@ -21,7 +21,7 @@ from parse_checkers import check_fortran_type, check_balanced_paren
 from parse_checkers import fortran_list_match
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
-from parse_checkers import check_dimensions, check_cf_standard_name
+from parse_checkers import check_units, check_dimensions, check_cf_standard_name
 from parse_checkers import check_default_value, check_valid_values
 from parse_log import init_log, set_log_level, flush_log
 from parse_log import set_log_to_stdout, set_log_to_null

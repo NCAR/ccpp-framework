@@ -12,6 +12,44 @@ from parse_source import CCPPError, ParseInternalError
 
 ########################################################################
 
+def check_units(test_val, prop_dict, error):
+    """Return <test_val> if a valid unit, otherwise, None
+    if <error> is True, raise an Exception if <test_val> is not valid.
+    >>> check_units('m/s', None, True)
+    'm/s'
+    >>> check_units('kg m-3', None, True)
+    'kg m-3'
+    >>> check_units('1', None, True)
+    '1'
+    >>> check_units('', None, False)
+
+    >>> check_units('', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '' is not a valid unit
+    >>> check_units(' ', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '' is not a valid unit
+    >>> check_units(['foo'], None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: ['foo'] is invalid; not a string
+    """
+    if not isinstance(test_val, str):
+        if error:
+            raise CCPPError("'{}' is invalid; not a string".format(test_val))
+        else:
+            test_val = None
+        # end if
+    else:
+        if not test_val.strip():
+            if error:
+                raise CCPPError("'{}' is not a valid unit".format(test_val))
+            else:
+                test_val = None
+            # end if
+        # end if
+    # end if
+    return test_val
+
 def check_dimensions(test_val, prop_dict, error, max_len=0):
     """Return <test_val> if a valid dimensions list, otherwise, None
     If <max_len> > 0, each string in <test_val> must not be longer than
@@ -54,7 +92,7 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
             raise CCPPError("'{}' is invalid; not a list".format(test_val))
         else:
             test_val = None
-        # End if
+        # end if
     else:
         for item in test_val:
             isplit = item.split(':')
@@ -65,9 +103,9 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                     raise CCPPError(errmsg.format(item))
                 else:
                     test_val = None
-                # End if
+                # end if
                 break
-            # End if
+            # end if
             # Check possible dim styles (a, a:b, a:, :b, :, ::, a:b:c, a::c)
             tdims = [x.strip() for x in isplit if len(x) > 0]
             for tdim in tdims:
@@ -88,9 +126,9 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                                 raise CCPPError(emsg.format(tdim))
                             else:
                                 valid = tdim
-                            # End if
-                        # End if
-                    # End if
+                            # end if
+                        # end if
+                    # end if
                 # End try
                 if not valid:
                     if error:
@@ -98,12 +136,12 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                         raise CCPPError(errmsg.format(item))
                     else:
                         test_val = None
-                    # End if
+                    # end if
                     break
-                # End if
-            # End for
-        # End for
-    # End if
+                # end if
+            # end for
+        # end for
+    # end if
     return test_val
 
 ########################################################################
@@ -139,17 +177,17 @@ def check_cf_standard_name(test_val, prop_dict, error):
         raise CCPPError("CCPP Standard Name cannot be blank")
     else:
         match = __CFID_RE.match(test_val)
-    # End if
+    # end if
     if match is None:
         if error:
             errmsg = "'{}' is not a valid CCPP Standard Name"
             raise CCPPError(errmsg.format(test_val))
         else:
             test_val = None
-        # End if
+        # end if
     else:
         test_val = test_val.lower()
-    # End if
+    # end if
     return test_val
 
 ########################################################################
@@ -210,14 +248,14 @@ def check_fortran_id(test_val, prop_dict, error, max_len=0):
             raise CCPPError("'{}' is not a valid Fortran identifier".format(test_val))
         else:
             test_val = None
-        # End if
+        # end if
     elif (max_len > 0) and (len(test_val) > max_len):
         if error:
             raise CCPPError("'{}' is too long (> {} chars)".format(test_val, max_len))
         else:
             test_val = None
-        # End if
-    # End if
+        # end if
+    # end if
     return test_val
 
 ########################################################################
@@ -320,7 +358,7 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
                 raise CCPPError(emsg.format(test_val))
             else:
                 test_val = None
-            # End if
+            # end if
         elif max_len > 0:
             tokens = test_val.strip().rstrip(')').split('(')
             tokens = [tokens[0].strip()] + [x.strip()
@@ -333,11 +371,11 @@ def check_fortran_ref(test_val, prop_dict, error, max_len=0):
                     else:
                         test_val = None
                         break
-                    # End if
-                # End if
-            # End for
-        # End if
-    # End if
+                    # end if
+                # end if
+            # end for
+        # end if
+    # end if
     return test_val
 
 ########################################################################
@@ -378,23 +416,23 @@ def check_local_name(test_val, prop_dict, error, max_len=0):
         protected = prop_dict['protected']
     else:
         protected = False
-    # End if
+    # end if
     if (prop_dict is not None) and ('type' in prop_dict):
         vtype = prop_dict['type']
     else:
         vtype = ""
-    # End if
+    # end if
     if (prop_dict is not None) and ('kind' in prop_dict):
         kind = prop_dict['kind']
     else:
         kind = ""
-    # End if
+    # end if
     if protected and vtype and check_fortran_literal(test_val, vtype, kind):
         valid_val = test_val
-    # End if
+    # end if
     if valid_val is None:
         valid_val = check_fortran_ref(test_val, prop_dict, error, max_len=max_len)
-    # End if
+    # end if
     return valid_val
 
 
@@ -437,14 +475,14 @@ def check_fortran_intrinsic(typestr, error=False):
     if (not match) and (typestr.lower()[0:6] == 'double'):
         # Special case for double precision
         match = FORTRAN_DP_RE.match(typestr.strip()) is not None
-    # End if
+    # end if
     if not match:
         if error:
             raise CCPPError("'{}' is not a valid Fortran type".format(typestr))
         else:
             typestr = None
-        # End if
-    # End if
+        # end if
+    # end if
     return typestr
 
 ########################################################################
@@ -489,15 +527,15 @@ def check_fortran_type(typestr, prop_dict, error):
     if match is None:
         match = registered_fortran_ddt_name(typestr)
         dt = " derived"
-    # End if
+    # end if
     if match is None:
         if error:
             emsg = "'{}' is not a valid{} Fortran type"
             raise CCPPError(emsg.format(typestr, dt))
         else:
             typestr = None
-        # End if
-    # End if
+        # end if
+    # end if
     return typestr
 
 ########################################################################
@@ -595,7 +633,7 @@ def check_fortran_literal(value, typestr, kind):
         vtype = 'real'
     else:
         vtype = typestr.lower()
-    # End if
+    # end if
     # Check complex first
     if vtype == 'complex':
         cvals = value.strip().split(',')
@@ -605,13 +643,13 @@ def check_fortran_literal(value, typestr, kind):
                 tp = 'real'
             elif ('.' in cvals[0]) or ('.' in cvals[1]):
                 valid = False
-            # End if
+            # end if
             if (cvals[0][0] == '(') and (cvals[1][-1] == ')'):
                 valid = valid and check_fortran_literal(cvals[0][1:], tp, kind)
                 valid = valid and check_fortran_literal(cvals[1][:-1], tp, kind)
             else:
                 valid = False
-            # End if
+            # end if
         else:
             valid = False
     elif valid:
@@ -623,18 +661,18 @@ def check_fortran_literal(value, typestr, kind):
             else:
                 val = vparts[0]
                 vkind = ''
-            # End if
+            # end if
         else:
             val = vparts[0]
             if len(vparts) > 1:
                 vkind = '_'.join(vparts[1:])
             else:
                 vkind = ''
-            # End if
-        # End if
+            # end if
+        # end if
         if vkind != kind.lower():
             valid = False
-        # End if, kind is okay, check value
+        # end if, kind is okay, check value
         if valid and (vtype == 'integer'):
             try:
                 vtest = int(val)
@@ -650,7 +688,7 @@ def check_fortran_literal(value, typestr, kind):
                 except ValueError as ve:
                     valid = False
                 # End try
-            # End if
+            # end if
         elif valid and (vtype == 'logical'):
             valid = (val.upper() == '.TRUE.') or (val.upper() == '.FALSE.')
         elif valid and (vtype == 'character'):
@@ -664,14 +702,14 @@ def check_fortran_literal(value, typestr, kind):
                     if (index%2 == 0) and (len(cparts[index]) > 0):
                         valid = False
                         break
-                    # End if
-                # End for
-            # End if (else okay)
+                    # end if
+                # end for
+            # end if (else okay)
         elif valid:
             errmsg = "ERROR: '{}' is not a Fortran intrinsic type"
             raise ParseInternalError(errmsg.format(typestr))
-        # End if (no else)
-    # End if
+        # end if (no else)
+    # end if
     return valid
 
 def check_default_value(test_val, prop_dict, error):
@@ -927,31 +965,31 @@ def check_balanced_paren(string, start=0, error=False):
             elif inchar is None:
                 inchar = string[index]
             # else in character context, keep going
-            # End if
+            # end if
         elif inchar is not None:
             # In character context, keep going
             pass
         elif string[index] == '(':
             if depth == 0:
                 begin = index
-            # End if
+            # end if
             depth = depth + 1
             if depth == 0:
                 break
-            # End if
+            # end if
         elif string[index] == ')':
             depth = depth - 1
             if depth == 0:
                 end = index
                 break
-            # End if
+            # end if
         # else just keep going
-        # End if
+        # end if
         index = index + 1
     # End while
     if (begin >= 0) and (end < 0) and error:
         raise CCPPError("ERROR: Unbalanced parenthesis in '{}'".format(string))
-    # End if
+    # end if
     return begin, end
 
 ########################################################################
