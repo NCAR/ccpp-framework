@@ -463,6 +463,9 @@ class Var(object):
     'in'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('units')
     'm/s'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('units') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Required property, 'units', missing, in <standard input>
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : ' ', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('units') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: foo: ' ' is not a valid unit, in <standard input>
