@@ -75,10 +75,95 @@ filenames""")
                         help="""Comment line to separate CCPP metadata tables
 (must start with a # or ; character)""")
 
-    parser.add_argument("--verbose", action='count',
+    parser.add_argument("--verbose", action='count', default=0,
                         help="Log more activity, repeat for increased output")
     pargs = parser.parse_args(args)
     return pargs
+
+###############################################################################
+def write_metadata_file(mfilename, ftables, sep):
+###############################################################################
+    """
+    Write the prototype metadata file, <mfilename>, based on the
+    headers (<ftables>) parsed from Fortran.
+    """
+    # Write the metadata file with all the items collected from Fortran
+    with open(mfilename, 'w') as outfile:
+        header_sep = ''
+        table_name = ''
+        for table in ftables:
+            # Write the table properties section
+            # Note that there may be extra tables depending on how the
+            # Fortran was parsed.
+            if (not table_name) or (table_name != table.table_name):
+                outfile.write("{}[ccpp-table-properties]{}".format(header_sep,
+                                                                   os.linesep))
+                header_sep = sep + os.linesep
+                table_name = table.table_name
+                outfile.write("  name = {}{}".format(table_name, os.linesep))
+                outfile.write("  type = {}{}".format(table.table_type,
+                                                     os.linesep))
+            # end if
+            for header in table.sections():
+                lname_dict = {'1':'ccpp_constant_one'}
+                outfile.write('{}[ccpp-arg-table]{}'.format(header_sep,
+                                                            os.linesep))
+                outfile.write('  name  = {}{}'.format(header.title,
+                                                      os.linesep))
+                outfile.write('  type  = {}{}'.format(header.header_type,
+                                                      os.linesep))
+                for var in header.variable_list():
+                    lname = var.get_prop_value('local_name')
+                    outfile.write('[ {} ]{}'.format(lname, os.linesep))
+                    prop = var.get_prop_value('standard_name')
+                    outfile.write('  standard_name = {}{}'.format(prop,
+                                                                  os.linesep))
+                    lname_dict[lname] = prop
+                    prop = var.get_prop_value('units')
+                    if not prop:
+                        prop = 'enter_units'
+                    # end if
+                    outfile.write('  units = {}{}'.format(prop, os.linesep))
+                    tprop = var.get_prop_value('type')
+                    kprop = var.get_prop_value('kind')
+                    if tprop == kprop:
+                        outfile.write('  ddt_type = {}'.format(tprop))
+                    else:
+                        outfile.write('  type = {}'.format(tprop.lower()))
+                        if kprop:
+                            outfile.write(' | kind = {}'.format(kprop.lower()))
+                        # end if
+                    # end if
+                    outfile.write(os.linesep)
+                    dims = var.get_dimensions()
+                    # Fill in standard names for dimensions
+                    dlist = list()
+                    if dims:
+                        for dim in dims:
+                            dslist = list()
+                            for dimspec in dim.split(':'):
+                                if dimspec and (dimspec in lname_dict):
+                                    dstr = lname_dict[dimspec]
+                                else:
+                                    dstr = unique_standard_name()
+                                # end if
+                                dslist.append(dstr)
+                            # end for
+                            dlist.append(':'.join(dslist))
+                        # end for
+                    # end if
+                    prop = '(' + ','.join(dlist) + ')'
+                    outfile.write('  dimensions = {}{}'.format(prop,
+                                                               os.linesep))
+                    if header.header_type == 'scheme':
+                        prop = var.get_prop_value('intent')
+                        outfile.write('  intent = {}{}'.format(prop,
+                                                               os.linesep))
+                    # end if
+                # end for
+            # end for
+        # end for
+    # end with
 
 ###############################################################################
 def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
@@ -91,69 +176,13 @@ def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
     for filename in filenames:
         logger.info('Looking for arg_tables from {}'.format(filename))
         reset_standard_name_counter()
-        fheaders = parse_fortran_file(filename, preproc_defs=preproc_defs,
-                                      logger=logger)
+        ftables = parse_fortran_file(filename, preproc_defs=preproc_defs,
+                                     logger=logger)
         # Create metadata filename
         filepath = '.'.join(os.path.basename(filename).split('.')[0:-1])
         fname = filepath + '.meta'
         mfilename = os.path.join(output_dir, fname)
-        # Write the metadata file with all the items collected from Fortran
-        with open(mfilename, 'w') as outfile:
-            header_sep = ''
-            for header in fheaders:
-                lname_dict = {'1':'ccpp_constant_one'}
-                outfile.write('{}[ccpp-arg-table]\n'.format(header_sep))
-                header_sep = sep + '\n'
-                outfile.write('  name  = {}\n'.format(header.title))
-                outfile.write('  type  = {}\n'.format(header.header_type))
-                for var in header.variable_list():
-                    lname = var.get_prop_value('local_name')
-                    outfile.write('[ {} ]\n'.format(lname))
-                    prop = var.get_prop_value('standard_name')
-                    outfile.write('  standard_name = {}\n'.format(prop))
-                    lname_dict[lname] = prop
-                    prop = var.get_prop_value('units')
-                    if not prop:
-                        prop = 'enter_units'
-                    # End if
-                    outfile.write('  units = {}\n'.format(prop))
-                    tprop = var.get_prop_value('type')
-                    kprop = var.get_prop_value('kind')
-                    if tprop == kprop:
-                        outfile.write('  ddt_type = {}'.format(tprop))
-                    else:
-                        outfile.write('  type = {}'.format(tprop.lower()))
-                        if kprop:
-                            outfile.write(' | kind = {}'.format(kprop.lower()))
-                        # End if
-                    # End if
-                    outfile.write('\n')
-                    dims = var.get_dimensions()
-                    # Fill in standard names for dimensions
-                    dlist = list()
-                    if dims:
-                        for dim in dims:
-                            dslist = list()
-                            for dimspec in dim.split(':'):
-                                if dimspec and (dimspec in lname_dict):
-                                    dstr = lname_dict[dimspec]
-                                else:
-                                    dstr = unique_standard_name()
-                                # End if
-                                dslist.append(dstr)
-                            # End for
-                            dlist.append(':'.join(dslist))
-                        # End for
-                    # End if
-                    prop = '(' + ','.join(dlist) + ')'
-                    outfile.write('  dimensions = {}\n'.format(prop))
-                    if header.header_type == 'scheme':
-                        prop = var.get_prop_value('intent')
-                        outfile.write('  intent = {}\n'.format(prop))
-                    # End if
-                # End for
-            # End for
-        # End with
+        write_metadata_file(mfilename, ftables, sep)
         meta_filenames.append(mfilename)
     return meta_filenames
 
@@ -168,7 +197,7 @@ def _main_func():
         set_log_level(_LOGGER, logging.DEBUG)
     elif verbosity > 0:
         set_log_level(_LOGGER, logging.INFO)
-    # End if
+    # end if
     # Make sure we know where output is going
     output_dir = os.path.abspath(args.output_root)
     # Optional table separator comment
@@ -186,15 +215,15 @@ def _main_func():
         if not os.path.isdir(output_dir):
             errmsg = "output-root, '{}', is not a directory"
             raise CCPPError(errmsg.format(args.output_root))
-        # End if
+        # end if
         if not os.access(output_dir, os.W_OK):
             errmsg = "Cannot write files to output-root ({})"
             raise CCPPError(errmsg.format(args.output_root))
-        # End if (output_dir is okay)
+        # end if (output_dir is okay)
     else:
         # Try to create output_dir (let it crash if it fails)
         os.makedirs(output_dir)
-    # End if
+    # end if
     # Parse the files and create metadata
     _ = parse_fortran_files(fort_files, preproc_defs,
                             output_dir, section_sep, _LOGGER)
@@ -213,8 +242,8 @@ if __name__ == "__main__":
             _LOGGER.exception(ccpp_err)
         else:
             _LOGGER.error(ccpp_err)
-        # End if
+        # end if
         sys.exit(1)
     finally:
         logging.shutdown()
-    # End try
+    # end try
