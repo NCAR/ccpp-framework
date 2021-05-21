@@ -18,7 +18,7 @@ from collections import OrderedDict
 # CCPP framework imports
 from parse_tools import check_local_name, check_fortran_type, context_string
 from parse_tools import FORTRAN_DP_RE, FORTRAN_SCALAR_REF_RE, fortran_list_match
-from parse_tools import check_dimensions, check_cf_standard_name
+from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
 from parse_tools import ParseContext, ParseSource
@@ -249,6 +249,13 @@ class VariableProperty(object):
     >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('3', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: Invalid value variable property, '3'
+    >>> VariableProperty('units', str, check_fn_in=check_units).valid_value('m s-1')
+    'm s-1'
+    >>> VariableProperty('units', str, check_fn_in=check_units).valid_value(' ')
+
+    >>> VariableProperty('units', str, check_fn_in=check_units).valid_value(' ', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: ' ' is not a valid unit
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('()')
     []
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x)')
@@ -454,6 +461,14 @@ class Var(object):
     'Hi mom'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('intent')
     'in'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('units')
+    'm/s'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('units') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Required property, 'units', missing, in <standard input>
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : ' ', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('units') #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: foo: ' ' is not a valid unit, in <standard input>
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'ttype' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid metadata variable property, 'ttype', in <standard input>
@@ -477,7 +492,8 @@ class Var(object):
                                      check_fn_in=check_cf_standard_name),
                     VariableProperty('long_name', str, optional_in=True,
                                      default_fn_in=standard_name_to_long_name),
-                    VariableProperty('units', str),
+                    VariableProperty('units', str,
+                                     check_fn_in=check_units),
                     VariableProperty('dimensions', list,
                                      check_fn_in=check_dimensions),
                     VariableProperty('type', str,
