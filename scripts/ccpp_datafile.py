@@ -72,6 +72,9 @@ _VALID_REPORTS = [{"report" : "host_files", "type" : bool,
                    "help" : ("Return a list of required output variable "
                              "standard names for suite, <SUITE_NAME>"),
                    "metavar" : "SUITE_NAME"},
+                  {"report" : "host_variables", "type" : bool,
+                   "help" : ("Return a list of required host model variable "
+                             "standard names")},
                   {"report" : "show", "type" : bool,
                    "help" :
                    "Pretty print the database contents to the screen"}]
@@ -246,15 +249,27 @@ def _command_line_parser():
         # end if
     # end for
     ###
-    parser.add_argument("--separator", type=str, required=False, default=",",
-                        metavar="SEP", dest="sep",
-                        help="String to separate items in a list")
-    help_str = "Screen width for '--show' line wrapping. -1 means do not wrap."
-    parser.add_argument("--line-wrap", type=int, required=False, default=-1,
+    defval = ","
+    help_str = "String to separate items in a list (default: '{}')"
+    parser.add_argument("--separator", type=str, required=False, default=defval,
+                        metavar="SEP", dest="sep", help=help_str.format(defval))
+    defval = False
+    help_str = ("Exclude protected variables (only has an effect if the "
+                "requested report is returning a list of variables)."
+                " (default: {})")
+    parser.add_argument("--exclude-protected", action='store_true',
+                        required=False,
+                        default=defval, help=help_str.format(defval))
+    defval = -1
+    help_str = ("Screen width for '--show' line wrapping. -1 means do not "
+                "wrap. (default: {})")
+    parser.add_argument("--line-wrap", type=int, required=False,
                         metavar="LINE_WIDTH", dest="line_wrap",
-                        help=help_str)
+                        default=defval, help=help_str.format(defval))
+    defval = 2
+    help_str = "Indent depth for '--show' output (default: {})"
     parser.add_argument("--indent", type=int, required=False, default=2,
-                        help="Indent depth for '--show' output")
+                        help=help_str.format(defval))
     return parser
 
 ###############################################################################
@@ -364,14 +379,18 @@ def _retrieve_dependencies(table):
     return sorted(result)
 
 ###############################################################################
-def _find_var_dictionary(table, dict_name, dict_type=None):
+def _find_var_dictionary(table, dict_name=None, dict_type=None):
 ###############################################################################
     """Find and return a var_dictionary named, <dict_name> in <table>.
     If not found, return None"""
     var_dicts = table.find("var_dictionaries")
     target_dict = None
+    if (dict_name is None) and (dict_type is None):
+        raise ValueError(("At least one of <dict_name> or <dict_type> must "
+                          "contain a string"))
+    # end if
     for vdict in var_dicts:
-        if ((vdict.get("name") == dict_name) and
+        if (((dict_name is None) or (vdict.get("name") == dict_name)) and
             ((dict_type is None) or (vdict.get("type") == dict_type))):
             target_dict = vdict
             break
@@ -438,21 +457,30 @@ def _is_variable_protected(table, var_name, var_dict):
             # end for
         # end if
         parent = var_dict.get("parent")
-        var_dict = _find_var_dictionary(table, parent)
+        if parent is not None:
+            var_dict = _find_var_dictionary(table, dict_name=parent)
+        else:
+            var_dict = None
+        # end if
     # end while
     return protected
 
 ###############################################################################
-def _retrieve_variable_list(table, suite_name, intent_type=None):
+def _retrieve_variable_list(table, suite_name,
+                            intent_type=None, excl_prot=True):
 ###############################################################################
     """Find and return a list of all the required variables in <suite_name>.
     If suite, <suite_name>, is not found in <table>, return an empty list.
     If <intent_type> is present, return only that variable type (input or
-    output)."""
+    output).
+    If <excl_prot> is True, do not include protected variables"""
     # Note that suites do not have call lists so we have to collect
     # all the variables from the suite's groups.
     var_set = set()
-    if intent_type is None:
+    excl_vars = list()
+    if intent_type == "host":
+        allowed_intents = list()
+    elif intent_type is None:
         allowed_intents = ['in', 'out', 'inout']
     elif intent_type == "input":
         allowed_intents = ['in', 'inout']
@@ -462,29 +490,67 @@ def _retrieve_variable_list(table, suite_name, intent_type=None):
         emsg = "Invalid intent_type, '{}'"
         raise CCPPDatatableError(emsg.format(intent_type))
     # end if
-    group_names = _retrieve_suite_group_names(table, suite_name)
-    for group in group_names:
-        cl_name = group + "_call_list"
-        group_dict = _find_var_dictionary(table, cl_name,
-                                          dict_type="group_call_list")
-        if group_dict is not None:
-            gvars = group_dict.find("variables")
-            if gvars is not None:
-                for var in gvars:
+    if excl_prot or (intent_type == "host"):
+        host_dict = _find_var_dictionary(table, dict_type="host")
+        if host_dict is not None:
+            hvars = host_dict.find("variables")
+            if hvars is not None:
+                for var in hvars:
                     vname = var.get("name")
-                    vintent = var.get("intent")
-                    protected = _is_variable_protected(table, vname, group_dict)
-                    if (not protected) and (vintent in allowed_intents):
-                        var_set.add(vname)
+                    if excl_prot:
+                        exclude = _is_variable_protected(table, vname,
+                                                         host_dict)
+                    else:
+                        exclude = False
+                    # end if
+                    if intent_type == "host":
+                        if not exclude:
+                            # Add to host variable set
+                            var_set.add(vname)
+                        # end if
+                    else:
+                        if exclude:
+                            # Add to list of protected variables
+                            excl_vars.append(vname)
+                        # end if
                     # end if
                 # end for
             # end if
         # end if
-    # end for
+    # end if
+    if intent_type != "host":
+        group_names = _retrieve_suite_group_names(table, suite_name)
+        for group in group_names:
+            cl_name = group + "_call_list"
+            group_dict = _find_var_dictionary(table, dict_name=cl_name,
+                                              dict_type="group_call_list")
+            if group_dict is not None:
+                gvars = group_dict.find("variables")
+                if gvars is not None:
+                    for var in gvars:
+                        vname = var.get("name")
+                        vintent = var.get("intent")
+                        if excl_prot:
+                            exclude = vname in excl_vars
+                            if not exclude:
+                                exclude = _is_variable_protected(table, vname,
+                                                                 group_dict)
+                            # end if
+                        else:
+                            exclude = False
+                        # end if
+                        if (vintent in allowed_intents) and (not exclude):
+                            var_set.add(vname)
+                        # end if
+                    # end for
+                # end if
+            # end if
+        # end for
+    # end if
     return sorted(var_set)
 
 ###############################################################################
-def datatable_report(datatable, action, sep):
+def datatable_report(datatable, action, sep, excl_prot=False):
 ###############################################################################
     """Perform a lookup <action> on <datatable> and return the result.
     """
@@ -516,13 +582,19 @@ def datatable_report(datatable, action, sep):
     elif action.action_is("suite_list"):
         result = _retrieve_suite_list(table)
     elif action.action_is("required_variables"):
-        result = _retrieve_variable_list(table, action.value)
+        result = _retrieve_variable_list(table, action.value,
+                                         excl_prot=excl_prot)
     elif action.action_is("input_variables"):
         result = _retrieve_variable_list(table, action.value,
-                                         intent_type="input")
+                                         intent_type="input",
+                                         excl_prot=excl_prot)
     elif action.action_is("output_variables"):
         result = _retrieve_variable_list(table, action.value,
-                                         intent_type="output")
+                                         intent_type="output",
+                                         excl_prot=excl_prot)
+    elif action.action_is("host_variables"):
+        result = _retrieve_variable_list(table, "host", excl_prot=excl_prot,
+                                         intent_type="host")
     else:
         result = ''
     # end if
@@ -963,7 +1035,8 @@ if __name__ == "__main__":
         if _ERRMSG:
             raise ValueError(_ERRMSG)
         # end if
-        REPORT = datatable_report(PARGS.datatable, _ACTION, PARGS.sep)
+        REPORT = datatable_report(PARGS.datatable, _ACTION,
+                                  PARGS.sep, PARGS.exclude_protected)
     # end if
     print("{}".format(REPORT.rstrip()))
     sys.exit(0)
