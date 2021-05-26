@@ -169,30 +169,38 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
             # DH* 2020-05-26
             # Legacy extension for inconsistent metadata (use of horizontal_dimension versus horizontal_loop_extent).
             # Since horizontal_dimension and horizontal_loop_extent have the same attributes (otherwise it doesn't
-            # make sense), we swap the standard name and add a note to the long name
+            # make sense), we swap the standard name and add a note to the long name - 2021-05-26: this is now an error.
             legacy_note = ''
             if standard_name == 'horizontal_loop_extent' and scheme_name and \
                     (table_name.endswith("_init") or table_name.endswith("_finalize")):
-                logging.warn("Legacy extension - replacing variable 'horizontal_loop_extent'" + \
-                             " with 'horizontal_dimension' in table {}".format(table_name))
-                standard_name = 'horizontal_dimension'
-                legacy_note = ' replaced by horizontal dimension (legacy extension)'
+                #logging.warn("Legacy extension - replacing variable 'horizontal_loop_extent'" + \
+                #             " with 'horizontal_dimension' in table {}".format(table_name))
+                #standard_name = 'horizontal_dimension'
+                #legacy_note = ' replaced by horizontal dimension (legacy extension)'
+                raise Exception("Legacy extension DISABLED: replacing variable 'horizontal_loop_extent'" + \
+                                " with 'horizontal_dimension' in table {}".format(table_name))
             elif standard_name == 'horizontal_dimension' and scheme_name and table_name.endswith("_run"):
-                logging.warn("Legacy extension - replacing variable 'horizontal_dimension' " + \
-                             "with 'horizontal_loop_extent' in table {}".format(table_name))
-                standard_name = 'horizontal_loop_extent'
-                legacy_note = ' replaced by horizontal loop extent (legacy extension)'
+                #logging.warn("Legacy extension - replacing variable 'horizontal_dimension'" + \
+                #             " with 'horizontal_loop_extent' in table {}".format(table_name))
+                #standard_name = 'horizontal_loop_extent'
+                #legacy_note = ' replaced by horizontal loop extent (legacy extension)'
+                raise Exception("Legacy extension DISABLED: replacing variable 'horizontal_dimension'" + \
+                                " with 'horizontal_loop_extent' in table {}".format(table_name))
             # Adjust dimensions
             dimensions = new_var.get_prop_value('dimensions')
             if scheme_name and (table_name.endswith("_init") or table_name.endswith("_finalize")) \
                     and 'horizontal_loop_extent' in dimensions:
-                logging.warn("Legacy extension - replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
-                             "for variable {} in table {}".format(standard_name,table_name))
-                dimensions = ['horizontal_dimension' if x=='horizontal_loop_extent' else x for x in dimensions]
+                #logging.warn("Legacy extension - replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
+                #             "for variable {} in table {}".format(standard_name,table_name))
+                #dimensions = ['horizontal_dimension' if x=='horizontal_loop_extent' else x for x in dimensions]
+                raise Exception("Legacy extension DISABLED: replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
+                                "for variable {} in table {}".format(standard_name,table_name))
             elif scheme_name and table_name.endswith("_run") and 'horizontal_dimension' in dimensions:
-                logging.warn("Legacy extension - replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
-                             "for variable {} in table {}".format(standard_name,table_name))
-                dimensions = ['horizontal_loop_extent' if x=='horizontal_dimension' else x for x in dimensions]
+                #logging.warn("Legacy extension - replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
+                #             "for variable {} in table {}".format(standard_name,table_name))
+                #dimensions = ['horizontal_loop_extent' if x=='horizontal_dimension' else x for x in dimensions]
+                raise Exception("Legacy extension DISABLED: replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
+                                "for variable {} in table {}".format(standard_name,table_name))
             # *DH  2020-05-26
             if new_var.get_prop_value('active').lower() == '.true.':
                 active = 'T'
