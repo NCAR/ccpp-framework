@@ -1380,11 +1380,15 @@ end module {module}
                         subcycle_body_prefix += '''
       associate(cnt => {loop_var_name})
       do cnt=1,{loop_cnt_max}\n\n'''.format(loop_var_name=ccpp_loop_counter_target_name,
-                                                             loop_cnt_max=subcycle.loop)
+                                                        loop_cnt_max=subcycle.loop)
                         subcycle_body_suffix += '''
       end do
       end associate
 '''
+                    else:
+                        subcycle_body_prefix += '''
+      {loop_var_name} = 1\n'''.format(loop_var_name=ccpp_loop_counter_target_name)
+
                 # Add this subcycle's Fortran body to the group body
                 body += subcycle_body_prefix + subcycle_body + subcycle_body_suffix
 
