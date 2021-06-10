@@ -41,6 +41,12 @@
   units = index
   dimensions = ()
   type = integer
+[loop_max]
+  standard_name = ccpp_loop_extent
+  long_name = loop extent for subcycling loops in CCPP
+  units = count
+  dimensions = ()
+  type = integer
 [blk_no]
   standard_name = ccpp_block_number
   long_name = number of block for explicit data blocking in CCPP
