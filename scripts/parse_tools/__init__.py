@@ -54,7 +54,7 @@ __all__ = [
     'FORTRAN_ID',
     'FORTRAN_SCALAR_REF',
     'FORTRAN_SCALAR_REF_RE',
-    'initLog',
+    'init_log',
     'ParseContext',
     'ParseInternalError',
     'ParseSource',
@@ -65,10 +65,10 @@ __all__ = [
     'read_xml_file',
     'registered_fortran_ddt_name',
     'reset_standard_name_counter',
-    'setLogLevel',
-    'setLogToFile',
-    'setLogToNull',
-    'setLogToStdout',
+    'set_log_level',
+    'set_log_to_file',
+    'set_log_to_null',
+    'set_log_to_stdout',
     'unique_standard_name',
     'validate_xml_file'
 ]

@@ -10,5 +10,5 @@
 [ vmr ]
   standard_name = volume_mixing_ratio_ddt
   dimensions = ()
-  ddt_type = banana
+  type = banana
   intent = inout

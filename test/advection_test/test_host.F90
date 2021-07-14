@@ -140,7 +140,7 @@ CONTAINS
        end if
        ! Check the input variables
        call ccpp_physics_suite_variables(test_suite%suite_name, test_list,    &
-            errmsg, errflg, input_vars_in=.true., output_vars_in=.false.)
+            errmsg, errflg, input_vars=.true., output_vars=.false.)
        if (errflg == 0) then
           check = check_list(test_list, test_suite%suite_input_vars,          &
                'input variable names', suite_name=test_suite%suite_name)
@@ -154,7 +154,7 @@ CONTAINS
        end if
        ! Check the output variables
        call ccpp_physics_suite_variables(test_suite%suite_name, test_list,    &
-            errmsg, errflg, input_vars_in=.false., output_vars_in=.true.)
+            errmsg, errflg, input_vars=.false., output_vars=.true.)
        if (errflg == 0) then
           check = check_list(test_list, test_suite%suite_output_vars,         &
                'output variable names', suite_name=test_suite%suite_name)

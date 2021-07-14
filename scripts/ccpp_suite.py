@@ -829,10 +829,6 @@ class SuiteObject(VarDictionary):
         dict_var = self.find_variable(source_var=var, any_scope=True)
         if dict_var is None:
             # No existing variable but add loop var match to call tree
-# XXgoldyXX: v debug only
-            if vstdname == 'horizontal_loop_begin':
-                raise ValueError("{}".format(vmatch))
-# XXgoldyXX: ^ debug only
             found_var = self.parent.add_variable_to_call_tree(dict_var,
                                                               vmatch=vmatch)
             new_vdims = vdims
@@ -2506,14 +2502,6 @@ class API(VarDictionary):
             out_file_name = suite.write(output_dir, logger)
             api_filenames.append(out_file_name)
         # end for
-# XXgoldyXX: v needed?
-#        # Write out the constituent file
-#        cmod_name = self.host_model.constituent_module
-#        const_file = ConstituentVarDict.write_constituent_module(output_dir,
-#                                                                 cmod_name,
-#                                                                 self.suites)
-#        api_filenames.append(const_file)
-# XXgoldyXX: ^ needed?
         return api_filenames
 
     @classmethod
@@ -2530,12 +2518,23 @@ class API(VarDictionary):
         return (errmsg_name, errflg_name)
 
     @staticmethod
-    def write_var_set_loop(ofile, varlist_name, var_list, indent):
-        """Write code to allocate and set <varlist_name> to <var_list>"""
-        ofile.write("allocate({}({}))".format(varlist_name, len(var_list)),
-                    indent)
+    def write_var_set_loop(ofile, varlist_name, var_list, indent,
+                           add_allocate=True, start_index=1, start_var=None):
+        """Write code to allocate (if <add_allocate> is True) and set
+        <varlist_name> to <var_list>. Elements of <varlist_name> are set
+        beginning at <start_index>.
+        """
+        if add_allocate:
+            ofile.write("allocate({}({}))".format(varlist_name, len(var_list)),
+                        indent)
+        # end if
         for ind, var in enumerate(var_list):
-            ofile.write("{}({}) = '{}'".format(varlist_name, ind+1, var),
+            if start_var:
+                ind_str = "{} + {}".format(start_var, ind + start_index)
+            else:
+                ind_str = "{}".format(ind + start_index)
+            # end if
+            ofile.write("{}({}) = '{}'".format(varlist_name, ind_str, var),
                         indent)
         # end for
 
@@ -2581,7 +2580,7 @@ class API(VarDictionary):
         ofile.write("end subroutine {}".format(API.__part_fname), 1)
         # Write out the suite required variable subroutine
         oline = "suite_name, variable_list, {errmsg}, {errflg}"
-        oline += ", input_vars_in, output_vars_in"
+        oline += ", input_vars, output_vars, struct_elements"
         inargs = oline.format(errmsg=errmsg_name, errflg=errflg_name)
         ofile.write("\nsubroutine {}({})".format(API.__vars_fname, inargs), 1)
         ofile.write("! Dummy arguments", 2)
@@ -2589,36 +2588,47 @@ class API(VarDictionary):
         ofile.write(oline, 2)
         oline = "character(len=*), allocatable, intent(out) :: variable_list(:)"
         ofile.write(oline, 2)
-        self._errmsg_var.write_def(ofile, 2, self)
-        self._errflg_var.write_def(ofile, 2, self)
-        oline = "logical, optional,             intent(in) :: input_vars_in"
+        self._errmsg_var.write_def(ofile, 2, self, extra_space=22)
+        self._errflg_var.write_def(ofile, 2, self, extra_space=22)
+        oline = "logical, optional,             intent(in) :: input_vars"
         ofile.write(oline, 2)
-        oline = "logical, optional,             intent(in) :: output_vars_in"
+        oline = "logical, optional,             intent(in) :: output_vars"
+        ofile.write(oline, 2)
+        oline = "logical, optional,             intent(in) :: struct_elements"
         ofile.write(oline, 2)
         ofile.write("! Local variables", 2)
-        ofile.write("logical {}:: input_vars".format(' '*34), 2)
-        ofile.write("logical {}:: output_vars".format(' '*34), 2)
-        ofile.write("\n", 0)
+        ofile.write("logical {}:: input_vars_use".format(' '*34), 2)
+        ofile.write("logical {}:: output_vars_use".format(' '*34), 2)
+        ofile.write("logical {}:: struct_elements_use".format(' '*34), 2)
+        ofile.write("integer {}:: num_vars".format(' '*34), 2)
+        ofile.write("", 0)
         ename = self._errflg_var.get_prop_value('local_name')
         ofile.write("{} = 0".format(ename), 2)
         ename = self._errmsg_var.get_prop_value('local_name')
         ofile.write("{} = ''".format(ename), 2)
-        ofile.write("if (present(input_vars_in)) then", 2)
-        ofile.write("input_vars = input_vars_in", 3)
+        ofile.write("if (present(input_vars)) then", 2)
+        ofile.write("input_vars_use = input_vars", 3)
         ofile.write("else", 2)
-        ofile.write("input_vars = .true.", 3)
+        ofile.write("input_vars_use = .true.", 3)
         ofile.write("end if", 2)
-        ofile.write("if (present(output_vars_in)) then", 2)
-        ofile.write("output_vars = output_vars_in", 3)
+        ofile.write("if (present(output_vars)) then", 2)
+        ofile.write("output_vars_use = output_vars", 3)
         ofile.write("else", 2)
-        ofile.write("output_vars = .true.", 3)
+        ofile.write("output_vars_use = .true.", 3)
+        ofile.write("end if", 2)
+        ofile.write("if (present(struct_elements)) then", 2)
+        ofile.write("struct_elements_use = struct_elements", 3)
+        ofile.write("else", 2)
+        ofile.write("struct_elements_use = .true.", 3)
         ofile.write("end if", 2)
         else_str = ''
         for suite in self.suites:
             parent = suite.parent
             # Collect all the suite variables
             oline = "{}if(trim(suite_name) == '{}') then"
-            suite_vars = [set(), set()] # input, output
+            input_vars = [set(), set(), set()] # leaves, arrrays, leaf elements
+            inout_vars = [set(), set(), set()] # leaves, arrrays, leaf elements
+            output_vars = [set(), set(), set()] # leaves, arrrays, leaf elements
             for part in suite.groups:
                 for var in part.call_list.variable_list():
                     stdname = var.get_prop_value("standard_name")
@@ -2630,27 +2640,235 @@ class API(VarDictionary):
                             protected = pvar.get_prop_value("protected")
                         # end if
                     # end if
-                    if (intent in ['in', 'inout']) and (not protected):
-                        suite_vars[0].add(stdname)
-                    # end if
-                    if intent in ['inout', 'out']:
-                        suite_vars[1].add(stdname)
+                    elements = var.intrinsic_elements(check_dict=self.parent)
+                    if (intent == 'in') and (not protected):
+                        if isinstance(elements, list):
+                            input_vars[1].add(stdname)
+                            input_vars[2].update(elements)
+                        else:
+                            input_vars[0].add(stdname)
+                        # end if
+                    elif intent == 'inout':
+                        if isinstance(elements, list):
+                            inout_vars[1].add(stdname)
+                            inout_vars[2].update(elements)
+                        else:
+                            inout_vars[0].add(stdname)
+                        # end if
+                    elif intent == 'out':
+                        if isinstance(elements, list):
+                            output_vars[1].add(stdname)
+                            output_vars[2].update(elements)
+                        else:
+                            output_vars[0].add(stdname)
+                        # end if
                     # end if
                 # end for
             # end for
+            # Figure out how many total variables to return and allocate
+            #   variable_list to that size
             ofile.write(oline.format(else_str, suite.name), 2)
-            ofile.write("if (input_vars .and. output_vars) then", 3)
-            var_list = list(suite_vars[0].union(suite_vars[1]))
-            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
-            ofile.write("else if (input_vars) then", 3)
-            var_list = list(suite_vars[0])
-            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
-            ofile.write("else if (output_vars) then", 3)
-            var_list = list(suite_vars[1])
-            API.write_var_set_loop(ofile, 'variable_list', var_list, 4)
+            ofile.write("if (input_vars_use .and. output_vars_use) then", 3)
+            have_elems = input_vars[2] or inout_vars[2] or output_vars[2]
+            if have_elems:
+                ofile.write("if (struct_elements_use) then", 4)
+                numvars = len(input_vars[0] | input_vars[2] | inout_vars[0] |
+                              inout_vars[2] | output_vars[0] | output_vars[2])
+                ofile.write("num_vars = {}".format(numvars), 5)
+                ofile.write("else", 4)
+            # end if
+            numvars = len(input_vars[0] | input_vars[1] | inout_vars[0] |
+                          inout_vars[1] | output_vars[0] | output_vars[1])
+            ofile.write("num_vars = {}".format(numvars), 5 if have_elems else 4)
+            if have_elems:
+                ofile.write("end if", 4)
+            # end if
+            ofile.write("else if (input_vars_use) then", 3)
+            have_elems = input_vars[2] or inout_vars[2]
+            if have_elems:
+                ofile.write("if (struct_elements_use) then", 4)
+                numvars = len(input_vars[0] | input_vars[2] |
+                              inout_vars[0] | inout_vars[2])
+                ofile.write("num_vars = {}".format(numvars), 5)
+                ofile.write("else", 4)
+            # end if
+            numvars = len(input_vars[0] | input_vars[1] |
+                          inout_vars[0] | inout_vars[1])
+            ofile.write("num_vars = {}".format(numvars), 5 if have_elems else 4)
+            if have_elems:
+                ofile.write("end if", 4)
+            # end if
+            ofile.write("else if (output_vars_use) then", 3)
+            have_elems = inout_vars[2] or output_vars[2]
+            if have_elems:
+                ofile.write("if (struct_elements_use) then", 4)
+                numvars = len(inout_vars[0] | inout_vars[2] |
+                              output_vars[0] | output_vars[2])
+                ofile.write("num_vars = {}".format(numvars), 5)
+                ofile.write("else", 4)
+            # end if
+            numvars = len(inout_vars[0] | inout_vars[1] |
+                          output_vars[0] | output_vars[1])
+            ofile.write("num_vars = {}".format(numvars), 5 if have_elems else 4)
+            if have_elems:
+                ofile.write("end if", 4)
+            # end if
             ofile.write("else", 3)
-            ofile.write("allocate(variable_list(0))\n", 4)
+            ofile.write("num_vars = 0", 4)
             ofile.write("end if", 3)
+            ofile.write("allocate(variable_list(num_vars))", 3)
+            # Now, fill in the variable_list array
+            # Start with inout variables
+            elem_start = 1
+            leaf_start = 1
+            leaf_written_set = inout_vars[0].copy()
+            elem_written_set = inout_vars[0].copy()
+            leaf_list = sorted(inout_vars[0])
+            if inout_vars[0] or inout_vars[1] or inout_vars[2]:
+                ofile.write("if (input_vars_use .or. output_vars_use) then", 3)
+                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 4,
+                                       add_allocate=False,
+                                       start_index=leaf_start)
+            # end if
+            leaf_start += len(leaf_list)
+            elem_start += len(leaf_list)
+            # elements which have not been written out
+            elem_list = sorted(inout_vars[2] - elem_written_set)
+            elem_written_set = elem_written_set | inout_vars[2]
+            leaf_list = sorted(inout_vars[1] - leaf_written_set)
+            leaf_written_set = leaf_written_set | inout_vars[1]
+            if elem_list or leaf_list:
+                ofile.write("if (struct_elements_use) then", 4)
+                API.write_var_set_loop(ofile, 'variable_list', elem_list, 5,
+                                       add_allocate=False,
+                                       start_index=elem_start)
+                elem_start += len(elem_list)
+                ofile.write("num_vars = {}".format(elem_start - 1), 5)
+                ofile.write("else", 4)
+                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 5,
+                                       add_allocate=False,
+                                       start_index=leaf_start)
+                leaf_start += len(leaf_list)
+                ofile.write("num_vars = {}".format(leaf_start - 1), 5)
+                ofile.write("end if", 4)
+            else:
+                ofile.write("num_vars = {}".format(len(leaf_written_set)),
+                            4 if leaf_written_set else 3)
+            # end if
+            if inout_vars[0] or inout_vars[1] or inout_vars[2]:
+                ofile.write("end if", 3)
+            # end if
+            # Write input variables
+            leaf_list = sorted(input_vars[0] - leaf_written_set)
+            # Are there any output variables which are also input variables
+            #    (e.g., for a different part (group) of the suite)?
+            # We need to collect them now in case <input_vars> is selected
+            #    but not <output_vars>.
+            leaf_cross_set = output_vars[0] & input_vars[0]
+            simp_cross_set = (output_vars[1] & input_vars[1]) - leaf_cross_set
+            elem_cross_set = (output_vars[2] & input_vars[2]) - leaf_cross_set
+            # Subtract the variables which have already been written out
+            leaf_cross_list = sorted(leaf_cross_set - leaf_written_set)
+            simp_cross_list = sorted(simp_cross_set - leaf_written_set)
+            elem_cross_list = sorted(elem_cross_set - elem_written_set)
+            # Next move back to processing the input variables
+            leaf_written_set = leaf_written_set | input_vars[0]
+            elem_list = sorted(input_vars[2] - elem_written_set)
+            elem_written_set = elem_written_set | input_vars[0] | input_vars[2]
+            have_inputs = elem_list or leaf_list
+            if have_inputs:
+                ofile.write("if (input_vars_use) then", 3)
+                # elements which have not been written out
+            # end if
+            API.write_var_set_loop(ofile, 'variable_list', leaf_list, 4,
+                                   add_allocate=False, start_var="num_vars",
+                                   start_index=1)
+            if leaf_list:
+                ofile.write("num_vars = num_vars + {}".format(len(leaf_list)),
+                            4)
+            # end if
+            leaf_start += len(leaf_list)
+            elem_start += len(leaf_list)
+            leaf_list = input_vars[1].difference(leaf_written_set)
+            leaf_written_set.union(input_vars[1])
+            if elem_list or leaf_list:
+                ofile.write("if (struct_elements_use) then", 4)
+                API.write_var_set_loop(ofile, 'variable_list', elem_list, 5,
+                                       add_allocate=False,
+                                       start_index=elem_start)
+                elem_start += len(elem_list) - 1
+                ofile.write("num_vars = {}".format(elem_start), 5)
+                ofile.write("else", 4)
+                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 5,
+                                       add_allocate=False,
+                                       start_index=leaf_start)
+                leaf_start += len(leaf_list) - 1
+                ofile.write("num_vars = {}".format(leaf_start), 5)
+                ofile.write("end if", 4)
+            # end if
+            if have_inputs:
+                ofile.write("end if", 3)
+            # end if
+            # Write output variables
+            leaf_list = sorted(output_vars[0].difference(leaf_written_set))
+            leaf_written_set = leaf_written_set.union(output_vars[0])
+            elem_written_set = elem_written_set.union(output_vars[0])
+            elem_list = sorted(output_vars[2].difference(elem_written_set))
+            elem_written_set = elem_written_set.union(output_vars[2])
+            have_outputs = elem_list or leaf_list
+            if have_outputs:
+                ofile.write("if (output_vars_use) then", 3)
+            # end if
+            leaf_start = 1
+            API.write_var_set_loop(ofile, 'variable_list', leaf_list, 4,
+                                   add_allocate=False, start_var="num_vars",
+                                   start_index=leaf_start)
+            leaf_start += len(leaf_list)
+            elem_start = leaf_start
+            leaf_list = output_vars[1].difference(leaf_written_set)
+            leaf_written_set.union(output_vars[1])
+            if elem_list or leaf_list:
+                ofile.write("if (struct_elements_use) then", 4)
+                API.write_var_set_loop(ofile, 'variable_list', elem_list, 5,
+                                       add_allocate=False, start_var="num_vars",
+                                       start_index=elem_start)
+                elem_start += len(elem_list)
+                ofile.write("else", 4)
+                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 5,
+                                       add_allocate=False, start_var="num_vars",
+                                       start_index=leaf_start)
+                leaf_start += len(leaf_list)
+                ofile.write("end if", 4)
+            # end if
+            if leaf_cross_list or elem_cross_list:
+                ofile.write("if (.not. input_vars_use) then", 4)
+                API.write_var_set_loop(ofile, 'variable_list', leaf_cross_list,
+                                       5, add_allocate=False,
+                                       start_var="num_vars",
+                                       start_index=leaf_start)
+                leaf_start += len(leaf_cross_list)
+                elem_start += len(leaf_cross_list)
+                if elem_cross_list or simp_cross_list:
+                    ofile.write("if (struct_elements_use) then", 5)
+                    API.write_var_set_loop(ofile, 'variable_list',
+                                           elem_cross_list, 6,
+                                           add_allocate=False,
+                                           start_var="num_vars",
+                                           start_index=elem_start)
+                    elem_start += len(elem_list)
+                    ofile.write("else", 5)
+                    API.write_var_set_loop(ofile, 'variable_list',
+                                           leaf_cross_list, 6,
+                                           add_allocate=False,
+                                           start_var="num_vars",
+                                           start_index=leaf_start)
+                    leaf_start += len(leaf_list)
+                    ofile.write("end if", 5)
+                # end if
+                ofile.write("end if", 4)
+            if have_outputs:
+                ofile.write("end if", 3)
+            # end if
             else_str = 'else '
         # end for
         ofile.write("else", 2)

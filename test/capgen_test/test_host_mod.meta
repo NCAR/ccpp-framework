@@ -77,7 +77,7 @@
 [ phys_state ]
   standard_name = physics_state_derived_type
   long_name = Physics State DDT
-  ddt_type = physics_state
+  type = physics_state
   dimensions = ()
 [ num_model_times ]
   standard_name = number_of_model_times
