@@ -899,7 +899,10 @@ end module {module}
             standard_name_by_local_name_define[metadata_define[standard_name][0].local_name] = standard_name
 
         # First get target names of standard CCPP variables for subcycling and error handling
-        ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
+        if CCPP_LOOP_COUNTER in metadata_request.keys():
+            ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
+        else:
+            ccpp_loop_counter_target_name = None
         if CCPP_LOOP_EXTENT in metadata_request.keys():
             ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
         else:
@@ -1385,7 +1388,7 @@ end module {module}
       end do
       end associate
 '''
-                    else:
+                    elif ccpp_loop_counter_target_name:
                         subcycle_body_prefix += '''
       {loop_var_name} = 1\n'''.format(loop_var_name=ccpp_loop_counter_target_name)
 

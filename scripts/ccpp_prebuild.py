@@ -326,6 +326,19 @@ def collect_physics_subroutines(scheme_files):
     os.chdir(BASEDIR)
     return (success, metadata_request, arguments_request, dependencies_request, schemes_in_files)
 
+def check_schemes_in_suites(arguments, suites):
+    """Check that all schemes that are requested in the suites exist"""
+    success = True
+    logging.info("Checking for existence of schemes in suites ...")
+    for suite in suites:
+        for group in suite.groups:
+            for subcycle in group.subcycles:
+                for scheme_name in subcycle.schemes:
+                    if not scheme_name in arguments.keys():
+                        success = False
+                        logging.critical("Scheme {} in suite {} cannot be found".format(scheme_name, suite.name))
+    return success
+
 def filter_metadata(metadata, arguments, dependencies, schemes_in_files, suites):
     """Remove all variables from metadata that are not used in the given suite;
     also remove information on argument lists, dependencies and schemes in files"""
@@ -781,6 +794,11 @@ def main():
     (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(config['scheme_files'])
     if not success:
         raise Exception('Call to collect_physics_subroutines failed.')
+
+    # Check that the schemes requested in the suites exist
+    success = check_schemes_in_suites(arguments_request, suites)
+    if not success:
+        raise Exception('Call to check_schemes_in_suites failed.')
 
     # Filter metadata/arguments - remove whatever is not included in suite definition files
     (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = filter_metadata(
