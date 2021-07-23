@@ -7,7 +7,7 @@ endif (NOT PROJECT)
 #------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.0)
 
-project(ccpp
+project(ccpp_framework
         VERSION 4.0.0
         LANGUAGES C CXX Fortran)
 
@@ -98,7 +98,7 @@ add_subdirectory(doc)
 #------------------------------------------------------------------------------
 # Configure and enable packaging
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Common Community Physics Package - Framework")
-set(CPACK_PACKAGE_VENDOR "GMTB NOAA/NCAR")
+set(CPACK_PACKAGE_VENDOR "DTC NOAA/NCAR")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})

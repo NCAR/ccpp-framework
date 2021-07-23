@@ -58,9 +58,9 @@ set(${PACKAGE}_LIB_DIRS
 
 #------------------------------------------------------------------------------
 # Define the executable and what to link
-add_library(ccpp STATIC ${SOURCES_F90})
-target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
-set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
+add_library(ccpp_framework STATIC ${SOURCES_F90})
+target_link_libraries(ccpp_framework LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
+set_target_properties(ccpp_framework PROPERTIES VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}
                                       LINK_FLAGS ${CMAKE_Fortran_FLAGS})
 
@@ -68,28 +68,28 @@ set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
 # Installation
 #
 if (PROJECT STREQUAL "CCPP-FV3")
-  target_include_directories(ccpp PUBLIC
+  target_include_directories(ccpp_framework PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
       $<INSTALL_INTERFACE:include>
   )
 elseif (PROJECT STREQUAL "CCPP-SCM")
-  target_include_directories(ccpp PUBLIC
+  target_include_directories(ccpp_framework PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
       $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
   )
 endif (PROJECT STREQUAL "CCPP-FV3")
 
 # Define where to install the library
-install(TARGETS ccpp
-        EXPORT ccpp-targets
+install(TARGETS ccpp_framework
+        EXPORT ccpp_framework-targets
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION lib
 )
 
 # Export our configuration
-install(EXPORT ccpp-targets
-        FILE ccpp-config.cmake
+install(EXPORT ccpp_framework-targets
+        FILE ccpp_framework-config.cmake
         DESTINATION lib/cmake
 )
 
