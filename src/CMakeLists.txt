@@ -69,12 +69,12 @@ set_target_properties(ccpp_framework PROPERTIES VERSION ${PROJECT_VERSION}
 #
 if (PROJECT STREQUAL "CCPP-FV3")
   target_include_directories(ccpp_framework PUBLIC
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
       $<INSTALL_INTERFACE:include>
   )
 elseif (PROJECT STREQUAL "CCPP-SCM")
   target_include_directories(ccpp_framework PUBLIC
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
       $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
   )
 endif (PROJECT STREQUAL "CCPP-FV3")
