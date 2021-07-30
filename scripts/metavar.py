@@ -1203,7 +1203,7 @@ class Var(object):
         If <check_dict> is not None, it is checked for children if none are
         found in this variable (via finding a variable in <check_dict> with
         the same standard name).
-        Currently, an array of DDTs is not processeed (return None) since
+        Currently, an array of DDTs is not processed (return None) since
         Fortran does not support a way to reference those elements.
         """
         if self.is_ddt():
