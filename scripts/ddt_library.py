@@ -19,27 +19,31 @@ from metadata_table import MetadataSection
 class VarDDT(Var):
     """A class to store a variable that is a component of a DDT (at any
     DDT nesting level).
-    <new_field> is the DDT component.
-    <var_ref> is a Var or VarDDT whose root originates in a model
-    dictionary.
-    The structure of the VarDDT object is:
-       The super class Var object is a copy of the model root Var.
-       The self._var_ref object is a VarDDT containing the top-level
-          field that leads to this component.
-    Thus, <new_field> (a Var) ends up at the end of a VarDDT chain.
     """
 
     def __init__(self, new_field, var_ref, logger=None, recur=False):
-        self._field = None
+        """Initialize a new VarDDT object.
+        <new_field> is the DDT component.
+        <var_ref> is a Var or VarDDT whose root originates in a model
+        dictionary.
+        The structure of the VarDDT object is:
+            The super class Var object is a copy of the model root Var.
+            The <var_ref object is a VarDDT containing the top-level
+                field that leads to this component.
+        Thus, <new_field> (a Var) ends up at the end of a VarDDT chain.
+        """
+        self.__field = None
         # Grab the info from the root of <var_ref>
         source = var_ref.source
         super(VarDDT, self).__init__(var_ref, source, context=source.context,
                                      logger=logger)
         # Find the correct place for <new_field>
         if isinstance(var_ref, Var):
-            self._field = new_field
+            # We are at a top level DDT var, set our field
+            self.__field = new_field
         else:
-            self._field = VarDDT(new_field, var_ref.field,
+            # Recurse to find correct (tail) location for <new_field>
+            self.__field = VarDDT(new_field, var_ref.field,
                                  logger=logger, recur=True)
         # End if
         if (not recur) and (logger is not None):
@@ -47,7 +51,7 @@ class VarDDT(Var):
         # End if
 
     def is_ddt(self):
-        '''Return True iff <self> is a DDT type.'''
+        """Return True iff <self> is a DDT type."""
         return True
 
     def get_parent_prop(self, name):
@@ -62,6 +66,17 @@ class VarDDT(Var):
             pvalue = super(VarDDT, self).get_prop_value(name)
         else:
             pvalue = self.field.get_prop_value(name)
+        # End if
+        return pvalue
+
+    def intrinsic_elements(self, check_dict=None):
+        """Return the Var intrinsic elements for the leaf Var object.
+        See Var.intrinsic_elem for details
+        """
+        if self.field is None:
+            pvalue = super(VarDDT, self).intrinsic_elements(check_dict=check_dict)
+        else:
+            pvalue = self.field.intrinsic_elements(check_dict=check_dict)
         # End if
         return pvalue
 
@@ -100,9 +115,9 @@ class VarDDT(Var):
         return call_str
 
     def write_def(self, outfile, indent, ddict, allocatable=False, dummy=False):
-        '''Write the definition line for this DDT.
+        """Write the definition line for this DDT.
         The type of this declaration is the type of the Var at the
-        end of the chain of references.'''
+        end of the chain of references."""
         if self.field is None:
             super(VarDDT, self).write_def(outfile, indent, ddict,
                                           allocatable=allocatable, dummy=dummy)
@@ -135,7 +150,7 @@ class VarDDT(Var):
         return lstr
 
     def __repr__(self):
-        '''Print representation for VarDDT objects'''
+        """Print representation for VarDDT objects"""
         # Note, recursion would be messy because of formatting issues
         lstr = ""
         sep = ""
@@ -153,7 +168,7 @@ class VarDDT(Var):
         return "<VarDDT {}>".format(lstr)
 
     def __str__(self):
-        '''Print string for VarDDT objects'''
+        """Print string for VarDDT objects"""
         return self.__repr__()
 
     @property
@@ -164,7 +179,7 @@ class VarDDT(Var):
     @property
     def field(self):
         "Return this objects field object, or None"
-        return self._field
+        return self.__field
 
 ###############################################################################
 class DDTLibrary(dict):

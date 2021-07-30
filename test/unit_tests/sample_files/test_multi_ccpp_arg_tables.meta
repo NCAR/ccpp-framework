@@ -50,7 +50,7 @@
 [ vmr ]
   standard_name = volume_mixing_ratio_ddt
   dimensions = ()
-  ddt_type = vmr_type
+  type = vmr_type
   intent = inout
 [ errmsg ]
   standard_name = ccpp_error_message
@@ -77,7 +77,7 @@
 [ vmr ]
   standard_name = volume_mixing_ratio_ddt
   dimensions = ()
-  ddt_type = vmr_type
+  type = vmr_type
   intent = out
 [ errmsg ]
   standard_name = ccpp_error_message

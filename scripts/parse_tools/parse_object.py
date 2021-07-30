@@ -55,6 +55,10 @@ class ParseObject(ParseContext):
         """Return the last line parsed"""
         return self.__line_end
 
+    def valid_line(self):
+        """Return True if the current line is valid"""
+        return (self.line_num >= 0) and (self.line_num < self.__num_lines)
+
     @property
     def file_name(self):
         """Return this object's filename"""
@@ -68,7 +72,7 @@ class ParseObject(ParseContext):
     def curr_line(self):
         """Return the current line (if valid) and the current line number.
         If the current line is invalid, return None"""
-        valid_line = (self.line_num >= 0) and (self.line_num < self.__num_lines)
+        valid_line = self.valid_line()
         _curr_line = None
         _my_curr_lineno = self.line_num
         if valid_line:

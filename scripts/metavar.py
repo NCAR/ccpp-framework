@@ -567,14 +567,19 @@ class Var(object):
     # All constituent props are optional so no check
 
     def __init__(self, prop_dict, source, context=None,
-                 invalid_ok=False, logger=None):
+                 invalid_ok=False, logger=None, clone_source=None):
         """Initialize a new Var object.
-        NB: invalid_ok=True is dangerous because it allows creation
-        of a Var object with invalid properties.
-        In order to prevent silent failures, invalid_ok requires a logger
-        in order to take effect.
-        if <prop_dict> is really a Var object, use that object's prop_dict."""
-        self._parent_var = None # for array references
+        NB: <invalid_ok>=True is dangerous because it allows creation
+            of a Var object with invalid properties.
+        In order to prevent silent failures, <invalid_ok> requires a logger
+            (passed through the <logger> input) in order to take effect.
+        If <prop_dict> is really a Var object, use that object's prop_dict.
+        If this Var object is a clone, record the original Var object
+            for reference
+        """
+        self.__parent_var = None # for array references
+        self.__children = list() # This Var's array references
+        self.__clone_source = clone_source
         if isinstance(prop_dict, Var):
             prop_dict = prop_dict.copy_prop_dict()
         # end if
@@ -920,7 +925,7 @@ class Var(object):
         # end if
         psource = ParseSource(source_name, source_type, context)
 
-        return Var(cprop_dict, psource)
+        return Var(cprop_dict, psource, clone_source=self)
 
     def get_prop_value(self, name):
         """Return the value of key, <name> if <name> is in this variable's
@@ -1186,6 +1191,56 @@ class Var(object):
         match = FORTRAN_SCALAR_REF_RE.match(local_name)
         return match
 
+    def intrinsic_elements(self, check_dict=None):
+        """Return a list of the standard names of this Var object's 'leaf'
+        intrinsic elements or this Var object's standard name if it is an
+        intrinsic 'leaf' variable.
+        If this Var object cannot be reduced to one or more intrinsic 'leaf'
+        variables (e.g., a DDT Var with no named elements), return None.
+        A 'leaf' intrinsic Var is a Var of intrinsic Fortran type which has
+        no children. If a Var has children, those children will be searched
+        to find leaves. If a Var is a DDT, its named elements are searched.
+        If <check_dict> is not None, it is checked for children if none are
+        found in this variable (via finding a variable in <check_dict> with
+        the same standard name).
+        Currently, an array of DDTs is not processed (return None) since
+        Fortran does not support a way to reference those elements.
+        """
+        if self.is_ddt():
+            element_names = None
+            raise ValueError("shouldn't happen?")
+            # To Do, find and process named elements of DDT
+        else:
+            children = self.children()
+            if (not children) and check_dict:
+                stdname = self.get_prop_value("standard_name")
+                pvar = check_dict.find_variable(standard_name=stdname,
+                                                any_scope=True)
+                if pvar:
+                    children = pvar.children()
+                # end if
+            # end if
+            if children:
+                element_names = list()
+                for child in children:
+                    child_elements = child.intrinsic_elements()
+                    if isinstance(child_elements, str):
+                        child_elements = [child_elements]
+                    # end if
+                    if child_elements:
+                        for elem in child_elements:
+                            if elem:
+                                element_names.append(elem)
+                            # end if
+                        # end for
+                    # end if
+                # end for
+            else:
+                element_names = self.get_prop_value('standard_name')
+            # end if
+        # end if
+        return element_names
+
     @classmethod
     def constituent_property_names(cls):
         """Return a list of the names of constituent properties"""
@@ -1194,23 +1249,43 @@ class Var(object):
     @property
     def parent(self):
         """Return this variable's parent variable (or None)"""
-        return self._parent_var
+        return self.__parent_var
 
     @parent.setter
     def parent(self, parent_var):
         """Set this variable's parent if not already set"""
-        if self._parent_var is not None:
+        if self.__parent_var is not None:
             emsg = 'Attempting to set parent for {} but parent already set'
             lname = self.get_prop_value('local_name')
             raise ParseInternalError(emsg.format(lname))
         # end if
         if isinstance(parent_var, Var):
-            self._parent_var = parent_var
+            self.__parent_var = parent_var
+            parent_var._add_child(self)
         else:
             emsg = 'Attempting to set parent for {}, bad parent type, {}'
             lname = self.get_prop_value('local_name')
             raise ParseInternalError(emsg.format(lname, type(parent_var)))
         # end if
+
+    def _add_child(self, cvar):
+        """Add <cvar> as a child of this Var object"""
+        if cvar not in self.__children:
+            self.__children.append(cvar)
+        # end if
+
+    def children(self):
+        """Return an iterator over this object's children or None if the
+        object has no children."""
+        children = self.__children
+        if not children:
+            pvar = self
+            while (not children) and pvar.__clone_source:
+                pvar = pvar.__clone_source
+                children = pvar.children()
+            # end while
+        # end if
+        return iter(children) if children else None
 
     @property
     def context(self):
@@ -1290,7 +1365,7 @@ class Var(object):
         return Var.find_vertical_dimension(vdims)[0]
 
     def write_def(self, outfile, indent, wdict, allocatable=False,
-                  dummy=False, add_intent=None):
+                  dummy=False, add_intent=None, extra_space=0):
         """Write the definition line for the variable to <outfile>.
         If <dummy> is True, include the variable's intent.
         If <dummy> is True but the variable has no intent, add the
@@ -1368,14 +1443,14 @@ class Var(object):
         # end if
         if self.is_ddt():
             dstr = "type({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-            cspc = comma + ' '*(13 - len(kind))
+            cspc = comma + ' '*(extra_space + 13 - len(kind))
         else:
             if kind:
                 dstr = "{type}({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(17 - len(vtype) - len(kind))
+                cspc = comma + ' '*(extra_space + 17 - len(vtype) - len(kind))
             else:
                 dstr = "{type}{cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(19 - len(vtype))
+                cspc = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,

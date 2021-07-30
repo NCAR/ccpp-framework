@@ -118,6 +118,7 @@ CONTAINS
        character(len=128), allocatable :: test_list(:)
 
        check_suite = .true.
+       write(6, *) "Checking suite ", trim(test_suite%suite_name)
        ! First, check the suite parts
        call ccpp_physics_suite_part_list(test_suite%suite_name, test_list,    &
             errmsg, errflg)
@@ -134,7 +135,7 @@ CONTAINS
        end if
        ! Check the input variables
        call ccpp_physics_suite_variables(test_suite%suite_name, test_list,    &
-            errmsg, errflg, input_vars_in=.true., output_vars_in=.false.)
+            errmsg, errflg, input_vars=.true., output_vars=.false.)
        if (errflg == 0) then
           check = check_list(test_list, test_suite%suite_input_vars,          &
                'input variable names', suite_name=test_suite%suite_name)
@@ -148,7 +149,7 @@ CONTAINS
        end if
        ! Check the output variables
        call ccpp_physics_suite_variables(test_suite%suite_name, test_list,    &
-            errmsg, errflg, input_vars_in=.false., output_vars_in=.true.)
+            errmsg, errflg, input_vars=.false., output_vars=.true.)
        if (errflg == 0) then
           check = check_list(test_list, test_suite%suite_output_vars,         &
                'output variable names', suite_name=test_suite%suite_name)
@@ -354,44 +355,44 @@ CONTAINS
    character(len=cs), target :: test_parts1(1) = (/ 'physics         ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
    character(len=cm), target :: test_invars1(6) = (/                          &
-        'potential_temperature_increment     ',                               &
         'potential_temperature               ',                               &
-        'time_step_for_physics               ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ' /)
-   character(len=cm), target :: test_outvars1(6) = (/                         &
-        'ccpp_error_message                  ',                               &
-        'ccpp_error_flag                     ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'potential_temperature               ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ' /)
-   character(len=cm), target :: test_reqvars1(8) = (/                         &
-        'potential_temperature_increment     ',                               &
-        'potential_temperature               ',                               &
-        'time_step_for_physics               ',                               &
         'potential_temperature_at_interface  ',                               &
         'surface_air_pressure                ',                               &
         'water_vapor_specific_humidity       ',                               &
-        'ccpp_error_message                  ',                               &
-        'ccpp_error_flag                     ' /)
+        'potential_temperature_increment     ',                               &
+        'time_step_for_physics               ' /)
+   character(len=cm), target :: test_outvars1(6) = (/                         &
+        'potential_temperature               ',                               &
+        'potential_temperature_at_interface  ',                               &
+        'surface_air_pressure                ',                               &
+        'water_vapor_specific_humidity       ',                               &
+        'ccpp_error_flag                     ',                               &
+        'ccpp_error_message                  ' /)
+   character(len=cm), target :: test_reqvars1(8) = (/                         &
+        'potential_temperature               ',                               &
+        'potential_temperature_at_interface  ',                               &
+        'surface_air_pressure                ',                               &
+        'water_vapor_specific_humidity       ',                               &
+        'potential_temperature_increment     ',                               &
+        'time_step_for_physics               ',                               &
+        'ccpp_error_flag                     ',                               &
+        'ccpp_error_message                  ' /)
 
    character(len=cm), target :: test_invars2(3) = (/                          &
-        'surface_air_pressure                ',                               &
+        'model_times                         ',                               &
         'number_of_model_times               ',                               &
-        'model_times                         ' /)
+        'surface_air_pressure                ' /)
 
    character(len=cm), target :: test_outvars2(4) = (/                         &
         'ccpp_error_flag                     ',                               &
         'ccpp_error_message                  ',                               &
-        'number_of_model_times               ',                               &
-        'model_times                         ' /)
+        'model_times                         ',                               &
+        'number_of_model_times               ' /)
 
    character(len=cm), target :: test_reqvars2(5) = (/                         &
-        'surface_air_pressure                ',                               &
-        'number_of_model_times               ',                               &
         'model_times                         ',                               &
+        'number_of_model_times               ',                               &
+        'surface_air_pressure                ',                               &
         'ccpp_error_flag                     ',                               &
         'ccpp_error_message                  ' /)
     type(suite_info) :: test_suites(2)

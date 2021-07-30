@@ -132,6 +132,7 @@ from parse_tools import ParseObject, ParseSource, ParseContext, context_string
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools import FORTRAN_ID, FORTRAN_SCALAR_REF, FORTRAN_SCALAR_REF_RE
 from parse_tools import check_fortran_ref, check_fortran_id
+from parse_tools import check_fortran_intrinsic
 from parse_tools import register_fortran_ddt_name, unique_standard_name
 
 ########################################################################
@@ -843,9 +844,11 @@ class MetadataSection(ParseSource):
                 for prop in properties:
                     pname = prop[0].strip().lower()
                     pval_str = prop[1].strip()
-                    if pname == 'ddt_type':
+                    if ((pname == 'type') and
+                        (not check_fortran_intrinsic(pval_str, error=False))):
                         if pval_str in known_ddts:
                             pval = pval_str
+                            pname = 'ddt_type'
                         else:
                             errmsg = "Unknown DDT type, {}".format(pval_str)
                             self.__pobj.add_syntax_err(errmsg)

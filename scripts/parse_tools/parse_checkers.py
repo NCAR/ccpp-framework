@@ -471,11 +471,12 @@ def check_fortran_intrinsic(typestr, error=False):
     >>> check_fortran_intrinsic("complex(kind=r8)")
 
     """
-    match = typestr.strip().lower() in FORTRAN_INTRINSIC_TYPES
-    if (not match) and (typestr.lower()[0:6] == 'double'):
+    chk_type = typestr.strip().lower()
+    match = chk_type in FORTRAN_INTRINSIC_TYPES
+    if (not match) and (chk_type[0:6] == 'double'):
         # Special case for double precision
-        match = FORTRAN_DP_RE.match(typestr.strip()) is not None
-    # end if
+        match = FORTRAN_DP_RE.match(chk_type) is not None
+    # End if
     if not match:
         if error:
             raise CCPPError("'{}' is not a valid Fortran type".format(typestr))

@@ -1,7 +1,8 @@
 """Public API for the fortran_parser library
 """
-import os
+from __future__ import absolute_import
 import sys
+import os.path
 sys.path.insert(0, os.path.dirname(__file__))
 
 # pylint: disable=wrong-import-position
