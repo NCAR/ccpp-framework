@@ -21,8 +21,8 @@ script:
 notifications:
   email:
     recipients:
-      - schramm@ucar.edu
+#      - schramm@ucar.edu
       - dom.heinzeller@noaa.gov
-      - goldy@ucar.edu
+#      - goldy@ucar.edu
     on_success: always # default: change
     on_failure: always # default: always
