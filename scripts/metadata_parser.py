@@ -12,8 +12,9 @@ from common import encode_container, CCPP_STAGES
 from mkcap import Var
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
-from parse_fortran import Ftype_type_decl
-from metadata_table import MetadataHeader
+from parse_fortran import FtypeTypeDecl
+from parse_checkers import registered_fortran_ddt_names
+from metadata_table import MetadataTable, parse_metadata_file
 
 # Output: This routine converts the argument tables for all subroutines / typedefs / kind / module variables
 # into dictionaries suitable to be used with ccpp_prebuild.py (which generates the fortran code for the caps)
@@ -105,135 +106,118 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
     if filename in NEW_METADATA_SAVE.keys():
         new_metadata_headers = NEW_METADATA_SAVE[filename]
     else:
-        new_metadata_headers = MetadataHeader.parse_metadata_file(filename)
+        new_metadata_headers = parse_metadata_file(filename, known_ddts=registered_fortran_ddt_names(),
+                                                                    logger=logging.getLogger(__name__))
         NEW_METADATA_SAVE[filename] = new_metadata_headers
 
     # Record dependencies for the metadata table (only applies to schemes)
-    has_property_table = False
     dependencies = []
 
     # Convert new metadata for requested table to old metadata dictionary
     metadata = collections.OrderedDict()
     for new_metadata_header in new_metadata_headers:
-        # Module or DDT tables
-        if not scheme_name:
-            # Module property tables
-            if new_metadata_header.property_table and new_metadata_header.title == module_name:
-                # If this is a ccpp-table-properties table for a module, it can only contain dependencies;
-                # ensure that for module tables, the header type is "module"
-                if not new_metadata_header.header_type == 'module':
-                    raise Exception("Unsupported header_type '{}' for table properties for modules".format(
-                                                                          new_metadata_header.header_type))
-                dependencies += new_metadata_header.dependencies
-                has_property_table = True
-                continue
-            # DDT property tables
-            elif new_metadata_header.property_table:
-                # If this is a ccpp-table-properties table for a DDT, it can only contain dependencies;
-                # ensure that for DDT tables, the header type is "ddt"
-                if not new_metadata_header.header_type == 'ddt':
-                    raise Exception("Unsupported header_type '{}' for table properties for DDTs".format(
-                                                                        new_metadata_header.header_type))
-                dependencies += new_metadata_header.dependencies
-                has_property_table = True
-                continue
-            # Module or DDT argument tables
-            else:
-                if not new_metadata_header.title == table_name:
+        for metadata_section in new_metadata_header.sections():
+            # Module or DDT tables
+            if not scheme_name:
+                # Module property tables
+                if not metadata_section.title == table_name:
                     # Skip this table, since it is not requested right now
                     continue
+
                 # Distinguish between module argument tables and DDT argument tables
-                if new_metadata_header.title == module_name:
+                if metadata_section.title == module_name:
                     container = encode_container(module_name)
                 else:
-                    container = encode_container(module_name, new_metadata_header.title)
-        else:
-            # Scheme property tables
-            if new_metadata_header.property_table and new_metadata_header.title == scheme_name:
-                # If this is a ccpp-table-properties table for a scheme, it can only contain dependencies;
-                # ensure that for scheme tables, the header type is "scheme"
-                if not new_metadata_header.header_type == 'scheme':
-                    raise Exception("Unsupported header_type '{}' for table properties for schemes".format(
-                                                                          new_metadata_header.header_type))
-                dependencies += new_metadata_header.dependencies
-                has_property_table = True
-                continue
-            # Scheme argument tables
+                    container = encode_container(module_name, metadata_section.title)
+
+                # Add to dependencies
+                if new_metadata_header.relative_path:
+                    dependencies += [ os.path.join(new_metadata_header.relative_path, x) for x in new_metadata_header.dependencies]
+                else:
+                    dependencies += new_metadata_header.dependencies
             else:
-                if not new_metadata_header.title == table_name:
+                # Scheme property tables
+                if not metadata_section.title == table_name:
                     # Skip this table, since it is not requested right now
                     continue
-                container = encode_container(module_name, scheme_name, table_name)
-        for new_var in new_metadata_header.variable_list():
-            standard_name = new_var.get_prop_value('standard_name')
-            # DH* 2020-05-26
-            # Legacy extension for inconsistent metadata (use of horizontal_dimension versus horizontal_loop_extent).
-            # Since horizontal_dimension and horizontal_loop_extent have the same attributes (otherwise it doesn't
-            # make sense), we swap the standard name and add a note to the long name - 2021-05-26: this is now an error.
-            legacy_note = ''
-            if standard_name == 'horizontal_loop_extent' and scheme_name and \
-                    (table_name.endswith("_init") or table_name.endswith("_finalize")):
-                #logging.warn("Legacy extension - replacing variable 'horizontal_loop_extent'" + \
-                #             " with 'horizontal_dimension' in table {}".format(table_name))
-                #standard_name = 'horizontal_dimension'
-                #legacy_note = ' replaced by horizontal dimension (legacy extension)'
-                raise Exception("Legacy extension DISABLED: replacing variable 'horizontal_loop_extent'" + \
-                                " with 'horizontal_dimension' in table {}".format(table_name))
-            elif standard_name == 'horizontal_dimension' and scheme_name and table_name.endswith("_run"):
-                #logging.warn("Legacy extension - replacing variable 'horizontal_dimension'" + \
-                #             " with 'horizontal_loop_extent' in table {}".format(table_name))
-                #standard_name = 'horizontal_loop_extent'
-                #legacy_note = ' replaced by horizontal loop extent (legacy extension)'
-                raise Exception("Legacy extension DISABLED: replacing variable 'horizontal_dimension'" + \
-                                " with 'horizontal_loop_extent' in table {}".format(table_name))
-            # Adjust dimensions
-            dimensions = new_var.get_prop_value('dimensions')
-            if scheme_name and (table_name.endswith("_init") or table_name.endswith("_finalize")) \
-                    and 'horizontal_loop_extent' in dimensions:
-                #logging.warn("Legacy extension - replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
-                #             "for variable {} in table {}".format(standard_name,table_name))
-                #dimensions = ['horizontal_dimension' if x=='horizontal_loop_extent' else x for x in dimensions]
-                raise Exception("Legacy extension DISABLED: replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
-                                "for variable {} in table {}".format(standard_name,table_name))
-            elif scheme_name and table_name.endswith("_run") and 'horizontal_dimension' in dimensions:
-                #logging.warn("Legacy extension - replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
-                #             "for variable {} in table {}".format(standard_name,table_name))
-                #dimensions = ['horizontal_loop_extent' if x=='horizontal_dimension' else x for x in dimensions]
-                raise Exception("Legacy extension DISABLED: replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
-                                "for variable {} in table {}".format(standard_name,table_name))
-            # *DH  2020-05-26
-            if new_var.get_prop_value('active').lower() == '.true.':
-                active = 'T'
-            elif new_var.get_prop_value('active').lower() == '.false.':
-                active = 'F'
-            else:
-                # Replace multiple whitespaces, preserve case
-                active = ' '.join(new_var.get_prop_value('active').split())
-            var = Var(standard_name = standard_name,
-                      long_name     = new_var.get_prop_value('long_name') + legacy_note,
-                      units         = new_var.get_prop_value('units'),
-                      local_name    = new_var.get_prop_value('local_name'),
-                      type          = new_var.get_prop_value('type'),
-                      dimensions    = dimensions,
-                      container     = container,
-                      kind          = new_var.get_prop_value('kind'),
-                      intent        = new_var.get_prop_value('intent'),
-                      optional      = 'T' if new_var.get_prop_value('optional') else 'F',
-                      active        = active,
-                      )
-            # Check for duplicates in same table
-            if standard_name in metadata.keys():
-               raise Exception("Error, multiple definitions of standard name {} in new metadata table {}".format(standard_name, table_name))
-            metadata[standard_name] = [var]
 
-    # CCPP property tables are mandatory
-    if not has_property_table:
-        if scheme_name:
-            raise Exception("Metadata file {} for scheme {} does not have a [ccpp-table-properties] section,".format(filename, scheme_name) + \
-                                                                      " or the 'name = ...' attribute in the [ccpp-table-properties] is wrong")
-        else:
-            raise Exception("Metadata file {} for table {} does not have a [ccpp-table-properties] section,".format(filename, table_name) + \
-                                                                      " or the 'name = ...' attribute in the [ccpp-table-properties] is wrong")
+                container = encode_container(module_name, scheme_name, table_name)
+
+                # Add to dependencies
+                if new_metadata_header.relative_path:
+                    dependencies += [ os.path.join(new_metadata_header.relative_path, x) for x in new_metadata_header.dependencies]
+                else:
+                    dependencies += new_metadata_header.dependencies
+
+            for new_var in metadata_section.variable_list():
+                standard_name = new_var.get_prop_value('standard_name')
+                # DH* 2020-05-26
+                # Legacy extension for inconsistent metadata (use of horizontal_dimension versus horizontal_loop_extent).
+                # Since horizontal_dimension and horizontal_loop_extent have the same attributes (otherwise it doesn't
+                # make sense), we swap the standard name and add a note to the long name - 2021-05-26: this is now an error.
+                legacy_note = ''
+                if standard_name == 'horizontal_loop_extent' and scheme_name and \
+                        (table_name.endswith("_init") or table_name.endswith("_finalize")):
+                    #logging.warn("Legacy extension - replacing variable 'horizontal_loop_extent'" + \
+                    #             " with 'horizontal_dimension' in table {}".format(table_name))
+                    #standard_name = 'horizontal_dimension'
+                    #legacy_note = ' replaced by horizontal dimension (legacy extension)'
+                    raise Exception("Legacy extension DISABLED: replacing variable 'horizontal_loop_extent'" + \
+                                    " with 'horizontal_dimension' in table {}".format(table_name))
+                elif standard_name == 'horizontal_dimension' and scheme_name and table_name.endswith("_run"):
+                    #logging.warn("Legacy extension - replacing variable 'horizontal_dimension'" + \
+                    #             " with 'horizontal_loop_extent' in table {}".format(table_name))
+                    #standard_name = 'horizontal_loop_extent'
+                    #legacy_note = ' replaced by horizontal loop extent (legacy extension)'
+                    raise Exception("Legacy extension DISABLED: replacing variable 'horizontal_dimension'" + \
+                                    " with 'horizontal_loop_extent' in table {}".format(table_name))
+
+                # Adjust dimensions
+                dimensions = new_var.get_prop_value('dimensions')
+                if scheme_name and (table_name.endswith("_init") or table_name.endswith("_finalize")) \
+                        and 'horizontal_loop_extent' in dimensions:
+                    #logging.warn("Legacy extension - replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
+                    #             "for variable {} in table {}".format(standard_name,table_name))
+                    #dimensions = ['horizontal_dimension' if x=='horizontal_loop_extent' else x for x in dimensions]
+                    raise Exception("Legacy extension DISABLED: replacing dimension 'horizontal_loop_extent' with 'horizontal_dimension' " + \
+                                    "for variable {} in table {}".format(standard_name,table_name))
+                elif scheme_name and table_name.endswith("_run") and 'horizontal_dimension' in dimensions:
+                    #logging.warn("Legacy extension - replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
+                    #             "for variable {} in table {}".format(standard_name,table_name))
+                    #dimensions = ['horizontal_loop_extent' if x=='horizontal_dimension' else x for x in dimensions]
+                    raise Exception("Legacy extension DISABLED: replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
+                                    "for variable {} in table {}".format(standard_name,table_name))
+                elif not scheme_name and 'horizontal_dimension' in dimensions:
+                    raise Exception("Legacy extension DISABLED: replacing dimension 'horizontal_dimension' with 'horizontal_loop_extent' " + \
+                                    "for variable {} in table {}".format(standard_name,table_name))
+                # *DH  2020-05-26
+
+                if not new_var.get_prop_value('active'):
+                    # If it doesn't have an active attribute, then the variable is always active (default)
+                    active = 'T'
+                elif new_var.get_prop_value('active').lower() == '.true.':
+                    active = 'T'
+                elif new_var.get_prop_value('active') and new_var.get_prop_value('active').lower() == '.false.':
+                    active = 'F'
+                else:
+                    # Replace multiple whitespaces, preserve case
+                    active = ' '.join(new_var.get_prop_value('active').split())
+                var = Var(standard_name = standard_name,
+                          long_name     = new_var.get_prop_value('long_name') + legacy_note,
+                          units         = new_var.get_prop_value('units'),
+                          local_name    = new_var.get_prop_value('local_name'),
+                          type          = new_var.get_prop_value('type').lower(),
+                          dimensions    = dimensions,
+                          container     = container,
+                          kind          = new_var.get_prop_value('kind'),
+                          intent        = new_var.get_prop_value('intent'),
+                          optional      = 'T' if new_var.get_prop_value('optional') else 'F',
+                          active        = active,
+                          )
+                # Check for duplicates in same table
+                if standard_name in metadata.keys():
+                   raise Exception("Error, multiple definitions of standard name {} in new metadata table {}".format(standard_name, table_name))
+                metadata[standard_name] = [var]
 
     return (metadata, dependencies)
 
@@ -350,10 +334,10 @@ def parse_variable_tables(filepath, filename):
                 # If type is not the first word, ignore the word
                 elif j>0:
                     continue
-                # Detect type definition using Ftype_type_decl class, routine
+                # Detect type definition using FtypeTypeDecl class, routine
                 # type_def_line and extract type_name
                 else:
-                    type_declaration = Ftype_type_decl.type_def_line(line.strip())
+                    type_declaration = FtypeTypeDecl.type_def_line(line.strip())
                     if in_type:
                         raise Exception('Nested definitions of derived types not supported')
                     in_type = True

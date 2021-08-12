@@ -1,0 +1,28 @@
+language: python
+
+python:
+  - "2.7"
+  - "3.6"
+  - "3.7"
+
+branches:
+  only:
+    - feature/capgen
+
+install:
+  - pip install pylint
+
+script:
+  - env PYTHONPATH=scripts:${PYTHONPATH} pylint --rcfile ./test/.pylintrc ./test/unit_tests/test_metadata_table.py
+  - env PYTHONPATH=scripts:${PYTHONPATH} pylint --rcfile ./test/.pylintrc ./test/unit_tests/test_metadata_scheme_file.py
+  - python test/unit_tests/test_metadata_table.py
+  - python test/unit_tests/test_metadata_scheme_file.py
+
+notifications:
+  email:
+    recipients:
+      - schramm@ucar.edu
+      - dom.heinzeller@noaa.gov
+      - goldy@ucar.edu
+    on_success: always # default: change
+    on_failure: always # default: always

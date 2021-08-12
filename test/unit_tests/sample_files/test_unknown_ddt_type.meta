@@ -1,0 +1,14 @@
+[ccpp-table-properties]
+  name = make_ddt
+  type = scheme
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = make_ddt_run
+  type = scheme
+[ vmr ]
+  standard_name = volume_mixing_ratio_ddt
+  dimensions = ()
+  type = banana
+  intent = inout

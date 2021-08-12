@@ -102,9 +102,6 @@ def import_config(configfile, builddir):
     config['static_api_dir']            = ccpp_prebuild_config.STATIC_API_DIR.format(build_dir=builddir)
     config['static_api_srcfile']        = ccpp_prebuild_config.STATIC_API_SRCFILE.format(build_dir=builddir)
 
-    # Add model-independent, CCPP-internal variable definition files
-    config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
-
     # To handle new metadata: import DDT references (if exist)
     try:
         config['typedefs_new_metadata'] = ccpp_prebuild_config.TYPEDEFS_NEW_METADATA
@@ -217,6 +214,8 @@ def convert_local_name_from_new_metadata(metadata, standard_name, typedefs_new_m
         indices = array_reference.lstrip('(').rstrip(')').split(',')
         indices_local_names = []
         for index_range in indices:
+            # Remove leading and trailing whitespaces
+            index_range = index_range.strip()
             # Leave colons-only dimension alone
             if index_range == ':':
                 indices_local_names.append(index_range)
@@ -225,6 +224,8 @@ def convert_local_name_from_new_metadata(metadata, standard_name, typedefs_new_m
             dimensions = index_range.split(':')
             dimensions_local_names = []
             for dimension in dimensions:
+                # Remove leading and trailing whitespaces
+                dimension = dimension.strip()
                 # Leave literals alone
                 try:
                     int(dimension)
