@@ -34,7 +34,7 @@ CCPP_STANDARD_VARS = {
     {'local_name' : '1', 'protected' : 'True',
      'standard_name' : 'ccpp_constant_one',
      'long_name' : "CCPP constant one",
-     'units' : 'none', 'dimensions' : '()', 'type' : 'integer'},
+     'units' : '1', 'dimensions' : '()', 'type' : 'integer'},
     'ccpp_error_flag' :
     {'local_name' : 'errflg', 'standard_name' : 'ccpp_error_flag',
      'long_name' : "CCPP error flag",
@@ -42,7 +42,7 @@ CCPP_STANDARD_VARS = {
     'ccpp_error_message' :
     {'local_name' : 'errmsg', 'standard_name' : 'ccpp_error_message',
      'long_name' : "CCPP error message",
-     'units' : 'none', 'dimensions' : '()', 'type' : 'character',
+     'units' : '1', 'dimensions' : '()', 'type' : 'character',
      'kind' : 'len=512'},
     'horizontal_dimension' :
     {'local_name' : 'total_columns',
@@ -574,19 +574,6 @@ class Var(object):
 #        __var_propdict[p.name] = p
         if not p.optional:
             __required_var_props.append(p.name)
-### <<<<<<< HEAD
-###         # End if
-###     # End for
-### 
-###     def __init__(self, prop_dict, source, invalid_ok=False, logger=None):
-###         """NB: invalid_ok=True is dangerous because it allows creation
-###         of a Var object with invalid properties.
-###         In order to prevent silent failures, invalid_ok requires a logger
-###         in order to take effect."""
-###         if source.type == 'SCHEME':
-###             required_props = Var.__required_var_props
-###             master_propdict = Var.__var_propdict
-### =======
         # end if
     # end for
     __var_propdict.update({p.name : p for p in __constituent_props})
@@ -614,7 +601,6 @@ class Var(object):
 # XXgoldyXX: v don't fill in default properties?
 #            mstr_propdict = Var.__var_propdict
 # XXgoldyXX: ^ don't fill in default properties?
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
         else:
             self.__required_props = Var.__required_spec_props
 # XXgoldyXX: v don't fill in default properties?
@@ -637,7 +623,7 @@ class Var(object):
             if 'units' not in prop_dict:
                 prop_dict['units'] = ""
             # end if
-            prop_dict['kind'] = ""
+            prop_dict['kind'] = prop_dict['ddt_type']
             del prop_dict['ddt_type']
             self.__intrinsic = False
         else:
@@ -1485,77 +1471,12 @@ class Var(object):
                                   sname=stdname), indent)
 
     def is_ddt(self):
-### <<<<<<< HEAD
-###         '''Return True iff <self> is a DDT type.'''
-###         vtype = self.get_prop_value('type')
-###         return registered_fortran_ddt_name(vtype) is not None
-### 
-###     def host_arg_str(self, hvar, host_model, ddt):
-###         '''Create the proper statement of a piece of a host-model variable.
-###         If ddt is True, we can only have a single element selected
-###         '''
-###         hstr = hvar.get_prop_value('local_name')
-###         # Turn the dimensions string into a proper list and take the correct one
-###         hdims = hvar.get_dimensions()
-###         dimsep = ''
-###         # Does the local name have any extra indices?
-###         match = array_ref_re.match(hstr.strip())
-###         if match is not None:
-###             hstr = match.group(1)
-###             # Find real names for all the indices
-###             tokens = [x.strip() for x in match.group(2).strip().split(',')]
-###             for token in tokens:
-###                 hsdim = self.find_host_model_var(token, host_model)
-###                 dimstr = dimstr + dimsep + hsdim
-###             # End for
-###         # End if
-###         if len(hdims) > 0:
-###             dimstr = '('
-###         else:
-###             dimstr = ''
-###         # End if
-###         for hdim in hdims:
-###             if ddt and (':' in hdim):
-###                 raise CCPPError("Invalid DDT dimension spec {}({})".format(hstr, hdimval))
-###             else:
-###                 # Find the host model variable for each dim
-###                 hsdims = self.find_host_model_var(hdim, host_model)
-###                 dimstr = dimstr + dimsep + hsdims
-###                 dimsep = ', '
-###             # End if
-###         # End for
-###         if len(hdims) > 0:
-###             dimstr = dimstr + ')'
-###         # End if
-###         return hstr + dimstr
-### 
-###     def print_debug(self):
-###         '''Print the data retrieval line for the variable.'''
-###         str='''Contents of {local_name} (* = mandatory for compatibility):
-###         standard_name = {standard_name} *
-###         long_name     = {long_name}
-###         units         = {units} *
-###         local_name    = {local_name}
-###         type          = {type} *
-###         dimensions    = {dimensions} *
-###         kind          = {kind} *
-### '''
-###         if 'intent' in self.__spec_propdict.keys():
-###             str += '        intent        = {intent}\n'
-###         if 'optional' in self.__spec_propdict.keys():
-###             str += '        optional      = {optional}\n'
-###         if self._context is not None:
-###             str += '        context       = {}'.format(self._context)
-###         # End if
-###         return str.format(**self._prop_dict)
-### =======
         """Return True iff <self> is a DDT type."""
         return not self.__intrinsic
 
     def is_constituent(self):
         """Return True iff <self> is a constituent variable."""
         return self.__is_constituent
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
 
     def __str__(self):
         """Print representation or string for Var objects"""

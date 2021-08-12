@@ -202,6 +202,17 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 else:
                     # Replace multiple whitespaces, preserve case
                     active = ' '.join(new_var.get_prop_value('active').split())
+
+                # DH* 20210812
+                # Workaround for Fortran DDTs incorrectly having the type of
+                # the DDT copied into the kind attribute in parse_metadata_file
+                if new_var.is_ddt() and new_var.get_prop_value('kind'):
+                    kind = ''
+                else:
+                    kind = new_var.get_prop_value('kind')
+                #kind = new_var.get_prop_value('kind')
+                # *DH 20210812
+
                 var = Var(standard_name = standard_name,
                           long_name     = new_var.get_prop_value('long_name') + legacy_note,
                           units         = new_var.get_prop_value('units'),
@@ -209,7 +220,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                           type          = new_var.get_prop_value('type').lower(),
                           dimensions    = dimensions,
                           container     = container,
-                          kind          = new_var.get_prop_value('kind'),
+                          kind          = kind,
                           intent        = new_var.get_prop_value('intent'),
                           optional      = 'T' if new_var.get_prop_value('optional') else 'F',
                           active        = active,
