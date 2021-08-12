@@ -2,11 +2,7 @@
 """A module for the base, ParseObject class"""
 
 # CCPP framework imports
-### <<<<<<< HEAD
-### from .parse_source import ParseContext, CCPPError
-### =======
 from parse_source    import ParseContext, CCPPError, context_string
-# >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
 
 ########################################################################
 

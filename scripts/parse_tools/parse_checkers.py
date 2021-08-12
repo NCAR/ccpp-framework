@@ -7,12 +7,7 @@ import re
 import sys
 import os.path
 sys.path.insert(0, os.path.dirname(__file__))
-###  CCPP framework imports
-### <<<<<<< HEAD
-### from .parse_source import CCPPError
-### =======
 from parse_source import CCPPError, ParseInternalError
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
 
 ########################################################################
 
@@ -207,13 +202,6 @@ FORTRAN_ID = r"([A-Za-z][A-Za-z0-9_]*)"
 __FID_RE = re.compile(FORTRAN_ID+r"$")
 # Note that the scalar array reference expressions below are not really for
 # scalar references because a colon can be a placeholder, unlike in Fortran code
-### <<<<<<< HEAD
-### FORTRAN_SCALAR_ARREF = r"\(\s*(?:"+FORTRAN_ID+r"|"+LITERAL_INT+r"|[:])\s*(?:,\s*(?:"+FORTRAN_ID+r"|"+LITERAL_INT+r"|[:])\s*){0,6}\)"
-### FORTRAN_SCALAR_REF = r"(?:"+"(?:"+LITERAL_INT+r"|"+FORTRAN_ID+")"+r"\s*"+"(?:"+LITERAL_INT+r"|"+FORTRAN_SCALAR_ARREF+r")"+r")"
-### _FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
-### FORTRAN_INTRINSIC_TYPES = [ "integer", "real", "logical", "complex",
-###                             "double precision", "character" ]
-### =======
 __FORTRAN_AID = r"(?:[A-Za-z][A-Za-z0-9_]*)"
 __FORT_INT = r"[0-9]+"
 __FORT_DIM = r"(?:"+__FORTRAN_AID+r"|[:]|"+__FORT_INT+r")"
@@ -223,7 +211,6 @@ FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+__FORTRAN_SCALAR_ARREF+r")"
 FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_INTRINSIC_TYPES = ["integer", "real", "logical", "complex",
                            "double precision", "character"]
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
 FORTRAN_TYPE_RE = re.compile(r"(?i)type\s*\(\s*("+FORTRAN_ID+r")\s*\)")
 
@@ -542,18 +529,6 @@ def check_fortran_type(typestr, prop_dict, error):
     if match is None:
         match = registered_fortran_ddt_name(typestr)
         dt = " derived"
-### <<<<<<< HEAD
-###     # End if
-###     # DH* 20190913 - skip checking if a DDT is registered at this time
-###     #if match is None:
-###     #    if error:
-###     #        raise CCPPError("'{}' is not a valid{} Fortran type".format(typestr, dt))
-###     #    else:
-###     #        typestr = None
-###     #    # End if
-###     ## End if
-###     # *DH 20190913
-### =======
     # end if
     if match is None:
         if error:
@@ -563,7 +538,6 @@ def check_fortran_type(typestr, prop_dict, error):
             typestr = None
         # end if
     # end if
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
     return typestr
 
 ########################################################################

@@ -125,18 +125,6 @@ Notes on the input format:
 """
 
 # Python library imports
-### <<<<<<< HEAD
-### from __future__ import print_function
-### import os
-### import re
-### # CCPP framework imports
-### from common      import CCPP_STAGES
-### from metavar     import Var, VarDictionary
-### from parse_tools import ParseObject, ParseSource, register_fortran_ddt_name
-### from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
-### from parse_tools import LITERAL_INT, FORTRAN_ID, FORTRAN_SCALAR_REF
-### from parse_tools import check_fortran_ref
-### =======
 import difflib
 import os.path
 import re
@@ -271,7 +259,6 @@ def find_scheme_names(filename):
         # end if
     # end while
     return scheme_names
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
 
 ########################################################################
 
@@ -605,41 +592,15 @@ class MetadataSection(ParseSource):
 
 """
 
-### <<<<<<< HEAD
-###     __header_start__ = re.compile(r"(?i)\s*\[\s*(ccpp-table-properties|ccpp-arg-table)\s*\]")
-### 
-###     __var_start__ = re.compile(r"^\[\s*("+FORTRAN_ID+r"|"+LITERAL_INT+r"|"+FORTRAN_SCALAR_REF+r")\s*\]$")
-### =======
     __header_start = re.compile(r"(?i)\s*\[\s*ccpp-arg-table\s*\]")
 
     __var_start = re.compile(r"^\[\s*"+FORTRAN_ID+r"\s*\]$")
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
 
     __vref_start = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
 
-### <<<<<<< HEAD
-###     __html_template__ = """
-### <html>
-### <head>
-### <title>{title}</title>
-### <meta charset="UTF-8">
-### </head>
-### <body>
-### <table border="1">
-### {header}{contents}</table>
-### </body>
-### </html>
-### """
-### 
-###     def __init__(self, parse_object=None,
-###                  title=None, type_in=None, module=None, var_dict=None,
-###                  property_table=False, logger=None):
-###         self._pobj = parse_object
-### =======
     def __init__(self, table_name, table_type, parse_object=None,
                  title=None, type_in=None, module=None, process_type=None,
                  var_dict=None, known_ddts=None, logger=None):
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
         """If <parse_object> is not None, initialize from the current file and
         location in <parse_object>.
         If <parse_object> is None, initialize from <title>, <type>, <module>,
@@ -704,10 +665,6 @@ class MetadataSection(ParseSource):
             # end for
             self.__start_context = None
         else:
-### <<<<<<< HEAD
-###             self.__init_from_file__(parse_object, property_table, logger)
-###         # End if
-### =======
             if known_ddts is None:
                 known_ddts = list()
             # end if
@@ -718,30 +675,12 @@ class MetadataSection(ParseSource):
         if self.header_type == 'ddt':
             register_fortran_ddt_name(self.title)
         # end if
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
         # Categorize the variables
         self._var_intents = {'in' : list(), 'out' : list(), 'inout' : list()}
         for var in self.variable_list():
             intent = var.get_prop_value('intent')
             if intent is not None:
                 self._var_intents[intent].append(var)
-### <<<<<<< HEAD
-###             # End if
-###         # End for
-### 
-###     def __init_from_file__(self, parse_object, property_table, logger):
-###         # Read the table preamble, assume the caller already figured out
-###         #  the first line of the header using the table_start method.
-###         curr_line, curr_line_num = self._pobj.next_line()
-###         self._table_title = None
-###         self._header_type = None
-###         self._module_name = None
-###         self._dependencies = []
-###         relative_path_local = ''
-###         self._property_table = property_table
-###         while (curr_line is not None) and (not self.variable_start(curr_line)) and (not MetadataHeader.table_start(curr_line)):
-###             for property in self.parse_config_line(curr_line):
-### =======
             # end if
         # end for
 
@@ -771,7 +710,6 @@ class MetadataSection(ParseSource):
                (not MetadataSection.header_start(curr_line)) and
                (not MetadataTable.table_start(curr_line))):
             for prop in _parse_config_line(curr_line, self.__pobj):
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
                 # Manually parse name, type, and module properties
                 key = prop[0].strip().lower()
                 value = prop[1].strip()
@@ -970,57 +908,6 @@ class MetadataSection(ParseSource):
                 var_props['local_name'] = sub_name
             # end if (else just leave the local name alone)
             try:
-### <<<<<<< HEAD
-###                 newvar = Var(var_props, source=self)
-###             except CCPPError as ve:
-###                 raise ParseSyntaxError(ve, context=self._pobj)
-###             return newvar, curr_line
-###         # End if
-### 
-###     def variable_list(self):
-###         "Return an ordered list of the header's variables"
-###         return self._variables.variable_list()
-### 
-###     def to_html(self, outdir, props):
-###         """Write html file for metadata table and return filename.
-###         Skip metadata headers without variables"""
-###         if not self._variables.variable_list():
-###             return None
-###         # Write table header
-###         header = "<tr>"
-###         for prop in props:
-###             header += "<th>{}</th>".format(prop)
-###         header += "</tr>\n"
-###         # Write table contents, one row per variable
-###         contents = ""
-###         for var in self._variables.variable_list():
-###             row = "<tr>"
-###             for prop in props:
-###                 value = var.get_prop_value(prop)
-###                 # Pretty-print for dimensions
-###                 if prop == 'dimensions':
-###                     value = '(' + ', '.join(value) + ')'
-###                 elif value is None:
-###                     value = "n/a"
-###                 row += "<td>{}</td>".format(value)
-###             row += "</tr>\n"
-###             contents += row
-###         filename = os.path.join(outdir, self.title + '.html')
-###         with open(filename,"w") as f:
-###             f.writelines(self.__html_template__.format(title=self.title + ' argument table',
-###                                                        header=header, contents=contents))
-###         return filename
-### 
-###     def get_var(self, standard_name=None, intent=None):
-###         if standard_name is not None:
-###             var = self._variables.find_variable(standard_name)
-###             return var
-###         elif intent is not None:
-###             if intent not in self._var_intents:
-###                 raise ParseInternalError("Illegal intent type, '{}', in {}".format(intent, self.title), context=self._pobj)
-###             # End if
-###             return self._var_intents[intent]
-### =======
                 newvar = Var(var_props, source=self, context=context)
             except CCPPError as verr:
                 self.__pobj.add_syntax_err(verr, skip_context=True)
@@ -1110,7 +997,6 @@ class MetadataSection(ParseSource):
         var = None
         if use_local_name:
             var = self.__variables.find_local_name(std_name)
-### >>>>>>> da063f9aef55d6e5023d5cdd1af6ad62fa0284f0
         else:
             var = self.__variables.find_variable(std_name, any_scope=False)
         # end if
