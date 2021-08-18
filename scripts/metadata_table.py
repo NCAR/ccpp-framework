@@ -374,7 +374,7 @@ class MetadataTable():
                         # end if
                         self.__table_type = value
                     elif key == 'dependencies':
-                        if value.lower() == "none" or value.strip() == '':
+                        if value.lower() == "none":
                             if self.__dependencies:
                                 emsg = "dependencies = {} is ".format(value)
                                 depends = ", ".join(self.__dependencies)
@@ -735,12 +735,6 @@ class MetadataSection(ParseSource):
                         self.__module_name = 'INVALID' # Allow error continue
                         self.__section_valid = False
                     # end if
-                elif key == 'dependencies':
-                    if not(value == "None" or value == ""):
-                        # Remove trailing comma, remove white spaces from each list element
-                        self._dependencies += [ v.strip() for v in value.rstrip(",").split(",") ]
-                elif key == 'relative_path':
-                    relative_path_local = value.strip()
                 elif key == 'process':
                     self.__process_type = value
                 else:
@@ -780,6 +774,10 @@ class MetadataSection(ParseSource):
         # end if
         if self.header_type == "ddt":
             known_ddts.append(self.title)
+        # end if
+        # We need a default module if none was listed
+        if self.module is None:
+            self.__module_name = self._default_module()
         # end if
         #  Initialize our ParseSource parent
         super(MetadataSection, self).__init__(self.title,

@@ -7,6 +7,7 @@ import re
 import sys
 import os.path
 sys.path.insert(0, os.path.dirname(__file__))
+# CCPP framework imports
 from parse_source import CCPPError, ParseInternalError
 
 ########################################################################
@@ -203,8 +204,6 @@ def check_cf_standard_name(test_val, prop_dict, error):
 
 ########################################################################
 
-# LITERAL_INT is a string representing an integer value
-LITERAL_INT = r"([0-9]*)"
 # FORTRAN_ID is a string representing the regular expression for Fortran names
 FORTRAN_ID = r"([A-Za-z][A-Za-z0-9_]*)"
 __FID_RE = re.compile(FORTRAN_ID+r"$")
