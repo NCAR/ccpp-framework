@@ -26,7 +26,10 @@ module ccpp_types
     implicit none
 
     private
-    public :: ccpp_t
+    public :: ccpp_t, one
+
+    !> @var Definition of constant one
+    integer, parameter :: one = 1
 
     !> @var The default loop counter indicating outside of a subcycle loop
     integer, parameter :: CCPP_DEFAULT_LOOP_CNT = -999

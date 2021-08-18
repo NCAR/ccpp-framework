@@ -1,0 +1,16 @@
+[ccpp-table-properties]
+  name = temp_calc_adjust
+  type = scheme
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = temp_calc_adjust_run
+  type = scheme
+[ temp_calc ]
+  standard_name = potential_temperature_at_previous_timestep
+  units = K |
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out

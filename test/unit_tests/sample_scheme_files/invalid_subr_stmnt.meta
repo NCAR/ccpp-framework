@@ -1,0 +1,23 @@
+[ccpp-table-properties]
+  name = invalid_subr_stmnt
+  type = scheme
+  
+########################################################################
+[ccpp-arg-table]
+  name = invalid_subr_stmnt_init
+  type = scheme
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out

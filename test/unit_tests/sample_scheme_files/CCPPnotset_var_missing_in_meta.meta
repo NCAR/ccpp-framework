@@ -1,0 +1,29 @@
+[ccpp-table-properties]
+  name = CCPPnotset_var_missing_in_meta
+  type = scheme
+  
+########################################################################
+[ccpp-arg-table]
+  name = CCPPnotset_var_missing_in_meta_run
+  type = scheme
+[ foo ]
+  standard_name = horizontal_loop_extent
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out

@@ -1,0 +1,14 @@
+[ccpp-table-properties]
+  name = test_missing_table_name
+  type = scheme
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  type = host
+[ col_start ]
+  standard_name = horizontal_loop_begin
+  type = integer
+  units = count
+  dimensions = ()
+  protected = True
