@@ -540,9 +540,7 @@ class Var(object):
 # XXgoldyXX: ^ debug only
 
     # __var_props contains properties which are not in __spec_props
-    __var_props = [VariableProperty('optional', bool,
-                                     optional_in=True, default_in=False),
-                   VariableProperty('intent', str,
+    __var_props = [VariableProperty('intent', str,
                                     valid_values_in=['in', 'out', 'inout'])]
 
     # __constituent_props contains properties associated only with constituents
