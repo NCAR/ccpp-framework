@@ -23,7 +23,7 @@ export PYTHONPATH="${scripts}:${PYTHONPATH}"
 for pyfile in $(find . -name \*.py); do
   if [ -f "${pyfile}" ]; then
     if [ $(grep -c doctest ${pyfile}) -ne 0 ]; then
-      python ${pyfile}
+      python3 ${pyfile}
     fi
   fi
 done

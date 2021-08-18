@@ -47,7 +47,8 @@ class MetadataTableTestCase(unittest.TestCase):
         #       ccpp-table-properties name is 'test_host'
         dependencies = result[0].dependencies
         rel_path = result[0].relative_path
-        self.assertTrue('' in dependencies)
+        self.assertFalse('' in dependencies)
+        self.assertEqual(len(dependencies), 0)
         self.assertIsNone(rel_path)
         self.assertEqual(len(result), 1)
         titles = [elem.table_name for elem in result]
@@ -372,6 +373,7 @@ class MetadataTableTestCase(unittest.TestCase):
         rel_path = result[0].relative_path
         titles = [elem.table_name for elem in result]
 
+        self.assertEqual(len(dependencies), 4)
         self.assertIn('machine.F', dependencies, msg="Dependency 'machine.F' is expected but not found")
         self.assertIn('physcons.F90', dependencies, msg="Dependency 'physcons.F90' is expected but not found")
         self.assertIn('GFDL_parse_tracers.F90', dependencies, msg="Dependency 'GFDL_parse_tracers.F90' is expected but not found")
