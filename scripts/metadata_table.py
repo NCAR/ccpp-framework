@@ -61,6 +61,9 @@ An example argument table is shown below.
 [ccpp-table-properties]
   name = <name>
   type = scheme
+  relative_path = <relative path>
+  dependencies = <dependencies>
+
 [ccpp-arg-table]
   name = <name>
   type = scheme
@@ -71,13 +74,13 @@ An example argument table is shown below.
   type = integer
   dimensions = ()
   intent = in
-  [ ix ]
+[ ix ]
   standard_name = horizontal_loop_dimension
   long_name = horizontal dimension
   units = index | type = integer | dimensions = ()
   intent = in
   ...
-  [ errmsg]
+[ errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
   units = none
@@ -85,7 +88,7 @@ An example argument table is shown below.
   len = *
   dimensions = ()
   intent = out
-  [ ierr ]
+[ ierr ]
   standard_name = ccpp_error_flag
   long_name = error flag for error handling in CCPP
   type = integer
