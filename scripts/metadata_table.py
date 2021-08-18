@@ -385,7 +385,7 @@ class MetadataTable():
                             emsg += "already been declared as None"
                             self.__pobj.add_syntax_err(emsg)
                         else:
-                            depends = [x.strip() for x in value.split(',')]
+                            depends = [x.strip() for x in value.split(',') if x.strip()]
                             self.__dependencies.extend(depends)
                         # end if
                     elif key == 'relative_path':
