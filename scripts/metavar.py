@@ -282,6 +282,9 @@ class VariableProperty(object):
     'q(:,:,index_of_water_vapor_specific_humidity)'
     """
 
+    __true_vals = ['t', 'true', '.true.']
+    __false_vals = ['f', 'false', '.false.']
+
     def __init__(self, name_in, type_in, valid_values_in=None,
                  optional_in=False, default_in=None, default_fn_in=None,
                  check_fn_in=None, mult_entry_ok=False):
@@ -408,9 +411,11 @@ class VariableProperty(object):
                 pass
         elif self.type is bool:
             if isinstance(test_value, str):
-                valid_val = ((test_value in ['True', 'False']) or
-                             (test_value.lower() in
-                              ['t', 'f', '.true.', '.false.']))
+                if test_value.lower() in VariableProperty.__true_vals + VariableProperty.__false_vals:
+                    valid_val = test_value.lower() in VariableProperty.__true_vals
+                else:
+                    valid_val = None # i.e., pass
+                # end if
             else:
                 valid_val = not not test_value # pylint: disable=unneeded-not
         elif self.type is str:
@@ -457,6 +462,10 @@ class Var(object):
 
     >>> Var.get_prop('dimensions').valid_value(['Bob', 'Ray'])
     ['Bob', 'Ray']
+    >>> Var.get_prop('active')
+    '.true.'
+    >>> Var.get_prop('active').valid_value('flag_for_aerosol_physics')
+    'flag_for_aerosol_physics'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('long_name')
     'Hi mom'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext())).get_prop_value('intent')
@@ -520,7 +529,9 @@ class Var(object):
                                      check_fn_in=check_default_value),
                     VariableProperty('persistence', str, optional_in=True,
                                      valid_values_in=['timestep', 'run'],
-                                     default_in='timestep')]
+                                     default_in='timestep'),
+                    VariableProperty('active', str, optional_in=True,
+                                     default_in='.true.')]
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,
