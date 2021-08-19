@@ -8,6 +8,7 @@
 # and use this for ccpp_prebuild.py; create to_html and to_latex routines for it
 
 import logging
+import os
 
 from common import decode_container, escape_tex
 
@@ -65,6 +66,9 @@ def metadata_to_html(metadata, model, filename):
 </html>
 '''
 
+    filepath = os.path.split(os.path.abspath(filename))[0]
+    if not os.path.isdir(filepath):
+        os.makedirs(filepath)
     with open(filename, 'w') as f:
         f.write(html)
 
@@ -72,14 +76,14 @@ def metadata_to_html(metadata, model, filename):
     return success
 
 
-def metadata_to_latex(metadata_define, metadata_request, pset_request, model, filename):
+def metadata_to_latex(metadata_define, metadata_request, model, filename):
     """Create a LaTeX document with a table that lists  each variable provided
     and/or requested. Uses the GMTB LaTeX templates and style definitons in gmtb.sty."""
 
     shading = { 0 : 'darkgray', 1 : 'lightgray' }
     success = True
 
-    var_names = sorted(list(set(metadata_define.keys() + metadata_request.keys())))
+    var_names = sorted(list(set(list(metadata_define.keys()) + list(metadata_request.keys()))))
 
     latex = '''\\documentclass[12pt,letterpaper,oneside,landscape]{{scrbook}}
 
@@ -122,17 +126,12 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
         if var_name in metadata_request.keys():
             requested_list = [ escape_tex(decode_container(v.container)) for v in metadata_request[var_name] ]
             # for the purpose of the table, just output the name of the subroutine
-            for i in xrange(len(requested_list)):
+            for i in range(len(requested_list)):
                 entry = requested_list[i]
                 requested_list[i] = entry[entry.find('SUBROUTINE')+len('SUBROUTINE')+1:]
             requested = '\\newline '.join(sorted(requested_list))
         else:
             requested = 'NOT REQUESTED'
-        if var_name in pset_request.keys():
-            pset_list = [ escape_tex(c) for c in pset_request[var_name] ]
-            pset = '\\newline '.join(sorted(pset_list))
-        else:
-            pset = ''
 
         # Create output
         text = '''
@@ -147,7 +146,6 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
 \\execout{{source     }} & \\execout{{{target}             }} \\\\
 \\execout{{local\_name}} & \\execout{{{local_name}         }} \\\\
 \\execout{{requested  }} & \\execout{{\\vtop{{{requested}}}}} \\\\
-\\execout{{physics set}} & \\execout{{\\vtop{{{set} }}}}      \\\\
 \\end{{tabular}}
 \\vspace{{4pt}}
 \\end{{samepage}}'''.format(standard_name=escape_tex(var.standard_name), standard_name_ref=var.standard_name,
@@ -158,8 +156,7 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
                           kind=escape_tex(var.kind),
                           target=target,
                           local_name=local_name,
-                          requested=requested,
-                          set=pset)
+                          requested=requested)
         latex += text
     # Footer
     latex += '''
@@ -167,6 +164,9 @@ def metadata_to_latex(metadata_define, metadata_request, pset_request, model, fi
 \\end{document}
 '''
 
+    filepath = os.path.split(os.path.abspath(filename))[0]
+    if not os.path.isdir(filepath):
+        os.makedirs(filepath)
     with open(filename, 'w') as f:
         f.write(latex)
 

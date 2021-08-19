@@ -6,29 +6,11 @@ endif (NOT PROJECT)
 
 #------------------------------------------------------------------------------
 # Set the sources
-set(SOURCES_C
-    ccpp_dl.h
-    ccpp_dl.c
-    ccpp_fields_idx.h
-    ccpp_fields_idx.c
-    ccpp_utils.h
-    ccpp_utils.c
-    ccpp_xml.h
-    ccpp_xml.c
-)
 set(SOURCES_F90
-    ccpp.F90
-    ccpp_dl.F90
-    ccpp_errors.F90
-    ccpp_fcall.F90
-    ccpp_fields.F90
-    ccpp_strings.F90
-    ccpp_scheme.F90
-    ccpp_suite.F90
     ccpp_types.F90
-    ccpp_xml.F90
     ccpp_api.F90
 )
+
 # Generate list of Fortran modules from defined sources
 foreach(source_f90 ${SOURCES_F90})
     string(REGEX REPLACE ".F90" ".mod" module_f90 ${source_f90})
@@ -36,39 +18,9 @@ foreach(source_f90 ${SOURCES_F90})
 endforeach()
 
 #------------------------------------------------------------------------------
-# Find/set libXML2
-if(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
-    include_directories(${LIBXML2_INCLUDE_DIR})
-    if (STATIC)
-        list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.a")
-    else (STATIC)
-        list(APPEND LIBS "${LIBXML2_LIB_DIR}/libxml2.so")
-    endif (STATIC)
-else(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
-    find_package(LibXml2 REQUIRED)
-    if(LIBXML2_FOUND)
-        include_directories(${LIBXML2_INCLUDE_DIR})
-        list(APPEND LIBS ${LIBXML2_LIBRARIES})
-    endif(LIBXML2_FOUND)
-endif(LIBXML2_LIB_DIR AND LIBXML2_INCLUDE_DIR)
-
-#------------------------------------------------------------------------------
 # CMake Modules
 # Set the CMake module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
-
-#------------------------------------------------------------------------------
-# The Fortran compiler/linker flag inserted by cmake to create shared libraries
-# with the Intel compiler is deprecated (-i_dynamic), correct here.
-# CMAKE_Fortran_COMPILER_ID = {"Intel", "PGI", "GNU", "Clang", "MSVC", ...}
-if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
-    string(REPLACE "-i_dynamic" "-shared-intel"
-           CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS
-           "${CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS}")
-    string(REPLACE "-i_dynamic" "-shared-intel"
-           CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS
-           "${CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS}")
-endif()
 
 #------------------------------------------------------------------------------
 # Set a default build type if none was specified
@@ -105,16 +57,8 @@ set(${PACKAGE}_LIB_DIRS
      CACHE FILEPATH "${PACKAGE} library directories")
 
 #------------------------------------------------------------------------------
-# Add the tests
-add_subdirectory(tests)
-
-#------------------------------------------------------------------------------
 # Define the executable and what to link
-if(STATIC)
-  add_library(ccpp STATIC ${SOURCES_C} ${SOURCES_F90})
-else(STATIC)
-  add_library(ccpp SHARED ${SOURCES_C} ${SOURCES_F90})
-endif(STATIC)
+add_library(ccpp STATIC ${SOURCES_F90})
 target_link_libraries(ccpp LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
 set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}
@@ -123,12 +67,6 @@ set_target_properties(ccpp PROPERTIES VERSION ${PROJECT_VERSION}
 #------------------------------------------------------------------------------
 # Installation
 #
-
-# Find all the C headers and Fortran modules
-file(GLOB HEADERS_C
-     "${CMAKE_CURRENT_SOURCE_DIR}/ccpp*.h"
-)
-
 if (PROJECT STREQUAL "CCPP-FV3")
   target_include_directories(ccpp PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -155,12 +93,9 @@ install(EXPORT ccpp-targets
         DESTINATION lib/cmake
 )
 
+# Define where to install the Fortran modules
 if (PROJECT STREQUAL "CCPP-FV3")
-  # Define where to install the C headers and Fortran modules
-  install(FILES ${HEADERS_C} DESTINATION include)
   install(FILES ${MODULES_F90} DESTINATION include)
 else (PROJECT STREQUAL "CCPP-SCM")
-  # Define where to install the C headers and Fortran modules
-  install(FILES ${HEADERS_C} DESTINATION include/${PROJECT_NAME})
   install(FILES ${MODULES_F90} DESTINATION include/${PROJECT_NAME})
 endif (PROJECT STREQUAL "CCPP-FV3")

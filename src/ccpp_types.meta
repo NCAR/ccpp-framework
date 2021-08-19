@@ -1,0 +1,69 @@
+########################################################################
+[ccpp-table-properties]
+  name = ccpp_t
+  type = ddt
+  dependencies =
+
+[ccpp-arg-table]
+  name = ccpp_t
+  type = ddt
+[errflg]
+  standard_name = ccpp_error_flag
+  long_name = error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+[loop_cnt]
+  standard_name = ccpp_loop_counter
+  long_name = loop counter for subcycling loops in CCPP
+  units = index
+  dimensions = ()
+  type = integer
+[loop_max]
+  standard_name = ccpp_loop_extent
+  long_name = loop extent for subcycling loops in CCPP
+  units = count
+  dimensions = ()
+  type = integer
+[blk_no]
+  standard_name = ccpp_block_number
+  long_name = number of block for explicit data blocking in CCPP
+  units = index
+  dimensions = ()
+  type = integer
+[thrd_no]
+  standard_name = ccpp_thread_number
+  long_name = number of thread for threading in CCPP
+  units = index
+  dimensions = ()
+  type = integer
+
+########################################################################
+
+[ccpp-table-properties]
+  name = ccpp_types
+  type = module
+  dependencies =
+
+[ccpp-arg-table]
+  name = ccpp_types
+  type = module
+[ccpp_t]
+  standard_name = ccpp_t
+  long_name = definition of type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t
+[one]
+  standard_name = ccpp_constant_one
+  long_name = definition of constant one
+  units = none
+  dimensions = ()
+  type = integer

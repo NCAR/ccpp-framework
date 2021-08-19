@@ -1,7 +1,6 @@
-# GMTB CCPP
+# CCPP Framwork
 
-[GMTB](http://www.dtcenter.org/GMTB/html/) Common Community Physics Package
-(CCPP), including the Interoperable Physics Driver (IPD).
+Common Community Physics Package (CCPP) Framework.
 
 | Branch  | Linux/MacOS Build | Coverage |
 |---      |---                |---       |
@@ -10,9 +9,7 @@
 
 
 ## Notes to Users
-This repository contains the Common Community Physics Packages (CCPP) and the driver 
-for the CCPP (which has been until recently referred to as the GMTB IPD). To avoid
-ambiguity, the term "IPD" will not be used for code contained within this repository.
+This repository contains the Common Community Physics Packages (CCPP) Framework.
 
 The repository for the CCPP and the CCPP driver contains sufficient code for standalone
 testing of the CCPP. The CCPP repository may also be used in conjunction with the 

@@ -4,25 +4,25 @@
 import collections
 import copy
 import getopt
+import filecmp
 import logging
 import os
+import re
 import sys
 import types
 import xml.etree.ElementTree as ET
 
-from common import decode_container, encode_container
-from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER
+from common import encode_container
+from common import CCPP_STAGES
+from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
+from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_INTERNAL_VARIABLES
+from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
+from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
 from mkcap import Var
 
 ###############################################################################
-
-#STANDARD_VARIABLE_TYPES = [ 'character', 'integer', 'logical', 'real' ]
-
-#CCPP_ERROR_FLAG_VARIABLE = 'error_flag'
-
-CCPP_STAGES = [ 'init', 'run', 'finalize' ]
 
 # Maximum number of dimensions of an array allowed by the Fortran 2008 standard
 FORTRAN_ARRAY_MAX_DIMS = 15
@@ -37,7 +37,7 @@ def extract_parents_and_indices_from_local_name(local_name):
     # First, extract all variables/indices in parentheses (used for subsetting)
     indices = []
     while '(' in local_name:
-        for i in xrange(len(local_name)):
+        for i in range(len(local_name)):
             if local_name[i] == '(':
                 last_open = i
             elif local_name[i] == ')':
@@ -97,7 +97,7 @@ def create_argument_list_wrapped_explicit(arguments, additional_vars_following =
         argument_list = argument_list.rstrip(',')
     return argument_list
 
-def create_arguments_module_use_var_defs(variable_dictionary, metadata_define):
+def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, tmpvars = None):
     """Given a dictionary of standard names and variables, and a metadata
     dictionary with the variable definitions by the host model, create a list
     of arguments (local names), module use statements (for derived data types
@@ -106,6 +106,7 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define):
     module_use = []
     var_defs = []
     local_kind_and_type_vars = []
+
     for standard_name in variable_dictionary.keys():
         # Add variable local name and variable definitions
         arguments.append(variable_dictionary[standard_name].local_name)
@@ -128,6 +129,22 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define):
                 type_var = metadata_define[type_var_standard_name][0]
                 module_use.append(type_var.print_module_use())
                 local_kind_and_type_vars.append(type_var_standard_name)
+
+    # Add any local variables (required for unit conversions, array transformations, ...)
+    if tmpvars:
+        var_defs.append('')
+        var_defs.append('! Local variables for unit conversions, array transformations, ...')
+        for tmpvar in tmpvars:
+            var_defs.append(tmpvar.print_def_local())
+            # Add special kind variables
+            if tmpvar.type in STANDARD_VARIABLE_TYPES and tmpvar.kind and not tmpvar.type == STANDARD_CHARACTER_TYPE:
+                kind_var_standard_name = tmpvar.kind
+                if not kind_var_standard_name in local_kind_and_type_vars:
+                    if not kind_var_standard_name in metadata_define.keys():
+                        raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
+                    kind_var = metadata_define[kind_var_standard_name][0]
+                    module_use.append(kind_var.print_module_use())
+                    local_kind_and_type_vars.append(kind_var_standard_name)
 
     return (arguments, module_use, var_defs)
 
@@ -179,7 +196,7 @@ module {module}
 {suite_switch}
       else
 
-         write({ccpp_var_name}%errmsg,'(*(a))'), 'Invalid suite ' // trim(suite_name)
+         write({ccpp_var_name}%errmsg,'(*(a))') 'Invalid suite ' // trim(suite_name)
          ierr = 1
 
       end if
@@ -198,6 +215,8 @@ end module {module}
         self._module      = CCPP_STATIC_API_MODULE
         self._subroutines = None
         self._suites      = []
+        self._directory   = '.'
+        self._update_api  = True
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -209,6 +228,24 @@ end module {module}
     @filename.setter
     def filename(self, value):
         self._filename = value
+
+    @property
+    def directory(self):
+        '''Get the directory to write API to.'''
+        return self._directory
+
+    @directory.setter
+    def directory(self, value):
+        self._directory = value
+
+    @property
+    def update_api(self):
+        '''Get the update_api flag.'''
+        return self._update_api
+
+    @update_api.setter
+    def update_api(self, value):
+        self._update_api = value
 
     @property
     def module(self):
@@ -241,7 +278,7 @@ end module {module}
         # which comes in as a scalar for any potential block/thread via the argument list.
         ccpp_var = None
         parent_standard_names = []
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             for suite in suites:
                 for parent_standard_name in suite.parents[ccpp_stage].keys():
                     if not parent_standard_name in parent_standard_names:
@@ -264,7 +301,7 @@ end module {module}
         # Create a subroutine for each stage
         self._subroutines=[]
         subs = ''
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             suite_switch = ''
             for suite in suites:
                 # Calls to groups of schemes for this stage
@@ -285,11 +322,11 @@ end module {module}
                ierr = {suite_name}_{group_name}_{stage}_cap({arguments})'''.format(clause=clause,
                                                                                    suite_name=group.suite,
                                                                                    group_name=group.name,
-                                                                                   stage=ccpp_stage,
+                                                                                   stage=CCPP_STAGES[ccpp_stage],
                                                                                    arguments=argument_list_group)
                 group_calls += '''
             else
-               write({ccpp_var_name}%errmsg, '(*(a))') "Group " // trim(group_name) // " not found"
+               write({ccpp_var_name}%errmsg, '(*(a))') 'Group ' // trim(group_name) // ' not found'
                ierr = 1
             end if
 '''.format(ccpp_var_name=ccpp_var.local_name, group_name=group.name)
@@ -300,7 +337,7 @@ end module {module}
                 argument_list_suite = create_argument_list_wrapped_explicit(suite.arguments[ccpp_stage])
                 suite_call = '''
            ierr = {suite_name}_{stage}_cap({arguments})
-'''.format(suite_name=suite.name, stage=ccpp_stage, arguments=argument_list_suite)
+'''.format(suite_name=suite.name, stage=CCPP_STAGES[ccpp_stage], arguments=argument_list_suite)
 
                 # Add call to all groups of this suite and to the entire suite
                 if not suite_switch:
@@ -324,8 +361,25 @@ end module {module}
                                    suite_switch=suite_switch)
 
         # Write output to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
+        if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            # If the file exists, write to temporary file first and compare them:
+            # - if identical, delete the temporary file and keep the existing one
+            #   and set the API update flag to false
+            # - if different, replace existing file with temporary file and set
+            #   the API update flag to true (default value)
+            # - always replace the file if any of the suite caps has changed
+            # If the file does not exist, write the API an set the flag to true
+            if os.path.isfile(self.filename) and \
+                    not any([suite.update_cap for suite in suites]):
+                write_to_test_file = True
+                test_filename = self.filename + '.test'
+                f = open(test_filename, 'w')
+            else:
+                write_to_test_file = False
+                f = open(self.filename, 'w')
         else:
             f = sys.stdout
         f.write(API.header.format(module=self._module,
@@ -335,7 +389,60 @@ end module {module}
         f.write(Suite.footer.format(module=self._module))
         if (f is not sys.stdout):
             f.close()
+            # See comment above on updating the API or not
+            if write_to_test_file:
+                if filecmp.cmp(self.filename, test_filename):
+                    # Files are equal, delete the test API and set update flag to False
+                    os.remove(test_filename)
+                    self.update_api = False
+                else:
+                    # Files are different, replace existing API with
+                    # the test API and set update flag to True
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
+                    self.update_api = True
+            else:
+                self.update_api = True
         return
+
+    def write_sourcefile(self, source_filename):
+        success = True
+        filepath = os.path.split(source_filename)[0]
+        if filepath and not os.path.isdir(filepath):
+            os.makedirs(filepath)
+        # If the file exists, write to temporary file first and compare them:
+        # - if identical, delete the temporary file and keep the existing one
+        # - if different, replace existing file with temporary file
+        # - however, always replace the file if the API update flag is true
+        if os.path.isfile(source_filename) and not self.update_api:
+            write_to_test_file = True
+            test_filename = source_filename + '.test'
+            f = open(test_filename, 'w')
+        else:
+            write_to_test_file = False
+            f = open(source_filename, 'w')
+        # Contents of shell/source file
+        contents = """# The CCPP static API is defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+export CCPP_STATIC_API=\"{filename}\"
+""".format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
+        f.write(contents)
+        f.close()
+        # See comment above on updating the API or not
+        if write_to_test_file:
+            if filecmp.cmp(source_filename, test_filename):
+                # Files are equal, delete the test file
+                os.remove(test_filename)
+            else:
+                # Files are different, replace existing file
+                # Python 3 only: os.replace(test_filename, source_filename)
+                os.remove(source_filename)
+                os.rename(test_filename, source_filename)
+        return success
 
 
 class Suite(object):
@@ -393,14 +500,16 @@ end module {module}
 
     def __init__(self, **kwargs):
         self._name = None
+        self._filename = sys.stdout
         self._sdf_name = None
         self._all_schemes_called = None
         self._all_subroutines_called = None
         self._caps = None
         self._module = None
         self._subroutines = None
-        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
-        self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
+        self._parents = { ccpp_stage : collections.OrderedDict() for ccpp_stage in CCPP_STAGES.keys() }
+        self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES.keys() }
+        self._update_cap = True
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
@@ -418,6 +527,24 @@ end module {module}
     def sdf_name(self, value):
         self._sdf_name = value
 
+    @property
+    def filename(self):
+        '''Get the filename of write the output to.'''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+    @property
+    def update_cap(self):
+        '''Get the update_cap flag.'''
+        return self._update_cap
+
+    @update_cap.setter
+    def update_cap(self, value):
+        self._update_cap = value
+
     def parse(self):
         '''Parse the suite definition file.'''
         success = True
@@ -430,6 +557,12 @@ end module {module}
         tree = ET.parse(self._sdf_name)
         suite_xml = tree.getroot()
         self._name = suite_xml.get('name')
+        # Validate name of suite in XML tag against filename; could be moved to common.py
+        if not (os.path.basename(self._sdf_name) == 'suite_{}.xml'.format(self._name)):
+            logging.critical("Invalid suite name {0} in suite definition file {1}.".format(
+                                                               self._name, self._sdf_name))
+            success = False
+            return success
 
         # Flattened lists of all schemes and subroutines in SDF
         self._all_schemes_called = []
@@ -460,7 +593,7 @@ end module {module}
                     schemes.append(scheme_xml.text)
                     loop=int(subcycle_xml.get('loop'))
                     for ccpp_stage in CCPP_STAGES:
-                        self._all_subroutines_called.append(scheme_xml.text + '_' + ccpp_stage)
+                        self._all_subroutines_called.append(scheme_xml.text + '_' + CCPP_STAGES[ccpp_stage])
                 subcycles.append(Subcycle(loop=loop, schemes=schemes))
 
             self._groups.append(Group(name=group_xml.get('name'), subcycles=subcycles, suite=self._name))
@@ -473,10 +606,10 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the suite.'''
-        print "ALL SUBROUTINES:"
-        print self._all_subroutines_called
-        print "STRUCTURED:"
-        print self._groups
+        print("ALL SUBROUTINES:")
+        print(self._all_subroutines_called)
+        print("STRUCTURED:")
+        print(self._groups)
         for group in self._groups:
             group.print_debug()
 
@@ -533,7 +666,7 @@ end module {module}
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
         self._module = 'ccpp_{suite_name}_cap'.format(suite_name=self._name)
-        self._filename = '{module_name}.F90'.format(module_name=self._module)
+        self.filename = '{module_name}.F90'.format(module_name=self._module)
         # Init
         self._subroutines = []
         # Write group caps and generate module use statements; combine the argument lists
@@ -544,7 +677,7 @@ end module {module}
             group.write(metadata_request, metadata_define, arguments)
             for subroutine in group.subroutines:
                 module_use += '   use {m}, only: {s}\n'.format(m=group.module, s=subroutine)
-            for ccpp_stage in CCPP_STAGES:
+            for ccpp_stage in CCPP_STAGES.keys():
                 for parent_standard_name in group.parents[ccpp_stage].keys():
                     if parent_standard_name in self.parents[ccpp_stage]:
                         if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and \
@@ -556,7 +689,7 @@ end module {module}
                     else:
                         self.parents[ccpp_stage][parent_standard_name] = copy.deepcopy(group.parents[ccpp_stage][parent_standard_name])
         subs = ''
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             # Create a wrapped argument list for calling the suite,
             # get module use statements and variable definitions
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = \
@@ -576,9 +709,9 @@ end module {module}
                 body += '''
       ierr = {suite_name}_{group_name}_{stage}_cap({arguments})
       if (ierr/=0) return
-'''.format(suite_name=self._name, group_name=group.name, stage=ccpp_stage, arguments=argument_list_group)
+'''.format(suite_name=self._name, group_name=group.name, stage=CCPP_STAGES[ccpp_stage], arguments=argument_list_group)
             # Add name of subroutine in the suite cap to list of subroutine names
-            subroutine = '{name}_{stage}_cap'.format(name=self._name, stage=ccpp_stage)
+            subroutine = '{name}_{stage}_cap'.format(name=self._name, stage=CCPP_STAGES[ccpp_stage])
             self._subroutines.append(subroutine)
             # Add subroutine to output
             subs += Suite.sub.format(subroutine=subroutine,
@@ -588,8 +721,26 @@ end module {module}
                                      body=body)
 
         # Write cap to stdout or file
-        if (self._filename is not sys.stdout):
-            f = open(self._filename, 'w')
+        if (self.filename is not sys.stdout):
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            # If the file exists, write to temporary file first and compare them:
+            # - if identical, delete the temporary file and keep the existing one
+            #   and set the suite cap update flag to false
+            # - if different, replace existing file with temporary file and set
+            #   the suite cap update flag to true (default value)
+            # - however, if any of the group caps has changed, rewrite the suite
+            #   cap as well and set the suite cap update flag to true
+            # If the file does not exist, write the cap an set the flag to true
+            if os.path.isfile(self.filename) and \
+                    not any([group.update_cap for group in self._groups]):
+                write_to_test_file = True
+                test_filename = self.filename + '.test'
+                f = open(test_filename, 'w')
+            else:
+                write_to_test_file = False
+                f = open(self.filename, 'w')
         else:
             f = sys.stdout
         f.write(Suite.header.format(module=self._module,
@@ -599,9 +750,25 @@ end module {module}
         f.write(Suite.footer.format(module=self._module))
         if (f is not sys.stdout):
             f.close()
+            # See comment above on updating the suite cap or not
+            if write_to_test_file:
+                if filecmp.cmp(self.filename, test_filename):
+                    # Files are equal, delete the test cap
+                    # and set update flag to False
+                    os.remove(test_filename)
+                    self.update_cap = False
+                else:
+                    # Files are different, replace existing cap
+                    # with test cap and set flag to True
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
+                    self.update_cap = True
+            else:
+                self.update_cap = True
 
         # Create list of all caps generated (for groups and suite)
-        self._caps = [ self._filename ]
+        self._caps = [ self.filename ]
         for group in self._groups:
             self._caps.append(group.filename)
 
@@ -648,7 +815,8 @@ module {module}
 
       implicit none
 
-      integer                     :: ierr
+      ! Error handling
+      integer :: ierr
 
       {var_defs}
 
@@ -671,9 +839,23 @@ end module {module}
         'init' : '''
       if (initialized) return
 ''',
+        'timestep_init' : '''
+      if (.not.initialized) then
+        write({target_name_msg},'(*(a))') '{name}_timestep_init called before {name}_init'
+        {target_name_flag} = 1
+        return
+      end if
+''',
         'run' : '''
       if (.not.initialized) then
         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
+        {target_name_flag} = 1
+        return
+      end if
+''',
+        'timestep_finalize' : '''
+      if (.not.initialized) then
+        write({target_name_msg},'(*(a))') '{name}_timestep_finalize called before {name}_init'
         {target_name_flag} = 1
         return
       end if
@@ -687,7 +869,9 @@ end module {module}
         'init' : '''
       initialized = .true.
 ''',
+        'timestep_init' : '',
         'run' : '',
+        'timestep_finalize' : '',
         'finalize' : '''
       initialized = .false.
 ''',
@@ -696,25 +880,30 @@ end module {module}
     def __init__(self, **kwargs):
         self._name = ''
         self._suite = None
-        self._filename = 'sys.stdout'
+        self._filename = sys.stdout
         self._init = False
         self._finalize = False
         self._module = None
         self._subroutines = None
         self._pset = None
-        self._parents = { ccpp_stage : {} for ccpp_stage in CCPP_STAGES }
+        self._parents = { ccpp_stage : collections.OrderedDict() for ccpp_stage in CCPP_STAGES }
         self._arguments = { ccpp_stage : [] for ccpp_stage in CCPP_STAGES }
+        self._update_cap = True
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
     def write(self, metadata_request, metadata_define, arguments):
         # Create an inverse lookup table of local variable names defined (by the host model) and standard names
-        standard_name_by_local_name_define = {}
+        standard_name_by_local_name_define = collections.OrderedDict()
         for standard_name in metadata_define.keys():
             standard_name_by_local_name_define[metadata_define[standard_name][0].local_name] = standard_name
 
         # First get target names of standard CCPP variables for subcycling and error handling
         ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
+        if CCPP_LOOP_EXTENT in metadata_request.keys():
+            ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
+        else:
+            ccpp_loop_extent_target_name = None
         ccpp_error_flag_target_name = metadata_request[CCPP_ERROR_FLAG_VARIABLE][0].target
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
         #
@@ -724,43 +913,137 @@ end module {module}
         self._subroutines = []
         local_subs = ''
         #
-        for ccpp_stage in CCPP_STAGES:
+        for ccpp_stage in CCPP_STAGES.keys():
             # The special init and finalize routines are only run in that stage
             if self._init and not ccpp_stage == 'init':
                 continue
             elif self._finalize and not ccpp_stage == 'finalize':
                 continue
             # For mapping local variable names to standard names
-            local_vars = {}
+            local_vars = collections.OrderedDict()
+            # For mapping temporary variable names (for unit conversions, etc) to local variable names
+            tmpvar_cnt = 0
+            tmpvars    = collections.OrderedDict()
             #
             body = ''
+            # Variable definitions automatically added for subroutines
             var_defs = ''
+            # List of manual variable definitions, for example for handling blocked data structures
+            var_defs_manual = []
+            # Conditionals for variables (used or allocated only under certain conditions)
+            conditionals = {}
+            #
             for subcycle in self._subcycles:
-                if subcycle.loop > 1 and ccpp_stage == 'run':
-                    body += '''
-      associate(cnt => {loop_var_name})
-      do cnt=1,{loop_cnt}\n\n'''.format(loop_var_name=ccpp_loop_counter_target_name,loop_cnt=subcycle.loop)
+                subcycle_body = ''
+                # Call all schemes
                 for scheme_name in subcycle.schemes:
+                    # actions_before and actions_after capture operations such
+                    # as unit conversions, transformations that have to happen
+                    # before and/or after the call to the subroutine (scheme)
+                    actions_before = ''
+                    actions_after  = ''
+                    #
                     module_name = scheme_name
                     subroutine_name = scheme_name + '_' + ccpp_stage
                     container = encode_container(module_name, scheme_name, subroutine_name)
-                    # Skip entirely empty routines
-                    if not arguments[module_name][scheme_name][subroutine_name]:
+                    # Skip entirely empty routines or non-existent routines
+                    if not subroutine_name in arguments[scheme_name].keys() or not arguments[scheme_name][subroutine_name]:
                         continue
                     error_check = ''
                     args = ''
                     length = 0
+
+                    # First identify all dimensions needed to handle the arguments
+                    # and add them to the list of required variables for the cap
+                    additional_variables_required = []
+                    #
+                    for var_standard_name in arguments[scheme_name][subroutine_name]:
+                        if not var_standard_name in metadata_define.keys():
+                            raise Exception('Variable {standard_name} not defined in host model metadata'.format(
+                                                                                standard_name=var_standard_name))
+                        var = metadata_define[var_standard_name][0]
+                        # dim can be 'A', '1', '1:A', ...
+                        for dim_expression in var.dimensions:
+                            dims = dim_expression.split(':')
+                            for dim in dims:
+                                dim = dim.lower()
+                                try:
+                                    dim = int(dim)
+                                except ValueError:
+                                    if not dim in local_vars.keys() and \
+                                            not dim in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                                        logging.debug("Adding dimension {} for variable {}".format(dim, var_standard_name))
+                                        additional_variables_required.append(dim)
+
+                        # If blocked data structures need to be converted, add necessary variables
+                        if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in var.local_name:
+                            if not CCPP_BLOCK_COUNT in local_vars.keys() \
+                                    and not CCPP_BLOCK_COUNT in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                                    logging.debug("Adding variable {} for handling blocked data structures".format(CCPP_BLOCK_COUNT))
+                                    additional_variables_required.append(CCPP_BLOCK_COUNT)
+                            if not CCPP_HORIZONTAL_LOOP_EXTENT in local_vars.keys() \
+                                    and not CCPP_HORIZONTAL_LOOP_EXTENT in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                                    logging.debug("Adding variable {} for handling blocked data structures".format(CCPP_HORIZONTAL_LOOP_EXTENT))
+                                    additional_variables_required.append(CCPP_HORIZONTAL_LOOP_EXTENT)
+                            if not CCPP_HORIZONTAL_DIMENSION in local_vars.keys() \
+                                    and not CCPP_HORIZONTAL_DIMENSION in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                                    logging.debug("Adding variable {} for handling blocked data structures".format(CCPP_HORIZONTAL_DIMENSION))
+                                    additional_variables_required.append(CCPP_HORIZONTAL_DIMENSION)
+
+                        # If the variable is only active/used under certain conditions, add necessary variables
+                        # also record the conditional for later use in unit conversions / blocked data conversions.
+                        if var.active == 'T':
+                            conditional = '.true.'
+                        elif var.active == 'F':
+                            conditional = '.false.'
+                        else:
+                            # Convert conditional expression in standard_name format to local names known to the host model
+                            conditional = ''
+                            # Find all words in the conditional, for each of them look for a matching
+                            # standard name in the list of known variables
+                            items = FORTRAN_CONDITIONAL_REGEX.findall(var.active)
+                            for item in items:
+                                item = item.lower()
+                                if item in FORTRAN_CONDITIONAL_REGEX_WORDS:
+                                    conditional += item
+                                else:
+                                    # Detect integers, following Python's "easier to ask forgiveness than permission" mentality
+                                    try:
+                                        int(item)
+                                        conditional += item
+                                    except ValueError:
+                                        if not item in metadata_define.keys():
+                                            raise Exception("Variable {} used in conditional for {} not known to host model".format(
+                                                                                                           item, var_standard_name))
+                                        var2 = metadata_define[item][0]
+                                        conditional += var2.local_name
+                                        # Add to list of required variables for the cap
+                                        if not item in local_vars.keys() \
+                                                and not item in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                                            logging.debug("Adding variable {} for handling conditionals".format(item))
+                                            additional_variables_required.append(item)
+                        # Conditionals are identical per requirement, no need to test for consistency again
+                        if not var_standard_name in conditionals.keys():
+                            conditionals[var_standard_name] = conditional
+
                     # Extract all variables needed (including indices for components/slices of arrays)
-                    for var_standard_name in arguments[module_name][scheme_name][subroutine_name]:
+                    for var_standard_name in additional_variables_required + arguments[scheme_name][subroutine_name]:
                         # Pick the correct variable for this module/scheme/subroutine
-                        # from the list of requested variable
-                        for var in metadata_request[var_standard_name]:
-                            if container == var.container:
-                                break
+                        # from the list of requested variable, if it is in that list
+                        if var_standard_name in arguments[scheme_name][subroutine_name]:
+                            for var in metadata_request[var_standard_name]:
+                                if container == var.container:
+                                    break
+                        # This is a dimension or required variable added automatically (e.g. for handling blocked data)
+                        else:
+                            # Create a copy of the variable in the metadata dictionary
+                            # of host model variables and set necessary default values
+                            var = copy.deepcopy(metadata_define[var_standard_name][0])
+                            var.intent = 'in'
+                            var.optional = 'F'
+
                         if not var_standard_name in local_vars.keys():
-                            if not var_standard_name in metadata_define.keys():
-                                raise Exception('Variable {standard_name} not defined in host model metadata'.format(
-                                                                                    standard_name=var_standard_name))
+                            # The full name of the variable as known to the host model
                             var_local_name_define = metadata_define[var_standard_name][0].local_name
 
                             # Break apart var_local_name_define into the different components (members of DDTs)
@@ -768,23 +1051,25 @@ end module {module}
                             (parent_local_name_define, parent_local_names_define_indices) = \
                                 extract_parents_and_indices_from_local_name(var_local_name_define)
 
+                            parent_standard_name = None
+                            parent_var = None
                             # Check for each of the derived parent local names as defined by the host model
                             # if they are registered (i.e. if there is a standard name for it). Note that
                             # the output of extract_parents_and_indices_from_local_name is stripped of any
                             # array subset information, i.e. a local name 'Atm(:)%...' will produce a
-                            # parent local name 'Atm'. Since the rank of tha parent variable is not known
+                            # parent local name 'Atm'. Since the rank of the parent variable is not known
                             # at this point and since the local name in the host model metadata table could
                             # contain '(:)', '(:,:)', ... (up to the rank of the array), we search for the
                             # maximum number of dimensions allowed by the Fortran standard.
                             for local_name_define in [parent_local_name_define] + parent_local_names_define_indices:
                                 parent_standard_name = None
                                 parent_var = None
-                                for i in xrange(FORTRAN_ARRAY_MAX_DIMS+1):
+                                for i in range(FORTRAN_ARRAY_MAX_DIMS+1):
                                     if i==0:
                                         dims_string = ''
                                     else:
                                         # (:) for i==1, (:,:) for i==2, ...
-                                        dims_string = '(' + ','.join([':' for j in xrange(i)]) + ')'
+                                        dims_string = '(' + ','.join([':' for j in range(i)]) + ')'
                                     if local_name_define+dims_string in standard_name_by_local_name_define.keys():
                                         parent_standard_name = standard_name_by_local_name_define[local_name_define+dims_string]
                                         parent_var = metadata_define[parent_standard_name][0]
@@ -825,63 +1110,311 @@ end module {module}
                                     else:
                                         self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
 
-                                # Record this information in the local_vars dictionary
-                                local_vars[var_standard_name] = {
-                                    'var_local_name' : metadata_define[var_standard_name][0].local_name,
-                                    'parent_standard_name' : parent_standard_name
-                                    }
+                                # Record the parent information for this variable (with standard name var_standard_name)
+                                if local_name_define == parent_local_name_define:
+                                    local_vars[var_standard_name] = {
+                                        'name' : metadata_define[var_standard_name][0].local_name,
+                                        'kind' : metadata_define[var_standard_name][0].kind,
+                                        'parent_standard_name' : parent_standard_name
+                                        }
 
-                        else:
+                            # Reset parent to actual parent of the variable with standard name var_standard_name
+                            if local_vars[var_standard_name]['parent_standard_name']:
+                                parent_standard_name = local_vars[var_standard_name]['parent_standard_name']
+                                parent_var = metadata_define[parent_standard_name][0]
+
+                        elif local_vars[var_standard_name]['parent_standard_name']:
                             parent_standard_name = local_vars[var_standard_name]['parent_standard_name']
+                            parent_var = metadata_define[parent_standard_name][0]
                             # Update intent information if necessary
                             if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and not var.intent == 'in':
                                 self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
                             elif self.parents[ccpp_stage][parent_standard_name].intent == 'out' and not var.intent == 'out':
                                 self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
 
-                        # Add to argument list
-                        arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
-                                                                var_name=local_vars[var_standard_name]['var_local_name'])
+                        # The remainder of this loop deals with adding variables to the argument list
+                        # for this subroutine, not required for the additional dimensions and variables
+                        if not var_standard_name in arguments[scheme_name][subroutine_name]:
+                            continue
+
+                        # kind_string is used for automated unit conversions, i.e. foo_kind_phys
+                        kind_string = '_' + local_vars[var_standard_name]['kind'] if local_vars[var_standard_name]['kind'] else ''
+
+                        # Convert blocked data in init and finalize steps - only required for variables with block number and horizontal_dimension
+                        if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
+                                CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name'] and \
+                                '{}:{}'.format(CCPP_CONSTANT_ONE,CCPP_HORIZONTAL_DIMENSION) in var.dimensions:
+                            # Reuse existing temporary variable, if possible
+                            if local_vars[var_standard_name]['name'] in tmpvars.keys():
+                                # If the variable already has a local variable (tmpvar), reuse it
+                                tmpvar = tmpvars[local_vars[var_standard_name]['name']]
+                                actions_in  = tmpvar.actions['in']
+                                actions_out = tmpvar.actions['out']
+                            else:
+                                # Add a local variable (tmpvar) for this variable
+                                tmpvar_cnt += 1
+                                tmpvar = copy.deepcopy(var)
+                                tmpvar.local_name = '{0}_local'.format(var.local_name)
+                                #
+                                # Create string for allocating the temporary array by converting the dimensions
+                                # (in standard_name format) to local names as known to the host model
+                                alloc_dimensions = []
+                                for dim in tmpvar.dimensions:
+                                    # This is not supported/implemented: tmpvar would have one dimension less
+                                    # than the original array, and the metadata requesting the variable would
+                                    # not pass the initial test that host model variables and scheme variables
+                                    # have the same rank.
+                                    if dim == CCPP_BLOCK_NUMBER:
+                                        raise Exception("{} cannot be part of the dimensions of variable {}".format(
+                                                                              CCPP_BLOCK_NUMBER, var_standard_name))
+                                    else:
+                                        # Handle dimensions like "A:B", "A:3", "-1:Z"
+                                        if ':' in dim:
+                                            dims = [ x.lower() for x in dim.split(':')]
+                                            try:
+                                                dim0 = int(dims[0])
+                                            except ValueError:
+                                                dim0 = metadata_define[dims[0]][0].local_name
+                                            try:
+                                                dim1 = int(dims[1])
+                                            except ValueError:
+                                                dim1 = metadata_define[dims[1]][0].local_name
+                                        # Single dimensions
+                                        else:
+                                            dim0 = 1
+                                            try:
+                                                dim1 = int(dim)
+                                            except ValueError:
+                                                dim1 = metadata_define[dim][0].local_name
+                                        alloc_dimensions.append('{}:{}'.format(dim0,dim1))
+
+                                # Padding of additional dimensions - before and after the horizontal dimension
+                                hdim_index = tmpvar.dimensions.index('{}:{}'.format(CCPP_CONSTANT_ONE,CCPP_HORIZONTAL_DIMENSION))
+                                dimpad_before = '' + ':,'*(len(tmpvar.dimensions[:hdim_index]))
+                                dimpad_after  = '' + ',:'*(len(tmpvar.dimensions[hdim_index+1:]))
+
+                                # Add necessary local variables for looping over blocks
+                                var_defs_manual.append('integer :: ib, nb')
+
+                                # Define actions before. Always copy data in, independent of intent.
+                                actions_in = '''        allocate({tmpvar}({dims}))
+        ib = 1
+        do nb=1,{block_count}
+          {tmpvar}({dimpad_before}ib:ib+{block_size}-1{dimpad_after}) = {var}
+          ib = ib+{block_size}
+        end do
+'''.format(tmpvar=tmpvar.local_name,
+           block_count=metadata_define[CCPP_BLOCK_COUNT][0].local_name.replace(CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER],'nb'),
+           block_size=metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name.replace(CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER],'nb'),
+           var=tmpvar.target.replace(CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER],'nb'),
+           dims=','.join(alloc_dimensions),
+           dimpad_before=dimpad_before,
+           dimpad_after=dimpad_after,
+           )
+                                # Define actions after, depending on intent.
+                                if var.intent in [ 'inout', 'out' ]:
+                                    actions_out = '''        ib = 1
+        do nb=1,{block_count}
+          {var} = {tmpvar}({dimpad_before}ib:ib+{block_size}-1{dimpad_after})
+          ib = ib+{block_size}
+        end do
+        deallocate({tmpvar})
+'''.format(tmpvar=tmpvar.local_name,
+           block_count=metadata_define[CCPP_BLOCK_COUNT][0].local_name.replace(CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER],'nb'),
+           block_size=metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name.replace(CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER],'nb'),
+           var=tmpvar.target.replace(CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER],'nb'),
+           dimpad_before=dimpad_before,
+           dimpad_after=dimpad_after,
+           )
+                                else:
+                                    actions_out = '''        deallocate({tmpvar})
+'''.format(tmpvar=tmpvar.local_name)
+
+                                # Set/update actions for this temporary variable
+                                tmpvar.actions = {'in' : actions_in, 'out' : actions_out}
+                                tmpvars[local_vars[var_standard_name]['name']] = tmpvar
+
+                            # Add unit conversions, if necessary
+                            if var.actions['in']:
+                                # Add unit conversion before entering the subroutine, after allocating the temporary
+                                # array holding the non-blocked data and copying the blocked data to it
+                                actions_in = actions_in + \
+                                                 '        {t} = {c}\n'.format(t=tmpvar.local_name,
+                                                                            c=var.actions['in'].format(var=tmpvar.local_name,
+                                                                                                    kind=kind_string))
+
+                            if var.actions['out']:
+                                # Add unit conversion after returning from the subroutine, before copying the non-blocked
+                                # data back to the blocked data and deallocating the temporary array
+                                actions_out  = '        {t} = {c}\n'.format(t=tmpvar.local_name,
+                                                                            c=var.actions['out'].format(var=tmpvar.local_name,
+                                                                                                        kind=kind_string)) + \
+                                                 actions_out
+
+                            # Add the conditionals for the "before" operations
+                            actions_before += '''
+      if ({conditional}) then
+{actions_in}
+      end if
+'''.format(conditional=conditionals[var_standard_name],
+           actions_in=actions_in.rstrip('\n'))
+                            # Add the conditionals for the "after" operations
+                            actions_after += '''
+      if ({conditional}) then
+{actions_out}
+      end if
+'''.format(conditional=conditionals[var_standard_name],
+           actions_out=actions_out.rstrip('\n'))
+
+                            # Add to argument list if required
+                            if var_standard_name in arguments[scheme_name][subroutine_name]:
+                                arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
+
+                        # Variables stored in blocked data structures but without horizontal dimension not supported at this time (doesn't make sense anyway)
+                        elif ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
+                                CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name']:
+                            raise Exception("Variables stored in blocked data structures but without horizontal dimension not supported at this time: {}".format(var_standard_name))
+
+                        # Unit conversions without converting blocked data structures
+                        elif var.actions['in'] or var.actions['out']:
+                            actions_in = ''
+                            actions_out = ''
+                            if local_vars[var_standard_name]['name'] in tmpvars.keys():
+                                # If the variable already has a local variable (tmpvar), reuse it
+                                tmpvar = tmpvars[local_vars[var_standard_name]['name']]
+                            else:
+                                # Add a local variable (tmpvar) for this variable
+                                tmpvar_cnt += 1
+                                tmpvar = copy.deepcopy(var)
+                                tmpvar.local_name = 'tmpvar{0}'.format(tmpvar_cnt)
+                                tmpvars[local_vars[var_standard_name]['name']] = tmpvar
+                            if tmpvar.rank:
+                                # Add allocate statement if the variable has a rank > 0
+                                actions_in += '        allocate({t}, source={v})\n'.format(t=tmpvar.local_name,
+                                                                                             v=tmpvar.target)
+                            if var.actions['in']:
+                                # Add unit conversion before entering the subroutine
+                                actions_in += '        {t} = {c}\n'.format(t=tmpvar.local_name,
+                                                                             c=var.actions['in'].format(var=tmpvar.target,
+                                                                                                        kind=kind_string))
+                            if var.actions['out']:
+                                # Add unit conversion after returning from the subroutine
+                                actions_out  += '        {v} = {c}\n'.format(v=tmpvar.target,
+                                                                             c=var.actions['out'].format(var=tmpvar.local_name,
+                                                                                                        kind=kind_string))
+                            if tmpvar.rank:
+                                # Add deallocate statement if the variable has a rank > 0
+                                actions_out += '        deallocate({t})\n'.format(t=tmpvar.local_name)
+
+                            # Add the conditionals for the "before" operations
+                            actions_before += '''
+      if ({conditional}) then
+{actions_in}
+      end if
+'''.format(conditional=conditionals[var_standard_name],
+           actions_in=actions_in.rstrip('\n'))
+                            # Add the conditionals for the "after" operations
+                            actions_after += '''
+      if ({conditional}) then
+{actions_out}
+      end if
+'''.format(conditional=conditionals[var_standard_name],
+           actions_out=actions_out.rstrip('\n'))
+
+                            # Add to argument list if required
+                            if var_standard_name in arguments[scheme_name][subroutine_name]:
+                                arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
+
+                        # Ordinary variables, no blocked data or unit conversions
+                        elif var_standard_name in arguments[scheme_name][subroutine_name]:
+                            # Add to argument list if required
+                            arg = '{local_name}={var_name},'.format(local_name=var.local_name, 
+                                                                    var_name=local_vars[var_standard_name]['name'])
+                        else:
+                            arg = ''
                         args += arg
                         length += len(arg)
                         # Split args so that lines don't exceed 260 characters (for PGI)
-                        if length > 70 and not var_standard_name == arguments[module_name][scheme_name][subroutine_name][-1]:
+                        if length > 70 and not var_standard_name == arguments[scheme_name][subroutine_name][-1]:
                             args += ' &\n                  '
                             length = 0
-
                     args = args.rstrip(',')
-                    subroutine_call = 'call {subroutine_name}({args})'.format(subroutine_name=subroutine_name, args=args)
+                    subroutine_call = '''
+{actions_before}
+
+      call {subroutine_name}({args})
+
+{actions_after}
+'''.format(subroutine_name=subroutine_name, args=args, actions_before=actions_before.rstrip('\n'), actions_after=actions_after.rstrip('\n'))
                     error_check = '''if ({target_name_flag}/=0) then
-        write({target_name_msg},'(a)') "An error occured in {subroutine_name}"
+        {target_name_msg} = "An error occured in {subroutine_name}: " // trim({target_name_msg})
         ierr={target_name_flag}
         return
       end if
 '''.format(target_name_flag=ccpp_error_flag_target_name, target_name_msg=ccpp_error_msg_target_name, subroutine_name=subroutine_name)
-                    body += '''
+                    subcycle_body += '''
       {subroutine_call}
       {error_check}
     '''.format(subroutine_call=subroutine_call, error_check=error_check)
 
                     module_use += '   use {m}, only: {s}\n'.format(m=module_name, s=subroutine_name)
 
-                if subcycle.loop > 1 and ccpp_stage == 'run':
-                    body += '''
+                # If this subcycle calls any schemes, i.e. has any variables registered
+                # that need to be passed to the group for this stage, then handle the
+                # subcycle loops by prepending/appending the necessary code to subcycle_body
+                subcycle_body_prefix = '''
+      ! Start of next subcycle
+'''
+                subcycle_body_suffix = ''
+                if self.parents[ccpp_stage]:
+                    # Set subcycle loop extent if requested by any scheme
+                    if ccpp_loop_extent_target_name and ccpp_stage == 'run':
+                        subcycle_body_prefix += '''
+      ! Set loop extent variable for the following subcycle
+      {loop_extent_var_name} = {loop_cnt_max}\n\n'''.format(loop_extent_var_name=ccpp_loop_extent_target_name,
+                                                                                   loop_cnt_max=subcycle.loop)
+                    elif ccpp_loop_extent_target_name:
+                        subcycle_body_prefix += '''
+      ! Set loop extent variable for the following subcycle
+      {loop_extent_var_name} = 1\n\n'''.format(loop_extent_var_name=ccpp_loop_extent_target_name)
+                    # Create subcycle (Fortran do loop) if needed
+                    if subcycle.loop > 1 and ccpp_stage == 'run':
+                        subcycle_body_prefix += '''
+      associate(cnt => {loop_var_name})
+      do cnt=1,{loop_cnt_max}\n\n'''.format(loop_var_name=ccpp_loop_counter_target_name,
+                                                        loop_cnt_max=subcycle.loop)
+                        subcycle_body_suffix += '''
       end do
       end associate
 '''
+                    else:
+                        subcycle_body_prefix += '''
+      {loop_var_name} = 1\n'''.format(loop_var_name=ccpp_loop_counter_target_name)
+
+                # Add this subcycle's Fortran body to the group body
+                body += subcycle_body_prefix + subcycle_body + subcycle_body_suffix
 
             # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
-                                                                     self.parents[ccpp_stage], metadata_define)
+                                                           self.parents[ccpp_stage], metadata_define, tmpvars.values())
             sub_argument_list = create_argument_list_wrapped(self.arguments[ccpp_stage])
 
-            subroutine = self._suite + '_' + self._name + '_' + ccpp_stage + '_cap'
+            # Remove duplicates from additional manual variable definitions
+            var_defs_manual = list(set(var_defs_manual))
+
+            # Write cap - shorten certain ccpp_stages to stay under the 63 character limit for Fortran function names
+            subroutine = self._suite + '_' + self._name + '_' + CCPP_STAGES[ccpp_stage] + '_cap'
             self._subroutines.append(subroutine)
-            # Test and set blocks for initialization status
-            initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
-                                        target_name_flag=ccpp_error_flag_target_name,
-                                        target_name_msg=ccpp_error_msg_target_name,
-                                        name=self._name)
+            # Test and set blocks for initialization status - check that at least
+            # the mandatory CCPP error handling arguments are present (i.e. there is
+            # at least one subroutine that gets called from this group), or skip.
+            if self.arguments[ccpp_stage]:
+                initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
+                                            target_name_flag=ccpp_error_flag_target_name,
+                                            target_name_msg=ccpp_error_msg_target_name,
+                                            name=self._name)
+            else:
+                initialized_test_block = ''
             initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
                                         target_name_flag=ccpp_error_flag_target_name,
                                         target_name_msg=ccpp_error_msg_target_name,
@@ -892,12 +1425,27 @@ end module {module}
                                            module_use='\n      '.join(sub_module_use),
                                            initialized_test_block=initialized_test_block,
                                            initialized_set_block=initialized_set_block,
-                                           var_defs='\n      '.join(sub_var_defs),
+                                           var_defs='\n      '.join(sub_var_defs + var_defs_manual),
                                            body=body)
 
         # Write output to stdout or file
         if (self.filename is not sys.stdout):
-            f = open(self.filename, 'w')
+            filepath = os.path.split(self.filename)[0]
+            if filepath and not os.path.isdir(filepath):
+                os.makedirs(filepath)
+            # If the file exists, write to temporary file first and compare them:
+            # - if identical, delete the temporary file and keep the existing one
+            #   and set the group cap update flag to false
+            # - if different, replace existing file with temporary file and set
+            #   the group cap update flag to true (default value)
+            # If the file does not exist, write the cap an set the flag to true
+            if os.path.isfile(self.filename):
+                write_to_test_file = True
+                test_filename = self.filename + '.test'
+                f = open(test_filename, 'w')
+            else:
+                write_to_test_file = False
+                f = open(self.filename, 'w')
         else:
             f = sys.stdout
         f.write(Group.header.format(group=self._name,
@@ -908,7 +1456,22 @@ end module {module}
         f.write(Group.footer.format(module=self._module))
         if (f is not sys.stdout):
             f.close()
-
+            # See comment above on updating the group cap or not
+            if write_to_test_file:
+                if filecmp.cmp(self.filename, test_filename):
+                    # Files are equal, delete the test cap
+                    # and set update flag to False
+                    os.remove(test_filename)
+                    self.update_cap = False
+                else:
+                    # Files are different, replace existing cap
+                    # with test cap and set flag to True
+                    # Python 3 only: os.replace(test_filename, self.filename)
+                    os.remove(self.filename)
+                    os.rename(test_filename, self.filename)
+                    self.update_cap = True
+            else:
+                self.update_cap = True
         return
 
     @property
@@ -928,6 +1491,15 @@ end module {module}
     @filename.setter
     def filename(self, value):
         self._filename = value
+
+    @property
+    def update_cap(self):
+        '''Get the update_cap flag.'''
+        return self._update_cap
+
+    @update_cap.setter
+    def update_cap(self, value):
+        self._update_cap = value
 
     @property
     def init(self):
@@ -973,7 +1545,7 @@ end module {module}
 
     def print_debug(self):
         '''Basic debugging output about the group.'''
-        print self._name
+        print(self._name)
         for subcycle in self._subcycles:
             subcycle.print_debug()
 
@@ -1037,9 +1609,9 @@ class Subcycle(object):
 
     def print_debug(self):
         '''Basic debugging output about the subcycle.'''
-        print self._loop
+        print(self._loop)
         for scheme in self._schemes:
-            print scheme
+            print(scheme)
 
 
 ###############################################################################

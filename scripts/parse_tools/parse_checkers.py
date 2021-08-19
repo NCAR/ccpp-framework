@@ -995,6 +995,11 @@ def check_balanced_paren(string, start=0, error=False):
 
 ########################################################################
 
+def registered_fortran_ddt_names():
+    return _REGISTERED_FORTRAN_DDT_NAMES
+
+########################################################################
+
 def registered_fortran_ddt_name(name):
     if name in _REGISTERED_FORTRAN_DDT_NAMES:
         return name
