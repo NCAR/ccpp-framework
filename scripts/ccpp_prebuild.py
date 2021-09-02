@@ -93,14 +93,15 @@ def import_config(configfile, builddir):
     config['caps_cmakefile']            = ccpp_prebuild_config.CAPS_CMAKEFILE.format(build_dir=builddir)
     config['caps_sourcefile']           = ccpp_prebuild_config.CAPS_SOURCEFILE.format(build_dir=builddir)
     config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR.format(build_dir=builddir)
-    config['suites_dir']                = ccpp_prebuild_config.SUITES_DIR
+    config['suites_dir']                = ccpp_prebuild_config.SUITES_DIR.format(build_dir=builddir)
     config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
     config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
     config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE.format(build_dir=builddir)
     config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE.format(build_dir=builddir)
-    # Location of static API file, and shell script to source
+    # Location of static API file, shell script to source, cmake include file
     config['static_api_dir']            = ccpp_prebuild_config.STATIC_API_DIR.format(build_dir=builddir)
-    config['static_api_srcfile']        = ccpp_prebuild_config.STATIC_API_SRCFILE.format(build_dir=builddir)
+    config['static_api_sourcefile']     = ccpp_prebuild_config.STATIC_API_SOURCEFILE.format(build_dir=builddir)
+    config['static_api_cmakefile']      = ccpp_prebuild_config.STATIC_API_CMAKEFILE.format(build_dir=builddir)
 
     # Add model-independent, CCPP-internal variable definition files
     config['variable_definition_files'].append(CCPP_INTERNAL_VARIABLE_DEFINITON_FILE)
@@ -148,7 +149,7 @@ def clean_files(config):
         config['latex_vartable_file'],
         os.path.join(config['caps_dir'], 'ccpp_*_cap.F90'),
         os.path.join(config['static_api_dir'], '{api}.F90'.format(api=CCPP_STATIC_API_MODULE)),
-        config['static_api_srcfile'],
+        config['static_api_sourcefile'],
         ]
     # Not very pythonic, but the easiest way w/o importing another Python module
     cmd = 'rm -vf {0}'.format(' '.join(files_to_remove))
@@ -847,12 +848,16 @@ def main():
         raise Exception('Call to generate_suite_and_group_caps failed.')
 
     (success, api) = generate_static_api(suites, config['static_api_dir'])
-    if not success: 
+    if not success:
         raise Exception('Call to generate_static_api failed.')
 
-    success = api.write_sourcefile(config['static_api_srcfile'])
-    if not success: 
-        raise Exception("Writing API sourcefile {sourcefile} failed".format(sourcefile=config['static_api_srcfile']))
+    success = api.write_includefile(config['static_api_sourcefile'], type='shell')
+    if not success:
+        raise Exception("Writing API sourcefile {sourcefile} failed".format(sourcefile=config['static_api_sourcefile']))
+
+    success = api.write_includefile(config['static_api_cmakefile'], type='cmake')
+    if not success:
+        raise Exception("Writing API cmakefile {cmakefile} failed".format(cmakefile=config['static_api_cmakefile']))
 
     # Add filenames of caps to makefile/cmakefile/shell script
     all_caps = suite_and_group_caps

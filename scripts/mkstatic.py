@@ -406,7 +406,7 @@ end module {module}
                 self.update_api = True
         return
 
-    def write_sourcefile(self, source_filename):
+    def write_includefile(self, source_filename, type):
         success = True
         filepath = os.path.split(source_filename)[0]
         if filepath and not os.path.isdir(filepath):
@@ -422,14 +422,30 @@ end module {module}
         else:
             write_to_test_file = False
             f = open(source_filename, 'w')
-        # Contents of shell/source file
-        contents = """# The CCPP static API is defined here.
+
+        if type == 'shell':
+            # Contents of shell/source file
+            contents = """# The CCPP static API is defined here.
 #
 # This file is auto-generated using ccpp_prebuild.py
 # at compile time, do not edit manually.
 #
 export CCPP_STATIC_API=\"{filename}\"
 """.format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
+        elif type == 'cmake':
+            # Contents of cmake include file
+            contents = """# The CCPP static API is defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+set(API \"{filename}\")
+""".format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
+        else:
+            logging.error('Encountereed unknown type of file "{type}" when writing include file for static API'.format(type=type))
+            success = False
+            return
+
         f.write(contents)
         f.close()
         # See comment above on updating the API or not
