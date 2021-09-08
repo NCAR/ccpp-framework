@@ -1,0 +1,98 @@
+# cld_ice is a scheme that produces a cloud ice amount
+[ccpp-table-properties]
+  name = cld_ice
+  type = scheme
+[ccpp-arg-table]
+  name = cld_ice_run
+  type = scheme
+[ ncol ]
+  standard_name = horizontal_loop_extent
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ timestep ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = in
+[ temp ]
+  standard_name = temperature
+  units = K
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ qv ]
+  standard_name = water_vapor_specific_humidity
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ ps ]
+  standard_name = surface_air_pressure
+  state_variable = true
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_loop_extent)
+  intent = in
+[ cld_ice ]
+  standard_name = cloud_ice_dry_mixing_ratio
+  advected = .true.
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  type = real |  kind = kind_phys
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = cld_ice_init
+  type = scheme
+[ tfreeze]
+  standard_name = water_temperature_at_freezing
+  long_name = Freezing temperature of water at sea level
+  units = K
+  dimensions = ()
+  type = real | kind = kind_phys
+  intent = in
+[ cld_ice ]
+  standard_name = cloud_ice_dry_mixing_ratio
+  advected = .true.
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real |  kind = kind_phys
+  # Advected species that needs to be supplied by framework
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_flag
+  long_name = Error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out

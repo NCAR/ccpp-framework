@@ -1,0 +1,23 @@
+[ccpp-table-properties]
+  name = temp_calc_adjust
+  type = scheme
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = temp_calc_adjust_run
+  type = scheme
+[ nbox ]
+  standard_name = horizontal_loop_extent
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ timestep ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = banana

@@ -1,0 +1,23 @@
+[ccpp-table-properties]
+  name = vmr_type
+  type = ddt
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = vmr_type
+  type = ddt
+[ nvmr ]
+  standard_name = number_of_chemical_species
+  units = count
+  dimensions = ()
+  type = integer
+[ccpp-farg-table]
+  name = make_ddt_run
+  type = scheme
+[ nbox ]
+  standard_name = horizontal_loop_extent
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in

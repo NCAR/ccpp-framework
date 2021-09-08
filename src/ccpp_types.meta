@@ -1,18 +1,3 @@
-[ccpp-table-properties]
-  name = ccpp_types
-  type = module
-  dependencies =
-
-[ccpp-arg-table]
-  name = ccpp_types
-  type = module
-[ccpp_t]
-  standard_name = ccpp_t
-  long_name = definition of type ccpp_t
-  units = DDT
-  dimensions = ()
-  type = ccpp_t
-
 ########################################################################
 [ccpp-table-properties]
   name = ccpp_t
@@ -57,5 +42,28 @@
   standard_name = ccpp_thread_number
   long_name = number of thread for threading in CCPP
   units = index
+  dimensions = ()
+  type = integer
+
+########################################################################
+
+[ccpp-table-properties]
+  name = ccpp_types
+  type = module
+  dependencies =
+
+[ccpp-arg-table]
+  name = ccpp_types
+  type = module
+[ccpp_t]
+  standard_name = ccpp_t
+  long_name = definition of type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t
+[one]
+  standard_name = ccpp_constant_one
+  long_name = definition of constant one
+  units = none
   dimensions = ()
   type = integer

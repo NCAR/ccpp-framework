@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="cld_suite" version="1.0">
+  <group name="physics">
+    <scheme>cld_liq</scheme>
+    <scheme>cld_ice</scheme>
+  </group>
+</suite>

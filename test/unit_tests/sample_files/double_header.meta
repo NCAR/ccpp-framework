@@ -1,0 +1,12 @@
+[ccpp-table-properties]
+  name = test_host
+  type = host
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = test_host
+  type = host
+[ccpp-arg-table]
+  name = test_host
+  type = host

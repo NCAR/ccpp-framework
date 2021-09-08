@@ -1,0 +1,11 @@
+[ccpp-table-properties]
+  name = test_host
+  type = host
+  relative_path = ../../ccpp/physics/physics
+  dependencies = machine.F,physcons.F90,,
+  dependencies = GFDL_parse_tracers.F90,,rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90
+
+########################################################################
+[ccpp-arg-table]
+  name = test_host
+  type = host

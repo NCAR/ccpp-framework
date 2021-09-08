@@ -1,0 +1,9 @@
+[ccpp-table-properties]
+  name = banana
+  type = host
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = test_host
+  type = host

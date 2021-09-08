@@ -16,7 +16,7 @@ from common import encode_container
 from common import CCPP_STAGES
 from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_INTERNAL_VARIABLES
-from common import CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
+from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
@@ -966,6 +966,7 @@ end module {module}
                         for dim_expression in var.dimensions:
                             dims = dim_expression.split(':')
                             for dim in dims:
+                                dim = dim.lower()
                                 try:
                                     dim = int(dim)
                                 except ValueError:
@@ -1002,6 +1003,7 @@ end module {module}
                             # standard name in the list of known variables
                             items = FORTRAN_CONDITIONAL_REGEX.findall(var.active)
                             for item in items:
+                                item = item.lower()
                                 if item in FORTRAN_CONDITIONAL_REGEX_WORDS:
                                     conditional += item
                                 else:
@@ -1141,7 +1143,7 @@ end module {module}
                         # Convert blocked data in init and finalize steps - only required for variables with block number and horizontal_dimension
                         if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
                                 CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name'] and \
-                                CCPP_HORIZONTAL_DIMENSION in var.dimensions:
+                                '{}:{}'.format(CCPP_CONSTANT_ONE,CCPP_HORIZONTAL_DIMENSION) in var.dimensions:
                             # Reuse existing temporary variable, if possible
                             if local_vars[var_standard_name]['name'] in tmpvars.keys():
                                 # If the variable already has a local variable (tmpvar), reuse it
@@ -1168,7 +1170,7 @@ end module {module}
                                     else:
                                         # Handle dimensions like "A:B", "A:3", "-1:Z"
                                         if ':' in dim:
-                                            dims = dim.split(':')
+                                            dims = [ x.lower() for x in dim.split(':')]
                                             try:
                                                 dim0 = int(dims[0])
                                             except ValueError:
@@ -1187,7 +1189,7 @@ end module {module}
                                         alloc_dimensions.append('{}:{}'.format(dim0,dim1))
 
                                 # Padding of additional dimensions - before and after the horizontal dimension
-                                hdim_index = tmpvar.dimensions.index(CCPP_HORIZONTAL_DIMENSION)
+                                hdim_index = tmpvar.dimensions.index('{}:{}'.format(CCPP_CONSTANT_ONE,CCPP_HORIZONTAL_DIMENSION))
                                 dimpad_before = '' + ':,'*(len(tmpvar.dimensions[:hdim_index]))
                                 dimpad_after  = '' + ',:'*(len(tmpvar.dimensions[hdim_index+1:]))
 
