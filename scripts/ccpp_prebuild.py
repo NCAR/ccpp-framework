@@ -31,7 +31,8 @@ from mkstatic import API, Suite, Group
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',     action='store', help='path to CCPP prebuild configuration file', required=True)
 parser.add_argument('--clean',      action='store_true', help='remove files created by this script, then exit', default=False)
-parser.add_argument('--debug',      action='store_true', help='enable debugging output', default=False)
+parser.add_argument('--verbose',    action='store_true', help='enable verbose output from this script', default=False)
+parser.add_argument('--debug',      action='store_true', help='enable debugging features in auto-generated code', default=False)
 parser.add_argument('--suites',     action='store', help='suite definition files to use (comma-separated, without path)', default='')
 parser.add_argument('--builddir',   action='store', help='relative path to CCPP build directory', required=False, default=None)
 
@@ -48,13 +49,14 @@ def parse_arguments():
     args = parser.parse_args()
     configfile = args.config
     clean = args.clean
+    verbose = args.verbose
     debug = args.debug
     if args.suites:
         sdfs = ['suite_{0}.xml'.format(x) for x in args.suites.split(',')]
     else:
         sdfs = None
     builddir = args.builddir
-    return (success, configfile, clean, debug, sdfs, builddir)
+    return (success, configfile, clean, verbose, debug, sdfs, builddir)
 
 def import_config(configfile, builddir):
     """Import the configuration from a given configuration file"""
@@ -112,15 +114,15 @@ def import_config(configfile, builddir):
 
     return(success, config)
 
-def setup_logging(debug):
+def setup_logging(verbose):
     """Sets up the logging module and logging level."""
     success = True
-    if debug:
+    if verbose:
         level = logging.DEBUG
     else:
         level = logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=level)
-    if debug:
+    if verbose:
         logging.info('Logging level set to DEBUG')
     else:
         logging.info('Logging level set to INFO')
@@ -555,7 +557,7 @@ def compare_metadata(metadata_define, metadata_request):
     modules = sorted(list(set(modules)))
     return (success, modules, metadata)
 
-def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arguments, caps_dir):
+def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arguments, caps_dir, debug):
     """Generate for the suite and for all groups parsed."""
     logging.info("Generating suite and group caps ...")
     suite_and_group_caps = []
@@ -564,7 +566,7 @@ def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arg
     for suite in suites:
         logging.debug("Generating suite and group caps for suite {0}...".format(suite.name))
         # Write caps for suite and groups in suite
-        suite.write(metadata_request, metadata_define, arguments)
+        suite.write(metadata_request, metadata_define, arguments, debug)
         suite_and_group_caps += suite.caps
     os.chdir(BASEDIR)
     if suite_and_group_caps:
@@ -739,11 +741,11 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
 def main():
     """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
-    (success, configfile, clean, debug, sdfs, builddir) = parse_arguments()
+    (success, configfile, clean, verbose, debug, sdfs, builddir) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
-    success = setup_logging(debug)
+    success = setup_logging(verbose)
     if not success:
         raise Exception('Call to setup_logging failed.')
 
@@ -825,7 +827,7 @@ def main():
 
     # Static build: generate caps for entire suite and groups in the specified suite; generate API
     (success, suite_and_group_caps) = generate_suite_and_group_caps(suites, metadata_request, metadata_define,
-                                                                    arguments_request, config['caps_dir'])
+                                                                    arguments_request, config['caps_dir'], debug)
     if not success:
         raise Exception('Call to generate_suite_and_group_caps failed.')
 
