@@ -30,6 +30,11 @@ args = parser.parse_args()
 # Functions and subroutines                                                   #
 ###############################################################################
 
+def parse_args():
+    """Parse command line arguments."""
+    xml = args.xml
+    var = args.variable
+
 def parse_xml():
     """Reads provided xml file, parses ordered list of schemes for the suite specified by said xml"""
     print('reading xml file ' + args.xml + 'defining CCPP suite')
@@ -41,8 +46,14 @@ def read_meta_file():
     print('reading .meta file for scheme [scheme]')
     print('found variable ' + args.variable + ' in [scheme], adding scheme to list [list]')
 
+def check_var():
+    """Check given variable against standard names"""
+    print('Checking if ' + args.variable + ' is in list of standard names')
+
 def main():
     """Main routine that traverses a CCPP scheme and outputs the list of schemes that modify given variable"""
+    parse_args()
+    check_var()
     parse_xml()
 #    for scheme in schemes:
     read_meta_file()
