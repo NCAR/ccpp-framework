@@ -1040,7 +1040,6 @@ end module {module}
                             # of host model variables and set necessary default values
                             var = copy.deepcopy(metadata_define[var_standard_name][0])
                             var.intent = 'in'
-                            var.optional = 'F'
 
                         if not var_standard_name in local_vars.keys():
                             # The full name of the variable as known to the host model
