@@ -48,6 +48,7 @@ def check_units(test_val, prop_dict, error):
             # end if
         # end if
     # end if
+
     return test_val
 
 def check_dimensions(test_val, prop_dict, error, max_len=0):
