@@ -4,10 +4,6 @@
 """Code to write Fortran code
 """
 
-# Python library imports
-from __future__ import print_function
-# CCPP framework imports
-
 class FortranWriter(object):
     """Class to turn output into properly continued and indented Fortran code
     >>> FortranWriter("foo.F90", 'r', 'test', 'mod_name') #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -259,17 +255,18 @@ end module {module}'''
 ###############################################################################
 if __name__ == "__main__":
     # First, run doctest
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
-    # Make sure we can write a file
-    import sys
     import os
-    import os.path
+    import sys
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    # Make sure we can write a file
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     NAME = 'foo'
     while os.path.exists(NAME+'.F90'):
         NAME = NAME + 'xo'
-    # End while
+    # end while
     NAME = NAME + '.F90'
     if os.access(os.getcwd(), os.W_OK):
         _CHECK = FortranWriter.copyright().split('\n')
@@ -301,11 +298,12 @@ if __name__ == "__main__":
                         print(EMSG.format(_line_num+1))
                         print("{}".format(_statement.rstrip()))
                         print("{}".format(_CHECK[_line_num]))
-                    # End if
-                # End for
-        # End with
+                    # end if
+                # end for
+        # end with
         os.remove(NAME)
     else:
         print("WARNING: Unable to write test file, '{}'".format(NAME))
-    # End if
-# No else
+    # end if
+    sys.exit(fail)
+# end if

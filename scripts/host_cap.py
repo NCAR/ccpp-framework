@@ -579,6 +579,10 @@ if __name__ == "__main__":
     _LOGGER = init_log('host_registry')
     set_log_to_null(_LOGGER)
     # Run doctest
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
-# No else:
+    import sys
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

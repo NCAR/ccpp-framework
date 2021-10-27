@@ -356,8 +356,13 @@ if __name__ == "__main__":
     set_log_to_null(_LOGGER)
     try:
         # First, run doctest
+        # pylint: disable=ungrouped-imports
         import doctest
-        doctest.testmod()
+        # pylint: enable=ungrouped-imports
+        fail, _ = doctest.testmod()
+        sys.exit(fail)
     except CCPPError as cerr:
         print("{}".format(cerr))
-# No else:
+        sys.exit(fail)
+    # end try
+# end if

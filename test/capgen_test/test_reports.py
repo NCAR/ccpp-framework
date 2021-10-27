@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """
 -----------------------------------------------------------------------
  Description:  Test capgen database report python interface
@@ -20,6 +20,11 @@ _SRC_DIR = os.path.join(_FRAMEWORK_DIR, "src")
 
 if not os.path.exists(_SCRIPTS_DIR):
     raise ImportError("Cannot find scripts directory")
+# end if
+
+if ((sys.version_info[0] < 3) or
+    (sys.version_info[0] == 3) and (sys.version_info[1] < 7)):
+    raise Exception("Python 3.7 or greater required")
 # end if
 
 sys.path.append(_SCRIPTS_DIR)

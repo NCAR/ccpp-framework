@@ -4,8 +4,6 @@
 Parse a host-model registry XML file and return the captured variables.
 """
 
-# Python library imports
-from __future__ import print_function
 # CCPP framework imports
 from metavar import VarDictionary
 from ddt_library import VarDDT, DDTLibrary
@@ -304,10 +302,14 @@ class HostModel(VarDictionary):
 ###############################################################################
 
 if __name__ == "__main__":
+    # pylint: disable=ungrouped-imports
     from parse_tools import init_log, set_log_to_null
+    import doctest
+    import sys
+    # pylint: enable=ungrouped-imports
     _LOGGER = init_log('host_registry')
     set_log_to_null(_LOGGER)
     # First, run doctest
-    import doctest
-    doctest.testmod()
-# No else:
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

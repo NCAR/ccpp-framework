@@ -1269,9 +1269,13 @@ class MetadataSection(ParseSource):
 ########################################################################
 
 if __name__ == "__main__":
+# pylint: enable=ungrouped-imports
     import doctest
+    import sys
+# pylint: disable=ungrouped-imports
     from framework_env import CCPPFrameworkEnv
     _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'',
                                              'scheme_files':'',
                                              'suites':''})
-    doctest.testmod()
+    fail, _ = doctest.testmod()
+    sys.exit(fail)

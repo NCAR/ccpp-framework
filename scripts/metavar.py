@@ -805,14 +805,14 @@ class Var:
         # end if
         if isinstance(parent_var, Var):
             self.__parent_var = parent_var
-            parent_var._add_child(self)
+            parent_var.add_child(self)
         else:
             emsg = 'Attempting to set parent for {}, bad parent type, {}'
             lname = self.get_prop_value('local_name')
             raise ParseInternalError(emsg.format(lname, type(parent_var)))
         # end if
 
-    def _add_child(self, cvar):
+    def add_child(self, cvar):
         """Add <cvar> as a child of this Var object"""
         if cvar not in self.__children:
             self.__children.append(cvar)
@@ -824,8 +824,8 @@ class Var:
         children = self.__children
         if not children:
             pvar = self
-            while (not children) and pvar.__clone_source:
-                pvar = pvar.__clone_source
+            while (not children) and pvar.clone_source:
+                pvar = pvar.clone_source
                 children = pvar.children()
             # end while
         # end if
@@ -852,6 +852,11 @@ class Var:
             lname = self.get_prop_value('local_name')
             raise ParseInternalError(errmsg.format(stdname, lname, new_source))
         # end if
+
+    @property
+    def clone_source(self):
+        """Return this Var object's clone source (or None)"""
+        return self.__clone_source
 
     @property
     def host_interface_var(self):
@@ -1965,5 +1970,10 @@ CCPP_CONSTANT_VARS =                                                         \
 
 ###############################################################################
 if __name__ == "__main__":
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
+    import sys
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

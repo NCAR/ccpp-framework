@@ -19,22 +19,44 @@ perr() {
 cd ${test_dir}
 perr $? "Cannot cd to test directory, '${test_dir}'"
 
+errcnt=0
+
 # Run capgen test
 ./capgen_test/run_test
-perr $? "Failure running capgen test"
+res=$?
+errcnt=$((errcnt + res))
+if [ $res -ne 0 ]; then
+  echo "Failure running capgen test"
+fi
 
 # Run advection test
 ./advection_test/run_test
-perr $? "Failure running advection test"
+res=$?
+errcnt=$((errcnt + res))
+if [ $res -ne 0 ]; then
+  echo "Failure running advection test"
+fi
 
 # Run doctests
 ./run_doctest.sh
-perr $? "Failure running doctests"
+res=$?
+errcnt=$((errcnt + res))
+if [ $res -ne 0 ]; then
+  echo "${errcnt} doctest failures"
+fi
 
 for test in `ls unit_tests/test_*.py`; do
   echo "Running unit test, ${test}"
   python3 ${test}
-  perr $? "Failure running unit test, ${test}"
+  res=$?
+  errcnt=$((errcnt + res))
+  if [ $res -ne 0 ]; then
+    echo "Failure, '${res}', running unit test, ${test}"
+  fi
 done
 
-echo "All tests PASSed!"
+if [ $errcnt -eq 0 ]; then
+  echo "All tests PASSed!"
+else
+  echo "${errcnt} tests FAILed"
+fi

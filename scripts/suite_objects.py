@@ -1903,6 +1903,10 @@ class Group(SuiteObject):
 
 if __name__ == "__main__":
     # First, run doctest
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
-# end if (no else)
+    import sys
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

@@ -8,7 +8,6 @@ VarDDT is a class to hold all information on a CCPP DDT metadata variable
 """
 
 # Python library imports
-from __future__     import print_function
 import logging
 # CCPP framework imports
 from parse_tools    import ParseInternalError, CCPPError, context_string
@@ -328,5 +327,10 @@ class DDTLibrary(dict):
 
 ###############################################################################
 if __name__ == "__main__":
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
+    import sys
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

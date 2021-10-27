@@ -1145,8 +1145,11 @@ class API(VarDictionary):
 if __name__ == "__main__":
     try:
         # First, run doctest
+        # pylint: disable=ungrouped-imports
         import doctest
-        doctest.testmod()
+        import sys
+        # pylint: enable=ungrouped-imports
+        fail, _ = doctest.testmod()
         # Goal: Replace this test with a suite from unit tests
         FRAME_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         TEMP_SUITE = os.path.join(FRAME_ROOT, 'test', 'capgen_test',
@@ -1157,6 +1160,10 @@ if __name__ == "__main__":
                       _API_DUMMY_RUN_ENV)
         else:
             print("Cannot find test file, '{}', skipping test".format(TEMP_SUITE))
+        # end if
+        sys.exit(fail)
     except CCPPError as suite_error:
         print("{}".format(suite_error))
-# end if (no else)
+        sys.exit(fail)
+    # end try
+# end if

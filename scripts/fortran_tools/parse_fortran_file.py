@@ -959,11 +959,11 @@ def parse_fortran_file(filename, run_env):
 ########################################################################
 
 if __name__ == "__main__":
-# pylint: disable=ungrouped-imports
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
+    fail, _ = doctest.testmod()
     from parse_tools import register_fortran_ddt_name
-# pylint: enable=ungrouped-imports
+    # pylint: enable=ungrouped-imports
     _FPATH = '/Users/goldy/scratch/foo'
     _FNAMES = ['GFS_PBL_generic.F90', 'GFS_rad_time_vary.fv3.F90',
                'GFS_typedefs.F90']
@@ -975,7 +975,8 @@ if __name__ == "__main__":
             mh = parse_fortran_file(fpathname, preproc_defs={'CCPP':1})
             for header in mheader:
                 print('{}: {}'.format(fname, h))
-            # End for
-        # End if
-    # End for
-# End if
+            # end for
+        # end if
+    # end for
+    sys.exit(fail)
+# end if

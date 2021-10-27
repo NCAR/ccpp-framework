@@ -1271,8 +1271,11 @@ class VarCompatObj:
 
 ###############################################################################
 if __name__ == "__main__":
+    # pylint: disable=ungrouped-imports
     import doctest
+    import sys
     from parse_tools import init_log, set_log_to_null
+    # pylint: enable=ungrouped-imports
     _DOCTEST_LOGGING = init_log('var_props')
     set_log_to_null(_DOCTEST_LOGGING)
     _DOCTEST_RUNENV = CCPPFrameworkEnv(_DOCTEST_LOGGING,
@@ -1286,4 +1289,6 @@ if __name__ == "__main__":
                                     "m", [], "var1_lname", "var_stdname",
                                     "real", "kind_phys", "m", [],
                                     "var2_lname", _DOCTEST_RUNENV)
-    doctest.testmod()
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

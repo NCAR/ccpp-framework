@@ -218,7 +218,7 @@ fi
 report_prog="${framework}/scripts/ccpp_datafile.py"
 datafile="${build_dir}/ccpp/datatable.xml"
 echo "Running python interface tests"
-python ${scriptdir}/test_reports.py ${build_dir} ${datafile}
+python3 ${scriptdir}/test_reports.py ${build_dir} ${datafile}
 res=$?
 if [ $res -ne 0 ]; then
   perr "python interface tests failed"
