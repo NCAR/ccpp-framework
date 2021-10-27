@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """
 Classes to parse C preprocessor lines and to maintain a stack to allow
 inclusion and exclusion of lines based on preprocessor symbol definitions.

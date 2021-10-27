@@ -69,12 +69,12 @@ _SUITE_LIST = ["ddt_suite", "temp_suite"]
 _INPUT_VARS_DDT = ["model_times", "number_of_model_times",
                    "horizontal_loop_begin", "horizontal_loop_end",
                    "surface_air_pressure", "horizontal_dimension"]
-_OUTPUT_VARS_DDT = ["ccpp_error_flag", "ccpp_error_message", "model_times",
+_OUTPUT_VARS_DDT = ["ccpp_error_code", "ccpp_error_message", "model_times",
                     "number_of_model_times"]
 _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT
 _PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
                    "horizontal_dimension", "vertical_layer_dimension"]
-_REQUIRED_VARS_TEMP = ["ccpp_error_flag", "ccpp_error_message",
+_REQUIRED_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                        "potential_temperature",
                        "potential_temperature_at_interface",
                        "potential_temperature_increment",
@@ -85,7 +85,7 @@ _INPUT_VARS_TEMP = ["potential_temperature",
                     "potential_temperature_increment",
                     "surface_air_pressure", "time_step_for_physics",
                     "water_vapor_specific_humidity"]
-_OUTPUT_VARS_TEMP = ["ccpp_error_flag", "ccpp_error_message",
+_OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "potential_temperature",
                      "potential_temperature_at_interface",
                      "surface_air_pressure", "water_vapor_specific_humidity"]

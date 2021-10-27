@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Class
 #
@@ -9,6 +9,7 @@ VarDDT is a class to hold all information on a CCPP DDT metadata variable
 
 # Python library imports
 from __future__     import print_function
+import logging
 # CCPP framework imports
 from parse_tools    import ParseInternalError, CCPPError, context_string
 from metavar        import Var
@@ -21,11 +22,12 @@ class VarDDT(Var):
     DDT nesting level).
     """
 
-    def __init__(self, new_field, var_ref, logger=None, recur=False):
+    def __init__(self, new_field, var_ref, run_env, recur=False):
         """Initialize a new VarDDT object.
         <new_field> is the DDT component.
         <var_ref> is a Var or VarDDT whose root originates in a model
         dictionary.
+        <run_env> is the CCPPFrameworkEnv object for this framework run.
         The structure of the VarDDT object is:
             The super class Var object is a copy of the model root Var.
             The <var_ref object is a VarDDT containing the top-level
@@ -35,19 +37,18 @@ class VarDDT(Var):
         self.__field = None
         # Grab the info from the root of <var_ref>
         source = var_ref.source
-        super(VarDDT, self).__init__(var_ref, source, context=source.context,
-                                     logger=logger)
+        super().__init__(var_ref, source, run_env, context=source.context)
         # Find the correct place for <new_field>
         if isinstance(var_ref, Var):
             # We are at a top level DDT var, set our field
             self.__field = new_field
         else:
             # Recurse to find correct (tail) location for <new_field>
-            self.__field = VarDDT(new_field, var_ref.field,
-                                 logger=logger, recur=True)
+            self.__field = VarDDT(new_field, var_ref.field, run_env, recur=True)
         # End if
-        if (not recur) and (logger is not None):
-            logger.debug('Adding DDT field, {}'.format(self))
+        if ((not recur) and
+            run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG)):
+            run_env.logger.debug('Adding DDT field, {}'.format(self))
         # End if
 
     def is_ddt(self):
@@ -57,13 +58,13 @@ class VarDDT(Var):
     def get_parent_prop(self, name):
         """Return the Var property value for the parent Var object.
         """
-        return super(VarDDT, self).get_prop_value(name)
+        return super().get_prop_value(name)
 
     def get_prop_value(self, name):
         """Return the Var property value for the leaf Var object.
         """
         if self.field is None:
-            pvalue = super(VarDDT, self).get_prop_value(name)
+            pvalue = super().get_prop_value(name)
         else:
             pvalue = self.field.get_prop_value(name)
         # End if
@@ -74,7 +75,7 @@ class VarDDT(Var):
         See Var.intrinsic_elem for details
         """
         if self.field is None:
-            pvalue = super(VarDDT, self).intrinsic_elements(check_dict=check_dict)
+            pvalue = super().intrinsic_elements(check_dict=check_dict)
         else:
             pvalue = self.field.intrinsic_elements(check_dict=check_dict)
         # End if
@@ -91,10 +92,8 @@ class VarDDT(Var):
         by default, the source and type are the same as this Var (self).
         """
         if self.field is None:
-            clone_var = super(VarDDT, self).clone(subst_dict,
-                                                  source_name=source_name,
-                                                  source_type=source_type,
-                                                  context=context)
+            clone_var = super().clone(subst_dict, source_name=source_name,
+                                      source_type=source_type, context=context)
         else:
             clone_var = self.field.clone(subst_dict,
                                          source_name=source_name,
@@ -107,7 +106,7 @@ class VarDDT(Var):
         """Return a legal call string of this VarDDT's local name sequence.
         """
         # XXgoldyXX: Need to add dimensions to this
-        call_str = super(VarDDT, self).get_prop_value('local_name')
+        call_str = super().get_prop_value('local_name')
         if self.field is not None:
             call_str += '%' + self.field.call_string(var_dict,
                                                      loop_vars=loop_vars)
@@ -119,8 +118,8 @@ class VarDDT(Var):
         The type of this declaration is the type of the Var at the
         end of the chain of references."""
         if self.field is None:
-            super(VarDDT, self).write_def(outfile, indent, ddict,
-                                          allocatable=allocatable, dummy=dummy)
+            super().write_def(outfile, indent, ddict,
+                              allocatable=allocatable, dummy=dummy)
         else:
             self.field.write_def(outfile, indent, ddict,
                                  allocatable=allocatable, dummy=dummy)
@@ -174,7 +173,7 @@ class VarDDT(Var):
     @property
     def var(self):
         "Return this VarDDT's Var object"
-        return super(VarDDT, self)
+        return super()
 
     @property
     def field(self):
@@ -190,12 +189,15 @@ class DDTLibrary(dict):
     The dictionary holds known standard names.
     """
 
-    def __init__(self, name, ddts=None, logger=None):
+    def __init__(self, name, run_env, ddts=None, logger=None):
         "Our dict is DDT definition headers, key is type"
-        self._name = '{}_ddt_lib'.format(name)
-        self._ddt_fields = {}    # DDT field to DDT access map
-        self._max_mod_name_len = 0
-        super(DDTLibrary, self).__init__()
+        self.__name = '{}_ddt_lib'.format(name)
+# XXgoldyXX: v remove?
+#        self.__ddt_fields = {}    # DDT field to DDT access map
+# XXgoldyXX: ^ remove?
+        self.__max_mod_name_len = 0
+        self.__run_env = run_env
+        super().__init__()
         if ddts is None:
             ddts = list()
         elif not isinstance(ddts, list):
@@ -223,8 +225,8 @@ class DDTLibrary(dict):
             # End if
             self[ddt.title] = ddt
             dlen = len(ddt.module)
-            if dlen > self._max_mod_name_len:
-                self._max_mod_name_len = dlen
+            if dlen > self.__max_mod_name_len:
+                self.__max_mod_name_len = dlen
             # End if
         # End for
 
@@ -245,7 +247,7 @@ class DDTLibrary(dict):
             # End if
         # End if (no else needed)
 
-    def collect_ddt_fields(self, var_dict, var, ddt=None):
+    def collect_ddt_fields(self, var_dict, var, run_env, ddt=None):
         """Add all the reachable fields from DDT variable <var> of type,
         <ddt> to <var_dict>. Each field is added as a VarDDT.
         """
@@ -261,12 +263,12 @@ class DDTLibrary(dict):
             # End if
         # End if
         for dvar in ddt.variable_list():
-            subvar = VarDDT(dvar, var)
+            subvar = VarDDT(dvar, var, self.run_env)
             dvtype = dvar.get_prop_value('type')
             if (dvar.is_ddt()) and (dvtype in self):
                 # If DDT in our library, we need to add sub-fields recursively.
                 subddt = self[dvtype]
-                self.collect_ddt_fields(var_dict, subvar, subddt)
+                self.collect_ddt_fields(var_dict, subvar, run_env, ddt=subddt)
             else:
                 # add_variable only checks the current dictionary. For a
                 # DDT, the variable also cannot be in our parent dictionaries.
@@ -281,7 +283,7 @@ class DDTLibrary(dict):
                     raise CCPPError(emsg.format(stdname, ntx, ctx))
                 # end if
                 # Add this intrinsic to <var_dict>
-                var_dict.add_variable(subvar)
+                var_dict.add_variable(subvar, run_env)
         # End for
 
     def ddt_modules(self, variable_list, ddt_mods=None):
@@ -304,7 +306,7 @@ class DDTLibrary(dict):
     def write_ddt_use_statements(self, variable_list, outfile, indent, pad=0):
         """Write the use statements for all ddt modules needed by
         <variable_list>"""
-        pad = max(pad, self._max_mod_name_len)
+        pad = max(pad, self.__max_mod_name_len)
         ddt_mods = self.ddt_modules(variable_list)
         for ddt_mod in ddt_mods:
             dmod = ddt_mod[0]
@@ -317,7 +319,12 @@ class DDTLibrary(dict):
     @property
     def name(self):
         "Return the name of this DDT library"
-        return self._name
+        return self.__name
+
+    @property
+    def run_env(self):
+        """Return the CCPPFrameworkEnv object for this DDT library"""
+        return self.__run_env
 
 ###############################################################################
 if __name__ == "__main__":

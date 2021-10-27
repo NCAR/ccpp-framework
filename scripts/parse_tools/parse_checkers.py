@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Helper functions to validate parsed input"""
 
@@ -12,11 +12,13 @@ from parse_source import CCPPError, ParseInternalError
 
 ########################################################################
 
+_UNITS_RE = re.compile(r"^[^/@#$%^&*()\|<>\[\]{}?,.]+$")
+
 def check_units(test_val, prop_dict, error):
     """Return <test_val> if a valid unit, otherwise, None
     if <error> is True, raise an Exception if <test_val> is not valid.
-    >>> check_units('m/s', None, True)
-    'm/s'
+    >>> check_units('m s-1', None, True)
+    'm s-1'
     >>> check_units('kg m-3', None, True)
     'kg m-3'
     >>> check_units('1', None, True)
@@ -33,19 +35,19 @@ def check_units(test_val, prop_dict, error):
     Traceback (most recent call last):
     CCPPError: ['foo'] is invalid; not a string
     """
-    if not isinstance(test_val, str):
-        if error:
-            raise CCPPError("'{}' is invalid; not a string".format(test_val))
-        else:
-            test_val = None
-        # end if
-    else:
-        if not test_val.strip():
+    if isinstance(test_val, str):
+        if _UNITS_RE.match(test_val.strip()) is None:
             if error:
                 raise CCPPError("'{}' is not a valid unit".format(test_val))
             else:
                 test_val = None
             # end if
+        # end if
+    else:
+        if error:
+            raise CCPPError("'{}' is invalid; not a string".format(test_val))
+        else:
+            test_val = None
         # end if
     # end if
     return test_val
@@ -206,8 +208,14 @@ __FORT_INT = r"[0-9]+"
 __FORT_DIM = r"(?:"+__FORTRAN_AID+r"|[:]|"+__FORT_INT+r")"
 __REPEAT_DIM = r"(?:,\s*"+__FORT_DIM+r"\s*)"
 __FORTRAN_SCALAR_ARREF = r"[(]\s*("+__FORT_DIM+r"\s*"+__REPEAT_DIM+r"{0,6})[)]"
+# FORTRAN_SCALAR_REF: Pattern of a valid Fortran array reference
+#    NB: Only allows symbols, no expressions and/or function calls
 FORTRAN_SCALAR_REF = r"(?:"+FORTRAN_ID+r"\s*"+__FORTRAN_SCALAR_ARREF+r")"
 FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
+# FORTRAN_FUNCTION_REF: A Fortran function reference
+#    NB: Currenly does not support function arguments
+FORTRAN_FUNCTION_REF = r"(?:"+FORTRAN_ID+r"\s*[(]\s*[)])"
+FORTRAN_FUNCTION_REF_RE = re.compile(FORTRAN_FUNCTION_REF)
 FORTRAN_INTRINSIC_TYPES = ["integer", "real", "logical", "complex",
                            "double precision", "character"]
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")

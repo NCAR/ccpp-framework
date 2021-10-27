@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Parse a host-model registry XML file and return the captured variables.
@@ -17,12 +17,18 @@ from parse_tools import FORTRAN_SCALAR_REF_RE
 class HostModel(VarDictionary):
     """Class to hold the data from a host model"""
 
-    def __init__(self, meta_tables, name_in, logger):
+    def __init__(self, meta_tables, name_in, run_env):
+        """Initialize this HostModel object.
+        <meta_tables> is a list of parsed host metadata tables.
+        <name_in> is the name for this host model.
+        <run_env> is the CCPPFrameworkEnv object for this framework run.
+        """
         self.__name = name_in
         self.__var_locations = {} # Local name to module map
         self.__loop_vars = None   # Loop control vars in interface calls
         self.__used_variables = None # Local names which have been requested
         self.__deferred_finds = None # Used variables that were missed at first
+        self.__run_env = run_env
         # First, process DDT headers
         meta_headers = list()
         for sect in [x.sections() for x in meta_tables.values()]:
@@ -30,31 +36,31 @@ class HostModel(VarDictionary):
         # end for
         # Initialize our dictionaries
         # Initialize variable dictionary
-        super(HostModel, self).__init__(self.name, logger=logger)
-        self.__ddt_lib = DDTLibrary('{}_ddts'.format(self.name),
+        super().__init__(self.name, run_env)
+        self.__ddt_lib = DDTLibrary('{}_ddts'.format(self.name), run_env,
                                     ddts=[d for d in meta_headers
-                                          if d.header_type == 'ddt'],
-                                    logger=logger)
+                                          if d.header_type == 'ddt'])
         self.__ddt_dict = VarDictionary("{}_ddt_vars".format(self.name),
-                                        parent_dict=self, logger=logger)
+                                        run_env, parent_dict=self)
         # Now, process the code headers by type
         self.__metadata_tables = meta_tables
         for header in [h for h in meta_headers if h.header_type != 'ddt']:
             title = header.title
-            if logger is not None:
+            if run_env.logger is not None:
                 msg = 'Adding {} {} to host model'
-                logger.debug(msg.format(header.header_type, title))
+                run_env.logger.debug(msg.format(header.header_type, title))
             # End if
             if header.header_type == 'module':
                 # Set the variable modules
                 modname = header.title
                 for var in header.variable_list():
-                    self.add_variable(var)
+                    self.add_variable(var, run_env)
                     lname = var.get_prop_value('local_name')
                     self.__var_locations[lname] = modname
                     self.ddt_lib.check_ddt_type(var, header, lname=lname)
                     if var.is_ddt():
-                        self.ddt_lib.collect_ddt_fields(self.__ddt_dict, var)
+                        self.ddt_lib.collect_ddt_fields(self.__ddt_dict, var,
+                                                        run_env)
                     # End if
                 # End for
             elif header.header_type == 'host':
@@ -63,10 +69,11 @@ class HostModel(VarDictionary):
                     self.__name = header.name
                 # End if
                 for var in header.variable_list():
-                    self.add_variable(var)
+                    self.add_variable(var, run_env)
                     self.ddt_lib.check_ddt_type(var, header)
                     if var.is_ddt():
-                        self.ddt_lib.collect_ddt_fields(self.__ddt_dict, var)
+                        self.ddt_lib.collect_ddt_fields(self.__ddt_dict, var,
+                                                        run_env)
                     # End if
                 # End for
                 loop_vars = header.variable_list(std_vars=False,
@@ -75,12 +82,12 @@ class HostModel(VarDictionary):
                     # loop_vars are part of the host-model interface call
                     # at run time. As such, they override the host-model
                     # array dimensions.
-                    self.__loop_vars = VarDictionary(self.name)
+                    self.__loop_vars = VarDictionary(self.name, run_env)
                 # End if
                 for hvar in loop_vars:
                     std_name = hvar.get_prop_value('standard_name')
                     if std_name not in self.__loop_vars:
-                        self.__loop_vars.add_variable(hvar)
+                        self.__loop_vars.add_variable(hvar, run_env)
                     else:
                         ovar = self.__loop_vars[std_name]
                         ctx1 = context_string(ovar.context)
@@ -182,12 +189,11 @@ class HostModel(VarDictionary):
         """Return the host model variable matching <standard_name> or None
         If <loop_subst> is True, substitute a begin:end range for an extent.
         """
-        my_var = super(HostModel,
-                       self).find_variable(standard_name=standard_name,
-                                           source_var=source_var,
-                                           any_scope=any_scope, clone=clone,
-                                           search_call_list=search_call_list,
-                                           loop_subst=loop_subst)
+        my_var = super().find_variable(standard_name=standard_name,
+                                       source_var=source_var,
+                                       any_scope=any_scope, clone=clone,
+                                       search_call_list=search_call_list,
+                                       loop_subst=loop_subst)
         if my_var is None:
             # Check our DDT library
             if standard_name is None:
@@ -217,7 +223,7 @@ class HostModel(VarDictionary):
                 new_var = my_var.clone(new_name, source_name=self.name,
                                        source_type="HOST",
                                        context=ctx)
-                self.add_variable(new_var)
+                self.add_variable(new_var, self.__run_env)
                 my_var = new_var
             # End if
         # End if
@@ -243,7 +249,7 @@ class HostModel(VarDictionary):
         # End if
         return my_var
 
-    def add_variable(self, newvar, exists_ok=False, gen_unique=False,
+    def add_variable(self, newvar, run_env, exists_ok=False, gen_unique=False,
                      adjust_intent=False):
         """Add <newvar> if it does not conflict with existing entries.
         For the host model, this includes entries in used DDT variables.
@@ -266,9 +272,9 @@ class HostModel(VarDictionary):
             raise CCPPError(emsg.format(standard_name, ntx, ctx))
         # end if
         # No collision, proceed normally
-        super(HostModel, self).add_variable(newvar=newvar, exists_ok=exists_ok,
-                                            gen_unique=gen_unique,
-                                            adjust_intent=False)
+        super().add_variable(newvar=newvar, run_env=run_env,
+                             exists_ok=exists_ok, gen_unique=gen_unique,
+                             adjust_intent=False)
 
     def add_host_variable_module(self, local_name, module, logger=None):
         """Add a module name location for a host variable"""

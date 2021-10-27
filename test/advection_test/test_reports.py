@@ -61,7 +61,7 @@ _CCPP_FILES = _UTILITY_FILES + _HOST_FILES + _SUITE_FILES
 _PROCESS_LIST = list()
 _MODULE_LIST = ["cld_ice", "cld_liq"]
 _SUITE_LIST = ["cld_suite"]
-_REQUIRED_VARS_CLD = ["ccpp_error_flag", "ccpp_error_message",
+_REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "horizontal_loop_begin", "horizontal_loop_end",
                       "surface_air_pressure", "temperature",
                       "time_step_for_physics", "water_temperature_at_freezing",
@@ -74,7 +74,7 @@ _INPUT_VARS_CLD = ["surface_air_pressure", "temperature",
                    "water_vapor_specific_humidity",
                    "cloud_ice_dry_mixing_ratio",
                    "cloud_liquid_dry_mixing_ratio"]
-_OUTPUT_VARS_CLD = ["ccpp_error_flag", "ccpp_error_message",
+_OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "water_vapor_specific_humidity", "temperature",
                     "cloud_ice_dry_mixing_ratio",
                     "cloud_liquid_dry_mixing_ratio"]

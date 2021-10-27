@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 
 """Classes and methods to implement a simple state machine."""
@@ -11,7 +11,7 @@ from parse_tools import FORTRAN_ID
 
 ###############################################################################
 
-class StateMachine(object):
+class StateMachine:
     """Class and methods to implement a simple state machine.
     Note, a collections.UserDict would be nice here but it is not in python 2.
     >>> StateMachine()

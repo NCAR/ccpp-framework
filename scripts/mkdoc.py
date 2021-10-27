@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # Functions to generate basic documentation in HTML and LaTeX for CCPP metadata
