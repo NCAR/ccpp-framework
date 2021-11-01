@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """
 Classes to parse C preprocessor lines and to maintain a stack to allow
 inclusion and exclusion of lines based on preprocessor symbol definitions.
@@ -416,6 +416,10 @@ class PreprocStack(object):
 ########################################################################
 
 if __name__ == "__main__":
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
+    import sys
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
 # end if

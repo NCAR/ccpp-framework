@@ -128,7 +128,7 @@ process_list=""
 module_list="cld_ice,cld_liq"
 dependencies=""
 suite_list="cld_suite"
-required_vars="ccpp_error_flag,ccpp_error_message"
+required_vars="ccpp_error_code,ccpp_error_message"
 required_vars="${required_vars},cloud_ice_dry_mixing_ratio"
 required_vars="${required_vars},cloud_liquid_dry_mixing_ratio"
 required_vars="${required_vars},horizontal_loop_begin"
@@ -144,7 +144,7 @@ input_vars="${input_vars},horizontal_loop_end"
 input_vars="${input_vars},surface_air_pressure,temperature"
 input_vars="${input_vars},time_step_for_physics,water_temperature_at_freezing"
 input_vars="${input_vars},water_vapor_specific_humidity"
-output_vars="ccpp_error_flag,ccpp_error_message"
+output_vars="ccpp_error_code,ccpp_error_message"
 output_vars="${output_vars},cloud_ice_dry_mixing_ratio"
 output_vars="${output_vars},cloud_liquid_dry_mixing_ratio"
 output_vars="${output_vars},temperature"
@@ -199,7 +199,7 @@ fi
 report_prog="${framework}/scripts/ccpp_datafile.py"
 datafile="${build_dir}/ccpp/datatable.xml"
 echo "Running python interface tests"
-python ${scriptdir}/test_reports.py ${build_dir} ${datafile}
+python3 ${scriptdir}/test_reports.py ${build_dir} ${datafile}
 res=$?
 if [ $res -ne 0 ]; then
   perr "python interface tests failed"

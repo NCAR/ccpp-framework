@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 There are four types of CCPP metadata tables, scheme, module, ddt, and host.
 A metadata file contains one or more metadata tables.
@@ -89,9 +89,10 @@ An example argument table is shown below.
   dimensions = ()
   intent = out
 [ ierr ]
-  standard_name = ccpp_error_flag
+  standard_name = ccpp_error_code
   long_name = error flag for error handling in CCPP
   type = integer
+  units = 1
   dimensions = ()
   intent=out
 
@@ -102,8 +103,8 @@ Notes on the input format:
   table describes
 - ModuleName must match the name of the module whose variables the argument
   table describes
-- for variable type definitions and module variables, the intent and
-  optional columns are not functional and should be omitted
+- for variable type definitions and module variables, the intent keyword
+  is not functional and should be omitted
 - each argument table (and its subroutine) must accept the following two arguments for error handling (the local name can vary):
 [ errmsg ]
   standard_name = ccpp_error_message
@@ -113,19 +114,18 @@ Notes on the input format:
   type = character
   kind = len=512
   intent = out
-  optional = F
 [ errflg ]
-  standard_name = ccpp_error_flag
+  standard_name = ccpp_error_code
   long_name = Error flag for error handling in CCPP
-  units = flag
+  units = 1
   dimensions = ()
   type = integer
   intent = out
-  optional = F
 """
 
 # Python library imports
 import difflib
+import logging
 import os.path
 import re
 # CCPP framework imports
@@ -179,7 +179,7 @@ def _parse_config_line(line, context):
 
 ########################################################################
 
-def parse_metadata_file(filename, known_ddts, logger):
+def parse_metadata_file(filename, known_ddts, run_env):
     """Parse <filename> and return list of parsed metadata tables"""
     # Read all lines of the file at once
     meta_tables = list()
@@ -195,8 +195,8 @@ def parse_metadata_file(filename, known_ddts, logger):
     curr_line, curr_line_num = parse_obj.curr_line()
     while curr_line is not None:
         if MetadataTable.table_start(curr_line):
-            new_table = MetadataTable(parse_object=parse_obj,
-                                      known_ddts=known_ddts, logger=logger)
+            new_table = MetadataTable(run_env, parse_object=parse_obj,
+                                      known_ddts=known_ddts)
             ntitle = new_table.table_name
             if ntitle not in table_titles:
                 meta_tables.append(new_table)
@@ -269,9 +269,9 @@ class MetadataTable():
 
     __table_start = re.compile(r"(?i)\s*\[\s*ccpp-table-properties\s*\]")
 
-    def __init__(self, table_name_in=None, table_type_in=None,
+    def __init__(self, run_env, table_name_in=None, table_type_in=None,
                  dependencies=None, relative_path=None, known_ddts=None,
-                 var_dict=None, module=None, parse_object=None, logger=None):
+                 var_dict=None, module=None, parse_object=None):
         """Initialize a MetadataTable, either with a name, <table_name_in>, and
         type, <table_type_in>, or with information from a file (<parse_object>).
         if <parse_object> is None, <dependencies> and <relative_path> are
@@ -284,6 +284,7 @@ class MetadataTable():
         self.__dependencies = dependencies
         self.__relative_path = relative_path
         self.__sections = list()
+        self.__run_env = run_env
         if parse_object is None:
             if table_name_in is not None:
                 self.__table_name = table_name_in
@@ -304,7 +305,7 @@ class MetadataTable():
             self.__start_context = None
             if (var_dict is not None) or module:
                 if var_dict is None:
-                    var_dict = VarDictionary(self.table_name)
+                    var_dict = VarDictionary(self.table_name, run_env)
                 # end if
                 # This interface is used by the Fortran parser so strip off
                 #    the phase from the table name but not the section title
@@ -314,9 +315,9 @@ class MetadataTable():
                     self.__table_name = fnam or stitle
                 # end if
                 sect = MetadataSection(self.table_name, self.table_type,
-                                       title=stitle, type_in=self.table_type,
-                                       module=module, var_dict=var_dict,
-                                       known_ddts=known_ddts, logger=logger)
+                                       run_env, title=stitle,
+                                       type_in=self.table_type, module=module,
+                                       var_dict=var_dict, known_ddts=known_ddts)
                 self.__sections.append(sect)
             # end if
         else:
@@ -341,10 +342,10 @@ class MetadataTable():
                 known_ddts = list()
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
-            self.__init_from_file(known_ddts, logger)
+            self.__init_from_file(known_ddts, self.__run_env)
         # end if
 
-    def __init_from_file(self, known_ddts, logger):
+    def __init_from_file(self, known_ddts, run_env):
         """ Read the table preamble, assume the caller already figured out
         the first line of the header using the header_start method."""
         curr_line, _ = self.__pobj.next_line()
@@ -388,7 +389,8 @@ class MetadataTable():
                             emsg += "already been declared as None"
                             self.__pobj.add_syntax_err(emsg)
                         else:
-                            depends = [x.strip() for x in value.split(',') if x.strip()]
+                            depends = [x.strip() for x in value.split(',')
+                                       if x.strip()]
                             self.__dependencies.extend(depends)
                         # end if
                     elif key == 'relative_path':
@@ -404,9 +406,8 @@ class MetadataTable():
                 if MetadataSection.header_start(curr_line):
                     skip_rest_of_section = False
                     section = MetadataSection(self.table_name, self.table_type,
-                                              parse_object=self.__pobj,
-                                              known_ddts=known_ddts,
-                                              logger=logger)
+                                              run_env, parse_object=self.__pobj,
+                                              known_ddts=known_ddts)
                     # Some table types only allow for one associated section
                     if ((len(self.__sections) == 1) and
                         (self.table_type in _SINGLETON_TABLE_TYPES)):
@@ -474,6 +475,11 @@ class MetadataTable():
         """Return the relative path for the table's dependencies"""
         return self.__relative_path
 
+    @property
+    def run_env(self):
+        """Return this table's CCPPFrameworkEnv object"""
+        return self.__run_env
+
     def __repr__(self):
         '''Print representation for MetadataTable objects'''
         return "<{} {} @ 0X{:X}>".format(self.__class__.__name__,
@@ -498,7 +504,7 @@ class MetadataTable():
 
 class MetadataSection(ParseSource):
     """Class to hold all information from a metadata header
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module = foo",    \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
@@ -506,7 +512,7 @@ class MetadataSection(ParseSource):
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])) #doctest: +ELLIPSIS
     <__main__.MetadataSection foo / footable at 0x...>
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module = foobar", \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
@@ -514,7 +520,7 @@ class MetadataSection(ParseSource):
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var horizontal_loop_extent: im at 0x...>
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module = foobar", \
                        "process = microphysics", "[ im ]",                    \
@@ -523,7 +529,7 @@ class MetadataSection(ParseSource):
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var horizontal_loop_extent: im at 0x...>
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type=scheme", "module = foo",      \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
@@ -533,7 +539,7 @@ class MetadataSection(ParseSource):
                        "  subroutine foo()"])).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     parse_source.ParseSyntaxError: Invalid variable property syntax, 'subroutine foo()', at foobar.txt:9
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module=foobar",   \
                        "[ im ]", "standard_name = horizontal_loop_extent",    \
@@ -542,7 +548,7 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        ""], line_start=0)).find_variable('horizontal_loop_extent').get_prop_value('local_name')
     'im'
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme"                     \
                        "[ im ]", "standard_name = horizontalloop extent",     \
@@ -551,7 +557,7 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("footable", "scheme",                                 \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["[ccpp-arg-table]", "name = foobar", "type = scheme"   \
                        "[ im ]", "standard_name = horizontal loop extent",    \
@@ -560,7 +566,7 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("foobar", "scheme",                                   \
+    >>> MetadataSection("foobar", "scheme", _DUMMY_RUN_ENV,                   \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "module = foo"                        \
                        "[ im ]", "standard_name = horizontal loop extent",    \
@@ -569,7 +575,7 @@ class MetadataSection(ParseSource):
                        "dimensions = () |  intent = in",                      \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("foobar", "scheme",                                   \
+    >>> MetadataSection("foobar", "scheme", _DUMMY_RUN_ENV,                   \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = foobar", "foo = bar"                           \
                        "[ im ]", "standard_name = horizontal loop extent",    \
@@ -598,10 +604,11 @@ class MetadataSection(ParseSource):
 
     __vref_start = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
 
-    def __init__(self, table_name, table_type, parse_object=None,
+    def __init__(self, table_name, table_type, run_env, parse_object=None,
                  title=None, type_in=None, module=None, process_type=None,
-                 var_dict=None, known_ddts=None, logger=None):
-        """If <parse_object> is not None, initialize from the current file and
+                 var_dict=None, known_ddts=None):
+        """Initialize a new MetadataSection object.
+        If <parse_object> is not None, initialize from the current file and
         location in <parse_object>.
         If <parse_object> is None, initialize from <title>, <type>, <module>,
         and <var_dict>. Note that if <parse_object> is not None, <title>,
@@ -618,6 +625,7 @@ class MetadataSection(ParseSource):
         self.__module_name = None
         self.__process_type = UNKNOWN_PROCESS_TYPE
         self.__section_valid = True
+        self.__run_env = run_env
         if parse_object is None:
             if title is not None:
                 self.__section_title = title
@@ -657,11 +665,10 @@ class MetadataSection(ParseSource):
                 self.__process_type = process_type
             # end if
             #  Initialize our ParseSource parent
-            super(MetadataSection, self).__init__(self.title,
-                                                  self.header_type, self.__pobj)
-            self.__variables = VarDictionary(self.title, logger=logger)
+            super().__init__(self.title, self.header_type, self.__pobj)
+            self.__variables = VarDictionary(self.title, run_env)
             for var in var_dict.variable_list(): # Let this crash if no dict
-                self.__variables.add_variable(var)
+                self.__variables.add_variable(var, run_env)
             # end for
             self.__start_context = None
         else:
@@ -669,7 +676,7 @@ class MetadataSection(ParseSource):
                 known_ddts = list()
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
-            self.__init_from_file(table_name, table_type, known_ddts, logger)
+            self.__init_from_file(table_name, table_type, known_ddts, run_env)
         # end if
         # Register this header if it is a DDT
         if self.header_type == 'ddt':
@@ -700,7 +707,7 @@ class MetadataSection(ParseSource):
         # end if
         return def_mod
 
-    def __init_from_file(self, table_name, table_type, known_ddts, logger):
+    def __init_from_file(self, table_name, table_type, known_ddts, run_env):
         """ Read the section preamble, assume the caller already figured out
         the first line of the header using the header_start method."""
         start_ctx = context_string(self.__pobj)
@@ -768,9 +775,9 @@ class MetadataSection(ParseSource):
             self.__pobj.add_syntax_err(mismatch)
             self.__section_valid = False
         # end if
-        if logger:
-            logger.info("Parsing {} {}{}".format(self.header_type,
-                                                 self.title, start_ctx))
+        if run_env.logger and run_env.logger.isEnabledFor(logging.INFO):
+            run_env.logger.info("Parsing {} {}{}".format(self.header_type,
+                                                         self.title, start_ctx))
         # end if
         if self.header_type == "ddt":
             known_ddts.append(self.title)
@@ -780,21 +787,20 @@ class MetadataSection(ParseSource):
             self.__module_name = self._default_module()
         # end if
         #  Initialize our ParseSource parent
-        super(MetadataSection, self).__init__(self.title,
-                                              self.header_type, self.__pobj)
+        super().__init__(self.title, self.header_type, self.__pobj)
         # Read the variables
         valid_lines = True
-        self.__variables = VarDictionary(self.title, logger=logger)
+        self.__variables = VarDictionary(self.title, run_env)
         while valid_lines:
             newvar, curr_line = self.parse_variable(curr_line, known_ddts)
             valid_lines = newvar is not None
             if valid_lines:
-                if logger:
+                if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
                     dmsg = 'Adding {} to {}'
                     lname = newvar.get_prop_value('local_name')
-                    logger.debug(dmsg.format(lname, self.title))
+                    run_env.logger.debug(dmsg.format(lname, self.title))
                 # end if
-                self.__variables.add_variable(newvar)
+                self.__variables.add_variable(newvar, run_env)
                 # Check to see if we hit the end of the table
                 valid_lines = not MetadataSection.header_start(curr_line)
             else:
@@ -906,7 +912,7 @@ class MetadataSection(ParseSource):
                 var_props['local_name'] = sub_name
             # end if (else just leave the local name alone)
             try:
-                newvar = Var(var_props, source=self, context=context)
+                newvar = Var(var_props, self, self.run_env, context=context)
             except CCPPError as verr:
                 self.__pobj.add_syntax_err(verr, skip_context=True)
                 var_ok = False
@@ -1068,7 +1074,7 @@ class MetadataSection(ParseSource):
                         std = var.get_prop_value('local_name')
                         ctx = context_string(context)
                         if logger is not None:
-                            errmsg = "WARNING: " + errmsg
+                            errmsg = "ERROR: " + errmsg
                             logger.error(errmsg.format(item, std, ctx))
                             dname = unique_standard_name()
                         else:
@@ -1178,7 +1184,7 @@ class MetadataSection(ParseSource):
         # end with
 
     def __repr__(self):
-        base = super(MetadataSection, self).__repr__()
+        base = super().__repr__()
         pind = base.find(' object ')
         if pind >= 0:
             pre = base[0:pind]
@@ -1230,6 +1236,11 @@ class MetadataSection(ParseSource):
         return self.__variables
 
     @property
+    def run_env(self):
+        """Return this section's CCPPFrameworkEnv object"""
+        return self.__run_env
+
+    @property
     def valid(self):
         """Return True iff we did not encounter an error creating
         this section"""
@@ -1258,5 +1269,13 @@ class MetadataSection(ParseSource):
 ########################################################################
 
 if __name__ == "__main__":
+# pylint: enable=ungrouped-imports
     import doctest
-    doctest.testmod()
+    import sys
+# pylint: disable=ungrouped-imports
+    from framework_env import CCPPFrameworkEnv
+    _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'',
+                                             'scheme_files':'',
+                                             'suites':''})
+    fail, _ = doctest.testmod()
+    sys.exit(fail)

@@ -1,18 +1,19 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Parse a host-model registry XML file and return the captured variables.
 """
 
 # Python library imports
+import logging
 import os
-import os.path
 # CCPP framework imports
 from ccpp_suite import API
 from ccpp_state_machine import CCPP_STATE_MACH
 from constituents import ConstituentVarDict, CONST_DDT_NAME, CONST_DDT_MOD
 from ddt_library import DDTLibrary
 from file_utils import KINDS_MODULE
+from framework_env import CCPPFrameworkEnv
 from metadata_table import MetadataTable
 from metavar import Var, VarDictionary, CCPP_CONSTANT_VARS
 from metavar import CCPP_LOOP_VAR_STDNAMES
@@ -36,20 +37,30 @@ _API_SRC_NAME = "CCPP_API"
 _API_SOURCE = ParseSource(_API_SRC_NAME, "MODULE",
                           ParseContext(filename="host_cap.F90"))
 
+_API_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
+                                                   'scheme_files':'',
+                                                   'suites':''})
+
 _SUITE_NAME_VAR = Var({'local_name':'suite_name',
                        'standard_name':'suite_name',
                        'intent':'in', 'type':'character',
                        'kind':'len=*', 'units':'', 'protected':'True',
-                       'dimensions':'()'}, _API_SOURCE)
+                       'dimensions':'()'}, _API_SOURCE, _API_DUMMY_RUN_ENV)
 
 _SUITE_PART_VAR = Var({'local_name':'suite_part',
                        'standard_name':'suite_part',
                        'intent':'in', 'type':'character',
                        'kind':'len=*', 'units':'', 'protected':'True',
-                       'dimensions':'()'}, _API_SOURCE)
+                       'dimensions':'()'}, _API_SOURCE, _API_DUMMY_RUN_ENV)
+
+###############################################################################
+# Used for creating blank dictionary
+_MVAR_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
+                                                    'scheme_files':'',
+                                                    'suites':''})
 
 # Used to prevent loop substitution lookups
-_BLANK_DICT = VarDictionary(_API_SRC_NAME)
+_BLANK_DICT = VarDictionary(_API_SRC_NAME, _MVAR_DUMMY_RUN_ENV)
 
 ###############################################################################
 def suite_part_list(suite, stage):
@@ -138,7 +149,7 @@ def constituent_model_const_indices(host_model):
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
-def add_constituent_vars(cap, host_model, suite_list, logger):
+def add_constituent_vars(cap, host_model, suite_list, run_env):
 ###############################################################################
     """Create a DDT library containing array reference variables
     for each constituent field for all suites in <suite_list>.
@@ -195,9 +206,9 @@ def add_constituent_vars(cap, host_model, suite_list, logger):
     # Add entries for each constituent (once per standard name)
     const_stdnames = set()
     for suite in suite_list:
-        if logger is not None:
+        if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
             lmsg = "Adding constituents from {} to {}"
-            logger.debug(lmsg.format(suite.name, host_model.name))
+            run_env.logger.debug(lmsg.format(suite.name, host_model.name))
         # end if
         scdict = suite.constituent_dictionary()
         for cvar in scdict.variable_list():
@@ -254,23 +265,23 @@ def add_constituent_vars(cap, host_model, suite_list, logger):
     # Parse this table using a fake filename
     parse_obj = ParseObject("{}_constituent_mod.meta".format(host_model.name),
                             ddt_mdata)
-    ddt_table = MetadataTable(parse_object=parse_obj, logger=logger)
+    ddt_table = MetadataTable(run_env, parse_object=parse_obj)
     ddt_name = ddt_table.sections()[0].title
     ddt_lib = DDTLibrary('{}_constituent_ddtlib'.format(host_model.name),
-                         ddts=ddt_table.sections(), logger=logger)
+                         run_env, ddts=ddt_table.sections())
     # A bit of cleanup
     del parse_obj
     del ddt_mdata
     # Now, create the "host constituent module" dictionary
     const_dict = VarDictionary("{}_constituents".format(host_model.name),
-                               parent_dict=host_model)
+                               run_env, parent_dict=host_model)
     # Add in the constituents object
     prop_dict = {'standard_name' : "ccpp_model_constituents_object",
                  'local_name' : constituent_model_object_name(host_model),
                  'dimensions' : '()', 'units' : "None", 'ddt_type' : ddt_name}
-    const_var = Var(prop_dict, _API_SOURCE)
+    const_var = Var(prop_dict, _API_SOURCE, run_env)
     const_var.write_def(cap, 1, const_dict)
-    ddt_lib.collect_ddt_fields(const_dict, const_var)
+    ddt_lib.collect_ddt_fields(const_dict, const_var, run_env)
     # Declare variable for the constituent standard names array
     max_csname = max([len(x) for x in const_stdnames]) if const_stdnames else 0
     num_const_fields = len(const_stdnames)
@@ -297,8 +308,8 @@ def add_constituent_vars(cap, host_model, suite_list, logger):
                      'local_name' : ind_loc_name, 'dimensions' : '()',
                      'units' : 'index', 'protected' : "True",
                      'type' : 'integer', 'kind' : ''}
-        ind_var = Var(prop_dict, _API_SOURCE)
-        const_dict.add_variable(ind_var)
+        ind_var = Var(prop_dict, _API_SOURCE, run_env)
+        const_dict.add_variable(ind_var, run_env)
     # end for
     # Add vertical dimensions for DDT call strings
     pver = host_model.find_variable(standard_name=vert_layer_dim,
@@ -310,8 +321,8 @@ def add_constituent_vars(cap, host_model, suite_list, logger):
                      'protected' : 'True', 'dimensions' : '()'}
         if const_dict.find_variable(standard_name=vert_layer_dim,
                                     any_scope=False) is None:
-            ind_var = Var(prop_dict, _API_SOURCE)
-            const_dict.add_variable(ind_var)
+            ind_var = Var(prop_dict, _API_SOURCE, _API_DUMMY_RUN_ENV)
+            const_dict.add_variable(ind_var, run_env)
         # end if
     # end if
     pver = host_model.find_variable(standard_name=vert_interface_dim,
@@ -323,8 +334,8 @@ def add_constituent_vars(cap, host_model, suite_list, logger):
                      'protected' : 'True', 'dimensions' : '()'}
         if const_dict.find_variable(standard_name=vert_interface_dim,
                                     any_scope=False) is None:
-            ind_var = Var(prop_dict, _API_SOURCE)
-            const_dict.add_variable(ind_var)
+            ind_var = Var(prop_dict, _API_SOURCE, run_env)
+            const_dict.add_variable(ind_var, run_env)
         # end if
     # end if
 
@@ -366,14 +377,14 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):
     return ', '.join(hmvars)
 
 ###############################################################################
-def write_host_cap(host_model, api, output_dir, logger):
+def write_host_cap(host_model, api, output_dir, run_env):
 ###############################################################################
     """Write an API to allow <host_model> to call any configured CCPP suite"""
     module_name = "{}_ccpp_cap".format(host_model.name)
     cap_filename = os.path.join(output_dir, '{}.F90'.format(module_name))
-    if logger is not None:
+    if run_env.logger is not None:
         msg = 'Writing CCPP Host Model Cap for {} to {}'
-        logger.info(msg.format(host_model.name, cap_filename))
+        run_env.logger.info(msg.format(host_model.name, cap_filename))
     # End if
     header = _HEADER.format(host_model=host_model.name)
     with FortranWriter(cap_filename, 'w', header, module_name) as cap:
@@ -418,12 +429,12 @@ def write_host_cap(host_model, api, output_dir, logger):
         cap.write("public :: {}".format(copyout_name), 1)
         cap.write("", 0)
         cap.write("! Private module variables", 1)
-        const_dict = add_constituent_vars(cap, host_model, api.suites, logger)
+        const_dict = add_constituent_vars(cap, host_model, api.suites, run_env)
         cap.end_module_header()
         for stage in CCPP_STATE_MACH.transitions():
             # Create a dict of local variables for stage
             host_local_vars = VarDictionary("{}_{}".format(host_model.name,
-                                                           stage))
+                                                           stage), run_env)
             # Create part call lists
             # Look for any loop-variable mismatch
             for suite in api.suites:
@@ -568,6 +579,10 @@ if __name__ == "__main__":
     _LOGGER = init_log('host_registry')
     set_log_to_null(_LOGGER)
     # Run doctest
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
-# No else:
+    import sys
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

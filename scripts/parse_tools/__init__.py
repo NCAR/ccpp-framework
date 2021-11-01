@@ -29,6 +29,7 @@ from parse_log import set_log_to_file
 from preprocess import PreprocStack
 from xml_tools import find_schema_file, find_schema_version
 from xml_tools import read_xml_file, validate_xml_file
+from xml_tools import PrettyElementTree
 # pylint: enable=wrong-import-position
 
 __all__ = [
@@ -61,6 +62,7 @@ __all__ = [
     'ParseSyntaxError',
     'ParseObject',
     'PreprocStack',
+    'PrettyElementTree',
     'register_fortran_ddt_name',
     'read_xml_file',
     'registered_fortran_ddt_name',

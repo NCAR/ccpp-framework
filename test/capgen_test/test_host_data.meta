@@ -40,7 +40,7 @@
   state_variable = true
   type = real
   kind = kind_phys
-  units = kg/kg moist or dry air depending on type
+  units = kg kg-1 moist or dry air depending on type
   dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_tracers)
 [ q(:,:,index_of_water_vapor_specific_humidity) ]
   standard_name = water_vapor_specific_humidity
