@@ -22,7 +22,7 @@ import argparse
 ###############################################################################
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-x', '--xml',       action='store', help='location of CCPP suite xml file to be read', required=True)
+parser.add_argument('-s', '--sdf',       action='store', help='suite definition file to use', required=True)
 parser.add_argument('-v', '--variable',  action='store', help='remove files created by this script, then exit', required=True)
 args = parser.parse_args()
 
@@ -30,14 +30,16 @@ args = parser.parse_args()
 # Functions and subroutines                                                   #
 ###############################################################################
 
-def parse_args():
+def parse_arguments(args):
     """Parse command line arguments."""
-    xml = args.xml
+    success = True
+    sdf = args.sdf
     var = args.variable
+    return(success,sdf,var)
 
-def parse_xml():
-    """Reads provided xml file, parses ordered list of schemes for the suite specified by said xml"""
-    print('reading xml file ' + args.xml + 'defining CCPP suite')
+def parse_suite(sdf):
+    """Reads provided sdf, parses ordered list of schemes for the suite specified by said sdf"""
+    print('reading sdf ' + sdf + ' defining CCPP suite')
     print('reading list of schemes from suite [suite]')
     print('stored list of schemes in [list]')
 
@@ -52,12 +54,12 @@ def check_var():
 
 def main():
     """Main routine that traverses a CCPP scheme and outputs the list of schemes that modify given variable"""
-    parse_args()
+    (success, sdf, var) = parse_arguments(args)
     check_var()
-    parse_xml()
+    parse_suite(sdf)
 #    for scheme in schemes:
     read_meta_file()
-    print('For suite [suite], the following schemes (in order) modify the variable ' + args.variable)
+    print('For suite [suite], the following schemes (in order) modify the variable ' + var)
 
 if __name__ == '__main__':
     main()
