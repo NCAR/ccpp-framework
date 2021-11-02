@@ -2,6 +2,7 @@
 
 # Standard modules
 import argparse
+import logging
 #import importlib
 #import itertools
 #import os
@@ -15,7 +16,7 @@ import argparse
 #                  SchemesMakefile, SchemesCMakefile, SchemesSourcefile, \
 #                  TypedefsMakefile, TypedefsCMakefile, TypedefsSourcefile
 #from mkdoc import metadata_to_html, metadata_to_latex
-#from mkstatic import API, Suite, Group
+from mkstatic import API, Suite, Group
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -39,9 +40,17 @@ def parse_arguments(args):
 
 def parse_suite(sdf):
     """Reads provided sdf, parses ordered list of schemes for the suite specified by said sdf"""
-    print('reading sdf ' + sdf + ' defining CCPP suite')
-    print('reading list of schemes from suite [suite]')
-    print('stored list of schemes in [list]')
+    print('reading sdf ' + sdf)
+    suite = Suite(sdf_name=sdf)
+    success = suite.parse()
+    if not success:
+        logging.error('Parsing suite definition file {0} failed.'.format(sdf))
+        success = False
+        return
+    print('Successfully read sdf' + suite.sdf_name)
+    print('reading list of schemes from suite ' + suite.name)
+    print('stored list of schemes in [list]:')
+    print(list)
 
 def read_meta_file():
     """Given a scheme, variable name, and list, reads .meta file for said scheme, checks for variable within that scheme, and if it exists and is intent(out), appends to list"""
@@ -55,6 +64,8 @@ def check_var():
 def main():
     """Main routine that traverses a CCPP scheme and outputs the list of schemes that modify given variable"""
     (success, sdf, var) = parse_arguments(args)
+    if not success:
+        raise Exception('Call to parse_arguments failed.')
     check_var()
     parse_suite(sdf)
 #    for scheme in schemes:
