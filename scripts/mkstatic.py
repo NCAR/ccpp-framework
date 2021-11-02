@@ -504,6 +504,7 @@ end module {module}
         self._sdf_name = None
         self._all_schemes_called = None
         self._all_subroutines_called = None
+        self._call_tree = None
         self._caps = None
         self._module = None
         self._subroutines = None
@@ -604,6 +605,54 @@ end module {module}
 
         return success
 
+    def make_call_tree(self):
+        '''Create a call tree (list of schemes as they are called) for the specified suite definition file'''
+        success = True
+
+        if not os.path.exists(self._sdf_name):
+            logging.critical("Suite definition file {0} not found.".format(self._sdf_name))
+            success = False
+            return success
+
+        tree = ET.parse(self._sdf_name)
+        suite_xml = tree.getroot()
+        self._name = suite_xml.get('name')
+        # Validate name of suite in XML tag against filename; could be moved to common.py
+        if not (os.path.basename(self._sdf_name) == 'suite_{}.xml'.format(self._name)):
+            logging.critical("Invalid suite name {0} in suite definition file {1}.".format(
+                                                               self._name, self._sdf_name))
+            success = False
+            return success
+
+        # Call tree of all schemes in SDF (with duplicates and subcycles)
+        self._call_tree = []
+
+        # Build hierarchical structure as in SDF
+        self._groups = []
+        for group_xml in suite_xml:
+#            subcycles = []
+
+#            # Add suite-wide init scheme to group 'init', similar for finalize
+#            if group_xml.tag.lower() == 'init' or group_xml.tag.lower() == 'finalize':
+#                self._all_schemes_called.append(group_xml.text)
+#                self._all_subroutines_called.append(group_xml.text + '_' + group_xml.tag.lower())
+#                schemes = [group_xml.text]
+#                subcycles.append(Subcycle(loop=1, schemes=schemes))
+#                if group_xml.tag.lower() == 'init':
+#                    self._groups.append(Group(name=group_xml.tag.lower(), subcycles=subcycles, suite=self._name, init=True))
+#                elif group_xml.tag.lower() == 'finalize':
+#                    self._groups.append(Group(name=group_xml.tag.lower(), subcycles=subcycles, suite=self._name, finalize=True))
+#                continue
+
+            # Parse subcycles of all regular groups
+            for subcycle_xml in group_xml:
+                for loop in range(0,int(subcycle_xml.get('loop'))):
+                    for scheme_xml in subcycle_xml:
+                        self._call_tree.append(scheme_xml.text)
+
+        return success
+
+
     def print_debug(self):
         '''Basic debugging output about the suite.'''
         print("ALL SUBROUTINES:")
@@ -617,6 +666,11 @@ end module {module}
     def all_schemes_called(self):
         '''Get the list of all schemes.'''
         return self._all_schemes_called
+
+    @property
+    def call_tree(self):
+        '''Get the call tree of the suite (all schemes, in order, with duplicates and loops).'''
+        return self._call_tree
 
     @property
     def all_subroutines_called(self):

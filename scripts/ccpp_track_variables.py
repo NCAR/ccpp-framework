@@ -49,8 +49,16 @@ def parse_suite(sdf):
         return
     print('Successfully read sdf' + suite.sdf_name)
     print('reading list of schemes from suite ' + suite.name)
-    print('stored list of schemes in [list]:')
-    print(list)
+#    list = suite.calling_tree
+#    print('stored calling tree of schemes in [list]:')
+#    print(list)
+    print('creating calling tree of schemes')
+    success = suite.make_call_tree()
+    print(suite.call_tree)
+    if not success:
+        logging.error('Parsing suite definition file {0} failed.'.format(sdf))
+        success = False
+        return
 
 def read_meta_file():
     """Given a scheme, variable name, and list, reads .meta file for said scheme, checks for variable within that scheme, and if it exists and is intent(out), appends to list"""
