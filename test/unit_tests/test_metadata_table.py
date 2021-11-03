@@ -97,8 +97,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "double_header.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         self.assertTrue('table already contains \'test_host\'' in str(context.exception))
@@ -109,8 +108,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_bad_dimension.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         self.assertTrue('Invalid \'dimensions\' property value, \'' in str(context.exception))
@@ -122,8 +120,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "test_duplicate_variable.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         self.assertTrue('Invalid (duplicate) standard name in temp_calc_adjust_run, defined at ' in str(context.exception))
@@ -134,8 +131,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_invalid_intent.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         self.assertTrue('Invalid \'intent\' property value, \'banana\', at ' in str(context.exception))
@@ -146,8 +142,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_missing_intent.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Required property, 'intent', missing, at "
@@ -159,8 +154,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_missing_units.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Required property, 'units', missing, at"
@@ -173,8 +167,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "test_missing_table_type.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid section type, 'None'"
@@ -186,8 +179,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_bad_table_type.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Section type, 'host', does not match table type, 'scheme'"
@@ -200,8 +192,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "test_missing_table_name.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Section name, 'None', does not match table title, 'test_missing_table_name'"
@@ -213,8 +204,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_bad_table_key.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid metadata table start property, 'something', at "
@@ -226,8 +216,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_bad_line_split.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid variable property syntax, \'\', at "
@@ -239,8 +228,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_unknown_ddt_type.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Unknown DDT type, banana, at "
@@ -252,8 +240,7 @@ class MetadataTableTestCase(unittest.TestCase):
         filename = os.path.join(SAMPLE_FILES_DIR, "test_bad_var_property_name.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid variable property name, 'none', at "
@@ -311,8 +298,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "test_bad_1st_arg_table_header.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
@@ -325,8 +311,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "test_bad_2nd_arg_table_header.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid variable property syntax, '[ccpp-farg-table]', at "
@@ -340,8 +325,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "test_mismatch_section_table_title.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Section name, 'test_host', does not match table title, 'banana', at "
@@ -354,8 +338,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "double_table_properties.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Duplicate metadata table, test_host, at "
@@ -368,8 +351,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "missing_table_properties.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid CCPP metadata line, '[ccpp-arg-table]', at "
@@ -406,8 +388,7 @@ class MetadataTableTestCase(unittest.TestCase):
                                 "test_invalid_table_properties_type.meta")
 
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
         emsg = "Invalid metadata table type, 'banana', at "
