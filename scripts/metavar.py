@@ -462,7 +462,7 @@ class Var(object):
 
     >>> Var.get_prop('dimensions').valid_value(['Bob', 'Ray'])
     ['Bob', 'Ray']
-    >>> Var.get_prop('active')
+    >>> Var.get_prop('active').valid_value('.true.')
     '.true.'
     >>> Var.get_prop('active').valid_value('flag_for_aerosol_physics')
     'flag_for_aerosol_physics'
@@ -490,6 +490,9 @@ class Var(object):
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'ino'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid intent variable property, 'ino', at <standard input>:1
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in', 'optional' : 'false'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid variable property name, 'optional', at <standard input>:1
     """
 
     ## Prop lists below define all the allowed CCPP Metadata attributes
@@ -511,8 +514,6 @@ class Var(object):
                                      optional_in=True,
                                      default_fn_in=default_kind_val),
                     VariableProperty('state_variable', bool,
-                                     optional_in=True, default_in=False),
-                    VariableProperty('optional', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('protected', bool,
                                      optional_in=True, default_in=False),
