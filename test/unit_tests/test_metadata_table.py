@@ -85,8 +85,7 @@ class MetadataTableTestCase(unittest.TestCase):
 
         #Exercise
         with self.assertRaises(Exception) as context:
-            parse_metadata_file(filename, known_ddts,
-                                self._DUMMY_RUN_ENV)
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #Verify
         #print("The exception is", context.exception)
