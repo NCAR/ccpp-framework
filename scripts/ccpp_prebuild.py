@@ -31,7 +31,8 @@ from mkstatic import API, Suite, Group
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',     action='store', help='path to CCPP prebuild configuration file', required=True)
 parser.add_argument('--clean',      action='store_true', help='remove files created by this script, then exit', default=False)
-parser.add_argument('--debug',      action='store_true', help='enable debugging output', default=False)
+parser.add_argument('--verbose',    action='store_true', help='enable verbose output from this script', default=False)
+parser.add_argument('--debug',      action='store_true', help='enable debugging features in auto-generated code', default=False)
 parser.add_argument('--suites',     action='store', help='suite definition files to use (comma-separated, without path)', default='')
 parser.add_argument('--builddir',   action='store', help='relative path to CCPP build directory', required=False, default=None)
 
@@ -48,13 +49,14 @@ def parse_arguments():
     args = parser.parse_args()
     configfile = args.config
     clean = args.clean
+    verbose = args.verbose
     debug = args.debug
     if args.suites:
         sdfs = ['suite_{0}.xml'.format(x) for x in args.suites.split(',')]
     else:
         sdfs = None
     builddir = args.builddir
-    return (success, configfile, clean, debug, sdfs, builddir)
+    return (success, configfile, clean, verbose, debug, sdfs, builddir)
 
 def import_config(configfile, builddir):
     """Import the configuration from a given configuration file"""
@@ -94,7 +96,6 @@ def import_config(configfile, builddir):
     config['caps_sourcefile']           = ccpp_prebuild_config.CAPS_SOURCEFILE.format(build_dir=builddir)
     config['caps_dir']                  = ccpp_prebuild_config.CAPS_DIR.format(build_dir=builddir)
     config['suites_dir']                = ccpp_prebuild_config.SUITES_DIR
-    config['optional_arguments']        = ccpp_prebuild_config.OPTIONAL_ARGUMENTS
     config['host_model']                = ccpp_prebuild_config.HOST_MODEL_IDENTIFIER
     config['html_vartable_file']        = ccpp_prebuild_config.HTML_VARTABLE_FILE.format(build_dir=builddir)
     config['latex_vartable_file']       = ccpp_prebuild_config.LATEX_VARTABLE_FILE.format(build_dir=builddir)
@@ -112,15 +113,15 @@ def import_config(configfile, builddir):
 
     return(success, config)
 
-def setup_logging(debug):
+def setup_logging(verbose):
     """Sets up the logging module and logging level."""
     success = True
-    if debug:
+    if verbose:
         level = logging.DEBUG
     else:
         level = logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=level)
-    if debug:
+    if verbose:
         logging.info('Logging level set to DEBUG')
     else:
         logging.info('Logging level set to INFO')
@@ -385,95 +386,9 @@ def generate_list_of_schemes_and_dependencies_to_compile(schemes_in_files, depen
     # Remove duplicates
     return (success, list(set(schemes_and_dependencies_to_compile)))
 
-def check_optional_arguments(metadata, arguments, optional_arguments):
-    """Check if for each subroutine with optional arguments, an entry exists in the
-    optional_arguments dictionary. This is required to generate the caps correctly
-    and to assess whether the variable is required from the host model. Optional
-    arguments that are not requested by the model as specified in the dictionary
-    optional_arguments are deleted from the list of requested data individually
-    for each subroutine."""
-    logging.info('Checking optional arguments in physics schemes ...')
-    success = True
-
-    # First make sure that the CCPP prebuild config entry doesn't contain any variables that are unknown
-    # (by standard name), or that it lists variables as optional arguments that aren't declared as optional
-    for scheme_name in optional_arguments.keys():
-        # Skip modules that have been filtered out (because they are not used by the selected suites, for example)
-        if scheme_name in arguments.keys():
-            for subroutine_name in optional_arguments[scheme_name].keys():
-                # If optional arguments are listed individually, check each of them
-                if isinstance(optional_arguments[scheme_name][subroutine_name], list):
-                    for var_name in optional_arguments[scheme_name][subroutine_name]:
-                        if not var_name in arguments[scheme_name][subroutine_name]:
-                            raise Exception("Explicitly requested optional argument '{}' not known to {}/{}".format(
-                                                                            var_name, scheme_name, subroutine_name))
-                        else:
-                            for var in metadata[var_name][:]:
-                                for item in var.container.split(' '):
-                                    subitems = item.split('_')
-                                    if subitems[0] == 'MODULE':
-                                        module_name_test = '_'.join(subitems[1:])
-                                    elif subitems[0] == 'SCHEME':
-                                        scheme_name_test = '_'.join(subitems[1:])
-                                    elif subitems[0] == 'SUBROUTINE':
-                                        subroutine_name_test = '_'.join(subitems[1:])
-                                    else:
-                                        success = False
-                                        logging.error('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
-                                                                                                 subitems[0], var.container, var_name))
-                                if scheme_name_test == scheme_name and subroutine_name_test == subroutine_name and not var.optional in ['t', 'T']:
-                                    raise Exception("Variable {} in {}/{}".format(var_name, scheme_name, subroutine_name) + \
-                                              " is not an optional argument, but listed as such in the CCPP prebuild config")
-
-    for var_name in sorted(metadata.keys()):
-        # The notation metadata[var_name][:] is a convenient way to make a copy
-        # of the metadata[var_name] list, which allows removing items as we go
-        for var in metadata[var_name][:]:
-            if var.optional in ['t', 'T']:
-                for item in var.container.split(' '):
-                    subitems = item.split('_')
-                    if subitems[0] == 'MODULE':
-                        module_name = '_'.join(subitems[1:])
-                    elif subitems[0] == 'SCHEME':
-                        scheme_name = '_'.join(subitems[1:])
-                    elif subitems[0] == 'SUBROUTINE':
-                        subroutine_name = '_'.join(subitems[1:])
-                    else:
-                        raise Exception('Invalid identifier {0} in container value {1} of requested variable {2}'.format(
-                                                                                   subitems[0], var.container, var_name))
-                if not scheme_name in optional_arguments.keys() or not \
-                        subroutine_name in optional_arguments[scheme_name].keys():
-                    raise Exception('No entry found in optional_arguments dictionary for optional argument ' + \
-                                    '{0} to subroutine {1} in module {2}'.format(var_name, subroutine_name, scheme_name))
-                if type(optional_arguments[scheme_name][subroutine_name]) is list:
-                    if var_name in optional_arguments[scheme_name][subroutine_name]:
-                        logging.debug('Optional argument {0} to subroutine {1} in module {2} is required, keep in list'.format(
-                                                                                       var_name, subroutine_name, scheme_name))
-                    else:
-                        logging.debug('Optional argument {0} to subroutine {1} in module {2} is not required, remove from list'.format(
-                                                                                               var_name, subroutine_name, scheme_name))
-                        # Remove this var instance from list of var instances for this var_name
-                        metadata[var_name].remove(var)
-                        # Remove var_name from list of calling arguments for that subroutine
-                        # (unless that module has been filtered out because none of the suites uses it)
-                        if scheme_name in arguments.keys():
-                            arguments[scheme_name][subroutine_name].remove(var_name)
-                elif optional_arguments[scheme_name][subroutine_name] == 'all':
-                    logging.debug('optional argument {0} to subroutine {1} in module {2} is required, keep in list'.format(
-                                                                                   var_name, subroutine_name, scheme_name))
-
-        # If metadata[var_name] is now empty, i.e. the variable is not
-        # requested at all by the model, remove the entry from metadata
-        if not metadata[var_name]:
-            del metadata[var_name]
-
-    return (success, metadata, arguments)
-
 def compare_metadata(metadata_define, metadata_request):
     """Compare the requested metadata to the defined one. For each requested entry, a
-    single (i.e. non-ambiguous entry) must be present in the defined entries. All optional
-    arguments that are still in the list of required variables for a scheme are needed,
-    since they were checked in the routine check_optional_arguments beforehand."""
+    single (i.e. non-ambiguous entry) must be present in the defined entries."""
 
     logging.info('Comparing metadata for requested and provided variables ...')
     success = True
@@ -555,7 +470,7 @@ def compare_metadata(metadata_define, metadata_request):
     modules = sorted(list(set(modules)))
     return (success, modules, metadata)
 
-def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arguments, caps_dir):
+def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arguments, caps_dir, debug):
     """Generate for the suite and for all groups parsed."""
     logging.info("Generating suite and group caps ...")
     suite_and_group_caps = []
@@ -564,7 +479,7 @@ def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arg
     for suite in suites:
         logging.debug("Generating suite and group caps for suite {0}...".format(suite.name))
         # Write caps for suite and groups in suite
-        suite.write(metadata_request, metadata_define, arguments)
+        suite.write(metadata_request, metadata_define, arguments, debug)
         suite_and_group_caps += suite.caps
     os.chdir(BASEDIR)
     if suite_and_group_caps:
@@ -739,11 +654,11 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
 def main():
     """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
-    (success, configfile, clean, debug, sdfs, builddir) = parse_arguments()
+    (success, configfile, clean, verbose, debug, sdfs, builddir) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
-    success = setup_logging(debug)
+    success = setup_logging(verbose)
     if not success:
         raise Exception('Call to setup_logging failed.')
 
@@ -794,12 +709,6 @@ def main():
     if not success:
         raise Exception('Call to generate_list_of_schemes_and_dependencies_to_compile failed.')
 
-    # Process optional arguments based on configuration in above dictionary optional_arguments
-    (success, metadata_request, arguments_request) = check_optional_arguments(metadata_request,arguments_request,
-                                                                              config['optional_arguments'])
-    if not success:
-        raise Exception('Call to check_optional_arguments failed.')
-
     # Create a LaTeX table with all variables requested by the pool of physics and/or provided by the host model
     success = metadata_to_latex(metadata_define, metadata_request, config['host_model'], config['latex_vartable_file'])
     if not success:
@@ -825,7 +734,7 @@ def main():
 
     # Static build: generate caps for entire suite and groups in the specified suite; generate API
     (success, suite_and_group_caps) = generate_suite_and_group_caps(suites, metadata_request, metadata_define,
-                                                                    arguments_request, config['caps_dir'])
+                                                                    arguments_request, config['caps_dir'], debug)
     if not success:
         raise Exception('Call to generate_suite_and_group_caps failed.')
 

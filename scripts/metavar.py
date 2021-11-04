@@ -142,6 +142,9 @@ class Var:
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'ino'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid intent variable property, 'ino', at <standard input>:1
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in', 'optional' : 'false'}, ParseSource('vname', 'SCHEME', ParseContext())) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ParseSyntaxError: Invalid variable property name, 'optional', at <standard input>:1
     """
 
     ## Prop lists below define all the allowed CCPP Metadata attributes
