@@ -7,9 +7,9 @@ endif (NOT PROJECT)
 #------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.0)
 
-project(ccpp
-        VERSION 4.0.0
-        LANGUAGES C CXX Fortran)
+project(ccpp_framework
+        VERSION 5.0.0
+        LANGUAGES Fortran)
 
 # Use rpaths on MacOSX
 set(CMAKE_MACOSX_RPATH 1)
@@ -33,26 +33,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 if (OPENMP)
   include(detect_openmp)
   detect_openmp()
-  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
-  message(STATUS "Enable OpenMP support for C/C++/Fortran compiler")
+  message(STATUS "Enable OpenMP support")
 else (OPENMP)
-  message (STATUS "Disable OpenMP support for C/C++/Fortran compiler")
+  message (STATUS "Disable OpenMP support")
 endif (OPENMP)
-
-#------------------------------------------------------------------------------
-# The Fortran compiler/linker flag inserted by cmake to create shared libraries
-# with the Intel compiler is deprecated (-i_dynamic), correct here.
-# CMAKE_Fortran_COMPILER_ID = {"Intel", "PGI", "GNU", "Clang", "MSVC", ...}
-if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
-    string(REPLACE "-i_dynamic" "-shared-intel"
-           CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS
-           "${CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS}")
-    string(REPLACE "-i_dynamic" "-shared-intel"
-           CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS
-           "${CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS}")
-endif()
 
 #------------------------------------------------------------------------------
 # Set a default build type if none was specified
@@ -62,15 +47,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 
     # Set the possible values of build type for cmake-gui
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "Coverage")
-endif()
-
-#------------------------------------------------------------------------------
-# The PGI compiler can not find any cap routines in their library.
-# This is due to how it labels subroutines within a modules.
-# For example the subroutine b() in the moduel a(), gets named a_b.
-# GCC and Intel do NOT do this, it is name simply as b.
-if ("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
-    message(STATUS "WARNING: PGI compiler is not fully ISO_C compliant; working solution involves a hack pgifix.py")
 endif()
 
 #------------------------------------------------------------------------------
@@ -98,7 +74,7 @@ add_subdirectory(doc)
 #------------------------------------------------------------------------------
 # Configure and enable packaging
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Common Community Physics Package - Framework")
-set(CPACK_PACKAGE_VENDOR "GMTB NOAA/NCAR")
+set(CPACK_PACKAGE_VENDOR "DTC NOAA/NCAR")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
