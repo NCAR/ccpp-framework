@@ -50,6 +50,14 @@ def check_units(test_val, prop_dict, error):
             test_val = None
         # end if
     # end if
+
+    # DH* 20210812
+    # Temporary workaround to convert unit 'none' (used for
+    # dimensionless quantities in ccpp-physics/UFS/SCM) to '1'
+    if test_val and test_val.lower() == 'none':
+        test_val = '1'
+    # *DH 20210812
+
     return test_val
 
 def check_dimensions(test_val, prop_dict, error, max_len=0):

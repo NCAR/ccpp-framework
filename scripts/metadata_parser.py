@@ -15,6 +15,12 @@ sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
 from parse_fortran import FtypeTypeDecl
 from parse_checkers import registered_fortran_ddt_names
 from metadata_table import MetadataTable, parse_metadata_file
+from framework_env import CCPPFrameworkEnv
+
+_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
+                                               'scheme_files':'',
+                                               'suites':''})
+
 
 # Output: This routine converts the argument tables for all subroutines / typedefs / kind / module variables
 # into dictionaries suitable to be used with ccpp_prebuild.py (which generates the fortran code for the caps)
@@ -23,11 +29,10 @@ from metadata_table import MetadataTable, parse_metadata_file
 # commented out, no check is performed. This is the case for 'type' and 'kind' right now, since models use their
 # own derived data types and kind types.
 VALID_ITEMS = {
-    'header' : ['local_name', 'standard_name', 'long_name', 'units', 'rank', 'type', 'kind', 'intent', 'optional'],
+    'header' : ['local_name', 'standard_name', 'long_name', 'units', 'rank', 'type', 'kind', 'intent'],
     #'type' : ['character', 'integer', 'real', ...],
     #'kind' : ['default', 'kind_phys', ...],
     'intent' : ['none', 'in', 'out', 'inout'],
-    'optional' : ['T', 'F'],
     }
 
 # Mandatory variables that every scheme needs to have
@@ -41,7 +46,6 @@ CCPP_MANDATORY_VARIABLES = {
                                rank          = '',
                                kind          = 'len=*',
                                intent        = 'out',
-                               optional      = 'F',
                                active        = 'T',
                                ),
     'ccpp_error_flag' : Var(local_name    = 'ierr',
@@ -53,7 +57,6 @@ CCPP_MANDATORY_VARIABLES = {
                             rank          = '',
                             kind          = '',
                             intent        = 'out',
-                            optional      = 'F',
                             active        = 'T',
                             ),
     }
@@ -107,7 +110,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
         new_metadata_headers = NEW_METADATA_SAVE[filename]
     else:
         new_metadata_headers = parse_metadata_file(filename, known_ddts=registered_fortran_ddt_names(),
-                                                                    logger=logging.getLogger(__name__))
+                                                                                run_env=_DUMMY_RUN_ENV)
         NEW_METADATA_SAVE[filename] = new_metadata_headers
 
     # Record dependencies for the metadata table (only applies to schemes)
@@ -222,7 +225,6 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                           container     = container,
                           kind          = kind,
                           intent        = new_var.get_prop_value('intent'),
-                          optional      = 'T' if new_var.get_prop_value('optional') else 'F',
                           active        = active,
                           )
                 # Check for duplicates in same table
