@@ -88,9 +88,19 @@ def read_meta_files(suite, metapath):
     # Create an ordered dictionary that will hold the in/out information for each scheme
     var_graph=collections.OrderedDict()
 
+    logging.debug('reading .meta files for schemes in {0}'.format(metapath))
     scheme_filenames=os.listdir(metapath)
-    print('reading .meta files for schemes in ' + metapath)
-    #(success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(scheme_filenames)
+    # The above line only gets us filenames, this line gets us a list with full paths
+    print(scheme_filenames[0])
+    scheme_filenames = [metapath + s for s in scheme_filenames]
+    print(scheme_filenames[0])
+
+    (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(scheme_filenames)
+
+    print(metadata_request)
+    print(arguments_request)
+    print(dependencies_request)
+    print(schemes_in_files)
 
     print('reading .meta file for scheme [scheme]')
     print('found variable ' + args.variable + ' in [scheme], adding scheme to list [list]')

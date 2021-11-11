@@ -19,7 +19,7 @@ from metadata_table import MetadataTable, parse_metadata_file
 # Output: This routine converts the argument tables for all subroutines / typedefs / kind / module variables
 # into dictionaries suitable to be used with ccpp_prebuild.py (which generates the fortran code for the caps)
 
-# Items in this dictionary are used for checking valid entries in metadata tables. For columsn with no keys/keys
+# Items in this dictionary are used for checking valid entries in metadata tables. For columns with no keys/keys
 # commented out, no check is performed. This is the case for 'type' and 'kind' right now, since models use their
 # own derived data types and kind types.
 VALID_ITEMS = {
@@ -602,6 +602,10 @@ def parse_scheme_tables(filepath, filename):
                                 break
                         if match:
                             if not scheme_name == module_name:
+                                print(line)
+                                print(current_line_number)
+                                print(words)
+                                print(j)
                                 raise Exception('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
                                                                                                              module_name, scheme_name))
                             if not scheme_name in registry[module_name].keys():
