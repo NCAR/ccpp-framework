@@ -7,6 +7,7 @@ import collections
 #import importlib
 #import itertools
 import os
+import glob
 #import re
 #import sys
 
@@ -27,7 +28,7 @@ from mkstatic import API, Suite, Group
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--sdf',           action='store', help='suite definition file to use', required=True)
-parser.add_argument('-m', '--metadata_path', action='store', help='path to CCPP scheme metadata files (DEPRECATED FOR NOW)')
+parser.add_argument('-m', '--metadata_path', action='store', help='path to CCPP scheme metadata files', required=True)
 parser.add_argument('-c', '--config',        action='store', help='path to CCPP prebuild configuration file', required=True)
 parser.add_argument('-v', '--variable',      action='store', help='remove files created by this script, then exit', required=True)
 parser.add_argument('--debug',               action='store_true', help='enable debugging output', default=False)
@@ -43,8 +44,9 @@ def parse_arguments(args):
     sdf = args.sdf
     var = args.variable
     configfile = args.config
+    metapath = args.metadata_path
     debug = args.debug
-    return(success,sdf,var,configfile,debug)
+    return(success,sdf,var,configfile,metapath,debug)
 
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
@@ -80,7 +82,23 @@ def parse_suite(sdf):
         return
     return (success, suite)
 
-def create_var_graph(suite, config):
+def create_metadata_filename_dict(metapath):
+    """Given a path, read all .meta files and add them to a dictionary with their associated schemes"""
+
+    success = True
+    scheme_filenames=glob.glob(metapath + "*.meta")
+    metadata_dict = {}
+    print(scheme_filenames)
+
+    for scheme_fn in scheme_filenames:
+        schemes=find_scheme_names(scheme_fn)
+        # The above returns a list of schemes in each filename, but we want a dictionary of schemes associated with filenames:
+        for scheme in schemes:
+            metadata_dict[scheme]=scheme_fn
+
+    return (metadata_dict, success)
+
+def create_var_graph(suite, config, metapath):
     """Given a suite, variable name, and a 'config' dictionary:
          1. Loops through the call tree of provided suite
          2. For each scheme, reads .meta file for said scheme, checks for variable within that scheme, and if it exists, adds an entry to an ordered dictionary with the name of the scheme and the intent of the variable"""
@@ -90,23 +108,29 @@ def create_var_graph(suite, config):
     # Create an ordered dictionary that will hold the in/out information for each scheme
     var_graph=collections.OrderedDict()
 
+    logging.debug("reading .meta files in path:\n {0}".format(metapath))
+    (metadata_dict, success)=create_metadata_filename_dict(metapath)
+
+    print(metadata_dict)
+
     logging.debug("reading metadata files for schemes defined in config file:\n {0}".format(config['scheme_files']))
 
-    (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(config['scheme_files'])
 
-    print("\n\n\n\n")
-    print(metadata_request)
-    print(arguments_request)
-    print(dependencies_request)
-    print("\n\n\n\n")
+#    (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(config['scheme_files'])
+#
+#    print("\n\n\n\n")
+#    print(metadata_request)
+#    print(arguments_request)
+#    print(dependencies_request)
+#    print("\n\n\n\n")
 
     print('reading .meta file for scheme [scheme]')
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files, 
     # then parse that metadata file to find variable info
     for scheme in suite.call_tree:
         
-        if scheme in schemes_in_files:
-            print(scheme, '->', schemes_in_files[scheme])
+        if scheme in metadata_dict:
+            print(scheme, '->', metadata_dict[scheme])
 
 #        logging.debug("reading metadata file {0} for scheme {1}".format(filename, scheme))
 
@@ -123,7 +147,7 @@ def check_var():
 def main():
     """Main routine that traverses a CCPP scheme and outputs the list of schemes that modify given variable"""
 
-    (success, sdf, var, configfile, debug) = parse_arguments(args)
+    (success, sdf, var, configfile, metapath, debug) = parse_arguments(args)
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -148,7 +172,7 @@ def main():
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
-    (success, var_graph) = create_var_graph(suite, config)
+    (success, var_graph) = create_var_graph(suite, config, metapath)
     if not success:
         raise Exception('Call to create_var_graph failed.')
 
