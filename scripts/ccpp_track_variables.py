@@ -13,6 +13,7 @@ import os
 # CCPP framework imports
 #from common import encode_container, decode_container, decode_container_as_dict, execute
 from metadata_parser import parse_scheme_tables, parse_variable_tables
+from metadata_table import find_scheme_names
 from ccpp_prebuild import collect_physics_subroutines, import_config, gather_variable_definitions
 #from mkcap import CapsMakefile, CapsCMakefile, CapsSourcefile, \
 #                  SchemesMakefile, SchemesCMakefile, SchemesSourcefile, \
@@ -93,12 +94,22 @@ def create_var_graph(suite, config):
 
     (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(config['scheme_files'])
 
+    print("\n\n\n\n")
     print(metadata_request)
     print(arguments_request)
     print(dependencies_request)
-    print(schemes_in_files)
+    print("\n\n\n\n")
 
     print('reading .meta file for scheme [scheme]')
+    # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files, 
+    # then parse that metadata file to find variable info
+    for scheme in suite.call_tree:
+        
+        if scheme in schemes_in_files:
+            print(scheme, '->', schemes_in_files[scheme])
+
+#        logging.debug("reading metadata file {0} for scheme {1}".format(filename, scheme))
+
     print('found variable ' + args.variable + ' in [scheme], adding scheme to list [list]')
     return (success,var_graph) 
 
@@ -131,6 +142,11 @@ def main():
     (success, config) = import_config(configfile, None)
     if not success:
         raise Exception('Call to import_config failed.')
+
+    # Variables defined by the host model
+    (success, metadata_define, dependencies_define) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
+    if not success:
+        raise Exception('Call to gather_variable_definitions failed.')
 
     (success, var_graph) = create_var_graph(suite, config)
     if not success:
