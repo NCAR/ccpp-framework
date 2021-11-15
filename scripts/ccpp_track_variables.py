@@ -8,7 +8,7 @@ import collections
 #import itertools
 import os
 import glob
-#import re
+import re
 #import sys
 
 # CCPP framework imports
@@ -100,7 +100,7 @@ def create_metadata_filename_dict(metapath):
     return (metadata_dict, success)
 
 
-def create_var_graph(suite, config, metapath):
+def create_var_graph(suite, var, config, metapath):
     """Given a suite, variable name, and a 'config' dictionary:
          1. Loops through the call tree of provided suite
          2. For each scheme, reads .meta file for said scheme, checks for variable within that scheme, and if it exists, adds an entry to an ordered dictionary with the name of the scheme and the intent of the variable"""
@@ -120,7 +120,7 @@ def create_var_graph(suite, config, metapath):
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files, 
     # then parse that metadata file to find variable info
     for scheme in suite.call_tree:
-        logging.debug("reading meta file for scheme {0} ".format(config['scheme_files']))
+        logging.debug("reading meta file for scheme {0} ".format(scheme))
 
         if scheme in metadata_dict:
             scheme_filename = metadata_dict[scheme]
@@ -132,11 +132,32 @@ def create_var_graph(suite, config, metapath):
         #(metadata_from_scheme, _) = read_new_metadata(scheme_filename, module_name, table_name)
         new_metadata_headers = parse_metadata_file(scheme_filename, known_ddts=registered_fortran_ddt_names(), logger=logging.getLogger(__name__))
         for scheme_metadata in new_metadata_headers:
-#            print(scheme_metadata.sections())
             for section in scheme_metadata.sections():
-                for variable in section.variable_list():
-                    print(variable)
-            print("\n\n\n\n")
+                found_var = []
+                intent = None
+                for scheme_var in section.variable_list():
+#                    print(scheme_var.get_prop_value('standard_name'))
+                    exact_match = False
+                    if var == scheme_var.get_prop_value('standard_name'):
+                        logging.debug("Found variable {0} in scheme {1}\n".format(var,section.title))
+                        exact_match = True
+                        found_var = var
+                        intent = scheme_var.get_prop_value('intent')
+                        break
+                    else:
+                        scheme_var_standard_name = scheme_var.get_prop_value('standard_name')
+                        if scheme_var_standard_name.find(var) != -1:
+#                            print("{0} matches {1}\n".format(var, scheme_var_standard_name))
+                            found_var.append(scheme_var_standard_name)
+#                        else:
+#                            print("{0} does not match {1}\n".format(var, scheme_var_standard_name))
+                if not found_var:
+                    print("Did not find variable {0} in scheme {1}\n".format(var,section.title))
+                elif exact_match:
+                    print("Exact match found for variable {0} in scheme {1}, intent {2}\n".format(var,section.title,intent))
+                else:
+                    print("Found inexact matches for variable(s) {0} in scheme {1}:\n".format(var,section.title))
+                    print(found_var)
 
     print('found variable ' + args.variable + ' in [scheme], adding scheme to list [list]')
     return (success,var_graph) 
@@ -159,9 +180,9 @@ def main():
     if not success:
         raise Exception('Call to setup_logging failed.')
 
-    success = check_var()
-    if not success:
-        raise Exception('Call to check_var failed.')
+#    success = check_var()
+#    if not success:
+#        raise Exception('Call to check_var failed.')
 
     (success, suite) = parse_suite(sdf)
     if not success:
@@ -176,7 +197,7 @@ def main():
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
-    (success, var_graph) = create_var_graph(suite, config, metapath)
+    (success, var_graph) = create_var_graph(suite, var, config, metapath)
     if not success:
         raise Exception('Call to create_var_graph failed.')
 
