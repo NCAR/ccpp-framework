@@ -13,14 +13,15 @@ import glob
 
 # CCPP framework imports
 #from common import encode_container, decode_container, decode_container_as_dict, execute
-from metadata_parser import parse_scheme_tables, parse_variable_tables
-from metadata_table import find_scheme_names
+from metadata_parser import parse_scheme_tables, read_new_metadata
+from metadata_table import find_scheme_names, parse_metadata_file
 from ccpp_prebuild import collect_physics_subroutines, import_config, gather_variable_definitions
 #from mkcap import CapsMakefile, CapsCMakefile, CapsSourcefile, \
 #                  SchemesMakefile, SchemesCMakefile, SchemesSourcefile, \
 #                  TypedefsMakefile, TypedefsCMakefile, TypedefsSourcefile
 #from mkdoc import metadata_to_html, metadata_to_latex
 from mkstatic import API, Suite, Group
+from parse_checkers import registered_fortran_ddt_names
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -98,6 +99,7 @@ def create_metadata_filename_dict(metapath):
 
     return (metadata_dict, success)
 
+
 def create_var_graph(suite, config, metapath):
     """Given a suite, variable name, and a 'config' dictionary:
          1. Loops through the call tree of provided suite
@@ -115,24 +117,26 @@ def create_var_graph(suite, config, metapath):
 
     logging.debug("reading metadata files for schemes defined in config file:\n {0}".format(config['scheme_files']))
 
-
-#    (success, metadata_request, arguments_request, dependencies_request, schemes_in_files) = collect_physics_subroutines(config['scheme_files'])
-#
-#    print("\n\n\n\n")
-#    print(metadata_request)
-#    print(arguments_request)
-#    print(dependencies_request)
-#    print("\n\n\n\n")
-
-    print('reading .meta file for scheme [scheme]')
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files, 
     # then parse that metadata file to find variable info
     for scheme in suite.call_tree:
-        
-        if scheme in metadata_dict:
-            print(scheme, '->', metadata_dict[scheme])
+        logging.debug("reading meta file for scheme {0} ".format(config['scheme_files']))
 
-#        logging.debug("reading metadata file {0} for scheme {1}".format(filename, scheme))
+        if scheme in metadata_dict:
+            scheme_filename = metadata_dict[scheme]
+        else:
+            raise Exception("Error, scheme '{0}' from suite '{1}' not found in metadata files in {2}".format(scheme, suite.sdf_name, metapath))
+
+        logging.debug("reading metadata file {0} for scheme {1}".format(scheme_filename, scheme))
+
+        #(metadata_from_scheme, _) = read_new_metadata(scheme_filename, module_name, table_name)
+        new_metadata_headers = parse_metadata_file(scheme_filename, known_ddts=registered_fortran_ddt_names(), logger=logging.getLogger(__name__))
+        for scheme_metadata in new_metadata_headers:
+#            print(scheme_metadata.sections())
+            for section in scheme_metadata.sections():
+                for variable in section.variable_list():
+                    print(variable)
+            print("\n\n\n\n")
 
     print('found variable ' + args.variable + ' in [scheme], adding scheme to list [list]')
     return (success,var_graph) 
