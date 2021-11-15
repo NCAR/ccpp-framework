@@ -119,6 +119,7 @@ def create_var_graph(suite, var, config, metapath):
 
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files, 
     # then parse that metadata file to find variable info
+    partial_matches = {}
     for scheme in suite.call_tree:
         logging.debug("reading meta file for scheme {0} ".format(scheme))
 
@@ -134,32 +135,42 @@ def create_var_graph(suite, var, config, metapath):
         for scheme_metadata in new_metadata_headers:
             for section in scheme_metadata.sections():
                 found_var = []
-                intent = None
+                intent = ''
                 for scheme_var in section.variable_list():
 #                    print(scheme_var.get_prop_value('standard_name'))
                     exact_match = False
                     if var == scheme_var.get_prop_value('standard_name'):
                         logging.debug("Found variable {0} in scheme {1}\n".format(var,section.title))
+                        found_var=var
                         exact_match = True
-                        found_var = var
                         intent = scheme_var.get_prop_value('intent')
                         break
                     else:
                         scheme_var_standard_name = scheme_var.get_prop_value('standard_name')
                         if scheme_var_standard_name.find(var) != -1:
-#                            print("{0} matches {1}\n".format(var, scheme_var_standard_name))
+                            print("{0} matches {1}\n".format(var, scheme_var_standard_name))
                             found_var.append(scheme_var_standard_name)
-#                        else:
-#                            print("{0} does not match {1}\n".format(var, scheme_var_standard_name))
+                        else:
+                            print("{0} does not match {1}\n".format(var, scheme_var_standard_name))
                 if not found_var:
                     print("Did not find variable {0} in scheme {1}\n".format(var,section.title))
                 elif exact_match:
                     print("Exact match found for variable {0} in scheme {1}, intent {2}\n".format(var,section.title,intent))
+                    var_graph[section.title] = intent
                 else:
                     print("Found inexact matches for variable(s) {0} in scheme {1}:\n".format(var,section.title))
-                    print(found_var)
+                    partial_matches[section.title] = found_var
+    if var_graph:
+        logging.debug("Successfully generated variable graph for sdf {0}\n".format(suite.sdf_name))
+    else:
+        success = False
+        print("Error: variable {0} not found in any suites for sdf {1}\n".format(var,suite.sdf_name))
+        if partial_matches:
+            print("Did find partial matches that may be of interest:\n")
 
-    print('found variable ' + args.variable + ' in [scheme], adding scheme to list [list]')
+            for key in partial_matches:
+                print("In {0} found variable(s) {1}".format(key, partial_matches[key]))
+        
     return (success,var_graph) 
 
 def check_var():
@@ -201,7 +212,10 @@ def main():
     if not success:
         raise Exception('Call to create_var_graph failed.')
 
-    print('For suite [suite], the following schemes (in order) modify the variable ' + var)
+    print('For suite {0}, the following schemes (in order) modify the variable {1}:'.format(suite.sdf_name,var))
+    for key in var_graph:
+        print("{0} (intent {1})".format(key,var_graph[key]))
+
 
 if __name__ == '__main__':
     main()
