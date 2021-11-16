@@ -311,7 +311,6 @@ def collect_physics_subroutines(scheme_files):
     dependencies_request = collections.OrderedDict()
     schemes_in_files = collections.OrderedDict()
     for scheme_file in scheme_files:
-        logging.debug('Parsing scheme file {0}'.format(scheme_file))
         scheme_file_with_abs_path = os.path.abspath(scheme_file)
         (scheme_filepath, scheme_filename) = os.path.split(scheme_file_with_abs_path)
         # Change to directory where scheme_file lives

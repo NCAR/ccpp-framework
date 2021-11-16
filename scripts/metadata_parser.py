@@ -602,10 +602,6 @@ def parse_scheme_tables(filepath, filename):
                                 break
                         if match:
                             if not scheme_name == module_name:
-                                print(line)
-                                print(current_line_number)
-                                print(words)
-                                print(j)
                                 raise Exception('Scheme name differs from module name: module_name="{0}" vs. scheme_name="{1}"'.format(
                                                                                                              module_name, scheme_name))
                             if not scheme_name in registry[module_name].keys():
