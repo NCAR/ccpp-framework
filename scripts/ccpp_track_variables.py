@@ -25,6 +25,8 @@ parser.add_argument('-c', '--config',        action='store', \
                     help='path to CCPP prebuild configuration file', required=True)
 parser.add_argument('-v', '--variable',      action='store', \
                     help='variable to track through CCPP suite', required=True)
+parser.add_argument('--draw',  action='store_true', \
+                    help='draw graph of calling tree for given variable', default=False)
 parser.add_argument('--debug', action='store_true', help='enable debugging output', default=False)
 args = parser.parse_args()
 
@@ -39,8 +41,9 @@ def parse_arguments(args):
     var = args.variable
     configfile = args.config
     metapath = args.metadata_path
+    draw = args.draw
     debug = args.debug
-    return(success,sdf,var,configfile,metapath,debug)
+    return(success,sdf,var,configfile,metapath,draw,debug)
 
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
@@ -48,41 +51,38 @@ def setup_logging(debug):
     if debug:
         level = logging.DEBUG
     else:
-        level = logging.INFO
+        level = logging.WARNING
     logging.basicConfig(format='%(levelname)s: %(message)s', level=level)
     if debug:
         logging.info('Logging level set to DEBUG')
-    else:
-        logging.info('Logging level set to INFO')
     return success
 
 def parse_suite(sdf):
     """Reads provided sdf, parses ordered list of schemes for the suite specified by said sdf"""
-    print('reading sdf ' + sdf)
+    logging.info(f'Reading sdf {sdf} and populating Suite object')
     suite = Suite(sdf_name=sdf)
     success = suite.parse()
     if not success:
-        logging.error('Parsing suite definition file {0} failed.'.format(sdf))
+        logging.error(f'Parsing suite definition file {sdf} failed.')
         success = False
         return (success, suite)
-    print('Successfully read sdf' + suite.sdf_name)
-    print('reading list of schemes from suite ' + suite.name)
-    print('creating calling tree of schemes')
+    logging.info(f'Successfully read sdf {suite.sdf_name}')
+    logging.info(f'Creating calling tree of schemes for suite {suite.name}')
     success = suite.make_call_tree()
-    print(suite.call_tree)
     if not success:
         logging.error('Parsing suite definition file {0} failed.'.format(sdf))
         success = False
-        return (success, suite)
     return (success, suite)
 
 def create_metadata_filename_dict(metapath):
     """Given a path, read all .meta files and add them to dictionary with their assoc schemes"""
 
     success = True
-    scheme_filenames=glob.glob(metapath + "*.meta")
     metadata_dict = {}
-    print(scheme_filenames)
+    scheme_filenames=glob.glob(metapath + "*.meta")
+    if not scheme_filenames:
+        logging.error(f'No files found in {metapath} with ".meta" extension')
+        success = False
 
     for scheme_fn in scheme_filenames:
         schemes=find_scheme_names(scheme_fn)
@@ -108,8 +108,8 @@ def create_var_graph(suite, var, config, metapath):
 
     logging.debug("reading .meta files in path:\n {0}".format(metapath))
     (metadata_dict, success)=create_metadata_filename_dict(metapath)
-
-    print(metadata_dict)
+    if not success:
+        raise Exception('Call to create_metadata_filename_dict failed')
 
     logging.debug(f"reading metadata files for schemes defined in config file: "
                   f"{config['scheme_files']}")
@@ -169,27 +169,23 @@ def create_var_graph(suite, var, config, metapath):
 
     return (success,var_graph)
 
-def check_var():
-    """Check given variable against standard names"""
-    # This function may ultimately end up being unnecessary
+def draw_var_graph(var_graph):
+    """Draw a graphical representation of the variable graph"""
+
     success = True
-    print('Checking if ' + args.variable + ' is in list of standard names')
+
     return success
 
 def main():
     """Main routine that traverses a CCPP suite and outputs the list of schemes that modify given variable"""
 
-    (success, sdf, var, configfile, metapath, debug) = parse_arguments(args)
+    (success, sdf, var, configfile, metapath, draw, debug) = parse_arguments(args)
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
     success = setup_logging(debug)
     if not success:
         raise Exception('Call to setup_logging failed.')
-
-#    success = check_var()
-#    if not success:
-#        raise Exception('Call to check_var failed.')
 
     (success, suite) = parse_suite(sdf)
     if not success:
@@ -208,9 +204,13 @@ def main():
     if not success:
         raise Exception('Call to create_var_graph failed.')
 
-    print('For suite {0}, the following schemes (in order) modify the variable {1}:'.format(suite.sdf_name,var))
-    for key in var_graph:
-        print("{0} (intent {1})".format(key,var_graph[key]))
+    if draw:
+        success = draw_var_graph(var_graph)
+    else:
+        print(f"For suite {suite.sdf_name}, the following schemes (in order) "
+              f"modify the variable {var}:")
+        for key in var_graph:
+            print(f"{key} (intent {var_graph[key]})")
 
 
 if __name__ == '__main__':
