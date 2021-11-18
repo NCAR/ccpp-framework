@@ -18,15 +18,15 @@ from parse_checkers import registered_fortran_ddt_names
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--sdf',           action='store', \
-                    help='suite definition file to use', required=True)
+                    help='suite definition file to parse', required=True)
 parser.add_argument('-m', '--metadata_path', action='store', \
                     help='path to CCPP scheme metadata files', required=True)
 parser.add_argument('-c', '--config',        action='store', \
                     help='path to CCPP prebuild configuration file', required=True)
 parser.add_argument('-v', '--variable',      action='store', \
                     help='variable to track through CCPP suite', required=True)
-parser.add_argument('--draw',  action='store_true', \
-                    help='draw graph of calling tree for given variable', default=False)
+#parser.add_argument('--draw',  action='store_true', \
+#                    help='draw graph of calling tree for given variable', default=False)
 parser.add_argument('--debug', action='store_true', help='enable debugging output', default=False)
 args = parser.parse_args()
 
@@ -41,9 +41,8 @@ def parse_arguments(args):
     var = args.variable
     configfile = args.config
     metapath = args.metadata_path
-    draw = args.draw
     debug = args.debug
-    return(success,sdf,var,configfile,metapath,draw,debug)
+    return(success,sdf,var,configfile,metapath,debug)
 
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
@@ -58,7 +57,8 @@ def setup_logging(debug):
     return success
 
 def parse_suite(sdf):
-    """Reads provided sdf, parses ordered list of schemes for the suite specified by said sdf"""
+    """Reads the provided sdf, parses into a Suite data structure, including the "call tree": 
+       the ordered list of schemes for the suite specified by the provided sdf"""
     logging.info(f'Reading sdf {sdf} and populating Suite object')
     suite = Suite(sdf_name=sdf)
     success = suite.parse()
@@ -75,7 +75,9 @@ def parse_suite(sdf):
     return (success, suite)
 
 def create_metadata_filename_dict(metapath):
-    """Given a path, read all .meta files and add them to dictionary with their assoc schemes"""
+    """Given a path, read all .meta files in that directory and add them to a dictionary: the keys
+       are the name of the scheme, and the values are the filename of the .meta file associated
+       with that scheme"""
 
     success = True
     metadata_dict = {}
@@ -96,10 +98,11 @@ def create_metadata_filename_dict(metapath):
 
 def create_var_graph(suite, var, config, metapath):
     """Given a suite, variable name, a 'config' dictionary, and a path to .meta files:
-         1. Loops through the call tree of provided suite
-         2. For each scheme, reads .meta file for said scheme, checks for variable within that
-            scheme, and if it exists, adds an entry to an ordered dictionary with the name of
-            the scheme and the intent of the variable"""
+         1. Creates a dictionary associating schemes with their .meta files
+         2. Loops through the call tree of the provided suite
+         3. For each scheme, reads .meta file for said scheme, checks for variable within that
+            scheme, and if it exists, adds an entry to a list of tuples, where each tuple includes
+            the name of the scheme and the intent of the variable within that scheme"""
 
     success = True
 
@@ -171,16 +174,18 @@ def create_var_graph(suite, var, config, metapath):
     return (success,var_graph)
 
 def draw_var_graph(var_graph):
-    """Draw a graphical representation of the variable graph"""
+    """Draw a graphical representation of the variable graph (not yet implemented)"""
 
     success = True
 
     return success
 
+    return
+
 def main():
     """Main routine that traverses a CCPP suite and outputs the list of schemes that modify given variable"""
 
-    (success, sdf, var, configfile, metapath, draw, debug) = parse_arguments(args)
+    (success, sdf, var, configfile, metapath, debug) = parse_arguments(args)
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -205,13 +210,10 @@ def main():
     if not success:
         raise Exception('Call to create_var_graph failed.')
 
-    if draw:
-        success = draw_var_graph(var_graph)
-    else:
-        print(f"For suite {suite.sdf_name}, the following schemes (in order) "
-              f"modify the variable {var}:")
-        for entry in var_graph:
-            print(f"{entry[0]} (intent {entry[1]})")
+    print(f"For suite {suite.sdf_name}, the following schemes (in order) "
+          f"modify the variable {var}:")
+    for entry in var_graph:
+        print(f"{entry[0]} (intent {entry[1]})")
 
 
 if __name__ == '__main__':
