@@ -103,8 +103,8 @@ def create_var_graph(suite, var, config, metapath):
 
     success = True
 
-    # Create an ordered dictionary that will hold the in/out information for each scheme
-    var_graph=collections.OrderedDict()
+    # Create a list of tuples that will hold the in/out information for each scheme
+    var_graph=[]
 
     logging.debug("reading .meta files in path:\n {0}".format(metapath))
     (metadata_dict, success)=create_metadata_filename_dict(metapath)
@@ -152,7 +152,8 @@ def create_var_graph(suite, var, config, metapath):
                 elif exact_match:
                     logging.debug(f"Exact match found for variable {var} in scheme {section.title},"
                                   f" intent {intent}")
-                    var_graph[section.title] = intent
+                    #print(f"{var_graph=}")
+                    var_graph.append((section.title,intent))
                 else:
                     logging.debug(f"Found inexact matches for variable(s) {var} "
                                   f"in scheme {section.title}:\n{found_var}")
@@ -209,8 +210,8 @@ def main():
     else:
         print(f"For suite {suite.sdf_name}, the following schemes (in order) "
               f"modify the variable {var}:")
-        for key in var_graph:
-            print(f"{key} (intent {var_graph[key]})")
+        for entry in var_graph:
+            print(f"{entry[0]} (intent {entry[1]})")
 
 
 if __name__ == '__main__':
