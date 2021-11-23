@@ -18,12 +18,18 @@ perr() {
 cd ${scripts}
 perr $? "Cannot cd to scripts directory, '${scripts}'"
 
+errcnt=0
+
 export PYTHONPATH="${scripts}:${PYTHONPATH}"
 # Find all python scripts that have doctest
 for pyfile in $(find . -name \*.py); do
   if [ -f "${pyfile}" ]; then
     if [ $(grep -c doctest ${pyfile}) -ne 0 ]; then
       python3 ${pyfile}
+      res=$?
+      errcnt=$((errcnt + res))
     fi
   fi
 done
+
+exit ${errcnt}

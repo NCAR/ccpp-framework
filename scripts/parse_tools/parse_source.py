@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Classes to aid the parsing process"""
 
@@ -415,5 +415,9 @@ class ParseSource(object):
 ########################################################################
 
 if __name__ == "__main__":
+    # pylint: disable=ungrouped-imports
     import doctest
-    doctest.testmod()
+    # pylint: enable=ungrouped-imports
+    fail, _ = doctest.testmod()
+    sys.exit(fail)
+# end if

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #pylint: disable=anomalous-backslash-in-string
 """
@@ -35,6 +35,7 @@ import os
 import os.path
 import logging
 # CCPP framework imports
+from framework_env import CCPPFrameworkEnv
 from parse_tools import init_log, set_log_level
 from parse_tools import CCPPError, ParseInternalError
 from parse_tools import reset_standard_name_counter, unique_standard_name
@@ -127,7 +128,7 @@ def write_metadata_file(mfilename, ftables, sep):
                     tprop = var.get_prop_value('type')
                     kprop = var.get_prop_value('kind')
                     if tprop == kprop:
-                        outfile.write('  ddt_type = {}'.format(tprop))
+                        outfile.write('  type = {}'.format(tprop))
                     else:
                         outfile.write('  type = {}'.format(tprop.lower()))
                         if kprop:
@@ -166,7 +167,7 @@ def write_metadata_file(mfilename, ftables, sep):
     # end with
 
 ###############################################################################
-def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
+def parse_fortran_files(filenames, run_env, output_dir, sep, logger):
 ###############################################################################
     """
     Parse each file in <filenames> and produce a prototype metadata file
@@ -176,8 +177,7 @@ def parse_fortran_files(filenames, preproc_defs, output_dir, sep, logger):
     for filename in filenames:
         logger.info('Looking for arg_tables from {}'.format(filename))
         reset_standard_name_counter()
-        ftables = parse_fortran_file(filename, preproc_defs=preproc_defs,
-                                     logger=logger)
+        ftables = parse_fortran_file(filename, run_env)
         # Create metadata filename
         filepath = '.'.join(os.path.basename(filename).split('.')[0:-1])
         fname = filepath + '.meta'
@@ -225,7 +225,10 @@ def _main_func():
         os.makedirs(output_dir)
     # end if
     # Parse the files and create metadata
-    _ = parse_fortran_files(fort_files, preproc_defs,
+    run_env = CCPPFrameworkEnv(_LOGGER, verbose=verbosity,
+                               host_files="", scheme_files="", suites="",
+                               preproc_directives=preproc_defs)
+    _ = parse_fortran_files(fort_files, run_env,
                             output_dir, section_sep, _LOGGER)
 
 ###############################################################################

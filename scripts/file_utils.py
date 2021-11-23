@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Utilities for checking and manipulating file status
@@ -209,7 +209,7 @@ def create_file_list(files, suffices, file_type, logger, root_path=None):
     txt_files = list() # Already processed txt files
     pathname = None
     if isinstance(files, str):
-        file_list = [x.strip() for x in files.split(',')]
+        file_list = [x.strip() for x in files.split(',') if x.strip()]
     elif isinstance(files, (list, tuple)):
         file_list = files
     else:

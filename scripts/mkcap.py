@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Script to generate a cap module and subroutines
 # from a scheme xml file.
