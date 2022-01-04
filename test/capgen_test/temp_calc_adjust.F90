@@ -33,7 +33,18 @@ CONTAINS
       errmsg = ''
       errflg = 0
 
-      temp_calc = 1.0_kind_phys
+      call temp_calc_adjust_nested_subroutine(temp_calc)
+
+   CONTAINS
+
+      ELEMENTAL SUBROUTINE temp_calc_adjust_nested_subroutine(temp)
+
+         REAL(kind_phys),    intent(out)   :: temp
+         !-------------------------------------------------------------
+
+         temp = 1.0_kind_phys
+
+      END SUBROUTINE temp_calc_adjust_nested_subroutine
 
    END SUBROUTINE temp_calc_adjust_run
 
