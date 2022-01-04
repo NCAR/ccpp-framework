@@ -615,6 +615,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
     # Find the subroutine line, should be first executable statement
     inpreamble = False
     insub = True
+    seen_contains = False
     if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
         ctx = context_string(pobj, nodir=True)
         msg = "Parsing specification of {}{}"
@@ -629,6 +630,9 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
             esmatch = _END_SUBROUTINE_RE.match(statement)
             pmatch = _ENDMODULE_RE.match(statement)
             asmatch = _ARG_TABLE_START_RE.match(statement)
+            seen_contains = seen_contains or is_contains_statement(statement, insub)
+            if seen_contains:
+                inpreamble = False
             if asmatch is not None:
                 # We have run off the end of something, hope that is okay
                 # Put this statement back for the caller to deal with
@@ -642,7 +646,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
                 insub = False
                 break
             # End if
-            if smatch is not None:
+            if smatch is not None and not seen_contains:
                 scheme_name = smatch.group(1)
                 inpreamble = scheme_name.lower() == table_name.lower()
                 if inpreamble:
@@ -674,14 +678,16 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
                     # End for
                     psrc = ParseSource(scheme_name, 'scheme', pobj)
                 # End if
-            elif inpreamble:
+            elif inpreamble or seen_contains:
                 # Process a preamble statement (use or argument declaration)
-                if esmatch is not None:
+                if esmatch is not None and scheme_name == esmatch.group(1):
                     inpreamble = False
+                    seen_contains = False
                     insub = False
-                elif ((not is_comment_statement(statement)) and
-                      (not parse_use_statement(statement, run_env)) and
-                      is_dummy_argument_statement(statement)):
+                elif (inpreamble and
+                      ((not is_comment_statement(statement)) and
+                       (not parse_use_statement(statement, run_env)) and
+                       is_dummy_argument_statement(statement))):
                     dvars = parse_fortran_var_decl(statement, psrc, run_env)
                     for var in dvars:
                         lname = var.get_prop_value('local_name').lower()
