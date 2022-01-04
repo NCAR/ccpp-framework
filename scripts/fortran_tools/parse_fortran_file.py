@@ -633,6 +633,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
             seen_contains = seen_contains or is_contains_statement(statement, insub)
             if seen_contains:
                 inpreamble = False
+            # End if
             if asmatch is not None:
                 # We have run off the end of something, hope that is okay
                 # Put this statement back for the caller to deal with
@@ -680,7 +681,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
                 # End if
             elif inpreamble or seen_contains:
                 # Process a preamble statement (use or argument declaration)
-                if esmatch is not None and scheme_name == esmatch.group(1):
+                if esmatch is not None:
                     inpreamble = False
                     seen_contains = False
                     insub = False
