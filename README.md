@@ -1,20 +1,6 @@
 # CCPP Framework
 
-Common Community Physics Package (CCPP) Framework.
-
-| Branch  | Linux/MacOS Build | Coverage |
-|---      |---                |---       |
-| Master  | [![Build Status](https://travis-ci.org/NCAR/gmtb-ccpp.svg?branch=master)](https://travis-ci.org/NCAR/gmtb-ccpp)  | [![Coverage Status](https://codecov.io/github/NCAR/gmtb-ccpp/coverage.svg?branch=master)](https://codecov.io/github/NCAR/gmtb-ccpp) |
-| Develop | [![Build Status](https://travis-ci.org/NCAR/gmtb-ccpp.svg?branch=develop)](https://travis-ci.org/NCAR/gmtb-ccpp) | [![Coverage Status](https://codecov.io/github/NCAR/gmtb-ccpp/coverage.svg?branch=develop)](https://codecov.io/github/NCAR/gmtb-ccpp?branch=develop) |
-
-
-## Notes to Users
-This repository contains the Common Community Physics Packages (CCPP) Framework.
-
-The repository for the CCPP and the CCPP driver contains sufficient code for standalone
-testing of the CCPP. The CCPP repository may also be used in conjunction with the 
-GMTB Single Column Model (SCM). Please see the [GMTB SCM+CCPP page](http://www.dtcenter.org/GMTB/gmtb_scm_ccpp_doc/)
-for more information on combining the GMTB SCM and the CCPP.
+This repository contains the Common Community Physics Package (CCPP) Framework: The infrastructure that connects CCPP physics schemes with a host model, as well as stand-alone tools for use with CCPP.
 
 ## Requirements
 
