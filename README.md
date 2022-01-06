@@ -85,35 +85,6 @@ early testing, and is included in the initial release.
   * For each scheme, an XML file (the scheme definition file) needs to exist.
     For the initial release, this XML file has not yet been designed.
 
-## Physics Schemes
-All physics schemes are kept in the GitHub repository ccpp-physics.
-
-To add a new scheme one needs to
-
-1. Add/Create the scheme within `schemes`. You should create a
-   sub-directory under the `schemes` directory. You will need to
-   add a [`ExternalProject_Add()`](https://cmake.org/cmake/help/latest/module/ExternalProject.html).
-   call to the `schemes/CMakeLists.txt` file.
-2. Create a `cap` subroutine. The CCPP will call your
-   cap routine.
-
-  1. The cap routine must be labelled "schemename_cap".
-
-     For example, the dummy scheme has a cap called
-     "dummy_cap". The requirements are that it is
-    1. The scheme name is lowercase (the symbol is called from a C 
-       function).
-    2. "_cap" is appended.
-    
-  2. Map all the inputs for the cap from the `cdata` encapsulating
-     type (this is of the `ccpp_t` type). The cap will extract the
-     fields from the fields array with the `ccpp_field_get()`
-     subroutine. 
-
-An example of a scheme is `schemes/check/test.f90`. It has the cap
-routine and the run routine. The run routine prints out that the
-scheme has been entered.
-
 
 ## Usage
 The CCPP must first be initialized, this is done by calling `ccpp_init()`.
