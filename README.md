@@ -86,64 +86,6 @@ early testing, and is included in the initial release.
     For the initial release, this XML file has not yet been designed.
 
 
-## Usage
-The CCPP must first be initialized, this is done by calling `ccpp_init()`.
-Once initialized, all variables that will be required in a physics scheme
-have to be added to the ccpp data object (of type `ccpp_t`). These variables
-can later be retrieved in a physics schemes cap.
-
-Example usage, in an atmosphere component:
-~~~~{.f90}
-type(ccpp_t), target :: cdata
-character(len=128)   :: scheme_xml_filename
-integer              :: ierr
-
-ierr = 0
-
-! Initialize the CCPP and load the physics scheme.
-call ccpp_init(scheme_xml_filename, cdata, ierr)
-if (ierr /= 0) then
-    call exit(1)
-end if
-
-! Add surface temperature (variable surf_t).
-call ccpp_field_add(cdata, 'surface_temperature', surf_t, ierr, 'K')
-if (ierr /= 0) then
-    call exit(1)
-end if
-
-! Call the first physics scheme
-call ccpp_ipd_run(cdata%suite%ipds(1)%subcycles(1)%schemes(1), cdata, ierr)
-if (ierr /= 0) then
-    call exit(1)
-end if
-~~~~
-
-Example usage, in a physics cap:
-~~~~{.f90}
-type(ccpp_t), pointer      :: cdata
-real, pointer              :: surf_t(:)
-integer                    :: ierr
-
-call c_f_pointer(ptr, cdata)
-call ccpp_field_get(cdata, 'surface_temperature', surf_t, ierr)
-if (ierr /= 0) then
-    call exit(1)
-end if
-~~~~
-
-Note, the cap routine must
-* Accept only one argument of type `type(c_ptr)`.
-* Be marked as `bind(c)`.
-
-## Documentation
-The code is documented with [doxygen](www.doxygen.org/).
-To generate the documentation you must have [doxygen](www.doxygen.org/)
-and [graphviz](http://www.graphviz.org/) installed. Then execute:
-```
-make doc
-```
-
 ## Code Coverage
 The code can be built and run to indicate code coverage. In order to do
 this, you must have GNU [gcov](https://gcc.gnu.org/onlinedocs/gcc/Gcov.html)
