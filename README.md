@@ -1,4 +1,4 @@
-# CCPP Framwork
+# CCPP Framework
 
 Common Community Physics Package (CCPP) Framework.
 
@@ -15,20 +15,6 @@ The repository for the CCPP and the CCPP driver contains sufficient code for sta
 testing of the CCPP. The CCPP repository may also be used in conjunction with the 
 GMTB Single Column Model (SCM). Please see the [GMTB SCM+CCPP page](http://www.dtcenter.org/GMTB/gmtb_scm_ccpp_doc/)
 for more information on combining the GMTB SCM and the CCPP.
-
-This is the release v0.1.0 of the CCPP. As this is the initial release,
-the CCPP only has infrastructure to support the neccesary functioning of
-the anticipated package, without having actual (i.e. physically valid)
-physical parameterization schemes included. The included physical
-parameterization schemes inside of the CCPP are "stub" only. While the
-schemes do have arguments similar to what traditional schemes require
-(wind, surface temperature, physical constants), the schemes immediately
-return after a message "I am in this scheme" has been output.
-
-This repository for the CCPP and the CCPP driver contains tests to verify
-proper running of the CCPP and driver. Detailed information on how to
-include fully functioning physical parameterizations schemes will be
-provided once examples of fully functioning schemes are part of the CCPP.
 
 ## Requirements
 
