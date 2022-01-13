@@ -51,7 +51,7 @@
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
-  units = 1
+  units = none
   dimensions = ()
   type = character
   kind = len=512
@@ -66,7 +66,7 @@
 [ccpp-arg-table]
   name = cld_ice_init
   type = scheme
-[ tfreeze]
+[ tfreeze ]
   standard_name = water_temperature_at_freezing
   long_name = Freezing temperature of water at sea level
   units = K
@@ -84,7 +84,7 @@
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
-  units = 1
+  units = none
   dimensions = ()
   type = character
   kind = len=512
