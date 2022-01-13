@@ -43,7 +43,7 @@ CCPP_STANDARD_VARS = {
     'ccpp_error_message' :
     {'local_name' : 'errmsg', 'standard_name' : 'ccpp_error_message',
      'long_name' : "CCPP error message",
-     'units' : '1', 'dimensions' : '()', 'type' : 'character',
+     'units' : 'none', 'dimensions' : '()', 'type' : 'character',
      'kind' : 'len=512'},
     'horizontal_dimension' :
     {'local_name' : 'total_columns',

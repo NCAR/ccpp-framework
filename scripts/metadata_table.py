@@ -109,7 +109,7 @@ Notes on the input format:
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
-  units = 1
+  units = none
   dimensions = ()
   type = character
   kind = len=512
