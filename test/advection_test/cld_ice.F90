@@ -10,6 +10,7 @@ MODULE cld_ice
 
    PUBLIC :: cld_ice_init
    PUBLIC :: cld_ice_run
+   PUBLIC :: cld_ice_final
 
    real(kind_phys), private :: tcld = HUGE(1.0_kind_phys)
 
@@ -70,5 +71,27 @@ CONTAINS
       tcld = tfreeze - 20.0_kind_phys
 
    end subroutine cld_ice_init
+
+   !> \section arg_table_cld_ice_final  Argument Table
+   !! \htmlinclude arg_table_cld_ice_final.html
+   !!
+
+   !> @{
+   !! This routine does nothing, but it tests if blank
+   !! lines and doxygen comments between metadata hooks
+   !! and the subroutine are parsed correctly.
+   !! @{
+
+   subroutine cld_ice_final(errmsg, errflg)
+
+      character(len=512), intent(out)   :: errmsg
+      integer,            intent(out)   :: errflg
+
+      errmsg = ''
+      errflg = 0
+
+   end subroutine cld_ice_final
+   !! @}
+   !! @}
 
 END MODULE cld_ice
