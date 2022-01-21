@@ -1,0 +1,27 @@
+[ccpp-table-properties]
+  name = physics_state
+  type = ddt
+[ccpp-arg-table]
+  name = physics_state
+  type = ddt
+[effrr]
+  standard_name = effective_radius_of_stratiform_cloud_rain_particle
+  long_name = effective radius of cloud rain particle in meter
+  units = m
+  dimensions = (horizontal_dimension,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+[effrl]
+  standard_name = effective_radius_of_stratiform_cloud_liquid_water_particle
+  long_name = effective radius of cloud liquid water particle in meter
+  units = m
+  dimensions = (horizontal_dimension,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+[effri]
+  standard_name = effective_radius_of_stratiform_cloud_ice_particle
+  long_name = effective radius of cloud ice water particle in meter
+  units = m
+  dimensions = (horizontal_dimension,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
