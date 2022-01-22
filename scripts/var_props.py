@@ -764,6 +764,32 @@ class VarCompatObj:
                      "real", "kind_phys", "m", ['horizontal_loop_extent'],  \
                      "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <__main__.VarCompatObj object at 0x...>
+
+    # Test that a 2-D var with unit conversion m->km works
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
+                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
+                     "real", "kind_phys", "km", ['horizontal_dimension'],   \
+                     "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    <__main__.VarCompatObj object at 0x...>
+
+    # Test that a 2-D var with unit conversion m->km works and that it
+    # produces the correct forward transformation
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
+                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
+                     "real", "kind_phys", "km", ['horizontal_dimension'],   \
+                     "var2_lname", _DOCTEST_RUNENV).forward_transform(      \
+                     "var1_lname", "var2_lname", ('i'))
+    'var1_lname(i) = 1.0E-3_kind_phys*var2_lname(i)'
+
+    # Test that a 3-D var with unit conversion m->km and vertical flipping
+    # works and that it produces the correct reverse transformation
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
+                     ['horizontal_dimension', 'vertical_layer_dimension'],  \
+                     "var1_lname", "var_stdname", "real", "kind_phys", "km",\
+                     ['horizontal_dimension', 'vertical_layer_dimension'],  \
+                     "var2_lname", _DOCTEST_RUNENV).reverse_transform(      \
+                     "var1_lname", "var2_lname", ('i','k'), flip_vdim='nk')
+    'var1_lname(i,nk-k+1) = 1.0E+3_kind_phys*var2_lname(i,k)'
     """
 
     def __init__(self, var1_stdname, var1_type, var1_kind, var1_units,
