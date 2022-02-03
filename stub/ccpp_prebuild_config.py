@@ -15,6 +15,7 @@ HOST_MODEL_IDENTIFIER = "FV3"
 # dependencies of these files to the list.
 VARIABLE_DEFINITION_FILES = [
     # actual variable definition files
+    '../src/ccpp_types.F90',
     'data.F90',
     ]
 
