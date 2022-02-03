@@ -104,8 +104,6 @@ def create_var_graph(suite, var, config, metapath):
             scheme, and if it exists, adds an entry to a list of tuples, where each tuple includes
             the name of the scheme and the intent of the variable within that scheme"""
 
-    success = True
-
     # Create a list of tuples that will hold the in/out information for each scheme
     var_graph=[]
 
@@ -162,6 +160,7 @@ def create_var_graph(suite, var, config, metapath):
                                   f"in scheme {section.title}:\n{found_var}")
                     partial_matches[section.title] = found_var
     if var_graph:
+        success = True
         logging.debug("Successfully generated variable graph for sdf {0}\n".format(suite.sdf_name))
     else:
         success = False
@@ -207,13 +206,11 @@ def main():
         raise Exception('Call to gather_variable_definitions failed.')
 
     (success, var_graph) = create_var_graph(suite, var, config, metapath)
-    if not success:
-        raise Exception('Call to create_var_graph failed.')
-
-    print(f"For suite {suite.sdf_name}, the following schemes (in order) "
-          f"modify the variable {var}:")
-    for entry in var_graph:
-        print(f"{entry[0]} (intent {entry[1]})")
+    if success:
+        print(f"For suite {suite.sdf_name}, the following schemes (in order) "
+              f"modify the variable {var}:")
+        for entry in var_graph:
+            print(f"{entry[0]} (intent {entry[1]})")
 
 
 if __name__ == '__main__':
