@@ -3,6 +3,7 @@
 # Standard modules
 import argparse
 import collections
+import copy
 import filecmp
 import importlib
 import itertools
@@ -23,6 +24,7 @@ from mkcap import CapsMakefile, CapsCMakefile, CapsSourcefile, \
                   TypedefsMakefile, TypedefsCMakefile, TypedefsSourcefile
 from mkdoc import metadata_to_html, metadata_to_latex
 from mkstatic import API, Suite, Group
+from mkstatic import CCPP_SUITE_VARIABLES
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -389,6 +391,16 @@ def filter_metadata(metadata, arguments, dependencies, schemes_in_files, suites)
                 schemes_in_files_filtered[scheme] = schemes_in_files[scheme]
     return (success, metadata_filtered, arguments_filtered, dependencies_filtered, schemes_in_files_filtered)
 
+def add_ccpp_suite_variables(metadata):
+    """ Add variables that are required to construct CCPP suites to the list of requested variables"""
+    success = True
+    logging.info("Adding CCPP suite variables to list of requested variables")
+    for var_name in CCPP_SUITE_VARIABLES.keys():
+        if not var_name in metadata.keys():
+            metadata[var_name] = [copy.deepcopy(CCPP_SUITE_VARIABLES[var_name])]
+            logging.debug("Adding CCPP suite variable {0} to list of requested variables".format(var_name))
+    return (success, metadata)
+
 def generate_list_of_schemes_and_dependencies_to_compile(schemes_in_files, dependencies1, dependencies2):
     """Generate a flat list of schemes and dependencies in two dependency dictionaries to compile"""
     success = True
@@ -722,6 +734,11 @@ def main():
                          metadata_request, arguments_request, dependencies_request, schemes_in_files, suites)
     if not success:
         raise Exception('Call to filter_metadata failed.')
+
+    # Add variables that are required to construct CCPP suites to the list of requested variables
+    (success, metadata_request) = add_ccpp_suite_variables(metadata_request)
+    if not success:
+        raise Exception('Call to add_ccpp_suite_variables failed.')
 
     (success, schemes_and_dependencies_to_compile) = generate_list_of_schemes_and_dependencies_to_compile(
                                               schemes_in_files, dependencies_request, dependencies_define)

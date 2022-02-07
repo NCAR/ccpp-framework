@@ -20,12 +20,39 @@ from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
+from metadata_parser import CCPP_MANDATORY_VARIABLES
 from mkcap import Var
 
 ###############################################################################
 
 # Maximum number of dimensions of an array allowed by the Fortran 2008 standard
 FORTRAN_ARRAY_MAX_DIMS = 15
+
+# These variables always need to be present for creating suite and group caps
+CCPP_SUITE_VARIABLES = { **CCPP_MANDATORY_VARIABLES,
+    CCPP_LOOP_COUNTER : Var(local_name    = 'loop_cnt',
+                            standard_name = CCPP_LOOP_COUNTER,
+                            long_name     = 'loop counter for subcycling loops in CCPP',
+                            units         = 'index',
+                            type          = 'integer',
+                            dimensions    = [],
+                            rank          = '',
+                            kind          = '',
+                            intent        = 'in',
+                            active        = 'T',
+                            ),
+    CCPP_LOOP_EXTENT : Var(local_name    = 'loop_max',
+                           standard_name = CCPP_LOOP_EXTENT,
+                           long_name     = 'loop counter for subcycling loops in CCPP',
+                           units         = 'count',
+                           type          = 'integer',
+                           dimensions    = [],
+                           rank          = '',
+                           kind          = '',
+                           intent        = 'in',
+                           active        = 'T',
+                           ),
+    }
 
 ###############################################################################
 
@@ -919,14 +946,8 @@ end module {module}
             standard_name_by_local_name_define[metadata_define[standard_name][0].local_name] = standard_name
 
         # First get target names of standard CCPP variables for subcycling and error handling
-        if CCPP_LOOP_COUNTER in metadata_request.keys():
-            ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
-        else:
-            ccpp_loop_counter_target_name = None
-        if CCPP_LOOP_EXTENT in metadata_request.keys():
-            ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
-        else:
-            ccpp_loop_extent_target_name = None
+        ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
+        ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
         ccpp_error_flag_target_name = metadata_request[CCPP_ERROR_FLAG_VARIABLE][0].target
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
         #
@@ -1480,14 +1501,14 @@ end module {module}
 '''
                 subcycle_body_suffix = ''
                 if self.parents[ccpp_stage]:
-                    # Set subcycle loop extent if requested by any scheme
-                    if ccpp_loop_extent_target_name and ccpp_stage == 'run':
+                    # Set subcycle loop extent
+                    if ccpp_stage == 'run':
                         subcycle_body_prefix += '''
       ! Set loop extent variable for the following subcycle
       {loop_extent_var_name} = {loop_cnt_max}
 '''.format(loop_extent_var_name=ccpp_loop_extent_target_name,
                                   loop_cnt_max=subcycle.loop)
-                    elif ccpp_loop_extent_target_name:
+                    else:
                         subcycle_body_prefix += '''
       ! Set loop extent variable for the following subcycle
       {loop_extent_var_name} = 1
@@ -1502,7 +1523,7 @@ end module {module}
       end do
       end associate
 '''
-                    elif ccpp_loop_counter_target_name:
+                    else:
                         subcycle_body_prefix += '''
       {loop_var_name} = 1\n'''.format(loop_var_name=ccpp_loop_counter_target_name)
 

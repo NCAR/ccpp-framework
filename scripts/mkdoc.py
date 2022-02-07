@@ -124,7 +124,7 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
             target = 'MISSING'
             local_name = 'MISSING'
         if var_name in metadata_request.keys():
-            requested_list = [ escape_tex(decode_container(v.container)) for v in metadata_request[var_name] ]
+            requested_list = [ escape_tex(decode_container(v.container)) if v.container else 'none' for v in metadata_request[var_name] ]
             # for the purpose of the table, just output the name of the subroutine
             for i in range(len(requested_list)):
                 entry = requested_list[i]

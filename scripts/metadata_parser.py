@@ -9,6 +9,7 @@ import sys
 from xml.etree import ElementTree as ET
 
 from common import encode_container, CCPP_STAGES
+from common import CCPP_ERROR_FLAG_VARIABLE, CCPP_ERROR_MSG_VARIABLE
 from mkcap import Var
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
@@ -37,28 +38,28 @@ VALID_ITEMS = {
 
 # Mandatory variables that every scheme needs to have
 CCPP_MANDATORY_VARIABLES = {
-    'ccpp_error_message' : Var(local_name    = 'errmsg',
-                               standard_name = 'ccpp_error_message',
-                               long_name     = 'error message for error handling in CCPP',
-                               units         = 'none',
-                               type          = 'character',
-                               dimensions    = [],
-                               rank          = '',
-                               kind          = 'len=*',
-                               intent        = 'out',
-                               active        = 'T',
-                               ),
-    'ccpp_error_flag' : Var(local_name    = 'ierr',
-                            standard_name = 'ccpp_error_flag',
-                            long_name     = 'error flag for error handling in CCPP',
-                            units         = 'flag',
-                            type          = 'integer',
-                            dimensions    = [],
-                            rank          = '',
-                            kind          = '',
-                            intent        = 'out',
-                            active        = 'T',
-                            ),
+    CCPP_ERROR_MSG_VARIABLE : Var(local_name    = 'errmsg',
+                                  standard_name = CCPP_ERROR_MSG_VARIABLE,
+                                  long_name     = 'error message for error handling in CCPP',
+                                  units         = 'none',
+                                  type          = 'character',
+                                  dimensions    = [],
+                                  rank          = '',
+                                  kind          = 'len=*',
+                                  intent        = 'out',
+                                  active        = 'T',
+                                  ),
+    CCPP_ERROR_FLAG_VARIABLE : Var(local_name    = 'ierr',
+                                   standard_name = CCPP_ERROR_FLAG_VARIABLE,
+                                   long_name     = 'error flag for error handling in CCPP',
+                                   units         = 'flag',
+                                   type          = 'integer',
+                                   dimensions    = [],
+                                   rank          = '',
+                                   kind          = '',
+                                   intent        = 'out',
+                                   active        = 'T',
+                                   ),
     }
 
 # Save metadata to avoid repeated parsing of type/variable definition files
