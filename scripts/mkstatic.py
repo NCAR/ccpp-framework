@@ -279,6 +279,10 @@ end module {module}
         '''Get the module name of the API.'''
         return self._module
 
+    @module.setter
+    def module(self, value):
+        self._module = value
+
     @property
     def subroutines(self):
         '''Get the subroutines names of the API to.'''
