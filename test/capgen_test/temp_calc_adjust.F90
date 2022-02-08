@@ -28,14 +28,39 @@ CONTAINS
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------
 
-      integer :: col_index
+      integer         :: col_index
+      real(kind_phys) :: bar = 1.0_kind_phys
 
       errmsg = ''
       errflg = 0
 
-      temp_calc = 1.0_kind_phys
+      call temp_calc_adjust_nested_subroutine(temp_calc)
+      if (check_foo()) then
+         call foo(bar)
+      end if
 
-   END SUBROUTINE temp_calc_adjust_run
+   CONTAINS
+
+      ELEMENTAL SUBROUTINE temp_calc_adjust_nested_subroutine(temp)
+
+         REAL(kind_phys),    intent(out)   :: temp
+         !-------------------------------------------------------------
+
+         temp = 1.0_kind_phys
+
+      END SUBROUTINE temp_calc_adjust_nested_subroutine
+
+      SUBROUTINE foo(bar)
+         REAL(kind_phys), intent(inout) :: bar
+         bar = bar + 1.0_kind_phys
+
+      END SUBROUTINE
+
+      logical function check_foo()
+         check_foo = .true.
+      end function check_foo
+
+   END SUBROUTINE
 
    !> \section arg_table_temp_calc_adjust_init  Argument Table
    !! \htmlinclude arg_table_temp_calc_adjust_init.html
