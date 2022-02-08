@@ -37,7 +37,7 @@ parser.add_argument('--verbose',    action='store_true', help='enable verbose ou
 parser.add_argument('--debug',      action='store_true', help='enable debugging features in auto-generated code', default=False)
 parser.add_argument('--suites',     action='store', help='suite definition files to use (comma-separated, without path)', default='')
 parser.add_argument('--builddir',   action='store', help='relative path to CCPP build directory', required=False, default=None)
-parser.add_argument('--suffix',     action='store', help='suffix to be added to the name of static api module', required=False, default='')
+parser.add_argument('--namespace',  action='store', help='namespace suffix to be added to the name of static api module', required=False, default='')
 
 # BASEDIR is the current directory where this script is executed
 BASEDIR = os.getcwd()
@@ -59,8 +59,8 @@ def parse_arguments():
     else:
         sdfs = None
     builddir = args.builddir
-    suffix = args.suffix
-    return (success, configfile, clean, verbose, debug, sdfs, builddir, suffix)
+    namespace = args.namespace
+    return (success, configfile, clean, verbose, debug, sdfs, builddir, namespace)
 
 def import_config(configfile, builddir):
     """Import the configuration from a given configuration file"""
@@ -132,10 +132,14 @@ def setup_logging(verbose):
         logging.info('Logging level set to INFO')
     return success
 
-def clean_files(config):
+def clean_files(config, namespace):
     """Clean files created by ccpp_prebuild.py"""
     success = True
     logging.info('Performing clean ....')
+    if namespace:
+        static_api_file = '{api}.F90'.format(api=CCPP_STATIC_API_MODULE+'_'+namespace)
+    else:
+        static_api_file = '{api}.F90'.format(api=CCPP_STATIC_API_MODULE)
     # Create list of files to remove, use wildcards where necessary
     files_to_remove = [
         config['typedefs_makefile'],
@@ -150,7 +154,7 @@ def clean_files(config):
         config['html_vartable_file'],
         config['latex_vartable_file'],
         os.path.join(config['caps_dir'], 'ccpp_*_cap.F90'),
-        os.path.join(config['static_api_dir'], '{api}.F90'.format(api=CCPP_STATIC_API_MODULE)),
+        os.path.join(config['static_api_dir'], static_api_file),
         config['static_api_sourcefile'],
         ]
     # Not very pythonic, but the easiest way w/o importing another Python module
@@ -516,7 +520,7 @@ def generate_suite_and_group_caps(suites, metadata_request, metadata_define, arg
         success = False
     return (success, suite_and_group_caps)
 
-def generate_static_api(suites, static_api_dir, suffix):
+def generate_static_api(suites, static_api_dir, namespace):
     """Generate static API for given suite(s)"""
     success = True
     # Change to caps directory, create if necessary
@@ -524,11 +528,11 @@ def generate_static_api(suites, static_api_dir, suffix):
         os.makedirs(static_api_dir)
     os.chdir(static_api_dir)
     api = API(suites=suites, directory=static_api_dir)
-    if suffix:
+    if namespace:
         base = os.path.splitext(os.path.basename(api.filename))[0]
         logging.info('Static API file name is ''{}'''.format(api.filename))
-        api.filename = base+'_'+suffix+'.F90'
-        api.module = base+'_'+suffix
+        api.filename = base+'_'+namespace+'.F90'
+        api.module = base+'_'+namespace
         logging.info('Static API file name is changed to ''{}'''.format(api.filename))
     logging.info('Generating static API {0} in {1} ...'.format(api.filename, static_api_dir))
     api.write()
@@ -688,7 +692,7 @@ def generate_caps_makefile(caps, caps_makefile, caps_cmakefile, caps_sourcefile,
 def main():
     """Main routine that handles the CCPP prebuild for different host models."""
     # Parse command line arguments
-    (success, configfile, clean, verbose, debug, sdfs, builddir, suffix) = parse_arguments()
+    (success, configfile, clean, verbose, debug, sdfs, builddir, namespace) = parse_arguments()
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
@@ -702,7 +706,7 @@ def main():
 
     # Perform clean if requested, then exit
     if clean:
-        success = clean_files(config)
+        success = clean_files(config, namespace)
         logging.info('CCPP prebuild clean completed successfully, exiting.')
         sys.exit(0)
 
@@ -782,7 +786,7 @@ def main():
     if not success:
         raise Exception('Call to generate_suite_and_group_caps failed.')
 
-    (success, api) = generate_static_api(suites, config['static_api_dir'], suffix)
+    (success, api) = generate_static_api(suites, config['static_api_dir'], namespace)
     if not success:
         raise Exception('Call to generate_static_api failed.')
 
