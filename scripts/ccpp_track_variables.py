@@ -104,7 +104,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
     # Create a list of tuples that will hold the in/out information for each scheme
     var_graph=[]
 
-    run_env.logger.debug("reading .meta files in path:\n {0}".format(metapath))
+    run_env.logger.debug(f"reading .meta files in path:\n {metapath}")
     metadata_dict=create_metadata_filename_dict(metapath)
 
     run_env.logger.debug(f"reading metadata files for schemes defined in config file: "
@@ -114,7 +114,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
     # then parse that metadata file to find variable info
     partial_matches = {}
     for scheme in suite.call_tree:
-        run_env.logger.debug("reading meta file for scheme {0} ".format(scheme))
+        run_env.logger.debug(f"reading meta file for scheme {scheme} ")
 
         if scheme in metadata_dict:
             scheme_filename = metadata_dict[scheme]
@@ -122,11 +122,10 @@ def create_var_graph(suite, var, config, metapath, run_env):
             raise Exception(f"Error, scheme '{scheme}' from suite '{suite.sdf_name}' "
                             f"not found in metadata files in {metapath}")
 
-        run_env.logger.debug("reading metadata file {0} for scheme {1}".format(scheme_filename, scheme))
+        run_env.logger.debug(f"reading metadata file {scheme_filename} for scheme {scheme}")
 
-        new_metadata_headers = parse_metadata_file(scheme_filename, \
-                                                   known_ddts=registered_fortran_ddt_names(), \
-                                                   run_env=run_env)
+        new_metadata_headers = parse_metadata_file(scheme_filename, 
+                                                   known_ddts=registered_fortran_ddt_names(), run_env=run_env)
         for scheme_metadata in new_metadata_headers:
             for section in scheme_metadata.sections():
                 found_var = []
@@ -134,7 +133,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
                 for scheme_var in section.variable_list():
                     exact_match = False
                     if var == scheme_var.get_prop_value('standard_name'):
-                        run_env.logger.debug("Found variable {0} in scheme {1}".format(var,section.title))
+                        run_env.logger.debug(f"Found variable {var} in scheme {section.title}")
                         found_var=var
                         exact_match = True
                         intent = scheme_var.get_prop_value('intent')
@@ -156,14 +155,14 @@ def create_var_graph(suite, var, config, metapath, run_env):
                     partial_matches[section.title] = found_var
     if var_graph:
         success = True
-        run_env.logger.debug("Successfully generated variable graph for sdf {0}\n".format(suite.sdf_name))
+        run_env.logger.debug(f"Successfully generated variable graph for sdf {suite.sdf_name}\n")
     else:
         success = False
         run_env.logger.error(f"Variable {var} not found in any suites for sdf {suite.sdf_name}\n")
         if partial_matches:
             print("Did find partial matches that may be of interest:\n")
             for key in partial_matches:
-                print("In {0} found variable(s) {1}".format(key, partial_matches[key]))
+                print(f"In {key} found variable(s) {partial_matches[key]}")
 
     return (success,var_graph)
 
