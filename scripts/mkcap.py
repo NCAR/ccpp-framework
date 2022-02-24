@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Script to generate a cap module and subroutines
 # from a scheme xml file.
@@ -12,7 +12,6 @@ import sys
 import getopt
 import xml.etree.ElementTree as ET
 
-from common import CCPP_ERROR_FLAG_VARIABLE
 from common import CCPP_INTERNAL_VARIABLES
 from common import STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import isstring, string_to_python_identifier

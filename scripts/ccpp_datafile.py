@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Code to generate and query the CCPP datafile returned by capgen.
 The CCPP datafile is a database consisting of several tables:
@@ -17,15 +17,15 @@ The CCPP datafile is a database consisting of several tables:
 
 # Python library imports
 import argparse
+import logging
 import os
-import re
 import sys
 import xml.etree.ElementTree as ET
 # CCPP framework imports
-from ccpp_suite import VerticalLoop, Subcycle
-from parse_tools import read_xml_file
 from metadata_table import UNKNOWN_PROCESS_TYPE
 from metavar import Var
+from parse_tools import read_xml_file, PrettyElementTree
+from suite_objects import VerticalLoop, Subcycle
 
 # Find python version
 PY3 = sys.version_info[0] > 2
@@ -33,9 +33,6 @@ PYSUBVER = sys.version_info[1]
 
 # Global data
 _INDENT_STR = "  "
-beg_tag_re = re.compile(r"([<][^/][^<>]*[^/][>])")
-end_tag_re = re.compile(r"([<][/][^<>/]+[>])")
-simple_tag_re = re.compile(r"([<][^/][^<>/]+[/][>])")
 
 ## datatable_report must have an action for each report type
 _VALID_REPORTS = [{"report" : "host_files", "type" : bool,
@@ -87,6 +84,13 @@ class CCPPDatatableError(ValueError):
     """Error specific to errors found in the CCPP capgen datafile"""
     pass
 
+class DatatableInternalError(ValueError):
+    """Error class for reporting internal errors"""
+    def __init__(self, message):
+        """Initialize this exception"""
+        logging.shutdown()
+        super(DatatableInternalError, self).__init__(message)
+
 class DatatableReport(object):
     """A class to hold a database report type and inquiry function"""
 
@@ -120,96 +124,6 @@ class DatatableReport(object):
     def valid_actions(cls):
         """Return the list of valid actions for this class"""
         return cls.__valid_actions
-
-class PrettyElementTree(ET.ElementTree):
-    """An ElementTree subclass with nice formatting when writing to a file"""
-
-    def __init__(self, element=None, file=None):
-        """Initialize a PrettyElementTree object"""
-        super(PrettyElementTree, self).__init__(element, file)
-
-    def _write(self, outfile, line, indent, eol=os.linesep):
-        """Write <line> as an ASCII string to <outfile>"""
-        outfile.write('{}{}{}'.format(_INDENT_STR*indent, line, eol))
-
-    def write(self, file, encoding="us-ascii", xml_declaration=None,
-              default_namespace=None, method="xml",
-              short_empty_elements=True):
-        """Subclassed write method to format output."""
-        if PY3 and (PYSUBVER >= 4):
-            if PYSUBVER >= 8:
-                input = ET.tostring(self.getroot(),
-                                   encoding=encoding, method=method,
-                                   xml_declaration=xml_declaration,
-                                   default_namespace=default_namespace,
-                                   short_empty_elements=short_empty_elements)
-            else:
-                input = ET.tostring(self.getroot(),
-                                    encoding=encoding, method=method,
-                                    short_empty_elements=short_empty_elements)
-            # end if
-        else:
-            input = ET.tostring(self.getroot(),
-                                encoding=encoding, method=method)
-        # end if
-        if PY3:
-            fmode = 'wt'
-            root = str(input, encoding="utf-8")
-        else:
-            fmode = 'w'
-            root = input
-        # end if
-        indent = 0
-        last_write_text = False
-        with open(file, fmode) as outfile:
-            inline = root.strip()
-            istart = 0 # Current start pos
-            iend = len(inline)
-            while istart < iend:
-                bmatch = beg_tag_re.match(inline[istart:])
-                ematch = end_tag_re.match(inline[istart:])
-                smatch = simple_tag_re.match(inline[istart:])
-                if bmatch is not None:
-                    outstr = bmatch.group(1)
-                    if inline[istart + len(bmatch.group(1))] != '<':
-                        # Print text on same line
-                        self._write(outfile, outstr, indent, eol='')
-                    else:
-                        self._write(outfile, outstr, indent)
-                    # end if
-                    indent += 1
-                    istart += len(outstr)
-                    last_write_text = False
-                elif ematch is not None:
-                    outstr = ematch.group(1)
-                    indent -= 1
-                    if last_write_text:
-                        self._write(outfile, outstr, 0)
-                        last_write_text = False
-                    else:
-                        self._write(outfile, outstr, indent)
-                    # end if
-                    istart += len(outstr)
-                elif smatch is not None:
-                    outstr = smatch.group(1)
-                    self._write(outfile, outstr, indent)
-                    istart += len(outstr)
-                    last_write_text = False
-                else:
-                    # No tag, just output text
-                    end_index = inline[istart:].find('<')
-                    if end_index < 0:
-                        end_index = iend
-                    else:
-                        end_index += istart
-                    # end if
-                    outstr = inline[istart:end_index]
-                    self._write(outfile, outstr.strip(), 0, eol='')
-                    last_write_text = True
-                    istart += len(outstr)
-                # end if
-            # end while
-        # end with
 
 ###
 ### Interface for retrieving datatable information
@@ -740,9 +654,10 @@ def _new_var_entry(parent, var, full_entry=True):
     """
     prop_list = ["intent"]
     if full_entry:
-        prop_list.extend(["local_name", "type", "kind", "units",
+        prop_list.extend(["allocatable", "active", "default_value",
                           "diagnostic_name", "diagnostic_name_fixed",
-                          "default_value", "protected"])
+                          "kind", "persistence", "polymorphic", "protected",
+                          "state_variable", "type", "units"])
         prop_list.extend(Var.constituent_property_names())
     # end if
     ventry = ET.SubElement(parent, "var")
@@ -929,7 +844,7 @@ def _add_suite_object(parent, suite_object):
     # end for
 
 ###############################################################################
-def generate_ccpp_datatable(filename, host_model, api, scheme_headers,
+def generate_ccpp_datatable(run_env, host_model, api, scheme_headers,
                             scheme_tdict, host_files, suite_files,
                             ccpp_kinds, source_dir):
 ###############################################################################
@@ -1007,7 +922,7 @@ def generate_ccpp_datatable(filename, host_model, api, scheme_headers,
     _add_dependencies(datatable, scheme_depends, host_depends)
     # Write tree
     datatable_tree = PrettyElementTree(datatable)
-    datatable_tree.write(filename)
+    datatable_tree.write(run_env.datatable_file)
 
 ###############################################################################
 

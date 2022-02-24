@@ -8,9 +8,9 @@
   name = ccpp_t
   type = ddt
 [errflg]
-  standard_name = ccpp_error_flag
-  long_name = error flag for error handling in CCPP
-  units = flag
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
   dimensions = ()
   type = integer
 [errmsg]
@@ -64,6 +64,6 @@
 [one]
   standard_name = ccpp_constant_one
   long_name = definition of constant one
-  units = none
+  units = 1
   dimensions = ()
   type = integer

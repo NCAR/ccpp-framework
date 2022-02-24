@@ -1,4 +1,11 @@
 [ccpp-table-properties]
+  name = suite_info
+  type = ddt
+[ccpp-arg-table]
+  name = suite_info
+  type = ddt
+
+[ccpp-table-properties]
   name = test_host
   type = host
 [ccpp-arg-table]
@@ -19,13 +26,13 @@
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
-  units = 1
+  units = none
   dimensions = ()
   type = character
   kind = len=512
 [ errflg ]
-  standard_name = ccpp_error_flag
+  standard_name = ccpp_error_code
   long_name = Error flag for error handling in CCPP
-  units = flag
+  units = 1
   dimensions = ()
   type = integer

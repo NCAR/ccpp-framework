@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """A pilot version to perform unit conversions. Each conversion must be representable
 as a formula where {var} is substituted by the actual variable (scalar, array) to convert,

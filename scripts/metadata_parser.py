@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import collections
 import logging
@@ -14,7 +14,14 @@ from mkcap import Var
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
 from parse_fortran import FtypeTypeDecl
 from parse_checkers import registered_fortran_ddt_names
+from parse_tools import init_log
 from metadata_table import MetadataTable, parse_metadata_file
+from framework_env import CCPPFrameworkEnv
+
+_API_LOGGING = init_log('metadata_parser')
+_DUMMY_RUN_ENV = CCPPFrameworkEnv(_API_LOGGING, ndict={'host_files':'',
+                                                       'scheme_files':'',
+                                                       'suites':''})
 
 # Output: This routine converts the argument tables for all subroutines / typedefs / kind / module variables
 # into dictionaries suitable to be used with ccpp_prebuild.py (which generates the fortran code for the caps)
@@ -42,10 +49,10 @@ CCPP_MANDATORY_VARIABLES = {
                                intent        = 'out',
                                active        = 'T',
                                ),
-    'ccpp_error_flag' : Var(local_name    = 'ierr',
-                            standard_name = 'ccpp_error_flag',
-                            long_name     = 'error flag for error handling in CCPP',
-                            units         = 'flag',
+    'ccpp_error_code' : Var(local_name    = 'ierr',
+                            standard_name = 'ccpp_error_code',
+                            long_name     = 'error code for error handling in CCPP',
+                            units         = '1',
                             type          = 'integer',
                             dimensions    = [],
                             rank          = '',
@@ -104,7 +111,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
         new_metadata_headers = NEW_METADATA_SAVE[filename]
     else:
         new_metadata_headers = parse_metadata_file(filename, known_ddts=registered_fortran_ddt_names(),
-                                                                    logger=logging.getLogger(__name__))
+                                                                                run_env=_DUMMY_RUN_ENV)
         NEW_METADATA_SAVE[filename] = new_metadata_headers
 
     # Record dependencies for the metadata table (only applies to schemes)

@@ -2,10 +2,9 @@ import logging
 import os
 import sys
 
-#sys.path.append(os.path.join(os.path.split(__file__)[0], '../scripts/parse_tools'))
 from parse_checkers import registered_fortran_ddt_names
 from metadata_table import MetadataTable, parse_metadata_file, Var
-#from metadata_table import MetadataHeader
+from framework_env import CCPPFrameworkEnv
 
 example_table = """
 [ccpp-table-properties]
@@ -32,8 +31,13 @@ def test_MetadataTable_parse_table(tmpdir):
     with open(path, "w") as f:
         f.write(example_table)
 
+    dummy_run_env = CCPPFrameworkEnv(None, ndict={'host_files':'',
+                                                  'scheme_files':'',
+                                                  'suites':''})
+
+
     metadata_headers = parse_metadata_file(path, known_ddts=registered_fortran_ddt_names(),
-                                                        logger=logging.getLogger(__name__))
+                                                                     run_env=dummy_run_env)
 
     # check metadata header
     assert len(metadata_headers) == 1

@@ -1,9 +1,10 @@
 language: python
 
 python:
-  - "2.7"
   - "3.6"
   - "3.7"
+  - "3.8"
+  - "3.9"
 
 branches:
   only:
@@ -21,8 +22,7 @@ script:
 notifications:
   email:
     recipients:
-#      - schramm@ucar.edu
       - dom.heinzeller@noaa.gov
-#      - goldy@ucar.edu
+      - goldy@ucar.edu
     on_success: always # default: change
     on_failure: always # default: always
