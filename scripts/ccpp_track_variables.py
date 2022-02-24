@@ -173,7 +173,7 @@ def draw_var_graph(var_graph):
     return
 
 def main():
-    """Main routine that traverses a CCPP suite and outputs the list of schemes that modify given variable"""
+    """Main routine that traverses a CCPP suite and outputs the list of schemes that use given variable"""
 
     (sdf, var, configfile, metapath, debug) = parse_arguments(args)
 
@@ -196,7 +196,7 @@ def main():
     (success, var_graph) = create_var_graph(suite, var, config, metapath, run_env)
     if success:
         print(f"For suite {suite.sdf_name}, the following schemes (in order) "
-              f"modify the variable {var}:")
+              f"use the variable {var}:")
         for entry in var_graph:
             print(f"{entry[0]} (intent {entry[1]})")
 
