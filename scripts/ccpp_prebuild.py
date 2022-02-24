@@ -154,6 +154,7 @@ def clean_files(config):
     return success
 
 def get_all_suites(suites_dir):
+    """Assemble a list of all suite definition files in suites_dir"""
     success = False
     logging.info("No suites were given, compiling a list of all suites")
     sdfs = []
@@ -209,7 +210,7 @@ def convert_local_name_from_new_metadata(metadata, standard_name, typedefs_new_m
 
     # The local name (incl. the array reference) is in new metadata format
     local_name = var.local_name
-    logging.info("Converting local name {0} of variable {1} from new to old metadata".format(local_name, standard_name))
+    logging.debug("Converting local name {0} of variable {1} from new to old metadata".format(local_name, standard_name))
     if "(" in local_name:
         (actual_var_name, array_reference) = split_var_name_and_array_reference(local_name)
         indices = array_reference.lstrip('(').rstrip(')').split(',')
