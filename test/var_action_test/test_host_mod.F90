@@ -36,7 +36,7 @@ contains
     real(kind_phys), parameter :: effrl_expected = 5.0E-5 ! 50 microns, in meter
     real(kind_phys), parameter :: effri_expected = 7.5E-5 ! 75 microns, in meter
     real(kind_phys), parameter :: effrs_expected = 5.1E-4 ! 510 microns, in meter
-    real(kind_phys), parameter :: tolerance = 1.0E-3   ! used as scaling factor for expected value
+    real(kind_phys), parameter :: tolerance = 1.0E-10     ! used as scaling factor for expected value
 
     compare_data = .true.
 

@@ -245,72 +245,70 @@ CONTAINS
                   trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
           end if
        end do
-       ! Loop over time steps
-       !do time_step = 1, num_time_steps
-          ! Initialize the timestep
+
+       ! Initialize the timestep
+       do sind = 1, num_suites
+          if (errflg /= 0) then
+             exit
+          end if
+          if (errflg == 0) then
+             call test_host_ccpp_physics_timestep_initial(                 &
+                  test_suites(sind)%suite_name, errmsg, errflg)
+          end if
+          if (errflg /= 0) then
+             write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ', &
+                  trim(errmsg)
+             exit
+          end if
+          if (errflg /= 0) then
+             exit
+          end if
+       end do
+
+       do col_start = 1, ncols, 5
+          if (errflg /= 0) then
+             exit
+          end if
+          col_end = MIN(col_start + 4, ncols)
+
           do sind = 1, num_suites
              if (errflg /= 0) then
                 exit
              end if
-             if (errflg == 0) then
-                call test_host_ccpp_physics_timestep_initial(                 &
-                     test_suites(sind)%suite_name, errmsg, errflg)
-             end if
-             if (errflg /= 0) then
-                write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ', &
-                     trim(errmsg)
-                exit
-             end if
-             if (errflg /= 0) then
-                exit
-             end if
-          end do
-
-          do col_start = 1, ncols, 5
-             if (errflg /= 0) then
-                exit
-             end if
-             col_end = MIN(col_start + 4, ncols)
-
-             do sind = 1, num_suites
+             do index = 1, size(test_suites(sind)%suite_parts)
                 if (errflg /= 0) then
                    exit
                 end if
-                do index = 1, size(test_suites(sind)%suite_parts)
-                   if (errflg /= 0) then
-                      exit
-                   end if
-                   if (errflg == 0) then
-                      call test_host_ccpp_physics_run(                        &
-                           test_suites(sind)%suite_name,                      &
-                           test_suites(sind)%suite_parts(index),              &
-                           col_start, col_end, errmsg, errflg)
-                   end if
-                   if (errflg /= 0) then
-                      write(6, '(5a)') trim(test_suites(sind)%suite_name),    &
-                           '/', trim(test_suites(sind)%suite_parts(index)),   &
-                           ': ', trim(errmsg)
-                      exit
-                   end if
-                end do
+                if (errflg == 0) then
+                   call test_host_ccpp_physics_run(                        &
+                        test_suites(sind)%suite_name,                      &
+                        test_suites(sind)%suite_parts(index),              &
+                        col_start, col_end, errmsg, errflg)
+                end if
+                if (errflg /= 0) then
+                   write(6, '(5a)') trim(test_suites(sind)%suite_name),    &
+                        '/', trim(test_suites(sind)%suite_parts(index)),   &
+                        ': ', trim(errmsg)
+                   exit
+                end if
              end do
           end do
+       end do
 
-          do sind = 1, num_suites
-             if (errflg /= 0) then
-                exit
-             end if
-             if (errflg == 0) then
-                call test_host_ccpp_physics_timestep_final(                   &
-                     test_suites(sind)%suite_name, errmsg, errflg)
-             end if
-             if (errflg /= 0) then
-                write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ',    &
-                     trim(errmsg)
-                exit
-             end if
-          end do
-       !end do ! End time step loop
+       do sind = 1, num_suites
+          if (errflg /= 0) then
+             exit
+          end if
+          if (errflg == 0) then
+             call test_host_ccpp_physics_timestep_final(                   &
+                  test_suites(sind)%suite_name, errmsg, errflg)
+          end if
+          if (errflg /= 0) then
+             write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ',    &
+                  trim(errmsg)
+             exit
+          end if
+       end do
 
        do sind = 1, num_suites
           if (errflg /= 0) then

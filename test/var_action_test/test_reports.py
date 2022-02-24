@@ -65,7 +65,6 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
 _CCPP_FILES = _UTILITY_FILES + \
               [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_action_suite_cap.F90")]
-#_PROCESS_LIST = []
 _MODULE_LIST = ["effr_calc"]
 _SUITE_LIST = ["var_action_suite"]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "vertical_layer_dimension",
@@ -137,8 +136,6 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("utility_files"),
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("ccpp_files"),
                               _CCPP_FILES)
 print("\nChecking lists from python")
-#NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("process_list"),
-#                              _PROCESS_LIST)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("module_list"),
                               _MODULE_LIST)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("suite_list"),
