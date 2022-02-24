@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # Standard modules
+import os
 import argparse
 import logging
 import collections
@@ -79,7 +80,7 @@ def create_metadata_filename_dict(metapath):
        with that scheme"""
 
     metadata_dict = {}
-    scheme_filenames=glob.glob(metapath + "*.meta")
+    scheme_filenames=glob.glob(os.path.join(metapath, "*.meta"))
     if not scheme_filenames:
         raise Exception(f'No files found in {metapath} with ".meta" extension')
 
