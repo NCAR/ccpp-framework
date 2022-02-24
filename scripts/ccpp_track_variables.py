@@ -38,17 +38,15 @@ args = parser.parse_args()
 
 def parse_arguments(args):
     """Parse command line arguments."""
-    success = True
     sdf = args.sdf
     var = args.variable
     configfile = args.config
     metapath = args.metadata_path
     debug = args.debug
-    return(success,sdf,var,configfile,metapath,debug)
+    return(sdf,var,configfile,metapath,debug)
 
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
-    success = True
 
     #Use capgen logging tools
     logger = init_log('ccpp_track_variables')
@@ -67,28 +65,23 @@ def parse_suite(sdf, run_env):
     suite = Suite(sdf_name=sdf)
     success = suite.parse()
     if not success:
-        logger.error(f'Parsing suite definition file {sdf} failed.')
-        success = False
-        return (success, suite)
+        raise Exception(f'Parsing suite definition file {sdf} failed.')
     run_env.logger.info(f'Successfully read sdf {suite.sdf_name}')
     run_env.logger.info(f'Creating calling tree of schemes for suite {suite.name}')
     success = suite.make_call_tree()
     if not success:
-        run_env.logger.error('Parsing suite definition file {0} failed.'.format(sdf))
-        success = False
-    return (success, suite)
+        raise Exception(f'Parsing suite definition file {sdf} failed.')
+    return suite
 
 def create_metadata_filename_dict(metapath):
     """Given a path, read all .meta files in that directory and add them to a dictionary: the keys
        are the name of the scheme, and the values are the filename of the .meta file associated
        with that scheme"""
 
-    success = True
     metadata_dict = {}
     scheme_filenames=glob.glob(metapath + "*.meta")
     if not scheme_filenames:
-        run_env.logger.error(f'No files found in {metapath} with ".meta" extension')
-        success = False
+        raise Exception(f'No files found in {metapath} with ".meta" extension')
 
     for scheme_fn in scheme_filenames:
         schemes=find_scheme_names(scheme_fn)
@@ -97,7 +90,7 @@ def create_metadata_filename_dict(metapath):
         for scheme in schemes:
             metadata_dict[scheme]=scheme_fn
 
-    return (metadata_dict, success)
+    return metadata_dict
 
 
 def create_var_graph(suite, var, config, metapath, run_env):
@@ -112,9 +105,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
     var_graph=[]
 
     run_env.logger.debug("reading .meta files in path:\n {0}".format(metapath))
-    (metadata_dict, success)=create_metadata_filename_dict(metapath)
-    if not success:
-        raise Exception('Call to create_metadata_filename_dict failed')
+    metadata_dict=create_metadata_filename_dict(metapath)
 
     run_env.logger.debug(f"reading metadata files for schemes defined in config file: "
                   f"{config['scheme_files']}")
@@ -179,29 +170,19 @@ def create_var_graph(suite, var, config, metapath, run_env):
 def draw_var_graph(var_graph):
     """Draw a graphical representation of the variable graph (not yet implemented)"""
 
-    success = True
-
-    return success
-
     return
 
 def main():
     """Main routine that traverses a CCPP suite and outputs the list of schemes that modify given variable"""
 
-    (success, sdf, var, configfile, metapath, debug) = parse_arguments(args)
-    if not success:
-        raise Exception('Call to parse_arguments failed.')
+    (sdf, var, configfile, metapath, debug) = parse_arguments(args)
 
     logger = setup_logging(debug)
-    if not success:
-        raise Exception('Call to setup_logging failed.')
 
     #Use new capgen class CCPPFrameworkEnv 
     run_env = CCPPFrameworkEnv(logger, host_files="", scheme_files="", suites="")
 
-    (success, suite) = parse_suite(sdf,run_env)
-    if not success:
-        raise Exception('Call to parse_suite failed.')
+    suite = parse_suite(sdf,run_env)
 
     (success, config) = import_config(configfile, None)
     if not success:
