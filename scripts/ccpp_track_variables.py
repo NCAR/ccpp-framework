@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Standard modules
 import argparse
@@ -11,6 +11,8 @@ from metadata_table import find_scheme_names, parse_metadata_file
 from ccpp_prebuild import import_config, gather_variable_definitions
 from mkstatic import Suite
 from parse_checkers import registered_fortran_ddt_names
+from parse_tools import init_log, set_log_level
+from framework_env import CCPPFrameworkEnv
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -47,30 +49,32 @@ def parse_arguments(args):
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
     success = True
-    if debug:
-        level = logging.DEBUG
-    else:
-        level = logging.WARNING
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=level)
-    if debug:
-        logging.info('Logging level set to DEBUG')
-    return success
 
-def parse_suite(sdf):
+    #Use capgen logging tools
+    logger = init_log('ccpp_track_variables')
+
+    if debug:
+        set_log_level(logger, logging.DEBUG)
+        logger.info('Logging level set to DEBUG')
+    else:
+        set_log_level(logger, logging.WARNING)
+    return logger
+
+def parse_suite(sdf, run_env):
     """Reads the provided sdf, parses into a Suite data structure, including the "call tree": 
        the ordered list of schemes for the suite specified by the provided sdf"""
-    logging.info(f'Reading sdf {sdf} and populating Suite object')
+    run_env.logger.info(f'Reading sdf {sdf} and populating Suite object')
     suite = Suite(sdf_name=sdf)
     success = suite.parse()
     if not success:
-        logging.error(f'Parsing suite definition file {sdf} failed.')
+        logger.error(f'Parsing suite definition file {sdf} failed.')
         success = False
         return (success, suite)
-    logging.info(f'Successfully read sdf {suite.sdf_name}')
-    logging.info(f'Creating calling tree of schemes for suite {suite.name}')
+    run_env.logger.info(f'Successfully read sdf {suite.sdf_name}')
+    run_env.logger.info(f'Creating calling tree of schemes for suite {suite.name}')
     success = suite.make_call_tree()
     if not success:
-        logging.error('Parsing suite definition file {0} failed.'.format(sdf))
+        run_env.logger.error('Parsing suite definition file {0} failed.'.format(sdf))
         success = False
     return (success, suite)
 
@@ -83,7 +87,7 @@ def create_metadata_filename_dict(metapath):
     metadata_dict = {}
     scheme_filenames=glob.glob(metapath + "*.meta")
     if not scheme_filenames:
-        logging.error(f'No files found in {metapath} with ".meta" extension')
+        run_env.logger.error(f'No files found in {metapath} with ".meta" extension')
         success = False
 
     for scheme_fn in scheme_filenames:
@@ -96,7 +100,7 @@ def create_metadata_filename_dict(metapath):
     return (metadata_dict, success)
 
 
-def create_var_graph(suite, var, config, metapath):
+def create_var_graph(suite, var, config, metapath, run_env):
     """Given a suite, variable name, a 'config' dictionary, and a path to .meta files:
          1. Creates a dictionary associating schemes with their .meta files
          2. Loops through the call tree of the provided suite
@@ -107,19 +111,19 @@ def create_var_graph(suite, var, config, metapath):
     # Create a list of tuples that will hold the in/out information for each scheme
     var_graph=[]
 
-    logging.debug("reading .meta files in path:\n {0}".format(metapath))
+    run_env.logger.debug("reading .meta files in path:\n {0}".format(metapath))
     (metadata_dict, success)=create_metadata_filename_dict(metapath)
     if not success:
         raise Exception('Call to create_metadata_filename_dict failed')
 
-    logging.debug(f"reading metadata files for schemes defined in config file: "
+    run_env.logger.debug(f"reading metadata files for schemes defined in config file: "
                   f"{config['scheme_files']}")
 
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files,
     # then parse that metadata file to find variable info
     partial_matches = {}
     for scheme in suite.call_tree:
-        logging.debug("reading meta file for scheme {0} ".format(scheme))
+        run_env.logger.debug("reading meta file for scheme {0} ".format(scheme))
 
         if scheme in metadata_dict:
             scheme_filename = metadata_dict[scheme]
@@ -127,11 +131,11 @@ def create_var_graph(suite, var, config, metapath):
             raise Exception(f"Error, scheme '{scheme}' from suite '{suite.sdf_name}' "
                             f"not found in metadata files in {metapath}")
 
-        logging.debug("reading metadata file {0} for scheme {1}".format(scheme_filename, scheme))
+        run_env.logger.debug("reading metadata file {0} for scheme {1}".format(scheme_filename, scheme))
 
         new_metadata_headers = parse_metadata_file(scheme_filename, \
                                                    known_ddts=registered_fortran_ddt_names(), \
-                                                   logger=logging.getLogger(__name__))
+                                                   run_env=run_env)
         for scheme_metadata in new_metadata_headers:
             for section in scheme_metadata.sections():
                 found_var = []
@@ -139,32 +143,32 @@ def create_var_graph(suite, var, config, metapath):
                 for scheme_var in section.variable_list():
                     exact_match = False
                     if var == scheme_var.get_prop_value('standard_name'):
-                        logging.debug("Found variable {0} in scheme {1}".format(var,section.title))
+                        run_env.logger.debug("Found variable {0} in scheme {1}".format(var,section.title))
                         found_var=var
                         exact_match = True
                         intent = scheme_var.get_prop_value('intent')
                         break
                     scheme_var_standard_name = scheme_var.get_prop_value('standard_name')
                     if scheme_var_standard_name.find(var) != -1:
-                        logging.debug(f"{var} matches {scheme_var_standard_name}")
+                        run_env.logger.debug(f"{var} matches {scheme_var_standard_name}")
                         found_var.append(scheme_var_standard_name)
                 if not found_var:
-                    logging.debug(f"Did not find variable {var} in scheme {section.title}")
+                    run_env.logger.debug(f"Did not find variable {var} in scheme {section.title}")
                 elif exact_match:
-                    logging.debug(f"Exact match found for variable {var} in scheme {section.title},"
+                    run_env.logger.debug(f"Exact match found for variable {var} in scheme {section.title},"
                                   f" intent {intent}")
                     #print(f"{var_graph=}")
                     var_graph.append((section.title,intent))
                 else:
-                    logging.debug(f"Found inexact matches for variable(s) {var} "
+                    run_env.logger.debug(f"Found inexact matches for variable(s) {var} "
                                   f"in scheme {section.title}:\n{found_var}")
                     partial_matches[section.title] = found_var
     if var_graph:
         success = True
-        logging.debug("Successfully generated variable graph for sdf {0}\n".format(suite.sdf_name))
+        run_env.logger.debug("Successfully generated variable graph for sdf {0}\n".format(suite.sdf_name))
     else:
         success = False
-        logging.error(f"Variable {var} not found in any suites for sdf {suite.sdf_name}\n")
+        run_env.logger.error(f"Variable {var} not found in any suites for sdf {suite.sdf_name}\n")
         if partial_matches:
             print("Did find partial matches that may be of interest:\n")
             for key in partial_matches:
@@ -188,11 +192,14 @@ def main():
     if not success:
         raise Exception('Call to parse_arguments failed.')
 
-    success = setup_logging(debug)
+    logger = setup_logging(debug)
     if not success:
         raise Exception('Call to setup_logging failed.')
 
-    (success, suite) = parse_suite(sdf)
+    #Use new capgen class CCPPFrameworkEnv 
+    run_env = CCPPFrameworkEnv(logger, host_files="", scheme_files="", suites="")
+
+    (success, suite) = parse_suite(sdf,run_env)
     if not success:
         raise Exception('Call to parse_suite failed.')
 
@@ -205,7 +212,7 @@ def main():
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
-    (success, var_graph) = create_var_graph(suite, var, config, metapath)
+    (success, var_graph) = create_var_graph(suite, var, config, metapath, run_env)
     if success:
         print(f"For suite {suite.sdf_name}, the following schemes (in order) "
               f"modify the variable {var}:")
