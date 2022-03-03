@@ -18,29 +18,25 @@ from framework_env import CCPPFrameworkEnv
 # Set up the command line argument parser and other global variables          #
 ###############################################################################
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-s', '--sdf', help='suite definition file to parse', required=True)
-parser.add_argument('-m', '--metadata_path',\
-                    help='path to CCPP scheme metadata files', required=True)
-parser.add_argument('-c', '--config', \
-                    help='path to CCPP prebuild configuration file', required=True)
-parser.add_argument('-v', '--variable', help='variable to track through CCPP suite', required=True)
-#parser.add_argument('--draw', help='draw graph of calling tree for given variable', default=False)
-parser.add_argument('--debug', help='enable debugging output', default=False)
-args = parser.parse_args()
-
 ###############################################################################
 # Functions and subroutines                                                   #
 ###############################################################################
 
-def parse_arguments(args):
+def parse_arguments():
     """Parse command line arguments."""
-    sdf = args.sdf
-    var = args.variable
-    configfile = args.config
-    metapath = args.metadata_path
-    debug = args.debug
-    return(sdf,var,configfile,metapath,debug)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--sdf', help='suite definition file to parse', required=True)
+    parser.add_argument('-m', '--metadata_path',
+                        help='path to CCPP scheme metadata files', required=True)
+    parser.add_argument('-c', '--config', 
+                        help='path to CCPP prebuild configuration file', required=True)
+    parser.add_argument('-v', '--variable', help='variable to track through CCPP suite', 
+                        required=True)
+    parser.add_argument('--debug', help='enable debugging output', default=False)
+
+    args = parser.parse_args()
+
+    return(args)
 
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
@@ -165,16 +161,16 @@ def create_var_graph(suite, var, config, metapath, run_env):
 def main():
     """Main routine that traverses a CCPP suite and outputs the list of schemes that use given variable"""
 
-    (sdf, var, configfile, metapath, debug) = parse_arguments(args)
+    args = parse_arguments()
 
-    logger = setup_logging(debug)
+    logger = setup_logging(args.debug)
 
     #Use new capgen class CCPPFrameworkEnv 
     run_env = CCPPFrameworkEnv(logger, host_files="", scheme_files="", suites="")
 
-    suite = parse_suite(sdf,run_env)
+    suite = parse_suite(args.sdf,run_env)
 
-    (success, config) = import_config(configfile, None)
+    (success, config) = import_config(args.config, None)
     if not success:
         raise Exception('Call to import_config failed.')
 
@@ -183,10 +179,10 @@ def main():
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
-    (success, var_graph) = create_var_graph(suite, var, config, metapath, run_env)
+    (success, var_graph) = create_var_graph(suite, args.variable, config, args.metadata_path, run_env)
     if success:
         print(f"For suite {suite.sdf_name}, the following schemes (in order) "
-              f"use the variable {var}:")
+              f"use the variable {args.variable}:")
         for entry in var_graph:
             print(f"{entry[0]} (intent {entry[1]})")
 
