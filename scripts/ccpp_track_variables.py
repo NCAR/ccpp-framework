@@ -4,7 +4,6 @@
 import os
 import argparse
 import logging
-import collections
 import glob
 
 # CCPP framework imports
@@ -20,17 +19,14 @@ from framework_env import CCPPFrameworkEnv
 ###############################################################################
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-s', '--sdf',           action='store', \
-                    help='suite definition file to parse', required=True)
-parser.add_argument('-m', '--metadata_path', action='store', \
+parser.add_argument('-s', '--sdf', help='suite definition file to parse', required=True)
+parser.add_argument('-m', '--metadata_path',\
                     help='path to CCPP scheme metadata files', required=True)
-parser.add_argument('-c', '--config',        action='store', \
+parser.add_argument('-c', '--config', \
                     help='path to CCPP prebuild configuration file', required=True)
-parser.add_argument('-v', '--variable',      action='store', \
-                    help='variable to track through CCPP suite', required=True)
-#parser.add_argument('--draw',  action='store_true', \
-#                    help='draw graph of calling tree for given variable', default=False)
-parser.add_argument('--debug', action='store_true', help='enable debugging output', default=False)
+parser.add_argument('-v', '--variable', help='variable to track through CCPP suite', required=True)
+#parser.add_argument('--draw', help='draw graph of calling tree for given variable', default=False)
+parser.add_argument('--debug', help='enable debugging output', default=False)
 args = parser.parse_args()
 
 ###############################################################################
@@ -60,7 +56,7 @@ def setup_logging(debug):
     return logger
 
 def parse_suite(sdf, run_env):
-    """Reads the provided sdf, parses into a Suite data structure, including the "call tree": 
+    """Reads the provided sdf, parses into a Suite data structure, including the "call tree":
        the ordered list of schemes for the suite specified by the provided sdf"""
     run_env.logger.info(f'Reading sdf {sdf} and populating Suite object')
     suite = Suite(sdf_name=sdf)
@@ -71,7 +67,7 @@ def parse_suite(sdf, run_env):
     run_env.logger.info(f'Creating calling tree of schemes for suite {suite.name}')
     success = suite.make_call_tree()
     if not success:
-        raise Exception(f'Parsing suite definition file {sdf} failed.')
+        raise Exception(f'Failed to create call tree of schemes for suite {suite.name}')
     return suite
 
 def create_metadata_filename_dict(metapath):
@@ -125,7 +121,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
 
         run_env.logger.debug(f"reading metadata file {scheme_filename} for scheme {scheme}")
 
-        new_metadata_headers = parse_metadata_file(scheme_filename, 
+        new_metadata_headers = parse_metadata_file(scheme_filename,
                                                    known_ddts=registered_fortran_ddt_names(), run_env=run_env)
         for scheme_metadata in new_metadata_headers:
             for section in scheme_metadata.sections():
@@ -148,7 +144,6 @@ def create_var_graph(suite, var, config, metapath, run_env):
                 elif exact_match:
                     run_env.logger.debug(f"Exact match found for variable {var} in scheme {section.title},"
                                   f" intent {intent}")
-                    #print(f"{var_graph=}")
                     var_graph.append((section.title,intent))
                 else:
                     run_env.logger.debug(f"Found inexact matches for variable(s) {var} "
@@ -166,11 +161,6 @@ def create_var_graph(suite, var, config, metapath, run_env):
                 print(f"In {key} found variable(s) {partial_matches[key]}")
 
     return (success,var_graph)
-
-def draw_var_graph(var_graph):
-    """Draw a graphical representation of the variable graph (not yet implemented)"""
-
-    return
 
 def main():
     """Main routine that traverses a CCPP suite and outputs the list of schemes that use given variable"""
