@@ -32,7 +32,8 @@ def parse_arguments():
                         help='path to CCPP prebuild configuration file', required=True)
     parser.add_argument('-v', '--variable', help='variable to track through CCPP suite', 
                         required=True)
-    parser.add_argument('--debug', help='enable debugging output', default=False)
+    parser.add_argument('--debug', action='store_true', help='enable debugging output', 
+                        default=False)
 
     args = parser.parse_args()
 
