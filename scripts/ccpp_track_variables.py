@@ -174,8 +174,10 @@ def main():
     if not success:
         raise Exception('Call to import_config failed.')
 
-    # Variables defined by the host model
-    (success, _, _) = gather_variable_definitions(config['variable_definition_files'], config['typedefs_new_metadata'])
+    # Variables defined by the host model; this call is necessary because it converts some old
+    # metadata formats so they can be used later in the script
+    (success, _, _) = gather_variable_definitions(config['variable_definition_files'], 
+                                                   config['typedefs_new_metadata'])
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
