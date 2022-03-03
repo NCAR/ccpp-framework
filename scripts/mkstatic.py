@@ -504,7 +504,7 @@ end module {module}
         self._sdf_name = None
         self._all_schemes_called = None
         self._all_subroutines_called = None
-        self._call_tree = None
+        self._call_tree = []
         self._caps = None
         self._module = None
         self._subroutines = None
