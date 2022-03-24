@@ -57,14 +57,11 @@ def parse_suite(sdf, run_env):
        the ordered list of schemes for the suite specified by the provided sdf"""
     run_env.logger.info(f'Reading sdf {sdf} and populating Suite object')
     suite = Suite(sdf_name=sdf)
-    success = suite.parse()
+    run_env.logger.info(f'Reading sdf {sdf} and populating Suite object')
+    success = suite.parse(make_call_tree=True)
     if not success:
         raise Exception(f'Parsing suite definition file {sdf} failed.')
     run_env.logger.info(f'Successfully read sdf {suite.sdf_name}')
-    run_env.logger.info(f'Creating calling tree of schemes for suite {suite.name}')
-    success = suite.make_call_tree()
-    if not success:
-        raise Exception(f'Failed to create call tree of schemes for suite {suite.name}')
     return suite
 
 def create_metadata_filename_dict(metapath):
