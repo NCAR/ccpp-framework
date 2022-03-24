@@ -19,6 +19,10 @@
 !
 module ccpp_types
 
+#ifdef MPI
+    use mpi_f08, only: MPI_Comm
+#endif
+
 !! \section arg_table_ccpp_types
 !! \htmlinclude ccpp_types.html
 !!
@@ -27,6 +31,13 @@ module ccpp_types
 
     private
     public :: ccpp_t, one
+    public :: MPI_Comm
+
+#ifndef MPI
+    type :: MPI_Comm
+      integer, parameter :: dummy = 0
+    end type MPI_Comm
+#endif
 
     !> @var Definition of constant one
     integer, parameter :: one = 1
