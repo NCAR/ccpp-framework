@@ -1196,6 +1196,36 @@ class MetadataSection(ParseSource):
             # end for
         # end with
 
+    def to_html(self, outdir, props):
+        """Write html file for metadata section and return filename.
+        Skip metadata sections without variables"""
+        if not self.__variables.variable_list():
+            return None
+        # Write table header
+        header = f"<tr>"
+        for prop in props:
+            header += f"<th>{prop}</th>".format(prop=prop)
+        header += f"</tr>\n"
+        # Write table contents, one row per variable
+        contents = ""
+        for var in self.__variables.variable_list():
+            row = f"<tr>"
+            for prop in props:
+                value = var.get_prop_value(prop)
+                # Pretty-print for dimensions
+                if prop == 'dimensions':
+                    value = '(' + ', '.join(value) + ')'
+                elif value is None:
+                    value = f"n/a"
+                row += f"<td>{value}</td>".format(value=value)
+            row += f"</tr>\n"
+            contents += row
+        filename = os.path.join(outdir, self.title + '.html')
+        with open(filename,"w") as f:
+            f.writelines(self.__html_template__.format(title=self.title + ' argument table',
+                                                       header=header, contents=contents))
+        return filename
+
     def __repr__(self):
         base = super().__repr__()
         pind = base.find(' object ')
@@ -1278,36 +1308,6 @@ class MetadataSection(ParseSource):
     def is_scalar_reference(test_val):
         """Return True iff <test_val> refers to a Fortran scalar."""
         return check_fortran_ref(test_val, None, False) is not None
-
-    def to_html(self, outdir, props):
-        """Write html file for metadata section and return filename.
-        Skip metadata sections without variables"""
-        if not self.__variables.variable_list():
-            return None
-        # Write table header
-        header = "<tr>"
-        for prop in props:
-            header += "<th>{}</th>".format(prop)
-        header += "</tr>\n"
-        # Write table contents, one row per variable
-        contents = ""
-        for var in self.__variables.variable_list():
-            row = "<tr>"
-            for prop in props:
-                value = var.get_prop_value(prop)
-                # Pretty-print for dimensions
-                if prop == 'dimensions':
-                    value = '(' + ', '.join(value) + ')'
-                elif value is None:
-                    value = "n/a"
-                row += "<td>{}</td>".format(value)
-            row += "</tr>\n"
-            contents += row
-        filename = os.path.join(outdir, self.title + '.html')
-        with open(filename,"w") as f:
-            f.writelines(self.__html_template__.format(title=self.title + ' argument table',
-                                                       header=header, contents=contents))
-        return filename
 
 ########################################################################
 
