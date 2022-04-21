@@ -70,16 +70,16 @@ def create_metadata_filename_dict(metapath):
        with that scheme"""
 
     metadata_dict = {}
-    scheme_filenames=glob.glob(os.path.join(metapath, "*.meta"))
+    scheme_filenames = glob.glob(os.path.join(metapath, "*.meta"))
     if not scheme_filenames:
         raise Exception(f'No files found in {metapath} with ".meta" extension')
 
     for scheme_fn in scheme_filenames:
-        schemes=find_scheme_names(scheme_fn)
+        schemes = find_scheme_names(scheme_fn)
         # The above returns a list of schemes in each filename, but
         # we want a dictionary of schemes associated with filenames:
         for scheme in schemes:
-            metadata_dict[scheme]=scheme_fn
+            metadata_dict[scheme] = scheme_fn
 
     return metadata_dict
 
@@ -93,7 +93,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
             the name of the scheme and the intent of the variable within that scheme"""
 
     # Create a list of tuples that will hold the in/out information for each scheme
-    var_graph=[]
+    var_graph = []
 
     run_env.logger.debug(f"reading .meta files in path:\n {metapath}")
     metadata_dict=create_metadata_filename_dict(metapath)
@@ -125,7 +125,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
                     exact_match = False
                     if var == scheme_var.get_prop_value('standard_name'):
                         run_env.logger.debug(f"Found variable {var} in scheme {section.title}")
-                        found_var=var
+                        found_var = var
                         exact_match = True
                         intent = scheme_var.get_prop_value('intent')
                         break
