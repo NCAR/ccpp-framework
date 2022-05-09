@@ -87,13 +87,15 @@ def create_metadata_filename_dict(metapath):
 def create_var_graph(suite, var, config, metapath, run_env):
     """Given a suite, variable name, a 'config' dictionary, and a path to .meta files:
          1. Creates a dictionary associating schemes with their .meta files
-         2. Loops through the call tree of the provided suite
+         2. Loops through the call tree of the provided suite by group
          3. For each scheme, reads .meta file for said scheme, checks for variable within that
-            scheme, and if it exists, adds an entry to a list of tuples, where each tuple includes
-            the name of the scheme and the intent of the variable within that scheme"""
+            scheme, and if it exists, adds an entry to a list of tuples for the corresponding
+            group, where each tuple includes the name of the scheme and the intent of the variable
+            within that scheme"""
 
-    # Create a list of tuples that will hold the in/out information for each scheme
-    var_graph = []
+    # Create a list of tuples for each group that will hold the in/out information for each scheme
+    var_graph={}
+    var_graph_empty = True
 
     run_env.logger.debug(f"reading .meta files in path:\n {metapath}")
     metadata_dict=create_metadata_filename_dict(metapath)
@@ -104,46 +106,53 @@ def create_var_graph(suite, var, config, metapath, run_env):
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files,
     # then parse that metadata file to find variable info
     partial_matches = {}
-    for scheme in suite.call_tree:
-        run_env.logger.debug(f"reading meta file for scheme {scheme} ")
+    for group in suite.call_tree:
+        run_env.logger.debug(f"for group {group} ")
+        # Create a list of tuples that will hold the in/out information for each scheme in this group
+        var_graph[group] = []
+        for scheme in suite.call_tree[group]:
+            run_env.logger.debug(f"reading meta file for scheme {scheme} ")
 
-        if scheme in metadata_dict:
-            scheme_filename = metadata_dict[scheme]
-        else:
-            raise Exception(f"Error, scheme '{scheme}' from suite '{suite.sdf_name}' "
-                            f"not found in metadata files in {metapath}")
+            if scheme in metadata_dict:
+                scheme_filename = metadata_dict[scheme]
+            else:
+                raise Exception(f"Error, scheme '{scheme}' from suite '{suite.sdf_name}' "
+                                f"not found in metadata files in {metapath}")
 
-        run_env.logger.debug(f"reading metadata file {scheme_filename} for scheme {scheme}")
+            run_env.logger.debug(f"reading metadata file {scheme_filename} for scheme {scheme}")
 
-        new_metadata_headers = parse_metadata_file(scheme_filename,
+            new_metadata_headers = parse_metadata_file(scheme_filename,
                                                    known_ddts=registered_fortran_ddt_names(), run_env=run_env)
-        for scheme_metadata in new_metadata_headers:
-            for section in scheme_metadata.sections():
-                found_var = []
-                intent = ''
-                for scheme_var in section.variable_list():
-                    exact_match = False
-                    if var == scheme_var.get_prop_value('standard_name'):
-                        run_env.logger.debug(f"Found variable {var} in scheme {section.title}")
-                        found_var = var
-                        exact_match = True
-                        intent = scheme_var.get_prop_value('intent')
-                        break
-                    scheme_var_standard_name = scheme_var.get_prop_value('standard_name')
-                    if scheme_var_standard_name.find(var) != -1:
-                        run_env.logger.debug(f"{var} matches {scheme_var_standard_name}")
-                        found_var.append(scheme_var_standard_name)
-                if not found_var:
-                    run_env.logger.debug(f"Did not find variable {var} in scheme {section.title}")
-                elif exact_match:
-                    run_env.logger.debug(f"Exact match found for variable {var} in scheme {section.title},"
-                                  f" intent {intent}")
-                    var_graph.append((section.title,intent))
-                else:
-                    run_env.logger.debug(f"Found inexact matches for variable(s) {var} "
-                                  f"in scheme {section.title}:\n{found_var}")
-                    partial_matches[section.title] = found_var
-    if var_graph:
+            for scheme_metadata in new_metadata_headers:
+                for section in scheme_metadata.sections():
+                    found_var = []
+                    intent = ''
+                    for scheme_var in section.variable_list():
+                        exact_match = False
+                        if var == scheme_var.get_prop_value('standard_name'):
+                            run_env.logger.debug(f"Found variable {var} in scheme {section.title}")
+                            found_var=var
+                            exact_match = True
+                            intent = scheme_var.get_prop_value('intent')
+                            break
+                        scheme_var_standard_name = scheme_var.get_prop_value('standard_name')
+                        if scheme_var_standard_name.find(var) != -1:
+                            run_env.logger.debug(f"{var} matches {scheme_var_standard_name}")
+                            found_var.append(scheme_var_standard_name)
+                    if not found_var:
+                        run_env.logger.debug(f"Did not find variable {var} in scheme {section.title}")
+                    elif exact_match:
+                        run_env.logger.debug(f"Exact match found for variable {var} in scheme {section.title},"
+                                             f" intent {intent}")
+                        var_graph[group].append((section.title,intent))
+                        var_graph_empty = False
+                    else:
+                        run_env.logger.debug(f"Found inexact matches for variable(s) {var} "
+                                      f"in scheme {section.title}:\n{found_var}")
+                        partial_matches[section.title] = found_var
+
+
+    if not var_graph_empty:
         success = True
         run_env.logger.debug(f"Successfully generated variable graph for sdf {suite.sdf_name}\n")
     else:
@@ -181,10 +190,13 @@ def main():
 
     (success, var_graph) = create_var_graph(suite, args.variable, config, args.metadata_path, run_env)
     if success:
-        print(f"For suite {suite.sdf_name}, the following schemes (in order) "
+        print(f"For suite {suite.sdf_name}, the following schemes (in order for each group)"
               f"use the variable {args.variable}:")
-        for entry in var_graph:
-            print(f"{entry[0]} (intent {entry[1]})")
+        for group in var_graph:
+            if var_graph[group]:
+                print(f"In group {group}")
+                for entry in var_graph[group]:
+                    print(f"  {entry[0]} (intent {entry[1]})")
 
 
 if __name__ == '__main__':
