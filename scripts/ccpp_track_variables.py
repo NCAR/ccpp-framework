@@ -124,6 +124,10 @@ def create_var_graph(suite, var, config, metapath, run_env):
             new_metadata_headers = parse_metadata_file(scheme_filename,
                                                    known_ddts=registered_fortran_ddt_names(), run_env=run_env)
             for scheme_metadata in new_metadata_headers:
+                if scheme_metadata.table_name != scheme:
+                    # Some metadata files contain information for multiple schemes, 
+                    # need to make sure we only read the relevant section
+                    continue
                 for section in scheme_metadata.sections():
                     found_var = []
                     intent = ''
@@ -190,7 +194,7 @@ def main():
 
     (success, var_graph) = create_var_graph(suite, args.variable, config, args.metadata_path, run_env)
     if success:
-        print(f"For suite {suite.sdf_name}, the following schemes (in order for each group)"
+        print(f"For suite {suite.sdf_name}, the following schemes (in order for each group) "
               f"use the variable {args.variable}:")
         for group in var_graph:
             if var_graph[group]:
