@@ -28,16 +28,16 @@ def parse_arguments():
     parser.add_argument('-s', '--sdf', help='suite definition file to parse', required=True)
     parser.add_argument('-m', '--metadata_path',
                         help='path to CCPP scheme metadata files', required=True)
-    parser.add_argument('-c', '--config', 
+    parser.add_argument('-c', '--config',
                         help='path to CCPP prebuild configuration file', required=True)
-    parser.add_argument('-v', '--variable', help='variable to track through CCPP suite', 
+    parser.add_argument('-v', '--variable', help='variable to track through CCPP suite',
                         required=True)
-    parser.add_argument('--debug', action='store_true', help='enable debugging output', 
+    parser.add_argument('--debug', action='store_true', help='enable debugging output',
                         default=False)
 
     args = parser.parse_args()
 
-    return(args)
+    return args
 
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
@@ -108,7 +108,7 @@ def create_var_graph(suite, var, config, metapath, run_env):
     partial_matches = {}
     for group in suite.call_tree:
         run_env.logger.debug(f"for group {group} ")
-        # Create a list of tuples that will hold the in/out information for each scheme in this group
+        # Create list of tuples that will hold the in/out information for each scheme in this group
         var_graph[group] = []
         for scheme in suite.call_tree[group]:
             run_env.logger.debug(f"reading meta file for scheme {scheme} ")
@@ -122,10 +122,11 @@ def create_var_graph(suite, var, config, metapath, run_env):
             run_env.logger.debug(f"reading metadata file {scheme_filename} for scheme {scheme}")
 
             new_metadata_headers = parse_metadata_file(scheme_filename,
-                                                   known_ddts=registered_fortran_ddt_names(), run_env=run_env)
+                                                       known_ddts=registered_fortran_ddt_names(),
+                                                       run_env=run_env)
             for scheme_metadata in new_metadata_headers:
                 if scheme_metadata.table_name != scheme:
-                    # Some metadata files contain information for multiple schemes, 
+                    # Some metadata files contain information for multiple schemes,
                     # need to make sure we only read the relevant section
                     continue
                 for section in scheme_metadata.sections():
@@ -146,8 +147,8 @@ def create_var_graph(suite, var, config, metapath, run_env):
                     if not found_var:
                         run_env.logger.debug(f"Did not find variable {var} in scheme {section.title}")
                     elif exact_match:
-                        run_env.logger.debug(f"Exact match found for variable {var} in scheme {section.title},"
-                                             f" intent {intent}")
+                        run_env.logger.debug(f"Exact match found for variable {var} in scheme "
+                                             f"{section.title}, intent {intent}")
                         var_graph[group].append((section.title,intent))
                         var_graph_empty = False
                     else:
@@ -170,13 +171,14 @@ def create_var_graph(suite, var, config, metapath, run_env):
     return (success,var_graph)
 
 def main():
-    """Main routine that traverses a CCPP suite and outputs the list of schemes that use given variable"""
+    """Main routine that traverses a CCPP suite and outputs the list of schemes that use given
+       variable, broken down by group"""
 
     args = parse_arguments()
 
     logger = setup_logging(args.debug)
 
-    #Use new capgen class CCPPFrameworkEnv 
+    #Use new capgen class CCPPFrameworkEnv
     run_env = CCPPFrameworkEnv(logger, host_files="", scheme_files="", suites="")
 
     suite = parse_suite(args.sdf,run_env)
@@ -187,7 +189,7 @@ def main():
 
     # Variables defined by the host model; this call is necessary because it converts some old
     # metadata formats so they can be used later in the script
-    (success, _, _) = gather_variable_definitions(config['variable_definition_files'], 
+    (success, _, _) = gather_variable_definitions(config['variable_definition_files'],
                                                    config['typedefs_new_metadata'])
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
