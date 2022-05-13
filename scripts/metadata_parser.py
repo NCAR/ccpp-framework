@@ -26,7 +26,7 @@ _DUMMY_RUN_ENV = CCPPFrameworkEnv(_API_LOGGING, ndict={'host_files':'',
 # Output: This routine converts the argument tables for all subroutines / typedefs / kind / module variables
 # into dictionaries suitable to be used with ccpp_prebuild.py (which generates the fortran code for the caps)
 
-# Items in this dictionary are used for checking valid entries in metadata tables. For columsn with no keys/keys
+# Items in this dictionary are used for checking valid entries in metadata tables. For columns with no keys/keys
 # commented out, no check is performed. This is the case for 'type' and 'kind' right now, since models use their
 # own derived data types and kind types.
 VALID_ITEMS = {
