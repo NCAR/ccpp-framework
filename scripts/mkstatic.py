@@ -64,6 +64,9 @@ def extract_parents_and_indices_from_local_name(local_name):
         parent = local_name[:local_name.find('%')]
     else:
         parent = local_name
+    # Remove whitespaces
+    parent = parent.strip()
+    indices = [ x.strip() for x in indices ]
     return (parent, indices)
 
 def create_argument_list_wrapped(arguments):
@@ -107,35 +110,47 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
     var_defs = []
     local_kind_and_type_vars = []
 
-    for standard_name in variable_dictionary.keys():
-        # Add variable local name and variable definitions
-        arguments.append(variable_dictionary[standard_name].local_name)
-        var_defs.append(variable_dictionary[standard_name].print_def_intent())
-        # Add special kind variables and derived data type definitions to module use statements
-        if variable_dictionary[standard_name].type in STANDARD_VARIABLE_TYPES and variable_dictionary[standard_name].kind \
-                and not variable_dictionary[standard_name].type == STANDARD_CHARACTER_TYPE:
-            kind_var_standard_name = variable_dictionary[standard_name].kind
-            if not kind_var_standard_name in local_kind_and_type_vars:
-                if not kind_var_standard_name in metadata_define.keys():
-                    raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
-                kind_var = metadata_define[kind_var_standard_name][0]
-                module_use.append(kind_var.print_module_use())
-                local_kind_and_type_vars.append(kind_var_standard_name)
-        elif not variable_dictionary[standard_name].type in STANDARD_VARIABLE_TYPES:
-            type_var_standard_name = variable_dictionary[standard_name].type
-            if not type_var_standard_name in local_kind_and_type_vars:
-                if not type_var_standard_name in metadata_define.keys():
-                    raise Exception("Type {type} not defined by host model".format(type=type_var_standard_name))
-                type_var = metadata_define[type_var_standard_name][0]
-                module_use.append(type_var.print_module_use())
-                local_kind_and_type_vars.append(type_var_standard_name)
+    # We need to run through this loop twice. In the first pass, process all scalars.
+    # In the second pass, process all arrays. This is so that any potential dimension
+    # that is used in the following array variable definitions is defined first to avoid
+    # violating the Fortran 2008 standard.
+    # https://community.intel.com/t5/Intel-Fortran-Compiler/Order-of-declaration-statements-with-and-without-implicit-typing/td-p/1176155
+    iteration = 1
+    while iteration <= 2:
+        for standard_name in variable_dictionary.keys():
+            if iteration == 1 and variable_dictionary[standard_name].dimensions:
+                continue
+            elif iteration == 2 and not variable_dictionary[standard_name].dimensions:
+                continue
+            # Add variable local name and variable definitions
+            arguments.append(variable_dictionary[standard_name].local_name)
+            var_defs.append(variable_dictionary[standard_name].print_def_intent(metadata_define))
+            # Add special kind variables and derived data type definitions to module use statements
+            if variable_dictionary[standard_name].type in STANDARD_VARIABLE_TYPES and variable_dictionary[standard_name].kind \
+                    and not variable_dictionary[standard_name].type == STANDARD_CHARACTER_TYPE:
+                kind_var_standard_name = variable_dictionary[standard_name].kind
+                if not kind_var_standard_name in local_kind_and_type_vars:
+                    if not kind_var_standard_name in metadata_define.keys():
+                        raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
+                    kind_var = metadata_define[kind_var_standard_name][0]
+                    module_use.append(kind_var.print_module_use())
+                    local_kind_and_type_vars.append(kind_var_standard_name)
+            elif not variable_dictionary[standard_name].type in STANDARD_VARIABLE_TYPES:
+                type_var_standard_name = variable_dictionary[standard_name].type
+                if not type_var_standard_name in local_kind_and_type_vars:
+                    if not type_var_standard_name in metadata_define.keys():
+                        raise Exception("Type {type} not defined by host model".format(type=type_var_standard_name))
+                    type_var = metadata_define[type_var_standard_name][0]
+                    module_use.append(type_var.print_module_use())
+                    local_kind_and_type_vars.append(type_var_standard_name)
+        iteration += 1
 
     # Add any local variables (required for unit conversions, array transformations, ...)
     if tmpvars:
         var_defs.append('')
         var_defs.append('! Local variables for unit conversions, array transformations, ...')
         for tmpvar in tmpvars:
-            var_defs.append(tmpvar.print_def_local())
+            var_defs.append(tmpvar.print_def_local(metadata_define))
             # Add special kind variables
             if tmpvar.type in STANDARD_VARIABLE_TYPES and tmpvar.kind and not tmpvar.type == STANDARD_CHARACTER_TYPE:
                 kind_var_standard_name = tmpvar.kind
@@ -966,7 +981,7 @@ end module {module}
                             raise Exception('Variable {standard_name} not defined in host model metadata'.format(
                                                                                 standard_name=var_standard_name))
                         var = metadata_define[var_standard_name][0]
-                        # dim can be 'A', '1', '1:A', ...
+                        # dim_expression can be 'A', '1', '1:A', ...
                         for dim_expression in var.dimensions:
                             dims = dim_expression.split(':')
                             for dim in dims:
@@ -1033,115 +1048,143 @@ end module {module}
                         if not var_standard_name in conditionals.keys():
                             conditionals[var_standard_name] = conditional
 
-                    # Extract all variables needed (including indices for components/slices of arrays)
-                    for var_standard_name in additional_variables_required + arguments[scheme_name][subroutine_name]:
-                        # Pick the correct variable for this module/scheme/subroutine
-                        # from the list of requested variable, if it is in that list
-                        if var_standard_name in arguments[scheme_name][subroutine_name]:
-                            for var in metadata_request[var_standard_name]:
-                                if container == var.container:
-                                    break
-                        # This is a dimension or required variable added automatically (e.g. for handling blocked data)
-                        else:
-                            # Create a copy of the variable in the metadata dictionary
-                            # of host model variables and set necessary default values
-                            var = copy.deepcopy(metadata_define[var_standard_name][0])
-                            var.intent = 'in'
+                    # Extract all variables needed (including indices for components/slices of arrays and
+                    # including their parents). We need to run this twice, because the dimensions of parent
+                    # variables get added to additional_variables_required in the first pass.
+                    iteration = 1
+                    while iteration <= 2:
+                        for var_standard_name in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                            # Pick the correct variable for this module/scheme/subroutine
+                            # from the list of requested variables, if it is in that list
+                            if var_standard_name in arguments[scheme_name][subroutine_name]:
+                                for var in metadata_request[var_standard_name]:
+                                    if container == var.container:
+                                        break
+                            # This is a dimension or required variable added automatically (e.g. for handling blocked data)
+                            else:
+                                # Create a copy of the variable in the metadata dictionary
+                                # of host model variables and set necessary default values
+                                var = copy.deepcopy(metadata_define[var_standard_name][0])
+                                var.intent = 'in'
 
-                        if not var_standard_name in local_vars.keys():
-                            # The full name of the variable as known to the host model
-                            var_local_name_define = metadata_define[var_standard_name][0].local_name
+                            if not var_standard_name in local_vars.keys():
+                                # The full name of the variable as known to the host model
+                                var_local_name_define = metadata_define[var_standard_name][0].local_name
 
-                            # Break apart var_local_name_define into the different components (members of DDTs)
-                            # to determine all variables that are required
-                            (parent_local_name_define, parent_local_names_define_indices) = \
-                                extract_parents_and_indices_from_local_name(var_local_name_define)
+                                # Break apart var_local_name_define into the different components (members of DDTs)
+                                # to determine all variables that are required
+                                (parent_local_name_define, parent_local_names_define_indices) = \
+                                    extract_parents_and_indices_from_local_name(var_local_name_define)
 
-                            parent_standard_name = None
-                            parent_var = None
-                            # Check for each of the derived parent local names as defined by the host model
-                            # if they are registered (i.e. if there is a standard name for it). Note that
-                            # the output of extract_parents_and_indices_from_local_name is stripped of any
-                            # array subset information, i.e. a local name 'Atm(:)%...' will produce a
-                            # parent local name 'Atm'. Since the rank of the parent variable is not known
-                            # at this point and since the local name in the host model metadata table could
-                            # contain '(:)', '(:,:)', ... (up to the rank of the array), we search for the
-                            # maximum number of dimensions allowed by the Fortran standard.
-                            for local_name_define in [parent_local_name_define] + parent_local_names_define_indices:
                                 parent_standard_name = None
                                 parent_var = None
-                                for i in range(FORTRAN_ARRAY_MAX_DIMS+1):
-                                    if i==0:
-                                        dims_string = ''
-                                    else:
-                                        # (:) for i==1, (:,:) for i==2, ...
-                                        dims_string = '(' + ','.join([':' for j in range(i)]) + ')'
-                                    if local_name_define+dims_string in standard_name_by_local_name_define.keys():
-                                        parent_standard_name = standard_name_by_local_name_define[local_name_define+dims_string]
-                                        parent_var = metadata_define[parent_standard_name][0]
-                                        break
-                                if not parent_var:
-                                    raise Exception('Parent variable {parent} of {child} with standard name '.format(
-                                                               parent=local_name_define, child=var_local_name_define)+\
-                                                    '{standard_name} not defined in host model metadata'.format(
-                                                                               standard_name=var_standard_name))
+                                # Check for each of the derived parent local names as defined by the host model
+                                # if they are registered (i.e. if there is a standard name for it). Note that
+                                # the output of extract_parents_and_indices_from_local_name is stripped of any
+                                # array subset information, i.e. a local name 'Atm(:)%...' will produce a
+                                # parent local name 'Atm'. Since the rank of the parent variable is not known
+                                # at this point and since the local name in the host model metadata table could
+                                # contain '(:)', '(:,:)', ... (up to the rank of the array), we search for the
+                                # maximum number of dimensions allowed by the Fortran standard.
+                                for local_name_define in [parent_local_name_define] + parent_local_names_define_indices:
+                                    parent_standard_name = None
+                                    parent_var = None
+                                    for i in range(FORTRAN_ARRAY_MAX_DIMS+1):
+                                        if i==0:
+                                            dims_string = ''
+                                        else:
+                                            # (:) for i==1, (:,:) for i==2, ...
+                                            dims_string = '(' + ','.join([':' for j in range(i)]) + ')'
+                                        if local_name_define+dims_string in standard_name_by_local_name_define.keys():
+                                            parent_standard_name = standard_name_by_local_name_define[local_name_define+dims_string]
+                                            parent_var = metadata_define[parent_standard_name][0]
+                                            break
+                                    if not parent_var:
+                                        raise Exception('Parent variable {parent} of {child} with standard name '.format(
+                                                                   parent=local_name_define, child=var_local_name_define)+\
+                                                        '{standard_name} not defined in host model metadata'.format(
+                                                                                   standard_name=var_standard_name))
 
-                                # Reset local name for entire array to a notation without (:), (:,:), etc.;
-                                # this is needed for the var.print_def_intent() routine to work correctly
-                                parent_var.local_name = local_name_define
+                                    # Reset local name for entire array to a notation without (:), (:,:), etc.;
+                                    # this is needed for the var.print_def_intent() routine to work correctly
+                                    parent_var.local_name = local_name_define
 
-                                # Add variable to dictionary of parent variables, if not already there.
-                                # Set or update intent, depending on whether the variable is an index
-                                # in var_local_name_define or the actual parent of that variable.
-                                if not parent_standard_name in self.parents[ccpp_stage].keys():
-                                    self.parents[ccpp_stage][parent_standard_name] = copy.deepcopy(parent_var)
-                                    # Copy the intent of the actual variable being processed
+                                    # Add the parent_var's dimensions to the locally defined dimensions:
+                                    # dim_expression can be 'A', '1', '1:A', ...
+                                    for dim_expression in parent_var.dimensions:
+                                        dims = dim_expression.split(':')
+                                        for dim in dims:
+                                            dim = dim.lower()
+                                            try:
+                                                dim = int(dim)
+                                            except ValueError:
+                                                if not dim in local_vars.keys() and \
+                                                        not dim in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                                                    if not dim in metadata_define.keys():
+                                                        raise Exception('Dimension {}, required by parent variable {}, not defined in host model metadata'.format(
+                                                                                                                                       dim, parent_standard_name))
+                                                    logging.debug("Adding dimension {} for parent variable {}".format(dim, parent_standard_name))
+                                                    additional_variables_required.append(dim)
+
+                                    # Add variable to dictionary of parent variables, if not already there.
+                                    # Set or update intent, depending on whether the variable is an index
+                                    # in var_local_name_define or the actual parent of that variable.
+                                    if not parent_standard_name in self.parents[ccpp_stage].keys():
+                                        self.parents[ccpp_stage][parent_standard_name] = copy.deepcopy(parent_var)
+                                        # Copy the intent of the actual variable being processed
+                                        if local_name_define == parent_local_name_define:
+                                            self.parents[ccpp_stage][parent_standard_name].intent = var.intent
+                                        # It's an index for the actual variable being processed --> intent(in)
+                                        else:
+                                            self.parents[ccpp_stage][parent_standard_name].intent = 'in'
+                                    elif self.parents[ccpp_stage][parent_standard_name].intent == 'in':
+                                        # Adjust the intent if the actual variable is not intent(in)
+                                        if local_name_define == parent_local_name_define and not var.intent == 'in':
+                                            self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                                        # It's an index for the actual variable being processed, intent is ok
+                                        #else:
+                                        #   # nothing to do
+                                    elif self.parents[ccpp_stage][parent_standard_name].intent == 'out':
+                                        # Adjust the intent if the actual variable is not intent(out)
+                                        if local_name_define == parent_local_name_define and not var.intent == 'out':
+                                            self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                                        # Adjust the intent, because the variable is also used as index variable
+                                        else:
+                                            self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+
+                                    # Record the parent information for this variable (with standard name var_standard_name)
                                     if local_name_define == parent_local_name_define:
-                                        self.parents[ccpp_stage][parent_standard_name].intent = var.intent
-                                    # It's an index for the actual variable being processed --> intent(in)
-                                    else:
-                                        self.parents[ccpp_stage][parent_standard_name].intent = 'in'
-                                elif self.parents[ccpp_stage][parent_standard_name].intent == 'in':
-                                    # Adjust the intent if the actual variable is not intent(in)
-                                    if local_name_define == parent_local_name_define and not var.intent == 'in':
-                                        self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
-                                    # It's an index for the actual variable being processed, intent is ok
-                                    #else:
-                                    #   # nothing to do
-                                elif self.parents[ccpp_stage][parent_standard_name].intent == 'out':
-                                    # Adjust the intent if the actual variable is not intent(out)
-                                    if local_name_define == parent_local_name_define and not var.intent == 'out':
-                                        self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
-                                    # Adjust the intent, because the variable is also used as index variable
-                                    else:
-                                        self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                                        local_vars[var_standard_name] = {
+                                            'name' : metadata_define[var_standard_name][0].local_name,
+                                            'kind' : metadata_define[var_standard_name][0].kind,
+                                            'parent_standard_name' : parent_standard_name
+                                            }
 
-                                # Record the parent information for this variable (with standard name var_standard_name)
-                                if local_name_define == parent_local_name_define:
-                                    local_vars[var_standard_name] = {
-                                        'name' : metadata_define[var_standard_name][0].local_name,
-                                        'kind' : metadata_define[var_standard_name][0].kind,
-                                        'parent_standard_name' : parent_standard_name
-                                        }
+                                # Reset parent to actual parent of the variable with standard name var_standard_name
+                                if local_vars[var_standard_name]['parent_standard_name']:
+                                    parent_standard_name = local_vars[var_standard_name]['parent_standard_name']
+                                    parent_var = metadata_define[parent_standard_name][0]
 
-                            # Reset parent to actual parent of the variable with standard name var_standard_name
-                            if local_vars[var_standard_name]['parent_standard_name']:
+                            elif local_vars[var_standard_name]['parent_standard_name']:
                                 parent_standard_name = local_vars[var_standard_name]['parent_standard_name']
                                 parent_var = metadata_define[parent_standard_name][0]
+                                # Update intent information if necessary
+                                if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and not var.intent == 'in':
+                                    self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                                elif self.parents[ccpp_stage][parent_standard_name].intent == 'out' and not var.intent == 'out':
+                                    self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
 
-                        elif local_vars[var_standard_name]['parent_standard_name']:
-                            parent_standard_name = local_vars[var_standard_name]['parent_standard_name']
-                            parent_var = metadata_define[parent_standard_name][0]
-                            # Update intent information if necessary
-                            if self.parents[ccpp_stage][parent_standard_name].intent == 'in' and not var.intent == 'in':
-                                self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
-                            elif self.parents[ccpp_stage][parent_standard_name].intent == 'out' and not var.intent == 'out':
-                                self.parents[ccpp_stage][parent_standard_name].intent = 'inout'
+                        # End of iteration (while) loop, increase iteration counter
+                        iteration += 1
 
-                        # The remainder of this loop deals with adding variables to the argument list
-                        # for this subroutine, not required for the additional dimensions and variables
-                        if not var_standard_name in arguments[scheme_name][subroutine_name]:
-                            continue
+                    # Loop over actual arguments for this subroutine and create the argument list.
+                    # This is not required for the additional dimensions and variables.
+                    for var_standard_name in arguments[scheme_name][subroutine_name]:
+                        # Pick the correct variable for this module/scheme/subroutine
+                        # from the list of requested variables
+                        for var in metadata_request[var_standard_name]:
+                            if container == var.container:
+                                break
 
                         # To assist debugging efforts, check if arrays have the correct size (ignore scalars for now)
                         assign_test = ''
@@ -1338,9 +1381,8 @@ end module {module}
 '''.format(conditional=conditionals[var_standard_name],
            actions_out=actions_out.rstrip('\n'))
 
-                            # Add to argument list if required
-                            if var_standard_name in arguments[scheme_name][subroutine_name]:
-                                arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
+                            # Add to argument list
+                            arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
 
                         # Variables stored in blocked data structures but without horizontal dimension not supported at this time (doesn't make sense anyway)
                         elif ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
@@ -1374,6 +1416,8 @@ end module {module}
                                 tmpvars[local_vars[var_standard_name]['name']] = tmpvar
                             if tmpvar.rank:
                                 # Add allocate statement if the variable has a rank > 0
+                                # According to https://fortran-lang.discourse.group/t/allocated-array-bounds-with-mold-and-source-on-expressions/3032,
+                                # allocating with 'source=...' sets the correct lower and upper bounds for the newly created array
                                 actions_in += '        allocate({t}, source={v})\n'.format(t=tmpvar.local_name,
                                                                                              v=tmpvar.target)
                             if var.actions['in']:
@@ -1405,9 +1449,8 @@ end module {module}
 '''.format(conditional=conditionals[var_standard_name],
            actions_out=actions_out.rstrip('\n'))
 
-                            # Add to argument list if required
-                            if var_standard_name in arguments[scheme_name][subroutine_name]:
-                                arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
+                            # Add to argument list
+                            arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
 
                         # Ordinary variables, no blocked data or unit conversions
                         elif var_standard_name in arguments[scheme_name][subroutine_name]:
