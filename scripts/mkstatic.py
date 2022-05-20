@@ -519,6 +519,7 @@ end module {module}
         self._sdf_name = None
         self._all_schemes_called = None
         self._all_subroutines_called = None
+        self._call_tree = []
         self._caps = None
         self._module = None
         self._subroutines = None
@@ -560,7 +561,7 @@ end module {module}
     def update_cap(self, value):
         self._update_cap = value
 
-    def parse(self):
+    def parse(self, make_call_tree=False):
         '''Parse the suite definition file.'''
         success = True
 
@@ -582,6 +583,10 @@ end module {module}
         # Flattened lists of all schemes and subroutines in SDF
         self._all_schemes_called = []
         self._all_subroutines_called = []
+
+        if make_call_tree:
+            # Call tree of all schemes in SDF (with duplicates and subcycles)
+            self._call_tree = []
 
         # Build hierarchical structure as in SDF
         self._groups = []
@@ -609,13 +614,21 @@ end module {module}
                     loop=int(subcycle_xml.get('loop'))
                     for ccpp_stage in CCPP_STAGES:
                         self._all_subroutines_called.append(scheme_xml.text + '_' + CCPP_STAGES[ccpp_stage])
+
                 subcycles.append(Subcycle(loop=loop, schemes=schemes))
+
+                if make_call_tree:
+                    # Populate call tree from SDF's heirarchical structure, including multiple calls in subcycle loops
+                    for loop in range(0,int(subcycle_xml.get('loop'))):
+                        for scheme_xml in subcycle_xml:
+                            self._call_tree.append(scheme_xml.text)
 
             self._groups.append(Group(name=group_xml.get('name'), subcycles=subcycles, suite=self._name))
 
         # Remove duplicates from list of all subroutines an schemes
         self._all_schemes_called = list(set(self._all_schemes_called))
         self._all_subroutines_called = list(set(self._all_subroutines_called))
+
 
         return success
 
@@ -632,6 +645,11 @@ end module {module}
     def all_schemes_called(self):
         '''Get the list of all schemes.'''
         return self._all_schemes_called
+
+    @property
+    def call_tree(self):
+        '''Get the call tree of the suite (all schemes, in order, with duplicates and loops).'''
+        return self._call_tree
 
     @property
     def all_subroutines_called(self):
