@@ -504,7 +504,7 @@ end module {module}
         self._sdf_name = None
         self._all_schemes_called = None
         self._all_subroutines_called = None
-        self._call_tree = []
+        self._call_tree = {}
         self._caps = None
         self._module = None
         self._subroutines = None
@@ -570,14 +570,16 @@ end module {module}
         self._all_subroutines_called = []
 
         if make_call_tree:
-            # Call tree of all schemes in SDF (with duplicates and subcycles)
-            self._call_tree = []
+            # Call tree of all schemes in SDF. call_tree is a dictionary, with keys corresponding to each group in a suite, and
+            # the value associated with each key being an ordered list of the schemes in each group (with duplicates and subcycles)
+            self._call_tree = {}
 
         # Build hierarchical structure as in SDF
         self._groups = []
         for group_xml in suite_xml:
             subcycles = []
 
+            self._call_tree[group_xml.attrib['name']] = []
             # Add suite-wide init scheme to group 'init', similar for finalize
             if group_xml.tag.lower() == 'init' or group_xml.tag.lower() == 'finalize':
                 self._all_schemes_called.append(group_xml.text)
@@ -606,7 +608,7 @@ end module {module}
                     # Populate call tree from SDF's heirarchical structure, including multiple calls in subcycle loops
                     for loop in range(0,int(subcycle_xml.get('loop'))):
                         for scheme_xml in subcycle_xml:
-                            self._call_tree.append(scheme_xml.text)
+                            self._call_tree[group_xml.attrib['name']].append(scheme_xml.text)
 
             self._groups.append(Group(name=group_xml.get('name'), subcycles=subcycles, suite=self._name))
 
