@@ -52,7 +52,7 @@ CCPP_MANDATORY_VARIABLES = {
                                   ),
     CCPP_ERROR_CODE_VARIABLE : Var(local_name    = 'ierr',
                                    standard_name = CCPP_ERROR_CODE_VARIABLE,
-                                   long_name     = 'error flag for error handling in CCPP',
+                                   long_name     = 'error code for error handling in CCPP',
                                    units         = '1',
                                    type          = 'integer',
                                    dimensions    = [],
