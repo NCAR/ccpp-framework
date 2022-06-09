@@ -473,7 +473,7 @@ export CCPP_STATIC_API=\"{filename}\"
 set(API \"{filename}\")
 """.format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
         else:
-            logging.error('Encountereed unknown type of file "{type}" when writing include file for static API'.format(type=type))
+            logging.error('Encountered unknown type of file "{type}" when writing include file for static API'.format(type=type))
             success = False
             return
 
