@@ -20,12 +20,39 @@ from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
+from metadata_parser import CCPP_MANDATORY_VARIABLES
 from mkcap import Var
 
 ###############################################################################
 
 # Maximum number of dimensions of an array allowed by the Fortran 2008 standard
 FORTRAN_ARRAY_MAX_DIMS = 15
+
+# These variables always need to be present for creating suite and group caps
+CCPP_SUITE_VARIABLES = { **CCPP_MANDATORY_VARIABLES,
+    CCPP_LOOP_COUNTER : Var(local_name    = 'loop_cnt',
+                            standard_name = CCPP_LOOP_COUNTER,
+                            long_name     = 'loop counter for subcycling loops in CCPP',
+                            units         = 'index',
+                            type          = 'integer',
+                            dimensions    = [],
+                            rank          = '',
+                            kind          = '',
+                            intent        = 'in',
+                            active        = 'T',
+                            ),
+    CCPP_LOOP_EXTENT : Var(local_name    = 'loop_max',
+                           standard_name = CCPP_LOOP_EXTENT,
+                           long_name     = 'loop counter for subcycling loops in CCPP',
+                           units         = 'count',
+                           type          = 'integer',
+                           dimensions    = [],
+                           rank          = '',
+                           kind          = '',
+                           intent        = 'in',
+                           active        = 'T',
+                           ),
+    }
 
 ###############################################################################
 
@@ -252,6 +279,10 @@ end module {module}
         '''Get the module name of the API.'''
         return self._module
 
+    @module.setter
+    def module(self, value):
+        self._module = value
+
     @property
     def subroutines(self):
         '''Get the subroutines names of the API to.'''
@@ -406,7 +437,7 @@ end module {module}
                 self.update_api = True
         return
 
-    def write_sourcefile(self, source_filename):
+    def write_includefile(self, source_filename, type):
         success = True
         filepath = os.path.split(source_filename)[0]
         if filepath and not os.path.isdir(filepath):
@@ -422,14 +453,30 @@ end module {module}
         else:
             write_to_test_file = False
             f = open(source_filename, 'w')
-        # Contents of shell/source file
-        contents = """# The CCPP static API is defined here.
+
+        if type == 'shell':
+            # Contents of shell/source file
+            contents = """# The CCPP static API is defined here.
 #
 # This file is auto-generated using ccpp_prebuild.py
 # at compile time, do not edit manually.
 #
 export CCPP_STATIC_API=\"{filename}\"
 """.format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
+        elif type == 'cmake':
+            # Contents of cmake include file
+            contents = """# The CCPP static API is defined here.
+#
+# This file is auto-generated using ccpp_prebuild.py
+# at compile time, do not edit manually.
+#
+set(API \"{filename}\")
+""".format(filename=os.path.abspath(os.path.join(self.directory,self.filename)))
+        else:
+            logging.error('Encountered unknown type of file "{type}" when writing include file for static API'.format(type=type))
+            success = False
+            return
+
         f.write(contents)
         f.close()
         # See comment above on updating the API or not
@@ -924,11 +971,8 @@ end module {module}
 
         # First get target names of standard CCPP variables for subcycling and error handling
         ccpp_loop_counter_target_name = metadata_request[CCPP_LOOP_COUNTER][0].target
-        if CCPP_LOOP_EXTENT in metadata_request.keys():
-            ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
-        else:
-            ccpp_loop_extent_target_name = None
-        ccpp_error_flag_target_name = metadata_request[CCPP_ERROR_CODE_VARIABLE][0].target
+        ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
+        ccpp_error_code_target_name = metadata_request[CCPP_ERROR_CODE_VARIABLE][0].target
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
         #
         module_use = ''
@@ -1465,7 +1509,7 @@ end module {module}
         ierr={target_name_flag}
         return
       end if
-'''.format(target_name_flag=ccpp_error_flag_target_name, target_name_msg=ccpp_error_msg_target_name, subroutine_name=subroutine_name)
+'''.format(target_name_flag=ccpp_error_code_target_name, target_name_msg=ccpp_error_msg_target_name, subroutine_name=subroutine_name)
                     subcycle_body += '''
       {subroutine_call}
       {error_check}
@@ -1481,14 +1525,14 @@ end module {module}
 '''
                 subcycle_body_suffix = ''
                 if self.parents[ccpp_stage]:
-                    # Set subcycle loop extent if requested by any scheme
-                    if ccpp_loop_extent_target_name and ccpp_stage == 'run':
+                    # Set subcycle loop extent
+                    if ccpp_stage == 'run':
                         subcycle_body_prefix += '''
       ! Set loop extent variable for the following subcycle
       {loop_extent_var_name} = {loop_cnt_max}
 '''.format(loop_extent_var_name=ccpp_loop_extent_target_name,
                                   loop_cnt_max=subcycle.loop)
-                    elif ccpp_loop_extent_target_name:
+                    else:
                         subcycle_body_prefix += '''
       ! Set loop extent variable for the following subcycle
       {loop_extent_var_name} = 1
@@ -1527,13 +1571,13 @@ end module {module}
             # at least one subroutine that gets called from this group), or skip.
             if self.arguments[ccpp_stage]:
                 initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
-                                            target_name_flag=ccpp_error_flag_target_name,
+                                            target_name_flag=ccpp_error_code_target_name,
                                             target_name_msg=ccpp_error_msg_target_name,
                                             name=self._name)
             else:
                 initialized_test_block = ''
             initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
-                                        target_name_flag=ccpp_error_flag_target_name,
+                                        target_name_flag=ccpp_error_code_target_name,
                                         target_name_msg=ccpp_error_msg_target_name,
                                         name=self._name)
             # Create subroutine
