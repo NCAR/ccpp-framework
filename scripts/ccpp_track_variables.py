@@ -28,16 +28,16 @@ def parse_arguments():
     parser.add_argument('-s', '--sdf', help='suite definition file to parse', required=True)
     parser.add_argument('-m', '--metadata_path',
                         help='path to CCPP scheme metadata files', required=True)
-    parser.add_argument('-c', '--config', 
+    parser.add_argument('-c', '--config',
                         help='path to CCPP prebuild configuration file', required=True)
-    parser.add_argument('-v', '--variable', help='variable to track through CCPP suite', 
+    parser.add_argument('-v', '--variable', help='variable to track through CCPP suite',
                         required=True)
-    parser.add_argument('--debug', action='store_true', help='enable debugging output', 
+    parser.add_argument('--debug', action='store_true', help='enable debugging output',
                         default=False)
 
     args = parser.parse_args()
 
-    return(args)
+    return args
 
 def setup_logging(debug):
     """Sets up the logging module and logging level."""
@@ -87,13 +87,15 @@ def create_metadata_filename_dict(metapath):
 def create_var_graph(suite, var, config, metapath, run_env):
     """Given a suite, variable name, a 'config' dictionary, and a path to .meta files:
          1. Creates a dictionary associating schemes with their .meta files
-         2. Loops through the call tree of the provided suite
+         2. Loops through the call tree of the provided suite by group
          3. For each scheme, reads .meta file for said scheme, checks for variable within that
-            scheme, and if it exists, adds an entry to a list of tuples, where each tuple includes
-            the name of the scheme and the intent of the variable within that scheme"""
+            scheme, and if it exists, adds an entry to a list of tuples for the corresponding
+            group, where each tuple includes the name of the scheme and the intent of the variable
+            within that scheme"""
 
-    # Create a list of tuples that will hold the in/out information for each scheme
-    var_graph = []
+    # Create a list of tuples for each group that will hold the in/out information for each scheme
+    var_graph={}
+    var_graph_empty = True
 
     run_env.logger.debug(f"reading .meta files in path:\n {metapath}")
     metadata_dict=create_metadata_filename_dict(metapath)
@@ -104,46 +106,58 @@ def create_var_graph(suite, var, config, metapath, run_env):
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files,
     # then parse that metadata file to find variable info
     partial_matches = {}
-    for scheme in suite.call_tree:
-        run_env.logger.debug(f"reading meta file for scheme {scheme} ")
+    for group in suite.call_tree:
+        run_env.logger.debug(f"for group {group} ")
+        # Create list of tuples that will hold the in/out information for each scheme in this group
+        var_graph[group] = []
+        for scheme in suite.call_tree[group]:
+            run_env.logger.debug(f"reading meta file for scheme {scheme} ")
 
-        if scheme in metadata_dict:
-            scheme_filename = metadata_dict[scheme]
-        else:
-            raise Exception(f"Error, scheme '{scheme}' from suite '{suite.sdf_name}' "
-                            f"not found in metadata files in {metapath}")
+            if scheme in metadata_dict:
+                scheme_filename = metadata_dict[scheme]
+            else:
+                raise Exception(f"Error, scheme '{scheme}' from suite '{suite.sdf_name}' "
+                                f"not found in metadata files in {metapath}")
 
-        run_env.logger.debug(f"reading metadata file {scheme_filename} for scheme {scheme}")
+            run_env.logger.debug(f"reading metadata file {scheme_filename} for scheme {scheme}")
 
-        new_metadata_headers = parse_metadata_file(scheme_filename,
-                                                   known_ddts=registered_fortran_ddt_names(), run_env=run_env)
-        for scheme_metadata in new_metadata_headers:
-            for section in scheme_metadata.sections():
-                found_var = []
-                intent = ''
-                for scheme_var in section.variable_list():
-                    exact_match = False
-                    if var == scheme_var.get_prop_value('standard_name'):
-                        run_env.logger.debug(f"Found variable {var} in scheme {section.title}")
-                        found_var = var
-                        exact_match = True
-                        intent = scheme_var.get_prop_value('intent')
-                        break
-                    scheme_var_standard_name = scheme_var.get_prop_value('standard_name')
-                    if scheme_var_standard_name.find(var) != -1:
-                        run_env.logger.debug(f"{var} matches {scheme_var_standard_name}")
-                        found_var.append(scheme_var_standard_name)
-                if not found_var:
-                    run_env.logger.debug(f"Did not find variable {var} in scheme {section.title}")
-                elif exact_match:
-                    run_env.logger.debug(f"Exact match found for variable {var} in scheme {section.title},"
-                                  f" intent {intent}")
-                    var_graph.append((section.title,intent))
-                else:
-                    run_env.logger.debug(f"Found inexact matches for variable(s) {var} "
-                                  f"in scheme {section.title}:\n{found_var}")
-                    partial_matches[section.title] = found_var
-    if var_graph:
+            new_metadata_headers = parse_metadata_file(scheme_filename,
+                                                       known_ddts=registered_fortran_ddt_names(),
+                                                       run_env=run_env)
+            for scheme_metadata in new_metadata_headers:
+                if scheme_metadata.table_name != scheme:
+                    # Some metadata files contain information for multiple schemes,
+                    # need to make sure we only read the relevant section
+                    continue
+                for section in scheme_metadata.sections():
+                    found_var = []
+                    intent = ''
+                    for scheme_var in section.variable_list():
+                        exact_match = False
+                        if var == scheme_var.get_prop_value('standard_name'):
+                            run_env.logger.debug(f"Found variable {var} in scheme {section.title}")
+                            found_var=var
+                            exact_match = True
+                            intent = scheme_var.get_prop_value('intent')
+                            break
+                        scheme_var_standard_name = scheme_var.get_prop_value('standard_name')
+                        if scheme_var_standard_name.find(var) != -1:
+                            run_env.logger.debug(f"{var} matches {scheme_var_standard_name}")
+                            found_var.append(scheme_var_standard_name)
+                    if not found_var:
+                        run_env.logger.debug(f"Did not find variable {var} in scheme {section.title}")
+                    elif exact_match:
+                        run_env.logger.debug(f"Exact match found for variable {var} in scheme "
+                                             f"{section.title}, intent {intent}")
+                        var_graph[group].append((section.title,intent))
+                        var_graph_empty = False
+                    else:
+                        run_env.logger.debug(f"Found inexact matches for variable(s) {var} "
+                                      f"in scheme {section.title}:\n{found_var}")
+                        partial_matches[section.title] = found_var
+
+
+    if not var_graph_empty:
         success = True
         run_env.logger.debug(f"Successfully generated variable graph for sdf {suite.sdf_name}\n")
     else:
@@ -157,13 +171,14 @@ def create_var_graph(suite, var, config, metapath, run_env):
     return (success,var_graph)
 
 def main():
-    """Main routine that traverses a CCPP suite and outputs the list of schemes that use given variable"""
+    """Main routine that traverses a CCPP suite and outputs the list of schemes that use given
+       variable, broken down by group"""
 
     args = parse_arguments()
 
     logger = setup_logging(args.debug)
 
-    #Use new capgen class CCPPFrameworkEnv 
+    #Use new capgen class CCPPFrameworkEnv
     run_env = CCPPFrameworkEnv(logger, host_files="", scheme_files="", suites="")
 
     suite = parse_suite(args.sdf,run_env)
@@ -174,17 +189,20 @@ def main():
 
     # Variables defined by the host model; this call is necessary because it converts some old
     # metadata formats so they can be used later in the script
-    (success, _, _) = gather_variable_definitions(config['variable_definition_files'], 
+    (success, _, _) = gather_variable_definitions(config['variable_definition_files'],
                                                    config['typedefs_new_metadata'])
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
     (success, var_graph) = create_var_graph(suite, args.variable, config, args.metadata_path, run_env)
     if success:
-        print(f"For suite {suite.sdf_name}, the following schemes (in order) "
+        print(f"For suite {suite.sdf_name}, the following schemes (in order for each group) "
               f"use the variable {args.variable}:")
-        for entry in var_graph:
-            print(f"{entry[0]} (intent {entry[1]})")
+        for group in var_graph:
+            if var_graph[group]:
+                print(f"In group {group}")
+                for entry in var_graph[group]:
+                    print(f"  {entry[0]} (intent {entry[1]})")
 
 
 if __name__ == '__main__':
