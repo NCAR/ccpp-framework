@@ -19,7 +19,7 @@ import logging
 # CCPP framework imports
 # pylint: enable=wrong-import-position
 
-class _StdNameCounter(object):
+class _StdNameCounter:
     """Class to hold a global counter to avoid using global keyword"""
     __SNAME_NUM = 0 # Counter for unique standard names
 
@@ -118,6 +118,12 @@ def context_string(context=None, with_comma=True, nodir=False):
     return cstr.format(comma=comma, where_str=where_str, ctx=context)
 
 ###############################################################################
+def type_name(obj):
+###############################################################################
+    """Return the name of the type of <obj>"""
+    return type(obj).__name__
+
+###############################################################################
 class CCPPError(ValueError):
     """Class so programs can log user errors without backtrace"""
     def __init__(self, message):
@@ -198,7 +204,7 @@ class ContextRegion(Iterable):
 
 ########################################################################
 
-class ParseContext(object):
+class ParseContext:
     """A class for keeping track of a parsing position
     >>> ParseContext(32, "source.F90") #doctest: +ELLIPSIS
     <__main__.ParseContext object at 0x...>
@@ -215,13 +221,6 @@ class ParseContext(object):
     >>> ParseContext(linenum=32, filename="source.F90").increment(13)
 
     """
-
-    # python 2/3 difference
-    try:
-        __pstr_types = (str, unicode)
-    except NameError:
-        __pstr_types = (str,)
-    # End try
 
     def __init__(self, linenum=None, filename=None, context=None):
         """Initialize this ParseContext"""
@@ -245,27 +244,27 @@ class ParseContext(object):
             filename = context.filename
         elif filename is None:
             filename = "<standard input>"
-        elif not isinstance(filename, ParseContext.__pstr_types):
+        elif not isinstance(filename, str):
             raise CCPPError('ParseContext filename must be a string')
         # No else, everything is okay
         # End if
-        self._linenum = linenum
-        self._filename = filename
+        self.__linenum = linenum
+        self.__filename = filename
 
     @property
     def line_num(self):
         """Return the current line"""
-        return self._linenum
+        return self.__linenum
 
     @line_num.setter
     def line_num(self, newnum):
         """Set a new line number for this context"""
-        self._linenum = newnum
+        self.__linenum = newnum
 
     @property
     def filename(self):
         """Return the object's filename"""
-        return self._filename
+        return self.__filename
 
     @property
     def regions(self):
@@ -274,19 +273,19 @@ class ParseContext(object):
 
     def __format__(self, spec):
         """Return a string representing the location in a file
-        Note that self._linenum is zero based.
+        Note that self.__linenum is zero based.
         <spec> can be 'dir' (show filename directory) or 'nodir' filename only.
         Any other spec entry is ignored.
         """
         if spec == 'dir':
-            fname = self._filename
+            fname = self.__filename
         elif spec == 'nodir':
-            fname = os.path.basename(self._filename)
+            fname = os.path.basename(self.__filename)
         else:
-            fname = self._filename
+            fname = self.__filename
         # End if
-        if self._linenum >= 0:
-            fmt_str = "{}:{}".format(fname, self._linenum+1)
+        if self.__linenum >= 0:
+            fmt_str = "{}:{}".format(fname, self.__linenum+1)
         else:
             fmt_str = "{}".format(fname)
         # End if
@@ -294,21 +293,21 @@ class ParseContext(object):
 
     def __str__(self):
         """Return a string representing the location in a file
-        Note that self._linenum is zero based.
+        Note that self.__linenum is zero based.
         """
-        if self._linenum >= 0:
-            retstr = "{}:{}".format(self._filename, self._linenum+1)
+        if self.__linenum >= 0:
+            retstr = "{}:{}".format(self.__filename, self.__linenum+1)
         else:
-            retstr = "{}".format(self._filename)
+            retstr = "{}".format(self.__filename)
         # End if
         return retstr
 
     def increment(self, inc=1):
         """Increment the location within a file"""
-        if self._linenum < 0:
-            self._linenum = 0
+        if self.__linenum < 0:
+            self.__linenum = 0
         # End if
-        self._linenum = self._linenum + inc
+        self.__linenum = self.__linenum + inc
 
     def enter_region(self, region_type, region_name=None, nested_ok=True):
         """Mark the entry of a region (e.g., DDT, module, function).
@@ -378,12 +377,12 @@ class ParseContext(object):
 
 ########################################################################
 
-class ParseSource(object):
+class ParseSource:
     """
     A simple object for providing source information
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")) #doctest: +ELLIPSIS
     <__main__.ParseSource object at 0x...>
-    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).type
+    >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).ptype
     'mytype'
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).name
     'myname'
@@ -393,24 +392,24 @@ class ParseSource(object):
 
     def __init__(self, name_in, type_in, context_in):
         """Initialize this ParseSource object."""
-        self._name = name_in
-        self._type = type_in
-        self._context = context_in
+        self.__name = name_in
+        self.__type = type_in
+        self.__context = context_in
 
     @property
-    def type(self):
+    def ptype(self):
         """Return this source's type"""
-        return self._type
+        return self.__type
 
     @property
     def name(self):
         """Return this source's name"""
-        return self._name
+        return self.__name
 
     @property
     def context(self):
         """Return this source's context"""
-        return self._context
+        return self.__context
 
 ########################################################################
 

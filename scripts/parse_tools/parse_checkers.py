@@ -12,7 +12,7 @@ from parse_source import CCPPError, ParseInternalError
 
 ########################################################################
 
-_UNITS_RE = re.compile(r"^[^/@#$%^&*()\|<>\[\]{}?,.]+$")
+_UNITS_RE = re.compile(r"^[^/!@#$%^&*=()\|<>\[\]{}?,.]+$")
 
 def check_units(test_val, prop_dict, error):
     """Return <test_val> if a valid unit, otherwise, None

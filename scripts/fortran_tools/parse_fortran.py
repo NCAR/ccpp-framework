@@ -532,7 +532,8 @@ class FtypeTypeDecl(Ftype):
     @classmethod
     def type_def_line(cls, line):
         """Return a type information if <line> represents the start
-        of a type definition"""
+              of a type definition.
+           Otherwise, return None"""
         type_def = None
         if not cls.type_match(line):
             if '!' in line:
@@ -629,7 +630,8 @@ def ftype_factory(line, context):
 def fortran_type_definition(line):
 ########################################################################
     """Return a type information if <line> represents the start
-        of a type definition"""
+        of a type definition.
+       Otherwise, return None."""
     return FtypeTypeDecl.type_def_line(line)
 
 ########################################################################
@@ -720,8 +722,8 @@ def parse_fortran_var_decl(line, source, run_env):
             varprops = Ftype.parse_attr_specs(elements[0].strip(), context)
             for prop in varprops:
                 if prop[0:6] == 'intent':
-                    if source.type != 'scheme':
-                        typ = source.type
+                    if source.ptype != 'scheme':
+                        typ = source.ptype
                         errmsg = 'Invalid variable declaration, {}, intent'
                         errmsg = errmsg + ' not allowed in {} variable'
                         if run_env.logger is not None:

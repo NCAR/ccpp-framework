@@ -133,18 +133,22 @@ def standard_name_to_long_name(prop_dict, context=None):
     """Translate a standard_name to its default long_name
     >>> standard_name_to_long_name({'standard_name':'cloud_optical_depth_layers_from_0p55mu_to_0p99mu'})
     'Cloud optical depth layers from 0.55mu to 0.99mu'
-    >>> standard_name_to_long_name({'local_name':'foo'}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> standard_name_to_long_name({'local_name':'foo'}) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No standard name to convert foo to long name
-    >>> standard_name_to_long_name({}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...
+    parse_source.CCPPError: No standard name to convert foo to long name
+    >>> standard_name_to_long_name({}) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No standard name to convert to long name
-    >>> standard_name_to_long_name({'local_name':'foo'}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...
+    parse_source.CCPPError: No standard name to convert to long name
+    >>> standard_name_to_long_name({'local_name':'foo'}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No standard name to convert foo to long name at foo.F90:3
-    >>> standard_name_to_long_name({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...
+    parse_source.CCPPError: No standard name to convert foo to long name, at foo.F90:4
+    >>> standard_name_to_long_name({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No standard name to convert to long name at foo.F90:3
+    ...
+    parse_source.CCPPError: No standard name to convert to long name, at foo.F90:4
     """
     # We assume that standar_name has been checked for validity
     # Make the first char uppercase and replace each underscore with a space
@@ -191,18 +195,22 @@ def default_kind_val(prop_dict, context=None):
     ''
     >>> default_kind_val({'type':'logical'})
     ''
-    >>> default_kind_val({'local_name':'foo'}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> default_kind_val({'local_name':'foo'}) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No type to find default kind for foo
-    >>> default_kind_val({}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...
+    parse_source.CCPPError: No type to find default kind for foo
+    >>> default_kind_val({}) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No type to find default kind
-    >>> default_kind_val({'local_name':'foo'}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...
+    parse_source.CCPPError: No type to find default kind
+    >>> default_kind_val({'local_name':'foo'}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No type to find default kind for foo at foo.F90:3
-    >>> default_kind_val({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...
+    parse_source.CCPPError: No type to find default kind for foo, at foo.F90:4
+    >>> default_kind_val({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: No type to find default kind at foo.F90:3
+    ...
+    parse_source.CCPPError: No type to find default kind, at foo.F90:4
     """
     if 'type' in prop_dict:
         vtype = prop_dict['type'].lower()
@@ -277,29 +285,34 @@ class DimTransform:
         # Test that bad inputs are trapped:
         >>> DimTransform((0, 1, 2), (2, 1), 'horizontal_dimension', 0, 1,    \
                          'horizontal_dimension',                             \
-                         1, 0) #doctest: +IGNORE_EXCEPTION_DETAIL
+                         1, 0) #doctest: +ELLIPSIS
         Traceback (most recent call last):
+        ...
         parse_source.ParseInternalError: Permutation mismatch, '(0, 1, 2)' and '(2, 1)'
-        >>> DimTransform((2, 0, 1), (1, 2, 0), 'horizontal_dimension', 3, 4, \
+        >>> DimTransform((2, 0, 1), (1, 2, 0), 'horizontal_dimension', 3, 2, \
                          'horizontal_dimension',                             \
-                         4, 3) #doctest: +IGNORE_EXCEPTION_DETAIL
+                         4, 3) #doctest: +ELLIPSIS
         Traceback (most recent call last):
+        ...
         parse_source.ParseInternalError: forward_hdim_index (3) out of range [0, 2]
         >>> DimTransform((2, 0, 1), (1, 2, 0), 'horizontal_dimension', 0, 4, \
                          'horizontal_dimension',                             \
-                         4, 3) #doctest: +IGNORE_EXCEPTION_DETAIL
+                         4, 3) #doctest: +ELLIPSIS
         Traceback (most recent call last):
-        parse_source.ParseInternalError: forward_vdim_index (4) out of range [0, 2
+        ...
+        parse_source.ParseInternalError: forward_vdim_index (4) out of range [0, 2]
         >>> DimTransform((2, 0, 1), (1, 2, 0), 'horizontal_dimension', 0, 2, \
                          'horizontal_dimension',                             \
-                         4, 3) #doctest: +IGNORE_EXCEPTION_DETAIL
+                         4, 3) #doctest: +ELLIPSIS
         Traceback (most recent call last):
+        ...
         parse_source.ParseInternalError: reverse_hdim_index (4) out of range [0, 2]
-        >>> DimTransform((2, 0, 1), (1, 2, 0), 'horizontal_dimension', 3, 4, \
+        >>> DimTransform((2, 0, 1), (1, 2, 0), 'horizontal_dimension', 1, 2, \
                          'horizontal_dimension',                             \
-                         0, 3) #doctest: +IGNORE_EXCEPTION_DETAIL
+                         0, 3) #doctest: +ELLIPSIS
         Traceback (most recent call last):
-        parse_source.ParseInternalError: forward_hdim_index (3) out of range [0, 2]
+        ...
+        parse_source.ParseInternalError: reverse_vdim_index (3) out of range [0, 2]
         """
         # Store inputs
         if len(forward_permutation) != len(reverse_permutation):
@@ -523,7 +536,7 @@ class VariableProperty:
     <__main__.VariableProperty object at ...>
     >>> VariableProperty('local_name', str).name
     'local_name'
-    >>> VariableProperty('standard_name', str).type == str
+    >>> VariableProperty('standard_name', str).ptype == str
     True
     >>> VariableProperty('units', str).is_match('units')
     True
@@ -535,16 +548,18 @@ class VariableProperty:
     2
     >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('3')
 
-    >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('3', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> VariableProperty('value', int, valid_values_in=[1, 2 ]).valid_value('3', error=True) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: Invalid value variable property, '3'
+    ...
+    parse_source.CCPPError: Invalid value variable property, '3'
     >>> VariableProperty('units', str, check_fn_in=check_units).valid_value('m s-1')
     'm s-1'
     >>> VariableProperty('units', str, check_fn_in=check_units).valid_value(' ')
 
-    >>> VariableProperty('units', str, check_fn_in=check_units).valid_value(' ', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> VariableProperty('units', str, check_fn_in=check_units).valid_value(' ', error=True) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: ' ' is not a valid unit
+    ...
+    parse_source.CCPPError: ' ' is not a valid unit
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('()')
     []
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x)')
@@ -557,12 +572,14 @@ class VariableProperty:
     ['w:x', 'y:z']
     >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value(['size(foo)'])
     ['size(foo)']
-    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,x:y:z:q)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(w:x,x:y:z:q)', error=True) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: 'x:y:z:q' is an invalid dimension range
-    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x:3y)', error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...
+    parse_source.CCPPError: 'x:y:z:q' is an invalid dimension range
+    >>> VariableProperty('dimensions', list, check_fn_in=check_dimensions).valid_value('(x:3y)', error=True) #doctest: +ELLIPSIS
     Traceback (most recent call last):
-    CCPPError: '3y' is not a valid Fortran identifier
+    ...
+    parse_source.CCPPError: '3y' is not a valid Fortran identifier
     >>> VariableProperty('local_name', str, check_fn_in=check_local_name).valid_value('foo')
     'foo'
     >>> VariableProperty('local_name', str, check_fn_in=check_local_name).valid_value('foo(bar)')
@@ -612,7 +629,7 @@ class VariableProperty:
         return self._name
 
     @property
-    def type(self):
+    def ptype(self):
         """Return the type of the property"""
         return self._type
 
@@ -659,7 +676,7 @@ class VariableProperty:
         If <prop_dict> is not None, it may be used in value validation.
         """
         valid_val = None
-        if self.type is int:
+        if self.ptype is int:
             try:
                 tval = int(test_value)
                 if self._valid_values is not None:
@@ -671,7 +688,7 @@ class VariableProperty:
                     valid_val = tval
             except CCPPError:
                 valid_val = None # Redundant but more expressive than pass
-        elif self.type is list:
+        elif self.ptype is list:
             if isinstance(test_value, str):
                 tval = fortran_list_match(test_value)
                 if tval and (len(tval) == 1) and (not tval[0]):
@@ -698,7 +715,7 @@ class VariableProperty:
                 # end for
             else:
                 pass
-        elif self.type is bool:
+        elif self.ptype is bool:
             if isinstance(test_value, str):
                 if test_value.lower() in VariableProperty.__true_vals + VariableProperty.__false_vals:
                     valid_val = test_value.lower() in VariableProperty.__true_vals
@@ -707,7 +724,7 @@ class VariableProperty:
                 # end if
             else:
                 valid_val = not not test_value # pylint: disable=unneeded-not
-        elif self.type is str:
+        elif self.ptype is str:
             if isinstance(test_value, str):
                 if self._valid_values is not None:
                     if test_value in self._valid_values:
@@ -1037,9 +1054,16 @@ class VarCompatObj:
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('C', 'K')
         ('{var}+273.15{kind}', '{var}-273.15{kind}')
 
-        # Try an unsupported conversion
-        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('C', 'm') #doctest: +IGNORE_EXCEPTION_DETAIL
+        # Try an invalid conversion
+        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('1', 'none') #doctest: +ELLIPSIS
         Traceback (most recent call last):
+        ...
+        parse_source.ParseSyntaxError: Unsupported units entry for var_stdname, '1', at foo.F90:4
+
+        # Try an unsupported conversion
+        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('C', 'm') #doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
         parse_source.ParseSyntaxError: Unsupported unit conversion, 'C' to 'm' for 'var_stdname'
         """
         u1_str = self.units_to_string(var1_units, self.__v1_context)
@@ -1183,8 +1207,7 @@ class VarCompatObj:
         # end if (no else, kind_ok already False)
         return kind_ok
 
-    @staticmethod
-    def units_to_string(units, context=None):
+    def units_to_string(self, units, context=None):
         """Replace variable unit description with string that is a legal
         Python identifier.
         If the resulting string is a Python keyword, raise an exception."""
@@ -1196,9 +1219,9 @@ class VarCompatObj:
         string = string.replace("+","_plus_")
         # Test that the resulting string is a valid Python identifier
         if not string.isidentifier():
-            emsg = "Unsupported units entry, '{}'{}"
+            emsg = "Unsupported units entry for {}, '{}'{}"
             ctx = context_string(context)
-            raise ParseSyntaxError(emsg.format(units ,ctx))
+            raise ParseSyntaxError(emsg.format(self.__stdname, units ,ctx))
         # end if
         # Test that the resulting string is NOT a Python keyword
         if keyword.iskeyword(string):
@@ -1311,10 +1334,15 @@ if __name__ == "__main__":
                                        kind_types=["kind_phys=REAL64",
                                                    "kind_dyn=REAL32",
                                                    "kind_host=REAL64"])
+    _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
+    _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
     _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys",
                                     "m", [], "var1_lname", "var_stdname",
                                     "real", "kind_phys", "m", [],
-                                    "var2_lname", _DOCTEST_RUNENV)
-    fail, _ = doctest.testmod()
+                                    "var2_lname", _DOCTEST_RUNENV,
+                                    v1_context=_DOCTEST_CONTEXT1,
+                                    v2_context=_DOCTEST_CONTEXT2)
+    OPTIONS = doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE
+    fail, _ = doctest.testmod(optionflags=OPTIONS)
     sys.exit(fail)
 # end if

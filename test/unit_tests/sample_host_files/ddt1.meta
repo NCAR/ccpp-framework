@@ -1,0 +1,20 @@
+########################################################################
+[ccpp-table-properties]
+  name = ddt1_t
+  type = ddt
+
+[ccpp-arg-table]
+  name = ddt1_t
+  type = ddt
+[ num_vars ]
+  standard_name = ddt_var_array_dimension
+  long_name = Number of vars managed by ddt1
+  units = count
+  dimensions = ()
+  type = integer
+[ vars ]
+  standard_name = vars_array
+  long_name = Array of vars managed by ddt1
+  units = none
+  dimensions = (horizontal_dimension, vertical_layer_dimension, ccpp_num_constituents)
+  type = real | kind = kind_phys

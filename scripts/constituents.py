@@ -8,20 +8,17 @@ The ConstituentVarDict class contains methods to generate the necessary code
 to implement this support.
 """
 
-# Python library imports
-from __future__ import print_function
-import os
 # CCPP framework imports
-from file_utils import KINDS_MODULE
-from fortran_tools import FortranWriter
-from parse_tools import ParseInternalError
-from metavar import Var, VarDictionary
+from parse_tools import ParseInternalError, type_name
+from metavar import VarDictionary
 
 ########################################################################
 
 CONST_DDT_NAME = "ccpp_model_constituents_t"
 CONST_DDT_MOD = "ccpp_constituent_prop_mod"
 CONST_PROP_TYPE = "ccpp_constituent_properties_t"
+CONST_PROP_PTR_TYPE = "ccpp_constituent_prop_ptr_t"
+CONST_OBJ_STDNAME = "ccpp_model_constituents_object"
 
 ########################################################################
 
@@ -34,7 +31,6 @@ class ConstituentVarDict(VarDictionary):
     __const_prop_array_name  = "ccpp_constituent_array"
     __const_prop_init_name  = "ccpp_constituents_initialized"
     __const_prop_init_consts = "ccpp_create_constituent_array"
-    __const_prop_type_name = "ccpp_constituent_properties_t"
     __constituent_type = "suite"
 
     def __init__(self, name, parent_dict, run_env, variables=None):
@@ -47,9 +43,8 @@ class ConstituentVarDict(VarDictionary):
         because this dictionary must be connected to a host model.
         """
         self.__run_env = run_env
-        super(ConstituentVarDict, self).__init__(name, run_env,
-                                                 variables=variables,
-                                                 parent_dict=parent_dict)
+        super().__init__(name, run_env,
+                         variables=variables, parent_dict=parent_dict)
 
     def find_variable(self, standard_name=None, source_var=None,
                       any_scope=True, clone=None,
@@ -155,7 +150,7 @@ class ConstituentVarDict(VarDictionary):
         outfile.write("! Private constituent module data", indent)
         if self:
             stmt = "type({}), private, allocatable :: {}(:)"
-            outfile.write(stmt.format(self.constituent_prop_type_name(),
+            outfile.write(stmt.format(CONST_PROP_TYPE,
                                       self.constituent_prop_array_name()),
                           indent)
         # end if
@@ -301,6 +296,7 @@ class ConstituentVarDict(VarDictionary):
         for std_name, var in self.items():
             outfile.write("index = index + 1", indent+1)
             long_name = var.get_prop_value('long_name')
+            units = var.get_prop_value('units')
             dims = var.get_dim_stdnames()
             if 'vertical_layer_dimension' in dims:
                 vertical_dim = 'vertical_layer_dimension'
@@ -310,10 +306,14 @@ class ConstituentVarDict(VarDictionary):
                 vertical_dim = ''
             # end if
             advect_str = self.TF_string(var.get_prop_value('advected'))
-            stmt = 'call {}(index)%initialize("{}", "{}", "{}", {}{})'
+            init_args = [f'std_name="{std_name}"', f'long_name="{long_name}"',
+                         f'units="{units}"', f'vertical_dim="{vertical_dim}"',
+                         f'advected={advect_str}',
+                         f'errcode={errvar_names["ccpp_error_code"]}',
+                         f'errmsg={errvar_names["ccpp_error_message"]}']
+            stmt = 'call {}(index)%initialize({})'
             outfile.write(stmt.format(self.constituent_prop_array_name(),
-                                      std_name, long_name, vertical_dim,
-                                      advect_str, errvar_call2), indent+1)
+                                      ", ".join(init_args)), indent+1)
         # end for
         for evar in err_vars:
             self.__init_err_var(evar, outfile, indent+1)
@@ -363,9 +363,12 @@ class ConstituentVarDict(VarDictionary):
         self._write_index_check(outfile, indent, suite_name,
                                 err_vars, use_errcode)
         if self:
-            stmt = "call {}(index)%standard_name(name_out{})"
+            init_args = ['std_name=name_out',
+                         f'errcode={errvar_names["ccpp_error_code"]}',
+                         f'errmsg={errvar_names["ccpp_error_message"]}']
+            stmt = "call {}(index)%standard_name({})"
             outfile.write(stmt.format(self.constituent_prop_array_name(),
-                                      errvar_call2), indent+1)
+                                      ", ".join(init_args)), indent+1)
         # end if
         outfile.write("end subroutine {}".format(self.const_name_subname()),
                       indent)
@@ -377,8 +380,8 @@ class ConstituentVarDict(VarDictionary):
         outfile.write("! Copy the data for a constituent", indent+1)
         outfile.write("! Dummy arguments", indent+1)
         outfile.write("integer,            intent(in)    :: index", indent+1)
-        stmt = "type({}), intent(out)     :: cnst_out"
-        outfile.write(stmt.format(self.constituent_prop_type_name()), indent+1)
+        stmt = f"type({CONST_PROP_TYPE}), intent(out)     :: cnst_out"
+        outfile.write(stmt, indent+1)
         for evar in err_vars:
             evar.write_def(outfile, indent+1, self, dummy=True)
         # end for
@@ -398,7 +401,7 @@ class ConstituentVarDict(VarDictionary):
         if not ((self.parent is not None) and
                 hasattr(self.parent.parent, "constituent_module")):
             emsg = "ConstituentVarDict parent not HostModel?"
-            emsg += "\nparent is '{}'".format(type(self.parent.parent))
+            emsg += f"\nparent is '{type_name(self.parent.parent)}'"
             raise ParseInternalError(emsg)
         # end if
         return self.parent.parent.constituent_module
@@ -450,7 +453,8 @@ class ConstituentVarDict(VarDictionary):
     def write_host_routines(cap, host, reg_funcname, num_const_funcname,
                             copy_in_funcname, copy_out_funcname, const_obj_name,
                             const_names_name, const_indices_name,
-                            suite_list, err_vars):
+                            advect_array_func, prop_array_func,
+                            const_index_func, suite_list, err_vars):
         """Write out the host model <reg_funcname> routine which will
         instantiate constituent fields for all the constituents in <suite_list>.
         <err_vars> is a list of the host model's error variables.
@@ -476,121 +480,139 @@ class ConstituentVarDict(VarDictionary):
                                                  errmsg=herrmsg)
 # XXgoldyXX: ^ need to generalize host model error var type support
         # First up, the registration routine
-        substmt = "subroutine {}".format(reg_funcname)
-        stmt = "{}(suite_list, ncols, num_layers, num_interfaces, {})"
-        cap.write(stmt.format(substmt, err_dummy_str), 1)
-        cap.write("! Create constituent object for suites in <suite_list>", 2)
+        substmt = f"subroutine {reg_funcname}"
+        args = "suite_list, ncols, num_layers, host_constituents "
+        stmt = f"{substmt}({args}, {err_dummy_str})"
+        cap.write(stmt, 1)
+        cap.comment("Create constituent object for suites in <suite_list>", 2)
         cap.write("", 0)
         ConstituentVarDict.write_constituent_use_statements(cap, suite_list, 2)
         cap.write("", 0)
-        cap.write("! Dummy arguments", 2)
-        cap.write("character(len=*),   intent(in)    :: suite_list(:)", 2)
-        cap.write("integer,            intent(in)    :: ncols", 2)
-        cap.write("integer,            intent(in)    :: num_layers", 2)
-        cap.write("integer,            intent(in)    :: num_interfaces", 2)
+        cap.comment("Dummy arguments", 2)
+        cap.write("character(len=*), intent(in)  :: suite_list(:)", 2)
+        cap.write("integer,          intent(in)  :: ncols", 2)
+        cap.write("integer,          intent(in)  :: num_layers", 2)
+        cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)  :: " +       \
+                  "host_constituents(:)", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
-        cap.write("! Local variables", 2)
+        cap.comment("Local variables", 2)
         spc = ' '*37
         cap.write("integer{} :: num_suite_consts".format(spc), 2)
         cap.write("integer{} :: num_consts".format(spc), 2)
         cap.write("integer{} :: index".format(spc), 2)
         cap.write("integer{} :: field_ind".format(spc), 2)
-        cap.write("type({}), pointer :: const_prop".format(CONST_PROP_TYPE), 2)
+        cap.write(f"type({CONST_PROP_TYPE}), pointer :: const_prop", 2)
         cap.write("", 0)
         cap.write("{} = 0".format(herrcode), 2)
-        cap.write("num_consts = 0", 2)
+        cap.write("num_consts = size(host_constituents, 1)", 2)
         for suite in suite_list:
             const_dict = suite.constituent_dictionary()
             funcname = const_dict.num_consts_funcname()
-            cap.write("! Number of suite constants for {}".format(suite.name),
-                      2)
+            cap.comment(f"Number of suite constants for {suite.name}", 2)
             errvar_str = ConstituentVarDict.__errcode_callstr(herrcode,
                                                               herrmsg, suite)
-            cap.write("num_suite_consts = {}({})".format(funcname,
-                                                         errvar_str), 2)
+            cap.write(f"num_suite_consts = {funcname}({errvar_str})", 2)
             cap.write("num_consts = num_consts + num_suite_consts", 2)
         # end for
         cap.write("if ({} == 0) then".format(herrcode), 2)
-        cap.write("! Initialize constituent data and field object", 3)
+        cap.comment("Initialize constituent data and field object", 3)
         stmt = "call {}%initialize_table(num_consts)"
         cap.write(stmt.format(const_obj_name), 3)
         cap.write("end if", 2)
+        # Register host model constituents
+        cap.comment("Add host model constituent metadata", 3)
+        cap.write("do index = 1, size(host_constituents, 1)", 2)
+        cap.write(f"if ({herrcode} == 0) then", 3)
+        cap.write("const_prop => host_constituents(index)", 4)
+        stmt = "call {}%new_field(const_prop, {})"
+        cap.write(stmt.format(const_obj_name, obj_err_callstr), 4)
+        cap.write("end if", 3)
+        cap.write("nullify(const_prop)", 3)
+        cap.write("if ({} /= 0) then".format(herrcode), 3)
+        cap.write("exit", 4)
+        cap.write("end if", 3)
+        cap.write("end do", 2)
+        cap.write("", 0)
+        # Register suite constituents
         for suite in suite_list:
             errvar_str = ConstituentVarDict.__errcode_callstr(herrcode,
                                                               herrmsg, suite)
-            cap.write("if ({} == 0) then".format(herrcode), 2)
-            cap.write("! Add {} constituent metadata".format(suite.name), 3)
+            cap.write(f"if ({herrcode} == 0) then", 2)
+            cap.comment(f"Add {suite.name} constituent metadata", 3)
             const_dict = suite.constituent_dictionary()
             funcname = const_dict.num_consts_funcname()
-            cap.write("num_suite_consts = {}({})".format(funcname,
-                                                         errvar_str), 3)
+            cap.write(f"num_suite_consts = {funcname}({errvar_str})", 3)
             cap.write("end if", 2)
             funcname = const_dict.copy_const_subname()
             cap.write("do index = 1, num_suite_consts", 2)
-            cap.write("allocate(const_prop, stat={})".format(herrcode), 3)
-            cap.write("if ({} /= 0) then".format(herrcode), 3)
-            cap.write('{} = "ERROR allocating const_prop"'.format(herrmsg), 4)
+            cap.write(f"if ({herrcode} == 0) then", 3)
+            cap.write(f"allocate(const_prop, stat={herrcode})", 4)
             cap.write("end if", 3)
-            cap.write("if ({} == 0) then".format(herrcode), 3)
+            cap.write(f"if ({herrcode} /= 0) then", 3)
+            cap.write(f'{herrmsg} = "ERROR allocating const_prop"', 4)
+            cap.write("exit", 4)
+            cap.write("end if", 3)
+            cap.write(f"if ({herrcode} == 0) then", 3)
             stmt = "call {}(index, const_prop, {})"
             cap.write(stmt.format(funcname, errvar_str), 4)
             cap.write("end if", 3)
-            cap.write("if ({} == 0) then".format(herrcode), 3)
+            cap.write(f"if ({herrcode} == 0) then", 3)
             stmt = "call {}%new_field(const_prop, {})"
             cap.write(stmt.format(const_obj_name, obj_err_callstr), 4)
             cap.write("end if", 3)
             cap.write("nullify(const_prop)", 3)
-            cap.write("if ({} /= 0) then".format(herrcode), 3)
+            cap.write(f"if ({herrcode} /= 0) then", 3)
             cap.write("exit", 4)
             cap.write("end if", 3)
             cap.write("end do", 2)
             cap.write("", 0)
         # end for
-        cap.write("if ({} == 0) then".format(herrcode), 2)
-        stmt = "call {}%lock_table(ncols, num_layers, num_interfaces, {})"
+        cap.write(f"if ({herrcode} == 0) then", 2)
+        stmt = "call {}%lock_table(ncols, num_layers, {})"
         cap.write(stmt.format(const_obj_name, obj_err_callstr), 3)
         cap.write("end if", 2)
-        cap.write("! Set the index for each active constituent", 2)
-        cap.write("do index = 1, SIZE({})".format(const_indices_name), 2)
-        stmt = "field_ind = {}%field_index({}(index), {})"
+        cap.comment("Set the index for each active constituent", 2)
+        cap.write(f"do index = 1, SIZE({const_indices_name})", 2)
+        stmt = "call {}%const_index(field_ind, {}(index), {})"
         cap.write(stmt.format(const_obj_name, const_names_name,
                               obj_err_callstr), 3)
         cap.write("if (field_ind > 0) then", 3)
-        cap.write("{}(index) = field_ind".format(const_indices_name), 4)
+        cap.write(f"{const_indices_name}(index) = field_ind", 4)
         cap.write("else", 3)
-        cap.write("{} = 1".format(herrcode), 4)
+        cap.write(f"{herrcode} = 1", 4)
         stmt = "{} = 'No field index for '//trim({}(index))"
         cap.write(stmt.format(herrmsg, const_names_name), 4)
         cap.write("end if", 3)
-        cap.write("if ({} /= 0) then".format(herrcode), 3)
+        cap.write(f"if ({herrcode} /= 0) then", 3)
         cap.write("exit", 4)
         cap.write("end if", 3)
         cap.write("end do", 2)
-        cap.write("end {}".format(substmt), 1)
-        # Next, write num_consts routine
-        substmt = "function {}".format(num_const_funcname)
+        cap.write(f"end {substmt}", 1)
+        # Write num_consts routine
+        substmt = f"subroutine {num_const_funcname}"
         cap.write("", 0)
-        cap.write("integer {}({})".format(substmt, err_dummy_str), 1)
-        cap.write("! Return the number of constituent fields for this run", 2)
+        cap.write(f"{substmt}(num_flds, advected, {err_dummy_str})", 1)
+        cap.comment("Return the number of constituent fields for this run", 2)
         cap.write("", 0)
-        cap.write("! Dummy arguments", 2)
+        cap.comment("Dummy arguments", 2)
+        cap.write("integer,            intent(out)   :: num_flds", 2)
+        cap.write("logical, optional,  intent(in)    :: advected", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
         cap.write("", 0)
-        cap.write("{} = {}%num_constituents({})".format(num_const_funcname,
-                                                        const_obj_name,
-                                                        obj_err_callstr), 2)
+        call_str = "call {}%num_constituents(num_flds, advected=advected, {})"
+        cap.write(call_str.format(const_obj_name, obj_err_callstr), 2)
         cap.write("end {}".format(substmt), 1)
-        # Next, write copy_in routine
+        # Write copy_in routine
         substmt = "subroutine {}".format(copy_in_funcname)
         cap.write("", 0)
         cap.write("{}(const_array, {})".format(substmt, err_dummy_str), 1)
-        cap.write("! Copy constituent field info into <const_array>", 2)
+        cap.comment("Copy constituent field info into <const_array>", 2)
         cap.write("", 0)
-        cap.write("! Dummy arguments", 2)
+        cap.comment("Dummy arguments", 2)
         cap.write("real(kind_phys),    intent(out)   :: const_array(:,:,:)", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
@@ -599,20 +621,66 @@ class ConstituentVarDict(VarDictionary):
         cap.write("call {}%copy_in(const_array, {})".format(const_obj_name,
                                                             obj_err_callstr), 2)
         cap.write("end {}".format(substmt), 1)
-        # Next, write copy_out routine
+        # Write copy_out routine
         substmt = "subroutine {}".format(copy_out_funcname)
         cap.write("", 0)
         cap.write("{}(const_array, {})".format(substmt, err_dummy_str), 1)
-        cap.write("! Update constituent field info from <const_array>", 2)
+        cap.comment("Update constituent field info from <const_array>", 2)
         cap.write("", 0)
-        cap.write("! Dummy arguments", 2)
+        cap.comment("Dummy arguments", 2)
         cap.write("real(kind_phys),    intent(in)    :: const_array(:,:,:)", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
         cap.write("", 0)
         cap.write("call {}%copy_out(const_array, {})".format(const_obj_name,
-                                                             obj_err_callstr), 2)
+                                                             obj_err_callstr),
+                  2)
+        cap.write("end {}".format(substmt), 1)
+        # Write advected constituents routine
+        cap.write("", 0)
+        cap.write(f"function {advect_array_func}() result(const_ptr)", 1)
+        cap.write("", 0)
+        cap.comment("Return pointer to advected constituent array", 2)
+        cap.write("", 0)
+        cap.comment("Dummy argument", 2)
+        cap.write("real(kind_phys), pointer :: const_ptr(:,:,:)", 2)
+        cap.write("", 0)
+        cap.write(f"const_ptr => {const_obj_name}%advected_constituents_ptr()",
+                  2)
+        cap.write(f"end function {advect_array_func}", 1)
+        # Write the constituent property array routine
+        cap.write("", 0)
+        cap.write(f"function {prop_array_func}() result(const_ptr)", 1)
+        cap.write(f"use {CONST_DDT_MOD}, only: {CONST_PROP_PTR_TYPE}", 2)
+        cap.write("", 0)
+        cap.comment("Return pointer to array of constituent properties", 2)
+        cap.write("", 0)
+        cap.comment("Dummy argument", 2)
+        cap.write("type(ccpp_constituent_prop_ptr_t), pointer :: const_ptr(:)",
+                  2)
+        cap.write("", 0)
+        cap.write(f"const_ptr => {const_obj_name}%constituent_props_ptr()",
+                  2)
+        cap.write(f"end function {prop_array_func}", 1)
+        # Write constituent index function
+        substmt = f"subroutine {const_index_func}"
+        cap.write("", 0)
+        cap.write(f"{substmt}(stdname, const_index, {err_dummy_str})", 1)
+        cap.comment("Set <const_index> to the constituent array index " +     \
+                    "for <stdname>.", 2)
+        cap.comment("If <stdname> is not found, set <const_index> to -1 " +   \
+                    "set an error condition", 2)
+        cap.write("", 0)
+        cap.comment("Dummy arguments", 2)
+        cap.write("character(len=*),    intent(in)    :: stdname", 2)
+        cap.write("integer,             intent(out)   :: const_index", 2)
+        for evar in err_vars:
+            evar.write_def(cap, 2, host, dummy=True, add_intent="out")
+        # end for
+        cap.write("", 0)
+        cap.write(f"call {const_obj_name}%const_index(const_index, " +        \
+                  f"stdname, {obj_err_callstr})", 2)
         cap.write("end {}".format(substmt), 1)
 
     @staticmethod
@@ -637,19 +705,12 @@ class ConstituentVarDict(VarDictionary):
         return ConstituentVarDict.__const_prop_init_consts
 
     @staticmethod
-    def constituent_prop_type_name():
-        """Return the name of the derived type which holds constituent
-        properties."""
-        return ConstituentVarDict.__const_prop_type_name
-
-    @staticmethod
     def write_suite_use(outfile, indent):
         """Write use statements for any modules needed by the suite cap.
         The statements are written to <outfile> at indent, <indent>.
         """
-        omsg = "use ccpp_constituent_prop_mod, only: {}"
-        cpt_name = ConstituentVarDict.constituent_prop_type_name()
-        outfile.write(omsg.format(cpt_name), indent)
+        omsg = f"use ccpp_constituent_prop_mod, only: {CONST_PROP_TYPE}"
+        outfile.write(omsg, indent)
 
     @staticmethod
     def TF_string(tf_val):

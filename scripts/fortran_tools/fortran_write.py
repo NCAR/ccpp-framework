@@ -4,7 +4,9 @@
 """Code to write Fortran code
 """
 
-class FortranWriter(object):
+import math
+
+class FortranWriter:
     """Class to turn output into properly continued and indented Fortran code
     >>> FortranWriter("foo.F90", 'r', 'test', 'mod_name') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
@@ -59,9 +61,9 @@ end module {module}'''
 
     def indent(self, level=0, continue_line=False):
         'Return an indent string for any level'
-        indent = self._indent * level
+        indent = self.indent_size * level
         if continue_line:
-            indent = indent + self._continue_indent
+            indent = indent + self.__continue_indent
         # End if
         return indent*' '
 
@@ -71,19 +73,52 @@ end module {module}'''
         """Find the best line break point given <choices>.
         If <last> is present, use it as a target line length."""
         if last is None:
-            last = self._line_fill
+            last = self.__line_fill
         # End if
         # Find largest good break
-        possible = [x for x in choices if x < last]
+        possible = [x for x in choices if 0 < x < last]
         if not possible:
-            best = self._line_max + 1
+            best = self.__line_max + 1
         else:
             best = max(possible)
         # End if
-        if (best > self._line_max) and (last < self._line_max):
-            best = self.find_best_break(choices, last=self._line_max)
+        if (best > self.__line_max) and (last < self.__line_max):
+            best = self.find_best_break(choices, last=self.__line_max)
         # End if
         return best
+
+    ###########################################################################
+
+    @staticmethod
+    def _in_quote(test_str):
+        """Return True if <test_str> ends in a character context.
+        >>> FortranWriter._in_quote("hi'mom")
+        True
+        >>> FortranWriter._in_quote("hi mom")
+        False
+        >>> FortranWriter._in_quote("'hi mom'")
+        False
+        >>> FortranWriter._in_quote("'hi"" mom'")
+        False
+        """
+        in_single_char = False
+        in_double_char = False
+        for char in test_str:
+            if in_single_char:
+                if char == "'":
+                    in_single_char = False
+                # end if
+            elif in_double_char:
+                if char == '"':
+                    in_double_char = False
+                # end if
+            elif char == "'":
+                in_single_char = True
+            elif char == '"':
+                in_double_char = True
+            # end if
+        # end for
+        return in_single_char or in_double_char
 
     ###########################################################################
 
@@ -102,9 +137,18 @@ end module {module}'''
             # End for
         else:
             istr = self.indent(indent_level, continue_line)
-            outstr = istr + statement.strip()
+            ostmt = statement.strip()
+            is_comment_stmt = ostmt and (ostmt[0] == '!')
+            in_comment = ""
+            if ostmt and (ostmt[0] != '&'):
+                # Skip indent for continue that is in the middle of a
+                #    token or a quoted region
+                outstr = istr + ostmt
+            else:
+                outstr = ostmt
+            # end if
             line_len = len(outstr)
-            if line_len > self._line_fill:
+            if line_len > self.__line_fill:
                 # Collect pretty break points
                 spaces = list()
                 commas = list()
@@ -125,9 +169,14 @@ end module {module}'''
                     elif outstr[sptr] == '"':
                         in_double_char = True
                     elif outstr[sptr] == '!':
-                        # Comment in non-character context, suck in rest of line
+                        # Comment in non-character context
                         spaces.append(sptr-1)
-                        sptr = line_len - 1
+                        in_comment = "! " # No continue for comment
+                        if ((not is_comment_stmt) and
+                            (sptr >= self.__max_comment_start)):
+                            # suck in rest of line
+                            sptr = line_len - 1
+                        # end if
                     elif outstr[sptr] == ' ':
                         # Non-quote spaces are where we can break
                         spaces.append(sptr)
@@ -140,31 +189,62 @@ end module {module}'''
                     # End if (no else, other characters will be ignored)
                     sptr = sptr + 1
                 # End while
+                # Before looking for best space, reject any that are on a
+                #    comment line but before any significant characters
+                if outstr.lstrip()[0] == '!':
+                    first_space = outstr.index('!') + 1
+                    while ((outstr[first_space] == '!' or
+                            outstr[first_space] == ' ') and
+                           (first_space < line_len)):
+                        first_space += 1
+                    # end while
+                    if min(spaces) < first_space:
+                        spaces = [x for x in spaces if x >= first_space]
+                    # end if
                 best = self.find_best_break(spaces)
-                if best >= self._line_fill:
-                    best = self.find_best_break(commas)
+                if best >= self.__line_fill:
+                    best = min(best, self.find_best_break(commas))
                 # End if
-                if best > self._line_max:
-                    # This is probably a bad situation that might not
-                    # compile, just write the line and hope for the best.
+                line_continue = False
+                if best >= self.__line_max:
+                    # This is probably a bad situation so we have to break
+                    #   in an ugly spot
+                    best = self.__line_max - 1
+                    if len(outstr) > best:
+                        line_continue = '&'
+                    # end if
+                # end if
+                if len(outstr) > best:
+                    if self._in_quote(outstr[0:best+1]):
+                        line_continue = '&'
+                    else:
+                        # If next line is just comment, do not use continue
+                        line_continue = outstr[best+1:].lstrip()[0] != '!'
+                    # end if
+                elif not line_continue:
+                    line_continue = len(outstr) > best
+                # End if
+                if in_comment or is_comment_stmt:
                     line_continue = False
-                elif len(outstr) > best:
-                    # If next line is just comment, do not use continue
-                    # NB: Is this a Fortran issue or just a gfortran issue?
-                    line_continue = outstr[best+1:].lstrip()[0] != '!'
-                else:
-                    line_continue = True
-                # End if
+                # end if
                 if line_continue:
-                    fill = "{}&".format((self._line_fill - best)*' ')
+                    fill = "{}&".format((self.__line_fill - best)*' ')
                 else:
-                    fill = ''
+                    fill = ""
                 # End if
-                self._file.write("{}{}\n".format(outstr[0:best+1], fill))
-                statement = outstr[best+1:]
+                outline = f"{outstr[0:best+1]}{fill}".rstrip()
+                self.__file.write(f"{outline}\n")
+                if best <= 0:
+                    imsg = "Internal ERROR: Unable to break line"
+                    raise ValueError(f"{imsg}, '{statement}'")
+                # end if
+                statement = in_comment + outstr[best+1:]
+                if isinstance(line_continue, str) and statement:
+                    statement = line_continue + statement
+                # end if
                 self.write(statement, indent_level, continue_line=line_continue)
             else:
-                self._file.write("{}\n".format(outstr))
+                self.__file.write("{}\n".format(outstr))
             # End if
         # End if
 
@@ -175,7 +255,7 @@ end module {module}'''
                  line_fill=None, line_max=None):
         """Initialize thie FortranWriter object.
         Some boilerplate is written automatically."""
-        self.__file_desc = file_description
+        self.__file_desc = file_description.replace('\n', '\n!! ')
         self.__module = module_name
         # We only handle writing situations (for now) and only text
         if 'r' in mode:
@@ -184,26 +264,27 @@ end module {module}'''
         if 'b' in mode:
             raise ValueError('Binary mode not allowed in FortranWriter object')
         # End if
-        self._file = open(filename, mode)
+        self.__file = open(filename, mode)
         if indent is None:
-            self._indent = FortranWriter.__INDENT
+            self.__indent = FortranWriter.__INDENT
         else:
-            self._indent = indent
+            self.__indent = indent
         # End if
         if continue_indent is None:
-            self._continue_indent = FortranWriter.__CONTINUE_INDENT
+            self.__continue_indent = FortranWriter.__CONTINUE_INDENT
         else:
-            self._continue_indent = continue_indent
+            self.__continue_indent = continue_indent
         # End if
         if line_fill is None:
-            self._line_fill = FortranWriter.__LINE_FILL
+            self.__line_fill = FortranWriter.__LINE_FILL
         else:
-            self._line_fill = line_fill
+            self.__line_fill = line_fill
         # End if
+        self.__max_comment_start = math.ceil(self.__line_fill * 3 / 4)
         if line_max is None:
-            self._line_max = FortranWriter.__LINE_MAX
+            self.__line_max = FortranWriter.__LINE_MAX
         else:
-            self._line_max = line_max
+            self.__line_max = line_max
         # End if
 
     ###########################################################################
@@ -234,7 +315,7 @@ end module {module}'''
 
     def __exit__(self, *args):
         self.write(FortranWriter.__MOD_FOOTER.format(module=self.__module), 0)
-        self._file.close()
+        self.__file.close()
         return False
 
     ###########################################################################
@@ -244,6 +325,45 @@ end module {module}'''
         <module>"""
         return FortranWriter.__MOD_HEADER.format(file_desc=self.__file_desc,
                                                  module=self.__module)
+
+    ###########################################################################
+
+    def comment(self, comment, indent):
+        """Write a Fortran comment with contents, <comment>"""
+        mlcomment = comment.replace('\n', '\n! ') # No backslash in f string
+        self.write(f"! {mlcomment}", indent)
+
+    ###########################################################################
+
+    def blank_line(self):
+        """Write a blank line"""
+        self.write("", 0)
+
+    ###########################################################################
+
+    def include(self, filename):
+        """Insert the contents of <filename> verbatim."""
+        with open(filename, 'r') as infile:
+            for line in infile:
+                self.__file.write(line)
+            # end for
+        # end with
+
+    ###########################################################################
+
+    @property
+    def line_fill(self):
+        """Return the target line length for this Fortran file"""
+        return self.__line_fill
+
+    ###########################################################################
+
+    @property
+    def indent_size(self):
+        """Return the number of spaces for each indent level for this
+              Fortran file
+        """
+        return self.__indent
 
     ###########################################################################
 

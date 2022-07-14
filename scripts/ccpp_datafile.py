@@ -652,7 +652,7 @@ def _new_var_entry(parent, var, full_entry=True):
     """Create a variable sub-element of <parent> with information from <var>.
     If <full_entry> is False, only include standard name and intent.
     """
-    prop_list = ["intent"]
+    prop_list = ["intent", "local_name"]
     if full_entry:
         prop_list.extend(["allocatable", "active", "default_value",
                           "diagnostic_name", "diagnostic_name_fixed",
@@ -671,9 +671,13 @@ def _new_var_entry(parent, var, full_entry=True):
     if full_entry:
         dims = var.get_dimensions()
         if dims:
-            dim_entry = ET.SubElement(ventry, "dimensions")
-            dim_entry.text = " ".join(dims)
+            v_entry = ET.SubElement(ventry, "dimensions")
+            v_entry.text = " ".join(dims)
         # end if
+        v_entry = ET.SubElement(ventry, "source_type")
+        v_entry.text = var.source.ptype.lower()
+        v_entry = ET.SubElement(ventry, "source_name")
+        v_entry.text = var.source.name.lower()
     # end if
 
 ###############################################################################

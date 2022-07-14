@@ -20,7 +20,7 @@ from parse_tools import FORTRAN_SCALAR_REF_RE
 from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
-from parse_tools import ParseContext, ParseSource
+from parse_tools import ParseContext, ParseSource, type_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
@@ -196,6 +196,8 @@ class Var:
                     VariableProperty('active', str, optional_in=True,
                                      default_in='.true.'),
                     VariableProperty('polymorphic', bool, optional_in=True,
+                                     default_in='.false.'),
+                    VariableProperty('target', bool, optional_in=True,
                                      default_in='.false.')]
 
 # XXgoldyXX: v debug only
@@ -261,7 +263,7 @@ class Var:
         if isinstance(prop_dict, Var):
             prop_dict = prop_dict.copy_prop_dict()
         # end if
-        if source.type == 'scheme':
+        if source.ptype == 'scheme':
             self.__required_props = Var.__required_var_props
 # XXgoldyXX: v don't fill in default properties?
 #            mstr_propdict = Var.__var_propdict
@@ -272,7 +274,7 @@ class Var:
             mstr_propdict = Var.__spec_propdict
 # XXgoldyXX: ^ don't fill in default properties?
         # end if
-        self._source = source
+        self.__source = source
         # Grab a frozen copy of the context
         if context is None:
             self._context = ParseContext(context=source.context)
@@ -476,7 +478,7 @@ class Var:
             source_name = self.source.name
         # end if
         if source_type is None:
-            source_type = self.source.type
+            source_type = self.source.ptype
         # end if
         if context is None:
             context = self._context
@@ -610,7 +612,8 @@ class Var:
                             # end if
                         # end for
                         if dvar:
-                            dnames.append(dvar.get_prop_value('local_name'))
+                            # vdict is the dictionary where <dvar> was found
+                            dnames.append(dvar.call_string(vdict))
                         # end if
                         if not dvar:
                             emsg += sepstr + "No variable found in "
@@ -687,9 +690,15 @@ class Var:
                             dvar = var_dict.find_variable(standard_name=item,
                                                           any_scope=False)
                             if dvar is None:
-                                iname = None
+                                try:
+                                    dval = int(item)
+                                    iname = item
+                                except ValueError:
+                                    iname = None
+                                # end try
                             else:
-                                iname = dvar.get_prop_value('local_name')
+                                iname = dvar.call_string(var_dict,
+                                                         loop_vars=loop_vars)
                             # end if
                         else:
                             iname = ''
@@ -749,7 +758,7 @@ class Var:
         match = FORTRAN_SCALAR_REF_RE.match(local_name)
         return match
 
-    def intrinsic_elements(self, check_dict=None):
+    def intrinsic_elements(self, check_dict=None, ddt_lib=None):
         """Return a list of the standard names of this Var object's 'leaf'
         intrinsic elements or this Var object's standard name if it is an
         intrinsic 'leaf' variable.
@@ -765,9 +774,23 @@ class Var:
         Fortran does not support a way to reference those elements.
         """
         if self.is_ddt():
-            element_names = None
-            raise ValueError("shouldn't happen?")
-            # To Do, find and process named elements of DDT
+            dtitle = self.get_prop_value('type')
+            if ddt_lib and (dtitle in ddt_lib):
+                element_names = []
+                ddt_def = ddt_lib[dtitle]
+                for dvar in ddt_def.variable_list():
+                    delems = dvar.intrinsic_elements(check_dict=check_dict,
+                                                     ddt_lib=ddt_lib)
+                    if delems:
+                        element_names.extend(delems)
+                    # end if
+                # end for
+                if not element_names:
+                    element_names = None
+                # end if
+            else:
+                element_names = None
+            # end if
         # end if
         children = self.children()
         if (not children) and check_dict:
@@ -822,7 +845,7 @@ class Var:
         else:
             emsg = 'Attempting to set parent for {}, bad parent type, {}'
             lname = self.get_prop_value('local_name')
-            raise ParseInternalError(emsg.format(lname, type(parent_var)))
+            raise ParseInternalError(emsg.format(lname, type_name(parent_var)))
         # end if
 
     def add_child(self, cvar):
@@ -845,6 +868,11 @@ class Var:
         return iter(children) if children else None
 
     @property
+    def var(self):
+        "Return this object (base behavior for derived classes such as VarDDT)"
+        return self
+
+    @property
     def context(self):
         """Return this variable's parsed context"""
         return self._context
@@ -852,13 +880,13 @@ class Var:
     @property
     def source(self):
         """Return the source object for this variable"""
-        return self._source
+        return self.__source
 
     @source.setter
     def source(self, new_source):
         """Reset this Var's source if <new_source> seems legit"""
         if isinstance(new_source, ParseSource):
-            self._source = new_source
+            self.__source = new_source
         else:
             errmsg = 'Attemping to set source of {} ({}) to "{}"'
             stdname = self.get_prop_value('standard_name')
@@ -874,7 +902,7 @@ class Var:
     @property
     def host_interface_var(self):
         """True iff self is included in the host model interface calls"""
-        return self.source.type == 'host'
+        return self.source.ptype == 'host'
 
     @property
     def run_env(self):
@@ -932,7 +960,7 @@ class Var:
         return find_vertical_dimension(vdims)[0]
 
     def write_def(self, outfile, indent, wdict, allocatable=False,
-                  dummy=False, add_intent=None, extra_space=0):
+                  dummy=False, add_intent=None, extra_space=0, public=False):
         """Write the definition line for the variable to <outfile>.
         If <dummy> is True, include the variable's intent.
         If <dummy> is True but the variable has no intent, add the
@@ -994,10 +1022,9 @@ class Var:
         elif intent is not None:
             alloval = self.get_prop_value('allocatable')
             if (intent.lower()[-3:] == 'out') and alloval:
-                intent_str = 'allocatable, intent({})'.format(intent)
+                intent_str = f"allocatable, intent({intent})"
             else:
-                intent_str = 'intent({}){}'.format(intent,
-                                                   ' '*(5 - len(intent)))
+                intent_str = f"intent({intent}){' '*(5 - len(intent))}"
             # end if
         elif not dummy:
             intent_str = ''
@@ -1009,6 +1036,13 @@ class Var:
         else:
             comma = ' '
         # end if
+        if self.get_prop_value('target'):
+            targ = ", target"
+        else:
+            targ = ""
+        # end if
+        comma = targ + comma
+        extra_space -= len(targ)
         if self.is_ddt():
             if polymorphic:
                 dstr = "class({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
@@ -1427,7 +1461,9 @@ class VarDictionary(OrderedDict):
                 self[stdname] = variables[key]
             # end for
         elif variables is not None:
-            raise ParseInternalError('Illegal type for variables, {} in {}'.format(type(variables), self.name))
+            emsg = "Illegal type for variables, {} in {}"
+            raise ParseInternalError(emsg.format(type_name(variables),
+                                                 self.name))
         # end if
 
     @property
@@ -1608,7 +1644,7 @@ class VarDictionary(OrderedDict):
             # end if
             if not present:
                 dvar = self.find_variable(standard_name=dimname, any_scope=True)
-                if dvar and (dvar.source.type not in ignore_sources):
+                if dvar and (dvar.source.ptype not in ignore_sources):
                     if to_dict:
                         to_dict.add_variable(dvar, self.__run_env,
                                              exists_ok=True,
@@ -1631,7 +1667,7 @@ class VarDictionary(OrderedDict):
                         err_ret += "\nFound {} from excluded source, '{}'{}"
                         lname = dvar.get_prop_value('local_name')
                         dctx = context_string(dvar.context)
-                        err_ret = err_ret.format(lname, dvar.source.type, dctx)
+                        err_ret = err_ret.format(lname, dvar.source.ptype, dctx)
                     # end if
                 # end if
             # end if

@@ -10,6 +10,8 @@ Framework runtime information and parameter values.
 # Python library imports
 import argparse
 import os
+# CCPP framework imports
+from parse_tools import type_name
 
 _EPILOG = '''
 '''
@@ -103,8 +105,8 @@ class CCPPFrameworkEnv:
             # String of definitions, separated by spaces
             preproc_list = [x.strip() for x in preproc_defs.split(' ') if x]
         else:
-            wmsg = "Error: Bad preproc list type, '{}'"
-            emsg += esep + wmsg.format(type(preproc_defs))
+            wmsg = f"Error: Bad preproc list type, '{type_name(preproc_defs)}'"
+            emsg += esep + wmsg
             esep = '\n'
         # end if
         # Turn the list into a dictionary

@@ -1,6 +1,7 @@
 module test_prog
 
-   use ccpp_kinds, only: kind_phys
+   use ccpp_kinds,                only: kind_phys
+   use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
 
    implicit none
    private
@@ -22,13 +23,28 @@ module test_prog
       character(len=cm), pointer :: suite_required_vars(:) => NULL()
    end type suite_info
 
+   type(ccpp_constituent_properties_t), private, target :: host_constituents(1)
+
+
    private :: check_list
    private :: check_suite
-   private :: constituents_in     ! Data from suites to dycore array
-   private :: constituents_out    ! Data from dycore array to suires
    private :: advect_constituents ! Move data around
+   private :: check_errflg
 
 CONTAINS
+
+   subroutine check_errflg(subname, errflg, errmsg)
+      ! If errflg is not zero, print an error message
+      character(len=*), intent(in) :: subname
+      integer,          intent(in) :: errflg
+      character(len=*), intent(in) :: errmsg
+
+      if (errflg /= 0) then
+         write(6, '(a,i0,4a)') "Error ", errflg, " from ", trim(subname),     &
+              ':', trim(errmsg)
+      end if
+
+   end subroutine check_errflg
 
    logical function check_list(test_list, chk_list, list_desc, suite_name)
       ! Check a list (<test_list>) against its expected value (<chk_list>)
@@ -185,52 +201,6 @@ CONTAINS
        end if
     end function check_suite
 
-    logical function constituents_in(num_host_fields) result(okay)
-       ! Copy advected species from physics to 'dynamics' array
-       use test_host_mod,      only: phys_state, ncnst, index_qv
-       use test_host_ccpp_cap, only: test_host_ccpp_gather_constituents
-
-       ! Dummy argument
-       integer, intent(in) :: num_host_fields ! Packed at beginning of Q
-       ! Local variables
-       integer            :: q_off
-       integer            :: errflg
-       character(len=512) :: errmsg
-
-       okay = .true.
-       q_off = num_host_fields + 1
-       call test_host_ccpp_gather_constituents(phys_state%q(:,:,q_off:),      &
-            errflg=errflg, errmsg=errmsg)
-       if (errflg /= 0) then
-          write(6, *) "ERROR: gather_constituents failed, '", trim(errmsg), "'"
-          okay = .false.
-       end if
-
-    end function constituents_in
-
-    logical function constituents_out(num_host_fields) result(okay)
-       ! Copy advected constituents back to physics
-       use test_host_mod,      only: phys_state, ncnst, index_qv
-       use test_host_ccpp_cap, only: test_host_ccpp_update_constituents
-
-       ! Dummy argument
-       integer, intent(in) :: num_host_fields ! Packed at beginning of Q
-       ! Local variables
-       integer            :: q_off
-       integer            :: errflg
-       character(len=512) :: errmsg
-
-       okay = .true.
-       q_off = num_host_fields + 1
-       call test_host_ccpp_update_constituents(phys_state%q(:,:,q_off:),      &
-            errflg=errflg, errmsg=errmsg)
-       if (errflg /= 0) then
-          write(6, *) "ERROR: update_constituents failed, '", trim(errmsg), "'"
-          okay = .false.
-       end if
-
-    end function constituents_out
-
     subroutine advect_constituents()
        use test_host_mod, only: phys_state, ncnst, index_qv, ncols, pver
        use test_host_mod, only: twist_array
@@ -248,17 +218,21 @@ CONTAINS
     !!
     subroutine test_host(retval, test_suites)
 
-       use test_host_mod,      only: num_time_steps, num_host_advected
+       use ccpp_constituent_prop_mod, only: ccpp_constituent_prop_ptr_t
+       use test_host_mod,      only: num_time_steps
        use test_host_mod,      only: init_data, compare_data
-       use test_host_mod,      only: ncols, pver, pverp
+       use test_host_mod,      only: ncols, pver
        use test_host_ccpp_cap, only: test_host_ccpp_register_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_number_constituents
+       use test_host_ccpp_cap, only: test_host_advected_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
        use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_initial
        use test_host_ccpp_cap, only: test_host_ccpp_physics_run
        use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_final
        use test_host_ccpp_cap, only: test_host_ccpp_physics_finalize
        use test_host_ccpp_cap, only: ccpp_physics_suite_list
+       use test_host_ccpp_cap, only: test_host_const_get_index
+       use test_host_ccpp_cap, only: test_host_model_const_properties
 
        type(suite_info), intent(in)  :: test_suites(:)
        logical,          intent(out) :: retval
@@ -266,12 +240,18 @@ CONTAINS
        logical                         :: check
        integer                         :: col_start, col_end
        integer                         :: index, sind
+       integer                         :: index_liq, index_ice
        integer                         :: time_step
        integer                         :: num_suites
        integer                         :: num_advected ! Num advected species
+       logical                         :: const_log
        character(len=128), allocatable :: suite_names(:)
+       character(len=256)              :: const_str
        character(len=512)              :: errmsg
        integer                         :: errflg
+       real(kind_phys), pointer        :: const_ptr(:,:,:)
+       type(ccpp_constituent_prop_ptr_t), pointer :: const_props(:)
+       character(len=*), parameter     :: subname = 'test_host'
 
        ! Gather and test the inspection routines
        num_suites = size(test_suites)
@@ -301,36 +281,125 @@ CONTAINS
        end if
 
        ! Register the constituents to find out what needs advecting
-       call test_host_ccpp_register_constituents(suite_names(:),              &
-            ncols, pver, pverp, errmsg=errmsg, errflg=errflg)
-       if (errflg /= 0) then
-          write(6, '(2a)') 'ERROR register_constituents: ', trim(errmsg)
-       end if
-       num_advected = test_host_ccpp_number_constituents(errmsg=errmsg,       &
-            errflg=errflg)
-       if (num_advected /= 2) then
-          write(6, '(a,i0)') "ERROR: num advected constituents = ", num_advected
-          STOP 2
-       end if
+      call host_constituents(1)%initialize(std_name="specific_humidity",      &
+           long_name="Specific humidity", units="kg kg-1",                    &
+           vertical_dim="vertical_layer_dimension", advected=.true.,          &
+           errcode=errflg, errmsg=errmsg)
+      call check_errflg(subname//'.initialize', errflg, errmsg)
+      if (errflg == 0) then
+         call test_host_ccpp_register_constituents(suite_names(:),            &
+              ncols, pver, host_constituents, errmsg=errmsg, errflg=errflg)
+      end if
+      if (errflg /= 0) then
+         write(6, '(2a)') 'ERROR register_constituents: ', trim(errmsg)
+      end if
+      ! Check number of advected constituents
+      if (errflg == 0) then
+         call test_host_ccpp_number_constituents(num_advected, errmsg=errmsg, &
+              errflg=errflg)
+         call check_errflg(subname//".num_advected", errflg, errmsg)
+      end if
+      if (num_advected /= 3) then
+         write(6, '(a,i0)') "ERROR: num advected constituents = ", num_advected
+         STOP 2
+      end if
 
-       ! Initialize our 'data'
-       call init_data(num_advected)
+      ! Initialize our 'data'
+      if (errflg == 0) then
+         const_ptr => test_host_advected_constituents()
+         call test_host_const_get_index('specific_humidity', index,           &
+              errflg, errmsg)
+         call check_errflg(subname//".index_specific_humidity", errflg, errmsg)
+      end if
+      if (errflg == 0) then
+         call test_host_const_get_index('cloud_liquid_dry_mixing_ratio',      &
+              index_liq, errflg, errmsg)
+         call check_errflg(subname//".index_cld_liq", errflg, errmsg)
+      end if
+      if (errflg == 0) then
+         call test_host_const_get_index('cloud_ice_dry_mixing_ratio',         &
+              index_ice, errflg, errmsg)
+         call check_errflg(subname//".index_cld_ice", errflg, errmsg)
+      end if
+      call init_data(const_ptr, index, index_liq, index_ice)
+      ! Check some constituent properties
+      if (errflg == 0) then
+         const_props => test_host_model_const_properties()
+         call const_props(index)%standard_name(const_str, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to get standard_name for specific_humidity, index = ",      &
+                 index, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (trim(const_str) /= 'specific_humidity') then
+            write(6, *) "ERROR: standard name, '", trim(const_str),           &
+                 "' should be 'specific_humidity'"
+            errflg = -1
+         end if
+      end if
+      if (errflg == 0) then
+         call const_props(index_liq)%long_name(const_str, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to get long_name for cld_liq index = ",                     &
+                 index_liq, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (trim(const_str) /= 'Cloud liquid dry mixing ratio') then
+            write(6, *) "ERROR: long name, '", trim(const_str),               &
+                 "' should be 'Cloud liquid dry mixing ratio'"
+            errflg = -1
+         end if
+      end if
+      if (errflg == 0) then
+         call const_props(index_ice)%is_mass_mixing_ratio(const_log,          &
+              errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to get mass mixing ratio prop for cld_ice index = ",       &
+                 index_ice, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (.not. const_log) then
+            write(6, *) "ERROR: cloud ice is not a mass mixing_ratio"
+            errflg = -1
+         end if
+      end if
+      if (errflg == 0) then
+         call const_props(index_ice)%is_dry(const_log, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to get dry prop for cld_ice index = ", index_ice, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (.not. const_log) then
+            write(6, *) "ERROR: cloud ice mass_mixing_ratio is not dry"
+            errflg = -1
+         end if
+      end if
 
        ! Use the suite information to setup the run
-       do sind = 1, num_suites
-          call test_host_ccpp_physics_initialize(test_suites(sind)%suite_name,&
-               errmsg, errflg)
-          if (errflg /= 0) then
-             write(6, '(4a)') 'ERROR in initialize of ',                      &
-                  trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
-             exit
-          end if
+      do sind = 1, num_suites
+         if (errflg == 0) then
+            call test_host_ccpp_physics_initialize(                           &
+                 test_suites(sind)%suite_name, errmsg, errflg)
+            if (errflg /= 0) then
+               write(6, '(4a)') 'ERROR in initialize of ',                   &
+                    trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
+               exit
+            end if
+         end if
        end do
        ! Loop over time steps
        do time_step = 1, num_time_steps
           ! Initialize the timestep
           do sind = 1, num_suites
-             if (retval) then
+             if (errflg == 0) then
                 call test_host_ccpp_physics_timestep_initial(                 &
                      test_suites(sind)%suite_name, errmsg, errflg)
                 if (errflg /= 0) then
@@ -348,15 +417,17 @@ CONTAINS
 
              do sind = 1, num_suites
                 do index = 1, size(test_suites(sind)%suite_parts)
-                   call test_host_ccpp_physics_run(                           &
-                        test_suites(sind)%suite_name,                         &
-                        test_suites(sind)%suite_parts(index),                 &
-                        col_start, col_end, errmsg, errflg)
-                   if (errflg /= 0) then
-                      write(6, '(5a)') trim(test_suites(sind)%suite_name),    &
-                           '/', trim(test_suites(sind)%suite_parts(index)),   &
-                           ': ', trim(errmsg)
-                      exit
+                   if (errflg == 0) then
+                      call test_host_ccpp_physics_run(                        &
+                           test_suites(sind)%suite_name,                      &
+                           test_suites(sind)%suite_parts(index),              &
+                           col_start, col_end, errmsg, errflg)
+                      if (errflg /= 0) then
+                         write(6, '(5a)') trim(test_suites(sind)%suite_name), &
+                              '/', trim(test_suites(sind)%suite_parts(index)),&
+                              ': ', trim(errmsg)
+                         exit
+                      end if
                    end if
                 end do
              end do
@@ -370,16 +441,13 @@ CONTAINS
              if (errflg /= 0) then
                 write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ',    &
                      trim(errmsg)
+                exit
              end if
           end do
 
           ! Run "dycore"
           if (errflg == 0) then
-             check = constituents_in(num_host_advected)
-          end if
-          if (check) then
              call advect_constituents()
-             check = constituents_out(num_host_advected)
           end if
        end do ! End time step loop
 
@@ -392,13 +460,14 @@ CONTAINS
                      trim(errmsg)
                 write(6,'(2a)') 'An error occurred in ccpp_timestep_final, ', &
                      'Exiting...'
+                exit
              end if
           end if
        end do
 
        if (errflg == 0) then
           ! Run finished without error, check answers
-          if (compare_data(num_advected + num_host_advected)) then
+          if (compare_data(num_advected)) then
              write(6, *) 'Answers are correct!'
              errflg = 0
           else
