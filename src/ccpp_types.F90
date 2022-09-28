@@ -35,7 +35,7 @@ module ccpp_types
 
 #ifndef MPI
     type :: MPI_Comm
-      integer, parameter :: dummy = 0
+      integer :: dummy = 0
     end type MPI_Comm
 #endif
 
