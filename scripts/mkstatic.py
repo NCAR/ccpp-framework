@@ -25,6 +25,10 @@ from mkcap import Var
 
 ###############################################################################
 
+# Limit suite names to 37 characters; this keeps cap names below 64 characters
+# Cap names of 64 characters or longer can cause issues with some compilers.
+SUITE_NAME_MAX_CHARS = 37
+
 # Maximum number of dimensions of an array allowed by the Fortran 2008 standard
 FORTRAN_ARRAY_MAX_DIMS = 15
 
@@ -624,6 +628,12 @@ end module {module}
         if not (os.path.basename(self._sdf_name) == 'suite_{}.xml'.format(self._name)):
             logging.critical("Invalid suite name {0} in suite definition file {1}.".format(
                                                                self._name, self._sdf_name))
+            success = False
+            return success
+
+        # Check if suite name is too long
+        if len(self._name) > SUITE_NAME_MAX_CHARS:
+            logging.critical(f"Suite name {self._name} has more than the allowed {SUITE_NAME_MAX_CHARS} characters")
             success = False
             return success
 
