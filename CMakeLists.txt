@@ -11,6 +11,12 @@ set(AUTHORS "Dom Heinzeller" "Grant Firl" "Mike Kavulich" "Steve Goldhaber")
 string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
+# Set MPI flags for C/C++/Fortran
+if (MPI)
+  find_package(MPI REQUIRED C Fortran)
+endif (OPENMP)
+
+#------------------------------------------------------------------------------
 # Set OpenMP flags for C/C++/Fortran
 if (OPENMP)
   find_package(OpenMP REQUIRED)
