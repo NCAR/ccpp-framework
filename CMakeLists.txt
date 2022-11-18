@@ -14,7 +14,7 @@ string(TIMESTAMP YEAR "%Y")
 # Set MPI flags for C/C++/Fortran
 if (MPI)
   find_package(MPI REQUIRED C Fortran)
-endif (OPENMP)
+endif (MPI)
 
 #------------------------------------------------------------------------------
 # Set OpenMP flags for C/C++/Fortran
