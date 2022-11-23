@@ -3,11 +3,11 @@
 # CCPP framework imports
 from state_machine import StateMachine
 
-_INIT_ST = r"(?:(?i)init(?:ial(?:ize)?)?)"
-_FINAL_ST = r"(?:(?i)final(?:ize)?)"
-_RUN_ST = r"(?:(?i)run)"
-_TS_INIT_ST = r"(?:(?i)timestep_init(?:ial(?:ize)?)?)"
-_TS_FINAL_ST = r"(?:(?i)timestep_final(?:ize)?)"
+_INIT_ST = r"(?:init(?:ial(?:ize)?)?)"
+_FINAL_ST = r"(?:final(?:ize)?)"
+_RUN_ST = r"(?:run)"
+_TS_INIT_ST = r"(?:timestep_init(?:ial(?:ize)?)?)"
+_TS_FINAL_ST = r"(?:timestep_final(?:ize)?)"
 
 # Allowed CCPP transitions
 # pylint: disable=bad-whitespace
