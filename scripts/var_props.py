@@ -1217,6 +1217,10 @@ class VarCompatObj:
         string = string.replace("-","_minus_")
         # Replace each plus sign with '_plus_'
         string = string.replace("+","_plus_")
+        # "1" is a valid unit
+        if string == "1":
+            string = "one"
+        # end if
         # Test that the resulting string is a valid Python identifier
         if not string.isidentifier():
             emsg = "Unsupported units entry for {}, '{}'{}"
