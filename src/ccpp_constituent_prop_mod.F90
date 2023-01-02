@@ -43,6 +43,8 @@ module ccpp_constituent_prop_mod
       integer,          private              :: const_water = int_unassigned
       ! minimum_mr is the minimum allowed value (default zero)
       real(kind_phys),  private              :: min_val = 0.0_kind_phys
+      ! molar_mass is the molecular weight of the constituent (g mol-1)
+      real(kind_phys),  private              :: molar_mass = kphys_unassigned
    contains
       ! Required hashable method
       procedure :: key => ccp_properties_get_key
@@ -64,6 +66,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_moist                => ccp_is_moist
       procedure :: is_wet                  => ccp_is_wet
       procedure :: minimum                 => ccp_min_val
+      procedure :: molec_weight            => ccp_molec_weight
       ! Copy method (be sure to update this anytime fields are added)
       procedure :: copyConstituent
       generic :: assignment(=) => copyConstituent
@@ -95,6 +98,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_moist                => ccpt_is_moist
       procedure :: is_wet                  => ccpt_is_wet
       procedure :: minimum                 => ccpt_min_val
+      procedure :: molec_weight            => ccpt_molec_weight
       ! ccpt_set: Set the internal pointer
       procedure :: set                     => ccpt_set
       ! Methods that change state (XXgoldyXX: make private?)
@@ -734,6 +738,24 @@ CONTAINS
       end if
 
    end subroutine ccp_min_val
+
+   !########################################################################
+
+   subroutine ccp_molec_weight(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      real(kind_phys),                      intent(out) :: val_out
+      integer,                              intent(out) :: errcode
+      character(len=*),                     intent(out) :: errmsg
+
+      if (this%is_initialized(errcode, errmsg)) then
+         val_out = this%molar_mass
+      else
+         val_out = kphys_unassigned
+      end if
+
+   end subroutine ccp_molec_weight
 
    !########################################################################
    !
@@ -1804,6 +1826,28 @@ CONTAINS
       end if
 
    end subroutine ccpt_min_val
+
+   !########################################################################
+
+   subroutine ccpt_molec_weight(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      real(kind_phys),                    intent(out) :: val_out
+      integer,                            intent(out) :: errcode
+      character(len=*),                   intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_molec_weight'
+
+      if (associated(this%prop)) then
+         call this%prop%molec_weight(val_out, errcode, errmsg)
+      else
+         val_out = kphys_unassigned
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_molec_weight
 
    !########################################################################
 
