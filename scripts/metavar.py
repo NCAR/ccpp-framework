@@ -20,6 +20,7 @@ from parse_tools import FORTRAN_SCALAR_REF_RE
 from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
+from parse_tools import check_molar_mass
 from parse_tools import ParseContext, ParseSource, type_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
@@ -199,6 +200,9 @@ class Var:
                                      default_in='.false.'),
                     VariableProperty('target', bool, optional_in=True,
                                      default_in='.false.')]
+                    VariableProperty('molar_mass', float,
+                                     optional_in=True, default_in=0.0,
+                                     check_fn_in=check_molar_mass)
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,
@@ -1060,6 +1064,7 @@ class Var:
                 cspc = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
+            
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
                                   name=name, dims=dimstr, cspc=cspc,
                                   sname=stdname), indent)

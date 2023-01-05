@@ -597,7 +597,7 @@ class VariableProperty:
         """Conduct sanity checks and initialize this variable property."""
         self._name = name_in
         self._type = type_in
-        if self._type not in [bool, int, list, str]:
+        if self._type not in [bool, int, list, str, float]:
             emsg = "{} has invalid VariableProperty type, '{}'"
             raise CCPPError(emsg.format(name_in, type_in))
         # end if

@@ -936,6 +936,50 @@ def check_diagnostic_id(test_val, prop_dict, error):
 
 ########################################################################
 
+def check_molar_mass(test_val, prop_dict, error):
+    """Return <test_val> if valid molar mass, otherwise, None
+    if <error> is True, raise an Exception if <test_val> is not valid.
+    >>> check_molar_mass(1, None, True)
+    1
+    >>> check_molar_mass(1.0, None, True)
+    1.0
+    >>> check_molar_mass(1.0, None, False)
+    1.0
+    >>> check_molar_mass('-1', None, False)
+
+    >>> check_molar_mass('-1.0', None, False)
+
+    >>> check_molar_mass('string', None, False)
+
+    >>> check_molar_mass('-1', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '-1' is not a valid molar mass
+    >>> check_molar_mass('-1.0', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '-1.0' is not a valid molar mass
+    >>> check_molar_mass('string', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '-1.0' is not a valid molar mass
+    """
+    if isinstance(test_val, float) or isinstance(test_val, int):
+       if test_val < 0.0:
+          if error:
+             raise CCPPError("{} is not a valid molar mass".format(test_val))
+          else:
+             test_val = None
+          # end if
+       # end if
+    else:
+       if error:
+          raise CCPPError("{} is invalid; not a float or int".format(test_val))
+       else:
+          test_val = None
+       # end if
+    # end if
+    return test_val
+
+########################################################################
+
 def check_balanced_paren(string, start=0, error=False):
     """Return <string> indices delineating a balance set of parentheses.
     Parentheses in character context do not count.
