@@ -688,6 +688,18 @@ class VariableProperty:
                     valid_val = tval
             except CCPPError:
                 valid_val = None # Redundant but more expressive than pass
+        elif self.ptype is float:
+            try:
+                tval = float(test_value)
+                if self._valid_value is not Note:
+                    if tval in self._valid_values:
+                        valid_val = tval
+                    else:
+                        valid_val = None # i.e. pass
+                else:
+                    valid_val = tval
+            except CCPPError:
+                valid_val = None
         elif self.ptype is list:
             if isinstance(test_value, str):
                 tval = fortran_list_match(test_value)

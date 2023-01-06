@@ -199,10 +199,10 @@ class Var:
                     VariableProperty('polymorphic', bool, optional_in=True,
                                      default_in='.false.'),
                     VariableProperty('target', bool, optional_in=True,
-                                     default_in='.false.')]
+                                     default_in='.false.'),
                     VariableProperty('molar_mass', float,
                                      optional_in=True, default_in=0.0,
-                                     check_fn_in=check_molar_mass)
+                                     check_fn_in=check_molar_mass)]
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,
