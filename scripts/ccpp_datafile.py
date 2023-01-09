@@ -657,7 +657,8 @@ def _new_var_entry(parent, var, full_entry=True):
         prop_list.extend(["allocatable", "active", "default_value",
                           "diagnostic_name", "diagnostic_name_fixed",
                           "kind", "persistence", "polymorphic", "protected",
-                          "state_variable", "type", "units", "molar_mass"])
+                          "state_variable", "type", "units", "molar_mass",
+                          "advected"])
         prop_list.extend(Var.constituent_property_names())
     # end if
     ventry = ET.SubElement(parent, "var")

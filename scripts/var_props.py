@@ -14,6 +14,7 @@ import re
 from conversion_tools import unit_conversion
 from framework_env import CCPPFrameworkEnv
 from parse_tools import check_local_name, check_fortran_type, context_string
+from parse_tools import check_molar_mass
 from parse_tools import FORTRAN_DP_RE, FORTRAN_SCALAR_REF_RE, fortran_list_match
 from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
@@ -586,6 +587,8 @@ class VariableProperty:
     'foo(bar)'
     >>> VariableProperty('local_name', str, check_fn_in=check_local_name).valid_value('q(:,:,index_of_water_vapor_specific_humidity)')
     'q(:,:,index_of_water_vapor_specific_humidity)'
+    >>> VariableProperty('molar_mass', float, check_fn_in=check_molar_mass).valid_value('12.1')
+    12.1
     """
 
     __true_vals = ['t', 'true', '.true.']
@@ -691,7 +694,7 @@ class VariableProperty:
         elif self.ptype is float:
             try:
                 tval = float(test_value)
-                if self._valid_value is not Note:
+                if self._valid_values is not None:
                     if tval in self._valid_values:
                         valid_val = tval
                     else:
@@ -1070,7 +1073,7 @@ class VarCompatObj:
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('1', 'none') #doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
-        parse_source.ParseSyntaxError: Unsupported units entry for var_stdname, '1', at foo.F90:4
+        parse_source.ParseSyntaxError: Unsupported unit conversion, '1' to 'none' for 'var_stdname'
 
         # Try an unsupported conversion
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('C', 'm') #doctest: +ELLIPSIS
