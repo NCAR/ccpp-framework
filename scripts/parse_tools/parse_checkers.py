@@ -13,6 +13,7 @@ from parse_source import CCPPError, ParseInternalError
 ########################################################################
 
 _UNITS_RE = re.compile(r"^[^/!@#$%^&*=()\|<>\[\]{}?,.]+$")
+_MAX_MOLAR_MASS = 10000.0
 
 def check_units(test_val, prop_dict, error):
     """Return <test_val> if a valid unit, otherwise, None
@@ -951,6 +952,8 @@ def check_molar_mass(test_val, prop_dict, error):
 
     >>> check_molar_mass('string', None, False)
 
+    >>> check_molar_mass(10001, None, False)
+
     >>> check_molar_mass('-1', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: '-1' is not a valid molar mass
@@ -960,27 +963,28 @@ def check_molar_mass(test_val, prop_dict, error):
     >>> check_molar_mass('string', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: '-1.0' is not a valid molar mass
+    >>> check_molar_mass(10001, None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '10001' is not a valid molar mass
     """
     # Check if input value is an int or float
     try:
-        valid = isinstance(float(test_val), float)
+        test_val = float(test_val)
+        if test_val < 0.0 or test_val > _MAX_MOLAR_MASS:
+           if error:
+               raise CCPPError("{} is not a valid molar mass".format(test_val))
+           else:
+               test_val = None
+           # end if
+        # end if
     except:
         # not an int or float, conditionally throw error
         if error:
            raise CCPPError("{} is invalid; not a float or int".format(test_val))
         else:
-           return None
+           test_val=None
         # end if
     # end try
-    # we have an int or float, convert to float and see if it's positive
-    test_val = float(test_val)
-    if test_val < 0.0:
-       if error:
-           raise CCPPError("{} is not a valid molar mass".format(test_val))
-       else:
-           return None
-       # end if
-    # end if
     return test_val
 
 ########################################################################
