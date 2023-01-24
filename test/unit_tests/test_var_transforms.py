@@ -163,11 +163,23 @@ class VarCompatTestCase(unittest.TestCase):
                                      'real', vkind='kind_phys')
         real_scalar2 = self._new_var('real_stdname1', 'd', [],
                                      'real', vkind='kind_phys')
+        char_nounit1 = self._new_var('char_stdname1', 'none', [],
+                                     'character', vkind='len=256')
+        char_nounit2 = self._new_var('char_stdname1', '1', [],
+                                     'character', vkind='len=256')
         with self.assertRaises(ParseSyntaxError) as context:
             compat = real_scalar1.compatible(real_scalar2, self.__run_env)
         # end with
+        #Test bad conversion for real time variables
         #Verify correct error message returned
         emsg = "Unsupported unit conversion, 'min' to 'd' for 'real_stdname1'"
+        self.assertTrue(emsg in str(context.exception))
+        #Test bad conversion for unitless variables
+        with self.assertRaises(ParseSyntaxError) as context:
+            compat = char_nounit1.compatible(char_nounit2, self.__run_env)
+        # end with
+        #Verify correct error message returned
+        emsg = "Unsupported unit conversion, 'none' to '1' for 'char_stdname1'"
         self.assertTrue(emsg in str(context.exception))
 
     def test_valid_kind_change(self):
