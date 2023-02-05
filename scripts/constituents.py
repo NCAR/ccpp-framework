@@ -452,7 +452,7 @@ class ConstituentVarDict(VarDictionary):
     @staticmethod
     def write_host_routines(cap, host, reg_funcname, num_const_funcname,
                             copy_in_funcname, copy_out_funcname, const_obj_name,
-                            const_names_name, const_indices_name,
+                            const_names_name, const_indices_name, const_array_func,
                             advect_array_func, prop_array_func,
                             const_index_func, suite_list, err_vars):
         """Write out the host model <reg_funcname> routine which will
@@ -462,6 +462,10 @@ class ConstituentVarDict(VarDictionary):
            <num_const_funcname>: Number of constituents
            <copy_in_funcname>: Collect constituent fields for host
            <copy_out_funcname>: Update constituent fields from host
+           <const_array_func>: Return a pointer to the constituent array
+           <advect_array_func>: Return a pointer to the advected constituent array
+           <prop_array_func>: Return a pointer to the constituent properties array
+           <const_index_func>: Return the index of a provided constituent name
         Output is written to <cap>.
         """
 # XXgoldyXX: v need to generalize host model error var type support
@@ -637,6 +641,17 @@ class ConstituentVarDict(VarDictionary):
                                                              obj_err_callstr),
                   2)
         cap.write("end {}".format(substmt), 1)
+        # Write constituents routine
+        cap.write("", 0)
+        cap.write(f"function {const_array_func}() result(const_ptr)", 1)
+        cap.write("", 0)
+        cap.comment("Return pointer to advected constituent array", 2)
+        cap.write("", 0)
+        cap.comment("Dummy argument", 2)
+        cap.write("real(kind_phys), pointer :: const_ptr(:,:,:)", 2)
+        cap.write("", 0)
+        cap.write(f"const_ptr => {const_obj_name}%field_data_ptr()", 2)
+        cap.write("end function {const_array_func}", 1)
         # Write advected constituents routine
         cap.write("", 0)
         cap.write(f"function {advect_array_func}() result(const_ptr)", 1)

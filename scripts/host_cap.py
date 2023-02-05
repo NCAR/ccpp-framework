@@ -151,6 +151,14 @@ def constituent_model_const_indices(host_model):
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
+def constituent_model_const_indices(host_model):
+###############################################################################
+    """Return the name of the function that will return a pointer to the
+       array of all constituents"""
+    hstr = "{}_constituents".format(host_model.name)
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
 def constituent_model_advected_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
@@ -428,6 +436,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write("public :: {}".format(copyin_name), 1)
         copyout_name = constituent_copyout_subname(host_model)
         cap.write("public :: {}".format(copyout_name), 1)
+        const_array_func = constituent_model_consts(host_model)
+        cap.write(f"public :: {const_array_func}", 1)
         advect_array_func = constituent_model_advected_consts(host_model)
         cap.write(f"public :: {advect_array_func}", 1)
         prop_array_func = constituent_model_const_props(host_model)
@@ -575,6 +585,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                                                copyout_name, const_obj_name,
                                                const_names_name,
                                                const_indices_name,
+                                               const_array_func,
                                                advect_array_func,
                                                prop_array_func,
                                                const_index_func,
