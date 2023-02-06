@@ -651,7 +651,7 @@ class ConstituentVarDict(VarDictionary):
         cap.write("real(kind_phys), pointer :: const_ptr(:,:,:)", 2)
         cap.write("", 0)
         cap.write(f"const_ptr => {const_obj_name}%field_data_ptr()", 2)
-        cap.write("end function {const_array_func}", 1)
+        cap.write(f"end function {const_array_func}", 1)
         # Write advected constituents routine
         cap.write("", 0)
         cap.write(f"function {advect_array_func}() result(const_ptr)", 1)
