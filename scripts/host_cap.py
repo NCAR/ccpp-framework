@@ -144,14 +144,14 @@ def constituent_model_const_stdnames(host_model):
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
-def constituent_model_consts(host_model):
+def constituent_model_const_indices(host_model):
 ###############################################################################
     """Return the name of the array of constituent field array indices"""
     hstr = "{}_model_const_indices".format(host_model.name)
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
-def constituent_model_const_indices(host_model):
+def constituent_model_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
        array of all constituents"""

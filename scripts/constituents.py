@@ -645,7 +645,7 @@ class ConstituentVarDict(VarDictionary):
         cap.write("", 0)
         cap.write(f"function {const_array_func}() result(const_ptr)", 1)
         cap.write("", 0)
-        cap.comment("Return pointer to advected constituent array", 2)
+        cap.comment("Return pointer to constituent array", 2)
         cap.write("", 0)
         cap.comment("Dummy argument", 2)
         cap.write("real(kind_phys), pointer :: const_ptr(:,:,:)", 2)
