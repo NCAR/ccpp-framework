@@ -187,6 +187,9 @@ def string_to_python_identifier(string):
     string = string.replace("-","_minus_")
     # Replace plus signs with _plus_
     string = string.replace("+","_plus_")
+    # "1" is a valid unit
+    if string == "1":
+        string = "one"
     # Test that the resulting string is a valid Python identifier
     if re.match("[_A-Za-z][_a-zA-Z0-9]*$", string) and not keyword.iskeyword(string):
         return string
