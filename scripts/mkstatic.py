@@ -896,7 +896,7 @@ module {module}
    private
    public :: {subroutines}
 
-   logical, save :: initialized = .false.
+   logical, dimension(200), save :: initialized = .false.
 
    contains
 '''
@@ -930,37 +930,37 @@ end module {module}
 
     initialized_test_blocks = {
         'init' : '''
-      if (initialized) return
+      if (initialized(cdata%ccpp_instance)) return
 ''',
         'timestep_init' : '''
-      if (.not.initialized) then
+      if (.not.initialized(cdata%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_init called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'run' : '''
-      if (.not.initialized) then
+      if (.not.initialized(cdata%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'timestep_finalize' : '''
-      if (.not.initialized) then
+      if (.not.initialized(cdata%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_finalize called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'finalize' : '''
-      if (.not.initialized) return
+      if (.not.initialized(cdata%ccpp_instance)) return
 ''',
     }
 
     initialized_set_blocks = {
         'init' : '''
-      initialized = .true.
+      initialized(cdata%ccpp_instance) = .true.
 ''',
         'timestep_init' : '',
         'run' : '',
