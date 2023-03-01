@@ -1166,10 +1166,6 @@ CONTAINS
                end if
             end do
             ! Some size sanity checks
-            write(iulog,*) 'PEVERWHEE nums'
-            write(iulog,*) this%hash_table%num_values()
-            write(iulog,*) this%num_advected_vars
-            write(iulog,*) index_const
             if (index_const /= this%hash_table%num_values()) then
                call set_errvars(errcode + 1, subname,                         &
                     errcode=errcode, errmsg=errmsg,                           &
