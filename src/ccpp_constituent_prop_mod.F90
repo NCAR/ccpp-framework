@@ -7,7 +7,6 @@ module ccpp_constituent_prop_mod
    use ccpp_hashable,   only: ccpp_hashable_t, ccpp_hashable_char_t
    use ccpp_hash_table, only: ccpp_hash_table_t, ccpp_hash_iterator_t
    use ccpp_kinds,      only: kind_phys
-   use cam_logfile, only: iulog
 
    implicit none
    private
