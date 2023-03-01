@@ -79,12 +79,27 @@ def suite_part_list(suite, stage):
     return spart_list
 
 ###############################################################################
+def constituent_num_suite_subname(host_model):
+###############################################################################
+    """Return the name of the number of suite constituents for this run
+    Because this is a user interface API function, the name is fixed."""
+    return "{}_ccpp_num_suite_constituents".format(host_model.name)
+
+###############################################################################
 def constituent_register_subname(host_model):
 ###############################################################################
-    """Return the name of the subroutine used to register (initialize) the
-    constituents for this run.
+    """Return the name of the subroutine used to register the constituent
+    properties for this run.
     Because this is a user interface API function, the name is fixed."""
     return "{}_ccpp_register_constituents".format(host_model.name)
+
+###############################################################################
+def constituent_initialize_subname(host_model):
+###############################################################################
+    """Return the name of the subroutine used to initialize the
+    constituents for this run.
+    Because this is a user interface API function, the name is fixed."""
+    return "{}_ccpp_initialize_constituents".format(host_model.name)
 
 ###############################################################################
 def constituent_num_consts_funcname(host_model):
@@ -430,6 +445,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         # Write the host-model interfaces for constituents
         reg_name = constituent_register_subname(host_model)
         cap.write("public :: {}".format(reg_name), 1)
+        init_name = constituent_initialize_subname(host_model)
+        cap.write("public :: {}".format(init_name), 1)
         numconsts_name = constituent_num_consts_funcname(host_model)
         cap.write("public :: {}".format(numconsts_name), 1)
         copyin_name = constituent_copyin_subname(host_model)
@@ -580,7 +597,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write("", 0)
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
-        ConstituentVarDict.write_host_routines(cap, host_model, reg_name,
+        ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
                                                numconsts_name, copyin_name,
                                                copyout_name, const_obj_name,
                                                const_names_name,

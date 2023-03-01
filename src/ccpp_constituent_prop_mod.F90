@@ -1,4 +1,5 @@
 module ccpp_constituent_prop_mod
+      use vert_coord,                only: pver
 
    ! ccpp_contituent_prop_mod contains types and procedures for storing
    ! and retrieving constituent properties
@@ -6,6 +7,7 @@ module ccpp_constituent_prop_mod
    use ccpp_hashable,   only: ccpp_hashable_t, ccpp_hashable_char_t
    use ccpp_hash_table, only: ccpp_hash_table_t, ccpp_hash_iterator_t
    use ccpp_kinds,      only: kind_phys
+   use cam_logfile, only: iulog
 
    implicit none
    private
@@ -120,6 +122,7 @@ module ccpp_constituent_prop_mod
       integer,                 private :: num_layers = 0
       type(ccpp_hash_table_t), private :: hash_table
       logical,                 private :: table_locked = .false.
+      logical,                 private :: data_locked = .false.
       ! These fields are public to allow for efficient (i.e., no copying)
       !   usage even though it breaks object independence
       real(kind_phys), allocatable     :: vars_layer(:,:,:)
@@ -132,16 +135,22 @@ module ccpp_constituent_prop_mod
       procedure, private :: is_match => ccp_model_const_is_match
       ! Return a constituent from the hash table
       procedure, private :: find_const => ccp_model_const_find_const
-      ! Is the table locked (i.e., ready to be used)?
+      ! Are both the properties table and data array locked (i.e., ready to be used)?
       procedure :: locked => ccp_model_const_locked
+      ! Is the properties table locked (i.e., ready to be used)?
+      procedure :: const_props_locked => ccp_model_const_props_locked
+      ! Is the data array locked (i.e., ready to be used)?
+      procedure :: const_data_locked => ccp_model_const_data_locked
       ! Is it okay to add new metadata fields?
       procedure :: okay_to_add => ccp_model_const_okay_to_add
       ! Add a constituent's metadata to the master hash table
       procedure :: new_field => ccp_model_const_add_metadata
       ! Initialize hash table
       procedure :: initialize_table => ccp_model_const_initialize
-      ! Freeze hash table and initialize constituent field arrays
-      procedure :: lock_table => ccp_model_const_lock
+      ! Freeze hash table and set constituents properties
+      procedure :: lock_table => ccp_model_const_table_lock
+      ! Freeze and initialize constituent field arrays
+      procedure :: lock_data => ccp_model_const_data_lock
       ! Empty (reset) the entire object
       procedure :: reset => ccp_model_const_reset
       ! Query number of constituents matching pattern
@@ -779,8 +788,8 @@ CONTAINS
       ccp_model_const_locked = .false.
       ! Use an initialized hash table as double check
       if (this%hash_table%is_initialized()) then
-         ccp_model_const_locked = this%table_locked
-         if ( (.not. this%table_locked) .and.                                 &
+         ccp_model_const_locked = this%table_locked .and. this%data_locked
+         if ( (.not. (this%table_locked .and. this%data_locked)) .and.                                 &
               present(errmsg) .and. present(warn_func)) then
             ! Write a warning as a courtesy to calling function but do not set
             !   errcode (let caller decide).
@@ -803,6 +812,84 @@ CONTAINS
 
    !########################################################################
 
+   logical function ccp_model_const_props_locked(this, errcode, errmsg, warn_func)
+      ! Return .true. iff <this>'s constituent properties are ready to use
+      ! Optionally fill out <errcode> and <errmsg> if object not initialized
+      ! Dummy arguments
+      class(ccpp_model_constituents_t), intent(in)  :: this
+      integer,          optional,       intent(out) :: errcode
+      character(len=*), optional,       intent(out) :: errmsg
+      character(len=*), optional,       intent(in)  :: warn_func
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccp_model_const_table_locked'
+
+      call initialize_errvars(errcode, errmsg)
+      ccp_model_const_props_locked = .false.
+      ! Use an initialized hash table as double check
+      if (this%hash_table%is_initialized()) then
+         ccp_model_const_props_locked = this%table_locked
+         if ( .not. this%table_locked .and.                                 &
+              present(errmsg) .and. present(warn_func)) then
+            ! Write a warning as a courtesy to calling function but do not set
+            !   errcode (let caller decide).
+            write(errmsg, *) trim(warn_func),                                 &
+                 ' WARNING: Model constituent properties not ready to use'
+         end if
+      else
+         if (present(warn_func)) then
+            call set_errvars(1, trim(warn_func),                              &
+                 errcode=errcode, errmsg=errmsg,                              &
+                 errmsg2=" WARNING: Model constituent properties not initialized")
+         else
+            call set_errvars(1, subname,                                      &
+                 errcode=errcode, errmsg=errmsg,                              &
+                 errmsg2=" WARNING: Model constituent properties not initialized")
+         end if
+      end if
+
+   end function ccp_model_const_props_locked
+
+   !########################################################################
+
+   logical function ccp_model_const_data_locked(this, errcode, errmsg, warn_func)
+      ! Return .true. iff <this>'s data are ready to use
+      ! Optionally fill out <errcode> and <errmsg> if object not initialized
+      ! Dummy arguments
+      class(ccpp_model_constituents_t), intent(in)  :: this
+      integer,          optional,       intent(out) :: errcode
+      character(len=*), optional,       intent(out) :: errmsg
+      character(len=*), optional,       intent(in)  :: warn_func
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccp_model_const_data_locked'
+
+      call initialize_errvars(errcode, errmsg)
+      ccp_model_const_data_locked = .false.
+      ! Use an initialized hash table as double check
+      if (this%hash_table%is_initialized()) then
+         ccp_model_const_data_locked = this%data_locked
+         if ( .not. this%data_locked .and.                                 &
+              present(errmsg) .and. present(warn_func)) then
+            ! Write a warning as a courtesy to calling function but do not set
+            !   errcode (let caller decide).
+            write(errmsg, *) trim(warn_func),                                 &
+                 ' WARNING: Model constituent data not ready to use'
+         end if
+      else
+         if (present(warn_func)) then
+            call set_errvars(1, trim(warn_func),                              &
+                 errcode=errcode, errmsg=errmsg,                              &
+                 errmsg2=" WARNING: Model constituent data not initialized")
+         else
+            call set_errvars(1, subname,                                      &
+                 errcode=errcode, errmsg=errmsg,                              &
+                 errmsg2=" WARNING: Model constituent data not initialized")
+         end if
+      end if
+
+   end function ccp_model_const_data_locked
+
+   !########################################################################
+
    logical function ccp_model_const_okay_to_add(this, errcode, errmsg,        &
         warn_func)
       ! Return .true. iff <this> is initialized and not locked
@@ -819,8 +906,9 @@ CONTAINS
 
       ccp_model_const_okay_to_add = this%hash_table%is_initialized()
       if (ccp_model_const_okay_to_add) then
-         ccp_model_const_okay_to_add = .not. this%locked(errcode=errcode,     &
-              errmsg=errmsg, warn_func=subname)
+         ccp_model_const_okay_to_add = .not. (this%const_props_locked(errcode=errcode,     &
+              errmsg=errmsg, warn_func=subname) .or. this%const_data_locked(errcode=errcode, &
+              errmsg=errmsg, warn_func=subname))
          if (.not. ccp_model_const_okay_to_add) then
             if (present(warn_func)) then
                call set_errvars(1, trim(warn_func),                           &
@@ -955,13 +1043,11 @@ CONTAINS
 
    !########################################################################
 
-   subroutine ccp_model_const_lock(this, ncols, num_layers, errcode, errmsg)
-      ! Freeze hash table and initialize constituent field arrays
+   subroutine ccp_model_const_table_lock(this, errcode, errmsg)
+      ! Freeze hash table and initialize constituent properties
 
       ! Dummy arguments
       class(ccpp_model_constituents_t), intent(inout) :: this
-      integer,                          intent(in)    :: ncols
-      integer,                          intent(in)    :: num_layers
       integer,                optional, intent(out)   :: errcode
       character(len=*),       optional, intent(out)   :: errmsg
       ! Local variables
@@ -974,12 +1060,12 @@ CONTAINS
       class(ccpp_hashable_t),              pointer :: hval
       type(ccpp_constituent_properties_t), pointer :: cprop
       character(len=dimname_len)                   :: dimname
-      character(len=*), parameter :: subname = 'ccp_model_const_lock'
+      character(len=*), parameter :: subname = 'ccp_model_const_table_lock'
 
       astat = 0
-      if (this%locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
+      if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          call set_errvars(1, subname, errcode=errcode, errmsg=errmsg,         &
-              errmsg2=" WARNING: Model constituents already locked, ignoring")
+              errmsg2=" WARNING: Model constituent properites already locked, ignoring")
          astat = astat + 1
       else
          ! Make sure everything is really initialized
@@ -1020,7 +1106,7 @@ CONTAINS
             end if
          end if
          index_advect = 0
-         index_const = this%num_advected_vars + 1
+         index_const = this%num_advected_vars
          ! Iterate through the hash table to find entries
          if (astat == 0) then
             call hiter%initialize(this%hash_table)
@@ -1080,6 +1166,10 @@ CONTAINS
                end if
             end do
             ! Some size sanity checks
+            write(iulog,*) 'PEVERWHEE nums'
+            write(iulog,*) this%hash_table%num_values()
+            write(iulog,*) this%num_advected_vars
+            write(iulog,*) index_const
             if (index_const /= this%hash_table%num_values()) then
                call set_errvars(errcode + 1, subname,                         &
                     errcode=errcode, errmsg=errmsg,                           &
@@ -1093,33 +1183,64 @@ CONTAINS
                     errmsg3="in hash table")
                astat = astat + 1
             end if
-            ! Everything looks okay, allocate field arrays
-            allocate(this%vars_layer(ncols, num_layers, index_const),         &
-                 stat=astat)
-            call handle_allocate_error(astat, 'vars_layer',                   &
-                 errcode=errcode, errmsg=errmsg)
-            if (astat == 0) then
-               allocate(this%vars_minvalue(index_const), stat=astat)
-               call handle_allocate_error(astat, 'vars_minvalue',             &
-                    errcode=errcode, errmsg=errmsg)
-            end if
-            if (astat == 0) then
-               this%num_layers = num_layers
-               this%vars_layer = kphys_unassigned
-               this%vars_minvalue = 0.0_kind_phys
-            end if
-            if (present(errcode)) then
-               if (errcode /= 0) then
-                  astat = 1
-               end if
-            end if
             if (astat == 0) then
                this%table_locked = .true.
             end if
          end if
       end if
 
-   end subroutine ccp_model_const_lock
+   end subroutine ccp_model_const_table_lock
+
+   !########################################################################
+
+   subroutine ccp_model_const_data_lock(this, ncols, num_layers, errcode, errmsg)
+      ! Freeze hash table and initialize constituent arrays
+
+      ! Dummy arguments
+      class(ccpp_model_constituents_t), intent(inout) :: this
+      integer,                          intent(in)    :: ncols
+      integer,                          intent(in)    :: num_layers
+      integer,                optional, intent(out)   :: errcode
+      character(len=*),       optional, intent(out)   :: errmsg
+      ! Local variables
+      integer                                      :: astat
+      character(len=*), parameter :: subname = 'ccp_model_const_data_lock'
+
+      if (this%const_data_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
+         call set_errvars(1, subname, errcode=errcode, errmsg=errmsg, &
+              errmsg2=" WARNING: Model constituent data already locked, ignoring")
+         astat = astat + 1
+      else if (.not. this%const_props_locked(errcode=errcode, errmsg=errmsg, &
+                warn_func=subname)) then
+         call set_errvars(1, subname, errcode=errcode, errmsg=errmsg, &
+              errmsg2=" WARNING: Model constituent properties not yet locked, ignoring")
+         astat = astat + 1
+      else
+         allocate(this%vars_layer(ncols, num_layers, this%hash_table%num_values()),         &
+              stat=astat)
+         call handle_allocate_error(astat, 'vars_layer',                   &
+              errcode=errcode, errmsg=errmsg)
+         if (astat == 0) then
+            allocate(this%vars_minvalue(this%hash_table%num_values()), stat=astat)
+            call handle_allocate_error(astat, 'vars_minvalue',             &
+                 errcode=errcode, errmsg=errmsg)
+         end if
+         if (astat == 0) then
+            this%num_layers = num_layers
+            this%vars_layer = kphys_unassigned
+            this%vars_minvalue = 0.0_kind_phys
+         end if
+         if (present(errcode)) then
+            if (errcode /= 0) then
+               astat = 1
+            end if
+         end if
+         if (astat == 0) then
+            this%data_locked = .true.
+         end if
+      end if
+
+   end subroutine ccp_model_const_data_lock
 
    !########################################################################
 
@@ -1209,7 +1330,7 @@ CONTAINS
       character(len=*), parameter :: subname = "ccp_model_const_num_match"
 
       nmatch = 0
-      if (this%locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
+      if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          do index = 1, SIZE(this%const_metadata)
             if (this%is_match(index, advected=advected)) then
                nmatch = nmatch + 1
@@ -1235,7 +1356,7 @@ CONTAINS
       type(ccpp_constituent_properties_t), pointer  :: cprop
       character(len=*), parameter :: subname = "ccp_model_const_index"
 
-      if (this%locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
+      if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          cprop => this%find_const(standard_name, errcode=errcode, errmsg=errmsg)
          if (associated(cprop)) then
             index = cprop%const_index()
@@ -1265,7 +1386,7 @@ CONTAINS
       type(ccpp_constituent_properties_t), pointer     :: cprop
       character(len=*), parameter :: subname = "ccp_model_const_metadata"
 
-      if (this%locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
+      if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          cprop => this%find_const(standard_name, errcode=errcode, errmsg=errmsg)
          if (associated(cprop)) then
             const_data = cprop
@@ -1481,7 +1602,7 @@ CONTAINS
       character(len=errmsg_len)   :: errmsg
       character(len=*), parameter :: subname = 'ccp_constituent_props_ptr'
 
-      if (this%locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
+      if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          const_ptr => this%const_metadata
       else
          ! We don't want output variables in a function so just nullify

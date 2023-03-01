@@ -450,7 +450,7 @@ class ConstituentVarDict(VarDictionary):
         # end for
 
     @staticmethod
-    def write_host_routines(cap, host, reg_funcname, num_const_funcname,
+    def write_host_routines(cap, host, reg_funcname, init_funcname, num_const_funcname,
                             copy_in_funcname, copy_out_funcname, const_obj_name,
                             const_names_name, const_indices_name, const_array_func,
                             advect_array_func, prop_array_func,
@@ -459,6 +459,7 @@ class ConstituentVarDict(VarDictionary):
         instantiate constituent fields for all the constituents in <suite_list>.
         <err_vars> is a list of the host model's error variables.
         Also write out the following routines:
+           <init_funcname>: Initialize constituent data
            <num_const_funcname>: Number of constituents
            <copy_in_funcname>: Collect constituent fields for host
            <copy_out_funcname>: Update constituent fields from host
@@ -485,7 +486,7 @@ class ConstituentVarDict(VarDictionary):
 # XXgoldyXX: ^ need to generalize host model error var type support
         # First up, the registration routine
         substmt = f"subroutine {reg_funcname}"
-        args = "suite_list, ncols, num_layers, host_constituents "
+        args = "suite_list, host_constituents "
         stmt = f"{substmt}({args}, {err_dummy_str})"
         cap.write(stmt, 1)
         cap.comment("Create constituent object for suites in <suite_list>", 2)
@@ -494,8 +495,6 @@ class ConstituentVarDict(VarDictionary):
         cap.write("", 0)
         cap.comment("Dummy arguments", 2)
         cap.write("character(len=*), intent(in)  :: suite_list(:)", 2)
-        cap.write("integer,          intent(in)  :: ncols", 2)
-        cap.write("integer,          intent(in)  :: num_layers", 2)
         cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)  :: " +       \
                   "host_constituents(:)", 2)
         for evar in err_vars:
@@ -574,25 +573,43 @@ class ConstituentVarDict(VarDictionary):
             cap.write("", 0)
         # end for
         cap.write(f"if ({herrcode} == 0) then", 2)
-        stmt = "call {}%lock_table(ncols, num_layers, {})"
+        stmt = "call {}%lock_table({})"
         cap.write(stmt.format(const_obj_name, obj_err_callstr), 3)
         cap.write("end if", 2)
-        cap.comment("Set the index for each active constituent", 2)
-        cap.write(f"do index = 1, SIZE({const_indices_name})", 2)
+        cap.write(f"if ({herrcode} == 0) then", 2)
+        cap.comment("Set the index for each active constituent", 3)
+        cap.write(f"do index = 1, SIZE({const_indices_name})", 3)
         stmt = "call {}%const_index(field_ind, {}(index), {})"
         cap.write(stmt.format(const_obj_name, const_names_name,
-                              obj_err_callstr), 3)
-        cap.write("if (field_ind > 0) then", 3)
-        cap.write(f"{const_indices_name}(index) = field_ind", 4)
-        cap.write("else", 3)
-        cap.write(f"{herrcode} = 1", 4)
+                              obj_err_callstr), 4)
+        cap.write("if (field_ind > 0) then", 4)
+        cap.write(f"{const_indices_name}(index) = field_ind", 5)
+        cap.write("else", 4)
+        cap.write(f"{herrcode} = 1", 5)
         stmt = "{} = 'No field index for '//trim({}(index))"
-        cap.write(stmt.format(herrmsg, const_names_name), 4)
-        cap.write("end if", 3)
-        cap.write(f"if ({herrcode} /= 0) then", 3)
-        cap.write("exit", 4)
-        cap.write("end if", 3)
-        cap.write("end do", 2)
+        cap.write(stmt.format(herrmsg, const_names_name), 5)
+        cap.write("end if", 4)
+        cap.write(f"if ({herrcode} /= 0) then", 4)
+        cap.write("exit", 5)
+        cap.write("end if", 4)
+        cap.write("end do", 3)
+        cap.write("end if", 2)
+        cap.write(f"end {substmt}", 1)
+        # Write constituent_init routine
+        substmt = f"subroutine {init_funcname}"
+        cap.write("", 0)
+        cap.write(f"{substmt}(ncols, num_layers, {err_dummy_str})", 1)
+        cap.comment("Initialize constituent data", 2)
+        cap.write("", 0)
+        cap.comment("Dummy arguments", 2)
+        cap.write("integer,            intent(in)    :: ncols", 2)
+        cap.write("integer,            intent(in)    :: num_layers", 2)
+        for evar in err_vars:
+            evar.write_def(cap, 2, host, dummy=True, add_intent="out")
+        # end for evar
+        cap.write("", 0)
+        call_str = f"call {const_obj_name}%lock_data(ncols, num_layers, {obj_err_callstr})"
+        cap.write(call_str, 2)
         cap.write(f"end {substmt}", 1)
         # Write num_consts routine
         substmt = f"subroutine {num_const_funcname}"
