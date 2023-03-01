@@ -398,7 +398,11 @@ CONTAINS
       class(ccpp_hash_iterator_t)      :: this
       class(ccpp_hash_table_t), target :: hash_table
 
-      this%hash_table => hash_table
+      class(ccpp_hash_table_t), target, allocatable, save :: temp_hash_table
+
+      temp_hash_table = hash_table
+
+      this%hash_table => temp_hash_table
       this%index = 0
       nullify(this%table_entry)
       do
