@@ -1095,6 +1095,7 @@ CONTAINS
                   exit
                end if
             end do
+            call hiter%finalize()
             ! Sanity check on num_advect
             if (this%num_advected_vars > num_vars) then
                astat = 1
@@ -1164,6 +1165,7 @@ CONTAINS
                   exit
                end if
             end do
+            call hiter%finalize()
             ! Some size sanity checks
             if (index_const /= this%hash_table%num_values()) then
                call set_errvars(errcode + 1, subname,                         &
@@ -1177,6 +1179,11 @@ CONTAINS
                     errmsg2=" ERROR: Too few advected constituents found ",   &
                     errmsg3="in hash table")
                astat = astat + 1
+            end if
+            if (present(errcode)) then
+               if (errcode /= 0) then
+                  astat = 1
+               end if
             end if
             if (astat == 0) then
                this%table_locked = .true.

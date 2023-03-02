@@ -59,6 +59,7 @@ module ccpp_hash_table
       procedure :: next       => hash_iterator_next_entry
       procedure :: valid      => hash_iterator_is_valid
       procedure :: value      => hash_iterator_value
+      procedure :: finalize   => hash_iterator_finalize
    end type ccpp_hash_iterator_t
 
    !! Private interfaces
@@ -520,5 +521,15 @@ CONTAINS
       end if
 
    end function hash_iterator_value
+
+   subroutine hash_iterator_finalize(this)
+      ! Deallocate hash_table object
+
+      ! Dummy arguments
+      class(ccpp_hash_iterator_t)    :: this
+
+      nullify(this%hash_table)
+
+   end subroutine hash_iterator_finalize
 
 end module ccpp_hash_table
