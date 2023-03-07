@@ -62,6 +62,8 @@ module ccpp_hash_table
       procedure :: finalize   => hash_iterator_finalize
    end type ccpp_hash_iterator_t
 
+   !! Module-level hash table variable
+   class(ccpp_hash_table_t), private, allocatable, target :: hash_table_module
    !! Private interfaces
    private :: have_error      ! Has a called routine detected an error?
    private :: clear_optstring ! Clear a string, if present
@@ -397,13 +399,11 @@ CONTAINS
 
       ! Dummy arguments
       class(ccpp_hash_iterator_t)      :: this
-      class(ccpp_hash_table_t), target :: hash_table
+      class(ccpp_hash_table_t), intent(in), target :: hash_table
 
-      class(ccpp_hash_table_t), target, allocatable, save :: temp_hash_table
+      hash_table_module = hash_table
 
-      temp_hash_table = hash_table
-
-      this%hash_table => temp_hash_table
+      this%hash_table => hash_table_module
       this%index = 0
       nullify(this%table_entry)
       do
@@ -529,6 +529,7 @@ CONTAINS
       class(ccpp_hash_iterator_t)    :: this
 
       nullify(this%hash_table)
+      deallocate(hash_table_module)
 
    end subroutine hash_iterator_finalize
 
