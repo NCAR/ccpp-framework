@@ -170,7 +170,7 @@ def constituent_model_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
        array of all constituents"""
-    hstr = "{}_constituents".format(host_model.name)
+    hstr = "{}_constituents_array".format(host_model.name)
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -178,7 +178,7 @@ def constituent_model_advected_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
        array of advected constituents"""
-    hstr = "{}_advected_constituents".format(host_model.name)
+    hstr = "{}_advected_constituents_array".format(host_model.name)
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
