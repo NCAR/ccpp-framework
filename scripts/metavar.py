@@ -332,6 +332,13 @@ class Var:
                 break
             # end if
         # end for
+        self.__initialized_in_physics = False
+        # Check for variables that are initialized in physics scheme(s)
+        if source.name[-4:] == 'init' and source.name[-14:] != 'timestep_init' and 'intent' in prop_dict:
+            if prop_dict['intent'] == 'out':
+                self.__initialized_in_physics = True
+            # end if
+        # end if
         # Steal dict from caller
         self._prop_dict = prop_dict
 # XXgoldyXX: v don't fill in default properties?
@@ -1076,6 +1083,10 @@ class Var:
     def is_constituent(self):
         """Return True iff <self> is a constituent variable."""
         return self.__is_constituent
+
+    def is_initialized_in_physics(self):
+        """Return True iff <self> is initialized in a physics init routine"""
+        return self.__initialized_in_physics
 
     def __str__(self):
         """Print representation or string for Var objects"""

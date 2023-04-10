@@ -293,6 +293,9 @@ class ConstituentVarDict(VarDictionary):
                                       len(self)), indent+1)
             outfile.write("index = 0", indent+1)
         # end if
+        for evar in err_vars:
+            self.__init_err_var(evar, outfile, indent+1)
+        # end for
         for std_name, var in self.items():
             outfile.write("index = index + 1", indent+1)
             long_name = var.get_prop_value('long_name')
@@ -306,17 +309,15 @@ class ConstituentVarDict(VarDictionary):
                 vertical_dim = ''
             # end if
             advect_str = self.TF_string(var.get_prop_value('advected'))
+            init_in_phys_str = self.TF_string(var.is_initialized_in_physics())
             init_args = [f'std_name="{std_name}"', f'long_name="{long_name}"',
                          f'units="{units}"', f'vertical_dim="{vertical_dim}"',
-                         f'advected={advect_str}',
+                         f'advected={advect_str}', f'initialized_in_physics={init_in_phys_str}',
                          f'errcode={errvar_names["ccpp_error_code"]}',
                          f'errmsg={errvar_names["ccpp_error_message"]}']
-            stmt = 'call {}(index)%initialize({})'
+            stmt = 'call {}(index)%instantiate({})'
             outfile.write(stmt.format(self.constituent_prop_array_name(),
                                       ", ".join(init_args)), indent+1)
-        # end for
-        for evar in err_vars:
-            self.__init_err_var(evar, outfile, indent+1)
         # end for
         outfile.write("{} = .true.".format(self.constituent_prop_init_name()),
                       indent+1)

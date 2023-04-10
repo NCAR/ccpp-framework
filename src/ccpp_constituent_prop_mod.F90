@@ -36,6 +36,7 @@ module ccpp_constituent_prop_mod
       character(len=:), private, allocatable :: vert_dim
       integer,          private              :: const_ind = int_unassigned
       logical,          private              :: advected = .false.
+      logical,          private              :: initialized_in_physics = .false.
       ! While the quantities below can be derived from the standard name,
       !    this implementation avoids string searching in parameterizations
       ! const_type distinguishes mass, volume, and number conc. mixing ratios
@@ -50,29 +51,30 @@ module ccpp_constituent_prop_mod
       ! Required hashable method
       procedure :: key => ccp_properties_get_key
       ! Informational methods
-      procedure :: is_initialized          => ccp_is_initialized
-      procedure :: standard_name           => ccp_get_standard_name
-      procedure :: long_name               => ccp_get_long_name
-      procedure :: is_layer_var            => ccp_is_layer_var
-      procedure :: is_interface_var        => ccp_is_interface_var
-      procedure :: is_2d_var               => ccp_is_2d_var
-      procedure :: vertical_dimension      => ccp_get_vertical_dimension
-      procedure :: const_index             => ccp_const_index
-      procedure :: is_advected             => ccp_is_advected
-      procedure :: equivalent              => ccp_is_equivalent
-      procedure :: is_mass_mixing_ratio    => ccp_is_mass_mixing_ratio
-      procedure :: is_volume_mixing_ratio  => ccp_is_volume_mixing_ratio
-      procedure :: is_number_concentration => ccp_is_number_concentration
-      procedure :: is_dry                  => ccp_is_dry
-      procedure :: is_moist                => ccp_is_moist
-      procedure :: is_wet                  => ccp_is_wet
-      procedure :: minimum                 => ccp_min_val
-      procedure :: molec_weight            => ccp_molec_weight
+      procedure :: is_instantiated           => ccp_is_instantiated
+      procedure :: is_initialized_in_physics => ccp_is_initialized_in_physics
+      procedure :: standard_name             => ccp_get_standard_name
+      procedure :: long_name                 => ccp_get_long_name
+      procedure :: is_layer_var              => ccp_is_layer_var
+      procedure :: is_interface_var          => ccp_is_interface_var
+      procedure :: is_2d_var                 => ccp_is_2d_var
+      procedure :: vertical_dimension        => ccp_get_vertical_dimension
+      procedure :: const_index               => ccp_const_index
+      procedure :: is_advected               => ccp_is_advected
+      procedure :: equivalent                => ccp_is_equivalent
+      procedure :: is_mass_mixing_ratio      => ccp_is_mass_mixing_ratio
+      procedure :: is_volume_mixing_ratio    => ccp_is_volume_mixing_ratio
+      procedure :: is_number_concentration   => ccp_is_number_concentration
+      procedure :: is_dry                    => ccp_is_dry
+      procedure :: is_moist                  => ccp_is_moist
+      procedure :: is_wet                    => ccp_is_wet
+      procedure :: minimum                   => ccp_min_val
+      procedure :: molec_weight              => ccp_molec_weight
       ! Copy method (be sure to update this anytime fields are added)
       procedure :: copyConstituent
       generic :: assignment(=) => copyConstituent
       ! Methods that change state (XXgoldyXX: make private?)
-      procedure :: initialize      => ccp_initialize
+      procedure :: instantiate     => ccp_instantiate
       procedure :: deallocate      => ccp_deallocate
       procedure :: set_const_index => ccp_set_const_index
    end type ccpp_constituent_properties_t
@@ -84,22 +86,23 @@ module ccpp_constituent_prop_mod
       type(ccpp_constituent_properties_t), private, pointer :: prop => NULL()
    contains
       ! Informational methods
-      procedure :: standard_name           => ccpt_get_standard_name
-      procedure :: long_name               => ccpt_get_long_name
-      procedure :: is_layer_var            => ccpt_is_layer_var
-      procedure :: is_interface_var        => ccpt_is_interface_var
-      procedure :: is_2d_var               => ccpt_is_2d_var
-      procedure :: vertical_dimension      => ccpt_get_vertical_dimension
-      procedure :: const_index             => ccpt_const_index
-      procedure :: is_advected             => ccpt_is_advected
-      procedure :: is_mass_mixing_ratio    => ccpt_is_mass_mixing_ratio
-      procedure :: is_volume_mixing_ratio  => ccpt_is_volume_mixing_ratio
-      procedure :: is_number_concentration => ccpt_is_number_concentration
-      procedure :: is_dry                  => ccpt_is_dry
-      procedure :: is_moist                => ccpt_is_moist
-      procedure :: is_wet                  => ccpt_is_wet
-      procedure :: minimum                 => ccpt_min_val
-      procedure :: molec_weight            => ccpt_molec_weight
+      procedure :: standard_name             => ccpt_get_standard_name
+      procedure :: long_name                 => ccpt_get_long_name
+      procedure :: is_layer_var              => ccpt_is_layer_var
+      procedure :: is_interface_var          => ccpt_is_interface_var
+      procedure :: is_2d_var                 => ccpt_is_2d_var
+      procedure :: vertical_dimension        => ccpt_get_vertical_dimension
+      procedure :: const_index               => ccpt_const_index
+      procedure :: is_advected               => ccpt_is_advected
+      procedure :: is_mass_mixing_ratio      => ccpt_is_mass_mixing_ratio
+      procedure :: is_volume_mixing_ratio    => ccpt_is_volume_mixing_ratio
+      procedure :: is_number_concentration   => ccpt_is_number_concentration
+      procedure :: is_dry                    => ccpt_is_dry
+      procedure :: is_moist                  => ccpt_is_moist
+      procedure :: is_wet                    => ccpt_is_wet
+      procedure :: is_initialized_in_physics => ccpt_is_initialized_in_physics
+      procedure :: minimum                   => ccpt_min_val
+      procedure :: molec_weight              => ccpt_molec_weight
       ! ccpt_set: Set the internal pointer
       procedure :: set                     => ccpt_set
       ! Methods that change state (XXgoldyXX: make private?)
@@ -157,7 +160,7 @@ module ccpp_constituent_prop_mod
       ! Return index of constituent matching standard name
       procedure :: const_index => ccp_model_const_index
       ! Return metadata matching standard name
-      procedure :: field_metada => ccp_model_const_metadata
+      procedure :: field_metadata => ccp_model_const_metadata
       ! Gather constituent fields matching pattern
       procedure :: copy_in => ccp_model_const_copy_in_3d
       ! Update constituent fields matching pattern
@@ -331,11 +334,11 @@ CONTAINS
 
    !#######################################################################
 
-   logical function ccp_is_initialized(this, errcode, errmsg)
-      ! Return .true. iff <this> is initialized
-      ! If <this> is *not* initialized and <errcode> and/or <errmsg> is present,
+   logical function ccp_is_instantiated(this, errcode, errmsg)
+      ! Return .true. iff <this> is instantiated
+      ! If <this> is *not* instantiated and <errcode> and/or <errmsg> is present,
       !    fill these fields with an error status
-      ! If <this> *is* initialized and <errcode> and/or <errmsg> is present,
+      ! If <this> *is* instantiated and <errcode> and/or <errmsg> is present,
       !    clear these fields.
 
       ! Dummy arguments
@@ -343,19 +346,19 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      ccp_is_initialized = allocated(this%var_std_name)
+      ccp_is_instantiated = allocated(this%var_std_name)
       call initialize_errvars(errcode, errmsg)
-      if (.not. ccp_is_initialized) then
+      if (.not. ccp_is_instantiated) then
          call set_errvars(1, "ccpp_constituent_properties_t object ",         &
               errcode=errcode, errmsg=errmsg, errmsg2="is not initialized")
       end if
 
-   end function ccp_is_initialized
+   end function ccp_is_instantiated
 
    !#######################################################################
 
-   subroutine ccp_initialize(this, std_name, long_name, units, vertical_dim,  &
-        advected, errcode, errmsg)
+   subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
+        advected, initialized_in_physics, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -365,12 +368,13 @@ CONTAINS
       character(len=*),                     intent(in)    :: units
       character(len=*),                     intent(in)    :: vertical_dim
       logical, optional,                    intent(in)    :: advected
+      logical, optional,                    intent(in)    :: initialized_in_physics
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
       ! Local variable
       integer :: astat
 
-      if (this%is_initialized()) then
+      if (this%is_instantiated()) then
          errcode = 1
          write(errmsg, *) 'ccpp_constituent_properties_t object, ',        &
               trim(std_name), ', is already initialized as ', this%var_std_name
@@ -387,6 +391,11 @@ CONTAINS
             this%advected = advected
          else
             this%advected = .false.
+         end if
+         if (present(initialized_in_physics)) then
+            this%initialized_in_physics = initialized_in_physics
+         else
+            this%initialized_in_physics = .false.
          end if
       end if
       if (errcode == 0) then
@@ -414,7 +423,7 @@ CONTAINS
       if (errcode /= 0) then
          call this%deallocate()
       end if
-   end subroutine ccp_initialize
+   end subroutine ccp_instantiate
 
    !#######################################################################
 
@@ -451,7 +460,7 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          std_name = this%var_std_name
       else
          std_name = ''
@@ -470,7 +479,7 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          long_name = this%var_long_name
       else
          long_name = ''
@@ -489,7 +498,7 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          vert_dim = this%vert_dim
       else
          vert_dim = ''
@@ -552,7 +561,7 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          ccp_const_index = this%const_ind
       else
          ccp_const_index = int_unassigned
@@ -572,7 +581,7 @@ CONTAINS
       integer,          optional,           intent(out)   :: errcode
       character(len=*), optional,           intent(out)   :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          if (this%const_ind == int_unassigned) then
             this%const_ind = index
          else
@@ -594,12 +603,29 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%advected
       else
          val_out = .false.
       end if
    end subroutine ccp_is_advected
+
+   !#######################################################################
+
+   subroutine ccp_is_initialized_in_physics(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      logical,                              intent(out) :: val_out
+      integer,          optional,           intent(out) :: errcode
+      character(len=*), optional,           intent(out) :: errmsg
+
+      if (this%is_instantiated(errcode, errmsg)) then
+         val_out = this%initialized_in_physics
+      else
+         val_out = .false.
+      end if
+   end subroutine ccp_is_initialized_in_physics
 
    !#######################################################################
 
@@ -612,8 +638,8 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg) .and.                          &
-           oconst%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg) .and.                          &
+           oconst%is_instantiated(errcode, errmsg)) then
          equiv = (trim(this%var_std_name) == trim(oconst%var_std_name)) .and. &
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
@@ -634,7 +660,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%const_type == mass_mixing_ratio
       else
          val_out = .false.
@@ -651,7 +677,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%const_type == volume_mixing_ratio
       else
          val_out = .false.
@@ -668,7 +694,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%const_type == number_concentration
       else
          val_out = .false.
@@ -685,7 +711,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%const_water == dry_mixing_ratio
       else
          val_out = .false.
@@ -703,7 +729,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%const_water == moist_mixing_ratio
       else
          val_out = .false.
@@ -721,7 +747,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%const_water == wet_mixing_ratio
       else
          val_out = .false.
@@ -739,7 +765,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%min_val
       else
          val_out = kphys_unassigned
@@ -757,7 +783,7 @@ CONTAINS
       integer,                              intent(out) :: errcode
       character(len=*),                     intent(out) :: errmsg
 
-      if (this%is_initialized(errcode, errmsg)) then
+      if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%molar_mass
       else
          val_out = kphys_unassigned
@@ -1680,7 +1706,7 @@ CONTAINS
       character(len=*), parameter :: subname = 'ccpt_get_vertical_dimension'
 
       if (associated(this%prop)) then
-         if (this%prop%is_initialized(errcode, errmsg)) then
+         if (this%prop%is_instantiated(errcode, errmsg)) then
             vert_dim = this%prop%vert_dim
          end if
       else
@@ -1930,6 +1956,28 @@ CONTAINS
 
    !########################################################################
 
+   subroutine ccpt_is_initialized_in_physics(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      logical,                            intent(out) :: val_out
+      integer,                            intent(out) :: errcode
+      character(len=*),                   intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_is_initialized_in_physics'
+
+      if (associated(this%prop)) then
+         call this%prop%is_initialized_in_physics(val_out, errcode, errmsg)
+      else
+         val_out = .false.
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_is_initialized_in_physics
+
+   !########################################################################
+
    subroutine ccpt_min_val(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
@@ -2034,7 +2082,7 @@ CONTAINS
       character(len=*), parameter :: subname = 'ccpt_set_const_index'
 
       if (associated(this%prop)) then
-         if (this%prop%is_initialized(errcode, errmsg)) then
+         if (this%prop%is_instantiated(errcode, errmsg)) then
             if (this%prop%const_ind == int_unassigned) then
                this%prop%const_ind = index
             else
