@@ -24,7 +24,7 @@ if not os.path.exists(SCRIPTS_DIR):
     raise ImportError("Cannot find scripts directory")
 
 sys.path.append(SCRIPTS_DIR)
-logging.disable(logging.CRITICAL)
+logging.disable(level=logging.CRITICAL)
 
 # pylint: disable=wrong-import-position
 import common
