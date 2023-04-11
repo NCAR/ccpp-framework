@@ -112,7 +112,7 @@ class ConstituentVarDict(VarDictionary):
                 # end for
                 newdims.append(':'.join(new_dnames))
             # end for
-            var = source_var.clone({'dimensions' : newdims}, remove_intent=True,
+            var = source_var.clone({'dimensions' : newdims}, remove_intent=False,
                                    source_type=self.__constituent_type)
             self.add_variable(var, self.__run_env)
         return var
@@ -316,8 +316,10 @@ class ConstituentVarDict(VarDictionary):
                          f'errcode={errvar_names["ccpp_error_code"]}',
                          f'errmsg={errvar_names["ccpp_error_message"]}']
             stmt = 'call {}(index)%instantiate({})'
+            outfile.write(f'if ({errvar_names["ccpp_error_code"]} == 0) then', indent+1)
             outfile.write(stmt.format(self.constituent_prop_array_name(),
-                                      ", ".join(init_args)), indent+1)
+                                      ", ".join(init_args)), indent+2)
+            outfile.write("end if", indent+1)
         # end for
         outfile.write("{} = .true.".format(self.constituent_prop_init_name()),
                       indent+1)
@@ -524,20 +526,20 @@ class ConstituentVarDict(VarDictionary):
         cap.comment("Initialize constituent data and field object", 3)
         stmt = "call {}%initialize_table(num_consts)"
         cap.write(stmt.format(const_obj_name), 3)
-        cap.write("end if", 2)
         # Register host model constituents
         cap.comment("Add host model constituent metadata", 3)
-        cap.write("do index = 1, size(host_constituents, 1)", 2)
-        cap.write(f"if ({herrcode} == 0) then", 3)
-        cap.write("const_prop => host_constituents(index)", 4)
+        cap.write("do index = 1, size(host_constituents, 1)", 3)
+        cap.write(f"if ({herrcode} == 0) then", 4)
+        cap.write("const_prop => host_constituents(index)", 5)
         stmt = "call {}%new_field(const_prop, {})"
-        cap.write(stmt.format(const_obj_name, obj_err_callstr), 4)
-        cap.write("end if", 3)
-        cap.write("nullify(const_prop)", 3)
-        cap.write("if ({} /= 0) then".format(herrcode), 3)
-        cap.write("exit", 4)
-        cap.write("end if", 3)
-        cap.write("end do", 2)
+        cap.write(stmt.format(const_obj_name, obj_err_callstr), 5)
+        cap.write("end if", 4)
+        cap.write("nullify(const_prop)", 4)
+        cap.write("if ({} /= 0) then".format(herrcode), 4)
+        cap.write("exit", 5)
+        cap.write("end if", 4)
+        cap.write("end do", 3)
+        cap.write("end if", 2)
         cap.write("", 0)
         # Register suite constituents
         for suite in suite_list:
@@ -550,27 +552,29 @@ class ConstituentVarDict(VarDictionary):
             cap.write(f"num_suite_consts = {funcname}({errvar_str})", 3)
             cap.write("end if", 2)
             funcname = const_dict.copy_const_subname()
-            cap.write("do index = 1, num_suite_consts", 2)
-            cap.write(f"if ({herrcode} == 0) then", 3)
-            cap.write(f"allocate(const_prop, stat={herrcode})", 4)
-            cap.write("end if", 3)
-            cap.write(f"if ({herrcode} /= 0) then", 3)
-            cap.write(f'{herrmsg} = "ERROR allocating const_prop"', 4)
-            cap.write("exit", 4)
-            cap.write("end if", 3)
-            cap.write(f"if ({herrcode} == 0) then", 3)
+            cap.write(f"if ({herrcode} == 0) then", 2)
+            cap.write("do index = 1, num_suite_consts", 3)
+            cap.write(f"if ({herrcode} == 0) then", 4)
+            cap.write(f"allocate(const_prop, stat={herrcode})", 5)
+            cap.write("end if", 4)
+            cap.write(f"if ({herrcode} /= 0) then", 4)
+            cap.write(f'{herrmsg} = "ERROR allocating const_prop"', 5)
+            cap.write("exit", 5)
+            cap.write("end if", 4)
+            cap.write(f"if ({herrcode} == 0) then", 4)
             stmt = "call {}(index, const_prop, {})"
-            cap.write(stmt.format(funcname, errvar_str), 4)
-            cap.write("end if", 3)
-            cap.write(f"if ({herrcode} == 0) then", 3)
+            cap.write(stmt.format(funcname, errvar_str), 5)
+            cap.write("end if", 4)
+            cap.write(f"if ({herrcode} == 0) then", 4)
             stmt = "call {}%new_field(const_prop, {})"
-            cap.write(stmt.format(const_obj_name, obj_err_callstr), 4)
-            cap.write("end if", 3)
-            cap.write("nullify(const_prop)", 3)
-            cap.write(f"if ({herrcode} /= 0) then", 3)
-            cap.write("exit", 4)
-            cap.write("end if", 3)
-            cap.write("end do", 2)
+            cap.write(stmt.format(const_obj_name, obj_err_callstr), 5)
+            cap.write("end if", 4)
+            cap.write("nullify(const_prop)", 4)
+            cap.write(f"if ({herrcode} /= 0) then", 4)
+            cap.write("exit", 5)
+            cap.write("end if", 4)
+            cap.write("end do", 3)
+            cap.write("end if", 2)
             cap.write("", 0)
         # end for
         cap.write(f"if ({herrcode} == 0) then", 2)

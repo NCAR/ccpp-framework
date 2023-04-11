@@ -198,6 +198,7 @@ CONTAINS
       outConst%vert_dim = inConst%vert_dim
       outConst%const_ind = inConst%const_ind
       outConst%advected = inConst%advected
+      outConst%initialized_in_physics = inConst%initialized_in_physics
       outConst%const_type = inConst%const_type
       outConst%const_water = inConst%const_water
       outConst%min_val = inConst%min_val
