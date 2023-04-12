@@ -1,5 +1,4 @@
 module ccpp_constituent_prop_mod
-      use vert_coord,                only: pver
 
    ! ccpp_contituent_prop_mod contains types and procedures for storing
    ! and retrieving constituent properties
