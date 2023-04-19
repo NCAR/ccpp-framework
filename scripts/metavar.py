@@ -334,7 +334,7 @@ class Var:
         # end for
         self.__initialized_in_physics = False
         # Check for variables that are initialized in physics scheme(s)
-        if source.name[-4:] == 'init' and source.name[-14:] != 'timestep_init' and 'intent' in prop_dict:
+        if source.name and source.name[-4:] == 'init' and source.name[-14:] != 'timestep_init' and 'intent' in prop_dict:
             if prop_dict['intent'] == 'out':
                 self.__initialized_in_physics = True
             # end if

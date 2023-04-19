@@ -28,9 +28,9 @@ contains
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------
 
-      real(kind_phys), parameter :: re_qc_min = 2.5 ! microns
-      real(kind_phys), parameter :: re_qc_max = 50. ! microns
-      real(kind_phys), parameter :: re_qi_avg = 75. ! microns
+      real(kind_phys), parameter :: re_qc_min = 2.5E-6 ! 2.5 microns, in meters
+      real(kind_phys), parameter :: re_qc_max = 5.0E-5 ! 50 microns, in meters
+      real(kind_phys), parameter :: re_qi_avg = 7.5E-5 ! 75 microns, in meters
       real(kind_phys) :: effrr_local(ncol,nlev)
 
       errmsg = ''
@@ -39,7 +39,7 @@ contains
       effrr_local = effrr_in
       effrl_inout = min(max(effrl_inout,re_qc_min),re_qc_max)
       effri_out   = re_qi_avg
-      effrs_inout = effrs_inout + 10.0 ! in micrometer
+      effrs_inout = effrs_inout + 1.0E-5 ! 10 microns in meters
 
    end subroutine effr_calc_run
 

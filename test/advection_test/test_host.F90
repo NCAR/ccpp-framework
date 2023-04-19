@@ -136,7 +136,6 @@ CONTAINS
        ! Dummy argument
        type(suite_info), intent(in)    :: test_suite
        ! Local variables
-       integer                         :: sind
        logical                         :: check
        integer                         :: errflg
        character(len=512)              :: errmsg
@@ -202,7 +201,7 @@ CONTAINS
     end function check_suite
 
     subroutine advect_constituents()
-       use test_host_mod, only: phys_state, ncnst, index_qv, ncols, pver
+       use test_host_mod, only: phys_state, ncnst
        use test_host_mod, only: twist_array
 
        ! Local variables
@@ -223,8 +222,9 @@ CONTAINS
        use test_host_mod,      only: init_data, compare_data
        use test_host_mod,      only: ncols, pver
        use test_host_ccpp_cap, only: test_host_ccpp_register_constituents
+       use test_host_ccpp_cap, only: test_host_ccpp_initialize_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_number_constituents
-       use test_host_ccpp_cap, only: test_host_advected_constituents
+       use test_host_ccpp_cap, only: test_host_constituents_array
        use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
        use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_initial
        use test_host_ccpp_cap, only: test_host_ccpp_physics_run
@@ -281,14 +281,14 @@ CONTAINS
        end if
 
        ! Register the constituents to find out what needs advecting
-      call host_constituents(1)%initialize(std_name="specific_humidity",      &
+      call host_constituents(1)%instantiate(std_name="specific_humidity",      &
            long_name="Specific humidity", units="kg kg-1",                    &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
            errcode=errflg, errmsg=errmsg)
       call check_errflg(subname//'.initialize', errflg, errmsg)
       if (errflg == 0) then
          call test_host_ccpp_register_constituents(suite_names(:),            &
-              ncols, pver, host_constituents, errmsg=errmsg, errflg=errflg)
+              host_constituents, errmsg=errmsg, errflg=errflg)
       end if
       if (errflg /= 0) then
          write(6, '(2a)') 'ERROR register_constituents: ', trim(errmsg)
@@ -303,10 +303,12 @@ CONTAINS
          write(6, '(a,i0)') "ERROR: num advected constituents = ", num_advected
          STOP 2
       end if
+      ! Initialize constituent data
+      call test_host_ccpp_initialize_constituents(ncols, pver, errflg, errmsg)
 
       ! Initialize our 'data'
       if (errflg == 0) then
-         const_ptr => test_host_advected_constituents()
+         const_ptr => test_host_constituents_array()
          call test_host_const_get_index('specific_humidity', index,           &
               errflg, errmsg)
          call check_errflg(subname//".index_specific_humidity", errflg, errmsg)
@@ -487,8 +489,38 @@ CONTAINS
 
     implicit none
 
-   character(len=cs), target :: test_parts1(1) = (/ 'physics         ' /)
-   character(len=cm), target :: test_invars1(7) = (/                          &
+   character(len=cs), target :: test_parts1(1)
+   character(len=cm), target :: test_invars1(7)
+!        'cloud_ice_dry_mixing_ratio          ',                               &
+!        'cloud_liquid_dry_mixing_ratio       ',                               &
+!        'surface_air_pressure                ',                               &
+!        'temperature                         ',                               &
+!        'time_step_for_physics               ',                               &
+!        'water_temperature_at_freezing       ',                               &
+!        'water_vapor_specific_humidity       ' /)
+   character(len=cm), target :: test_outvars1(6)
+!        'ccpp_error_message                  ',                               &
+!        'ccpp_error_code                     ',                               &
+!        'temperature                         ',                               &
+!        'water_vapor_specific_humidity       ',                               &
+!        'cloud_liquid_dry_mixing_ratio       ',                               &
+!        'cloud_ice_dry_mixing_ratio          ' /)
+   character(len=cm), target :: test_reqvars1(9)
+!        'surface_air_pressure                ',                               &
+!        'temperature                         ',                               &
+!        'time_step_for_physics               ',                               &
+!        'cloud_liquid_dry_mixing_ratio       ',                               &
+!        'cloud_ice_dry_mixing_ratio          ',                               &
+!        'water_temperature_at_freezing       ',                               &
+!        'water_vapor_specific_humidity       ',                               &
+!        'ccpp_error_message                  ',                               &
+!        'ccpp_error_code                     ' /)
+
+    type(suite_info) :: test_suites(1)
+    logical :: run_okay
+
+    test_parts1 = (/ 'physics         '/)
+    test_invars1 = (/                          &
         'cloud_ice_dry_mixing_ratio          ',                               &
         'cloud_liquid_dry_mixing_ratio       ',                               &
         'surface_air_pressure                ',                               &
@@ -496,14 +528,14 @@ CONTAINS
         'time_step_for_physics               ',                               &
         'water_temperature_at_freezing       ',                               &
         'water_vapor_specific_humidity       ' /)
-   character(len=cm), target :: test_outvars1(6) = (/                         &
+    test_outvars1 = (/                         &
         'ccpp_error_message                  ',                               &
         'ccpp_error_code                     ',                               &
         'temperature                         ',                               &
         'water_vapor_specific_humidity       ',                               &
         'cloud_liquid_dry_mixing_ratio       ',                               &
         'cloud_ice_dry_mixing_ratio          ' /)
-   character(len=cm), target :: test_reqvars1(9) = (/                         &
+    test_reqvars1 = (/                         &
         'surface_air_pressure                ',                               &
         'temperature                         ',                               &
         'time_step_for_physics               ',                               &
@@ -514,12 +546,10 @@ CONTAINS
         'ccpp_error_message                  ',                               &
         'ccpp_error_code                     ' /)
 
-    type(suite_info) :: test_suites(1)
-    logical :: run_okay
 
     ! Setup expected test suite info
     test_suites(1)%suite_name = 'cld_suite'
-	test_suites(1)%suite_parts => test_parts1
+    test_suites(1)%suite_parts => test_parts1
     test_suites(1)%suite_input_vars => test_invars1
     test_suites(1)%suite_output_vars => test_outvars1
     test_suites(1)%suite_required_vars => test_reqvars1

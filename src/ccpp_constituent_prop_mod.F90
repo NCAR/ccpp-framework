@@ -371,8 +371,6 @@ CONTAINS
       logical, optional,                    intent(in)    :: initialized_in_physics
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
-      ! Local variable
-      integer :: astat
 
       if (this%is_instantiated()) then
          errcode = 1

@@ -92,7 +92,6 @@ contains
       real(kind_phys), intent(inout) :: array(:,:)
 
        ! Local variables
-       integer         :: q_ind      ! Constituent index
        integer         :: icol, ilev ! Field coordinates
        integer         :: idir       ! 'w' sign
        integer         :: levb, leve ! Starting and ending level indices
@@ -121,7 +120,6 @@ contains
       integer            :: col
       integer            :: lev
       integer            :: cind
-      integer            :: nind
       logical            :: need_header
       real(kind_phys)    :: check
       real(kind_phys)    :: denom
