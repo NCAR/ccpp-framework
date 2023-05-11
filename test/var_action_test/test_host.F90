@@ -329,7 +329,7 @@ CONTAINS
 
        if (errflg == 0) then
           ! Run finished without error, check answers
-          if (compare_data(col_start, col_end)) then
+          if (compare_data()) then
              write(6, *) 'Answers are correct!'
              errflg = 0
           else

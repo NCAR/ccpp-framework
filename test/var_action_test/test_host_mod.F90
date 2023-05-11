@@ -30,9 +30,7 @@ contains
 
   end subroutine init_data
 
-  logical function compare_data(col_start, col_end)
-    integer,        intent(in) :: col_start
-    integer,        intent(in) :: col_end
+  logical function compare_data()
 
     real(kind_phys), parameter :: effrr_expected = 1.0E-3 ! 1000 microns, in meter
     real(kind_phys), parameter :: effrl_expected = 5.0E-5 ! 50 microns, in meter
@@ -60,7 +58,7 @@ contains
         compare_data = .false.
     end if
 
-    if (maxval(abs(effrs(col_start:col_end,:) - effrs_expected)) > tolerance*effrs_expected) then
+    if (maxval(abs(           effrs - effrs_expected)) > tolerance*effrs_expected) then
         write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            effrs from expected value exceeds tolerance: ', &
                                       maxval(abs(           effrs - effrs_expected)), ' > ', tolerance*effrs_expected
         compare_data = .false.
