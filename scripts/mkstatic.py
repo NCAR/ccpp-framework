@@ -896,7 +896,7 @@ module {module}
    private
    public :: {subroutines}
 
-   logical, dimension(200), save :: initialized = .false.
+   logical, dimension({CCPP_NUM_INSTANCES}), save :: initialized = .false.
 
    contains
 '''
