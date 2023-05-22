@@ -59,11 +59,8 @@ module ccpp_hash_table
       procedure :: next       => hash_iterator_next_entry
       procedure :: valid      => hash_iterator_is_valid
       procedure :: value      => hash_iterator_value
-      procedure :: finalize   => hash_iterator_finalize
    end type ccpp_hash_iterator_t
 
-   !! Module-level hash table variable
-   type(ccpp_hash_table_t), private, allocatable, target :: hash_table_module
    !! Private interfaces
    private :: have_error      ! Has a called routine detected an error?
    private :: clear_optstring ! Clear a string, if present
@@ -401,9 +398,7 @@ CONTAINS
       class(ccpp_hash_iterator_t)      :: this
       type(ccpp_hash_table_t), intent(in), target :: hash_table
 
-      hash_table_module = hash_table
-
-      this%hash_table => hash_table_module
+      this%hash_table => hash_table
       this%index = 0
       nullify(this%table_entry)
       do
@@ -521,16 +516,5 @@ CONTAINS
       end if
 
    end function hash_iterator_value
-
-   subroutine hash_iterator_finalize(this)
-      ! Deallocate hash_table object
-
-      ! Dummy arguments
-      class(ccpp_hash_iterator_t)    :: this
-
-      nullify(this%hash_table)
-      deallocate(hash_table_module)
-
-   end subroutine hash_iterator_finalize
 
 end module ccpp_hash_table

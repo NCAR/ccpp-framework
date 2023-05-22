@@ -309,10 +309,9 @@ class ConstituentVarDict(VarDictionary):
                 vertical_dim = ''
             # end if
             advect_str = self.TF_string(var.get_prop_value('advected'))
-            init_in_phys_str = self.TF_string(var.is_initialized_in_physics())
             init_args = [f'std_name="{std_name}"', f'long_name="{long_name}"',
                          f'units="{units}"', f'vertical_dim="{vertical_dim}"',
-                         f'advected={advect_str}', f'initialized_in_physics={init_in_phys_str}',
+                         f'advected={advect_str}',
                          f'errcode={errvar_names["ccpp_error_code"]}',
                          f'errmsg={errvar_names["ccpp_error_message"]}']
             stmt = 'call {}(index)%instantiate({})'

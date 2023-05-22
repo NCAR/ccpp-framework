@@ -2,7 +2,7 @@
 
 """
 Define the CCPPDatabaseObj object
-Ojbect definition and methods to provide information from a run of capgen.
+Object definition and methods to provide information from a run of capgen.
 """
 
 from host_model import HostModel

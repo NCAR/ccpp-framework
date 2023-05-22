@@ -35,7 +35,6 @@ module ccpp_constituent_prop_mod
       character(len=:), private, allocatable :: vert_dim
       integer,          private              :: const_ind = int_unassigned
       logical,          private              :: advected = .false.
-      logical,          private              :: initialized_in_physics = .false.
       ! While the quantities below can be derived from the standard name,
       !    this implementation avoids string searching in parameterizations
       ! const_type distinguishes mass, volume, and number conc. mixing ratios
@@ -51,7 +50,6 @@ module ccpp_constituent_prop_mod
       procedure :: key => ccp_properties_get_key
       ! Informational methods
       procedure :: is_instantiated           => ccp_is_instantiated
-      procedure :: is_initialized_in_physics => ccp_is_initialized_in_physics
       procedure :: standard_name             => ccp_get_standard_name
       procedure :: long_name                 => ccp_get_long_name
       procedure :: is_layer_var              => ccp_is_layer_var
@@ -99,7 +97,6 @@ module ccpp_constituent_prop_mod
       procedure :: is_dry                    => ccpt_is_dry
       procedure :: is_moist                  => ccpt_is_moist
       procedure :: is_wet                    => ccpt_is_wet
-      procedure :: is_initialized_in_physics => ccpt_is_initialized_in_physics
       procedure :: minimum                   => ccpt_min_val
       procedure :: molec_weight              => ccpt_molec_weight
       ! ccpt_set: Set the internal pointer
@@ -197,7 +194,6 @@ CONTAINS
       outConst%vert_dim = inConst%vert_dim
       outConst%const_ind = inConst%const_ind
       outConst%advected = inConst%advected
-      outConst%initialized_in_physics = inConst%initialized_in_physics
       outConst%const_type = inConst%const_type
       outConst%const_water = inConst%const_water
       outConst%min_val = inConst%min_val
@@ -358,7 +354,7 @@ CONTAINS
    !#######################################################################
 
    subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, initialized_in_physics, errcode, errmsg)
+        advected, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -368,7 +364,6 @@ CONTAINS
       character(len=*),                     intent(in)    :: units
       character(len=*),                     intent(in)    :: vertical_dim
       logical, optional,                    intent(in)    :: advected
-      logical, optional,                    intent(in)    :: initialized_in_physics
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
 
@@ -389,11 +384,6 @@ CONTAINS
             this%advected = advected
          else
             this%advected = .false.
-         end if
-         if (present(initialized_in_physics)) then
-            this%initialized_in_physics = initialized_in_physics
-         else
-            this%initialized_in_physics = .false.
          end if
       end if
       if (errcode == 0) then
@@ -607,23 +597,6 @@ CONTAINS
          val_out = .false.
       end if
    end subroutine ccp_is_advected
-
-   !#######################################################################
-
-   subroutine ccp_is_initialized_in_physics(this, val_out, errcode, errmsg)
-
-      ! Dummy arguments
-      class(ccpp_constituent_properties_t), intent(in)  :: this
-      logical,                              intent(out) :: val_out
-      integer,          optional,           intent(out) :: errcode
-      character(len=*), optional,           intent(out) :: errmsg
-
-      if (this%is_instantiated(errcode, errmsg)) then
-         val_out = this%initialized_in_physics
-      else
-         val_out = .false.
-      end if
-   end subroutine ccp_is_initialized_in_physics
 
    !#######################################################################
 
@@ -1119,7 +1092,6 @@ CONTAINS
                   exit
                end if
             end do
-            call hiter%finalize()
             ! Sanity check on num_advect
             if (this%num_advected_vars > num_vars) then
                astat = 1
@@ -1189,7 +1161,6 @@ CONTAINS
                   exit
                end if
             end do
-            call hiter%finalize()
             ! Some size sanity checks
             if (index_const /= this%hash_table%num_values()) then
                call set_errvars(errcode + 1, subname,                         &
@@ -1951,28 +1922,6 @@ CONTAINS
       end if
 
    end subroutine ccpt_is_wet
-
-   !########################################################################
-
-   subroutine ccpt_is_initialized_in_physics(this, val_out, errcode, errmsg)
-
-      ! Dummy arguments
-      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
-      logical,                            intent(out) :: val_out
-      integer,                            intent(out) :: errcode
-      character(len=*),                   intent(out) :: errmsg
-      ! Local variable
-      character(len=*), parameter :: subname = 'ccpt_is_initialized_in_physics'
-
-      if (associated(this%prop)) then
-         call this%prop%is_initialized_in_physics(val_out, errcode, errmsg)
-      else
-         val_out = .false.
-         call set_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
-      end if
-
-   end subroutine ccpt_is_initialized_in_physics
 
    !########################################################################
 
