@@ -16,7 +16,7 @@ from common import encode_container
 from common import CCPP_STAGES
 from common import CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_THREAD_NUMBER, CCPP_INTERNAL_VARIABLES
-from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
+from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT, CCPP_NUM_INSTANCES
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
@@ -896,7 +896,7 @@ module {module}
    private
    public :: {subroutines}
 
-   logical, dimension({CCPP_NUM_INSTANCES}), save :: initialized = .false.
+   logical, dimension({num_instances}), save :: initialized = .false.
 
    contains
 '''
@@ -1665,7 +1665,8 @@ end module {module}
         f.write(Group.header.format(group=self._name,
                                     module=self._module,
                                     module_use=module_use,
-                                    subroutines=', &\n             '.join(self._subroutines)))
+                                    subroutines=', &\n             '.join(self._subroutines),
+                                    num_instances=CCPP_NUM_INSTANCES))
         f.write(local_subs)
         f.write(Group.footer.format(module=self._module))
         if (f is not sys.stdout):
