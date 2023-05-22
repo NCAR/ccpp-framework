@@ -29,8 +29,8 @@ contains
       !----------------------------------------------------------------
 
       real(kind_phys), parameter :: re_qc_min = 2.5 ! microns
-      real(kind_phys), parameter :: re_qc_max = 50  ! microns
-      real(kind_phys), parameter :: re_qi_avg = 75  ! microns
+      real(kind_phys), parameter :: re_qc_max = 50. ! microns
+      real(kind_phys), parameter :: re_qi_avg = 75. ! microns
       real(kind_phys) :: effrr_local(ncol,nlev)
 
       errmsg = ''
