@@ -35,6 +35,7 @@ module ccpp_constituent_prop_mod
       character(len=:), private, allocatable :: vert_dim
       integer,          private              :: const_ind = int_unassigned
       logical,          private              :: advected = .false.
+      logical,          private              :: thermo_active = .false.
       ! While the quantities below can be derived from the standard name,
       !    this implementation avoids string searching in parameterizations
       ! const_type distinguishes mass, volume, and number conc. mixing ratios
@@ -61,6 +62,7 @@ module ccpp_constituent_prop_mod
       procedure :: vertical_dimension        => ccp_get_vertical_dimension
       procedure :: const_index               => ccp_const_index
       procedure :: is_advected               => ccp_is_advected
+      procedure :: is_thermo_active          => ccp_is_thermo_active
       procedure :: equivalent                => ccp_is_equivalent
       procedure :: is_mass_mixing_ratio      => ccp_is_mass_mixing_ratio
       procedure :: is_volume_mixing_ratio    => ccp_is_volume_mixing_ratio
@@ -76,9 +78,10 @@ module ccpp_constituent_prop_mod
       procedure :: copyConstituent
       generic :: assignment(=) => copyConstituent
       ! Methods that change state (XXgoldyXX: make private?)
-      procedure :: instantiate     => ccp_instantiate
-      procedure :: deallocate      => ccp_deallocate
-      procedure :: set_const_index => ccp_set_const_index
+      procedure :: instantiate       => ccp_instantiate
+      procedure :: deallocate        => ccp_deallocate
+      procedure :: set_const_index   => ccp_set_const_index
+      procedure :: set_thermo_active => ccp_set_thermo_active
    end type ccpp_constituent_properties_t
 
 !! \section arg_table_ccpp_constituent_prop_ptr_t
@@ -96,6 +99,7 @@ module ccpp_constituent_prop_mod
       procedure :: vertical_dimension        => ccpt_get_vertical_dimension
       procedure :: const_index               => ccpt_const_index
       procedure :: is_advected               => ccpt_is_advected
+      procedure :: is_thermo_active          => ccpt_is_thermo_active
       procedure :: is_mass_mixing_ratio      => ccpt_is_mass_mixing_ratio
       procedure :: is_volume_mixing_ratio    => ccpt_is_volume_mixing_ratio
       procedure :: is_number_concentration   => ccpt_is_number_concentration
@@ -109,8 +113,9 @@ module ccpp_constituent_prop_mod
       ! ccpt_set: Set the internal pointer
       procedure :: set                     => ccpt_set
       ! Methods that change state (XXgoldyXX: make private?)
-      procedure :: deallocate      => ccpt_deallocate
-      procedure :: set_const_index => ccpt_set_const_index
+      procedure :: deallocate        => ccpt_deallocate
+      procedure :: set_const_index   => ccpt_set_const_index
+      procedure :: set_thermo_active => ccpt_set_thermo_active
    end type ccpp_constituent_prop_ptr_t
 
 !! \section arg_table_ccpp_model_constituents_t
@@ -596,6 +601,45 @@ CONTAINS
 
    !#######################################################################
 
+   subroutine ccp_set_thermo_active(this, thermo_flag, errcode, errmsg)
+      ! Set whether this constituent is thermodynamically active, which
+      ! means that certain physics schemes will use this constitutent
+      ! when calculating thermodynamic quantities (e.g. enthalpy).
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      logical,                              intent(in)    :: thermo_flag
+      integer,          optional,           intent(out)   :: errcode
+      character(len=*), optional,           intent(out)   :: errmsg
+
+      !Set thermodynamically active flag for this constituent:
+      if (this%is_instantiated(errcode, errmsg)) then
+         this%thermo_active = thermo_flag
+      end if
+
+   end subroutine ccp_set_thermo_active
+
+   !#######################################################################
+
+   subroutine ccp_is_thermo_active(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      logical,                              intent(out) :: val_out
+      integer,          optional,           intent(out) :: errcode
+      character(len=*), optional,           intent(out) :: errmsg
+
+      !If instantiated then check if constituent is
+      !thermodynamically active, otherwise return false:
+      if (this%is_instantiated(errcode, errmsg)) then
+         val_out = this%thermo_active
+      else
+         val_out = .false.
+      end if
+   end subroutine ccp_is_thermo_active
+
+   !#######################################################################
+
    subroutine ccp_is_advected(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
@@ -628,7 +672,8 @@ CONTAINS
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
               (this%advected .eqv. oconst%advected)                     .and. &
-              (this%const_default_value == oconst%const_default_value)
+              (this%const_default_value == oconst%const_default_value)  .and. &
+              (this%thermo_active .eqv. oconst%thermo_active)
       else
          equiv = .false.
       end if
@@ -1339,8 +1384,8 @@ CONTAINS
 
    !########################################################################
 
-   logical function ccp_model_const_is_match(this, index, advected)           &
-        result(is_match)
+   logical function ccp_model_const_is_match(this, index, advected,            &
+        thermo_active) result(is_match)
       ! Return .true. iff the constituent at <index> matches a pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1363,11 +1408,20 @@ CONTAINS
          end if
       end if
 
+      if (present(thermo_active)) then
+         call this%const_metadata(index)%is_thermo_active(check)
+         if (thermo_active .neqv. check) then
+            is_match = .false.
+         end if
+      end if
+
+
    end function ccp_model_const_is_match
 
    !########################################################################
 
-   subroutine ccp_model_const_num_match(this, nmatch, advected, errcode, errmsg)
+   subroutine ccp_model_const_num_match(this, nmatch, advected, thermo_active, &
+        errcode, errmsg)
       ! Query number of constituents matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1377,6 +1431,7 @@ CONTAINS
       class(ccpp_model_constituents_t), intent(in)  :: this
       integer,                          intent(out) :: nmatch
       logical,          optional,       intent(in)  :: advected
+      logical,          optional,       intent(in)  :: thermo_active
       integer,          optional,       intent(out) :: errcode
       character(len=*), optional,       intent(out) :: errmsg
       ! Local variables
@@ -1386,7 +1441,7 @@ CONTAINS
       nmatch = 0
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          do index = 1, SIZE(this%const_metadata)
-            if (this%is_match(index, advected=advected)) then
+            if (this%is_match(index, advected=advected, thermo_active=thermo_active)) then
                nmatch = nmatch + 1
             end if
          end do
@@ -1452,7 +1507,7 @@ CONTAINS
    !########################################################################
 
    subroutine ccp_model_const_copy_in_3d(this, const_array, advected,         &
-        errcode, errmsg)
+        thermo_active, errcode, errmsg)
       ! Gather constituent fields matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1462,6 +1517,7 @@ CONTAINS
       class(ccpp_model_constituents_t),    intent(in)  :: this
       real(kind_phys),                     intent(out) :: const_array(:,:,:)
       logical,          optional,          intent(in)  :: advected
+      logical,          optional,          intent(in)  :: thermo_active
       integer,          optional,          intent(out) :: errcode
       character(len=*), optional,          intent(out) :: errmsg
       ! Local variables
@@ -1478,7 +1534,8 @@ CONTAINS
          max_cind = SIZE(const_array, 3)
          num_levels = SIZE(const_array, 2)
          do index = 1, SIZE(this%const_metadata)
-            if (this%is_match(index, advected=advected)) then
+            if (this%is_match(index, advected=advected,                       &
+                              thermo_active=thermo_active)) then
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
@@ -1527,7 +1584,7 @@ CONTAINS
    !########################################################################
 
    subroutine ccp_model_const_copy_out_3d(this, const_array, advected,        &
-        errcode, errmsg)
+        thermo_active, errcode, errmsg)
       ! Update constituent fields matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1537,6 +1594,7 @@ CONTAINS
       class(ccpp_model_constituents_t), intent(inout) :: this
       real(kind_phys),                  intent(in)    :: const_array(:,:,:)
       logical,          optional,       intent(in)    :: advected
+      logical,          optional,       intent(in)    :: thermo_active
       integer,          optional,       intent(out)   :: errcode
       character(len=*), optional,       intent(out)   :: errmsg
       ! Local variables
@@ -1553,7 +1611,8 @@ CONTAINS
          max_cind = SIZE(const_array, 3)
          num_levels = SIZE(const_array, 2)
          do index = 1, SIZE(this%const_metadata)
-            if (this%is_match(index, advected=advected)) then
+            if (this%is_match(index, advected=advected,                       &
+                              thermo_active=thermo_active)) then
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
@@ -1825,6 +1884,28 @@ CONTAINS
       end if
 
    end subroutine ccpt_const_index
+
+   !#######################################################################
+
+   subroutine ccpt_is_thermo_active(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      logical,                            intent(out) :: val_out
+      integer,          optional,         intent(out) :: errcode
+      character(len=*), optional,         intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_is_thermo_active'
+
+      if (associated(this%prop)) then
+         call this%prop%is_thermo_active(val_out, errcode, errmsg)
+      else
+         val_out = .false.
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_is_thermo_active
 
    !#######################################################################
 
@@ -2123,9 +2204,9 @@ CONTAINS
 
       ! Dummy arguments
       class(ccpp_constituent_prop_ptr_t), intent(inout) :: this
-      integer,                              intent(in)    :: index
-      integer,          optional,           intent(out)   :: errcode
-      character(len=*), optional,           intent(out)   :: errmsg
+      integer,                            intent(in)    :: index
+      integer,          optional,         intent(out)   :: errcode
+      character(len=*), optional,         intent(out)   :: errmsg
       ! Local variable
       character(len=*), parameter :: subname = 'ccpt_set_const_index'
 
@@ -2145,5 +2226,32 @@ CONTAINS
       end if
 
    end subroutine ccpt_set_const_index
+
+   !#######################################################################
+
+   subroutine ccpt_set_thermo_active(this, thermo_flag, errcode, errmsg)
+      ! Set whether this constituent is thermodynamically active, which
+      ! means that certain physics schemes will use this constitutent
+      ! when calculating thermodynamic quantities (e.g. enthalpy).
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(inout) :: this
+      logical,                            intent(in)    :: thermo_flag
+      integer,          optional,         intent(out)   :: errcode
+      character(len=*), optional,         intent(out)   :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_set_thermo_active'
+
+      if (associated(this%prop)) then
+         if (this%is_instantiated(errcode, errmsg)) then
+            this%thermo_active = thermo_flag
+         end if
+      else
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_set_const_index
+
 
 end module ccpp_constituent_prop_mod
