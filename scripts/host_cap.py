@@ -209,7 +209,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     to create the dictionary.
     """
     # First create a MetadataTable for the constituents DDT
-    stdname_layer = "ccpp_num_constituents"
+    stdname_layer = "number_of_ccpp_constituents"
     horiz_dim = "horizontal_dimension"
     vert_layer_dim = "vertical_layer_dimension"
     vert_interface_dim = "vertical_interface_dimension"
@@ -224,7 +224,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
         f" standard_name = {stdname_layer}",
         " units = count", " dimensions = ()", " type = integer",
         f"[ {array_layer} ]",
-        " standard_name = ccpp_constituent_array",
+        " standard_name = ccpp_constituents",
         " units = none",
         f" dimensions = ({horiz_dim}, {vert_layer_dim}, {stdname_layer})",
         " type = real", " kind = kind_phys"]
