@@ -112,7 +112,7 @@ class ConstituentVarDict(VarDictionary):
                 # end for
                 newdims.append(':'.join(new_dnames))
             # end for
-            var = source_var.clone({'dimensions' : newdims}, remove_intent=False,
+            var = source_var.clone({'dimensions' : newdims}, remove_intent=True,
                                    source_type=self.__constituent_type)
             self.add_variable(var, self.__run_env)
         return var

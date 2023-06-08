@@ -78,6 +78,20 @@ character(len=16) :: {css_var_name} = '{state}'
 
     __scheme_template = '<scheme>{}</scheme>'
 
+    # The var_type_vals are bits to describe the status of a variable in
+    # each phase with a single number.
+    # Each phase is 2 bits with the following table:
+    #   0: Variable not present in this phase
+    #   1: Variable is intent(in) in this phase
+    #   2: Variable is intent(out) in this phase
+    #   3: Variable is intent(inout) in this phase
+    __var_type_vals = [f"{phase}_{bit}_bitpos"
+                       for phase in CCPP_STATE_MACH.transitions()
+                       for bit in ("input", "output")]
+    # __struct_element is a bit for variables which are part of a DDT
+    __struct_element = "struct_element"
+    __var_type_vals.append(__struct_element)
+
     def __init__(self, filename, api, run_env):
         """Initialize this Suite object from the SDF, <filename>.
         <api> serves as the Suite's parent."""
@@ -111,6 +125,11 @@ character(len=16) :: {css_var_name} = '{state}'
         # end if
         # Parse the SDF
         self.parse(run_env)
+        # For completeness, we initilize these here, however,
+        #   they will receive correct values at the end of analyze
+        self.__regular_vars = None
+        self.__parent_vars = None
+        self.__elem_vars = None
 
     @property
     def name(self):
@@ -260,6 +279,78 @@ character(len=16) :: {css_var_name} = '{state}'
     def groups(self):
         """Get the list of groups in this suite."""
         return self.__groups
+
+    def _interface_vars_dict(self, check_dict, ddt_lib):
+        """Collect the input, output, and inout variables for each phase
+        of this suite."""
+        parent = self.parent
+        # Collect all the suite variables, by type
+        regular_vars = {} # Fortran intrinsics
+        parent_vars = {}  # E.g., DDT
+        elem_vars = {} # Intrinsic vars inside a DDT
+        for part in self.groups:
+            phase = part.phase()
+            for var in part.call_list.variable_list():
+                stdname = var.get_prop_value("standard_name")
+                intent = var.get_prop_value("intent")
+                protected = var.get_prop_value("protected")
+                if (parent is not None) and (not protected):
+                    pvar = parent.find_variable(standard_name=stdname)
+                    if pvar is not None:
+                        protected = pvar.get_prop_value("protected")
+                    # end if
+                # end if
+                elements = var.intrinsic_elements(check_dict=check_dict,
+                                                  ddt_lib=ddt_lib)
+                if (intent == 'in') and (not protected):
+                    if isinstance(elements, list):
+                        self._add_vars_to_dict(parent_vars, stdname,
+                                               phase, "input")
+                        self._add_vars_to_dict(elem_vars, elements,
+                                               phase, "input")
+                    else:
+                        self._add_vars_to_dict(regular_vars, stdname,
+                                               phase, "input")
+                    # end if
+                elif intent == 'inout':
+                    if isinstance(elements, list):
+                        self._add_vars_to_dict(parent_vars, stdname,
+                                               phase, "input")
+                        self._add_vars_to_dict(elem_vars, elements,
+                                               phase, "input")
+                        self._add_vars_to_dict(parent_vars, stdname,
+                                               phase, "output")
+                        self._add_vars_to_dict(elem_vars, elements,
+                                               phase, "output")
+                    else:
+                        self._add_vars_to_dict(regular_vars, stdname,
+                                               phase, "input")
+                        self._add_vars_to_dict(regular_vars, stdname,
+                                               phase, "output")
+                    # end if
+                elif intent == 'out':
+                    if isinstance(elements, list):
+                        self._add_vars_to_dict(parent_vars, stdname,
+                                               phase, "output")
+                        self._add_vars_to_dict(elem_vars, elements,
+                                               phase, "output")
+                    else:
+                        self._add_vars_to_dict(regular_vars, stdname,
+                                               phase, "output")
+                    # end if
+                # end if
+            # end for
+        # end for
+        # Check for overlap (there should not be any)
+        reg_set = set(regular_vars.keys())
+        par_set = set(parent_vars.keys())
+        if not reg_set.isdisjoint(par_set):
+            overlap = reg_set.intersection(par_set)
+            emsg = (f"Suite {self.name}: Standard name overlap with: " +
+                    f"{', '.join(overlap)}.")
+            raise CCPPError(emsg)
+        # end if
+        return regular_vars, parent_vars, elem_vars
 
     def find_variable(self, standard_name=None, source_var=None,
                       any_scope=True, clone=None,
@@ -446,6 +537,9 @@ character(len=16) :: {css_var_name} = '{state}'
                 # end if
             # end for
         # end for
+        # Finally, collect usage dictionaries of Suite variables
+        args = self._interface_vars_dict(host_model, ddt_library)
+        self.__regular_vars, self.__parent_vars, self.__elem_vars = args
 
     def is_run_group(self, group):
         """Method to separate out run-loop groups from special initial
@@ -485,7 +579,208 @@ character(len=16) :: {css_var_name} = '{state}'
         """Return the constituent dictionary for this suite"""
         return self.parent
 
-    def write(self, output_dir, run_env):
+    @staticmethod
+    def _add_vars_to_dict(vdict, stdname, phase, inout):
+        # Add a presence flag to the <stdname> set in <vdict>
+        # Add a new set if <stdname> is not in <vdict>
+        # If <stdname> is a list, apply this function to each element
+        if isinstance(stdname, list):
+            for var in stdname:
+                self._add_vars_to_dict(vdict, var, phase, inout)
+            # end for
+        else:
+            if not stdname in vdict:
+                vdict[stdname] = set()
+            # end if
+            vdict[stdname].add(f"{phase}_{inout}_bitpos")
+        # end if
+
+    def req_vars_subname(self):
+        """Return the name of the required variables subroutine for this suite"""
+        return f"suite_{self.name}_variables"
+
+    def write_req_vars_sub(self, ofile, errvars):
+        """Write the required variables subroutine"""
+        bitfield_funcname = "find_bitfld_val"
+        varmatch_funcname = "var_match"
+        # Find error variables (only support old style for now)
+        errmsg_var = None
+        errcode_var= None
+        for evar in errvars:
+            if evar.get_prop_value('standard_name') == 'ccpp_error_code':
+                errcode_var = evar
+            elif evar.get_prop_value('standard_name') == 'ccpp_error_message':
+                errmsg_var = evar
+            else:
+                raise ParseInternalError("Unsupported error variable")
+            # end if
+        # end for
+        if (errmsg_var == None) or (errcode_var == None):
+            emsg = "Could not find error variable names: errvars = "
+            emsg += f"{', '.join([str(x) for x in errvars])}"
+            raise ParseInternalError(emsg)
+        # end if
+        errmsg = errmsg_var.get_prop_value('local_name')
+        errcode = errcode_var.get_prop_value('local_name')
+        inargs = f"variable_list, {errmsg}, {errcode}"
+        inargs += ", input_vars, output_vars, phases, struct_elements"
+        ofile.blank_line()
+        ofile.write(f"subroutine {self.req_vars_subname()}({inargs})", 1)
+        ofile.write("! Dummy arguments", 2)
+        vtype = "character(len=*)"
+        oline = f"{vtype}, allocatable, intent(out)   :: variable_list(:)"
+        ofile.write(oline, 2)
+        errmsg_var.write_def(ofile, 2, self,
+                             extra_space=11, dummy=True, add_intent="out")
+        errcode_var.write_def(ofile, 2, self,
+                              extra_space=11, dummy=True, add_intent="out")
+        oline = "logical,          optional,    intent(in)    :: input_vars"
+        ofile.write(oline, 2)
+        oline = "logical,          optional,    intent(in)    :: output_vars"
+        ofile.write(oline, 2)
+        oline = "character(len=*), optional,    intent(in)    :: phases(:)"
+        ofile.write(oline, 2)
+        oline = f"logical,{' '*9} optional,    intent(in)    :: struct_elements"
+        ofile.write(oline, 2)
+        ofile.write("! Local variables", 2)
+        spc = 37
+        ofile.write(f"logical {' '*spc}:: input_vars_use", 2)
+        ofile.write(f"logical {' '*spc}:: output_vars_use", 2)
+        ofile.write(f"logical {' '*spc}:: struct_elements_use", 2)
+        mlen = max([len(x.phase()) for x in self.groups])
+        mspc = ' '*15
+        ofile.write(f"character(len={mlen}), allocatable{mspc}:: phases_use(:)",
+                    2)
+        ofile.write(f"integer {' '*spc}:: num_vars", 2)
+        ofile.write(f"integer {' '*spc}:: var_index", 2)
+        ofile.write(f"integer(int_kind) {' '*(spc - 10)}:: var_mask", 2)
+        ofile.write(f"integer(int_kind) {' '*(spc - 10)}:: ptype_val", 2)
+        ofile.write(f"integer {' '*spc}:: out_index", 2)
+        ofile.write(f"integer {' '*spc}:: ierr", 2)
+        ofile.blank_line()
+        ofile.write(f"{errcode} = 0", 2)
+        ofile.write(f"{errmsg} = ''", 2)
+        ofile.write("if (present(input_vars)) then", 2)
+        ofile.write("input_vars_use = input_vars", 3)
+        ofile.write("else", 2)
+        ofile.write("input_vars_use = .true.", 3)
+        ofile.write("end if", 2)
+        ofile.write("if (present(output_vars)) then", 2)
+        ofile.write("output_vars_use = output_vars", 3)
+        ofile.write("else", 2)
+        ofile.write("output_vars_use = .true.", 3)
+        ofile.write("end if", 2)
+        ofile.write("if (present(phases)) then", 2)
+        ofile.write("allocate(phases_use(size(phases, 1)), stat=ierr)", 3)
+        ofile.write("if (ierr /= 0) then", 3)
+        ofile.write(f"{errcode} = ierr", 4)
+        ofile.write(f"{errmsg} = 'Unable to allocate phases_use'", 4)
+        ofile.write("return", 4)
+        ofile.write("end if", 3)
+        ofile.write("phases_use(:) = phases(:)", 3)
+        ofile.write("else", 2)
+        pnames = [f"\"{x.phase()}{' '*(mlen - len(x.phase()))}\""
+                  for x in self.groups]
+        ofile.write(f"allocate(phases_use({len(pnames)}), stat=ierr)", 3)
+        ofile.write("if (ierr /= 0) then", 3)
+        ofile.write(f"{errcode} = ierr", 4)
+        ofile.write(f"{errmsg} = 'Unable to allocate phases_use'", 4)
+        ofile.write("return", 4)
+        ofile.write("end if", 3)
+        ofile.write(f"phases_use(:) = (/ {', '.join(pnames)} /)", 3)
+        ofile.write("end if", 2)
+        ofile.write("if (present(struct_elements)) then", 2)
+        ofile.write("struct_elements_use = struct_elements", 3)
+        ofile.write("else", 2)
+        ofile.write("struct_elements_use = .true.", 3)
+        ofile.write("end if", 2)
+        ofile.comment("Find the correct variable mask based on phase and type",
+                      2)
+        ofile.write("var_mask = 0_int_kind", 2)
+        ofile.write("do var_index = 1, size(phases_use, 1)", 2)
+        ofile.write("if (input_vars_use) then", 3)
+        args = f"(phases_use(var_index), 'input')"
+        ofile.write(f"ptype_val = {bitfield_funcname}{args}", 4)
+        ofile.write("if (ptype_val == 0_int_kind) then", 4)
+        ofile.write(f"{errcode} = 1", 5)
+        emsg = "'No bitval for input phase = '//trim(phases_use(var_index))"
+        ofile.write(f"{errmsg} = {emsg}", 5)
+        ofile.write("return", 5)
+        ofile.write("end if", 4)
+        ofile.write("var_mask = var_mask + ptype_val", 4)
+        ofile.write("end if", 3)
+        ofile.write("if (output_vars_use) then", 3)
+        args = f"(phases_use(var_index), 'output')"
+        ofile.write(f"ptype_val = {bitfield_funcname}{args}", 4)
+        ofile.write("if (ptype_val == 0_int_kind) then", 4)
+        ofile.write(f"{errcode} = 1", 5)
+        emsg = "'No bitval for output phase = '//trim(phases_use(var_index))"
+        ofile.write(f"{errmsg} = {emsg}", 5)
+        ofile.write("return", 5)
+        ofile.write("end if", 4)
+        ofile.write("var_mask = var_mask + ptype_val", 4)
+        ofile.write("end if", 3)
+        ofile.write("end do", 2)
+        ofile.comment("Find the number of variables that match the pattern", 2)
+        ofile.write("num_vars = 0", 2)
+        ofile.write("do var_index = 1, size(suite_bitvals, 1)", 2)
+        ofile.write(f"if ({varmatch_funcname}(suite_bitvals(var_index))) then",
+                    3)
+        ofile.write("num_vars = num_vars + 1", 4)
+        ofile.write("end if", 3)
+        ofile.write("end do", 2)
+        ofile.write("allocate(variable_list(num_vars), stat=ierr)", 2)
+        ofile.write("if (ierr /= 0) then", 2)
+        ofile.write(f"{errcode} = ierr", 3)
+        ofile.write(f"{errmsg} = 'Unable to allocate variable_list'", 3)
+        ofile.write("return", 3)
+        ofile.write("end if", 2)
+        ofile.write("out_index = 0", 2)
+        ofile.write("do var_index = 1, size(suite_allvars, 1)", 2)
+        ofile.write(f"if ({varmatch_funcname}(suite_bitvals(var_index))) then",
+                    3)
+        ofile.write("out_index = out_index + 1", 4)
+        ofile.write("variable_list(out_index) = suite_allvars(var_index)", 4)
+        ofile.write("end if", 3)
+        ofile.write("end do", 2)
+        ofile.blank_line()
+        ofile.write("contains", 1)
+        ofile.blank_line()
+        ofile.comment("Find the bit value for this phase and inout type", 2)
+        int_type = "integer(int_kind)"
+        ofile.write(f"{int_type} function {bitfield_funcname}(phase, iotype)", 2)
+        ofile.write("character(len=*), intent(in)  :: phase", 3)
+        ofile.write("character(len=*), intent(in)  :: iotype", 3)
+        ofile.write("character(len=:), allocatable :: ptype_name", 3)
+        ofile.write("ptype_name = trim(phase)//'_'//trim(iotype)//'_bitpos'", 3)
+        ofile.write("select case(trim(ptype_name))", 3)
+        for vtype in self.__var_type_vals:
+            if vtype == self.__struct_element:
+                continue
+            # end if
+            ofile.write(f"case ('{vtype}')", 3)
+            ofile.write(f"{bitfield_funcname} = {vtype}", 4)
+        # end for
+        ofile.write("case default", 3)
+        ofile.comment("Error, return 0: Caller must trap", 4)
+        ofile.write(f"{bitfield_funcname} = 0", 4)
+        ofile.write("end select", 3)
+        ofile.write(f"end function {bitfield_funcname}", 2)
+        ofile.blank_line()
+        ofile.write(f"logical function {varmatch_funcname}(var_bfield)", 2)
+        ofile.write("integer(int_kind), intent(in)  :: var_bfield", 3)
+        ofile.write(f"{varmatch_funcname} = .false.", 3)
+        etest = "if (struct_elements_use .or. "
+        etest += "(iand(struct_element, var_bfield) == 0_int_kind)) then"
+        ofile.write(etest, 3)
+        ofile.write(f"{varmatch_funcname} = iand(var_bfield, var_mask) /= 0", 4)
+        ofile.write("end if", 3)
+        ofile.write(f"end function {varmatch_funcname}", 2)
+        ofile.blank_line()
+        ofile.write(f"end subroutine {self.req_vars_subname()}", 1)
+        ofile.blank_line()
+
+    def write(self, output_dir, run_env, check_dict, ddt_lib):
         """Create caps for all groups in the suite and for the entire suite
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
@@ -501,6 +796,18 @@ character(len=16) :: {css_var_name} = '{state}'
                            "CCPP Suite Cap for {}".format(self.name),
                            self.module) as outfile:
             # Write module 'use' statements here
+            # For proper conversion of binary literals
+            bitmax = len(self.__var_type_vals) + 1
+            if bitmax >= 64:
+                raise ParseInternalError("Not enough bits for Suite var types")
+            # end if
+            if bitmax >= 32:
+                int_str = "INT64"
+            else:
+                int_str = "INT32"
+            # end if
+            outfile.write(f"use ISO_FORTRAN_ENV, only: int_kind => {int_str}",
+                          1)
             outfile.write('use {}'.format(KINDS_MODULE), 1)
             # Look for any DDT types
             self.__ddt_library.write_ddt_use_statements(self.values(),
@@ -516,8 +823,9 @@ character(len=16) :: {css_var_name} = '{state}'
             outfile.write(line.format(css_var_name=var_name,
                                       state=var_state), 1)
             for group in self.__groups:
-                outfile.write('public :: {}'.format(group.name), 1)
+                outfile.write(f"public :: {group.name}", 1)
             # end for
+            outfile.write(f"public :: {self.req_vars_subname()}", 1)
             # Declare constituent public interfaces
             const_dict.declare_public_interfaces(outfile, 1)
             # Declare constituent private suite interfaces and data
@@ -526,6 +834,66 @@ character(len=16) :: {css_var_name} = '{state}'
             for svar in self.keys():
                 self[svar].write_def(outfile, 1, self, allocatable=True)
             # end for
+            # Declare suite variable variables and parameters
+            int_type = f"integer(int_kind)"
+            bitpos = 1 # Position in value where 1 is least significant
+            bitfld = 1 # Value of binary digit at bitpos
+            valbits = {} # Remember bitfld of each entry type
+            mspc = max([len(x) for x in self.__var_type_vals])
+            vtype_names = []
+            # First, the bitpos parameters
+            for vtype in self.__var_type_vals:
+                vfld = f"{vtype}{' '*(mspc - len(vtype))}"
+                bitstr = f"int(b'{bitfld:0{bitmax}b}', int_kind)"
+                outfile.write(f"{int_type}, parameter :: {vfld} = {bitstr}", 1)
+                valbits[f"{vtype}"] = bitfld
+                vtype_names.append(f'"{vfld}"')
+                bitpos += 1
+                bitfld *= 2
+            # end for
+            # Now some strings so we can find the right pos
+            oline = f"character(len={mspc}), private :: vartype_names"
+            oline += f"({len(valbits)}) = (/ {', '.join(vtype_names)} /)"
+            outfile.write(oline, 1)
+            # Collect all the Suite variables in one list
+            allvars = set()
+            allvars.update(self.__regular_vars.keys())
+            allvars.update(self.__parent_vars.keys())
+            allvars.update(self.__elem_vars.keys())
+            # Change allvars to a list for a consistent ordering
+            allvars = sorted(allvars)
+            mspc = max([len(x) for x in allvars])
+            nvars = len(allvars)
+            # Declare an array of all this Suite's variable standard names
+            decl = f"character(len={mspc}), private :: suite_allvars({nvars}) = "
+            vlist = ', '.join([f"\"{x}{' '*(mspc - len(x))}\"" for x in allvars])
+            decl += f"(/ {vlist} /)"
+            outfile.write(decl, 1)
+
+            # Declare a bitfield for each variable with phase and type info
+            decl = f"{int_type}, private :: suite_bitvals({nvars}) = "
+            vlist = []
+            for stdname in allvars:
+                if stdname in self.__regular_vars:
+                    var = self.__regular_vars[stdname]
+                    varval = 0
+                elif stdname in self.__parent_vars:
+                    var = self.__parent_vars[stdname]
+                    varval = 0
+                elif stdname in self.__elem_vars:
+                    var = self.__elem_vars[stdname]
+                    varval = valbits[self.__struct_element]
+                else:
+                    raise ParseInternalError(f"No var for '{stdname}'?")
+                # end if
+                # Compute value of variable
+                for entry in var:
+                    varval += valbits[entry]
+                # end for
+                vlist.append(f"int(b'{varval:0{bitmax}b}', int_kind)")
+            # end for
+            decl += f"(/ {', '.join(vlist)} /)"
+            outfile.write(decl, 1)
             outfile.end_module_header()
             for group in self.__groups:
                 if group.name in self._beg_groups:
@@ -541,6 +909,8 @@ character(len=16) :: {css_var_name} = '{state}'
             # end for
             err_vars = self.find_error_variables(any_scope=True,
                                                  clone_as_out=True)
+            # Write the required variables subroutine for this suite
+            self.write_req_vars_sub(outfile, err_vars)
             # Write the constituent properties interface
             const_dict.write_constituent_routines(outfile, 1,
                                                   self.name, err_vars)
@@ -687,7 +1057,8 @@ class API(VarDictionary):
         api_filenames = list()
         # Write out the suite files
         for suite in self.suites:
-            out_file_name = suite.write(output_dir, run_env)
+            out_file_name = suite.write(output_dir, run_env,
+                                        self.parent, self.__ddt_lib)
             api_filenames.append(out_file_name)
         # end for
         return api_filenames
@@ -760,308 +1131,47 @@ class API(VarDictionary):
     def write_req_vars_sub(self, ofile, errmsg_name, errcode_name):
         """Write the required variables subroutine"""
         oline = "suite_name, variable_list, {errmsg}, {errcode}"
-        oline += ", input_vars, output_vars, struct_elements"
+        oline += ", input_vars, output_vars, phases, struct_elements"
         inargs = oline.format(errmsg=errmsg_name, errcode=errcode_name)
         ofile.write("\nsubroutine {}({})".format(API.__vars_fname, inargs), 1)
+        # Declare use statements for suite varlist routines
+        mlen = max([len(x.module) for x in self.suites])
+        for suite in self.suites:
+            mod = f"{suite.module}{' '*(mlen - len(suite.module))}"
+            ofile.write(f"use {mod}, only: {suite.req_vars_subname()}", 2)
+        # end for
         ofile.write("! Dummy arguments", 2)
         oline = "character(len=*),              intent(in)  :: suite_name"
         ofile.write(oline, 2)
         oline = "character(len=*), allocatable, intent(out) :: variable_list(:)"
         ofile.write(oline, 2)
-        self._errmsg_var.write_def(ofile, 2, self, extra_space=22)
-        self._errcode_var.write_def(ofile, 2, self, extra_space=22)
-        oline = "logical, optional,             intent(in) :: input_vars"
+        self._errmsg_var.write_def(ofile, 2, self, extra_space=11,
+                                   dummy=True, add_intent="out")
+        self._errcode_var.write_def(ofile, 2, self, extra_space=11,
+                                    dummy=True, add_intent="out")
+        oline = "logical,          optional,    intent(in) :: input_vars"
         ofile.write(oline, 2)
-        oline = "logical, optional,             intent(in) :: output_vars"
+        oline = "logical,          optional,    intent(in) :: output_vars"
         ofile.write(oline, 2)
-        oline = "logical, optional,             intent(in) :: struct_elements"
+        oline = "character(len=*), optional,    intent(in) :: phases(:)"
         ofile.write(oline, 2)
-        ofile.write("! Local variables", 2)
-        ofile.write("logical {}:: input_vars_use".format(' '*34), 2)
-        ofile.write("logical {}:: output_vars_use".format(' '*34), 2)
-        ofile.write("logical {}:: struct_elements_use".format(' '*34), 2)
-        ofile.write("integer {}:: num_vars".format(' '*34), 2)
-        ofile.write("", 0)
-        ename = self._errcode_var.get_prop_value('local_name')
-        ofile.write("{} = 0".format(ename), 2)
-        ename = self._errmsg_var.get_prop_value('local_name')
-        ofile.write("{} = ''".format(ename), 2)
-        ofile.write("if (present(input_vars)) then", 2)
-        ofile.write("input_vars_use = input_vars", 3)
-        ofile.write("else", 2)
-        ofile.write("input_vars_use = .true.", 3)
-        ofile.write("end if", 2)
-        ofile.write("if (present(output_vars)) then", 2)
-        ofile.write("output_vars_use = output_vars", 3)
-        ofile.write("else", 2)
-        ofile.write("output_vars_use = .true.", 3)
-        ofile.write("end if", 2)
-        ofile.write("if (present(struct_elements)) then", 2)
-        ofile.write("struct_elements_use = struct_elements", 3)
-        ofile.write("else", 2)
-        ofile.write("struct_elements_use = .true.", 3)
-        ofile.write("end if", 2)
+        oline = "logical,          optional,    intent(in) :: struct_elements"
+        ofile.write(oline, 2)
+        ofile.blank_line()
+        ecname = self._errcode_var.get_prop_value('local_name')
+        ofile.write(f"{ecname} = 0", 2)
+        emname = self._errmsg_var.get_prop_value('local_name')
+        ofile.write(f"{emname} = ''", 2)
         else_str = ''
         for suite in self.suites:
-            parent = suite.parent
-            # Collect all the suite variables
-            oline = "{}if(trim(suite_name) == '{}') then"
-            input_vars = [set(), set(), set()] # leaves, arrays, leaf elements
-            inout_vars = [set(), set(), set()] # leaves, arrays, leaf elements
-            output_vars = [set(), set(), set()] # leaves, arrays, leaf elements
-            const_initialized_in_physics = {}
-            for part in suite.groups:
-                for var in part.call_list.variable_list():
-                    phase = part.phase()
-                    stdname = var.get_prop_value("standard_name")
-                    intent = var.get_prop_value("intent")
-                    protected = var.get_prop_value("protected")
-                    constituent = var.is_constituent()
-                    if stdname not in const_initialized_in_physics:
-                        const_initialized_in_physics[stdname] = False
-                    if (parent is not None) and (not protected):
-                        pvar = parent.find_variable(standard_name=stdname)
-                        if pvar is not None:
-                            protected = pvar.get_prop_value("protected")
-                        # end if
-                    # end if
-                    elements = var.intrinsic_elements(check_dict=self.parent,
-                                                      ddt_lib=self.__ddt_lib)
-                    if (intent == 'in') and (not protected) and (not const_initialized_in_physics[stdname]):
-                        if isinstance(elements, list):
-                            input_vars[1].add(stdname)
-                            input_vars[2].update(elements)
-                        else:
-                            input_vars[0].add(stdname)
-                        # end if
-                    elif intent == 'inout' and (not const_initialized_in_physics[stdname]):
-                        if isinstance(elements, list):
-                            inout_vars[1].add(stdname)
-                            inout_vars[2].update(elements)
-                        else:
-                            inout_vars[0].add(stdname)
-                        # end if
-                    elif intent == 'out' and phase != 'initialize' and constituent and not const_initialized_in_physics[stdname]:
-                        # constituents HAVE to be initialized in the init phase because the dycore needs to advect them
-                        emsg = "constituent variable '{}' cannot be initialized in the '{}' phase"
-                        raise CCPPError(emsg.format(stdname, phase))
-                    elif intent == 'out' and constituent and phase == 'initialize':
-                        const_initialized_in_physics[stdname] = True
-                    elif intent == 'out':
-                        if isinstance(elements, list):
-                            output_vars[1].add(stdname)
-                            output_vars[2].update(elements)
-                        else:
-                            output_vars[0].add(stdname)
-                        # end if
-                    # end if
-                # end for
-            # end for
-            # Figure out how many total variables to return and allocate
-            #   variable_list to that size
-            ofile.write(oline.format(else_str, suite.name), 2)
-            ofile.write("if (input_vars_use .and. output_vars_use) then", 3)
-            have_elems = input_vars[2] or inout_vars[2] or output_vars[2]
-            if have_elems:
-                ofile.write("if (struct_elements_use) then", 4)
-                numvars = len(input_vars[0] | input_vars[2] | inout_vars[0] |
-                              inout_vars[2] | output_vars[0] | output_vars[2])
-                ofile.write("num_vars = {}".format(numvars), 5)
-                ofile.write("else", 4)
-            # end if
-            numvars = len(input_vars[0] | input_vars[1] | inout_vars[0] |
-                          inout_vars[1] | output_vars[0] | output_vars[1])
-            ofile.write("num_vars = {}".format(numvars), 5 if have_elems else 4)
-            if have_elems:
-                ofile.write("end if", 4)
-            # end if
-            ofile.write("else if (input_vars_use) then", 3)
-            have_elems = input_vars[2] or inout_vars[2]
-            if have_elems:
-                ofile.write("if (struct_elements_use) then", 4)
-                numvars = len(input_vars[0] | input_vars[2] |
-                              inout_vars[0] | inout_vars[2])
-                ofile.write("num_vars = {}".format(numvars), 5)
-                ofile.write("else", 4)
-            # end if
-            numvars = len(input_vars[0] | input_vars[1] |
-                          inout_vars[0] | inout_vars[1])
-            ofile.write("num_vars = {}".format(numvars), 5 if have_elems else 4)
-            if have_elems:
-                ofile.write("end if", 4)
-            # end if
-            ofile.write("else if (output_vars_use) then", 3)
-            have_elems = inout_vars[2] or output_vars[2]
-            if have_elems:
-                ofile.write("if (struct_elements_use) then", 4)
-                numvars = len(inout_vars[0] | inout_vars[2] |
-                              output_vars[0] | output_vars[2])
-                ofile.write("num_vars = {}".format(numvars), 5)
-                ofile.write("else", 4)
-            # end if
-            numvars = len(inout_vars[0] | inout_vars[1] |
-                          output_vars[0] | output_vars[1])
-            ofile.write("num_vars = {}".format(numvars), 5 if have_elems else 4)
-            if have_elems:
-                ofile.write("end if", 4)
-            # end if
-            ofile.write("else", 3)
-            ofile.write("num_vars = 0", 4)
-            ofile.write("end if", 3)
-            ofile.write("allocate(variable_list(num_vars))", 3)
-            # Now, fill in the variable_list array
-            # Start with inout variables
-            elem_start = 1
-            leaf_start = 1
-            leaf_written_set = inout_vars[0].copy()
-            elem_written_set = inout_vars[0].copy()
-            leaf_list = sorted(inout_vars[0])
-            if inout_vars[0] or inout_vars[1] or inout_vars[2]:
-                ofile.write("if (input_vars_use .or. output_vars_use) then", 3)
-                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 4,
-                                       add_allocate=False,
-                                       start_index=leaf_start)
-            # end if
-            leaf_start += len(leaf_list)
-            elem_start += len(leaf_list)
-            # elements which have not been written out
-            elem_list = sorted(inout_vars[2] - elem_written_set)
-            elem_written_set = elem_written_set | inout_vars[2]
-            leaf_list = sorted(inout_vars[1] - leaf_written_set)
-            leaf_written_set = leaf_written_set | inout_vars[1]
-            if elem_list or leaf_list:
-                ofile.write("if (struct_elements_use) then", 4)
-                API.write_var_set_loop(ofile, 'variable_list', elem_list, 5,
-                                       add_allocate=False,
-                                       start_index=elem_start)
-                elem_start += len(elem_list)
-                ofile.write("num_vars = {}".format(elem_start - 1), 5)
-                ofile.write("else", 4)
-                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 5,
-                                       add_allocate=False,
-                                       start_index=leaf_start)
-                leaf_start += len(leaf_list)
-                ofile.write("num_vars = {}".format(leaf_start - 1), 5)
-                ofile.write("end if", 4)
-            else:
-                ofile.write("num_vars = {}".format(len(leaf_written_set)),
-                            4 if leaf_written_set else 3)
-            # end if
-            if inout_vars[0] or inout_vars[1] or inout_vars[2]:
-                ofile.write("end if", 3)
-            # end if
-            # Write input variables
-            leaf_list = sorted(input_vars[0] - leaf_written_set)
-            # Are there any output variables which are also input variables
-            #    (e.g., for a different part (group) of the suite)?
-            # We need to collect them now in case <input_vars> is selected
-            #    but not <output_vars>.
-            leaf_cross_set = output_vars[0] & input_vars[0]
-            simp_cross_set = (output_vars[1] & input_vars[1]) - leaf_cross_set
-            elem_cross_set = (output_vars[2] & input_vars[2]) - leaf_cross_set
-            # Subtract the variables which have already been written out
-            leaf_cross_list = sorted(leaf_cross_set - leaf_written_set)
-            simp_cross_list = sorted(simp_cross_set - leaf_written_set)
-            elem_cross_list = sorted(elem_cross_set - elem_written_set)
-            # Next move back to processing the input variables
-            leaf_written_set = leaf_written_set | input_vars[0]
-            elem_list = sorted(input_vars[2] - elem_written_set)
-            elem_written_set = elem_written_set | input_vars[0] | input_vars[2]
-            have_inputs = elem_list or leaf_list
-            if have_inputs:
-                ofile.write("if (input_vars_use) then", 3)
-                # elements which have not been written out
-            # end if
-            API.write_var_set_loop(ofile, 'variable_list', leaf_list, 4,
-                                   add_allocate=False, start_var="num_vars",
-                                   start_index=1)
-            if leaf_list:
-                ofile.write("num_vars = num_vars + {}".format(len(leaf_list)),
-                            4)
-            # end if
-            leaf_start += len(leaf_list)
-            elem_start += len(leaf_list)
-            leaf_list = input_vars[1].difference(leaf_written_set)
-            leaf_written_set.union(input_vars[1])
-            if elem_list or leaf_list:
-                ofile.write("if (struct_elements_use) then", 4)
-                API.write_var_set_loop(ofile, 'variable_list', elem_list, 5,
-                                       add_allocate=False,
-                                       start_index=elem_start)
-                elem_start += len(elem_list) - 1
-                ofile.write("num_vars = {}".format(elem_start), 5)
-                ofile.write("else", 4)
-                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 5,
-                                       add_allocate=False,
-                                       start_index=leaf_start)
-                leaf_start += len(leaf_list) - 1
-                ofile.write("num_vars = {}".format(leaf_start), 5)
-                ofile.write("end if", 4)
-            # end if
-            if have_inputs:
-                ofile.write("end if", 3)
-            # end if
-            # Write output variables
-            leaf_list = sorted(output_vars[0].difference(leaf_written_set))
-            leaf_written_set = leaf_written_set.union(output_vars[0])
-            elem_written_set = elem_written_set.union(output_vars[0])
-            elem_list = sorted(output_vars[2].difference(elem_written_set))
-            elem_written_set = elem_written_set.union(output_vars[2])
-            have_outputs = elem_list or leaf_list
-            if have_outputs:
-                ofile.write("if (output_vars_use) then", 3)
-            # end if
-            leaf_start = 1
-            API.write_var_set_loop(ofile, 'variable_list', leaf_list, 4,
-                                   add_allocate=False, start_var="num_vars",
-                                   start_index=leaf_start)
-            leaf_start += len(leaf_list)
-            elem_start = leaf_start
-            leaf_list = output_vars[1].difference(leaf_written_set)
-            leaf_written_set.union(output_vars[1])
-            if elem_list or leaf_list:
-                ofile.write("if (struct_elements_use) then", 4)
-                API.write_var_set_loop(ofile, 'variable_list', elem_list, 5,
-                                       add_allocate=False, start_var="num_vars",
-                                       start_index=elem_start)
-                elem_start += len(elem_list)
-                ofile.write("else", 4)
-                API.write_var_set_loop(ofile, 'variable_list', leaf_list, 5,
-                                       add_allocate=False, start_var="num_vars",
-                                       start_index=leaf_start)
-                leaf_start += len(leaf_list)
-                ofile.write("end if", 4)
-            # end if
-            if leaf_cross_list or elem_cross_list:
-                ofile.write("if (.not. input_vars_use) then", 4)
-                API.write_var_set_loop(ofile, 'variable_list', leaf_cross_list,
-                                       5, add_allocate=False,
-                                       start_var="num_vars",
-                                       start_index=leaf_start)
-                leaf_start += len(leaf_cross_list)
-                elem_start += len(leaf_cross_list)
-                if elem_cross_list or simp_cross_list:
-                    ofile.write("if (struct_elements_use) then", 5)
-                    API.write_var_set_loop(ofile, 'variable_list',
-                                           elem_cross_list, 6,
-                                           add_allocate=False,
-                                           start_var="num_vars",
-                                           start_index=elem_start)
-                    elem_start += len(elem_list)
-                    ofile.write("else", 5)
-                    API.write_var_set_loop(ofile, 'variable_list',
-                                           leaf_cross_list, 6,
-                                           add_allocate=False,
-                                           start_var="num_vars",
-                                           start_index=leaf_start)
-                    leaf_start += len(leaf_list)
-                    ofile.write("end if", 5)
-                # end if
-                ofile.write("end if", 4)
-            if have_outputs:
-                ofile.write("end if", 3)
-            # end if
+            oline = f"{else_str}if(trim(suite_name) == '{suite.name}') then"
+            ofile.write(oline, 2)
             else_str = 'else '
+            args = ["variable_list", emname, ecname, "input_vars=input_vars",
+                    "output_vars=output_vars", "phases=phases",
+                    "struct_elements=struct_elements"]
+            ofile.write(f"call {suite.req_vars_subname()}({', '.join(args)})",
+                        3)
         # end for
         ofile.write("else", 2)
         emsg = "write({errmsg}, '(3a)')".format(errmsg=errmsg_name)
