@@ -68,6 +68,9 @@ CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
 # Filename pattern for suite definition files
 SUITE_DEFINITION_FILENAME_PATTERN = re.compile('^suite_(.*)\.xml$')
 
+# Maximum number of concurrent CCPP instances per MPI task
+CCPP_NUM_INSTANCES = 200
+
 def execute(cmd, abort = True):
     """Runs a local command in a shell. Waits for completion and
     returns status, stdout and stderr. If abort = True, abort in

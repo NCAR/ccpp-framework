@@ -16,7 +16,7 @@ from common import encode_container
 from common import CCPP_STAGES
 from common import CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_THREAD_NUMBER, CCPP_INTERNAL_VARIABLES
-from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
+from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT, CCPP_NUM_INSTANCES
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
@@ -896,7 +896,7 @@ module {module}
    private
    public :: {subroutines}
 
-   logical, save :: initialized = .false.
+   logical, dimension({num_instances}), save :: initialized = .false.
 
    contains
 '''
@@ -930,37 +930,37 @@ end module {module}
 
     initialized_test_blocks = {
         'init' : '''
-      if (initialized) return
+      if (initialized(cdata%ccpp_instance)) return
 ''',
         'timestep_init' : '''
-      if (.not.initialized) then
+      if (.not.initialized(cdata%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_init called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'run' : '''
-      if (.not.initialized) then
+      if (.not.initialized(cdata%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'timestep_finalize' : '''
-      if (.not.initialized) then
+      if (.not.initialized(cdata%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_finalize called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'finalize' : '''
-      if (.not.initialized) return
+      if (.not.initialized(cdata%ccpp_instance)) return
 ''',
     }
 
     initialized_set_blocks = {
         'init' : '''
-      initialized = .true.
+      initialized(cdata%ccpp_instance) = .true.
 ''',
         'timestep_init' : '',
         'run' : '',
@@ -1665,7 +1665,8 @@ end module {module}
         f.write(Group.header.format(group=self._name,
                                     module=self._module,
                                     module_use=module_use,
-                                    subroutines=', &\n             '.join(self._subroutines)))
+                                    subroutines=', &\n             '.join(self._subroutines),
+                                    num_instances=CCPP_NUM_INSTANCES))
         f.write(local_subs)
         f.write(Group.footer.format(module=self._module))
         if (f is not sys.stdout):
