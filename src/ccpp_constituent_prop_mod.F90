@@ -1396,6 +1396,7 @@ CONTAINS
       class(ccpp_model_constituents_t), intent(in) :: this
       integer,                          intent(in) :: index
       logical, optional,                intent(in) :: advected
+      logical, optional,                intent(in) :: thermo_active
       ! Local variable
       logical :: check
 
@@ -2243,15 +2244,14 @@ CONTAINS
       character(len=*), parameter :: subname = 'ccpt_set_thermo_active'
 
       if (associated(this%prop)) then
-         if (this%is_instantiated(errcode, errmsg)) then
-            this%thermo_active = thermo_flag
+         if (this%prop%is_instantiated(errcode, errmsg)) then
+            this%prop%thermo_active = thermo_flag
          end if
       else
          call set_errvars(1, subname//": invalid constituent pointer",        &
               errcode=errcode, errmsg=errmsg)
       end if
 
-   end subroutine ccpt_set_const_index
-
+   end subroutine ccpt_set_thermo_active
 
 end module ccpp_constituent_prop_mod
