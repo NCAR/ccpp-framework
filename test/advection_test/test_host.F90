@@ -384,8 +384,46 @@ CONTAINS
             errflg = -1
          end if
       end if
+      !Check that being thermodynamically active defaults to False:
+      if (errflg == 0) then
+         call const_props(index_ice)%is_thermo_active(check, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to get thermo_active prop for cld_ice index = ", index_ice, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (check) then !Should be False
+            write(6, *) "ERROR: 'is_thermo_active' should default to False ", &
+                 "for all constituents unless set by host model."
+            errflg = -1
+         end if
+      end if
+      !Check that setting a constituent to be thermodynamiaclly active works
+      !as expected:
+      if (errflg == 0) then
+         call const_props(index_ice)%set_thermo_active(.true., errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to set thermo_active prop for cld_ice index = ", index_ice, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         call const_props(index_ice)%is_thermo_active(check, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to get thermo_active prop for cld_ice index = ", index_ice, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (.not.check) then !Should now be True
+            write(6, *) "ERROR: 'set_thermo_active' did not set thermo_active ", &
+                 "constituent property correctly."
+            errflg = -1
+         end if
+      end if
 
-       ! Use the suite information to setup the run
+      ! Use the suite information to setup the run
       do sind = 1, num_suites
          if (errflg == 0) then
             call test_host_ccpp_physics_initialize(                           &
