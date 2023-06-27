@@ -10,4 +10,4 @@ RUN python3 -m venv ./ccpp-env && \
 
 COPY . /ccpp/
 
-ENTRYPOINT [ '/bin/bash' ]
+CMD ["/bin/bash"]
