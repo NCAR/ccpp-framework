@@ -1,0 +1,13 @@
+name test
+
+on: [push]
+
+jobs:
+  unit_tests:
+    runs_on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: build Docker image
+      run: docker build -t ccpp .
+    - name: run tsts in container
+      run: docker run --name test-container -t ccpp bash -c 'cd ccpp/test && ./run_tests.sh'
