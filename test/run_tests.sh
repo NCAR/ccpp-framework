@@ -67,4 +67,5 @@ if [ $errcnt -eq 0 ]; then
   echo "All tests PASSed!"
 else
   echo "${errcnt} tests FAILed"
+  return 1
 fi
