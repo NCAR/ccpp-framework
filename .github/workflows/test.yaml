@@ -10,4 +10,4 @@ jobs:
     - name: build Docker image
       run: docker build -t ccpp .
     - name: run tsts in container
-      run: docker run --name test-container -t ccpp bash -c 'cd ccpp/test && ./run_tests.sh'
+      run: docker run --name test-container -t ccpp bash -c 'source ccpp-env/bin/activate && cd ccpp/test && ./run_tests.sh'
