@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: build Docker image
-      run: docker build -t ccpp .
+      run: docker build -f test/Dockerfile -t ccpp .
     - name: run tests in container
       run: docker run --name test-container -t ccpp bash -c 'source ccpp-env/bin/activate && cd ccpp/test && ./run_tests.sh'
 
