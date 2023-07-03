@@ -45,6 +45,9 @@ module ccpp_constituent_prop_mod
       real(kind_phys),  private              :: min_val = 0.0_kind_phys
       ! molar_mass is the molecular weight of the constituent (g mol-1)
       real(kind_phys),  private              :: molar_mass = kphys_unassigned
+      ! default_value is the default value that the constituent array will be
+      ! initialized to
+      real(kind_phys),  private              :: const_default_value = kphys_unassigned
    contains
       ! Required hashable method
       procedure :: key => ccp_properties_get_key
@@ -67,6 +70,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_wet                    => ccp_is_wet
       procedure :: minimum                   => ccp_min_val
       procedure :: molec_weight              => ccp_molec_weight
+      procedure :: default_value             => ccp_default_value
       ! Copy method (be sure to update this anytime fields are added)
       procedure :: copyConstituent
       generic :: assignment(=) => copyConstituent
@@ -99,6 +103,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_wet                    => ccpt_is_wet
       procedure :: minimum                   => ccpt_min_val
       procedure :: molec_weight              => ccpt_molec_weight
+      procedure :: default_value             => ccpt_default_value
       ! ccpt_set: Set the internal pointer
       procedure :: set                     => ccpt_set
       ! Methods that change state (XXgoldyXX: make private?)
@@ -197,6 +202,7 @@ CONTAINS
       outConst%const_type = inConst%const_type
       outConst%const_water = inConst%const_water
       outConst%min_val = inConst%min_val
+      outConst%const_default_value = inConst%const_default_value
    end subroutine copyConstituent
 
    !#######################################################################
@@ -354,7 +360,7 @@ CONTAINS
    !#######################################################################
 
    subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, errcode, errmsg)
+        advected, default_value, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -364,6 +370,7 @@ CONTAINS
       character(len=*),                     intent(in)    :: units
       character(len=*),                     intent(in)    :: vertical_dim
       logical, optional,                    intent(in)    :: advected
+      real(kind_phys), optional,            intent(in)    :: default_value
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
 
@@ -384,6 +391,9 @@ CONTAINS
             this%advected = advected
          else
             this%advected = .false.
+         end if
+         if (present(default_value)) then
+            this%const_default_value = default_value
          end if
       end if
       if (errcode == 0) then
@@ -434,6 +444,7 @@ CONTAINS
       this%advected = .false.
       this%const_type = int_unassigned
       this%const_water = int_unassigned
+      this%const_default_value = kphys_unassigned
 
    end subroutine ccp_deallocate
 
@@ -614,7 +625,8 @@ CONTAINS
          equiv = (trim(this%var_std_name) == trim(oconst%var_std_name)) .and. &
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
-              (this%advected .eqv. oconst%advected)
+              (this%advected .eqv. oconst%advected)                     .and. &
+              (this%const_default_value == oconst%const_default_value)
       else
          equiv = .false.
       end if
@@ -761,6 +773,24 @@ CONTAINS
       end if
 
    end subroutine ccp_molec_weight
+
+   !########################################################################
+
+   subroutine ccp_default_value(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      real(kind_phys),                      intent(out) :: val_out
+      integer,                              intent(out) :: errcode
+      character(len=*),                     intent(out) :: errmsg
+
+      if (this%is_instantiated(errcode, errmsg)) then
+         val_out = this%const_default_value
+      else
+         val_out = kphys_unassigned
+      end if
+
+   end subroutine ccp_default_value
 
    !########################################################################
    !
@@ -1200,7 +1230,8 @@ CONTAINS
       integer,                optional, intent(out)   :: errcode
       character(len=*),       optional, intent(out)   :: errmsg
       ! Local variables
-      integer                                      :: astat
+      integer                                         :: astat, index
+      real(kind=kind_phys)                            :: default_value
       character(len=*), parameter :: subname = 'ccp_model_const_data_lock'
 
       if (this%const_data_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
@@ -1224,7 +1255,11 @@ CONTAINS
          end if
          if (astat == 0) then
             this%num_layers = num_layers
-            this%vars_layer = kphys_unassigned
+            do index = 1, this%hash_table%num_values()
+               call this%const_metadata(index)%default_value(default_value, &
+                               errcode, errmsg)
+               this%vars_layer(:,:,index) = default_value
+            end do
             this%vars_minvalue = 0.0_kind_phys
          end if
          if (present(errcode)) then
@@ -1966,6 +2001,28 @@ CONTAINS
       end if
 
    end subroutine ccpt_molec_weight
+
+   !########################################################################
+
+   subroutine ccpt_default_value(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      real(kind_phys),                    intent(out) :: val_out
+      integer,                            intent(out) :: errcode
+      character(len=*),                   intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_default_value'
+
+      if (associated(this%prop)) then
+         call this%prop%default_value(val_out, errcode, errmsg)
+      else
+         val_out = kphys_unassigned
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_default_value
 
    !########################################################################
 

@@ -301,6 +301,7 @@ class ConstituentVarDict(VarDictionary):
             long_name = var.get_prop_value('long_name')
             units = var.get_prop_value('units')
             dims = var.get_dim_stdnames()
+            default_value = var.get_prop_value('default_value')
             if 'vertical_layer_dimension' in dims:
                 vertical_dim = 'vertical_layer_dimension'
             elif 'vertical_interface_dimension' in dims:
@@ -314,6 +315,8 @@ class ConstituentVarDict(VarDictionary):
                          f'advected={advect_str}',
                          f'errcode={errvar_names["ccpp_error_code"]}',
                          f'errmsg={errvar_names["ccpp_error_message"]}']
+            if default_value is not None:
+                init_args.append(f'default_value={default_value}')
             stmt = 'call {}(index)%instantiate({})'
             outfile.write(f'if ({errvar_names["ccpp_error_code"]} == 0) then', indent+1)
             outfile.write(stmt.format(self.constituent_prop_array_name(),
