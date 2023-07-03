@@ -45,6 +45,7 @@ fi
 # if [ $res -ne 0 ]; then
 #   echo "Failure running var_action test"
 # fi
+echo "Skipping var_action_test/run_test until feature is fully implemented"
 
 # Run doctests
 ./run_doctest.sh
