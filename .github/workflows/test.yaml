@@ -1,4 +1,4 @@
-name: test
+name: Capgen Unit Tests
 
 on:
   pull_request:
