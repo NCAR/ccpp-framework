@@ -1,6 +1,12 @@
 name: test
 
-on: [push]
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      #Trigger workflow on push to any branch or branch heirarchy:
+      - '**'
 
 jobs:
   unit_tests:
