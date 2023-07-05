@@ -13,8 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: build Docker image
-      run: docker build -f test/Dockerfile -t ccpp .
-    - name: run tests in container
-      run: docker run --name test-container -t ccpp bash -c 'source ccpp-env/bin/activate && cd ccpp/test && ./run_tests.sh'
+    - name: update repos and install dependencies
+      run: apt update && apt install -y cmake gcc-g++ gcc-fortran make python3 git
+    - name: create python venv
+      run: python3 -m venv ./ccpp-env && source ./ccpp-env/bin/activate && pip3 install -r requirements.txt
+    - name: Run unit tests
+      run: source ccpp-env/bin/activate && cd ccpp/test && ./run_tests.sh
 
