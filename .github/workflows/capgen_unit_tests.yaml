@@ -18,5 +18,5 @@ jobs:
     - name: create python venv
       run: python3 -m venv ./ccpp-env && source ./ccpp-env/bin/activate && pip3 install -r requirements.txt
     - name: Run unit tests
-      run: source ccpp-env/bin/activate && cd ccpp/test && ./run_tests.sh
+      run: source ccpp-env/bin/activate && cd test && ./run_tests.sh
 
