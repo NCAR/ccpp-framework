@@ -1,13 +1,13 @@
 name: Capgen Unit Tests
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
     branches:
       #Trigger workflow on push to any branch or branch heirarchy:
       - '**'
-  workflow_dispatch
 
 jobs:
   unit_tests:
