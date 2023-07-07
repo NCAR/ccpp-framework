@@ -11,7 +11,7 @@ on:
 
 jobs:
   unit_tests:
-    if: github.event_name == 'pull_request' || github.repository == 'NCAR/ccpp-framework'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.repository == 'NCAR/ccpp-framework'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
