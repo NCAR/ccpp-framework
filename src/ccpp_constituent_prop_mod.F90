@@ -71,6 +71,7 @@ module ccpp_constituent_prop_mod
       procedure :: minimum                   => ccp_min_val
       procedure :: molec_weight              => ccp_molec_weight
       procedure :: default_value             => ccp_default_value
+      procedure :: has_default               => ccp_has_default
       ! Copy method (be sure to update this anytime fields are added)
       procedure :: copyConstituent
       generic :: assignment(=) => copyConstituent
@@ -104,6 +105,7 @@ module ccpp_constituent_prop_mod
       procedure :: minimum                   => ccpt_min_val
       procedure :: molec_weight              => ccpt_molec_weight
       procedure :: default_value             => ccpt_default_value
+      procedure :: has_default               => ccpt_has_default
       ! ccpt_set: Set the internal pointer
       procedure :: set                     => ccpt_set
       ! Methods that change state (XXgoldyXX: make private?)
@@ -791,6 +793,26 @@ CONTAINS
       end if
 
    end subroutine ccp_default_value
+
+   !########################################################################
+
+   subroutine ccp_has_default(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      logical,                              intent(out) :: val_out
+      integer,                              intent(out) :: errcode
+      character(len=*),                     intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccp_has_default'
+
+      if (this%is_instantiated(errcode, errmsg)) then
+         val_out = this%const_default_value /= kphys_unassigned
+      else
+         val_out = .false.
+      end if
+
+   end subroutine ccp_has_default
 
    !########################################################################
    !
@@ -2023,6 +2045,28 @@ CONTAINS
       end if
 
    end subroutine ccpt_default_value
+
+   !########################################################################
+
+   subroutine ccpt_has_default(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      logical,                            intent(out) :: val_out
+      integer,                            intent(out) :: errcode
+      character(len=*),                   intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_has_default'
+
+      if (associated(this%prop)) then
+         call this%prop%has_default(val_out, errcode, errmsg)
+      else
+         val_out = .false.
+         call set_errvars(1, subname//": invalid constituent pointer",      &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_has_default
 
    !########################################################################
 
