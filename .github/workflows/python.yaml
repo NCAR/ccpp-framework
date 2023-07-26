@@ -54,4 +54,4 @@ jobs:
     - name: Doctest
       run : |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
-        pytest scripts -m --doctest-modules
+        pytest scripts/ --doctest-modules
