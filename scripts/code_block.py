@@ -13,7 +13,7 @@ from parse_tools   import ParseInternalError
 class CodeBlock(object):
     """Class to store a block of code and a method to write it to a file
     >>> CodeBlock([]) #doctest: +ELLIPSIS
-    <__main__.CodeBlock object at 0x...>
+    <code_block.CodeBlock object at 0x...>
     >>> CodeBlock(['hi mom']) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseInternalError: Each element of <code_list> must contain exactly two items, a code string and a relative indent
@@ -24,7 +24,10 @@ class CodeBlock(object):
     Traceback (most recent call last):
     ParseInternalError: Each element of <code_list> must contain exactly two items, a code string and a relative indent
     >>> CodeBlock([('hi mom', 1)]) #doctest: +ELLIPSIS
-    <__main__.CodeBlock object at 0x...>
+    <code_block.CodeBlock object at 0x...>
+    >>> from fortran_tools import FortranWriter
+    >>> outfile_name = "__code_block_temp.F90"
+    >>> outfile = FortranWriter(outfile_name, 'w', 'test file', 'test_mod')
     >>> CodeBlock([('hi mom', 1)]).write(outfile, 1, {})
 
     >>> CodeBlock([('hi {greet} mom', 1)]).write(outfile, 1, {}) #doctest: +IGNORE_EXCEPTION_DETAIL
@@ -32,6 +35,10 @@ class CodeBlock(object):
     ParseInternalError: 'greet' missing from <var_dict>
     >>> CodeBlock([('hi {{greet}} mom', 1)]).write(outfile, 1, {})
     >>> CodeBlock([('{greet} there mom', 1)]).write(outfile, 1, {'greet':'hi'})
+    >>> outfile.__exit__()
+    False
+    >>> import os
+    >>> os.remove(outfile_name)
     """
 
     __var_re = re.compile(r"[{][ ]*([A-Za-z][A-Za-z0-9_]*)[ ]*[}]")
