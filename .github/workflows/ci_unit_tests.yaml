@@ -1,0 +1,32 @@
+name: CI test to run CCPP-framework unit tests.
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build-linux:
+
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        py-version: [3.7.13, 3.8.5, 3.9.12]
+        test-files: [test_metadata_scheme_file.py, test_metadata_table.py, test_var_transforms.py]
+
+    # Environmental variables
+    env:
+      WRK_ROOT: ${{ github.workspace }}
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{matrix.py-version}}
+
+    - name: Run unit tests
+      run: |
+        cd ${WRK_ROOT}/test/unit_tests
+        ./${{matrix.test-files}}
