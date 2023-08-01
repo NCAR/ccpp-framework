@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        py-version: [3.7.13, 3.8.5, 3.9.12]
+        py-version: [3.7.13, 3.9.12]
         test-files: [test_metadata_scheme_file.py, test_metadata_table.py, test_var_transforms.py]
 
     # Environmental variables
@@ -25,6 +25,9 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{matrix.py-version}}
+
+    - name: Update system packages
+      run: sudo apt-get update
 
     - name: Run unit tests
       run: |
