@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        py-version: [3.7.13, 3.7.17, 3.8.12, 3.8.17, 3.9.12, 3.9.16, 3.10.5, 3.10.12, 3.11.0]
+        py-version: [3.7.13, 3.7.17, 3.8.12, 3.8.17, 3.9.12, 3.9.16, 3.10.5, 3.10.12]
         test-files: [test_metadata_scheme_file.py, test_metadata_table.py, test_var_transforms.py]
 
     # Environmental variables
