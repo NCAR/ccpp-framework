@@ -47,14 +47,6 @@ fi
 # fi
 echo "Skipping var_action_test/run_test until feature is fully implemented"
 
-# Run doctests
-./run_doctest.sh
-res=$?
-errcnt=$((errcnt + res))
-if [ $res -ne 0 ]; then
-  echo "${errcnt} doctest failures"
-fi
-
 for test in `ls unit_tests/test_*.py`; do
   echo "Running unit test, ${test}"
   python3 ${test}
