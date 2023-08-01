@@ -3,16 +3,10 @@
 """Classes to aid the parsing process"""
 
 import sys
-# Find python version
-PY3 = sys.version_info[0] > 2
 
 # pylint: disable=wrong-import-position
 # Python library imports
-if PY3:
-    from collections.abc import Iterable
-else:
-    from collections import Iterable
-# end if
+from collections.abc import Iterable
 import copy
 import os.path
 import logging

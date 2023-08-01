@@ -27,10 +27,6 @@ from metavar import Var
 from parse_tools import read_xml_file, PrettyElementTree
 from suite_objects import VerticalLoop, Subcycle
 
-# Find python version
-PY3 = sys.version_info[0] > 2
-PYSUBVER = sys.version_info[1]
-
 # Global data
 _INDENT_STR = "  "
 
