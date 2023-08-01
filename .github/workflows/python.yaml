@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.repository == 'NCAR/ccpp-framework' || github.event_name == 'push'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.repository == 'NCAR/ccpp-framework'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,7 +34,7 @@ jobs:
         pytest
 
   doctest:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.repository == 'NCAR/ccpp-framework' || github.event_name == 'push'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.repository == 'NCAR/ccpp-framework'
     runs-on: ubuntu-latest
     strategy:
       matrix:
