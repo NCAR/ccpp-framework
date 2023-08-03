@@ -393,6 +393,3 @@ class MetadataTableTestCase(unittest.TestCase):
         #print("The exception is", context.exception)
         emsg = "Invalid metadata table type, 'banana', at "
         self.assertTrue(emsg in str(context.exception))
-
-if __name__ == '__main__':
-    unittest.main()

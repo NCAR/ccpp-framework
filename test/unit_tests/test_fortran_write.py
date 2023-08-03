@@ -121,6 +121,3 @@ class MetadataTableTestCase(unittest.TestCase):
         self.assertTrue(os.path.exists(generate), msg=amsg)
         amsg = f"{generate} does not match {compare}"
         self.assertTrue(filecmp.cmp(generate, compare, shallow=False), msg=amsg)
-
-if __name__ == '__main__':
-    unittest.main()

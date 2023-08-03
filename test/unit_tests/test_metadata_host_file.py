@@ -255,6 +255,3 @@ class MetadataHeaderTestCase(unittest.TestCase):
         for emsg in emsgs:
             self.assertTrue(emsg in except_str)
         # end for
-
-if __name__ == "__main__":
-    unittest.main()
