@@ -13,7 +13,6 @@ import glob
 import os
 # CCPP framework imports
 from parse_tools import CCPPError, ParseInternalError
-import sys
 
 # Standardize name of generated kinds file and module
 KINDS_MODULE = 'ccpp_kinds'
