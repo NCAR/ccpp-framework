@@ -25,7 +25,6 @@ end_tag_re = re.compile(r"([<][/][^<>/]+[>])")
 simple_tag_re = re.compile(r"([<][^/][^<>/]+[/][>])")
 
 # Find python version
-PY3 = sys.version_info[0] > 2
 PYSUBVER = sys.version_info[1]
 _LOGGER = None
 
@@ -54,35 +53,12 @@ def call_command(commands, logger, silent=False):
     result = False
     outstr = ''
     try:
-        if PY3:
-            if PYSUBVER > 6:
-                cproc = subprocess.run(commands, check=True,
-                                       capture_output=True)
-                if not silent:
-                    logger.debug(cproc.stdout)
-                # end if
-                result = cproc.returncode == 0
-            elif PYSUBVER >= 5:
-                cproc = subprocess.run(commands, check=True,
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE)
-                if not silent:
-                    logger.debug(cproc.stdout)
-                # end if
-                result = cproc.returncode == 0
-            else:
-                raise ValueError("Python 3 must be at least version 3.5")
-            # end if
-        else:
-            pproc = subprocess.Popen(commands, stdin=None,
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
-            output, _ = pproc.communicate()
-            if not silent:
-                logger.debug(output)
-            # end if
-            result = pproc.returncode == 0
+        cproc = subprocess.run(commands, check=True,
+                                capture_output=True)
+        if not silent:
+            logger.debug(cproc.stdout)
         # end if
+        result = cproc.returncode == 0
     except (OSError, CCPPError, subprocess.CalledProcessError) as err:
         if silent:
             result = False
@@ -226,11 +202,7 @@ def read_xml_file(filename, logger=None):
 ###############################################################################
     """Read the XML file, <filename>, and return its tree and root"""
     if os.path.isfile(filename) and os.access(filename, os.R_OK):
-        if PY3:
-            file_open = (lambda x: open(x, 'r', encoding='utf-8'))
-        else:
-            file_open = (lambda x: open(x, 'r'))
-        # end if
+        file_open = (lambda x: open(x, 'r', encoding='utf-8'))
         with file_open(filename) as file_:
             try:
                 tree = ET.parse(file_)
@@ -282,29 +254,19 @@ class PrettyElementTree(ET.ElementTree):
               default_namespace=None, method="xml",
               short_empty_elements=True):
         """Subclassed write method to format output."""
-        if PY3 and (PYSUBVER >= 4):
-            if PYSUBVER >= 8:
-                et_str = ET.tostring(self.getroot(),
-                                     encoding=encoding, method=method,
-                                     xml_declaration=xml_declaration,
-                                     default_namespace=default_namespace,
-                                     short_empty_elements=short_empty_elements)
-            else:
-                et_str = ET.tostring(self.getroot(),
-                                     encoding=encoding, method=method,
-                                     short_empty_elements=short_empty_elements)
-            # end if
+        if PYSUBVER >= 8:
+            et_str = ET.tostring(self.getroot(),
+                                 encoding=encoding, method=method,
+                                 xml_declaration=xml_declaration,
+                                 default_namespace=default_namespace,
+                                 short_empty_elements=short_empty_elements)
         else:
             et_str = ET.tostring(self.getroot(),
-                                 encoding=encoding, method=method)
+                                 encoding=encoding, method=method,
+                                 short_empty_elements=short_empty_elements)
         # end if
-        if PY3:
-            fmode = 'wt'
-            root = str(et_str, encoding="utf-8")
-        else:
-            fmode = 'w'
-            root = et_str
-        # end if
+        fmode = 'wt'
+        root = str(et_str, encoding="utf-8")
         indent = 0
         last_write_text = False
         with open(file, fmode) as outfile:
