@@ -256,14 +256,14 @@ class PrettyElementTree(ET.ElementTree):
         """Subclassed write method to format output."""
         if PYSUBVER >= 8:
             et_str = ET.tostring(self.getroot(),
-                                    encoding=encoding, method=method,
-                                    xml_declaration=xml_declaration,
-                                    default_namespace=default_namespace,
-                                    short_empty_elements=short_empty_elements)
+                                 encoding=encoding, method=method,
+                                 xml_declaration=xml_declaration,
+                                 default_namespace=default_namespace,
+                                 short_empty_elements=short_empty_elements)
         else:
             et_str = ET.tostring(self.getroot(),
-                                    encoding=encoding, method=method,
-                                    short_empty_elements=short_empty_elements)
+                                 encoding=encoding, method=method,
+                                 short_empty_elements=short_empty_elements)
         # end if
         fmode = 'wt'
         root = str(et_str, encoding="utf-8")
