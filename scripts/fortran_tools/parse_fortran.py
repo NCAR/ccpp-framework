@@ -832,15 +832,3 @@ def parse_fortran_var_decl(line, source, run_env):
 ########################################################################
 
 ########################################################################
-
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    # pylint: enable=ungrouped-imports
-    from framework_env import CCPPFrameworkEnv
-    _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
-                                                   'scheme_files':'',
-                                                   'suites':''})
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if
