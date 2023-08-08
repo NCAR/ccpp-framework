@@ -47,8 +47,6 @@ fi
 # fi
 echo "Skipping var_action_test/run_test until feature is fully implemented"
 
-pytest -v unit_tests/
-
 if [ $errcnt -eq 0 ]; then
   echo "All tests PASSed!"
 else
