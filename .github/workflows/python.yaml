@@ -31,7 +31,7 @@ jobs:
     - name: Test with pytest
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
-        pytest
+        pytest -v
 
   doctest:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.repository == 'NCAR/ccpp-framework'
@@ -54,4 +54,4 @@ jobs:
     - name: Doctest
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
-        pytest scripts/ --doctest-modules
+        pytest -v scripts/ --doctest-modules
