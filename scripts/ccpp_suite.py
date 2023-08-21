@@ -17,8 +17,7 @@ from file_utils import KINDS_MODULE
 from fortran_tools import FortranWriter
 from framework_env import CCPPFrameworkEnv
 from metavar import Var, VarDictionary, ccpp_standard_var
-from metavar import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
-from parse_tools import ParseContext, ParseSource, context_string
+from parse_tools import ParseContext, ParseSource
 from parse_tools import ParseInternalError, CCPPError
 from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from parse_tools import init_log, set_log_to_null
@@ -31,12 +30,12 @@ from suite_objects import CallList, Group, Scheme
 ###############################################################################
 
 # Source for internally generated variables.
-_API_SOURCE_NAME = "CCPP_API"
+API_SOURCE_NAME = "CCPP_API"
 # Use the constituent source type for consistency
 _API_SUITE_VAR_NAME = ConstituentVarDict.constitutent_source_type()
 _API_SCHEME_VAR_NAME = "scheme"
 _API_CONTEXT = ParseContext(filename="ccpp_suite.py")
-_API_SOURCE = ParseSource(_API_SOURCE_NAME, _API_SCHEME_VAR_NAME, _API_CONTEXT)
+_API_SOURCE = ParseSource(API_SOURCE_NAME, _API_SCHEME_VAR_NAME, _API_CONTEXT)
 _API_LOGGING = init_log('ccpp_suite')
 set_log_to_null(_API_LOGGING)
 _API_DUMMY_RUN_ENV = CCPPFrameworkEnv(_API_LOGGING,
@@ -299,7 +298,7 @@ character(len=16) :: {css_var_name} = '{state}'
                     # Remove this entry to avoid looping back here
                     del self.__gvar_stdnames[standard_name]
                     # Let everyone know this is now a Suite variable
-                    var.source = ParseSource(_API_SOURCE_NAME,
+                    var.source = ParseSource(API_SOURCE_NAME,
                                              _API_SUITE_VAR_NAME,
                                              var.context)
                     self.add_variable(var, self.__run_env)
@@ -730,9 +729,9 @@ class API(VarDictionary):
 
     def write_suite_part_list_sub(self, ofile, errmsg_name, errcode_name):
         """Write the suite-part list subroutine"""
-        oline = "suite_name, part_list, {errmsg}, {errcode}"
-        inargs = oline.format(errmsg=errmsg_name, errcode=errcode_name)
-        ofile.write("\nsubroutine {}({})".format(API.__part_fname, inargs), 1)
+        ofile.blank_line()
+        inargs = f"suite_name, part_list, {errmsg_name}, {errcode_name}"
+        ofile.write(f"subroutine {API.__part_fname}({inargs})", 1)
         oline = "character(len=*),              intent(in)  :: suite_name"
         ofile.write(oline, 2)
         oline = "character(len=*), allocatable, intent(out) :: part_list(:)"
@@ -741,9 +740,9 @@ class API(VarDictionary):
         self._errcode_var.write_def(ofile, 2, self)
         else_str = ''
         ename = self._errcode_var.get_prop_value('local_name')
-        ofile.write("{} = 0".format(ename), 2)
+        ofile.write(f"{ename} = ''", 2)
         ename = self._errmsg_var.get_prop_value('local_name')
-        ofile.write("{} = ''".format(ename), 2)
+        ofile.write(f"{ename} = ''", 2)
         for suite in self.suites:
             oline = "{}if(trim(suite_name) == '{}') then"
             ofile.write(oline.format(else_str, suite.name), 2)
@@ -751,12 +750,12 @@ class API(VarDictionary):
             else_str = 'else '
         # end for
         ofile.write("else", 2)
-        emsg = "write({errmsg}, '(3a)')".format(errmsg=errmsg_name)
+        emsg = f"write({errmsg_name}, '(3a)')"
         emsg += "'No suite named ', trim(suite_name), ' found'"
         ofile.write(emsg, 3)
-        ofile.write("{errcode} = 1".format(errcode=errcode_name), 3)
+        ofile.write(f"{errcode_name} = 1", 3)
         ofile.write("end if", 2)
-        ofile.write("end subroutine {}".format(API.__part_fname), 1)
+        ofile.write(f"end subroutine {API.__part_fname}", 1)
 
     def write_req_vars_sub(self, ofile, errmsg_name, errcode_name):
         """Write the required variables subroutine"""
@@ -807,9 +806,9 @@ class API(VarDictionary):
             parent = suite.parent
             # Collect all the suite variables
             oline = "{}if(trim(suite_name) == '{}') then"
-            input_vars = [set(), set(), set()] # leaves, arrrays, leaf elements
-            inout_vars = [set(), set(), set()] # leaves, arrrays, leaf elements
-            output_vars = [set(), set(), set()] # leaves, arrrays, leaf elements
+            input_vars = [set(), set(), set()] # leaves, arrays, leaf elements
+            inout_vars = [set(), set(), set()] # leaves, arrays, leaf elements
+            output_vars = [set(), set(), set()] # leaves, arrays, leaf elements
             for part in suite.groups:
                 for var in part.call_list.variable_list():
                     stdname = var.get_prop_value("standard_name")
@@ -821,7 +820,8 @@ class API(VarDictionary):
                             protected = pvar.get_prop_value("protected")
                         # end if
                     # end if
-                    elements = var.intrinsic_elements(check_dict=self.parent)
+                    elements = var.intrinsic_elements(check_dict=self.parent,
+                                                      ddt_lib=self.__ddt_lib)
                     if (intent == 'in') and (not protected):
                         if isinstance(elements, list):
                             input_vars[1].add(stdname)

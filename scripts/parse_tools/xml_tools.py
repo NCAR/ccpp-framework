@@ -7,26 +7,19 @@ Parse a host-model registry XML file and return the captured variables.
 # Python library imports
 from __future__ import print_function
 import os
-import os.path
 import re
+import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 sys.path.insert(0, os.path.dirname(__file__))
-# pylint: disable=wrong-import-position
-try:
-    from distutils.spawn import find_executable
-    _XMLLINT = find_executable('xmllint')
-except ImportError:
-    _XMLLINT = None
-# End try
 # CCPP framework imports
 from parse_source import CCPPError
 from parse_log import init_log, set_log_to_null
-# pylint: enable=wrong-import-position
 
 # Global data
 _INDENT_STR = "  "
+_XMLLINT = shutil.which('xmllint') # Blank if not installed
 beg_tag_re = re.compile(r"([<][^/][^<>]*[^/][>])")
 end_tag_re = re.compile(r"([<][/][^<>/]+[>])")
 simple_tag_re = re.compile(r"([<][^/][^<>/]+[/][>])")
@@ -35,6 +28,14 @@ simple_tag_re = re.compile(r"([<][^/][^<>/]+[/][>])")
 PY3 = sys.version_info[0] > 2
 PYSUBVER = sys.version_info[1]
 _LOGGER = None
+
+###############################################################################
+class XMLToolsInternalError(ValueError):
+###############################################################################
+    """Error class for reporting internal errors"""
+    def __init__(self, message):
+        """Initialize this exception"""
+        super().__init__(message)
 
 ###############################################################################
 def call_command(commands, logger, silent=False):
@@ -53,35 +54,12 @@ def call_command(commands, logger, silent=False):
     result = False
     outstr = ''
     try:
-        if PY3:
-            if PYSUBVER > 6:
-                cproc = subprocess.run(commands, check=True,
-                                       capture_output=True)
-                if not silent:
-                    logger.debug(cproc.stdout)
-                # End if
-                result = cproc.returncode == 0
-            elif PYSUBVER >= 5:
-                cproc = subprocess.run(commands, check=True,
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE)
-                if not silent:
-                    logger.debug(cproc.stdout)
-                # End if
-                result = cproc.returncode == 0
-            else:
-                raise ValueError("Python 3 must be at least version 3.5")
-            # End if
-        else:
-            pproc = subprocess.Popen(commands, stdin=None,
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
-            output, _ = pproc.communicate()
-            if not silent:
-                logger.debug(output)
-            # End if
-            result = pproc.returncode == 0
-        # End if
+        cproc = subprocess.run(commands, check=True,
+                               capture_output=True)
+        if not silent:
+            logger.debug(cproc.stdout)
+        # end if
+        result = cproc.returncode == 0
     except (OSError, CCPPError, subprocess.CalledProcessError) as err:
         if silent:
             result = False
@@ -90,9 +68,9 @@ def call_command(commands, logger, silent=False):
             emsg = "Execution of '{}' failed with code:\n"
             outstr = emsg.format(cmd, err.returncode)
             outstr += "{}".format(err.output)
-            raise CCPPError(outstr)
-        # End if
-    # End of try
+            raise CCPPError(outstr) from err
+        # end if
+    # end of try
     return result
 
 ###############################################################################
@@ -102,6 +80,8 @@ def find_schema_version(root):
     Find the version of the host registry file represented by root
     >>> find_schema_version(ET.fromstring('<model name="CAM" version="1.0"></model>'))
     [1, 0]
+    >>> find_schema_version(ET.fromstring('<entry_id version="2.0"></entry_id>'))
+    [2, 0]
     >>> find_schema_version(ET.fromstring('<model name="CAM" version="1.a"></model>')) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: Illegal version string, '1.a'
@@ -118,33 +98,33 @@ def find_schema_version(root):
     verbits = None
     if 'version' not in root.attrib:
         raise CCPPError("version attribute required")
-    # End if
+    # end if
     version = root.attrib['version']
     versplit = version.split('.')
     try:
         if len(versplit) != 2:
             raise CCPPError('oops')
-        # End if (no else needed)
+        # end if (no else needed)
         try:
             verbits = [int(x) for x in versplit]
         except ValueError as verr:
-            raise CCPPError(verr)
-        # End try
+            raise CCPPError(verr) from verr
+        # end try
         if verbits[0] < 1:
             raise CCPPError('Major version must be at least 1')
-        # End if
+        # end if
         if verbits[1] < 0:
             raise CCPPError('Minor version must be non-negative')
-        # End if
+        # end if
     except CCPPError as verr:
         errstr = """Illegal version string, '{}'
         Format must be <integer>.<integer>"""
         ve_str = str(verr)
         if ve_str:
             errstr = ve_str + '\n' + errstr
-        # End if
-        raise CCPPError(errstr.format(version))
-    # End try
+        # end if
+        raise CCPPError(errstr.format(version)) from verr
+    # end try
     return verbits
 
 ###############################################################################
@@ -161,10 +141,10 @@ def find_schema_file(schema_root, version, schema_path=None):
         schema_file = os.path.join(schema_path, schema_filename)
     else:
         schema_file = schema_filename
-    # End if
+    # end if
     if os.path.exists(schema_file):
         return schema_file
-    # End if
+    # end if
     return None
 
 ###############################################################################
@@ -178,38 +158,42 @@ def validate_xml_file(filename, schema_root, version, logger,
     # Check the filename
     if not os.path.isfile(filename):
         raise CCPPError("validate_xml_file: Filename, '{}', does not exist".format(filename))
-    # End if
+    # end if
     if not os.access(filename, os.R_OK):
         raise CCPPError("validate_xml_file: Cannot open '{}'".format(filename))
-    # End if
-    if not schema_path:
-        # Find the schema, based on the model version
-        thispath = os.path.abspath(__file__)
-        pdir = os.path.dirname(os.path.dirname(os.path.dirname(thispath)))
-        schema_path = os.path.join(pdir, 'schema')
-    # End if
-    schema_file = find_schema_file(schema_root, version, schema_path)
-    if not (schema_file and os.path.isfile(schema_file)):
-        verstring = '.'.join([str(x) for x in version])
-        emsg = """validate_xml_file: Cannot find schema for version {},
-        {} does not exist"""
-        raise CCPPError(emsg.format(verstring, schema_file))
-    # End if
+    # end if
+    if os.path.isfile(schema_root):
+        # We already have a file, just use it
+        schema_file = schema_root
+    else:
+        if not schema_path:
+            # Find the schema, based on the model version
+            thispath = os.path.abspath(__file__)
+            pdir = os.path.dirname(os.path.dirname(os.path.dirname(thispath)))
+            schema_path = os.path.join(pdir, 'schema')
+        # end if
+        schema_file = find_schema_file(schema_root, version, schema_path)
+        if not (schema_file and os.path.isfile(schema_file)):
+            verstring = '.'.join([str(x) for x in version])
+            emsg = """validate_xml_file: Cannot find schema for version {}, {} does not exist"""
+            raise CCPPError(emsg.format(verstring, schema_file))
+        # end if
+    # end if
     if not os.access(schema_file, os.R_OK):
         emsg = "validate_xml_file: Cannot open schema, '{}'"
         raise CCPPError(emsg.format(schema_file))
-    # End if
-    if _XMLLINT is not None:
+    # end if
+    if _XMLLINT:
         logger.debug("Checking file {} against schema {}".format(filename,
                                                                  schema_file))
         cmd = [_XMLLINT, '--noout', '--schema', schema_file, filename]
         result = call_command(cmd, logger)
         return result
-    # End if
+    # end if
     lmsg = "xmllint not found, could not validate file {}"
     if error_on_noxmllint:
         raise CCPPError("validate_xml_file: " + lmsg.format(filename))
-    # End if
+    # end if
     logger.warning(lmsg.format(filename))
     return True # We could not check but still need to proceed
 
@@ -229,13 +213,13 @@ def read_xml_file(filename, logger=None):
                 root = tree.getroot()
             except ET.ParseError as perr:
                 emsg = "read_xml_file: Cannot read {}, {}"
-                raise CCPPError(emsg.format(filename, perr))
+                raise CCPPError(emsg.format(filename, perr)) from perr
     elif not os.access(filename, os.R_OK):
         raise CCPPError("read_xml_file: Cannot open '{}'".format(filename))
     else:
         emsg = "read_xml_file: Filename, '{}', does not exist"
         raise CCPPError(emsg.format(filename))
-    # End if
+    # end if
     if logger:
         logger.debug("Read XML file, '{}'".format(filename))
     # End if
@@ -248,7 +232,7 @@ class PrettyElementTree(ET.ElementTree):
 
     def __init__(self, element=None, file=None):
         """Initialize a PrettyElementTree object"""
-        super(PrettyElementTree, self).__init__(element, file)
+        super().__init__(element, file)
 
     def _write(self, outfile, line, indent, eol=os.linesep):
         """Write <line> as an ASCII string to <outfile>"""
@@ -268,7 +252,7 @@ class PrettyElementTree(ET.ElementTree):
         # end if
         emsg = "No output at {} of {}\n{}".format(txt_beg, len(text),
                                                   text[txt_beg:txt_end])
-        raise DatatableInternalError(emsg)
+        raise XMLToolsInternalError(emsg)
 
     def write(self, file, encoding="us-ascii", xml_declaration=None,
               default_namespace=None, method="xml",
@@ -276,26 +260,26 @@ class PrettyElementTree(ET.ElementTree):
         """Subclassed write method to format output."""
         if PY3 and (PYSUBVER >= 4):
             if PYSUBVER >= 8:
-                input = ET.tostring(self.getroot(),
-                                   encoding=encoding, method=method,
-                                   xml_declaration=xml_declaration,
-                                   default_namespace=default_namespace,
-                                   short_empty_elements=short_empty_elements)
+                et_str = ET.tostring(self.getroot(),
+                                     encoding=encoding, method=method,
+                                     xml_declaration=xml_declaration,
+                                     default_namespace=default_namespace,
+                                     short_empty_elements=short_empty_elements)
             else:
-                input = ET.tostring(self.getroot(),
-                                    encoding=encoding, method=method,
-                                    short_empty_elements=short_empty_elements)
+                et_str = ET.tostring(self.getroot(),
+                                     encoding=encoding, method=method,
+                                     short_empty_elements=short_empty_elements)
             # end if
         else:
-            input = ET.tostring(self.getroot(),
-                                encoding=encoding, method=method)
+            et_str = ET.tostring(self.getroot(),
+                                 encoding=encoding, method=method)
         # end if
         if PY3:
             fmode = 'wt'
-            root = str(input, encoding="utf-8")
+            root = str(et_str, encoding="utf-8")
         else:
             fmode = 'w'
-            root = input
+            root = et_str
         # end if
         indent = 0
         last_write_text = False

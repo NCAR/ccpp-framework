@@ -30,7 +30,7 @@ class StateMachine:
     >>> StateMachine([('ab','a','b','a')]).final_state('ab')
     'b'
     >>> StateMachine([('ab','a','b','a')]).transition_regex('ab')
-    re.compile('a$')
+    re.compile('a$, re.IGNORECASE')
     >>> StateMachine([('ab','a','b','a')]).function_match('foo_a', transition='ab')
     ('foo', 'a', 'ab')
     >>> StateMachine([('ab','a','b',r'ax?')]).function_match('foo_a', transition='ab')
@@ -162,8 +162,9 @@ class StateMachine:
         if len(value) != 3:
             raise ValueError("Invalid transition ({}), should be of the form (inital_state, final_state, regex).".format(value))
         # end if
-        regex = re.compile(value[2] + r"$")
-        function = re.compile(FORTRAN_ID + r"_(" + value[2] + r")$")
+        regex = re.compile(value[2] + r"$", re.IGNORECASE)
+        function = re.compile(FORTRAN_ID + r"_(" + value[2] + r")$",
+                              re.IGNORECASE)
         self.__stt__[key] = (value[0], value[1], regex, function)
 
     def __delitem__(self, key):

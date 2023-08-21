@@ -15,6 +15,7 @@ import os
 import logging
 import re
 # CCPP framework imports
+from ccpp_database_obj import CCPPDatabaseObj
 from ccpp_datafile import generate_ccpp_datatable
 from ccpp_suite import API
 from file_utils import check_for_writeable_file, remove_dir, replace_paths
@@ -30,7 +31,7 @@ from parse_tools import CCPPError, ParseInternalError
 
 ## Capture the Framework root
 __SCRIPT_PATH = os.path.dirname(__file__)
-__FRAMEWORK_ROOT = os.path.abspath(os.path.join(__SCRIPT_PATH, os.pardir))
+__FRAMEWORK_ROOT = os.path.abspath(os.path.join(_SCRIPT_PATH, os.pardir))
 ## Init this now so that all Exceptions can be trapped
 _LOGGER = init_log(os.path.basename(__file__))
 
@@ -559,7 +560,7 @@ def clean_capgen(cap_output_file, logger):
     set_log_level(logger, log_level)
 
 ###############################################################################
-def capgen(run_env):
+def capgen(run_env, return_db=False):
 ###############################################################################
     """Parse indicated host, scheme, and suite files.
     Generate code to allow host model to run indicated CCPP suites."""
@@ -628,7 +629,8 @@ def capgen(run_env):
     cap_filenames = ccpp_api.write(outtemp_dir, run_env)
     if run_env.generate_host_cap:
         # Create a cap file
-        host_files = [write_host_cap(host_model, ccpp_api,
+        cap_module = host_model.ccpp_cap_name()
+        host_files = [write_host_cap(host_model, ccpp_api, cap_module,
                                      outtemp_dir, run_env)]
     else:
         host_files = list()
@@ -650,6 +652,10 @@ def capgen(run_env):
     generate_ccpp_datatable(run_env, host_model, ccpp_api,
                             scheme_headers, scheme_tdict, host_files,
                             cap_filenames, kinds_file, src_dir)
+    if return_db:
+        return CCPPDatabaseObj(run_env, host_model=host_model, api=ccpp_api)
+    # end if
+    return None
 
 ###############################################################################
 def _main_func():
@@ -665,7 +671,7 @@ def _main_func():
     if framework_env.clean:
         clean_capgen(framework_env.datatable_file, framework_env.logger)
     else:
-        capgen(framework_env)
+        _ = capgen(framework_env)
     # end if (clean)
 
 ###############################################################################
