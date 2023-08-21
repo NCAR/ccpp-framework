@@ -90,6 +90,22 @@ class CallList(VarDictionary):
             # end if
         # end for
 
+    def add_variable(self, newvar, run_env, exists_ok=False, gen_unique=False,
+                     adjust_intent=False):
+        """Add <newvar> as for VarDictionary but make sure that the variable
+           has an intent with the default being intent(in).
+        """
+        # We really need an intent on a dummy argument
+        if newvar.get_prop_value("intent") is None:
+            subst_dict = {'intent' : 'in'}
+            oldvar = newvar
+            newvar = oldvar.clone(subst_dict, source_name=self.name,
+                                  source_type=_API_GROUP_VAR_NAME,
+                                  context=oldvar.context)
+        # end if
+        super().add_variable(newvar, run_env, exists_ok=exists_ok,
+                             gen_unique=gen_unique, adjust_intent=adjust_intent)
+
     def call_string(self, cldicts=None, is_func_call=False, subname=None):
         """Return a dummy argument string for this call list.
         <cldict> may be a list of VarDictionary objects to search for

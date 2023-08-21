@@ -5,10 +5,11 @@ Parse a host-model registry XML file and return the captured variables.
 """
 
 # CCPP framework imports
-from metavar import VarDictionary
+from constituents import CONST_DDT_NAME, CONST_PROP_TYPE, CONST_OBJ_STDNAME
+from metavar import Var, VarDictionary
 from ddt_library import VarDDT, DDTLibrary
-from parse_tools import ParseContext, CCPPError, ParseInternalError
-from parse_tools import context_string
+from parse_tools import ParseContext, ParseSource, CCPPError, ParseInternalError
+from parse_tools import context_string, registered_fortran_ddt_name
 from parse_tools import FORTRAN_SCALAR_REF_RE
 
 ###############################################################################
@@ -17,7 +18,7 @@ class HostModel(VarDictionary):
 
     def __init__(self, meta_tables, name_in, run_env):
         """Initialize this HostModel object.
-        <meta_tables> is a list of parsed host metadata tables.
+        <meta_tables> is a dictionary of parsed host metadata tables.
         <name_in> is the name for this host model.
         <run_env> is the CCPPFrameworkEnv object for this framework run.
         """
@@ -35,11 +36,12 @@ class HostModel(VarDictionary):
         # Initialize our dictionaries
         # Initialize variable dictionary
         super().__init__(self.name, run_env)
+        ddt_headers = [d for d in meta_headers if d.header_type == 'ddt']
         self.__ddt_lib = DDTLibrary('{}_ddts'.format(self.name), run_env,
-                                    ddts=[d for d in meta_headers
-                                          if d.header_type == 'ddt'])
+                                    ddts=ddt_headers)
         self.__ddt_dict = VarDictionary("{}_ddt_vars".format(self.name),
                                         run_env, parent_dict=self)
+        del ddt_headers
         # Now, process the code headers by type
         self.__metadata_tables = meta_tables
         for header in [h for h in meta_headers if h.header_type != 'ddt']:
@@ -111,6 +113,20 @@ class HostModel(VarDictionary):
             errmsg = 'No name found for host model, add a host metadata entry'
             raise CCPPError(errmsg)
         # End if
+        # Add in the constituents object
+        if registered_fortran_ddt_name(CONST_PROP_TYPE):
+            prop_dict = {'standard_name' : CONST_OBJ_STDNAME,
+                         'local_name' : self.constituent_model_object_name(),
+                         'dimensions' : '()', 'units' : "None",
+                         'ddt_type' : CONST_DDT_NAME, 'target' : 'True'}
+            host_source = ParseSource(self.ccpp_cap_name(), "MODULE",
+                           ParseContext(filename=f"{self.ccpp_cap_name()}.F90"))
+            const_var = Var(prop_dict, host_source, run_env)
+            self.add_variable(const_var, run_env)
+            lname = const_var.get_prop_value('local_name')
+            self.__var_locations[lname] = self.ccpp_cap_name()
+            self.ddt_lib.collect_ddt_fields(self.__ddt_dict, const_var, run_env)
+        # end if
         # Finally, turn on the use meter so we know which module variables
         #    to 'use' in a host cap.
         self.__used_variables = set() # Local names which have been requested
@@ -131,12 +147,10 @@ class HostModel(VarDictionary):
         """Return this host model's DDT library"""
         return self.__ddt_lib
 
-# XXgoldyXX: v needed?
     @property
     def constituent_module(self):
         """Return the name of host model constituent module"""
         return "{}_ccpp_constituents".format(self.name)
-# XXgoldyXX: ^ needed?
 
     def argument_list(self, loop_vars=True):
         """Return a string representing the host model variable arg list"""
@@ -157,8 +171,9 @@ class HostModel(VarDictionary):
 
     def variable_locations(self):
         """Return a set of module-variable and module-type pairs.
-        These represent the locations of all host model data with a listed
-        source location (variables with no <module> source are omitted)."""
+           These represent the locations of all host model data with a listed
+           source location (variables with no <module> source or for which the
+           source is the CCPP host cap are omitted)."""
         varset = set()
         lnames = self.prop_list('local_name')
         # Attempt to realize deferred lookups
@@ -171,10 +186,11 @@ class HostModel(VarDictionary):
             # End for
         # End if
         # Now, find all the used module variables
+        cap_modname = self.ccpp_cap_name()
         for name in lnames:
             module = self.host_variable_module(name)
             used = self.__used_variables and (name in self.__used_variables)
-            if module and used:
+            if module and used and (module != cap_modname):
                 varset.add((module, name))
             # No else, either no module or a zero-length module name
             # End if
@@ -298,6 +314,15 @@ class HostModel(VarDictionary):
             # End if
         # End for
         return hdvars
+
+    def constituent_model_object_name(self):
+        """Return the variable name of the object which holds the constituent
+           metadata and field information."""
+        return "{}_constituents_obj".format(self.name)
+
+    def ccpp_cap_name(self):
+        """Return the name of the CCPP host model cap module name."""
+        return f"{self.name}_ccpp_cap"
 
 ###############################################################################
 
