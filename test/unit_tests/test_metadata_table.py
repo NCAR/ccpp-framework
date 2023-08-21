@@ -8,7 +8,7 @@
 
  Command line arguments: none
 
- Usage: python test_metadata_table.py         # run the unit tests
+ Usage: python3 test_metadata_table.py         # run the unit tests
 -----------------------------------------------------------------------
 """
 import sys

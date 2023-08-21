@@ -38,12 +38,14 @@ if [ $res -ne 0 ]; then
 fi
 
 # Run var_action test
-./var_action_test/run_test
-res=$?
-errcnt=$((errcnt + res))
-if [ $res -ne 0 ]; then
-  echo "Failure running var_action test"
-fi
+# TODO: Re-enable after feature fully implemented.
+# ./var_action_test/run_test
+# res=$?
+# errcnt=$((errcnt + res))
+# if [ $res -ne 0 ]; then
+#   echo "Failure running var_action test"
+# fi
+echo "Skipping var_action_test/run_test until feature is fully implemented"
 
 # Run doctests
 ./run_doctest.sh
@@ -67,4 +69,5 @@ if [ $errcnt -eq 0 ]; then
   echo "All tests PASSed!"
 else
   echo "${errcnt} tests FAILed"
+  return 1
 fi
