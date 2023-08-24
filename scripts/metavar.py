@@ -1004,15 +1004,15 @@ class Var:
             intent = None
         # end if
         if protected and allocatable:
-            errmsg = 'Cannot create allocatable variable from protected, {}'
+            errmsg = "Cannot create allocatable variable from protected, {}"
             raise CCPPError(errmsg.format(name))
         # end if
         if dummy and (intent is None):
             if add_intent is not None:
                 intent = add_intent
             else:
-                errmsg = "<add_intent> is missing for dummy argument, {}"
-                raise CCPPError(errmsg.format(name))
+                errmsg = f"<add_intent> is missing for dummy argument, {name}"
+                raise CCPPError(errmsg)
             # end if
         # end if
         if protected and dummy:
@@ -1025,7 +1025,12 @@ class Var:
             # end if
         elif intent is not None:
             alloval = self.get_prop_value('allocatable')
-            if (intent.lower()[-3:] == 'out') and alloval:
+            if alloval:
+                if intent.lower() == 'in':
+                    # We should not have allocatable, intent(in), makes no sense
+                    errmsg = f"{name} ({stdname}) is allocatable and intent(in)"
+                    raise CCPPError(errmsg)
+                # end if
                 intent_str = f"allocatable, intent({intent})"
             else:
                 intent_str = f"intent({intent}){' '*(5 - len(intent))}"
@@ -1064,7 +1069,7 @@ class Var:
                 cspc = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
-            
+
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
                                   name=name, dims=dimstr, cspc=cspc,
                                   sname=stdname), indent)
