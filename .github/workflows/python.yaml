@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches:
-      #Trigger workflow on push to any branch or branch heirarchy:
+      #Trigger workflow on push to any branch or branch hierarchy:
       - '**'
 
 jobs:
