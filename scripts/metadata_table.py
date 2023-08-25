@@ -504,6 +504,10 @@ class MetadataTable():
 
 class MetadataSection(ParseSource):
     """Class to hold all information from a metadata header
+    >>> from framework_env import CCPPFrameworkEnv
+    >>> _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'', \
+                                                 'scheme_files':'', \
+                                                 'suites':''})
     >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module = foo",    \
@@ -511,7 +515,7 @@ class MetadataSection(ParseSource):
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])) #doctest: +ELLIPSIS
-    <__main__.MetadataSection foo / footable at 0x...>
+    <metadata_table.MetadataSection foo / footable at 0x...>
     >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module = foobar", \
@@ -1267,15 +1271,3 @@ class MetadataSection(ParseSource):
         return check_fortran_ref(test_val, None, False) is not None
 
 ########################################################################
-
-if __name__ == "__main__":
-# pylint: enable=ungrouped-imports
-    import doctest
-    import sys
-# pylint: disable=ungrouped-imports
-    from framework_env import CCPPFrameworkEnv
-    _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'',
-                                             'scheme_files':'',
-                                             'suites':''})
-    fail, _ = doctest.testmod()
-    sys.exit(fail)

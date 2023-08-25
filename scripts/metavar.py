@@ -1004,15 +1004,15 @@ class Var:
             intent = None
         # end if
         if protected and allocatable:
-            errmsg = 'Cannot create allocatable variable from protected, {}'
+            errmsg = "Cannot create allocatable variable from protected, {}"
             raise CCPPError(errmsg.format(name))
         # end if
         if dummy and (intent is None):
             if add_intent is not None:
                 intent = add_intent
             else:
-                errmsg = "<add_intent> is missing for dummy argument, {}"
-                raise CCPPError(errmsg.format(name))
+                errmsg = f"<add_intent> is missing for dummy argument, {name}"
+                raise CCPPError(errmsg)
             # end if
         # end if
         if protected and dummy:
@@ -1025,7 +1025,12 @@ class Var:
             # end if
         elif intent is not None:
             alloval = self.get_prop_value('allocatable')
-            if (intent.lower()[-3:] == 'out') and alloval:
+            if alloval:
+                if intent.lower() == 'in':
+                    # We should not have allocatable, intent(in), makes no sense
+                    errmsg = f"{name} ({stdname}) is allocatable and intent(in)"
+                    raise CCPPError(errmsg)
+                # end if
                 intent_str = f"allocatable, intent({intent})"
             else:
                 intent_str = f"intent({intent}){' '*(5 - len(intent))}"
@@ -1064,7 +1069,7 @@ class Var:
                 cspc = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
-            
+
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
                                   name=name, dims=dimstr, cspc=cspc,
                                   sname=stdname), indent)
@@ -1418,11 +1423,11 @@ class VarDictionary(OrderedDict):
     >>> VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})
     VarDictionary(bar)
     >>> VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)) #doctest: +ELLIPSIS
-    VarDictionary(baz, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(baz, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> print("{}".format(VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV))))
     VarDictionary(baz, ['hi_mom'])
     >>> VarDictionary('qux', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) #doctest: +ELLIPSIS
-    VarDictionary(qux, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(qux, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> VarDictionary('boo', _MVAR_DUMMY_RUN_ENV).add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV), _MVAR_DUMMY_RUN_ENV)
 
     >>> VarDictionary('who', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]).prop_list('local_name')
@@ -2023,11 +2028,3 @@ CCPP_CONSTANT_VARS =                                                         \
                                                _MVAR_DUMMY_RUN_ENV)])
 
 ###############################################################################
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    import sys
-    # pylint: enable=ungrouped-imports
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if

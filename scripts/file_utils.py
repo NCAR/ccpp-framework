@@ -13,11 +13,6 @@ import glob
 import os
 # CCPP framework imports
 from parse_tools import CCPPError, ParseInternalError
-#XXgoldyXX: v Crap required to support python 2
-import sys
-# Find python version
-PY3 = sys.version_info[0] > 2
-#XXgoldyXX: ^ Crap required to support python 2
 
 # Standardize name of generated kinds file and module
 KINDS_MODULE = 'ccpp_kinds'
@@ -300,13 +295,7 @@ def move_modified_files(src_dir, dest_dir, overwrite=False, remove_src=False):
                 fmove = True
             # end if
             if fmove:
-#XXgoldyXX: v Crap required to support python 2
-                if PY3:
-                    os.replace(src_path, dest_path)
-                else:
-                    os.rename(src_path, dest_path)
-                # end if
-#XXgoldyXX: ^ Crap required to support python 2
+                os.replace(src_path, dest_path)
             else:
                 os.remove(src_path)
             # end if

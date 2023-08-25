@@ -490,9 +490,9 @@ CONTAINS
     implicit none
 
    character(len=cs), target :: test_parts1(1)
-   character(len=cm), target :: test_invars1(6)
-   character(len=cm), target :: test_outvars1(5)
-   character(len=cm), target :: test_reqvars1(8)
+   character(len=cm), target :: test_invars1(7)
+   character(len=cm), target :: test_outvars1(6)
+   character(len=cm), target :: test_reqvars1(9)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
@@ -500,6 +500,7 @@ CONTAINS
     test_parts1 = (/ 'physics         '/)
     test_invars1 = (/                          &
         'cloud_ice_dry_mixing_ratio          ',                               &
+        'cloud_liquid_dry_mixing_ratio       ',                               &
         'surface_air_pressure                ',                               &
         'temperature                         ',                               &
         'time_step_for_physics               ',                               &
@@ -510,11 +511,13 @@ CONTAINS
         'ccpp_error_code                     ',                               &
         'temperature                         ',                               &
         'water_vapor_specific_humidity       ',                               &
+        'cloud_liquid_dry_mixing_ratio       ',                               &
         'cloud_ice_dry_mixing_ratio          ' /)
     test_reqvars1 = (/                         &
         'surface_air_pressure                ',                               &
         'temperature                         ',                               &
         'time_step_for_physics               ',                               &
+        'cloud_liquid_dry_mixing_ratio       ',                               &
         'cloud_ice_dry_mixing_ratio          ',                               &
         'water_temperature_at_freezing       ',                               &
         'water_vapor_specific_humidity       ',                               &
