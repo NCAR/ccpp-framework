@@ -456,9 +456,9 @@ class ConstituentVarDict(VarDictionary):
 
     @staticmethod
     def write_host_routines(cap, host, reg_funcname, init_funcname, num_const_funcname,
-                            copy_in_funcname, copy_out_funcname, const_obj_name,
-                            const_names_name, const_indices_name, const_array_func,
-                            advect_array_func, prop_array_func,
+                            query_const_funcname, copy_in_funcname, copy_out_funcname,
+                            const_obj_name, const_names_name, const_indices_name,
+                            const_array_func, advect_array_func, prop_array_func,
                             const_index_func, suite_list, err_vars):
         """Write out the host model <reg_funcname> routine which will
         instantiate constituent fields for all the constituents in <suite_list>.
@@ -466,6 +466,7 @@ class ConstituentVarDict(VarDictionary):
         Also write out the following routines:
            <init_funcname>: Initialize constituent data
            <num_const_funcname>: Number of constituents
+           <query_const_funcname>: Check if standard name matches existing constituent
            <copy_in_funcname>: Collect constituent fields for host
            <copy_out_funcname>: Update constituent fields from host
            <const_array_func>: Return a pointer to the constituent array
@@ -634,6 +635,23 @@ class ConstituentVarDict(VarDictionary):
         call_str = "call {}%num_constituents(num_flds, advected=advected, {})"
         cap.write(call_str.format(const_obj_name, obj_err_callstr), 2)
         cap.write("end {}".format(substmt), 1)
+        # Write query_consts routine
+        substmt = f"subroutine {query_const_funcname}"
+        cap.write("", 0)
+        cap.write(f"{substmt}(var_name, constituent_exists, {err_dummy_str})", 1)
+        cap.comment(f"Return constituent_exists = true iff var_name appears in {host.name}_model_const_stdnames", 2)
+        cap.write("", 0)
+        cap.write("character(len=*),   intent(in)  :: var_name", 2)
+        cap.write("logical,            intent(out) :: constituent_exists", 2)
+        for evar in err_vars:
+            evar.write_def(cap, 2, host, dummy=True, add_intent="out")
+        # end for
+        cap.write("constituent_exists = .false.", 2)
+        cap.write(f"if (any({host.name}_model_const_stdnames == var_name)) then", 2)
+        cap.write("constituent_exists = .true.", 3)
+        cap.write("end if", 2)
+        cap.write("", 0)
+        cap.write(f"end {substmt}", 1)
         # Write copy_in routine
         substmt = "subroutine {}".format(copy_in_funcname)
         cap.write("", 0)
