@@ -641,8 +641,8 @@ class ConstituentVarDict(VarDictionary):
         cap.write(f"{substmt}(var_name, constituent_exists, {err_dummy_str})", 1)
         cap.comment(f"Return constituent_exists = true iff var_name appears in {host.name}_model_const_stdnames", 2)
         cap.write("", 0)
-        cap.write("character(len=*),   intent(in)  :: var_name", 2)
-        cap.write("logical,            intent(out) :: constituent_exists", 2)
+        cap.write("character(len=*),   intent(in)    :: var_name", 2)
+        cap.write("logical,            intent(out)   :: constituent_exists", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for

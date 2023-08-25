@@ -222,6 +222,7 @@ CONTAINS
        use test_host_mod,      only: init_data, compare_data
        use test_host_mod,      only: ncols, pver
        use test_host_ccpp_cap, only: test_host_ccpp_register_constituents
+       use test_host_ccpp_cap, only: test_host_ccpp_is_scheme_constituent
        use test_host_ccpp_cap, only: test_host_ccpp_initialize_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_number_constituents
        use test_host_ccpp_cap, only: test_host_constituents_array
@@ -245,11 +246,14 @@ CONTAINS
        integer                         :: num_suites
        integer                         :: num_advected ! Num advected species
        logical                         :: const_log
+       logical                         :: is_constituent
+       logical                         :: has_default
        character(len=128), allocatable :: suite_names(:)
        character(len=256)              :: const_str
        character(len=512)              :: errmsg
        integer                         :: errflg
        real(kind_phys), pointer        :: const_ptr(:,:,:)
+       real(kind_phys)                 :: default_value
        type(ccpp_constituent_prop_ptr_t), pointer :: const_props(:)
        character(len=*), parameter     :: subname = 'test_host'
 
@@ -280,8 +284,29 @@ CONTAINS
           return
        end if
 
-       ! Register the constituents to find out what needs advecting
-      call host_constituents(1)%instantiate(std_name="specific_humidity",      &
+      errflg = 0
+      errmsg = ''
+
+      ! Check that is_scheme_constituent works as expected
+      call test_host_ccpp_is_scheme_constituent('specific_humidity',          &
+           is_constituent, errflg, errmsg)
+      call check_errflg(subname//"_ccpp_is_scheme_constituent", errflg, errmsg)
+      ! specific_humidity should not be an existing constituent
+      if (is_constituent) then
+         write(6, *) "ERROR: specific humidity is already a constituent"
+      end if
+      call test_host_ccpp_is_scheme_constituent('cloud_ice_dry_mixing_ratio', &
+           is_constituent, errflg, errmsg)
+      call check_errflg(subname//"_ccpp_is_scheme_constituent", errflg, errmsg)
+      ! cloud_ice_dry_mixing_ratio should be an existing constituent
+      if (.not. is_constituent) then
+         write(6, *) "ERROR: cloud_ice_dry_mixing ratio not found in ",       &
+                        "host cap constituent list"
+      end if
+
+
+      ! Register the constituents to find out what needs advecting
+      call host_constituents(1)%instantiate(std_name="specific_humidity",     &
            long_name="Specific humidity", units="kg kg-1",                    &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
            errcode=errflg, errmsg=errmsg)
@@ -385,7 +410,45 @@ CONTAINS
          end if
       end if
 
-       ! Use the suite information to setup the run
+      if (errflg == 0) then
+         call const_props(index_liq)%has_default(has_default, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to check for default for cld_liq index = ", index_liq, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (has_default) then
+            write(6, *) "ERROR: cloud liquid mass_mixing_ratio should not have default but does"
+         end if
+      end if
+      if (errflg == 0) then
+         call const_props(index_ice)%has_default(has_default, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to check for default for cld_ice index = ", index_ice, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (.not. has_default) then
+            write(6, *) "ERROR: cloud ice mass_mixing_ratio should have default but doesn't"
+         end if
+      end if
+      if (errflg == 0) then
+         call const_props(index_ice)%default_value(default_value, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+                 "to grab default for cld_ice index = ", index_ice, trim(errmsg)
+         end if
+      end if
+      if (errflg == 0) then
+         if (default_value /= 0.0_kind_phys) then
+            write(6, *) "ERROR: cloud ice mass_mixing_ratio default is ", default_value, &
+                        " but should be 0.0"
+         end if
+      end if
+
+      ! Use the suite information to setup the run
       do sind = 1, num_suites
          if (errflg == 0) then
             call test_host_ccpp_physics_initialize(                           &
