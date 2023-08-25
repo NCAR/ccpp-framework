@@ -68,6 +68,11 @@ done
 if [ $errcnt -eq 0 ]; then
   echo "All tests PASSed!"
 else
-  echo "${errcnt} tests FAILed"
-  return 1
+  if [ $errcnt -eq 1 ]; then
+    echo "${errcnt} test FAILed"
+  else
+    echo "${errcnt} tests FAILed"
+  fi
+  #Exit with non-zero exit code
+  exit 1
 fi
