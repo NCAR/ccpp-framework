@@ -432,5 +432,6 @@ class VarCompatTestCase(unittest.TestCase):
         expected = f"{v5_lname}({lind_str}) = {v4_lname}({rind_str})"
         self.assertEqual(rev_stmt, expected)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
+
