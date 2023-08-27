@@ -39,7 +39,7 @@ CONTAINS
       integer,          intent(in)    :: errflg
       character(len=*), intent(in)    :: errmsg
 
-      integer,          intent(inout) :: errflg_final
+      integer,          intent(out)   :: errflg_final
 
       if (errflg /= 0) then
          write(6, '(a,i0,4a)') "Error ", errflg, " from ", trim(subname),     &
