@@ -103,7 +103,7 @@ class CCPPFrameworkEnv:
             # String of definitions, separated by spaces
             preproc_list = [x.strip() for x in preproc_defs.split(' ') if x]
         else:
-            wmsg = f"Error: Bad preproc list type, '{type_name{preproc_defs)}'"
+            wmsg = f"Error: Bad preproc list type, '{type_name(preproc_defs)}'"
             emsg += esep + wmsg
             esep = '\n'
         # end if

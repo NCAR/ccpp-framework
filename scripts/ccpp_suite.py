@@ -729,7 +729,6 @@ class API(VarDictionary):
 
     def write_suite_part_list_sub(self, ofile, errmsg_name, errcode_name):
         """Write the suite-part list subroutine"""
-        ofile.blank_line()
         inargs = f"suite_name, part_list, {errmsg_name}, {errcode_name}"
         ofile.write(f"subroutine {API.__part_fname}({inargs})", 1)
         oline = "character(len=*),              intent(in)  :: suite_name"
@@ -740,7 +739,7 @@ class API(VarDictionary):
         self._errcode_var.write_def(ofile, 2, self)
         else_str = ''
         ename = self._errcode_var.get_prop_value('local_name')
-        ofile.write(f"{ename} = ''", 2)
+        ofile.write(f"{ename} = 0", 2)
         ename = self._errmsg_var.get_prop_value('local_name')
         ofile.write(f"{ename} = ''", 2)
         for suite in self.suites:
@@ -820,8 +819,7 @@ class API(VarDictionary):
                             protected = pvar.get_prop_value("protected")
                         # end if
                     # end if
-                    elements = var.intrinsic_elements(check_dict=self.parent,
-                                                      ddt_lib=self.__ddt_lib)
+                    elements = var.intrinsic_elements(check_dict=self.parent)
                     if (intent == 'in') and (not protected):
                         if isinstance(elements, list):
                             input_vars[1].add(stdname)

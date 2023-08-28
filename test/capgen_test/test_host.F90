@@ -130,7 +130,7 @@ CONTAINS
                suite_name=test_suite%suite_name)
        else
           check = .false.
-          write(6, '(a,i0,2a)') 'ERROR ', errflg, ': ', trim(errmsg)
+          write(6, '(a,i0,2a)') 'ERROR 1 ', errflg, ': ', trim(errmsg)
        end if
        check_suite = check_suite .and. check
        if (allocated(test_list)) then
@@ -144,7 +144,7 @@ CONTAINS
                'input variable names', suite_name=test_suite%suite_name)
        else
           check = .false.
-          write(6, '(a,i0,2a)') 'ERROR ', errflg, ': ', trim(errmsg)
+          write(6, '(a,i0,2a)') 'ERROR 2 ', errflg, ': ', trim(errmsg)
        end if
        check_suite = check_suite .and. check
        if (allocated(test_list)) then
@@ -158,7 +158,7 @@ CONTAINS
                'output variable names', suite_name=test_suite%suite_name)
        else
           check = .false.
-          write(6, '(a,i0,2a)') 'ERROR ', errflg, ': ', trim(errmsg)
+          write(6, '(a,i0,2a)') 'ERROR 3 ', errflg, ': ', trim(errmsg)
        end if
        check_suite = check_suite .and. check
        if (allocated(test_list)) then
@@ -172,7 +172,7 @@ CONTAINS
                'required variable names', suite_name=test_suite%suite_name)
        else
           check = .false.
-          write(6, '(a,i0,2a)') 'ERROR ', errflg, ': ', trim(errmsg)
+          write(6, '(a,i0,2a)') 'ERROR 4 ', errflg, ': ', trim(errmsg)
        end if
        check_suite = check_suite .and. check
        if (allocated(test_list)) then

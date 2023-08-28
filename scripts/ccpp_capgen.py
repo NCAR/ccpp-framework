@@ -31,7 +31,7 @@ from parse_tools import CCPPError, ParseInternalError
 
 ## Capture the Framework root
 __SCRIPT_PATH = os.path.dirname(__file__)
-__FRAMEWORK_ROOT = os.path.abspath(os.path.join(_SCRIPT_PATH, os.pardir))
+__FRAMEWORK_ROOT = os.path.abspath(os.path.join(__SCRIPT_PATH, os.pardir))
 ## Init this now so that all Exceptions can be trapped
 _LOGGER = init_log(os.path.basename(__file__))
 
@@ -629,8 +629,7 @@ def capgen(run_env, return_db=False):
     cap_filenames = ccpp_api.write(outtemp_dir, run_env)
     if run_env.generate_host_cap:
         # Create a cap file
-        cap_module = host_model.ccpp_cap_name()
-        host_files = [write_host_cap(host_model, ccpp_api, cap_module,
+        host_files = [write_host_cap(host_model, ccpp_api,
                                      outtemp_dir, run_env)]
     else:
         host_files = list()

@@ -683,7 +683,7 @@ class MetadataSection(ParseSource):
             register_fortran_ddt_name(self.title)
         # end if
         # Categorize the variables
-        self._var_intents = {'in' : [], 'out' : [], 'inout' : [])}
+        self._var_intents = {'in' : [], 'out' : [], 'inout' : []}
         for var in self.variable_list():
             intent = var.get_prop_value('intent')
             if intent is not None:

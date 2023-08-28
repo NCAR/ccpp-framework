@@ -30,7 +30,7 @@ class StateMachine:
     >>> StateMachine([('ab','a','b','a')]).final_state('ab')
     'b'
     >>> StateMachine([('ab','a','b','a')]).transition_regex('ab')
-    re.compile('a$, re.IGNORECASE')
+    re.compile('a$', re.IGNORECASE)
     >>> StateMachine([('ab','a','b','a')]).function_match('foo_a', transition='ab')
     ('foo', 'a', 'ab')
     >>> StateMachine([('ab','a','b',r'ax?')]).function_match('foo_a', transition='ab')
