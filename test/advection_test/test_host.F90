@@ -299,14 +299,16 @@ CONTAINS
       ! Check that is_scheme_constituent works as expected
       call test_host_ccpp_is_scheme_constituent('specific_humidity',          &
            is_constituent, errflg, errmsg)
-      call check_errflg(subname//"_ccpp_is_scheme_constituent", errflg, errmsg)
+      call check_errflg(subname//"_ccpp_is_scheme_constituent", errflg,       &
+           errmsg, errflg_final)
       ! specific_humidity should not be an existing constituent
       if (is_constituent) then
          write(6, *) "ERROR: specific humidity is already a constituent"
       end if
       call test_host_ccpp_is_scheme_constituent('cloud_ice_dry_mixing_ratio', &
            is_constituent, errflg, errmsg)
-      call check_errflg(subname//"_ccpp_is_scheme_constituent", errflg, errmsg)
+      call check_errflg(subname//"_ccpp_is_scheme_constituent", errflg,       &
+           errmsg, errflg_final)
       ! cloud_ice_dry_mixing_ratio should be an existing constituent
       if (.not. is_constituent) then
          write(6, *) "ERROR: cloud_ice_dry_mixing ratio not found in ",       &
