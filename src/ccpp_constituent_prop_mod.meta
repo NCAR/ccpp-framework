@@ -16,32 +16,32 @@
   name = ccpp_model_constituents_t
   type = ddt
 [ num_layer_vars ]
-  standard_name = ccpp_num_constituents
+  standard_name = number_of_ccpp_constituents
   long_name = Number of constituents managed by CCPP Framework
   units = count
   dimensions = ()
   type = integer
 [ num_advected_vars ]
-  standard_name = ccpp_num_advected_constituents
+  standard_name = number_of_ccpp_advected_constituents
   long_name = Number of advected constituents managed by CCPP Framework
   units = count
   dimensions = ()
   type = integer
 [ vars_layer ]
-  standard_name = ccpp_constituent_array
+  standard_name = ccpp_constituents
   long_name = Array of constituents managed by CCPP Framework
   units = none
   state_variable = true
-  dimensions = (horizontal_dimension, vertical_layer_dimension, ccpp_num_constituents)
+  dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_ccpp_constituents)
   type = real | kind = kind_phys
 [ const_metadata ]
-  standard_name = ccpp_constituent_properties_array
+  standard_name = ccpp_constituent_properties
   units = None
   type = ccpp_constituent_prop_ptr_t
-  dimensions = (ccpp_num_constituents)
+  dimensions = (number_of_ccpp_constituents)
 [ vars_minvalue ]
-  standard_name = ccpp_constituent_array_minimum_values
+  standard_name = ccpp_constituent_minimum_values
   units = kg kg-1
   type = real | kind = kind_phys
-  dimensions = (ccpp_num_constituents)
+  dimensions = (number_of_ccpp_constituents)
   protected = True
