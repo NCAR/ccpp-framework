@@ -28,7 +28,7 @@ class ConstituentVarDict(VarDictionary):
     allocation and support for these variables.
     """
 
-    __const_prop_array_name  = "ccpp_constituent_array"
+    __const_prop_array_name  = "ccpp_constituents"
     __const_prop_init_name  = "ccpp_constituents_initialized"
     __const_prop_init_consts = "ccpp_create_constituent_array"
     __constituent_type = "suite"

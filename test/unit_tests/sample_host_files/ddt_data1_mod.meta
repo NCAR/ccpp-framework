@@ -25,7 +25,7 @@
   standard_name = vars_array
   long_name = Array of vars managed by ddt2
   units = none
-  dimensions = (horizontal_dimension, vertical_layer_dimension, ccpp_num_constituents)
+  dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_ccpp_constituents)
   type = real | kind = kind_phys
 
 ########################################################################
