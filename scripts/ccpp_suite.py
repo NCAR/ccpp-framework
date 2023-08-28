@@ -843,8 +843,8 @@ class API(VarDictionary):
                         else:
                             inout_vars[0].add(stdname)
                         # end if
-                    elif intent == 'out' and phase != 'initialize' and constituent
-                         and not const_initialized_in_physics[stdname]:
+                    elif (intent == 'out' and phase != 'initialize' and constituent
+                         and not const_initialized_in_physics[stdname]):
                         # constituents HAVE to be initialized in the init phase because the dycore needs to advect them
                         emsg = "constituent variable '{}' cannot be initialized in the '{}' phase"
                         raise CCPPError(emsg.format(stdname, phase))

@@ -31,7 +31,7 @@ from parse_tools import CCPPError, ParseInternalError
 
 ## Capture the Framework root
 _SCRIPT_PATH = os.path.dirname(__file__)
-_FRAMEWORK_ROOT = os.path.abspath(os.path.join(__SCRIPT_PATH, os.pardir))
+_FRAMEWORK_ROOT = os.path.abspath(os.path.join(_SCRIPT_PATH, os.pardir))
 _SRC_ROOT = os.path.join(_FRAMEWORK_ROOT, "src")
 ## Init this now so that all Exceptions can be trapped
 _LOGGER = init_log(os.path.basename(__file__))
@@ -614,7 +614,7 @@ def capgen(run_env):
     # We always need to parse the ccpp_constituent_prop_ptr_t DDT
     ##XXgoldyXX: Should this be in framework_env.py?
     const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
-    if const_prop_mod and not in scheme_files:
+    if const_prop_mod not in scheme_files:
         scheme_files = [const_prop_mod] + scheme_files
     # end if
     # Next, parse the scheme files
@@ -653,7 +653,8 @@ def capgen(run_env):
     cap_filenames = ccpp_api.write(outtemp_dir, run_env)
     if run_env.generate_host_cap:
         # Create a cap file
-        host_files = [write_host_cap(host_model, ccpp_api,
+        cap_module = host_model.ccpp_cap_name()
+        host_files = [write_host_cap(host_model, ccpp_api, cap_module,
                                      outtemp_dir, run_env)]
     else:
         host_files = list()

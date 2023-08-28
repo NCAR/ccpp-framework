@@ -563,29 +563,39 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, run_env):
                                         module=spec_name,
                                         var_dict=var_dict)
                 mheaders.append(mheader)
-                if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+                if (run_env.logger and
+                    run_env.logger.isEnabledFor(logging.DEBUG)):
                     ctx = context_string(pobj, nodir=True)
                     msg = 'Adding header {}{}'
                     run_env.logger.debug(msg.format(mheader.table_name, ctx))
+                # end if
                 break
-            elif ((type_def is not None) and (active_table is not None) and
-                  (type_def[0].lower() == active_table.lower())):
+            elif type_def is not None:
                 # Put statement back so caller knows where we are
                 statements.insert(0, statement)
-                statements, ddt = parse_type_def(statements, type_def,
-                                                 spec_name, pobj, run_env)
-                if ddt is None:
-                    ctx = context_string(pobj, nodir=True)
-                    msg = "No DDT found at '{}'{}"
-                    raise CCPPError(msg.format(statement, ctx))
-                # End if
-                mheaders.append(ddt)
-                if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
-                    ctx = context_string(pobj, nodir=True)
-                    msg = 'Adding DDT {}{}'
-                    run_env.logger.debug(msg.format(ddt.table_name, ctx))
-                # End if
-                active_table = None
+                if ((active_table is not None) and
+                    (type_def[0].lower() == active_table.lower())):
+                    statements, ddt = parse_type_def(statements, type_def,
+                                                     spec_name, pobj, run_env)
+                    if ddt is None:
+                        ctx = context_string(pobj, nodir=True)
+                        msg = "No DDT found at '{}'{}"
+                        raise CCPPError(msg.format(statement, ctx))
+                    # End if
+                    mheaders.append(ddt)
+                    if (run_env.logger and
+                        run_env.logger.isEnabledFor(logging.DEBUG)):
+                        ctx = context_string(pobj, nodir=True)
+                        msg = 'Adding DDT {}{}'
+                        run_env.logger.debug(msg.format(ddt.table_name, ctx))
+                    # End if
+                    active_table = None
+                else:
+                    # We found a type definition but it is not one with
+                    #   metadata. Just parse it and throw away what is found.
+                    _ = parse_type_def(statements, type_def,
+                                       spec_name, pobj, run_env)
+                # end if
             elif active_table is not None:
                 # We should have a variable definition to add
                 if ((not is_comment_statement(statement)) and
@@ -786,6 +796,7 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
             # End program or module
             pmatch = endmatch.match(statement)
             asmatch = _ARG_TABLE_START_RE.match(statement)
+            type_def = fortran_type_definition(statement)
             if pmatch is not None:
                 # We never found a contains statement
                 inspec = False
@@ -812,6 +823,13 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
                 # End if
                 inspec = pobj.in_region('MODULE', region_name=mod_name)
                 break
+            elif type_def:
+                # We have a type definition without metadata
+                # Just parse it and throw away what is found.
+                # Put statement back so caller knows where we are
+                statements.insert(0, statement)
+                _ = parse_type_def(statements, type_def,
+                                   spec_name, pobj, run_env)
             elif is_contains_statement(statement, inmod):
                 inspec = False
                 break
