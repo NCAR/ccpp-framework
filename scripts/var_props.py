@@ -198,7 +198,7 @@ def default_kind_val(prop_dict, context=None):
     >>> default_kind_val({'local_name':'foo'}) #doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    parse_source.CCPPError: No type to find default kind for foo
+    parse_source.CCPPError: No type to find default kind for  foo
     >>> default_kind_val({}) #doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
@@ -206,7 +206,7 @@ def default_kind_val(prop_dict, context=None):
     >>> default_kind_val({'local_name':'foo'}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    parse_source.CCPPError: No type to find default kind for foo, at foo.F90:4
+    parse_source.CCPPError: No type to find default kind for  foo, at foo.F90:4
     >>> default_kind_val({}, context=ParseContext(linenum=3, filename='foo.F90')) #doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
@@ -515,25 +515,25 @@ class DimTransform:
 class VariableProperty:
     """Class to represent a single property of a metadata header entry
     >>> VariableProperty('local_name', str) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('standard_name', str) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('long_name', str) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('units', str) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('dimensions', list) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('type', str) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('kind', str) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('state_variable', str, valid_values_in=['True',   'False', '.true.', '.false.' ], optional_in=True, default_in=False) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('intent', str, valid_values_in=['in', 'out', 'inout']) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('optional', str, valid_values_in=['True',   'False', '.true.', '.false.' ], optional_in=True, default_in=False) #doctest: +ELLIPSIS
-    <__main__.VariableProperty object at ...>
+    <var_props.VariableProperty object at ...>
     >>> VariableProperty('local_name', str).name
     'local_name'
     >>> VariableProperty('standard_name', str).ptype == str
@@ -763,31 +763,41 @@ class VarCompatObj:
         character(len=<INTEGER_VALUE>)
 
     # Test that we can create a standard VarCompatObj object
+    >>> from parse_tools import init_log, set_log_to_null
+    >>> _DOCTEST_LOGGING = init_log('var_props')
+    >>> set_log_to_null(_DOCTEST_LOGGING)
+    >>> _DOCTEST_RUNENV = CCPPFrameworkEnv(_DOCTEST_LOGGING, \
+                                       ndict={'host_files':'', \
+                                              'scheme_files':'', \
+                                              'suites':''}, \
+                                       kind_types=["kind_phys=REAL64", \
+                                                   "kind_dyn=REAL32", \
+                                                   "kind_host=REAL64"])
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", [],           \
                      "var1_lname", "var_stdname", "real", "kind_phys",      \
                      "m", [], "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
-    <__main__.VarCompatObj object at 0x...>
+    <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with no horizontal transform works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
                      ['horizontal_dimension'], "var1_lname", "var_stdname", \
                      "real", "kind_phys", "m", ['horizontal_dimension'],    \
                      "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
-    <__main__.VarCompatObj object at 0x...>
+    <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with a horizontal transform works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
                      ['horizontal_dimension'], "var1_lname", "var_stdname", \
                      "real", "kind_phys", "m", ['horizontal_loop_extent'],  \
                      "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
-    <__main__.VarCompatObj object at 0x...>
+    <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with unit conversion m->km works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
                      ['horizontal_dimension'], "var1_lname", "var_stdname", \
                      "real", "kind_phys", "km", ['horizontal_dimension'],   \
                      "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
-    <__main__.VarCompatObj object at 0x...>
+    <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with unit conversion m->km works and that it
     # produces the correct forward transformation
@@ -1012,6 +1022,26 @@ class VarCompatObj:
         If a conversion is required, return a tuple with the two kinds,
            i.e., (var1_kind, var2_kind).
 
+        # Initial setup
+        >>> from parse_tools import init_log, set_log_to_null
+        >>> _DOCTEST_LOGGING = init_log('var_props')
+        >>> set_log_to_null(_DOCTEST_LOGGING)
+        >>> _DOCTEST_RUNENV = CCPPFrameworkEnv(_DOCTEST_LOGGING, \
+                                               ndict={'host_files':'', \
+                                                      'scheme_files':'', \
+                                                      'suites':''}, \
+                                               kind_types=["kind_phys=REAL64", \
+                                                           "kind_dyn=REAL32", \
+                                                           "kind_host=REAL64"])
+        >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
+        >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
+        >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
+                                            "m", [], "var1_lname", "var_stdname", \
+                                            "real", "kind_phys", "m", [], \
+                                            "var2_lname", _DOCTEST_RUNENV, \
+                                            v1_context=_DOCTEST_CONTEXT1, \
+                                            v2_context=_DOCTEST_CONTEXT2)
+
         # Try some kind conversions
         >>> _DOCTEST_VCOMPAT._get_kind_convstrs('kind_phys', 'kind_dyn',   \
                                                 _DOCTEST_RUNENV)
@@ -1045,6 +1075,26 @@ class VarCompatObj:
         """Attempt to retrieve the forward and reverse unit transformations
         for transforming a variable in <var1_units> to / from a variable in
         <var2_units>.
+
+        # Initial setup
+        >>> from parse_tools import init_log, set_log_to_null
+        >>> _DOCTEST_LOGGING = init_log('var_props')
+        >>> set_log_to_null(_DOCTEST_LOGGING)
+        >>> _DOCTEST_RUNENV = CCPPFrameworkEnv(_DOCTEST_LOGGING, \
+                                               ndict={'host_files':'', \
+                                                      'scheme_files':'', \
+                                                      'suites':''}, \
+                                               kind_types=["kind_phys=REAL64", \
+                                                           "kind_dyn=REAL32", \
+                                                           "kind_host=REAL64"])
+        >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
+        >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
+        >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
+                                            "m", [], "var1_lname", "var_stdname", \
+                                            "real", "kind_phys", "m", [], \
+                                            "var2_lname", _DOCTEST_RUNENV, \
+                                            v1_context=_DOCTEST_CONTEXT1, \
+                                            v2_context=_DOCTEST_CONTEXT2)
 
         # Try some working unit transforms
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('m', 'mm')
@@ -1098,20 +1148,40 @@ class VarCompatObj:
         The reverse dimension transformation is a permutation of the indices of
            the second variable to the first.
 
+        # Initial setup
+        >>> from parse_tools import init_log, set_log_to_null
+        >>> _DOCTEST_LOGGING = init_log('var_props')
+        >>> set_log_to_null(_DOCTEST_LOGGING)
+        >>> _DOCTEST_RUNENV = CCPPFrameworkEnv(_DOCTEST_LOGGING, \
+                                       ndict={'host_files':'', \
+                                              'scheme_files':'', \
+                                              'suites':''}, \
+                                       kind_types=["kind_phys=REAL64", \
+                                                   "kind_dyn=REAL32", \
+                                                   "kind_host=REAL64"])
+        >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
+        >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
+        >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
+                                    "m", [], "var1_lname", "var_stdname", \
+                                    "real", "kind_phys", "m", [], \
+                                    "var2_lname", _DOCTEST_RUNENV, \
+                                    v1_context=_DOCTEST_CONTEXT1, \
+                                    v2_context=_DOCTEST_CONTEXT2)
+
         # Test simple permutations
         >>> _DOCTEST_VCOMPAT._get_dim_transforms(['horizontal_dimension',      \
                                                   'vertical_layer_dimension'], \
                                                  ['vertical_layer_dimension',  \
                                                   'horizontal_dimension'])     \
         #doctest: +ELLIPSIS
-        <__main__.DimTransform object at 0x...>
+        <var_props.DimTransform object at 0x...>
         >>> _DOCTEST_VCOMPAT._get_dim_transforms(['horizontal_dimension',      \
                                                   'vertical_layer_dimension',  \
                                                   'xdim'],                     \
                                                  ['vertical_layer_dimension',  \
                                                   'horizontal_dimension',      \
                                                   'xdim']) #doctest: +ELLIPSIS
-        <__main__.DimTransform object at 0x...>
+        <var_props.DimTransform object at 0x...>
         >>> _DOCTEST_VCOMPAT._get_dim_transforms(['horizontal_dimension',      \
                                                   'vertical_layer_dimension',  \
                                                   'xdim'],                     \
@@ -1119,7 +1189,7 @@ class VarCompatObj:
                                                   'horizontal_dimension',      \
                                                   'vertical_layer_dimension']) \
         #doctest: +ELLIPSIS
-        <__main__.DimTransform object at 0x...>
+        <var_props.DimTransform object at 0x...>
 
         # Test some mismatch sets
         >>> _DOCTEST_VCOMPAT._get_dim_transforms(['horizontal_dimension',      \
@@ -1323,30 +1393,3 @@ class VarCompatObj:
         return self.equiv
 
 ###############################################################################
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    import sys
-    from parse_tools import init_log, set_log_to_null
-    # pylint: enable=ungrouped-imports
-    _DOCTEST_LOGGING = init_log('var_props')
-    set_log_to_null(_DOCTEST_LOGGING)
-    _DOCTEST_RUNENV = CCPPFrameworkEnv(_DOCTEST_LOGGING,
-                                       ndict={'host_files':'',
-                                              'scheme_files':'',
-                                              'suites':''},
-                                       kind_types=["kind_phys=REAL64",
-                                                   "kind_dyn=REAL32",
-                                                   "kind_host=REAL64"])
-    _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
-    _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
-    _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys",
-                                    "m", [], "var1_lname", "var_stdname",
-                                    "real", "kind_phys", "m", [],
-                                    "var2_lname", _DOCTEST_RUNENV,
-                                    v1_context=_DOCTEST_CONTEXT1,
-                                    v2_context=_DOCTEST_CONTEXT2)
-    OPTIONS = doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE
-    fail, _ = doctest.testmod(optionflags=OPTIONS)
-    sys.exit(fail)
-# end if

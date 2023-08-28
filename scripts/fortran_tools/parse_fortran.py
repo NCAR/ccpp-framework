@@ -665,6 +665,10 @@ def parse_fortran_var_decl(line, source, run_env):
     '(8)'
     >>> _VAR_ID_RE.match("foo(::,a:b,a:,:b)").group(2)
     '(::,a:b,a:,:b)'
+    >>> from framework_env import CCPPFrameworkEnv
+    >>> _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'', \
+                                                       'scheme_files':'', \
+                                                       'suites':''})
     >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('local_name')
     'foo'
     >>> parse_fortran_var_decl("integer :: foo = 0", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('local_name')
@@ -826,15 +830,3 @@ def parse_fortran_var_decl(line, source, run_env):
 ########################################################################
 
 ########################################################################
-
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    # pylint: enable=ungrouped-imports
-    from framework_env import CCPPFrameworkEnv
-    _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
-                                                   'scheme_files':'',
-                                                   'suites':''})
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if

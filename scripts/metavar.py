@@ -1379,11 +1379,11 @@ class VarDictionary(OrderedDict):
     >>> VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})
     VarDictionary(bar)
     >>> VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)) #doctest: +ELLIPSIS
-    VarDictionary(baz, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(baz, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> print("{}".format(VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV))))
     VarDictionary(baz, ['hi_mom'])
     >>> VarDictionary('qux', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) #doctest: +ELLIPSIS
-    VarDictionary(qux, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(qux, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> VarDictionary('boo', _MVAR_DUMMY_RUN_ENV).add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV), _MVAR_DUMMY_RUN_ENV)
 
     >>> VarDictionary('who', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]).prop_list('local_name')
@@ -1982,11 +1982,3 @@ CCPP_CONSTANT_VARS =                                                         \
                                                _MVAR_DUMMY_RUN_ENV)])
 
 ###############################################################################
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    import sys
-    # pylint: enable=ungrouped-imports
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if

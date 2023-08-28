@@ -10,7 +10,7 @@ class ParseObject(ParseContext):
     """ParseObject is a simple class that keeps track of an object's
     place in a file and safely produces lines from an array of lines
     >>> ParseObject('foobar.F90', []) #doctest: +ELLIPSIS
-    <__main__.ParseObject object at 0x...>
+    <parse_tools.parse_object.ParseObject object at 0x...>
     >>> ParseObject('foobar.F90', []).filename
     'foobar.F90'
     >>> ParseObject('foobar.F90', ["##hi mom",], line_start=1).curr_line()
@@ -170,12 +170,3 @@ class ParseObject(ParseContext):
         # end try
 
 ########################################################################
-
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    import sys
-    # pylint: enable=ungrouped-imports
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if
