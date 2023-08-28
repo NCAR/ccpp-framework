@@ -44,11 +44,11 @@ class VarDDT(Var):
         else:
             # Recurse to find correct (tail) location for <new_field>
             self.__field = VarDDT(new_field, var_ref.field, run_env, recur=True)
-        # end if
+        # End if
         if ((not recur) and
             run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG)):
             run_env.logger.debug('Adding DDT field, {}'.format(self))
-        # end if
+        # End if
 
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""
@@ -66,18 +66,18 @@ class VarDDT(Var):
             pvalue = super().get_prop_value(name)
         else:
             pvalue = self.field.get_prop_value(name)
-        # end if
+        # End if
         return pvalue
 
     def intrinsic_elements(self, check_dict=None):
         """Return the Var intrinsic elements for the leaf Var object.
-        See Var.intrinsic_elements for details
+        See Var.intrinsic_elem for details
         """
         if self.field is None:
             pvalue = super().intrinsic_elements(check_dict=check_dict)
         else:
             pvalue = self.field.intrinsic_elements(check_dict=check_dict)
-        # end if
+        # End if
         return pvalue
 
     def clone(self, subst_dict, source_name=None, source_type=None,
@@ -98,7 +98,7 @@ class VarDDT(Var):
                                          source_name=source_name,
                                          source_type=source_type,
                                          context=context)
-        # end if
+        # End if
         return clone_var
 
     def call_string(self, var_dict, loop_vars=None):
@@ -109,7 +109,7 @@ class VarDDT(Var):
         if self.field is not None:
             call_str += '%' + self.field.call_string(var_dict,
                                                      loop_vars=loop_vars)
-        # end if
+        # End if
         return call_str
 
     def write_def(self, outfile, indent, ddict, allocatable=False, dummy=False):
@@ -122,7 +122,7 @@ class VarDDT(Var):
         else:
             self.field.write_def(outfile, indent, ddict,
                                  allocatable=allocatable, dummy=dummy)
-        # end if
+        # End if
 
     @staticmethod
     def __var_rep(var, prefix=""):
@@ -137,14 +137,14 @@ class VarDDT(Var):
                 lstr = '{}%{}({})'.format(prefix, lname, ', '.join(ldims))
             else:
                 lstr = '{}({})'.format(lname, ', '.join(ldims))
-            # end if
+            # End if
         else:
             if prefix:
                 lstr = '{}%{}'.format(prefix, lname)
             else:
                 lstr = '{}'.format(lname)
-            # end if
-        # end if
+            # End if
+        # End if
         return lstr
 
     def __repr__(self):
@@ -160,9 +160,9 @@ class VarDDT(Var):
             elif isinstance(field, Var):
                 lstr = self.__var_rep(field, prefix=lstr)
                 field = None
-            # end if
+            # End if
             sep = '%'
-        # end while
+        # End while
         return "<VarDDT {}>".format(lstr)
 
     def __str__(self):
@@ -201,33 +201,33 @@ class DDTLibrary(dict):
             ddts = list()
         elif not isinstance(ddts, list):
             ddts = [ddts]
-        # end if
+        # End if
         # Add all the DDT headers, then process
         for ddt in ddts:
             if not isinstance(ddt, MetadataSection):
                 errmsg = 'Invalid DDT metadata type, {}'
-                raise ParseInternalError(errmsg.format(type(ddt).__name__))
-            # end if
+                raise ParseInternalError(errmsg.format(type(ddt)))
+            # End if
             if not ddt.header_type == 'ddt':
                 errmsg = 'Metadata table header is for a {}, should be DDT'
                 raise ParseInternalError(errmsg.format(ddt.header_type))
-            # end if
+            # End if
             if ddt.title in self:
                 errmsg = "Duplicate DDT, {}, found{}, original{}"
                 ctx = context_string(ddt.source.context)
                 octx = context_string(self[ddt.title].source.context)
                 raise CCPPError(errmsg.format(ddt.title, ctx, octx))
-            # end if
-            if logger and logger.isEnabledFor(logging.DEBUG):
-                lmsg = f"Adding DDT {ddt.title} to {self.name}"
-                logger.debug(lmsg)
-            # end if
+            # End if
+            if logger is not None:
+                lmsg = 'Adding DDT {} to {}'
+                logger.debug(lmsg.format(ddt.title, self.name))
+            # End if
             self[ddt.title] = ddt
             dlen = len(ddt.module)
             if dlen > self.__max_mod_name_len:
                 self.__max_mod_name_len = dlen
-            # end if
-        # end for
+            # End if
+        # End for
 
     def check_ddt_type(self, var, header, lname=None):
         """If <var> is a DDT, check to make sure it is in this DDT library.
@@ -239,21 +239,16 @@ class DDTLibrary(dict):
             if vtype not in self:
                 if lname is None:
                     lname = var.get_prop_value('local_name')
-                # end if
+                # End if
                 errmsg = 'Variable {} is of unknown type ({}) in {}'
                 ctx = context_string(var.context)
                 raise CCPPError(errmsg.format(lname, vtype, header.title, ctx))
-            # end if
-        # end if (no else needed)
+            # End if
+        # End if (no else needed)
 
-    def collect_ddt_fields(self, var_dict, var, run_env,
-                           ddt=None, skip_duplicates=False):
+    def collect_ddt_fields(self, var_dict, var, run_env, ddt=None):
         """Add all the reachable fields from DDT variable <var> of type,
         <ddt> to <var_dict>. Each field is added as a VarDDT.
-        Note: By default, it is an error to try to add a duplicate
-              field to <var_dict> (i.e., the field already exists in
-              <var_dict> or one of its parents). To simply skip duplicate
-              fields, set <skip_duplicates> to True.
         """
         if ddt is None:
             vtype = var.get_prop_value('type')
@@ -264,8 +259,8 @@ class DDTLibrary(dict):
                 ctx = context_string(var.context)
                 errmsg = "Variable, {}, is not a known DDT{}"
                 raise ParseInternalError(errmsg.format(lname, ctx))
-            # end if
-        # end if
+            # End if
+        # End if
         for dvar in ddt.variable_list():
             subvar = VarDDT(dvar, var, self.run_env)
             dvtype = dvar.get_prop_value('type')
@@ -273,25 +268,22 @@ class DDTLibrary(dict):
                 # If DDT in our library, we need to add sub-fields recursively.
                 subddt = self[dvtype]
                 self.collect_ddt_fields(var_dict, subvar, run_env, ddt=subddt)
-            # end if
-            # add_variable only checks the current dictionary. By default,
-            # for a DDT, the variable also cannot be in our parent
-            # dictionaries.
-            stdname = dvar.get_prop_value('standard_name')
-            pvar = var_dict.find_variable(standard_name=stdname,
+            else:
+                # add_variable only checks the current dictionary. For a
+                # DDT, the variable also cannot be in our parent dictionaries.
+                stdname = dvar.get_prop_value('standard_name')
+                pvar = var_dict.find_variable(standard_name=stdname,
                                               any_scope=True)
-            if pvar and (not skip_duplicates):
-                emsg = "Attempt to add duplicate DDT sub-variable, {}{}."
-                emsg += "\nVariable originally defined{}"
-                ntx = context_string(dvar.context)
-                ctx = context_string(pvar.context)
-                raise CCPPError(emsg.format(stdname, ntx, ctx))
-            # end if
-            # Add this intrinsic to <var_dict>
-            if not pvar:
+                if pvar:
+                    emsg = "Attempt to add duplicate DDT sub-variable, {}{}."
+                    emsg += "\nVariable originally defined{}"
+                    ntx = context_string(dvar.context)
+                    ctx = context_string(pvar.context)
+                    raise CCPPError(emsg.format(stdname, ntx, ctx))
+                # end if
+                # Add this intrinsic to <var_dict>
                 var_dict.add_variable(subvar, run_env)
-            # end if
-        # end for
+        # End for
 
     def ddt_modules(self, variable_list, ddt_mods=None):
         """Collect information for module use statements.
@@ -300,14 +292,14 @@ class DDTLibrary(dict):
         """
         if ddt_mods is None:
             ddt_mods = set() # Need a new set for every call
-        # end if
+        # End if
         for var in variable_list:
             vtype = var.get_prop_value('type')
             if vtype in self:
                 module = self[vtype].module
                 ddt_mods.add((module, vtype))
-            # end if
-        # end for
+            # End if
+        # End for
         return ddt_mods
 
     def write_ddt_use_statements(self, variable_list, outfile, indent, pad=0):
@@ -321,7 +313,7 @@ class DDTLibrary(dict):
             slen = ' '*(pad - len(dmod))
             ustring = 'use {},{} only: {}'
             outfile.write(ustring.format(dmod, slen, dtype), indent)
-        # end for
+        # End for
 
     @property
     def name(self):
