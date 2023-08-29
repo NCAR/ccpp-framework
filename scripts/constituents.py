@@ -646,6 +646,10 @@ class ConstituentVarDict(VarDictionary):
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
+        cap.blank_line()
+        cap.write(f"{herrcode} = 0", 2)
+        cap.write(f"{herrmsg} = ''", 2)
+        cap.blank_line()
         cap.write("constituent_exists = .false.", 2)
         cap.write(f"if (any({host.name}_model_const_stdnames == var_name)) then", 2)
         cap.write("constituent_exists = .true.", 3)
