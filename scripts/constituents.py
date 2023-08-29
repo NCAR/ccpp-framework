@@ -637,10 +637,10 @@ class ConstituentVarDict(VarDictionary):
         cap.write("end {}".format(substmt), 1)
         # Write query_consts routine
         substmt = f"subroutine {query_const_funcname}"
-        cap.write("", 0)
+        blank_line()
         cap.write(f"{substmt}(var_name, constituent_exists, {err_dummy_str})", 1)
         cap.comment(f"Return constituent_exists = true iff var_name appears in {host.name}_model_const_stdnames", 2)
-        cap.write("", 0)
+        blank_line()
         cap.write("character(len=*),   intent(in)    :: var_name", 2)
         cap.write("logical,            intent(out)   :: constituent_exists", 2)
         for evar in err_vars:
@@ -650,7 +650,7 @@ class ConstituentVarDict(VarDictionary):
         cap.write(f"if (any({host.name}_model_const_stdnames == var_name)) then", 2)
         cap.write("constituent_exists = .true.", 3)
         cap.write("end if", 2)
-        cap.write("", 0)
+        blank_line()
         cap.write(f"end {substmt}", 1)
         # Write copy_in routine
         substmt = "subroutine {}".format(copy_in_funcname)

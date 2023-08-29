@@ -304,6 +304,7 @@ CONTAINS
       ! specific_humidity should not be an existing constituent
       if (is_constituent) then
          write(6, *) "ERROR: specific humidity is already a constituent"
+         errflg_final = -1 !Notify test script that a failure occurred
       end if
       call test_host_ccpp_is_scheme_constituent('cloud_ice_dry_mixing_ratio', &
            is_constituent, errflg, errmsg)
@@ -313,6 +314,7 @@ CONTAINS
       if (.not. is_constituent) then
          write(6, *) "ERROR: cloud_ice_dry_mixing ratio not found in ",       &
                         "host cap constituent list"
+         errflg_final = -1 !Notify test script that a failure occurred
       end if
 
 
@@ -512,7 +514,7 @@ CONTAINS
       !Check that setting a constituent's default value works as expected
       call const_props(index_liq)%has_default(has_default, errflg, errmsg)
       if (errflg /= 0) then
-         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+         write(6, '(a,i0,2a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
               "to check for default for cld_liq index = ", index_liq, trim(errmsg)
          errflg_final = -1 !Notify test script that a failure occurred
       end if
@@ -527,13 +529,14 @@ CONTAINS
       end if
       call const_props(index_ice)%has_default(has_default, errflg, errmsg)
       if (errflg /= 0) then
-         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+         write(6, '(a,i0,2a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
               "to check for default for cld_ice index = ", index_ice, trim(errmsg)
          errflg_final = -1 !Notify test script that a failure occurred
       end if
       if (errflg == 0) then
          if (.not. has_default) then
             write(6, *) "ERROR: cloud ice mass_mixing_ratio should have default but doesn't"
+            errflg_final = -1 !Notify test script that a failure occurred
          end if
       else
          !Reset error flag to continue testing other properties:
@@ -541,7 +544,7 @@ CONTAINS
       end if
       call const_props(index_ice)%default_value(default_value, errflg, errmsg)
       if (errflg /= 0) then
-         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
+         write(6, '(a,i0,2a,i0,/,a)') "ERROR: Error, ", errflg, " trying ", &
               "to grab default for cld_ice index = ", index_ice, trim(errmsg)
          errflg_final = -1 !Notify test script that a failure occurred
       end if
@@ -549,6 +552,7 @@ CONTAINS
          if (default_value /= 0.0_kind_phys) then
             write(6, *) "ERROR: cloud ice mass_mixing_ratio default is ", default_value, &
                         " but should be 0.0"
+            errflg_final = -1 !Notify test script that a failure occurred
          end if
       else
          !Reset error flag to continue testing other properties:
