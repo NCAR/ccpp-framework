@@ -110,6 +110,14 @@ def constituent_num_consts_funcname(host_model):
     return "{}_ccpp_number_constituents".format(host_model.name)
 
 ###############################################################################
+def query_scheme_constituents_funcname(host_model):
+###############################################################################
+    """Return the name of the function to return True if the standard name
+    passed in matches an existing constituent
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_is_scheme_constituent"
+
+###############################################################################
 def constituent_copyin_subname(host_model):
 ###############################################################################
     """Return the name of the subroutine to copy constituent fields to the
@@ -444,15 +452,17 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         API.declare_inspection_interfaces(cap)
         # Write the host-model interfaces for constituents
         reg_name = constituent_register_subname(host_model)
-        cap.write("public :: {}".format(reg_name), 1)
+        cap.write(f"public :: {reg_name}", 1)
         init_name = constituent_initialize_subname(host_model)
-        cap.write("public :: {}".format(init_name), 1)
+        cap.write(f"public :: {init_name}", 1)
         numconsts_name = constituent_num_consts_funcname(host_model)
-        cap.write("public :: {}".format(numconsts_name), 1)
+        cap.write(f"public :: {numconsts_name}", 1)
+        queryconsts_name = query_scheme_constituents_funcname(host_model)
+        cap.write(f"public :: {queryconsts_name}", 1)
         copyin_name = constituent_copyin_subname(host_model)
-        cap.write("public :: {}".format(copyin_name), 1)
+        cap.write(f"public :: {copyin_name}", 1)
         copyout_name = constituent_copyout_subname(host_model)
-        cap.write("public :: {}".format(copyout_name), 1)
+        cap.write(f"public :: {copyout_name}", 1)
         const_array_func = constituent_model_consts(host_model)
         cap.write(f"public :: {const_array_func}", 1)
         advect_array_func = constituent_model_advected_consts(host_model)
@@ -598,8 +608,9 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
-                                               numconsts_name, copyin_name,
-                                               copyout_name, const_obj_name,
+                                               numconsts_name, queryconsts_name,
+                                               copyin_name, copyout_name, 
+                                               const_obj_name,
                                                const_names_name,
                                                const_indices_name,
                                                const_array_func,
