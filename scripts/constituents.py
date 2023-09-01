@@ -9,7 +9,7 @@ to implement this support.
 """
 
 # CCPP framework imports
-from parse_tools import ParseInternalError, type_name
+from parse_tools import ParseInternalError
 from metavar import VarDictionary
 
 ########################################################################
@@ -406,7 +406,7 @@ class ConstituentVarDict(VarDictionary):
         if not ((self.parent is not None) and
                 hasattr(self.parent.parent, "constituent_module")):
             emsg = "ConstituentVarDict parent not HostModel?"
-            emsg += f"\nparent is '{type_name(self.parent.parent)}'"
+            emsg += f"\nparent is '{type(self.parent.parent)}'"
             raise ParseInternalError(emsg)
         # end if
         return self.parent.parent.constituent_module
