@@ -204,7 +204,7 @@ class ParseContext(object):
     <parse_tools.parse_source.ParseContext object at 0x...>
     >>> ParseContext("source.F90", 32)
     Traceback (most recent call last):
-    CCPPError: ParseContext linenum must be an int
+    parse_tools.parse_source.CCPPError: ParseContext linenum must be an int
     >>> ParseContext(32, 90) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: ParseContext filenum must be a string
