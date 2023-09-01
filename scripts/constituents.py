@@ -9,7 +9,7 @@ to implement this support.
 """
 
 # CCPP framework imports
-from parse_tools import ParseInternalError
+from parse_tools import ParseInternalError, type_name
 from metavar import VarDictionary
 
 ########################################################################
@@ -28,7 +28,7 @@ class ConstituentVarDict(VarDictionary):
     allocation and support for these variables.
     """
 
-    __const_prop_array_name  = "ccpp_constituent_array"
+    __const_prop_array_name  = "ccpp_constituents"
     __const_prop_init_name  = "ccpp_constituents_initialized"
     __const_prop_init_consts = "ccpp_create_constituent_array"
     __constituent_type = "suite"
@@ -112,7 +112,7 @@ class ConstituentVarDict(VarDictionary):
                 # end for
                 newdims.append(':'.join(new_dnames))
             # end for
-            var = source_var.clone({'dimensions' : newdims}, remove_intent=False,
+            var = source_var.clone({'dimensions' : newdims}, remove_intent=True,
                                    source_type=self.__constituent_type)
             self.add_variable(var, self.__run_env)
         return var
@@ -406,7 +406,7 @@ class ConstituentVarDict(VarDictionary):
         if not ((self.parent is not None) and
                 hasattr(self.parent.parent, "constituent_module")):
             emsg = "ConstituentVarDict parent not HostModel?"
-            emsg += f"\nparent is '{type(self.parent.parent)}'"
+            emsg += f"\nparent is '{type_name(self.parent.parent)}'"
             raise ParseInternalError(emsg)
         # end if
         return self.parent.parent.constituent_module
@@ -456,9 +456,9 @@ class ConstituentVarDict(VarDictionary):
 
     @staticmethod
     def write_host_routines(cap, host, reg_funcname, init_funcname, num_const_funcname,
-                            copy_in_funcname, copy_out_funcname, const_obj_name,
-                            const_names_name, const_indices_name, const_array_func,
-                            advect_array_func, prop_array_func,
+                            query_const_funcname, copy_in_funcname, copy_out_funcname,
+                            const_obj_name, const_names_name, const_indices_name,
+                            const_array_func, advect_array_func, prop_array_func,
                             const_index_func, suite_list, err_vars):
         """Write out the host model <reg_funcname> routine which will
         instantiate constituent fields for all the constituents in <suite_list>.
@@ -466,6 +466,7 @@ class ConstituentVarDict(VarDictionary):
         Also write out the following routines:
            <init_funcname>: Initialize constituent data
            <num_const_funcname>: Number of constituents
+           <query_const_funcname>: Check if standard name matches existing constituent
            <copy_in_funcname>: Collect constituent fields for host
            <copy_out_funcname>: Update constituent fields from host
            <const_array_func>: Return a pointer to the constituent array
@@ -634,6 +635,27 @@ class ConstituentVarDict(VarDictionary):
         call_str = "call {}%num_constituents(num_flds, advected=advected, {})"
         cap.write(call_str.format(const_obj_name, obj_err_callstr), 2)
         cap.write("end {}".format(substmt), 1)
+        # Write query_consts routine
+        substmt = f"subroutine {query_const_funcname}"
+        cap.blank_line()
+        cap.write(f"{substmt}(var_name, constituent_exists, {err_dummy_str})", 1)
+        cap.comment(f"Return constituent_exists = true iff var_name appears in {host.name}_model_const_stdnames", 2)
+        cap.blank_line()
+        cap.write("character(len=*),   intent(in)    :: var_name", 2)
+        cap.write("logical,            intent(out)   :: constituent_exists", 2)
+        for evar in err_vars:
+            evar.write_def(cap, 2, host, dummy=True, add_intent="out")
+        # end for
+        cap.blank_line()
+        cap.write(f"{herrcode} = 0", 2)
+        cap.write(f"{herrmsg} = ''", 2)
+        cap.blank_line()
+        cap.write("constituent_exists = .false.", 2)
+        cap.write(f"if (any({host.name}_model_const_stdnames == var_name)) then", 2)
+        cap.write("constituent_exists = .true.", 3)
+        cap.write("end if", 2)
+        cap.blank_line()
+        cap.write(f"end {substmt}", 1)
         # Write copy_in routine
         substmt = "subroutine {}".format(copy_in_funcname)
         cap.write("", 0)

@@ -8,7 +8,7 @@ Parse a host-model registry XML file and return the captured variables.
 import logging
 import os
 # CCPP framework imports
-from ccpp_suite import API
+from ccpp_suite import API, API_SOURCE_NAME
 from ccpp_state_machine import CCPP_STATE_MACH
 from constituents import ConstituentVarDict, CONST_DDT_NAME, CONST_DDT_MOD
 from constituents import CONST_OBJ_STDNAME
@@ -33,8 +33,7 @@ _SUBFOOT = '''
    end subroutine {host_model}_ccpp_physics_{stage}
 '''
 
-_API_SRC_NAME = "CCPP_API"
-_API_SOURCE = ParseSource(_API_SRC_NAME, "MODULE",
+_API_SOURCE = ParseSource(API_SOURCE_NAME, "MODULE",
                           ParseContext(filename="host_cap.F90"))
 
 _API_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
@@ -60,7 +59,7 @@ _MVAR_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
                                                     'suites':''})
 
 # Used to prevent loop substitution lookups
-_BLANK_DICT = VarDictionary(_API_SRC_NAME, _MVAR_DUMMY_RUN_ENV)
+_BLANK_DICT = VarDictionary(API_SOURCE_NAME, _MVAR_DUMMY_RUN_ENV)
 
 ###############################################################################
 def suite_part_list(suite, stage):
@@ -109,6 +108,14 @@ def constituent_num_consts_funcname(host_model):
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
     return "{}_ccpp_number_constituents".format(host_model.name)
+
+###############################################################################
+def query_scheme_constituents_funcname(host_model):
+###############################################################################
+    """Return the name of the function to return True if the standard name
+    passed in matches an existing constituent
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_is_scheme_constituent"
 
 ###############################################################################
 def constituent_copyin_subname(host_model):
@@ -210,7 +217,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     to create the dictionary.
     """
     # First create a MetadataTable for the constituents DDT
-    stdname_layer = "ccpp_num_constituents"
+    stdname_layer = "number_of_ccpp_constituents"
     horiz_dim = "horizontal_dimension"
     vert_layer_dim = "vertical_layer_dimension"
     vert_interface_dim = "vertical_interface_dimension"
@@ -225,7 +232,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
         f" standard_name = {stdname_layer}",
         " units = count", " dimensions = ()", " type = integer",
         f"[ {array_layer} ]",
-        " standard_name = ccpp_constituent_array",
+        " standard_name = ccpp_constituents",
         " units = none",
         f" dimensions = ({horiz_dim}, {vert_layer_dim}, {stdname_layer})",
         " type = real", " kind = kind_phys"]
@@ -445,15 +452,17 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         API.declare_inspection_interfaces(cap)
         # Write the host-model interfaces for constituents
         reg_name = constituent_register_subname(host_model)
-        cap.write("public :: {}".format(reg_name), 1)
+        cap.write(f"public :: {reg_name}", 1)
         init_name = constituent_initialize_subname(host_model)
-        cap.write("public :: {}".format(init_name), 1)
+        cap.write(f"public :: {init_name}", 1)
         numconsts_name = constituent_num_consts_funcname(host_model)
-        cap.write("public :: {}".format(numconsts_name), 1)
+        cap.write(f"public :: {numconsts_name}", 1)
+        queryconsts_name = query_scheme_constituents_funcname(host_model)
+        cap.write(f"public :: {queryconsts_name}", 1)
         copyin_name = constituent_copyin_subname(host_model)
-        cap.write("public :: {}".format(copyin_name), 1)
+        cap.write(f"public :: {copyin_name}", 1)
         copyout_name = constituent_copyout_subname(host_model)
-        cap.write("public :: {}".format(copyout_name), 1)
+        cap.write(f"public :: {copyout_name}", 1)
         const_array_func = constituent_model_consts(host_model)
         cap.write(f"public :: {const_array_func}", 1)
         advect_array_func = constituent_model_advected_consts(host_model)
@@ -510,7 +519,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     subst_dict['intent'] = 'inout'
                 # End if
                 hdvars.append(hvar.clone(subst_dict,
-                                         source_name=_API_SRC_NAME))
+                                         source_name=API_SOURCE_NAME))
             # End for
             lnames = [x.get_prop_value('local_name') for x in apivars + hdvars]
             api_vlist = ", ".join(lnames)
@@ -599,8 +608,9 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
-                                               numconsts_name, copyin_name,
-                                               copyout_name, const_obj_name,
+                                               numconsts_name, queryconsts_name,
+                                               copyin_name, copyout_name, 
+                                               const_obj_name,
                                                const_names_name,
                                                const_indices_name,
                                                const_array_func,
