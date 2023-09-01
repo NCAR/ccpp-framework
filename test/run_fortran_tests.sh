@@ -50,6 +50,11 @@ echo "Skipping var_action_test/run_test until feature is fully implemented"
 if [ $errcnt -eq 0 ]; then
   echo "All tests PASSed!"
 else
-  echo "${errcnt} tests FAILed"
+  if [ $errcnt -eq 1 ]; then
+    echo "${errcnt} test FAILed"
+  else
+    echo "${errcnt} tests FAILed"
+  fi
+  #Exit with non-zero exit code
   exit 1
 fi
