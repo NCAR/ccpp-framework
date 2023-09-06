@@ -82,6 +82,7 @@ module ccpp_constituent_prop_mod
       procedure :: deallocate        => ccp_deallocate
       procedure :: set_const_index   => ccp_set_const_index
       procedure :: set_thermo_active => ccp_set_thermo_active
+      procedure :: set_minimum       => ccp_set_min_val
    end type ccpp_constituent_properties_t
 
 !! \section arg_table_ccpp_constituent_prop_ptr_t
@@ -116,6 +117,7 @@ module ccpp_constituent_prop_mod
       procedure :: deallocate        => ccpt_deallocate
       procedure :: set_const_index   => ccpt_set_const_index
       procedure :: set_thermo_active => ccpt_set_thermo_active
+      procedure :: set_minimum       => ccpt_set_min_val
    end type ccpp_constituent_prop_ptr_t
 
 !! \section arg_table_ccpp_model_constituents_t
@@ -805,6 +807,26 @@ CONTAINS
 
    !########################################################################
 
+   subroutine ccp_set_min_val(this, min_value, errcode, errmsg)
+      ! Set the minimum value of this particular constituent.
+      ! If this subroutine is never used then the minimum
+      ! value defaults to zero.
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      real(kind_phys),                      intent(in)    :: min_value
+      integer,          optional,           intent(out)   :: errcode
+      character(len=*), optional,           intent(out)   :: errmsg
+
+      !Set minimum allowed value for this constituent:
+      if (this%is_instantiated(errcode, errmsg)) then
+         this%min_val = min_value
+      end if
+
+   end subroutine ccp_set_min_val
+
+   !########################################################################
+
    subroutine ccp_molec_weight(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
@@ -1299,6 +1321,7 @@ CONTAINS
       ! Local variables
       integer                                         :: astat, index
       real(kind=kind_phys)                            :: default_value
+      real(kind=kind_phys)                            :: minvalue
       character(len=*), parameter :: subname = 'ccp_model_const_data_lock'
 
       if (this%const_data_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
@@ -1323,11 +1346,16 @@ CONTAINS
          if (astat == 0) then
             this%num_layers = num_layers
             do index = 1, this%hash_table%num_values()
+               !Set all constituents to their default values:
                call this%const_metadata(index)%default_value(default_value, &
                                errcode, errmsg)
                this%vars_layer(:,:,index) = default_value
+
+               !Also set the minimum allowed value array:
+               call this%const_metadata(index)%minimum(minvalue, errcode,   &
+                               errmsg)
+               this%vars_minvalue(index) = minvalue
             end do
-            this%vars_minvalue = 0.0_kind_phys
          end if
          if (present(errcode)) then
             if (errcode /= 0) then
@@ -2083,6 +2111,31 @@ CONTAINS
       end if
 
    end subroutine ccpt_min_val
+
+   !########################################################################
+
+   subroutine ccpt_set_min_val(this, min_value, errcode, errmsg)
+      ! Set the minimum value of this particular constituent.
+      ! If this subroutine is never used then the minimum
+      ! value defaults to zero.
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t),   intent(inout) :: this
+      real(kind_phys),                      intent(in)    :: min_value
+      integer,          optional,           intent(out)   :: errcode
+      character(len=*), optional,           intent(out)   :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_set_min_val'
+
+      !Set minimum value for this constituent:
+      if (associated(this%prop)) then
+         call this%prop%set_minimum(min_value, errcode, errmsg)
+      else
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_set_min_val
 
    !########################################################################
 
