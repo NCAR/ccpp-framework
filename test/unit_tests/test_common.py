@@ -16,7 +16,7 @@ import logging
 import unittest
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_FILE = os.path.basename(os.path.abspath(__file__))
+TEST_FILE = os.path.abspath(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.abspath(os.path.join(TEST_DIR, os.pardir, os.pardir, "scripts"))
 SAMPLE_FILES_DIR = os.path.join(TEST_DIR, "sample_files")
 
