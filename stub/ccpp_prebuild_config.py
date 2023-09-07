@@ -33,7 +33,7 @@ SCHEME_FILES = [
 
 # Default build dir, relative to current working directory,
 # if not specified as command-line argument
-DEFAULT_BUILD_DIR = '.'
+DEFAULT_BUILD_DIR = 'build'
 
 # Auto-generated makefile/cmakefile snippets that contain all type definitions
 TYPEDEFS_MAKEFILE   = '{build_dir}/CCPP_TYPEDEFS.mk'
@@ -54,7 +54,7 @@ CAPS_SOURCEFILE = '{build_dir}/CCPP_CAPS.sh'
 CAPS_DIR = '{build_dir}'
 
 # Directory where the suite definition files are stored
-SUITES_DIR = '{build_dir}'
+SUITES_DIR = '.'
 
 # Optional arguments - only required for schemes that use
 # optional arguments. ccpp_prebuild.py will throw an exception
