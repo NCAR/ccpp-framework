@@ -19,6 +19,7 @@ CCPP_STAGES['init']              = 'init'
 CCPP_STAGES['run']               = 'run'
 CCPP_STAGES['finalize']          = 'final'
 
+CCPP_T_INSTANCE_VARIABLE = 'ccpp_t_instance'
 CCPP_CONSTANT_ONE        = 'ccpp_constant_one'
 CCPP_ERROR_CODE_VARIABLE = 'ccpp_error_code'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'

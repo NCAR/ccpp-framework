@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 from common import encode_container
 from common import CCPP_STAGES
-from common import CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
+from common import CCPP_T_INSTANCE_VARIABLE, CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_THREAD_NUMBER, CCPP_INTERNAL_VARIABLES
 from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT, CCPP_NUM_INSTANCES
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
@@ -930,37 +930,37 @@ end module {module}
 
     initialized_test_blocks = {
         'init' : '''
-      if (initialized(cdata%ccpp_instance)) return
+      if (initialized({ccpp_var_name}%ccpp_instance)) return
 ''',
         'timestep_init' : '''
-      if (.not.initialized(cdata%ccpp_instance)) then
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_init called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'run' : '''
-      if (.not.initialized(cdata%ccpp_instance)) then
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'timestep_finalize' : '''
-      if (.not.initialized(cdata%ccpp_instance)) then
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_finalize called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'finalize' : '''
-      if (.not.initialized(cdata%ccpp_instance)) return
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) return
 ''',
     }
 
     initialized_set_blocks = {
         'init' : '''
-      initialized(cdata%ccpp_instance) = .true.
+      initialized({ccpp_var_name}%ccpp_instance) = .true.
 ''',
         'timestep_init' : '',
         'run' : '',
@@ -999,7 +999,10 @@ end module {module}
         ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
         ccpp_error_code_target_name = metadata_request[CCPP_ERROR_CODE_VARIABLE][0].target
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
-        #
+        # Then, identify the variable name of the mandatory ccpp_t variable defined by the host model
+        ccpp_var = metadata_define[CCPP_T_INSTANCE_VARIABLE][0]
+
+        # Init
         module_use = ''
         self._module = 'ccpp_{suite}_{name}_cap'.format(name=self._name, suite=self._suite)
         self._filename = '{module_name}.F90'.format(module_name=self._module)
@@ -1624,12 +1627,14 @@ end module {module}
             # at least one subroutine that gets called from this group), or skip.
             if self.arguments[ccpp_stage]:
                 initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
+                                            ccpp_var_name = ccpp_var.local_name,
                                             target_name_flag=ccpp_error_code_target_name,
                                             target_name_msg=ccpp_error_msg_target_name,
                                             name=self._name)
             else:
                 initialized_test_block = ''
             initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
+                                        ccpp_var_name = ccpp_var.local_name,
                                         target_name_flag=ccpp_error_code_target_name,
                                         target_name_msg=ccpp_error_msg_target_name,
                                         name=self._name)
