@@ -500,7 +500,7 @@ CONTAINS
          call const_props(index_ice)%minimum(check_value, errflg, errmsg)
          if (errflg /= 0) then
             write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
-                 " tryingto get minimum value for cld_ice index = ",          &
+                 " trying to get minimum value for cld_ice index = ",         &
                  index_ice, trim(errmsg)
             errflg_final = -1 !Notify test script that a failure occurred
          end if
@@ -552,7 +552,7 @@ CONTAINS
          call const_props(index_ice)%is_thermo_active(check, errflg, errmsg)
          if (errflg /= 0) then
             write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
-                 " tryingto get thermo_active prop for cld_ice index = ",     &
+                 " trying to get thermo_active prop for cld_ice index = ",    &
                  index_ice, trim(errmsg)
             errflg_final = -1 !Notify test script that a failure occurred
          end if
