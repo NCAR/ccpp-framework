@@ -8,8 +8,10 @@ import sys
 
 # CCPP framework imports
 from common import CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
+from parse_checkers import registered_fortran_ddt_names
 from parse_tools import init_log, set_log_level
-from metadata_table import MetadataHeader
+from metadata_table import MetadataTable, parse_metadata_file
+from framework_env import CCPPFrameworkEnv
 
 ###############################################################################
 # Set up the command line argument parser and other global variables          #
@@ -27,7 +29,7 @@ parser.add_argument('--outputdir', '-o', action='store',
 
 # List and order of variable attributes to output to HTML
 ATTRIBUTES = [ 'local_name', 'standard_name', 'long_name', 'units',
-               'type', 'dimensions', 'kind', 'intent', 'optional' ]
+               'type', 'dimensions', 'kind', 'intent' ]
 
 ###############################################################################
 # Functions and subroutines                                                   #
@@ -56,7 +58,7 @@ def import_config(configfile, logger):
 
     # Get the base directory for running metadata2html.py from
     # the default build directory value in the CCPP prebuild config
-    basedir = os.path.join(os.getcwd(), ccpp_prebuild_config.DEFAULT_BUILD_DIR)
+    basedir = os.path.join(os.getcwd())
     logger.info('Relative path to CCPP directory from  CCPP prebuild config: {}'.format(
                                                 ccpp_prebuild_config.DEFAULT_BUILD_DIR))
 
@@ -92,21 +94,28 @@ def get_output_directory_from_config(config, logger):
         raise Exception("Output directory {} for converted metadata tables does not exist".format(outdir))
     return outdir
 
-def convert_to_html(filename_in, outdir, logger):
+def convert_to_html(filename_in, outdir, logger, run_env):
     """Convert a metadata file into html (one html file for each table)"""
     if not os.path.isfile(filename_in):
         raise Exception("Metadata file {} not found".format(filename_in))
     logger.info("Converting file {} to HTML".format(filename_in))
-    metadata_headers = MetadataHeader.parse_metadata_file(filename_in)
+    metadata_headers = parse_metadata_file(filename_in,
+                                           known_ddts=registered_fortran_ddt_names(),
+                                           run_env=run_env)
     for metadata_header in metadata_headers:
-        filename_out = metadata_header.to_html(outdir, ATTRIBUTES)
-        if filename_out:
-            logger.info("  ... wrote {}".format(filename_out))
+        for metadata_section in metadata_header.sections():
+            filename_out = metadata_section.to_html(outdir, ATTRIBUTES)
+            if filename_out:
+                logger.info("  ... wrote {}".format(filename_out))
 
 def main():
     # Initialize logging
     logger = init_log('metadata2html')
     set_log_level(logger, logging.INFO)
+    run_env = CCPPFrameworkEnv(logger, ndict={'host_files':'',
+                                              'scheme_files':'',
+                                              'suites':''})
+
     # Convert metadata file
     (configfile, filename, outdir) = parse_arguments()
     if configfile:
@@ -114,9 +123,9 @@ def main():
         filenames = get_metadata_files_from_config(config, logger)
         outdir = get_output_directory_from_config(config, logger)
         for filename in filenames:
-            convert_to_html(filename, outdir, logger)
+            convert_to_html(filename, outdir, logger, run_env)
     else:
-        convert_to_html(filename, outdir, logger)
+        convert_to_html(filename, outdir, logger, run_env)
 
 if __name__ == '__main__':
     main()

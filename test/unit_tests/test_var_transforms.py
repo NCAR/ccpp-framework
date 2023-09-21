@@ -8,7 +8,7 @@
 
  Command line arguments: none
 
- Usage: python test_var_transform.py         # run the unit tests
+ Usage: python test_var_transforms.py         # run the unit tests
 -----------------------------------------------------------------------
 """
 import sys
