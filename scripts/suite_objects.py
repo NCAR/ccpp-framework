@@ -13,7 +13,7 @@ from ccpp_state_machine import CCPP_STATE_MACH, RUN_PHASE_NAME
 from code_block import CodeBlock
 from constituents import ConstituentVarDict
 from framework_env import CCPPFrameworkEnv
-from metavar import Var, VarDictionary, VarLoopSubst
+from metavar import Var, VarDictionary, VarLoopSubst, VarUnitConv
 from metavar import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
 from parse_tools import ParseContext, ParseSource, context_string
 from parse_tools import ParseInternalError, CCPPError
@@ -800,6 +800,30 @@ class SuiteObject(VarDictionary):
         # end if
         return found_var
 
+    def match_units(self, var, title):
+        """Compare units for <var> in this SuiteObject's dictionary tree.
+        If there are differences, apply unit conversions"""
+
+        dict_var  = self.find_variable(source_var=var, any_scope=True)
+        hunits    = dict_var.get_prop_value('units')
+        found_var = False
+        if (hunits != var.get_prop_value('units')):
+            found_var = True
+            if self.run_phase():
+                if (var.get_prop_value('intent') == 'out'):
+                    match = VarDictionary.unit_cnv_to(hunits, var)
+                if (var.get_prop_value('intent') == 'in'):
+                    match = VarDictionary.unit_cnv_from(hunits, var)
+                if (var.get_prop_value('intent') == 'inout'):
+                    match = VarDictionary.unit_cnv_from(hunits, var)
+                    match = VarDictionary.unit_cnv_to(hunits, var)
+                print(match._set_action)
+            else:
+                match = None
+            self.register_action(match)
+
+        return found_var
+
     def match_variable(self, var, vstdname=None, vdims=None):
         """Try to find a source for <var> in this SuiteObject's dictionary
         tree. Several items are returned:
@@ -820,6 +844,7 @@ class SuiteObject(VarDictionary):
         else:
             vmatch = None
         # end if
+        
         found_var = False
         missing_vert = None
         new_vdims = list()
@@ -1184,6 +1209,8 @@ class Scheme(SuiteObject):
                                                   vstdname))
                 # end if
             # end if
+            found = self.match_units(var,my_header.title)
+
         # end for
         if self.needs_vertical is not None:
             self.parent.add_part(self, replace=True) # Should add a vloop
@@ -1546,6 +1573,7 @@ class Group(SuiteObject):
         self._host_ddts = None
         self._loop_var_matches = list()
         self._phase_check_stmts = list()
+        self._unit_cnv_matches = list()
         self._set_state = None
         self._ddt_library = None
 
@@ -1582,6 +1610,11 @@ class Group(SuiteObject):
             # Add the missing dim
             vaction.add_local(self, _API_LOCAL, self.run_env)
             return True
+
+        if isinstance(vaction, VarUnitConv):
+            self._unit_cnv_matches = vaction.add_to_list(self._unit_cnv_matches)
+            return True
+
         # end if
         return False
 

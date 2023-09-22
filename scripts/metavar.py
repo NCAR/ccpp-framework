@@ -25,6 +25,7 @@ from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
 from var_props import standard_name_to_long_name, default_kind_val
+from conversion_tools import unit_conversion
 
 ##############################################################################
 
@@ -1204,6 +1205,15 @@ class VarAction:
 
 ###############################################################################
 
+class VarUnitConv(VarAction):
+    """A class to perform unit conversions"""
+
+    def __init__(self, set_action):
+        """Initialize unit conversion"""
+        self._set_action = set_action
+
+###############################################################################
+
 class VarLoopSubst(VarAction):
     """A class to handle required loop substitutions where the host model
     (or a suite part) does not provide a loop-like variable used by a
@@ -1822,6 +1832,30 @@ class VarDictionary(OrderedDict):
         """Override == to restore object equality, not dictionary
         list equality"""
         return self is other
+
+    @classmethod
+    def unit_cnv_from(cls, hunits, var):
+        """Return VarUnitConv if <hunits> and <var> require unit
+        conversion, otherwise, return None"""
+        function_name = '{0}__to__{1}'.format(hunits,var.get_prop_value('units'))
+        try:
+            function = getattr(unit_conversion, function_name)
+            ucmatch  = VarUnitConv(function())
+        except:
+            ucmatch  = None
+        return ucmatch
+
+    @classmethod
+    def unit_cnv_to(cls, hunits, var):
+        """Return VarUnitConv if <hunits> and <var> require unit
+        conversion, otherwise, return None"""
+        function_name = '{1}__to__{0}'.format(hunits,var.get_prop_value('units'))
+        try:
+            function = getattr(unit_conversion, function_name)
+            ucmatch  = VarUnitConv(function())
+        except:
+            ucmatch  = None
+        return ucmatch
 
     @classmethod
     def loop_var_match(cls, standard_name):
