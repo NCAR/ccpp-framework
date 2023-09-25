@@ -58,6 +58,7 @@ module ccpp_types
        integer                                             :: loop_max = CCPP_DEFAULT_LOOP_MAX
        integer                                             :: blk_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
        integer                                             :: thrd_no = CCPP_DEFAULT_BLOCK_AND_THREAD_NUMBER
+       integer                                             :: ccpp_instance = 1
 
     contains
 

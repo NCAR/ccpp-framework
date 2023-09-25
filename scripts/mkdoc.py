@@ -85,10 +85,13 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
 
     var_names = sorted(list(set(list(metadata_define.keys()) + list(metadata_request.keys()))))
 
+    styledir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                            '../doc/DevelopersGuide'))
+
     latex = '''\\documentclass[12pt,letterpaper,oneside,landscape]{{scrbook}}
 
 \\usepackage{{import}}
-\\import{{../common/}}{{gmtb.sty}}
+\\import{{{styledir}/}}{{gmtb.sty}}
 \\renewcommand{{\\thesection}}{{\\arabic{{section}}}}
 \\renewcommand{{\\thesubsection}}{{\\arabic{{section}}.\\arabic{{subsection}}}}
 
@@ -96,7 +99,7 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
 
 \\section{{CCPP variables provided by model {model} vs requested by pool of physics}}\\label{{sec_ccpp_variables}}
 \\subsection{{List of variables}}
-\\begin{{longtable}}{{l}}'''.format(model=model)
+\\begin{{longtable}}{{l}}'''.format(model=model, styledir=styledir)
 
     for var_name in var_names:
         if var_name in metadata_define.keys():
@@ -124,7 +127,7 @@ def metadata_to_latex(metadata_define, metadata_request, model, filename):
             target = 'MISSING'
             local_name = 'MISSING'
         if var_name in metadata_request.keys():
-            requested_list = [ escape_tex(decode_container(v.container)) for v in metadata_request[var_name] ]
+            requested_list = [ escape_tex(decode_container(v.container)) if v.container else 'none' for v in metadata_request[var_name] ]
             # for the purpose of the table, just output the name of the subroutine
             for i in range(len(requested_list)):
                 entry = requested_list[i]

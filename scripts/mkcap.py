@@ -12,7 +12,6 @@ import sys
 import getopt
 import xml.etree.ElementTree as ET
 
-from common import CCPP_ERROR_FLAG_VARIABLE
 from common import CCPP_INTERNAL_VARIABLES
 from common import STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import isstring, string_to_python_identifier
@@ -96,7 +95,9 @@ class Var(object):
 
     @property
     def rank(self):
-        '''Get the rank of the variable.'''
+        '''Get the rank of the variable. Originally, this was an integer indicating
+        the number of dimensions (therefore the name), now it is a list of colons to use
+        for assumed-size array definitions in Fortran.'''
         if len(self._dimensions) == 0:
             return ''
         else:
@@ -207,6 +208,54 @@ class Var(object):
         conversion = function()
         self._actions['in'] = function()
 
+    def dimstring_local_names(self, metadata, assume_shape = False):
+        '''Create the dimension string for assumed shape or explicit arrays
+        in Fortran. Requires a metadata dictionary to resolve the dimensions,
+        which are in CCPP standard names, to local variable names. If the 
+        optional argument assume_shape is True, return an assumed shape
+        dimension string with the upper bound being left undefined.'''
+        # Simplest case: scalars
+        if len(self.dimensions) == 0:
+            return ''
+        dimstring = []
+        # Arrays
+        for dim in self.dimensions:
+            # Handle dimensions like "A:B", "A:3", "-1:Z"
+            if ':' in dim:
+                dims = [ x.lower() for x in dim.split(':')]
+                try:
+                    dim0 = int(dims[0])
+                    dim0 = dims[0]
+                except ValueError:
+                    if not dims[0].lower() in metadata.keys():
+                        raise Exception('Dimension {}, required by variable {}, not defined in metadata'.format(
+                                                                           dims[0].lower(), self.standard_name))
+                    dim0 = metadata[dims[0].lower()][0].local_name
+                try:
+                    dim1 = int(dims[1])
+                    dim1 = dims[1]
+                except ValueError:
+                    if not dims[1].lower() in metadata.keys():
+                        raise Exception('Dimension {}, required by variable {}, not defined in metadata'.format(
+                                                                           dims[1].lower(), self.standard_name))
+                    dim1 = metadata[dims[1].lower()][0].local_name
+            # Single dimensions
+            else:
+                dim0 = 1
+                try:
+                    dim1 = int(dim)
+                    dim1 = dim
+                except ValueError:
+                    if not dim.lower() in metadata.keys():
+                        raise Exception('Dimension {}, required by variable {}, not defined in metadata'.format(
+                                                                               dim.lower(), self.standard_name))
+                    dim1 = metadata[dim.lower()][0].local_name
+            if assume_shape:
+                dimstring.append('{}:'.format(dim0))
+            else:
+                dimstring.append('{}:{}'.format(dim0, dim1))
+        return '({})'.format(','.join(dimstring))
+
     def print_module_use(self):
         '''Print the module use line for the variable.'''
         for item in self.container.split(' '):
@@ -216,23 +265,27 @@ class Var(object):
         str = 'use {module}, only: {varname}'.format(module=module,varname=self.local_name)
         return str
 
-    def print_def_intent(self):
-        '''Print the definition line for the variable, using intent.'''
+    def print_def_intent(self, metadata):
+        '''Print the definition line for the variable, using intent. Use the metadata
+        dictionary to resolve lower bounds for array dimensions.'''
+        # Resolve dimensisons to local names using undefined upper bounds (assumed shape)
+        dimstring = self.dimstring_local_names(metadata, assume_shape = True)
+        #
         if self.type in STANDARD_VARIABLE_TYPES:
             if self.kind:
-                str = "{s.type}({s._kind}), intent({s.intent}) :: {s.local_name}{s.rank}"
+                str = "{s.type}({s._kind}), intent({s.intent}) :: {s.local_name}{dimstring}"
             else:
-                str = "{s.type}, intent({s.intent}) :: {s.local_name}{s.rank}"
+                str = "{s.type}, intent({s.intent}) :: {s.local_name}{dimstring}"
         else:
             if self.kind:
                 error_message = "Generating variable definition statements for derived types with" + \
                                 " kind attributes not implemented; variable: {0}".format(self.standard_name)
                 raise Exception(error_message)
             else:
-                str = "type({s.type}), intent({s.intent}) :: {s.local_name}{s.rank}"
-        return str.format(s=self)
+                str = "type({s.type}), intent({s.intent}) :: {s.local_name}{dimstring}"
+        return str.format(s=self, dimstring=dimstring)
 
-    def print_def_local(self):
+    def print_def_local(self, metadata):
         '''Print the definition line for the variable, assuming it is a local variable.'''
         if self.type in STANDARD_VARIABLE_TYPES:
             if self.kind:
