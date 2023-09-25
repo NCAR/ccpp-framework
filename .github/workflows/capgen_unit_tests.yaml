@@ -3,15 +3,10 @@ name: Capgen Unit Tests
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, synchronize, reopened]
-  push:
-    branches:
-      #Trigger workflow on push to any branch or branch hierarchy:
-      - '**'
+    branches: [feature/capgen, main]
 
 jobs:
   unit_tests:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.repository == 'NCAR/ccpp-framework'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
