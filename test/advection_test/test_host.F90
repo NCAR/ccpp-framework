@@ -259,6 +259,7 @@ CONTAINS
        integer                         :: errflg_final ! Used to notify testing script of test failure
        real(kind_phys), pointer        :: const_ptr(:,:,:)
        real(kind_phys)                 :: default_value
+       real(kind_phys)                 :: check_value
        type(ccpp_constituent_prop_ptr_t), pointer :: const_props(:)
        character(len=*), parameter     :: subname = 'test_host'
 
@@ -463,6 +464,62 @@ CONTAINS
          errflg = 0
       end if
 
+      !-------------------
+      !minimum value tests:
+      !-------------------
+
+      !Check that a constituent's minimum value defaults to zero:
+      call const_props(index_ice)%minimum(check_value, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get minimum value for cld_ice index = ", index_ice,         &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (check_value /= 0._kind_phys) then !Should be zero
+            write(6, *) "ERROR: 'minimum' should default to zero for all ",   &
+                 "constituents unless set by host model or scheme metadata."
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !Check that setting a constituent's minimum value works
+      !as expected:
+      call const_props(index_ice)%set_minimum(1._kind_phys, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to set minimum value for cld_ice index = ", index_ice,         &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         call const_props(index_ice)%minimum(check_value, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
+                 " trying to get minimum value for cld_ice index = ",         &
+                 index_ice, trim(errmsg)
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      end if
+      if (errflg == 0) then
+         if (check_value /= 1._kind_phys) then !Should now be one
+            write(6, *) "ERROR: 'set_minimum' did not set constituent",       &
+                 " minimum value correctly."
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !-------------------
+      !thermo-active tests:
+      !-------------------
+
       !Check that being thermodynamically active defaults to False:
       call const_props(index_ice)%is_thermo_active(check, errflg, errmsg)
       if (errflg /= 0) then
@@ -495,7 +552,7 @@ CONTAINS
          call const_props(index_ice)%is_thermo_active(check, errflg, errmsg)
          if (errflg /= 0) then
             write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
-                 " tryingto get thermo_active prop for cld_ice index = ",     &
+                 " trying to get thermo_active prop for cld_ice index = ",    &
                  index_ice, trim(errmsg)
             errflg_final = -1 !Notify test script that a failure occurred
          end if
@@ -510,6 +567,7 @@ CONTAINS
          !Reset error flag to continue testing other properties:
          errflg = 0
       end if
+      !-------------------
 
       !Check that setting a constituent's default value works as expected
       call const_props(index_liq)%has_default(has_default, errflg, errmsg)
