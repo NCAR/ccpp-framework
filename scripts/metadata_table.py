@@ -604,6 +604,19 @@ class MetadataSection(ParseSource):
 
     __vref_start = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
 
+    __html_template__ = """
+<html>
+<head>
+<title>{title}</title>
+<meta charset="UTF-8">
+</head>
+<body>
+<table border="1">
+{header}{contents}</table>
+</body>
+</html>
+"""
+
     def __init__(self, table_name, table_type, run_env, parse_object=None,
                  title=None, type_in=None, module=None, process_type=None,
                  var_dict=None, known_ddts=None):
@@ -1182,6 +1195,36 @@ class MetadataSection(ParseSource):
                 var.write_metadata(mfile)
             # end for
         # end with
+
+    def to_html(self, outdir, props):
+        """Write html file for metadata section and return filename.
+        Skip metadata sections without variables"""
+        if not self.__variables.variable_list():
+            return None
+        # Write table header
+        header = f"<tr>"
+        for prop in props:
+            header += f"<th>{prop}</th>".format(prop=prop)
+        header += f"</tr>\n"
+        # Write table contents, one row per variable
+        contents = ""
+        for var in self.__variables.variable_list():
+            row = f"<tr>"
+            for prop in props:
+                value = var.get_prop_value(prop)
+                # Pretty-print for dimensions
+                if prop == 'dimensions':
+                    value = '(' + ', '.join(value) + ')'
+                elif value is None:
+                    value = f"n/a"
+                row += f"<td>{value}</td>".format(value=value)
+            row += f"</tr>\n"
+            contents += row
+        filename = os.path.join(outdir, self.title + '.html')
+        with open(filename,"w") as f:
+            f.writelines(self.__html_template__.format(title=self.title + ' argument table',
+                                                       header=header, contents=contents))
+        return filename
 
     def __repr__(self):
         base = super().__repr__()

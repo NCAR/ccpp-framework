@@ -162,9 +162,8 @@ class StateMachine:
         if len(value) != 3:
             raise ValueError("Invalid transition ({}), should be of the form (inital_state, final_state, regex).".format(value))
         # end if
-        regex = re.compile(value[2] + r"$", re.IGNORECASE)
-        function = re.compile(FORTRAN_ID + r"_(" + value[2] + r")$",
-                              re.IGNORECASE)
+        regex = re.compile(value[2] + r"$", flags=re.IGNORECASE)
+        function = re.compile(FORTRAN_ID + r"_(" + value[2] + r")$", flags=re.IGNORECASE)
         self.__stt__[key] = (value[0], value[1], regex, function)
 
     def __delitem__(self, key):

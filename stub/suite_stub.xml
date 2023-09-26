@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="stub" version="1">
+  <group name="stub">
+    <subcycle loop="1">
+      <scheme>stub</scheme>
+    </subcycle>
+  </group>
+</suite>
