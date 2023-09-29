@@ -1427,7 +1427,7 @@ class VarDictionary(OrderedDict):
                 self[stdname] = variables[key]
             # end for
         elif variables is not None:
-            raise ParseInternalError('Illegal type for variables, {} in {}'.format(type_name(variables), self.name))
+            raise ParseInternalError(f'Illegal type for variables, {type_name(variables)} in {self.name}')
         # end if
 
     @property
@@ -1623,15 +1623,13 @@ class VarDictionary(OrderedDict):
                     else:
                         ctx = context_string(var.context)
                     # end if
-                    err_ret += "{}: ".format(self.name)
-                    err_ret += "Cannot find variable for dimension, {}, of {}{}"
                     vstdname = var.get_prop_value('standard_name')
-                    err_ret = err_ret.format(dimname, vstdname, ctx)
+                    err_ret += f"{self.name}: "
+                    err_ret += f"Cannot find variable for dimension, {dimname}, of {vstdname}{ctx}"
                     if dvar:
-                        err_ret += "\nFound {} from excluded source, '{}'{}"
+                        err_ret += f"\nFound {lname} from excluded source, '{dvar.source.ptype}'{dctx}"
                         lname = dvar.get_prop_value('local_name')
                         dctx = context_string(dvar.context)
-                        err_ret = err_ret.format(lname, dvar.source.ptype, dctx)
                     # end if
                 # end if
             # end if
