@@ -18,7 +18,7 @@ class CCPPDatabaseObjError(ValueError):
         super().__init__(message)
 
 class CCPPDatabaseObj:
-    """Ojbect with data and methods to provide information from a run of capgen.
+    """Object with data and methods to provide information from a run of capgen.
     """
 
     def __init__(self, run_env, host_model=None, api=None, database_file=None):
@@ -56,7 +56,7 @@ class CCPPDatabaseObj:
               datatable.xml file created by capgen.
         """
         metadata_tables = {}
-        host_name = "cam"
+        host_name = "host"
         self.__host_model = HostModel(metadata_tables, host_name, run_env)
         self.__api = API(sdfs, host_model, scheme_headers, run_env)
         raise CCPPDatabaseObjError("ERROR: <database_file> not supported")
