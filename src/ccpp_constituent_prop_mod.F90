@@ -639,7 +639,7 @@ CONTAINS
       integer,          optional,           intent(out)   :: errcode
       character(len=*), optional,           intent(out)   :: errmsg
 
-      !Set thermodynamically active flag for this constituent:
+      !Set water species flag for this constituent:
       if (this%is_instantiated(errcode, errmsg)) then
          this%water_species = water_flag
       end if
@@ -676,7 +676,7 @@ CONTAINS
       character(len=*), optional,           intent(out) :: errmsg
 
       !If instantiated then check if constituent is
-      !thermodynamically active, otherwise return false:
+      !a water species, otherwise return false:
       if (this%is_instantiated(errcode, errmsg)) then
          val_out = this%water_species
       else

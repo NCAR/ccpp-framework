@@ -573,7 +573,7 @@ CONTAINS
       !water-species tests:
       !-------------------
 
-      !Check that being thermodynamically active defaults to False:
+      !Check that being a water species defaults to False:
       call const_props(index_liq)%is_water_species(check, errflg, errmsg)
       if (errflg /= 0) then
          write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
