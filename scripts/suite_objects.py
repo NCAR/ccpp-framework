@@ -20,6 +20,7 @@ from parse_tools import ParseInternalError, CCPPError
 from parse_tools import init_log, set_log_to_null
 from var_props import is_horizontal_dimension, find_horizontal_dimension
 from var_props import find_vertical_dimension
+from var_props import VarCompatObj
 
 # pylint: disable=too-many-lines
 
@@ -800,7 +801,7 @@ class SuiteObject(VarDictionary):
         # end if
         return found_var
 
-    def match_variable(self, var, vstdname=None, vdims=None):
+    def match_variable(self, var, run_env): # , vstdname=None, vdims=None):
         """Try to find a source for <var> in this SuiteObject's dictionary
         tree. Several items are returned:
         found_var: True if a match was found
@@ -809,11 +810,11 @@ class SuiteObject(VarDictionary):
         missing_vert: Vertical dim in parent but not in <var>
         perm: Permutation (XXgoldyXX: Not yet implemented)
         """
-        if vstdname is None:
-            vstdname = var.get_prop_value('standard_name')
+        #if vstdname is None:
+        vstdname = var.get_prop_value('standard_name')
         # end if
-        if vdims is None:
-            vdims = var.get_dimensions()
+        #if vdims is None:
+        vdims = var.get_dimensions()
         # end if
         if (not vdims) and self.run_phase():
             vmatch = VarDictionary.loop_var_match(vstdname)
@@ -824,6 +825,7 @@ class SuiteObject(VarDictionary):
         missing_vert = None
         new_vdims = list()
         var_vdim = var.has_vertical_dimension(dims=vdims)
+        compat_obj = None
         # Does this variable exist in the calling tree?
         dict_var = self.find_variable(source_var=var, any_scope=True)
         if dict_var is None:
@@ -838,7 +840,46 @@ class SuiteObject(VarDictionary):
             # Therefore, we have to use the declaration dimensions in the call.
             found_var = True
             new_vdims = dict_var.get_dimensions()
+            # DH*
+            compat_obj = VarCompatObj(
+                vstdname,
+                var.get_prop_value('type'),
+                var.get_prop_value('kind'),
+                var.get_prop_value('units'),
+                var.get_dimensions(),
+                var.get_prop_value('local_name'),
+                dict_var.get_prop_value('standard_name'),
+                dict_var.get_prop_value('type'),
+                dict_var.get_prop_value('kind'),
+                dict_var.get_prop_value('units'),
+                dict_var.get_dimensions(),
+                dict_var.get_prop_value('local_name'),
+                run_env
+            )
+            if compat_obj.has_unit_transforms:
+                raise Exception("Not implemented - dict_var.source.type in _API_LOCAL_VAR_TYPES and compat_obj.has_unit_transforms")
+            # *DH
         else:
+            # DH*
+            compat_obj = VarCompatObj(
+                vstdname,
+                var.get_prop_value('type'),
+                var.get_prop_value('kind'),
+                var.get_prop_value('units'),
+                var.get_dimensions(),
+                var.get_prop_value('local_name'),
+                dict_var.get_prop_value('standard_name'),
+                dict_var.get_prop_value('type'),
+                dict_var.get_prop_value('kind'),
+                dict_var.get_prop_value('units'),
+                dict_var.get_dimensions(),
+                dict_var.get_prop_value('local_name'),
+                run_env
+            )
+
+            # I don't understand this code well enough to know whether the checks below
+            # can be replaced by functionality offered by compat_obj. Leaving it as is.
+            # *DH
             # Check dimensions
             dict_dims = dict_var.get_dimensions()
             if vdims:
@@ -878,7 +919,7 @@ class SuiteObject(VarDictionary):
                 # end if
             # end if
         # end if
-        return found_var, var_vdim, new_vdims, missing_vert
+        return found_var, var_vdim, new_vdims, missing_vert, compat_obj, dict_var
 
     def in_process_split(self):
         """Find out if we are in a process-split region"""
@@ -1128,9 +1169,24 @@ class Scheme(SuiteObject):
             def_val = var.get_prop_value('default_value')
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
-            args = self.match_variable(var, vstdname=vstdname, vdims=vdims)
-            found, vert_dim, new_dims, missing_vert = args
+            args = self.match_variable(var, self.run_env) # , vstdname=vstdname, vdims=vdims)
+            found, vert_dim, new_dims, missing_vert, compat_obj, suite_var = args
+            # DH*
+            #print (f"ZZZ {var}: {found} {vert_dim} {new_dims} {missing_vert} {compat_obj}")
+            # *DH
             if found:
+                if compat_obj is not None and (compat_obj.has_dim_transforms or compat_obj.has_unit_transforms):
+                    # need a temporary variable to replace var1 (the scheme side of things)?
+                    # safer in any case to use a different local name ...
+                    tmp_var = var.clone(var.get_prop_value('local_name')+'_local')
+                    #print(tmp_var)
+                    print("compat_obj.reverse_transform(fake data): '{}'".format(compat_obj.reverse_transform(lvar_lname=tmp_var.get_prop_value('local_name'), rvar_lname=suite_var.get_prop_value('local_name'), indices=var.get_dimensions(), adjust_hdim='ccpp_constant_one')))
+                    print("compat_obj.forward_transform(fake data): '{}'".format(compat_obj.forward_transform(rvar_lname=tmp_var.get_prop_value('local_name'), lvar_lname=suite_var.get_prop_value('local_name'), indices=var.get_dimensions(), adjust_hdim='ccpp_constant_one')))
+                    self.__group.manage_variable(tmp_var)
+                    # DH* this is the missing bit:
+                    # define action (new action class)
+                    #self.__group.register_action()
+                    # ... what else?
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
                 # end if

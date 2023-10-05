@@ -751,9 +751,9 @@ class VarCompatObj:
     """Class to compare two Var objects and then answer questions about
     the compatibility of the two variables.
     There are three levels of compatibility.
-    * Compatible is when two variables match in all properties so that one
+    * Equivalent is when two variables match in all properties so that one
         can be passed to another with no transformation.
-    * Comformable is when two variables have the same information but may
+    * Compatible is when two variables have the same information but may
         need some transformation between them. Examples are differences in
         dimension ordering, units, or kind.
     * Not Compatible is when information from one variable cannot be passed
@@ -915,11 +915,12 @@ class VarCompatObj:
                 incompat_reason.append('dimensions')
             # end if
         # end if
+        print(f"here, self.__stdname is {self.__stdname}, self.__equiv is {self.__equiv} and self.__compat is {self.__compat}")
         self.__incompat_reason = " and ".join([x for x in incompat_reason if x])
 
     def forward_transform(self, lvar_lname, rvar_lname, indices,
                           adjust_hdim=None, flip_vdim=None):
-        """Compute and return the the forward transform from "var1" to "var2".
+        """Compute and return the the forward transform from "var1" (rhs) to "var2" (lhs).
         <lvar_lname> is the local name of "var2".
         <rvar_lname> is the local name of "var1".
         <indices> is a tuple of the loop indices for "var1" (i.e., "var1"
@@ -963,7 +964,7 @@ class VarCompatObj:
 
     def reverse_transform(self, lvar_lname, rvar_lname, indices,
                           adjust_hdim=None, flip_vdim=None):
-        """Compute and return the the reverse transform from "var2" to "var1".
+        """Compute and return the the reverse transform from "var2" (rhs) to "var1" (lhs).
         <lvar_lname> is the local name of "var1".
         <rvar_lname> is the local name of "var2".
         <indices> is a tuple of the loop indices for "var2" (i.e., "var2"

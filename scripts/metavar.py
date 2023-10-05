@@ -1304,6 +1304,7 @@ class VarLoopSubst(VarAction):
             # end if
             action_dict[self.missing_stdname] = var.get_prop_value('local_name')
         # end if
+        #raise Exception("DH DEBUG: write_action for VarLoopSubst: '{}'".format(self._set_action.format(**action_dict)))
         return self._set_action.format(**action_dict)
 
     def write_metadata(self, mfile):
