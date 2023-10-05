@@ -1631,13 +1631,16 @@ end module {module}
                                             target_name_flag=ccpp_error_code_target_name,
                                             target_name_msg=ccpp_error_msg_target_name,
                                             name=self._name)
+                initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
+                                            ccpp_var_name = ccpp_var.local_name,
+                                            target_name_flag=ccpp_error_code_target_name,
+                                            target_name_msg=ccpp_error_msg_target_name,
+                                            name=self._name)
             else:
                 initialized_test_block = ''
-            initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
-                                        ccpp_var_name = ccpp_var.local_name,
-                                        target_name_flag=ccpp_error_code_target_name,
-                                        target_name_msg=ccpp_error_msg_target_name,
-                                        name=self._name)
+                initialized_set_block  = ''
+            
+            
             # Create subroutine
             local_subs += Group.sub.format(subroutine=subroutine,
                                            argument_list=sub_argument_list,
