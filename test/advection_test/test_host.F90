@@ -558,7 +558,7 @@ CONTAINS
          end if
       end if
       if (errflg == 0) then
-         if (.not.check) then !Should now be True
+         if (.not. check) then !Should now be True
             write(6, *) "ERROR: 'set_thermo_active' did not set",             &
                  " thermo_active constituent property correctly."
             errflg_final = -1 !Notify test script that a failure occurred
@@ -611,7 +611,7 @@ CONTAINS
          end if
       end if
       if (errflg == 0) then
-         if (.not.check) then !Should now be True
+         if (.not. check) then !Should now be True
             write(6, *) "ERROR: 'set_water_species' did not set",             &
                  " water_species constituent property correctly."
             errflg_final = -1 !Notify test script that a failure occurred
