@@ -1185,7 +1185,7 @@ class VarAction:
         of the objects.
         equiv should be overridden with a method that first calls this
         method and then tests class-specific object data."""
-        return vmatch.__class__ == self.__class__
+        return vmatch.__class__ != self.__class__
 
     def add_to_list(self, vlist):
         """Add <self> to <vlist> unless <self> or its equivalent is
@@ -1208,9 +1208,41 @@ class VarAction:
 class VarUnitConv(VarAction):
     """A class to perform unit conversions"""
 
-    def __init__(self, set_action):
+    def __init__(self, set_action, local_name, kind, **kwargs):
         """Initialize unit conversion"""
+        self._local_name      = local_name
+        self._local_name_temp = local_name+'_local'
+        self._kind            = kind
+        for key, value in kwargs.items():
+            setattr(self, "_"+key, value)
         self._set_action = set_action
+
+    def add_local(self, var):
+        """Add a local variable for unit conversion"""
+        tmp_var = var.clone(self._local_name_temp)
+        self.__group.manage_variable(tmp_var)
+
+    def write_action(self, vadict):
+        """Return unit conversion transformation"""
+        if self._set_action:
+            if self._key == 'from':
+                lhs = var=self._local_name_temp
+                rhs = self._set_action.format(var=self._local_name, kind='_'+self._kind)
+            if self._key == 'to':
+                lhs = var=self._local_name
+                rhs = self._set_action.format(var=self._local_name_temp, kind='_'+self._kind)
+
+        return f"{lhs} = {rhs}"
+
+    @property
+    def required_stdnames(self):
+        """Return the _required_stdnames for this object"""
+        return self._required_stdnames
+
+    @property
+    def missing_stdname(self):
+        """Return the _missing_stdname for this object"""
+        return self._missing_stdname
 
 ###############################################################################
 
@@ -1267,6 +1299,7 @@ class VarLoopSubst(VarAction):
                          'local_name':local_name,
                          'type':'integer', 'units':'count', 'dimensions':'()'}
             var = Var(prop_dict, source, run_env)
+            print('    add_local():')
             vadict.add_variable(var, run_env, exists_ok=True, gen_unique=True)
         # end if
 
@@ -1620,6 +1653,7 @@ class VarDictionary(OrderedDict):
                 dvar = self.find_variable(standard_name=dimname, any_scope=True)
                 if dvar and (dvar.source.type not in ignore_sources):
                     if to_dict:
+                        print('   add_variable_dimensions():')
                         to_dict.add_variable(dvar, self.__run_env,
                                              exists_ok=True,
                                              adjust_intent=adjust_intent)
@@ -1788,6 +1822,7 @@ class VarDictionary(OrderedDict):
     def merge(self, other_dict, run_env):
         """Add new entries from <other_dict>"""
         for ovar in other_dict.variable_list():
+            print('   merge():')
             self.add_variable(ovar, run_env)
         # end for
 
@@ -1834,27 +1869,29 @@ class VarDictionary(OrderedDict):
         return self is other
 
     @classmethod
-    def unit_cnv_from(cls, hunits, var):
+    def unit_cnv_match(cls, hunits, var):
         """Return VarUnitConv if <hunits> and <var> require unit
         conversion, otherwise, return None"""
-        function_name = '{0}__to__{1}'.format(hunits,var.get_prop_value('units'))
-        try:
-            function = getattr(unit_conversion, function_name)
-            ucmatch  = VarUnitConv(function())
-        except:
-            ucmatch  = None
-        return ucmatch
+        ucmatch = {"from": '' ,"to": ''}
+        function_name_from = '{0}__to__{1}'.format(hunits, var.get_prop_value('units'))
+        function_name_to   = '{0}__to__{1}'.format(var.get_prop_value('units'), hunits)
 
-    @classmethod
-    def unit_cnv_to(cls, hunits, var):
-        """Return VarUnitConv if <hunits> and <var> require unit
-        conversion, otherwise, return None"""
-        function_name = '{1}__to__{0}'.format(hunits,var.get_prop_value('units'))
         try:
-            function = getattr(unit_conversion, function_name)
-            ucmatch  = VarUnitConv(function())
+            function_from   = getattr(unit_conversion, function_name_from)
+            ucmatch["from"] = VarUnitConv(function_from(),key="from",
+                                          local_name=var.get_prop_value('local_name'),
+                                          kind=var.get_prop_value('kind'))
         except:
-            ucmatch  = None
+            ucmatch["from"] = None
+        try:
+            if (var.get_prop_value('intent') != 'in'):
+                function_to   = getattr(unit_conversion, function_name_to)
+                ucmatch["to"] = VarUnitConv(function_to(),key="to",
+                                            local_name=var.get_prop_value('local_name'),
+                                            kind=var.get_prop_value('kind'))
+        except:
+            ucmatch["to"]   = None
+
         return ucmatch
 
     @classmethod

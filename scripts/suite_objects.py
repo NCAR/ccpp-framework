@@ -800,30 +800,6 @@ class SuiteObject(VarDictionary):
         # end if
         return found_var
 
-    def match_units(self, var, title):
-        """Compare units for <var> in this SuiteObject's dictionary tree.
-        If there are differences, apply unit conversions"""
-
-        dict_var  = self.find_variable(source_var=var, any_scope=True)
-        hunits    = dict_var.get_prop_value('units')
-        found_var = False
-        if (hunits != var.get_prop_value('units')):
-            found_var = True
-            if self.run_phase():
-                if (var.get_prop_value('intent') == 'out'):
-                    match = VarDictionary.unit_cnv_to(hunits, var)
-                if (var.get_prop_value('intent') == 'in'):
-                    match = VarDictionary.unit_cnv_from(hunits, var)
-                if (var.get_prop_value('intent') == 'inout'):
-                    match = VarDictionary.unit_cnv_from(hunits, var)
-                    match = VarDictionary.unit_cnv_to(hunits, var)
-                print(match._set_action)
-            else:
-                match = None
-            self.register_action(match)
-
-        return found_var
-
     def match_variable(self, var, vstdname=None, vdims=None):
         """Try to find a source for <var> in this SuiteObject's dictionary
         tree. Several items are returned:
@@ -1209,7 +1185,11 @@ class Scheme(SuiteObject):
                                                   vstdname))
                 # end if
             # end if
-            found = self.match_units(var,my_header.title)
+            # Are there any unit conversions?
+            found = self.__group.match_units(var)
+            if found:
+                tmp_var = var.clone(var.get_prop_value('local_name')+'_local')
+                self.__group.manage_variable(tmp_var)
 
         # end for
         if self.needs_vertical is not None:
@@ -1235,7 +1215,15 @@ class Scheme(SuiteObject):
                                              subname=self.subroutine_name)
         stmt = 'call {}({})'
         outfile.write('if ({} == 0) then'.format(errcode), indent)
+        # Unit conversions? Add forward transform
+        for umatch in self.__group._unit_cnv_matches_from:
+            action = umatch.write_action(vadict=self.call_list)
+            if action: outfile.write(action, indent+1)
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
+        # Unit conversions?  Add reverse transform
+        for umatch in self.__group._unit_cnv_matches_to:
+            action = umatch.write_action(vadict=self.call_list)
+            if action: outfile.write(action, indent+1)
         outfile.write('end if', indent)
 
     def schemes(self):
@@ -1572,8 +1560,9 @@ class Group(SuiteObject):
         self._host_vars = None
         self._host_ddts = None
         self._loop_var_matches = list()
+        self._unit_cnv_matches_from = list()
+        self._unit_cnv_matches_to = list()
         self._phase_check_stmts = list()
-        self._unit_cnv_matches = list()
         self._set_state = None
         self._ddt_library = None
 
@@ -1611,12 +1600,29 @@ class Group(SuiteObject):
             vaction.add_local(self, _API_LOCAL, self.run_env)
             return True
 
-        if isinstance(vaction, VarUnitConv):
-            self._unit_cnv_matches = vaction.add_to_list(self._unit_cnv_matches)
+        if isinstance(vaction["from"], VarUnitConv):
+            if (vaction["from"]):
+                self._unit_cnv_matches_from = vaction["from"].add_to_list(self._unit_cnv_matches_from)
+            if (vaction["to"]):
+                self._unit_cnv_matches_to = vaction["to"].add_to_list(self._unit_cnv_matches_to)
             return True
 
-        # end if
         return False
+
+    def match_units(self, var):
+        dict_var  = self.find_variable(source_var=var, any_scope=True)
+        found_var = False
+        if dict_var:
+            hunits    = dict_var.get_prop_value('units')
+            if (hunits != var.get_prop_value('units')):
+                found_var = True
+                if self.run_phase():
+                    match = VarDictionary.unit_cnv_match(hunits, var)
+                    self.register_action(match)
+                else:
+                    match = None
+        return found_var
+
 
     def manage_variable(self, newvar):
         """Add <newvar> to our local dictionary making necessary
