@@ -1638,7 +1638,7 @@ end module {module}
                                             name=self._name)
             else:
                 initialized_test_block = ''
-                initialized_set_block  = ''
+                initialized_set_block  = 'initialized(:) = .true.'
             
             
             # Create subroutine
