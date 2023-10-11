@@ -1299,7 +1299,6 @@ class VarLoopSubst(VarAction):
                          'local_name':local_name,
                          'type':'integer', 'units':'count', 'dimensions':'()'}
             var = Var(prop_dict, source, run_env)
-            print('    add_local():')
             vadict.add_variable(var, run_env, exists_ok=True, gen_unique=True)
         # end if
 
@@ -1653,7 +1652,6 @@ class VarDictionary(OrderedDict):
                 dvar = self.find_variable(standard_name=dimname, any_scope=True)
                 if dvar and (dvar.source.type not in ignore_sources):
                     if to_dict:
-                        print('   add_variable_dimensions():')
                         to_dict.add_variable(dvar, self.__run_env,
                                              exists_ok=True,
                                              adjust_intent=adjust_intent)
@@ -1822,7 +1820,6 @@ class VarDictionary(OrderedDict):
     def merge(self, other_dict, run_env):
         """Add new entries from <other_dict>"""
         for ovar in other_dict.variable_list():
-            print('   merge():')
             self.add_variable(ovar, run_env)
         # end for
 
