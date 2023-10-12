@@ -12,7 +12,13 @@ from parse_source import CCPPError, ParseInternalError
 
 ########################################################################
 
-_UNITS_RE = re.compile(r"^[^/@#$%^&*()\|<>\[\]{}?,.]+$")
+_UNITLESS_REGEX                = "1"
+_NON_LEADING_ZERO_NUM          = "[1-9]\d*"
+_NEGATIVE_NON_LEADING_ZERO_NUM = f"[-]{_NON_LEADING_ZERO_NUM}"
+_UNIT_EXPONENT                 = f"({_NEGATIVE_NON_LEADING_ZERO_NUM}|{_NON_LEADING_ZERO_NUM})"
+_UNIT_REGEX                    = f"[a-zA-Z]+{_UNIT_EXPONENT}?"
+_UNITS_REGEX                   = f"^({_UNIT_REGEX}(\s{_UNIT_REGEX})*|{_UNITLESS_REGEX})$"
+_UNITS_RE                      = re.compile(_UNITS_REGEX)
 
 def check_units(test_val, prop_dict, error):
     """Return <test_val> if a valid unit, otherwise, None
