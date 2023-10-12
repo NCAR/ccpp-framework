@@ -16,7 +16,7 @@ CONTAINS
    !> \section arg_table_cld_liq_run  Argument Table
    !! \htmlinclude arg_table_cld_liq_run.html
    !!
-   subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, ps, cld_liq_array,   &
+   subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, ps, cld_liq_array,    &
         errmsg, errflg)
 
       integer,            intent(in)    :: ncol
