@@ -158,7 +158,7 @@ def blank_metadata_line(line):
 
 def _parse_config_line(line, context):
     """Parse a config line and return a list of keyword value pairs."""
-    parse_items = list()
+    parse_items = []
     if line is None:
         pass # No properties on this line
     elif blank_metadata_line(line):
@@ -182,8 +182,8 @@ def _parse_config_line(line, context):
 def parse_metadata_file(filename, known_ddts, run_env):
     """Parse <filename> and return list of parsed metadata tables"""
     # Read all lines of the file at once
-    meta_tables = list()
-    table_titles = list() # Keep track of names in file
+    meta_tables = []
+    table_titles = [] # Keep track of names in file
     with open(filename, 'r') as infile:
         fin_lines = infile.readlines()
         for index, fin_line in enumerate(fin_lines):
@@ -225,7 +225,7 @@ def find_scheme_names(filename):
     """Find and return a list of all the physics scheme names in
     <filename>. A scheme is identified by its ccpp-table-properties name.
     """
-    scheme_names = list()
+    scheme_names = []
     with open(filename, 'r') as infile:
         fin_lines = infile.readlines()
     # end with
@@ -283,7 +283,7 @@ class MetadataTable():
         self.__pobj = parse_object
         self.__dependencies = dependencies
         self.__relative_path = relative_path
-        self.__sections = list()
+        self.__sections = []
         self.__run_env = run_env
         if parse_object is None:
             if table_name_in is not None:
@@ -339,7 +339,7 @@ class MetadataTable():
                 raise ParseInternalError(perr)
             # end if
             if known_ddts is None:
-                known_ddts = list()
+                known_ddts = []
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
             self.__init_from_file(known_ddts, self.__run_env)
@@ -351,7 +351,7 @@ class MetadataTable():
         curr_line, _ = self.__pobj.next_line()
         in_properties_header = True
         skip_rest_of_section = False
-        self.__dependencies = list() # Default is no dependencies
+        self.__dependencies = [] # Default is no dependencies
         # Process lines until the end of the file or start of the next table.
         while ((curr_line is not None) and
                (not MetadataTable.table_start(curr_line))):
@@ -440,7 +440,7 @@ class MetadataTable():
             known_ddts.append(self.table_name)
         # end if
         if self.__dependencies is None:
-            self.__dependencies = list()
+            self.__dependencies = []
         # end if
 
     def start_context(self, with_comma=True, nodir=True):
@@ -504,6 +504,10 @@ class MetadataTable():
 
 class MetadataSection(ParseSource):
     """Class to hold all information from a metadata header
+    >>> from framework_env import CCPPFrameworkEnv
+    >>> _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'', \
+                                                 'scheme_files':'', \
+                                                 'suites':''})
     >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module = foo",    \
@@ -511,7 +515,7 @@ class MetadataSection(ParseSource):
                        "long_name = horizontal loop extent, start at 1",      \
                        "units = index | type = integer",                      \
                        "dimensions = () |  intent = in"])) #doctest: +ELLIPSIS
-    <__main__.MetadataSection foo / footable at 0x...>
+    <metadata_table.MetadataSection foo / footable at 0x...>
     >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
                       parse_object=ParseObject("foobar.txt",                  \
                       ["name = footable", "type = scheme", "module = foobar", \
@@ -604,6 +608,19 @@ class MetadataSection(ParseSource):
 
     __vref_start = re.compile(r"^\[\s*"+FORTRAN_SCALAR_REF+r"\s*\]$")
 
+    __html_template__ = """
+<html>
+<head>
+<title>{title}</title>
+<meta charset="UTF-8">
+</head>
+<body>
+<table border="1">
+{header}{contents}</table>
+</body>
+</html>
+"""
+
     def __init__(self, table_name, table_type, run_env, parse_object=None,
                  title=None, type_in=None, module=None, process_type=None,
                  var_dict=None, known_ddts=None):
@@ -673,7 +690,7 @@ class MetadataSection(ParseSource):
             self.__start_context = None
         else:
             if known_ddts is None:
-                known_ddts = list()
+                known_ddts = []
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
             self.__init_from_file(table_name, table_type, known_ddts, run_env)
@@ -683,7 +700,7 @@ class MetadataSection(ParseSource):
             register_fortran_ddt_name(self.title)
         # end if
         # Categorize the variables
-        self._var_intents = {'in' : list(), 'out' : list(), 'inout' : list()}
+        self._var_intents = {'in' : [], 'out' : [], 'inout' : []}
         for var in self.variable_list():
             intent = var.get_prop_value('intent')
             if intent is not None:
@@ -693,7 +710,7 @@ class MetadataSection(ParseSource):
 
     def _default_module(self):
         """Set a default module for this header"""
-        mfile = self.__pobj.file_name
+        mfile = self.__pobj.filename
         if mfile[-5:] == '.meta':
             # Default value is a Fortran module that matches the filename
             def_mod = os.path.basename(mfile)[:-5]
@@ -888,7 +905,7 @@ class MetadataSection(ParseSource):
                         # Special case for dimensions, turn them into ranges
                         if pname == 'dimensions':
                             porig = pval
-                            pval = list()
+                            pval = []
                             for dim in porig:
                                 if ':' in dim:
                                     pval.append(dim)
@@ -975,7 +992,7 @@ class MetadataSection(ParseSource):
                                                        local_name, colon_rank,
                                                        ctx))
             # end if
-            sub_dims = list()
+            sub_dims = []
             sindex = 0
             for rind in rdims:
                 if rind == ':':
@@ -1010,7 +1027,7 @@ class MetadataSection(ParseSource):
         """Convert the dimension elements in <var> to standard names by
         by using other variables in this header.
         """
-        std_dims = list()
+        std_dims = []
         vdims = var.get_dimensions()
         # Check for bad dimensions
         if vdims is None:
@@ -1036,7 +1053,7 @@ class MetadataSection(ParseSource):
             raise CCPPError("{}".format(errmsg))
         # end if
         for dim in vdims:
-            std_dim = list()
+            std_dim = []
             if ':' not in dim:
                 # Metadata dimensions always have an explicit start
                 var_one = CCPP_CONSTANT_VARS.find_local_name('1')
@@ -1056,7 +1073,7 @@ class MetadataSection(ParseSource):
                         # Some non-standard integer value
                         dname = item
                     # end if
-                except ValueError:
+                except ValueError as verr:
                     # Not an integer, try to find the standard_name
                     if not item:
                         # Naked colons are okay
@@ -1070,15 +1087,15 @@ class MetadataSection(ParseSource):
                         # end if
                     # end if
                     if dname is None:
-                        errmsg = "Unknown dimension element, {}, in {}{}"
                         std = var.get_prop_value('local_name')
-                        ctx = context_string(context)
+                        errmsg = f"Unknown dimension element, {item}, in {std}"
+                        errmsg += context_string(context)
                         if logger is not None:
                             errmsg = "ERROR: " + errmsg
                             logger.error(errmsg.format(item, std, ctx))
                             dname = unique_standard_name()
                         else:
-                            raise CCPPError(errmsg.format(item, std, ctx))
+                            raise CCPPError(errmsg) from verr
                         # end if
                     # end if
                 # end try
@@ -1183,6 +1200,36 @@ class MetadataSection(ParseSource):
             # end for
         # end with
 
+    def to_html(self, outdir, props):
+        """Write html file for metadata section and return filename.
+        Skip metadata sections without variables"""
+        if not self.__variables.variable_list():
+            return None
+        # Write table header
+        header = f"<tr>"
+        for prop in props:
+            header += f"<th>{prop}</th>".format(prop=prop)
+        header += f"</tr>\n"
+        # Write table contents, one row per variable
+        contents = ""
+        for var in self.__variables.variable_list():
+            row = f"<tr>"
+            for prop in props:
+                value = var.get_prop_value(prop)
+                # Pretty-print for dimensions
+                if prop == 'dimensions':
+                    value = '(' + ', '.join(value) + ')'
+                elif value is None:
+                    value = f"n/a"
+                row += f"<td>{value}</td>".format(value=value)
+            row += f"</tr>\n"
+            contents += row
+        filename = os.path.join(outdir, self.title + '.html')
+        with open(filename,"w") as f:
+            f.writelines(self.__html_template__.format(title=self.title + ' argument table',
+                                                       header=header, contents=contents))
+        return filename
+
     def __repr__(self):
         base = super().__repr__()
         pind = base.find(' object ')
@@ -1267,15 +1314,3 @@ class MetadataSection(ParseSource):
         return check_fortran_ref(test_val, None, False) is not None
 
 ########################################################################
-
-if __name__ == "__main__":
-# pylint: enable=ungrouped-imports
-    import doctest
-    import sys
-# pylint: disable=ungrouped-imports
-    from framework_env import CCPPFrameworkEnv
-    _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'',
-                                             'scheme_files':'',
-                                             'suites':''})
-    fail, _ = doctest.testmod()
-    sys.exit(fail)

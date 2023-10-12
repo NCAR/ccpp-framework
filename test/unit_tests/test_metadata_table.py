@@ -8,7 +8,7 @@
 
  Command line arguments: none
 
- Usage: python test_metadata_table.py         # run the unit tests
+ Usage: python3 test_metadata_table.py         # run the unit tests
 -----------------------------------------------------------------------
 """
 import sys
@@ -394,5 +394,6 @@ class MetadataTableTestCase(unittest.TestCase):
         emsg = "Invalid metadata table type, 'banana', at "
         self.assertTrue(emsg in str(context.exception))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
+

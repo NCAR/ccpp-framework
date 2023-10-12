@@ -19,8 +19,9 @@ CCPP_STAGES['init']              = 'init'
 CCPP_STAGES['run']               = 'run'
 CCPP_STAGES['finalize']          = 'final'
 
+CCPP_T_INSTANCE_VARIABLE = 'ccpp_t_instance'
 CCPP_CONSTANT_ONE        = 'ccpp_constant_one'
-CCPP_ERROR_FLAG_VARIABLE = 'ccpp_error_flag'
+CCPP_ERROR_CODE_VARIABLE = 'ccpp_error_code'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
 CCPP_LOOP_COUNTER        = 'ccpp_loop_counter'
 CCPP_LOOP_EXTENT         = 'ccpp_loop_extent'
@@ -50,7 +51,7 @@ CCPP_INTERNAL_VARIABLE_DEFINITON_FILE = os.path.join(SRCDIR, 'ccpp_types.F90')
 
 # List of internal variables provided by the CCPP
 CCPP_INTERNAL_VARIABLES = {
-    CCPP_ERROR_FLAG_VARIABLE : 'cdata%errflg',
+    CCPP_ERROR_CODE_VARIABLE : 'cdata%errflg',
     CCPP_ERROR_MSG_VARIABLE  : 'cdata%errmsg',
     CCPP_LOOP_COUNTER        : 'cdata%loop_cnt',
     CCPP_BLOCK_NUMBER        : 'cdata%blk_no',
@@ -67,6 +68,9 @@ CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
 
 # Filename pattern for suite definition files
 SUITE_DEFINITION_FILENAME_PATTERN = re.compile('^suite_(.*)\.xml$')
+
+# Maximum number of concurrent CCPP instances per MPI task
+CCPP_NUM_INSTANCES = 200
 
 def execute(cmd, abort = True):
     """Runs a local command in a shell. Waits for completion and
@@ -165,14 +169,7 @@ def escape_tex(text):
 
 def isstring(s):
     """Return true if a variable is a string"""
-    # We use Python 3
-    if (sys.version_info.major == 3):
-        return isinstance(s, str)
-    # We use Python 2
-    elif (sys.version_info.major == 2):
-        return isinstance(s, basestring)
-    else:
-        raise Exception('Unknown Python version')
+    return isinstance(s, str)
 
 def string_to_python_identifier(string):
     """Replaces forbidden characters in strings with standard substitutions
@@ -187,6 +184,9 @@ def string_to_python_identifier(string):
     string = string.replace("-","_minus_")
     # Replace plus signs with _plus_
     string = string.replace("+","_plus_")
+    # "1" is a valid unit
+    if string == "1":
+        string = "one"
     # Test that the resulting string is a valid Python identifier
     if re.match("[_A-Za-z][_a-zA-Z0-9]*$", string) and not keyword.iskeyword(string):
         return string

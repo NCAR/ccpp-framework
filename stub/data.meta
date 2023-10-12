@@ -1,0 +1,14 @@
+[ccpp-table-properties]
+  name = data
+  type = module
+  dependencies =
+
+[ccpp-arg-table]
+  name = data
+  type = module
+[ccpp_data]
+  standard_name = ccpp_t_instance
+  long_name = instance of derived data type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t

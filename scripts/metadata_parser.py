@@ -9,23 +9,25 @@ import sys
 from xml.etree import ElementTree as ET
 
 from common import encode_container, CCPP_STAGES
+from common import CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE
 from mkcap import Var
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
 from parse_fortran import FtypeTypeDecl
 from parse_checkers import registered_fortran_ddt_names
+from parse_tools import init_log
 from metadata_table import MetadataTable, parse_metadata_file
 from framework_env import CCPPFrameworkEnv
 
-_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
-                                               'scheme_files':'',
-                                               'suites':''})
-
+_API_LOGGING = init_log('metadata_parser')
+_DUMMY_RUN_ENV = CCPPFrameworkEnv(_API_LOGGING, ndict={'host_files':'',
+                                                       'scheme_files':'',
+                                                       'suites':''})
 
 # Output: This routine converts the argument tables for all subroutines / typedefs / kind / module variables
 # into dictionaries suitable to be used with ccpp_prebuild.py (which generates the fortran code for the caps)
 
-# Items in this dictionary are used for checking valid entries in metadata tables. For columsn with no keys/keys
+# Items in this dictionary are used for checking valid entries in metadata tables. For columns with no keys/keys
 # commented out, no check is performed. This is the case for 'type' and 'kind' right now, since models use their
 # own derived data types and kind types.
 VALID_ITEMS = {
@@ -37,28 +39,28 @@ VALID_ITEMS = {
 
 # Mandatory variables that every scheme needs to have
 CCPP_MANDATORY_VARIABLES = {
-    'ccpp_error_message' : Var(local_name    = 'errmsg',
-                               standard_name = 'ccpp_error_message',
-                               long_name     = 'error message for error handling in CCPP',
-                               units         = 'none',
-                               type          = 'character',
-                               dimensions    = [],
-                               rank          = '',
-                               kind          = 'len=*',
-                               intent        = 'out',
-                               active        = 'T',
-                               ),
-    'ccpp_error_flag' : Var(local_name    = 'ierr',
-                            standard_name = 'ccpp_error_flag',
-                            long_name     = 'error flag for error handling in CCPP',
-                            units         = 'flag',
-                            type          = 'integer',
-                            dimensions    = [],
-                            rank          = '',
-                            kind          = '',
-                            intent        = 'out',
-                            active        = 'T',
-                            ),
+    CCPP_ERROR_MSG_VARIABLE : Var(local_name    = 'errmsg',
+                                  standard_name = CCPP_ERROR_MSG_VARIABLE,
+                                  long_name     = 'error message for error handling in CCPP',
+                                  units         = 'none',
+                                  type          = 'character',
+                                  dimensions    = [],
+                                  rank          = '',
+                                  kind          = 'len=*',
+                                  intent        = 'out',
+                                  active        = 'T',
+                                  ),
+    CCPP_ERROR_CODE_VARIABLE : Var(local_name    = 'ierr',
+                                   standard_name = CCPP_ERROR_CODE_VARIABLE,
+                                   long_name     = 'error code for error handling in CCPP',
+                                   units         = '1',
+                                   type          = 'integer',
+                                   dimensions    = [],
+                                   rank          = '',
+                                   kind          = '',
+                                   intent        = 'out',
+                                   active        = 'T',
+                                   ),
     }
 
 # Save metadata to avoid repeated parsing of type/variable definition files

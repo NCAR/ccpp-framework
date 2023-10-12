@@ -7,7 +7,7 @@ project(ccpp_framework
 #------------------------------------------------------------------------------
 # Set package definitions
 set(PACKAGE "ccpp-framework")
-set(AUTHORS "Dom Heinzeller" "Grant Firl" "Laurie Carson")
+set(AUTHORS "Dom Heinzeller" "Grant Firl" "Mike Kavulich" "Steve Goldhaber")
 string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
@@ -20,12 +20,10 @@ endif (OPENMP)
 #------------------------------------------------------------------------------
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    # DH* TODO - TRY TO CHANGE THIS TO RELEASE AND SEE WHAT HAPPENS TO THE RESULTS
-    message(STATUS "Setting build type to 'Debug' as none was specified.")
+    message(STATUS "Setting build type to 'Release' as none was specified.")
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-    # *DH
     # Set the possible values of build type for cmake-gui
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Bitforbit" "Release" "Coverage")
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "Coverage")
 endif()
 
 #------------------------------------------------------------------------------

@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # pylint: disable=wrong-import-position
 from parse_source import ParseContext, ParseSource
 from parse_source import ParseSyntaxError, ParseInternalError
-from parse_source import CCPPError, context_string
+from parse_source import CCPPError, context_string, type_name
 from parse_source import unique_standard_name, reset_standard_name_counter
 from parse_object import ParseObject
 from parse_checkers import check_fortran_id, FORTRAN_ID
@@ -72,6 +72,7 @@ __all__ = [
     'set_log_to_file',
     'set_log_to_null',
     'set_log_to_stdout',
+    'type_name',
     'unique_standard_name',
     'validate_xml_file'
 ]

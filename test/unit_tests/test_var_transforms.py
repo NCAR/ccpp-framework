@@ -8,7 +8,7 @@
 
  Command line arguments: none
 
- Usage: python test_var_transform.py         # run the unit tests
+ Usage: python test_var_transforms.py         # run the unit tests
 -----------------------------------------------------------------------
 """
 import sys
@@ -432,5 +432,6 @@ class VarCompatTestCase(unittest.TestCase):
         expected = f"{v5_lname}({lind_str}) = {v4_lname}({rind_str})"
         self.assertEqual(rev_stmt, expected)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
+

@@ -8,7 +8,7 @@ Parse a host-model registry XML file and return the captured variables.
 import logging
 import os
 # CCPP framework imports
-from ccpp_suite import API
+from ccpp_suite import API, API_SOURCE_NAME
 from ccpp_state_machine import CCPP_STATE_MACH
 from constituents import ConstituentVarDict, CONST_DDT_NAME, CONST_DDT_MOD
 from constituents import CONST_OBJ_STDNAME
@@ -33,9 +33,7 @@ _SUBFOOT = '''
    end subroutine {host_model}_ccpp_physics_{stage}
 '''
 
-_API_SRC_NAME = "CCPP_API"
-
-_API_SOURCE = ParseSource(_API_SRC_NAME, "MODULE",
+_API_SOURCE = ParseSource(API_SOURCE_NAME, "MODULE",
                           ParseContext(filename="host_cap.F90"))
 
 _API_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
@@ -61,7 +59,7 @@ _MVAR_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
                                                     'suites':''})
 
 # Used to prevent loop substitution lookups
-_BLANK_DICT = VarDictionary(_API_SRC_NAME, _MVAR_DUMMY_RUN_ENV)
+_BLANK_DICT = VarDictionary(API_SOURCE_NAME, _MVAR_DUMMY_RUN_ENV)
 
 ###############################################################################
 def suite_part_list(suite, stage):
@@ -521,7 +519,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     subst_dict['intent'] = 'inout'
                 # End if
                 hdvars.append(hvar.clone(subst_dict,
-                                         source_name=_API_SRC_NAME))
+                                         source_name=API_SOURCE_NAME))
             # End for
             lnames = [x.get_prop_value('local_name') for x in apivars + hdvars]
             api_vlist = ", ".join(lnames)

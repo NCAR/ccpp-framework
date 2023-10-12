@@ -41,6 +41,8 @@ def call_command(commands, logger, silent=False):
 ###############################################################################
     """
     Try a command line and return the output on success (None on failure)
+    >>> _LOGGER = init_log('xml_tools')
+    >>> set_log_to_null(_LOGGER)
     >>> call_command(['ls', 'really__improbable_fffilename.foo'], _LOGGER) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: Execution of 'ls really__improbable_fffilename.foo' failed:
@@ -320,19 +322,3 @@ class PrettyElementTree(ET.ElementTree):
         # end with
 
 ##############################################################################
-
-if __name__ == "__main__":
-    _LOGGER = init_log('xml_tools')
-    set_log_to_null(_LOGGER)
-    try:
-        # First, run doctest
-        # pylint: disable=ungrouped-imports
-        import doctest
-        # pylint: enable=ungrouped-imports
-        fail, _ = doctest.testmod()
-        sys.exit(fail)
-    except CCPPError as cerr:
-        print("{}".format(cerr))
-        sys.exit(fail)
-    # end try
-# end if

@@ -40,7 +40,7 @@
 
  Command line arguments: none
 
- Usage: python test_metadata_scheme_file.py       # run the unit tests
+ Usage: python3 test_metadata_scheme_file.py       # run the unit tests
 -----------------------------------------------------------------------
 """
 import sys
@@ -344,6 +344,6 @@ class MetadataHeaderTestCase(unittest.TestCase):
 #             _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
 #        # Verify correct error messages returned
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
 

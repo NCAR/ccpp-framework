@@ -15,6 +15,7 @@ import os
 import logging
 import re
 # CCPP framework imports
+from ccpp_database_obj import CCPPDatabaseObj
 from ccpp_datafile import generate_ccpp_datatable
 from ccpp_suite import API
 from file_utils import check_for_writeable_file, remove_dir, replace_paths
@@ -566,7 +567,7 @@ def clean_capgen(cap_output_file, logger):
     set_log_level(logger, log_level)
 
 ###############################################################################
-def capgen(run_env):
+def capgen(run_env, return_db=False):
 ###############################################################################
     """Parse indicated host, scheme, and suite files.
     Generate code to allow host model to run indicated CCPP suites."""
@@ -675,6 +676,10 @@ def capgen(run_env):
     generate_ccpp_datatable(run_env, host_model, ccpp_api,
                             scheme_headers, scheme_tdict, host_files,
                             cap_filenames, kinds_file, src_dir)
+    if return_db:
+        return CCPPDatabaseObj(run_env, host_model=host_model, api=ccpp_api)
+    # end if
+    return None
 
 ###############################################################################
 def _main_func():
@@ -690,7 +695,7 @@ def _main_func():
     if framework_env.clean:
         clean_capgen(framework_env.datatable_file, framework_env.logger)
     else:
-        capgen(framework_env)
+        _ = capgen(framework_env)
     # end if (clean)
 
 ###############################################################################
