@@ -375,7 +375,7 @@ class ParseSource():
     """
     A simple object for providing source information
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")) #doctest: +ELLIPSIS
-    <__main__.ParseSource object at 0x...>
+    <parse_tools.parse_source.ParseSource object at 0x...>
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).ptype
     'mytype'
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).name
