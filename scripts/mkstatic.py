@@ -1611,6 +1611,14 @@ end module {module}
                 if subcycle_body:
                     body += subcycle_body_prefix + subcycle_body + subcycle_body_suffix
 
+            #For the init stage, for the case when the suite doesn't have any schemes with init phases,
+            #we still need to add the host-supplied ccpp_t variable to the init group caps so that it is
+            #available for setting the initialized flag for the particular instance being called. Otherwise,
+            #the initialized_set_block for the init phase tries to reference the unavailable ccpp_t variable.
+            if (ccpp_stage == 'init' and not self.parents[ccpp_stage]):
+                ccpp_var.intent = 'in'
+                self.parents[ccpp_stage].update({ccpp_var.local_name:ccpp_var})
+
             # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
                                                            self.parents[ccpp_stage], metadata_define, tmpvars.values())
@@ -1631,16 +1639,13 @@ end module {module}
                                             target_name_flag=ccpp_error_code_target_name,
                                             target_name_msg=ccpp_error_msg_target_name,
                                             name=self._name)
-                initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
-                                            ccpp_var_name = ccpp_var.local_name,
-                                            target_name_flag=ccpp_error_code_target_name,
-                                            target_name_msg=ccpp_error_msg_target_name,
-                                            name=self._name)
             else:
                 initialized_test_block = ''
-                initialized_set_block  = 'initialized(:) = .true.'
-            
-            
+            initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
+                                        ccpp_var_name = ccpp_var.local_name,
+                                        target_name_flag=ccpp_error_code_target_name,
+                                        target_name_msg=ccpp_error_msg_target_name,
+                                        name=self._name)
             # Create subroutine
             local_subs += Group.sub.format(subroutine=subroutine,
                                            argument_list=sub_argument_list,
