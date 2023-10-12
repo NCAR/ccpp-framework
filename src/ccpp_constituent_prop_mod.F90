@@ -36,6 +36,7 @@ module ccpp_constituent_prop_mod
       integer,          private              :: const_ind = int_unassigned
       logical,          private              :: advected = .false.
       logical,          private              :: thermo_active = .false.
+      logical,          private              :: water_species = .false.
       ! While the quantities below can be derived from the standard name,
       !    this implementation avoids string searching in parameterizations
       ! const_type distinguishes mass, volume, and number conc. mixing ratios
@@ -63,6 +64,7 @@ module ccpp_constituent_prop_mod
       procedure :: const_index               => ccp_const_index
       procedure :: is_advected               => ccp_is_advected
       procedure :: is_thermo_active          => ccp_is_thermo_active
+      procedure :: is_water_species          => ccp_is_water_species
       procedure :: equivalent                => ccp_is_equivalent
       procedure :: is_mass_mixing_ratio      => ccp_is_mass_mixing_ratio
       procedure :: is_volume_mixing_ratio    => ccp_is_volume_mixing_ratio
@@ -82,6 +84,7 @@ module ccpp_constituent_prop_mod
       procedure :: deallocate        => ccp_deallocate
       procedure :: set_const_index   => ccp_set_const_index
       procedure :: set_thermo_active => ccp_set_thermo_active
+      procedure :: set_water_species => ccp_set_water_species
       procedure :: set_minimum       => ccp_set_min_val
    end type ccpp_constituent_properties_t
 
@@ -101,6 +104,7 @@ module ccpp_constituent_prop_mod
       procedure :: const_index               => ccpt_const_index
       procedure :: is_advected               => ccpt_is_advected
       procedure :: is_thermo_active          => ccpt_is_thermo_active
+      procedure :: is_water_species          => ccpt_is_water_species
       procedure :: is_mass_mixing_ratio      => ccpt_is_mass_mixing_ratio
       procedure :: is_volume_mixing_ratio    => ccpt_is_volume_mixing_ratio
       procedure :: is_number_concentration   => ccpt_is_number_concentration
@@ -117,6 +121,7 @@ module ccpp_constituent_prop_mod
       procedure :: deallocate        => ccpt_deallocate
       procedure :: set_const_index   => ccpt_set_const_index
       procedure :: set_thermo_active => ccpt_set_thermo_active
+      procedure :: set_water_species => ccpt_set_water_species
       procedure :: set_minimum       => ccpt_set_min_val
    end type ccpp_constituent_prop_ptr_t
 
@@ -623,6 +628,26 @@ CONTAINS
 
    !#######################################################################
 
+   subroutine ccp_set_water_species(this, water_flag, errcode, errmsg)
+      ! Set whether this constituent is a water species, which means
+      ! that this constituent represents a particular phase or type
+      ! of water in the atmosphere.
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      logical,                              intent(in)    :: water_flag
+      integer,          optional,           intent(out)   :: errcode
+      character(len=*), optional,           intent(out)   :: errmsg
+
+      !Set water species flag for this constituent:
+      if (this%is_instantiated(errcode, errmsg)) then
+         this%water_species = water_flag
+      end if
+
+   end subroutine ccp_set_water_species
+
+   !#######################################################################
+
    subroutine ccp_is_thermo_active(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
@@ -639,6 +664,25 @@ CONTAINS
          val_out = .false.
       end if
    end subroutine ccp_is_thermo_active
+
+   !#######################################################################
+
+   subroutine ccp_is_water_species(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      logical,                              intent(out) :: val_out
+      integer,          optional,           intent(out) :: errcode
+      character(len=*), optional,           intent(out) :: errmsg
+
+      !If instantiated then check if constituent is
+      !a water species, otherwise return false:
+      if (this%is_instantiated(errcode, errmsg)) then
+         val_out = this%water_species
+      else
+         val_out = .false.
+      end if
+   end subroutine ccp_is_water_species
 
    !#######################################################################
 
@@ -668,14 +712,15 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_instantiated(errcode, errmsg) .and.                          &
+      if (this%is_instantiated(errcode, errmsg) .and.                         &
            oconst%is_instantiated(errcode, errmsg)) then
          equiv = (trim(this%var_std_name) == trim(oconst%var_std_name)) .and. &
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
               (this%advected .eqv. oconst%advected)                     .and. &
               (this%const_default_value == oconst%const_default_value)  .and. &
-              (this%thermo_active .eqv. oconst%thermo_active)
+              (this%thermo_active .eqv. oconst%thermo_active)           .and. &
+              (this%water_species .eqv. oconst%water_species)
       else
          equiv = .false.
       end if
@@ -1413,7 +1458,7 @@ CONTAINS
    !########################################################################
 
    logical function ccp_model_const_is_match(this, index, advected,            &
-        thermo_active) result(is_match)
+        thermo_active, water_species) result(is_match)
       ! Return .true. iff the constituent at <index> matches a pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1425,6 +1470,7 @@ CONTAINS
       integer,                          intent(in) :: index
       logical, optional,                intent(in) :: advected
       logical, optional,                intent(in) :: thermo_active
+      logical, optional,                intent(in) :: water_species
       ! Local variable
       logical :: check
 
@@ -1444,13 +1490,20 @@ CONTAINS
          end if
       end if
 
+      if (present(water_species)) then
+         call this%const_metadata(index)%is_water_species(check)
+         if (water_species .neqv. check) then
+            is_match = .false.
+         end if
+      end if
+
 
    end function ccp_model_const_is_match
 
    !########################################################################
 
    subroutine ccp_model_const_num_match(this, nmatch, advected, thermo_active, &
-        errcode, errmsg)
+        water_species, errcode, errmsg)
       ! Query number of constituents matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1461,6 +1514,7 @@ CONTAINS
       integer,                          intent(out) :: nmatch
       logical,          optional,       intent(in)  :: advected
       logical,          optional,       intent(in)  :: thermo_active
+      logical,          optional,       intent(in)  :: water_species
       integer,          optional,       intent(out) :: errcode
       character(len=*), optional,       intent(out) :: errmsg
       ! Local variables
@@ -1470,7 +1524,8 @@ CONTAINS
       nmatch = 0
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          do index = 1, SIZE(this%const_metadata)
-            if (this%is_match(index, advected=advected, thermo_active=thermo_active)) then
+            if (this%is_match(index, advected=advected, thermo_active=thermo_active, &
+                              water_species=water_species)) then
                nmatch = nmatch + 1
             end if
          end do
@@ -1536,7 +1591,7 @@ CONTAINS
    !########################################################################
 
    subroutine ccp_model_const_copy_in_3d(this, const_array, advected,         &
-        thermo_active, errcode, errmsg)
+        thermo_active, water_species, errcode, errmsg)
       ! Gather constituent fields matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1547,6 +1602,7 @@ CONTAINS
       real(kind_phys),                     intent(out) :: const_array(:,:,:)
       logical,          optional,          intent(in)  :: advected
       logical,          optional,          intent(in)  :: thermo_active
+      logical,          optional,          intent(in)  :: water_species
       integer,          optional,          intent(out) :: errcode
       character(len=*), optional,          intent(out) :: errmsg
       ! Local variables
@@ -1564,7 +1620,8 @@ CONTAINS
          num_levels = SIZE(const_array, 2)
          do index = 1, SIZE(this%const_metadata)
             if (this%is_match(index, advected=advected,                       &
-                              thermo_active=thermo_active)) then
+                              thermo_active=thermo_active,                    &
+                              water_species=water_species)) then
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
@@ -1613,7 +1670,7 @@ CONTAINS
    !########################################################################
 
    subroutine ccp_model_const_copy_out_3d(this, const_array, advected,        &
-        thermo_active, errcode, errmsg)
+        thermo_active, water_species, errcode, errmsg)
       ! Update constituent fields matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1624,6 +1681,7 @@ CONTAINS
       real(kind_phys),                  intent(in)    :: const_array(:,:,:)
       logical,          optional,       intent(in)    :: advected
       logical,          optional,       intent(in)    :: thermo_active
+      logical,          optional,       intent(in)    :: water_species
       integer,          optional,       intent(out)   :: errcode
       character(len=*), optional,       intent(out)   :: errmsg
       ! Local variables
@@ -1641,7 +1699,8 @@ CONTAINS
          num_levels = SIZE(const_array, 2)
          do index = 1, SIZE(this%const_metadata)
             if (this%is_match(index, advected=advected,                       &
-                              thermo_active=thermo_active)) then
+                              thermo_active=thermo_active,                    &
+                              water_species=water_species)) then
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
@@ -1935,6 +1994,28 @@ CONTAINS
       end if
 
    end subroutine ccpt_is_thermo_active
+
+   !#######################################################################
+
+   subroutine ccpt_is_water_species(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      logical,                            intent(out) :: val_out
+      integer,          optional,         intent(out) :: errcode
+      character(len=*), optional,         intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_is_thermo_active'
+
+      if (associated(this%prop)) then
+         call this%prop%is_water_species(val_out, errcode, errmsg)
+      else
+         val_out = .false.
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_is_water_species
 
    !#######################################################################
 
@@ -2306,5 +2387,31 @@ CONTAINS
       end if
 
    end subroutine ccpt_set_thermo_active
+
+   !#######################################################################
+
+   subroutine ccpt_set_water_species(this, water_flag, errcode, errmsg)
+      ! Set whether this constituent is a water species, which means
+      ! that this constituent represents a particular phase or type
+      ! of water in the atmosphere.
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(inout) :: this
+      logical,                            intent(in)    :: water_flag
+      integer,          optional,         intent(out)   :: errcode
+      character(len=*), optional,         intent(out)   :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_set_water_species'
+
+      if (associated(this%prop)) then
+         if (this%prop%is_instantiated(errcode, errmsg)) then
+            this%prop%water_species = water_flag
+         end if
+      else
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_set_water_species
 
 end module ccpp_constituent_prop_mod

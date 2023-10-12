@@ -558,9 +558,62 @@ CONTAINS
          end if
       end if
       if (errflg == 0) then
-         if (.not.check) then !Should now be True
+         if (.not. check) then !Should now be True
             write(6, *) "ERROR: 'set_thermo_active' did not set",             &
                  " thermo_active constituent property correctly."
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      !-------------------
+
+      !-------------------
+      !water-species tests:
+      !-------------------
+
+      !Check that being a water species defaults to False:
+      call const_props(index_liq)%is_water_species(check, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get water_species prop for cld_liq index = ", index_liq,    &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (check) then !Should be False
+            write(6, *) "ERROR: 'is_water_species' should default to False ", &
+                 "for all constituents unless set by host model."
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !Check that setting a constituent to be a water species works
+      !as expected:
+      call const_props(index_liq)%set_water_species(.true., errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to set water_species prop for cld_liq index = ", index_liq,    &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         call const_props(index_liq)%is_water_species(check, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
+                 " trying to get water_species prop for cld_liq index = ",    &
+                 index_liq, trim(errmsg)
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      end if
+      if (errflg == 0) then
+         if (.not. check) then !Should now be True
+            write(6, *) "ERROR: 'set_water_species' did not set",             &
+                 " water_species constituent property correctly."
             errflg_final = -1 !Notify test script that a failure occurred
          end if
       else
