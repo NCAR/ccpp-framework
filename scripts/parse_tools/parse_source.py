@@ -201,10 +201,10 @@ class ContextRegion(Iterable):
 class ParseContext():
     """A class for keeping track of a parsing position
     >>> ParseContext(32, "source.F90") #doctest: +ELLIPSIS
-    <__main__.ParseContext object at 0x...>
+    <parse_tools.parse_source.ParseContext object at 0x...>
     >>> ParseContext("source.F90", 32)
     Traceback (most recent call last):
-    CCPPError: ParseContext linenum must be an int
+    parse_tools.parse_source.CCPPError: ParseContext linenum must be an int
     >>> ParseContext(32, 90) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: ParseContext filenum must be a string
@@ -375,7 +375,7 @@ class ParseSource():
     """
     A simple object for providing source information
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")) #doctest: +ELLIPSIS
-    <__main__.ParseSource object at 0x...>
+    <parse_tools.parse_source.ParseSource object at 0x...>
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).ptype
     'mytype'
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")).name
@@ -406,11 +406,3 @@ class ParseSource():
         return self.__context
 
 ########################################################################
-
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    # pylint: enable=ungrouped-imports
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if

@@ -19,7 +19,7 @@ CONTAINS
    !> \section arg_table_cld_ice_run  Argument Table
    !! \htmlinclude arg_table_cld_ice_run.html
    !!
-   subroutine cld_ice_run(ncol, timestep, temp, qv, ps, cld_ice_array,         &
+   subroutine cld_ice_run(ncol, timestep, temp, qv, ps, cld_ice_array,              &
         errmsg, errflg)
 
       integer,            intent(in)    :: ncol
