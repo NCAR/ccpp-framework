@@ -925,7 +925,7 @@ class VarCompatObj:
                 incompat_reason.append('dimensions')
             # end if
         # end if
-        print(f"here, self.__stdname is {self.__stdname}, self.__equiv is {self.__equiv} and self.__compat is {self.__compat}")
+        #print(f"here, self.__stdname is {self.__stdname}, self.__equiv is {self.__equiv} and self.__compat is {self.__compat}")
         self.__incompat_reason = " and ".join([x for x in incompat_reason if x])
 
     def forward_transform(self, lvar_lname, rvar_lname, indices,
