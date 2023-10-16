@@ -398,7 +398,7 @@ class ConstituentVarDict(VarDictionary):
         if not ((self.parent is not None) and
                 hasattr(self.parent.parent, "constituent_module")):
             emsg = "ConstituentVarDict parent not HostModel?"
-            emsg += "\nparent is '{}'".format(type(self.parent.parent))
+            emsg += f"\nparent is '{type_name(self.parent.parent)}'"
             raise ParseInternalError(emsg)
         # end if
         return self.parent.parent.constituent_module
