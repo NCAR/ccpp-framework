@@ -202,7 +202,7 @@ class Var:
                     VariableProperty('active', str, optional_in=True,
                                      default_in='.true.'),
                     VariableProperty('polymorphic', bool, optional_in=True,
-                                     default_in='.false.')]
+                                     default_in=False)]
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,
