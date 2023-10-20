@@ -10,7 +10,7 @@ class ParseObject(ParseContext):
     """ParseObject is a simple class that keeps track of an object's
     place in a file and safely produces lines from an array of lines
     >>> ParseObject('foobar.F90', []) #doctest: +ELLIPSIS
-    <__main__.ParseObject object at 0x...>
+    <parse_tools.parse_object.ParseObject object at 0x...>
     >>> ParseObject('foobar.F90', []).filename
     'foobar.F90'
     >>> ParseObject('foobar.F90', ["##hi mom",], line_start=1).curr_line()
@@ -35,7 +35,6 @@ class ParseObject(ParseContext):
 
     def __init__(self, filename, lines_in, line_start=0):
         """Initialize this ParseObject"""
-        self.__filename = filename
         self.__lines = lines_in
         self.__line_start = line_start
         self.__line_end = line_start
@@ -43,7 +42,7 @@ class ParseObject(ParseContext):
         self.__num_lines = len(self.__lines)
         self.__error_message = ""
         self.__num_errors = 0
-        super(ParseObject, self).__init__(linenum=line_start, filename=filename)
+        super().__init__(linenum=line_start, filename=filename)
 
     @property
     def first_line_num(self):
@@ -58,11 +57,6 @@ class ParseObject(ParseContext):
     def valid_line(self):
         """Return True if the current line is valid"""
         return (self.line_num >= 0) and (self.line_num < self.__num_lines)
-
-    @property
-    def file_name(self):
-        """Return this object's filename"""
-        return self.__filename
 
     @property
     def error_message(self):
@@ -170,12 +164,3 @@ class ParseObject(ParseContext):
         # end try
 
 ########################################################################
-
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    import sys
-    # pylint: enable=ungrouped-imports
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if

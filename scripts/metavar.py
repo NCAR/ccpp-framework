@@ -20,7 +20,7 @@ from parse_tools import FORTRAN_SCALAR_REF_RE
 from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
-from parse_tools import ParseContext, ParseSource
+from parse_tools import ParseContext, ParseSource, type_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
@@ -261,7 +261,7 @@ class Var:
         if isinstance(prop_dict, Var):
             prop_dict = prop_dict.copy_prop_dict()
         # end if
-        if source.type == 'scheme':
+        if source.ptype == 'scheme':
             self.__required_props = Var.__required_var_props
 # XXgoldyXX: v don't fill in default properties?
 #            mstr_propdict = Var.__var_propdict
@@ -272,7 +272,7 @@ class Var:
             mstr_propdict = Var.__spec_propdict
 # XXgoldyXX: ^ don't fill in default properties?
         # end if
-        self._source = source
+        self.__source = source
         # Grab a frozen copy of the context
         if context is None:
             self._context = ParseContext(context=source.context)
@@ -476,7 +476,7 @@ class Var:
             source_name = self.source.name
         # end if
         if source_type is None:
-            source_type = self.source.type
+            source_type = self.source.ptype
         # end if
         if context is None:
             context = self._context
@@ -822,7 +822,7 @@ class Var:
         else:
             emsg = 'Attempting to set parent for {}, bad parent type, {}'
             lname = self.get_prop_value('local_name')
-            raise ParseInternalError(emsg.format(lname, type(parent_var)))
+            raise ParseInternalError(emsg.format(lname, type_name(parent_var)))
         # end if
 
     def add_child(self, cvar):
@@ -852,13 +852,13 @@ class Var:
     @property
     def source(self):
         """Return the source object for this variable"""
-        return self._source
+        return self.__source
 
     @source.setter
     def source(self, new_source):
         """Reset this Var's source if <new_source> seems legit"""
         if isinstance(new_source, ParseSource):
-            self._source = new_source
+            self.__source = new_source
         else:
             errmsg = 'Attemping to set source of {} ({}) to "{}"'
             stdname = self.get_prop_value('standard_name')
@@ -874,7 +874,7 @@ class Var:
     @property
     def host_interface_var(self):
         """True iff self is included in the host model interface calls"""
-        return self.source.type == 'host'
+        return self.source.ptype == 'host'
 
     @property
     def run_env(self):
@@ -1379,11 +1379,11 @@ class VarDictionary(OrderedDict):
     >>> VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})
     VarDictionary(bar)
     >>> VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)) #doctest: +ELLIPSIS
-    VarDictionary(baz, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(baz, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> print("{}".format(VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV))))
     VarDictionary(baz, ['hi_mom'])
     >>> VarDictionary('qux', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) #doctest: +ELLIPSIS
-    VarDictionary(qux, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(qux, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> VarDictionary('boo', _MVAR_DUMMY_RUN_ENV).add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV), _MVAR_DUMMY_RUN_ENV)
 
     >>> VarDictionary('who', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]).prop_list('local_name')
@@ -1427,7 +1427,7 @@ class VarDictionary(OrderedDict):
                 self[stdname] = variables[key]
             # end for
         elif variables is not None:
-            raise ParseInternalError('Illegal type for variables, {} in {}'.format(type(variables), self.name))
+            raise ParseInternalError(f'Illegal type for variables, {type_name(variables)} in {self.name}')
         # end if
 
     @property
@@ -1608,7 +1608,7 @@ class VarDictionary(OrderedDict):
             # end if
             if not present:
                 dvar = self.find_variable(standard_name=dimname, any_scope=True)
-                if dvar and (dvar.source.type not in ignore_sources):
+                if dvar and (dvar.source.ptype not in ignore_sources):
                     if to_dict:
                         to_dict.add_variable(dvar, self.__run_env,
                                              exists_ok=True,
@@ -1623,15 +1623,13 @@ class VarDictionary(OrderedDict):
                     else:
                         ctx = context_string(var.context)
                     # end if
-                    err_ret += "{}: ".format(self.name)
-                    err_ret += "Cannot find variable for dimension, {}, of {}{}"
                     vstdname = var.get_prop_value('standard_name')
-                    err_ret = err_ret.format(dimname, vstdname, ctx)
+                    err_ret += f"{self.name}: "
+                    err_ret += f"Cannot find variable for dimension, {dimname}, of {vstdname}{ctx}"
                     if dvar:
-                        err_ret += "\nFound {} from excluded source, '{}'{}"
+                        err_ret += f"\nFound {lname} from excluded source, '{dvar.source.ptype}'{dctx}"
                         lname = dvar.get_prop_value('local_name')
                         dctx = context_string(dvar.context)
-                        err_ret = err_ret.format(lname, dvar.source.type, dctx)
                     # end if
                 # end if
             # end if
@@ -1982,11 +1980,3 @@ CCPP_CONSTANT_VARS =                                                         \
                                                _MVAR_DUMMY_RUN_ENV)])
 
 ###############################################################################
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    import sys
-    # pylint: enable=ungrouped-imports
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if

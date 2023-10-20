@@ -362,7 +362,7 @@ class SuiteObject(VarDictionary):
     @classmethod
     def is_suite_variable(cls, var):
         """Return True iff <var> belongs to our Suite"""
-        return var and (var.source.type == _API_SUITE_VAR_NAME)
+        return var and (var.source.ptype == _API_SUITE_VAR_NAME)
 
     def is_local_variable(self, var):
         """Return the local variable matching <var> if one is found belonging
@@ -434,7 +434,7 @@ class SuiteObject(VarDictionary):
                 if dvar is None:
                     emsg = "{}: Could not find dimension {} in {}"
                     raise ParseInternalError(emsg.format(self.name,
-                                                         stdname, vardim))
+                                                         vardim, stdname))
                 # end if
         elif self.parent is None:
             errmsg = 'No call_list found for {}'.format(newvar)
@@ -830,7 +830,7 @@ class SuiteObject(VarDictionary):
             found_var = self.parent.add_variable_to_call_tree(dict_var,
                                                               vmatch=vmatch)
             new_vdims = vdims
-        elif dict_var.source.type in _API_LOCAL_VAR_TYPES:
+        elif dict_var.source.ptype in _API_LOCAL_VAR_TYPES:
             # We cannot change the dimensions of locally-declared variables
             # Using a loop substitution is invalid because the loop variable
             # value has not yet been set.
@@ -1783,7 +1783,7 @@ class Group(SuiteObject):
                                      search_call_list=search_call_list,
                                      loop_subst=loop_subst)
         if fvar and fvar.is_constituent():
-            if fvar.source.type == ConstituentVarDict.constitutent_source_type():
+            if fvar.source.ptype == ConstituentVarDict.constitutent_source_type():
                 # We found this variable in the constituent dictionary,
                 #   add it to our call list
                 self.add_call_list_variable(fvar, exists_ok=True)
