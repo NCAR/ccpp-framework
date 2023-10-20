@@ -1620,8 +1620,6 @@ class Group(SuiteObject):
         self._host_vars = None
         self._host_ddts = None
         self._loop_var_matches = list()
-        self._unit_cnv_matches_from = list()
-        self._unit_cnv_matches_to = list()
         self._phase_check_stmts = list()
         self._set_state = None
         self._ddt_library = None
@@ -1661,21 +1659,6 @@ class Group(SuiteObject):
             return True
 
         return False
-
-    def match_units(self, var):
-        dict_var  = self.find_variable(source_var=var, any_scope=True)
-        found_var = False
-        if dict_var:
-            hunits    = dict_var.get_prop_value('units')
-            if (hunits != var.get_prop_value('units')):
-                found_var = True
-                if self.run_phase():
-                    match = VarDictionary.unit_cnv_match(hunits, var)
-                    self.register_action(match)
-                else:
-                    match = None
-        return found_var
-
 
     def manage_variable(self, newvar):
         """Add <newvar> to our local dictionary making necessary
