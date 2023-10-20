@@ -25,7 +25,6 @@ from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
 from var_props import standard_name_to_long_name, default_kind_val
-from conversion_tools import unit_conversion
 
 ##############################################################################
 
@@ -1185,7 +1184,7 @@ class VarAction:
         of the objects.
         equiv should be overridden with a method that first calls this
         method and then tests class-specific object data."""
-        return vmatch.__class__ != self.__class__
+        return vmatch.__class__ == self.__class__
 
     def add_to_list(self, vlist):
         """Add <self> to <vlist> unless <self> or its equivalent is
@@ -1202,47 +1201,6 @@ class VarAction:
             vlist.append(self)
         # end if
         return vlist
-
-###############################################################################
-
-class VarUnitConv(VarAction):
-    """A class to perform unit conversions"""
-
-    def __init__(self, set_action, local_name, kind, **kwargs):
-        """Initialize unit conversion"""
-        self._local_name      = local_name
-        self._local_name_temp = local_name+'_local'
-        self._kind            = kind
-        for key, value in kwargs.items():
-            setattr(self, "_"+key, value)
-        self._set_action = set_action
-
-    def add_local(self, var):
-        """Add a local variable for unit conversion"""
-        tmp_var = var.clone(self._local_name_temp)
-        self.__group.manage_variable(tmp_var)
-
-    def write_action(self, vadict):
-        """Return unit conversion transformation"""
-        if self._set_action:
-            if self._key == 'from':
-                lhs = var=self._local_name_temp
-                rhs = self._set_action.format(var=self._local_name, kind='_'+self._kind)
-            if self._key == 'to':
-                lhs = var=self._local_name
-                rhs = self._set_action.format(var=self._local_name_temp, kind='_'+self._kind)
-
-        return f"{lhs} = {rhs}"
-
-    @property
-    def required_stdnames(self):
-        """Return the _required_stdnames for this object"""
-        return self._required_stdnames
-
-    @property
-    def missing_stdname(self):
-        """Return the _missing_stdname for this object"""
-        return self._missing_stdname
 
 ###############################################################################
 
@@ -1864,32 +1822,6 @@ class VarDictionary(OrderedDict):
         """Override == to restore object equality, not dictionary
         list equality"""
         return self is other
-
-    @classmethod
-    def unit_cnv_match(cls, hunits, var):
-        """Return VarUnitConv if <hunits> and <var> require unit
-        conversion, otherwise, return None"""
-        ucmatch = {"from": '' ,"to": ''}
-        function_name_from = '{0}__to__{1}'.format(hunits, var.get_prop_value('units'))
-        function_name_to   = '{0}__to__{1}'.format(var.get_prop_value('units'), hunits)
-
-        try:
-            function_from   = getattr(unit_conversion, function_name_from)
-            ucmatch["from"] = VarUnitConv(function_from(),key="from",
-                                          local_name=var.get_prop_value('local_name'),
-                                          kind=var.get_prop_value('kind'))
-        except:
-            ucmatch["from"] = None
-        try:
-            if (var.get_prop_value('intent') != 'in'):
-                function_to   = getattr(unit_conversion, function_name_to)
-                ucmatch["to"] = VarUnitConv(function_to(),key="to",
-                                            local_name=var.get_prop_value('local_name'),
-                                            kind=var.get_prop_value('kind'))
-        except:
-            ucmatch["to"]   = None
-
-        return ucmatch
 
     @classmethod
     def loop_var_match(cls, standard_name):
