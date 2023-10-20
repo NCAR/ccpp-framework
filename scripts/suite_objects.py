@@ -1273,15 +1273,7 @@ class Scheme(SuiteObject):
         for reverse_transform in self.__reverse_transforms: outfile.write(reverse_transform, indent)
         # Write the scheme call.
         outfile.write('if ({} == 0) then'.format(errcode), indent)
-        # Unit conversions? Add forward transform
-        for umatch in self.__group._unit_cnv_matches_from:
-            action = umatch.write_action(vadict=self.call_list)
-            if action: outfile.write(action, indent+1)
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
-        # Unit conversions?  Add reverse transform
-        for umatch in self.__group._unit_cnv_matches_to:
-            action = umatch.write_action(vadict=self.call_list)
-            if action: outfile.write(action, indent+1)
         outfile.write('end if', indent)
         # Write any forward transforms.
         for forward_transform in self.__forward_transforms: outfile.write(forward_transform, indent)
