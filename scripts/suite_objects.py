@@ -20,6 +20,7 @@ from parse_tools import ParseInternalError, CCPPError
 from parse_tools import init_log, set_log_to_null
 from var_props import is_horizontal_dimension, find_horizontal_dimension
 from var_props import find_vertical_dimension
+from var_props import VarCompatObj
 
 # pylint: disable=too-many-lines
 
@@ -800,7 +801,7 @@ class SuiteObject(VarDictionary):
         # end if
         return found_var
 
-    def match_variable(self, var, vstdname=None, vdims=None):
+    def match_variable(self, var, run_env):
         """Try to find a source for <var> in this SuiteObject's dictionary
         tree. Several items are returned:
         found_var: True if a match was found
@@ -809,12 +810,8 @@ class SuiteObject(VarDictionary):
         missing_vert: Vertical dim in parent but not in <var>
         perm: Permutation (XXgoldyXX: Not yet implemented)
         """
-        if vstdname is None:
-            vstdname = var.get_prop_value('standard_name')
-        # end if
-        if vdims is None:
-            vdims = var.get_dimensions()
-        # end if
+        vstdname = var.get_prop_value('standard_name')
+        vdims    = var.get_dimensions()
         if (not vdims) and self.run_phase():
             vmatch = VarDictionary.loop_var_match(vstdname)
         else:
@@ -824,6 +821,7 @@ class SuiteObject(VarDictionary):
         missing_vert = None
         new_vdims = list()
         var_vdim = var.has_vertical_dimension(dims=vdims)
+        compat_obj = None
         # Does this variable exist in the calling tree?
         dict_var = self.find_variable(source_var=var, any_scope=True)
         if dict_var is None:
@@ -856,6 +854,23 @@ class SuiteObject(VarDictionary):
                 new_vdims = list()
                 new_dict_dims = dict_dims
                 match = True
+            # Create compatability object, containing any necessary forward/reverse 
+            # transforms from <var> and <dict_var>
+            compat_obj = VarCompatObj(
+                vstdname,
+                var.get_prop_value('type'),
+                var.get_prop_value('kind'),
+                var.get_prop_value('units'),
+                var.get_dimensions(),
+                var.get_prop_value('local_name'),
+                dict_var.get_prop_value('standard_name'),
+                dict_var.get_prop_value('type'),
+                dict_var.get_prop_value('kind'),
+                dict_var.get_prop_value('units'),
+                dict_var.get_dimensions(),
+                dict_var.get_prop_value('local_name'),
+                run_env)
+
             # end if
             # Add the variable to the parent call tree
             if dict_dims == new_dict_dims:
@@ -878,7 +893,7 @@ class SuiteObject(VarDictionary):
                 # end if
             # end if
         # end if
-        return found_var, var_vdim, new_vdims, missing_vert
+        return found_var, var_vdim, new_vdims, missing_vert, compat_obj, dict_var
 
     def in_process_split(self):
         """Find out if we are in a process-split region"""
@@ -1061,6 +1076,8 @@ class Scheme(SuiteObject):
         self.__lib = scheme_xml.get('lib', None)
         self.__has_vertical_dimension = False
         self.__group = None
+        self.__forward_transforms = list()
+        self.__reverse_transforms = list()
         super().__init__(name, context, parent, run_env, active_call_list=True)
 
     def update_group_call_list_variable(self, var):
@@ -1128,8 +1145,8 @@ class Scheme(SuiteObject):
             def_val = var.get_prop_value('default_value')
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
-            args = self.match_variable(var, vstdname=vstdname, vdims=vdims)
-            found, vert_dim, new_dims, missing_vert = args
+            args = self.match_variable(var, self.run_env)
+            found, vert_dim, new_dims, missing_vert, compat_obj, suite_var = args
             if found:
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
@@ -1184,6 +1201,21 @@ class Scheme(SuiteObject):
                                                   vstdname))
                 # end if
             # end if
+            # Are there any forward/reverse transforms for this variable?
+            if compat_obj is not None and (compat_obj.has_dim_transforms or compat_obj.has_unit_transforms):
+                tmp_var = var.clone(var.get_prop_value('local_name')+'_local')
+                self.__group.manage_variable(tmp_var)
+                if (var.get_prop_value('intent') != 'in'):
+                    self.__forward_transforms.append(
+                        compat_obj.forward_transform(lvar_lname=var.get_prop_value('local_name'),
+                                                     rvar_lname=tmp_var.get_prop_value('local_name'),
+                                                     indices=[':']*var.get_rank()))
+                                                     #indices=self.transform_dim_str(var.get_dimensions(), var.context)))
+                self.__reverse_transforms.append(
+                    compat_obj.reverse_transform(lvar_lname=tmp_var.get_prop_value('local_name'),
+                                                 rvar_lname=var.get_prop_value('local_name'),
+                                                 indices=[':']*var.get_rank()))
+                                                 #indices=self.transform_dim_str(var.get_dimensions(), var.context)))
         # end for
         if self.needs_vertical is not None:
             self.parent.add_part(self, replace=True) # Should add a vloop
@@ -1194,6 +1226,35 @@ class Scheme(SuiteObject):
             # end if
         # end if
         return scheme_mods
+
+    def transform_dim_str(self, dims, context):
+        """Create the dimension string for a transform statement"""
+        rdims = list()
+        for dim in dims:
+            rdparts = list()
+            dparts = dim.split(':')
+            for dpart in dparts:
+                dvar = self.find_variable(standard_name=dpart, any_scope=True)
+                if dvar is None:
+                    dvar = self.call_list.find_variable(standard_name=dpart,
+                                                        any_scope=False)
+                if dvar is None:
+                    emsg = "Dimension variable, '{}', not found{}"
+                    lvar = self.find_local_name(dpart, any_scope=True)
+                    if lvar is not None:
+                        emsg += "\nBe sure to use standard names!"
+ 
+                    ctx = context_string(context)
+                    raise CCPPError(emsg.format(dpart, ctx))
+ 
+                lname = dvar.get_prop_value('local_name')
+                rdparts.append(lname)
+                # end if
+            rdims.append(':'.join(rdparts))
+            # end for
+        # end for
+
+        return rdims
 
     def write(self, outfile, errcode, indent):
         # Unused arguments are for consistent write interface
@@ -1207,9 +1268,14 @@ class Scheme(SuiteObject):
                                              is_func_call=True,
                                              subname=self.subroutine_name)
         stmt = 'call {}({})'
+        # Write any reverse transforms.
+        for reverse_transform in self.__reverse_transforms: outfile.write(reverse_transform, indent)
+        # Write the scheme call.
         outfile.write('if ({} == 0) then'.format(errcode), indent)
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
         outfile.write('end if', indent)
+        # Write any forward transforms.
+        for forward_transform in self.__forward_transforms: outfile.write(forward_transform, indent)
 
     def schemes(self):
         """Return self as a list for consistency with subcycle"""
