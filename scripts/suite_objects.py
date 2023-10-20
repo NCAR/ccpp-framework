@@ -13,7 +13,7 @@ from ccpp_state_machine import CCPP_STATE_MACH, RUN_PHASE_NAME
 from code_block import CodeBlock
 from constituents import ConstituentVarDict
 from framework_env import CCPPFrameworkEnv
-from metavar import Var, VarDictionary, VarLoopSubst, VarUnitConv
+from metavar import Var, VarDictionary, VarLoopSubst
 from metavar import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
 from parse_tools import ParseContext, ParseSource, context_string
 from parse_tools import ParseInternalError, CCPPError
@@ -1658,13 +1658,6 @@ class Group(SuiteObject):
             self._loop_var_matches = vaction.add_to_list(self._loop_var_matches)
             # Add the missing dim
             vaction.add_local(self, _API_LOCAL, self.run_env)
-            return True
-
-        if isinstance(vaction["from"], VarUnitConv):
-            if (vaction["from"]):
-                self._unit_cnv_matches_from = vaction["from"].add_to_list(self._unit_cnv_matches_from)
-            if (vaction["to"]):
-                self._unit_cnv_matches_to = vaction["to"].add_to_list(self._unit_cnv_matches_to)
             return True
 
         return False
