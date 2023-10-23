@@ -857,20 +857,7 @@ class SuiteObject(VarDictionary):
                 match = True
             # Create compatability object, containing any necessary forward/reverse 
             # transforms from <var> and <dict_var>
-            compat_obj = VarCompatObj(
-                vstdname,
-                var.get_prop_value('type'),
-                var.get_prop_value('kind'),
-                var.get_prop_value('units'),
-                var.get_dimensions(),
-                var.get_prop_value('local_name'),
-                dict_var.get_prop_value('standard_name'),
-                dict_var.get_prop_value('type'),
-                dict_var.get_prop_value('kind'),
-                dict_var.get_prop_value('units'),
-                dict_var.get_dimensions(),
-                dict_var.get_prop_value('local_name'),
-                run_env)
+            compat_obj = var.compatible(dict_var, run_env)
 
             # end if
             # Add the variable to the parent call tree
