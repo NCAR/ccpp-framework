@@ -820,8 +820,8 @@ class VarCompatObj:
     """
 
     def __init__(self, var1_stdname, var1_type, var1_kind, var1_units,
-                 var1_dims, var1_lname, var2_stdname, var2_type, var2_kind,
-                 var2_units, var2_dims, var2_lname, run_env, v1_context=None,
+                 var1_dims, var1_lname, var1_top, var2_stdname, var2_type, var2_kind,
+                 var2_units, var2_dims, var2_lname, var2_top, run_env, v1_context=None,
                  v2_context=None):
         """Initialize this object with information on the equivalence and/or
            conformability of two variables.
@@ -843,6 +843,9 @@ class VarCompatObj:
         self.__dim_transforms = None
         self.__kind_transforms = None
         self.__unit_transforms = None
+        self.__has_dim_transforms = False
+        self.__has_kind_transforms = False
+        self.__has_unit_transforms = False
         incompat_reason = list()
         # First, check for fatal incompatibilities
         if var1_stdname != var2_stdname:
@@ -910,15 +913,9 @@ class VarCompatObj:
         # end if
         if self.__compat:
             # Check dimensions
-            ##XXgoldyXX: For now, we always have to create a dimension
-            ##           transform because we do not know if the vertical
-            ##           dimension is flipped.
-            if var1_dims or var2_dims:
-                _, vdim_ind = find_vertical_dimension(var1_dims)
-                if (var1_dims != var2_dims) or (vdim_ind >= 0):
-                    self.__dim_transforms = self._get_dim_transforms(var1_dims,
-                                                                     var2_dims)
-                    self.__compat = self.__dim_transforms is not None
+            if var1_top or var2_top:
+                self.__compat             = True
+                self.__has_dim_transforms = True
                 # end if
             # end if
             if not self.__compat:
@@ -945,22 +942,19 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
-        # Grab any dimension transform
-        if self.has_dim_transforms:
-            dtrans = self.__dim_transforms
-            lhs_term = dtrans.forward_transform(lvar_lname, indices,
-                                                adjust_hdim=adjust_hdim,
-                                                flip_vdim=flip_vdim)
-        else:
-            lhs_term = f"{lvar_lname}({','.join(indices)})"
-        # end if
+        # Dimension transform (Indices handled externally)
         rhs_term = f"{rvar_lname}({','.join(indices)})"
+        lhs_term = f"{lvar_lname}"
+
+        # Kind transforms
         if self.has_kind_transforms:
             kind = self.__kind_transforms[1]
             rhs_term = f"real({rhs_term}, {kind})"
         else:
             kind = ''
         # end if
+
+        # Unit transforms
         if self.has_unit_transforms:
             if kind:
                 kind = "_" + kind
@@ -989,22 +983,19 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
-        # Grab any dimension transform
-        if self.has_dim_transforms:
-            dtrans = self.__dim_transforms
-            lhs_term = dtrans.reverse_transform(lvar_lname, indices,
-                                                adjust_hdim=adjust_hdim,
-                                                flip_vdim=flip_vdim)
-        else:
-            lhs_term = f"{lvar_lname}({','.join(indices)})"
-        # end if
-        rhs_term = f"{rvar_lname}({','.join(indices)})"
+        # Dimension transforms (Indices handled exrernally)
+        lhs_term = f"{lvar_lname}({','.join(indices)})"
+        rhs_term = f"{rvar_lname}"
+
+        # Kind transforms
         if self.has_kind_transforms:
             kind = self.__kind_transforms[0]
             rhs_term = f"real({rhs_term}, {kind})"
         else:
             kind = ''
         # end if
+
+        # Unit transforms
         if self.has_unit_transforms:
             if kind:
                 kind = "_" + kind
@@ -1357,7 +1348,10 @@ class VarCompatObj:
         The reverse dimension transformation is a permutation of the indices of
            the second variable to the first.
         """
-        return self.__dim_transforms is not None
+        result = False
+        if (self.__dim_transforms is not None): result = True
+        if (self.__has_dim_transforms): result = True
+        return result
 
     @property
     def has_kind_transforms(self):
@@ -1369,7 +1363,10 @@ class VarCompatObj:
         The reverse kind transformation is a string representation of the
            kind of the first variable.
         """
-        return self.__kind_transforms is not None
+        result = False
+        if (self.__kind_transforms is not None): result = True
+        if (self.__has_kind_transforms): result = True
+        return result
 
     @property
     def has_unit_transforms(self):
@@ -1384,7 +1381,10 @@ class VarCompatObj:
            and <var> arguments to produce code to transform one variable into
            the correct units of the other.
         """
-        return self.__unit_transforms is not None
+        result = False
+        if (self.__unit_transforms is not None): result = True
+        if (self.__has_unit_transforms): result = True
+        return result
 
     def __bool__(self):
         """Return True if this object describes two Var objects which are

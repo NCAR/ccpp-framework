@@ -1128,7 +1128,10 @@ class Scheme(SuiteObject):
         # end if
         scheme_mods = set()
         scheme_mods.add((my_header.module, self.subroutine_name))
+        var_local = {"local_name":[], "std_name":[]}
         for var in my_header.variable_list():
+            var_local["local_name"].append(var.get_prop_value('local_name'))
+            var_local["std_name"].append(var.get_prop_value('standard_name'))
             vstdname = var.get_prop_value('standard_name')
             def_val = var.get_prop_value('default_value')
             vdims = var.get_dimensions()
@@ -1193,17 +1196,27 @@ class Scheme(SuiteObject):
             if compat_obj is not None and (compat_obj.has_dim_transforms or compat_obj.has_unit_transforms):
                 tmp_var = var.clone(var.get_prop_value('local_name')+'_local')
                 self.__group.manage_variable(tmp_var)
+
+                # Move this piece somewhere!
+                indices = [':']*tmp_var.get_rank()
+                dim = find_vertical_dimension(var.get_dimensions())[0]
+                for dpart in dim.split(':'):
+                    if (dpart in var_local["std_name"]):
+                        vli = 1
+                        if (compat_obj.has_dim_transforms):
+                            indices[find_vertical_dimension(var.get_dimensions())[1]] = var_local["local_name"][vli] + ':1:-1'
+                        else:
+                            indices[find_vertical_dimension(var.get_dimensions())[1]] = '1:' + var_local["local_name"][vli]
+
                 if (var.get_prop_value('intent') != 'in'):
                     self.__forward_transforms.append(
                         compat_obj.forward_transform(lvar_lname=var.get_prop_value('local_name'),
                                                      rvar_lname=tmp_var.get_prop_value('local_name'),
-                                                     indices=[':']*var.get_rank()))
-                                                     #indices=self.transform_dim_str(var.get_dimensions(), var.context)))
+                                                     indices=indices))
                 self.__reverse_transforms.append(
                     compat_obj.reverse_transform(lvar_lname=tmp_var.get_prop_value('local_name'),
                                                  rvar_lname=var.get_prop_value('local_name'),
-                                                 indices=[':']*var.get_rank()))
-                                                 #indices=self.transform_dim_str(var.get_dimensions(), var.context)))
+                                                 indices=indices))
         # end for
         if self.needs_vertical is not None:
             self.parent.add_part(self, replace=True) # Should add a vloop
@@ -1214,35 +1227,6 @@ class Scheme(SuiteObject):
             # end if
         # end if
         return scheme_mods
-
-    def transform_dim_str(self, dims, context):
-        """Create the dimension string for a transform statement"""
-        rdims = list()
-        for dim in dims:
-            rdparts = list()
-            dparts = dim.split(':')
-            for dpart in dparts:
-                dvar = self.find_variable(standard_name=dpart, any_scope=True)
-                if dvar is None:
-                    dvar = self.call_list.find_variable(standard_name=dpart,
-                                                        any_scope=False)
-                if dvar is None:
-                    emsg = "Dimension variable, '{}', not found{}"
-                    lvar = self.find_local_name(dpart, any_scope=True)
-                    if lvar is not None:
-                        emsg += "\nBe sure to use standard names!"
- 
-                    ctx = context_string(context)
-                    raise CCPPError(emsg.format(dpart, ctx))
- 
-                lname = dvar.get_prop_value('local_name')
-                rdparts.append(lname)
-                # end if
-            rdims.append(':'.join(rdparts))
-            # end for
-        # end for
-
-        return rdims
 
     def write(self, outfile, errcode, indent):
         # Unused arguments are for consistent write interface
