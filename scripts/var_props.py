@@ -957,15 +957,12 @@ class VarCompatObj:
         rhs_term = f"{rvar_lname}({','.join(indices)})"
         lhs_term = f"{lvar_lname}"
 
-        # Kind transforms
         if self.has_kind_transforms:
             kind = self.__kind_transforms[1]
             rhs_term = f"real({rhs_term}, {kind})"
         else:
             kind = ''
         # end if
-
-        # Unit transforms
         if self.has_unit_transforms:
             if kind:
                 kind = "_" + kind
@@ -998,15 +995,12 @@ class VarCompatObj:
         lhs_term = f"{lvar_lname}({','.join(indices)})"
         rhs_term = f"{rvar_lname}"
 
-        # Kind transforms
         if self.has_kind_transforms:
             kind = self.__kind_transforms[0]
             rhs_term = f"real({rhs_term}, {kind})"
         else:
             kind = ''
         # end if
-
-        # Unit transforms
         if self.has_unit_transforms:
             if kind:
                 kind = "_" + kind
@@ -1139,26 +1133,6 @@ class VarCompatObj:
                                                context=self.__v1_context))
         # end if
         return (forward_transform, reverse_transform)
-
-    def _get_vert_transforms(self, var1_dims, var2_dims):
-        transforms = None
-        dim1 = find_vertical_dimension(var1_dims)[0]
-        dim2 = find_vertical_dimension(var2_dims)[0]
-        print("_get_vert_transforms dim1: ",dim1)
-        print("_get_vert_transforms dim2: ",dim2)
-        print(self.find_variable(standard_name='vertical_layer_dimension', any_scope=False))
-
-        return transforms
-        #indices = [':']*tmp_var.get_rank()
-        #dim = find_vertical_dimension(var.get_dimensions())[0]
-        #for dpart in dim.split(':'):
-        #    if (dpart in var_local["std_name"]):
-        #        vli = 1
-        #        if (compat_obj.has_dim_transforms):
-        #            indices[find_vertical_dimension(var.get_dimensions())[1]] = var_local["local_name"][vli] + ':1:-1'
-        #        else:
-        #            indices[find_vertical_dimension(var.get_dimensions())[1]] = '1:' + var_local["local_name"][vli]
-
 
     def _get_dim_transforms(self, var1_dims, var2_dims):
         """Attempt to find forward and reverse permutations for transforming a

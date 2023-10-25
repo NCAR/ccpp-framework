@@ -1197,7 +1197,7 @@ class Scheme(SuiteObject):
                 tmp_var = var.clone(var.get_prop_value('local_name')+'_local')
                 self.__group.manage_variable(tmp_var)
 
-                # Move this piece somewhere!
+                # Create indices for vertical flipping (if needed)
                 indices = [':']*var.get_rank()
                 dim = find_vertical_dimension(var.get_dimensions())[0]
                 for dpart in dim.split(':'):
@@ -1208,11 +1208,13 @@ class Scheme(SuiteObject):
                         else:
                             indices[find_vertical_dimension(var.get_dimensions())[1]] = '1:' + var_local["local_name"][vli]
 
+                # Add any forward transforms.
                 if (var.get_prop_value('intent') != 'in'):
                     self.__forward_transforms.append(
                         compat_obj.forward_transform(lvar_lname=var.get_prop_value('local_name'),
                                                      rvar_lname=tmp_var.get_prop_value('local_name'),
                                                      indices=indices))
+                # Add any reverse transforms.
                 self.__reverse_transforms.append(
                     compat_obj.reverse_transform(lvar_lname=tmp_var.get_prop_value('local_name'),
                                                  rvar_lname=var.get_prop_value('local_name'),
