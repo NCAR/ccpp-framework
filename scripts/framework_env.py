@@ -165,6 +165,10 @@ class CCPPFrameworkEnv:
         # We always need a kind_phys so add a default if necessary
         if "kind_phys" not in self.__kind_dict:
             self.__kind_dict["kind_phys"] = "REAL64"
+        if "kind_dbl_prec" not in self.__kind_dict:
+            self.__kind_dict["kind_dbl_prec"] = "REAL64"
+        if "kind_sngl_prec" not in self.__kind_dict:
+            self.__kind_dict["kind_sngl_prec"] = "REAL32"
         # end if
         if ndict and ('use_error_obj' in ndict):
             self.__use_error_obj = ndict['use_error_obj']

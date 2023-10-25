@@ -48,7 +48,7 @@
   units = um
   dimensions = (horizontal_loop_extent,vertical_layer_dimension)
   type = real
-  kind = kind_phys
+  kind = kind_dbl_prec
   intent = inout
   top_at_one = .true.
 [ errmsg ]
