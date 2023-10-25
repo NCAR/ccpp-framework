@@ -1193,17 +1193,17 @@ class Scheme(SuiteObject):
                 # end if
             # end if
             # Are there any forward/reverse transforms for this variable?
-            if compat_obj is not None and (compat_obj.has_dim_transforms or compat_obj.has_unit_transforms):
+            if compat_obj is not None and (compat_obj.has_vert_transforms or compat_obj.has_unit_transforms):
                 tmp_var = var.clone(var.get_prop_value('local_name')+'_local')
                 self.__group.manage_variable(tmp_var)
 
                 # Move this piece somewhere!
-                indices = [':']*tmp_var.get_rank()
+                indices = [':']*var.get_rank()
                 dim = find_vertical_dimension(var.get_dimensions())[0]
                 for dpart in dim.split(':'):
                     if (dpart in var_local["std_name"]):
-                        vli = 1
-                        if (compat_obj.has_dim_transforms):
+                        vli = var_local["std_name"].index(dpart)
+                        if (compat_obj.has_vert_transforms):
                             indices[find_vertical_dimension(var.get_dimensions())[1]] = var_local["local_name"][vli] + ':1:-1'
                         else:
                             indices[find_vertical_dimension(var.get_dimensions())[1]] = '1:' + var_local["local_name"][vli]

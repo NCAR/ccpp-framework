@@ -843,9 +843,7 @@ class VarCompatObj:
         self.__dim_transforms = None
         self.__kind_transforms = None
         self.__unit_transforms = None
-        self.__has_dim_transforms = False
-        self.__has_kind_transforms = False
-        self.__has_unit_transforms = False
+        self.has_vert_transforms = False
         incompat_reason = list()
         # First, check for fatal incompatibilities
         if var1_stdname != var2_stdname:
@@ -912,10 +910,23 @@ class VarCompatObj:
             # end if
         # end if
         if self.__compat:
-            # Check dimensions
+            # Check for vertical array flipping (do later)
             if var1_top or var2_top:
-                self.__compat             = True
-                self.__has_dim_transforms = True
+                self.__compat            = True
+                self.has_vert_transforms = True
+            # end if
+        # end if
+        if self.__compat:
+            # Check dimensions
+            ##XXgoldyXX: For now, we always have to create a dimension
+            ##           transform because we do not know if the vertical
+            ##           dimension is flipped.
+            if var1_dims or var2_dims:
+                _, vdim_ind = find_vertical_dimension(var1_dims)
+                if (var1_dims != var2_dims) or (vdim_ind >= 0):
+                    self.__dim_transforms = self._get_dim_transforms(var1_dims,
+                                                                     var2_dims)
+                    self.__compat = self.__dim_transforms is not None
                 # end if
             # end if
             if not self.__compat:
@@ -1128,6 +1139,26 @@ class VarCompatObj:
                                                context=self.__v1_context))
         # end if
         return (forward_transform, reverse_transform)
+
+    def _get_vert_transforms(self, var1_dims, var2_dims):
+        transforms = None
+        dim1 = find_vertical_dimension(var1_dims)[0]
+        dim2 = find_vertical_dimension(var2_dims)[0]
+        print("_get_vert_transforms dim1: ",dim1)
+        print("_get_vert_transforms dim2: ",dim2)
+        print(self.find_variable(standard_name='vertical_layer_dimension', any_scope=False))
+
+        return transforms
+        #indices = [':']*tmp_var.get_rank()
+        #dim = find_vertical_dimension(var.get_dimensions())[0]
+        #for dpart in dim.split(':'):
+        #    if (dpart in var_local["std_name"]):
+        #        vli = 1
+        #        if (compat_obj.has_dim_transforms):
+        #            indices[find_vertical_dimension(var.get_dimensions())[1]] = var_local["local_name"][vli] + ':1:-1'
+        #        else:
+        #            indices[find_vertical_dimension(var.get_dimensions())[1]] = '1:' + var_local["local_name"][vli]
+
 
     def _get_dim_transforms(self, var1_dims, var2_dims):
         """Attempt to find forward and reverse permutations for transforming a
@@ -1348,10 +1379,7 @@ class VarCompatObj:
         The reverse dimension transformation is a permutation of the indices of
            the second variable to the first.
         """
-        result = False
-        if (self.__dim_transforms is not None): result = True
-        if (self.__has_dim_transforms): result = True
-        return result
+        return self.__dim_transforms is not None
 
     @property
     def has_kind_transforms(self):
@@ -1363,10 +1391,7 @@ class VarCompatObj:
         The reverse kind transformation is a string representation of the
            kind of the first variable.
         """
-        result = False
-        if (self.__kind_transforms is not None): result = True
-        if (self.__has_kind_transforms): result = True
-        return result
+        return self.__kind_transforms is not None
 
     @property
     def has_unit_transforms(self):
@@ -1381,10 +1406,7 @@ class VarCompatObj:
            and <var> arguments to produce code to transform one variable into
            the correct units of the other.
         """
-        result = False
-        if (self.__unit_transforms is not None): result = True
-        if (self.__has_unit_transforms): result = True
-        return result
+        return self.__unit_transforms is not None
 
     def __bool__(self):
         """Return True if this object describes two Var objects which are
