@@ -1064,8 +1064,6 @@ class Scheme(SuiteObject):
         self.__lib = scheme_xml.get('lib', None)
         self.__has_vertical_dimension = False
         self.__group = None
-        self.__alloc_transforms   = list()
-        self.__depend_transforms  = list()
         self.__forward_transforms = list()
         self.__reverse_transforms = list()
         super().__init__(name, context, parent, run_env, active_call_list=True)
@@ -1198,25 +1196,14 @@ class Scheme(SuiteObject):
             if compat_obj is not None and (compat_obj.has_vert_transforms or compat_obj.has_unit_transforms):
                 # Add local variable (<var>_local) needed for transformation.
                 tmp_var = var.clone(var.get_prop_value('local_name')+'_local')
-                alloc_stmt = "allocate({}({}))"
-                self.__alloc_transforms.append(alloc_stmt.format(var.get_prop_value('local_name')+'_local',''))
                 self.__group.manage_variable(tmp_var)
 
-                # Add local variable (<var>_nlay) needed for vertical flipping.
+                # Create indices, flipping if necessary.
                 indices = [':']*var.get_rank()
                 if compat_obj.has_vert_transforms:
-                    verti_var = Var({'local_name':var.get_prop_value('local_name')+'_nlay',
-                                     'standard_name':var.get_prop_value('local_name')+'_nlay',
-                                     'type':'integer', 'units':'count', 
-                                     'dimensions':'()'}, _API_LOCAL, self.run_env)
-                    self.__group.manage_variable(verti_var)
-                    # Set indices for vertical flipping.
                     dim = find_vertical_dimension(var.get_dimensions())
-                    for dpart in dim[0].split(':'):
-                        indices[dim[1]] = var.get_prop_value('local_name')+'_nlay:1:-1'
-                    # Create statement for use in write stage.
-                    write_stmt = var.get_prop_value('local_name')+"_nlay = size({},{})"
-                    self.__depend_transforms.append(write_stmt.format(var.get_prop_value('local_name'),dim[1]+1))
+                    lvar = 'nlev'
+                    indices[dim[1]] = lvar+':1:-1'
 
                 # Add any forward transforms.
                 if (var.get_prop_value('intent') != 'in'):
@@ -1225,10 +1212,11 @@ class Scheme(SuiteObject):
                                                      rvar_lname=tmp_var.get_prop_value('local_name'),
                                                      indices=indices))
                 # Add any reverse transforms.
-                self.__reverse_transforms.append(
-                    compat_obj.reverse_transform(lvar_lname=tmp_var.get_prop_value('local_name'),
-                                                 rvar_lname=var.get_prop_value('local_name'),
-                                                 indices=indices))
+                if (var.get_prop_value('intent') != 'out'):
+                    self.__reverse_transforms.append(
+                        compat_obj.reverse_transform(lvar_lname=tmp_var.get_prop_value('local_name'),
+                                                     rvar_lname=var.get_prop_value('local_name'),
+                                                     indices=indices))
         # end for
         if self.needs_vertical is not None:
             self.parent.add_part(self, replace=True) # Should add a vloop
@@ -1254,10 +1242,6 @@ class Scheme(SuiteObject):
         stmt = 'call {}({})'
         # Write the scheme call.
         outfile.write('if ({} == 0) then'.format(errcode), indent)
-        # Write any allocate statements needed for transforms.
-        #for alloc_transform   in self.__alloc_transforms:   outfile.write(alloc_transform, indent+1)
-        # Write any dependencies needed for transforms.
-        for depend_transform  in self.__depend_transforms:  outfile.write(depend_transform, indent+1)
         # Write any reverse transforms.
         for reverse_transform in self.__reverse_transforms: outfile.write(reverse_transform, indent+1)
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
