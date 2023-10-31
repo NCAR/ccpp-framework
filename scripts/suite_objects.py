@@ -1202,8 +1202,10 @@ class Scheme(SuiteObject):
                 indices = [':']*var.get_rank()
                 if compat_obj.has_vert_transforms:
                     dim = find_vertical_dimension(var.get_dimensions())
-                    lvar = 'nlev'
-                    indices[dim[1]] = lvar+':1:-1'
+                    vdim_name = vert_dim.split(':')[-1]
+                    group_vvar = self.__group.call_list.find_variable(vdim_name)
+                    vname = group_vvar.get_prop_value('local_name')
+                    indices[dim[1]] = vname+':1:-1'
 
                 # Add any forward transforms.
                 if (var.get_prop_value('intent') != 'in'):
