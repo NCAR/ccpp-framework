@@ -117,8 +117,14 @@ class Var:
     ['Bob', 'Ray']
     >>> Var.get_prop('active') #doctest: +ELLIPSIS
     <var_props.VariableProperty object at 0x...>
+    >>> Var.get_prop('active').get_default_val({})
+    '.true.'
     >>> Var.get_prop('active').valid_value('flag_for_aerosol_physics')
     'flag_for_aerosol_physics'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'DDT', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('active')
+    '.true.'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in', 'active' : 'child_is_home==.true.'}, ParseSource('vname', 'DDT', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('active')
+    'child_is_home==.true.'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('long_name')
     'Hi mom'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('intent')
@@ -197,9 +203,9 @@ class Var:
                     VariableProperty('active', str, optional_in=True,
                                      default_in='.true.'),
                     VariableProperty('polymorphic', bool, optional_in=True,
-                                     default_in='.false.'),
+                                     default_in=False),
                     VariableProperty('target', bool, optional_in=True,
-                                     default_in='.false.')]
+                                     default_in=False)]
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,
@@ -502,7 +508,7 @@ class Var:
             pvalue = self._prop_dict[name]
         elif name in Var.__var_propdict:
             vprop = Var.__var_propdict[name]
-            if vprop.has_default_func:
+            if vprop.optional:
                 pvalue = vprop.get_default_val(self._prop_dict,
                                                context=self.context)
             else:
