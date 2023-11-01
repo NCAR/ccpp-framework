@@ -243,14 +243,16 @@ CONTAINS
 
    !#######################################################################
 
-   subroutine append_errvars(errcode_val, errmsg_val, errcode, errmsg)
+   subroutine append_errvars(errcode_val, errmsg_val, subname, errcode, errmsg, caller)
       ! Append to error variables, if present
 
       ! Dummy arguments
       integer,           intent(in)    :: errcode_val
       character(len=*),  intent(in)    :: errmsg_val
+      character(len=*),  intent(in)    :: subname
       integer,          optional, intent(inout) :: errcode
       character(len=*), optional, intent(inout) :: errmsg
+      character(len=*), optional, intent(in)    :: caller
       ! Local variable
       integer :: emsg_len
 
@@ -263,45 +265,51 @@ CONTAINS
             errmsg(emsg_len+1:) = '; '
          end if
          emsg_len = len_trim(errmsg)
-         errmsg(emsg_len+1:) = trim(errmsg_val)
+         if (present(caller)) then
+            errmsg(emsg_len+1:) = trim(caller)//" "//trim(errmsg_val)
+         else
+            errmsg(emsg_len+1:) = trim(subname)//" "//trim(errmsg_val)
+         end if
       end if
    end subroutine append_errvars
 
    !#######################################################################
 
-   subroutine handle_allocate_error(astat, fieldname, errcode, errmsg)
+   subroutine handle_allocate_error(astat, fieldname, subname, errcode, errmsg)
       ! Generate an error message if <astat> indicates an allocation failure
 
       ! Dummy arguments
       integer,                    intent(in)  :: astat
       character(len=*),           intent(in)  :: fieldname
+      character(len=*),           intent(in)  :: subname
       integer,          optional, intent(out) :: errcode
       character(len=*), optional, intent(out) :: errmsg
 
       call initialize_errvars(errcode, errmsg)
       if (astat /= 0) then
          call append_errvars(astat, "Error allocating ccpp_constituent_properties_t object component " // &
-              trim(fieldname) // ", error code = " // to_str(astat), errcode=errcode, errmsg=errmsg)
+              trim(fieldname) // ", error code = " // to_str(astat), subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine handle_allocate_error
 
    !#######################################################################
 
-   subroutine check_var_bounds(var, var_bound, varname, errcode, errmsg)
+   subroutine check_var_bounds(var, var_bound, varname, subname, errcode, errmsg)
       ! Generate an error message if <astat> indicates an allocation failure
 
       ! Dummy arguments
       integer,                    intent(in)  :: var
       integer,                    intent(in)  :: var_bound
       character(len=*),           intent(in)  :: varname
+      character(len=*),           intent(in)  :: subname
       integer,          optional, intent(out) :: errcode
       character(len=*), optional, intent(out) :: errmsg
 
       call initialize_errvars(errcode, errmsg)
       if (var > var_bound) then
          call append_errvars(1, trim(varname)//" exceeds its upper bound, " // &
-              to_str(var_bound),  errcode=errcode, errmsg=errmsg)
+              to_str(var_bound), subname, errcode=errcode, errmsg=errmsg)
       end if
    end subroutine check_var_bounds
 
@@ -331,12 +339,13 @@ CONTAINS
       class(ccpp_constituent_properties_t), intent(in)  :: this
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
+      character(len=*), parameter :: subname = 'ccp_is_instantiated'
 
       ccp_is_instantiated = allocated(this%var_std_name)
       call initialize_errvars(errcode, errmsg)
       if (.not. ccp_is_instantiated) then
          call append_errvars(1, "ccpp_constituent_properties_t object is not initialized", &
-              errcode=errcode, errmsg=errmsg)
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end function ccp_is_instantiated
@@ -559,13 +568,14 @@ CONTAINS
       integer,                              intent(in)    :: index
       integer,          optional,           intent(out)   :: errcode
       character(len=*), optional,           intent(out)   :: errmsg
+      character(len=*), parameter :: subname = 'ccp_set_const_index'
 
       if (this%is_instantiated(errcode, errmsg)) then
          if (this%const_ind == int_unassigned) then
             this%const_ind = index
          else
             call append_errvars(1, "ccpp_constituent_properties_t const index " // &
-                 "is already set", errcode=errcode, errmsg=errmsg)
+                 "is already set", subname, errcode=errcode, errmsg=errmsg)
          end if
       end if
 
@@ -854,7 +864,7 @@ CONTAINS
       ! Use an initialized hash table as double check
       if (this%hash_table%is_initialized()) then
          ccp_model_const_locked = this%table_locked .and. this%data_locked
-         if ( (.not. (this%table_locked .and. this%data_locked)) .and.                                 &
+         if ( (.not. (this%table_locked .and. this%data_locked)) .and.        &
               present(errmsg) .and. present(warn_func)) then
             ! Write a warning as a courtesy to calling function but do not set
             !   errcode (let caller decide).
@@ -862,15 +872,8 @@ CONTAINS
                  ' WARNING: Model constituents not ready to use'
          end if
       else
-         if (present(warn_func)) then
-            call append_errvars(1, trim(warn_func) //                         &
-                 " WARNING: Model constituents not initialized",              &
-                 errcode=errcode, errmsg=errmsg)
-         else
-            call append_errvars(1, subname //                                 &
-                 " WARNING: Model constituents not initialized",              &
-                 errcode=errcode, errmsg=errmsg)
-         end if
+         call append_errvars(1, "WARNING: Model constituents not initialized",  &
+              subname, errcode=errcode, errmsg=errmsg, caller=warn_func)
       end if
 
    end function ccp_model_const_locked
@@ -901,15 +904,9 @@ CONTAINS
                  ' WARNING: Model constituent properties not ready to use'
          end if
       else
-         if (present(warn_func)) then
-            call append_errvars(1, trim(warn_func) //                         &
-                 " WARNING: Model constituent properties not initialized",    &
-                 errcode=errcode, errmsg=errmsg)
-         else
-            call append_errvars(1, subname //                                 &
-                 " WARNING: Model constituent properties not initialized",    &
-                 errcode=errcode, errmsg=errmsg)
-         end if
+         call append_errvars(1,                                           &
+              "WARNING: Model constituent properties not initialized",    &
+              subname, errcode=errcode, errmsg=errmsg, caller=warn_func)
       end if
 
    end function ccp_model_const_props_locked
@@ -936,19 +933,13 @@ CONTAINS
               present(errmsg) .and. present(warn_func)) then
             ! Write a warning as a courtesy to calling function but do not set
             !   errcode (let caller decide).
-            write(errmsg, *) trim(warn_func),                                 &
+            write(errmsg, *) trim(warn_func),                              &
                  ' WARNING: Model constituent data not ready to use'
          end if
       else
-         if (present(warn_func)) then
-            call append_errvars(1, trim(warn_func) //                         &
-                 " WARNING: Model constituent data not initialized",          &
-                 errcode=errcode, errmsg=errmsg)
-         else
-            call append_errvars(1, subname //                                 &
-                 " WARNING: Model constituent data not initialized",          &
-                 errcode=errcode, errmsg=errmsg)
-         end if
+         call append_errvars(1,                                           &
+              "WARNING: Model constituent data not initialized",          &
+              subname, errcode=errcode, errmsg=errmsg, caller=warn_func)
       end if
 
    end function ccp_model_const_data_locked
@@ -975,26 +966,14 @@ CONTAINS
               errmsg=errmsg, warn_func=subname) .or. this%const_data_locked(errcode=errcode, &
               errmsg=errmsg, warn_func=subname))
          if (.not. ccp_model_const_okay_to_add) then
-            if (present(warn_func)) then
-               call append_errvars(1, trim(warn_func) //                      &
-                    " WARNING: Model constituents are locked",                &
-                    errcode=errcode, errmsg=errmsg)
-            else
-               call append_errvars(1, subname //                              &
-                    " WARNING: Model constituents are locked",                &
-                    errcode=errcode, errmsg=errmsg)
-            end if
+            call append_errvars(1,                                        &
+                 "WARNING: Model constituents are locked",                &
+                 subname, errcode=errcode, errmsg=errmsg, caller=warn_func)
          end if
       else
-         if (present(warn_func)) then
-            call append_errvars(1, trim(warn_func) //                         &
-                 " WARNING: Model constituents not initialized",              &
-                 errcode=errcode, errmsg=errmsg)
-         else
-            call append_errvars(1, subname //                                 &
-                 " WARNING: Model constituents not initialized",              &
-                 errcode=errcode, errmsg=errmsg)
-         end if
+         call append_errvars(1,                                           &
+              "WARNING: Model constituents not initialized",              &
+              subname, errcode=errcode, errmsg=errmsg, caller=warn_func)
       end if
 
    end function ccp_model_const_okay_to_add
@@ -1019,7 +998,7 @@ CONTAINS
 !!XXgoldyXX: Add check on key to see if incompatible item already there.
          call this%hash_table%add_hash_key(field_data, error)
          if (len_trim(error) > 0) then
-            call append_errvars(1, trim(error), errcode=errcode, errmsg=errmsg)
+            call append_errvars(1, trim(error), subname, errcode=errcode, errmsg=errmsg)
          else
             ! If we get here we are successful, add to variable count
             if (field_data%is_layer_var()) then
@@ -1031,16 +1010,15 @@ CONTAINS
                   if (errcode /= 0) then
                      call append_errvars(1,                                   &
                           "ERROR: Unknown vertical dimension, '" //           &
-                          trim(error) // "'",                                 &
+                          trim(error) // "'", subname,                        &
                           errcode=errcode, errmsg=errmsg)
                   end if
                end if
             end if
          end if
       else
-         call append_errvars(1, subname //                                    &
-              "WARNING: Model constituents are locked",                       &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, "WARNING: Model constituents are locked",     &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccp_model_const_add_metadata
@@ -1091,15 +1069,15 @@ CONTAINS
       nullify(cprop)
       hval => this%hash_table%table_value(standard_name, errmsg=error)
       if (len_trim(error) > 0) then
-         call append_errvars(1, subname // ": "//trim(error), errcode=errcode, &
-              errmsg=errmsg)
+         call append_errvars(1, trim(error), subname,                  &
+              errcode=errcode, errmsg=errmsg)
       else
          select type(hval)
          type is (ccpp_constituent_properties_t)
             cprop => hval
          class default
-            call append_errvars(1, subname // " ERROR: Bad hash table value " // &
-                 trim(standard_name), errcode=errcode, errmsg=errmsg)
+            call append_errvars(1, "ERROR: Bad hash table value " //   &
+                 trim(standard_name), subname, errcode=errcode, errmsg=errmsg)
          end select
       end if
 
@@ -1130,9 +1108,9 @@ CONTAINS
       astat = 0
       errcode_local = 0
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
-         call append_errvars(1, subname //                                        &
-              " WARNING: Model constituents properties already locked, ignoring", &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1,                                                  &
+              "WARNING: Model constituents properties already locked, ignoring", &
+              subname, errcode=errcode, errmsg=errmsg)
          errcode_local = 1
       else
          ! Make sure everything is really initialized
@@ -1142,7 +1120,7 @@ CONTAINS
          num_vars = this%hash_table%num_values()
          allocate(this%const_metadata(num_vars), stat=astat)
          call handle_allocate_error(astat, 'const_metadata',                  &
-              errcode=errcode, errmsg=errmsg)
+              subname, errcode=errcode, errmsg=errmsg)
          ! We want to pack the advected constituents at the beginning of
          !   the field array so we need to know how many there are
          if (astat == 0) then
@@ -1165,11 +1143,10 @@ CONTAINS
             end do
             ! Sanity check on num_advect
             if (this%num_advected_vars > num_vars) then
-               call append_errvars(1, subname //                              &
-                    " ERROR: num_advected_vars index " //                     &
+               call append_errvars(1, "ERROR: num_advected_vars index " //    &
                     to_str(this%num_advected_vars) //                         &
                     " out of bounds " // to_str(num_vars),                    &
-                    errcode=errcode, errmsg=errmsg)
+                    subname, errcode=errcode, errmsg=errmsg)
                errcode_local = 1
             end if
          end if
@@ -1188,10 +1165,10 @@ CONTAINS
                      if (check) then
                         index_advect = index_advect + 1
                         if (index_advect > this%num_advected_vars) then
-                           call append_errvars(1, subname // " ERROR: const a index " //  &
-                                to_str(index_advect) // " out of bounds " //              &
-                                to_str(this%num_advected_vars),                           &
-                                errcode=errcode, errmsg=errmsg)
+                           call append_errvars(1, "ERROR: const a index " //  &
+                                to_str(index_advect) // " out of bounds " //  &
+                                to_str(this%num_advected_vars),               &
+                                subname, errcode=errcode, errmsg=errmsg)
                            errcode_local = errcode_local + 1
                            exit
                         end if
@@ -1201,9 +1178,10 @@ CONTAINS
                      else
                         index_const = index_const + 1
                         if (index_const > num_vars) then
-                           call append_errvars(1, subname // " ERROR: const v index " //      &
-                                to_str(index_const) // " out of bounds " // to_str(num_vars), &
-                                errcode=errcode, errmsg=errmsg)
+                           call append_errvars(1, "ERROR: const v index " //  &
+                                to_str(index_const) // " out of bounds " //   &
+                                to_str(num_vars), subname, errcode=errcode,   &
+                                errmsg=errmsg)
                            errcode_local = errcode_local + 1
                            exit
                         end if
@@ -1215,14 +1193,14 @@ CONTAINS
                      if (.not. cprop%is_layer_var()) then
                         call cprop%vertical_dimension(dimname,                &
                              errcode=errcode, errmsg=errmsg)
-                        call append_errvars(1, subname // " ERROR: Bad vertical dimension, '" // &
-                             trim(dimname), errcode=errcode, errmsg=errmsg)
+                        call append_errvars(1, "ERROR: Bad vertical dimension, '" // &
+                             trim(dimname), subname, errcode=errcode, errmsg=errmsg)
                         errcode_local = errcode_local + 1
                         exit
                      end if
                   class default
-                     call append_errvars(1, subname // " ERROR: Bad hash table value",           &
-                          errcode=errcode, errmsg=errmsg)
+                     call append_errvars(1, "ERROR: Bad hash table value",    &
+                          subname, errcode=errcode, errmsg=errmsg)
                      errcode_local = errcode_local + 1
                      exit
                   end select
@@ -1233,16 +1211,16 @@ CONTAINS
             end do
             ! Some size sanity checks
             if (index_const /= this%hash_table%num_values()) then
-               call append_errvars(1, subname //                                     &
-                    " ERROR: Too few constituents " // to_str(index_const) //        &
-                    " found in hash table " // to_str(this%hash_table%num_values()), &
+               call append_errvars(1, "ERROR: Too few constituents "//        &
+                    to_str(index_const) // " found in hash table " //         &
+                    to_str(this%hash_table%num_values()), subname,            &
                     errcode=errcode, errmsg=errmsg)
                errcode_local = errcode_local + 1
             end if
             if (index_advect /= this%num_advected_vars) then
-               call append_errvars(1, subname //                                       &
-                    " ERROR: Too few advected constituents " // to_str(index_const) // &
-                    " found in hash table " // to_str(this%hash_table%num_values()),   &
+               call append_errvars(1, "ERROR: Too few advected constituents " // &
+                    to_str(index_const) // " found in hash table " //            &
+                    to_str(this%hash_table%num_values()), subname,               &
                     errcode=errcode, errmsg=errmsg)
                errcode_local = errcode_local + 1
             end if
@@ -1277,26 +1255,26 @@ CONTAINS
 
       errcode_local = 0
       if (this%const_data_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
-         call append_errvars(1, subname //                                 &
-              " WARNING: Model constituent data already locked, ignoring", &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1,                                              &
+              "WARNING: Model constituent data already locked, ignoring",    &
+              subname, errcode=errcode, errmsg=errmsg)
          errcode_local = errcode_local + 1
       else if (.not. this%const_props_locked(errcode=errcode, errmsg=errmsg, &
                 warn_func=subname)) then
-         call append_errvars(1, subname //                                       &
-              " WARNING: Model constituent properties not yet locked, ignoring", &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1,                                              &
+              "WARNING: Model constituent properties not yet locked, ignoring", &
+              subname, errcode=errcode, errmsg=errmsg)
          errcode_local = errcode_local + 1
       else
          allocate(this%vars_layer(ncols, num_layers, this%hash_table%num_values()),         &
               stat=astat)
          call handle_allocate_error(astat, 'vars_layer',                   &
-              errcode=errcode, errmsg=errmsg)
+              subname, errcode=errcode, errmsg=errmsg)
          errcode_local = astat
          if (astat == 0) then
             allocate(this%vars_minvalue(this%hash_table%num_values()), stat=astat)
             call handle_allocate_error(astat, 'vars_minvalue',             &
-                 errcode=errcode, errmsg=errmsg)
+                 subname, errcode=errcode, errmsg=errmsg)
             errcode_local = astat
          end if
          if (errcode_local == 0) then
@@ -1519,39 +1497,39 @@ CONTAINS
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
-                  call append_errvars(1, subname //                           &
+                  call append_errvars(1,                                      &
                        ": Too many constituents for <const_array>",           &
-                       errcode=errcode, errmsg=errmsg)
+                       subname, errcode=errcode, errmsg=errmsg)
                   exit
                end if
                ! Copy this constituent's field data to <const_array>
                call this%const_metadata(index)%const_index(fld_ind)
                if (fld_ind /= index) then
                   call this%const_metadata(index)%standard_name(std_name)
-                  call append_errvars(1, subname//": ERROR: "//               &
+                  call append_errvars(1, ": ERROR: "//                        &
                        "bad field index, "//to_str(fld_ind)//                 &
                        " for '"//trim(std_name)//"', should have been "//     &
-                       to_str(index), errcode=errcode, errmsg=errmsg)
+                       to_str(index), subname, errcode=errcode, errmsg=errmsg)
                   exit
                else if (this%const_metadata(index)%is_layer_var()) then
                   if (this%num_layers == num_levels) then
                      const_array(:,:,cindex) = this%vars_layer(:,:,fld_ind)
                   else
                      call this%const_metadata(index)%standard_name(std_name)
-                     call append_errvars(1, subname//": ERROR: "//            &
+                     call append_errvars(1, ": ERROR: "//                     &
                           "Wrong number of vertical levels for '"//           &
                           trim(std_name)//"', "//to_str(num_levels)//         &
                           ", expected "//to_str(this%num_layers),             &
-                          errcode=errcode, errmsg=errmsg)
+                          subname, errcode=errcode, errmsg=errmsg)
                      exit
                   end if
                else
                   call this%const_metadata(index)%standard_name(std_name)
-                  call append_errvars(1, subname//": Unsupported var type,"// &
+                  call append_errvars(1, ": Unsupported var type,"//          &
                        " wrong number of vertical levels for '"//             &
                        trim(std_name)//"', "//to_str(num_levels)//            &
                        ", expected"//to_str(this%num_layers),                 &
-                       errcode=errcode, errmsg=errmsg)
+                       subname, errcode=errcode, errmsg=errmsg)
                   exit
                end if
             end if
@@ -1595,39 +1573,39 @@ CONTAINS
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
-                  call append_errvars(1, subname//                            &
+                  call append_errvars(1,                                      &
                        ": Too many constituents for <const_array>",           &
-                       errcode=errcode, errmsg=errmsg)
+                       subname, errcode=errcode, errmsg=errmsg)
                   exit
                end if
                ! Copy this field of to <const_array> to constituent's field data
                call this%const_metadata(index)%const_index(fld_ind)
                if (fld_ind /= index) then
                   call this%const_metadata(index)%standard_name(std_name)
-                  call append_errvars(1, subname//": ERROR: "//               &
+                  call append_errvars(1, ": ERROR: "//                        &
                        "bad field index, "//to_str(fld_ind)//                 &
                        " for '"//trim(std_name)//"', should have been"//      &
-                       to_str(index), errcode=errcode, errmsg=errmsg)
+                       to_str(index), subname, errcode=errcode, errmsg=errmsg)
                   exit
                else if (this%const_metadata(index)%is_layer_var()) then
                   if (this%num_layers == num_levels) then
                      this%vars_layer(:,:,fld_ind) = const_array(:,:,cindex)
                   else
                      call this%const_metadata(index)%standard_name(std_name)
-                     call append_errvars(1, subname//                         &
+                     call append_errvars(1,                                   &
                           ": Wrong number of vertical levels for '"//         &
                           trim(std_name)//"', "//to_str(num_levels)//         &
                           ", expected"//to_str(this%num_layers),              &
-                          errcode=errcode, errmsg=errmsg)
+                          subname, errcode=errcode, errmsg=errmsg)
                      exit
                   end if
                else
                   call this%const_metadata(index)%standard_name(std_name)
-                  call append_errvars(1, subname//": Unsupported var type,"// &
+                  call append_errvars(1, ": Unsupported var type,"//          &
                        " wrong number of vertical levels for'"//              &
                        trim(std_name)//"', "//to_str(num_levels)//            &
                        ", expected "//to_str(this%num_layers),                &
-                       errcode=errcode, errmsg=errmsg)
+                       subname, errcode=errcode, errmsg=errmsg)
                   exit
                end if
             end if
@@ -1726,8 +1704,8 @@ CONTAINS
          call this%prop%standard_name(std_name, errcode, errmsg)
       else
          std_name = ''
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_get_standard_name
@@ -1749,8 +1727,8 @@ CONTAINS
          call this%prop%long_name(long_name, errcode, errmsg)
       else
          long_name = ''
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_get_long_name
@@ -1774,8 +1752,8 @@ CONTAINS
          end if
       else
          vert_dim = ''
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_get_vertical_dimension
@@ -1857,8 +1835,8 @@ CONTAINS
          index = this%prop%const_index(errcode, errmsg)
       else
          index = int_unassigned
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_const_index
@@ -1879,8 +1857,8 @@ CONTAINS
          call this%prop%is_thermo_active(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_thermo_active
@@ -1901,8 +1879,8 @@ CONTAINS
          call this%prop%is_advected(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_advected
@@ -1923,8 +1901,8 @@ CONTAINS
          call this%prop%is_mass_mixing_ratio(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_mass_mixing_ratio
@@ -1945,8 +1923,8 @@ CONTAINS
          call this%prop%is_volume_mixing_ratio(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_volume_mixing_ratio
@@ -1967,8 +1945,8 @@ CONTAINS
          call this%prop%is_number_concentration(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_number_concentration
@@ -1989,8 +1967,8 @@ CONTAINS
          call this%prop%is_dry(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_dry
@@ -2011,8 +1989,8 @@ CONTAINS
          call this%prop%is_moist(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_moist
@@ -2033,8 +2011,8 @@ CONTAINS
          call this%prop%is_wet(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_is_wet
@@ -2055,8 +2033,8 @@ CONTAINS
          call this%prop%minimum(val_out, errcode, errmsg)
       else
          val_out = kphys_unassigned
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_min_val
@@ -2077,8 +2055,8 @@ CONTAINS
          call this%prop%molec_weight(val_out, errcode, errmsg)
       else
          val_out = kphys_unassigned
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_molec_weight
@@ -2099,8 +2077,8 @@ CONTAINS
          call this%prop%default_value(val_out, errcode, errmsg)
       else
          val_out = kphys_unassigned
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_default_value
@@ -2121,8 +2099,8 @@ CONTAINS
          call this%prop%has_default(val_out, errcode, errmsg)
       else
          val_out = .false.
-         call append_errvars(1, subname//": invalid constituent pointer",      &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",      &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_has_default
@@ -2141,6 +2119,7 @@ CONTAINS
       ! Local variables
       character(len=stdname_len) :: stdname
       character(len=errmsg_len)  :: errmsg2
+      character(len=*), parameter :: subname = 'ccpt_set'
 
       call initialize_errvars(errcode, errmsg)
       if (associated(this%prop)) then
@@ -2150,7 +2129,7 @@ CONTAINS
                  trim(stdname), "'"
          end if
          errcode = errcode + 1
-         call append_errvars(1, "ccpt_set: "//trim(errmsg2), errcode=errcode, &
+         call append_errvars(1, trim(errmsg2), subname, errcode=errcode,      &
               errmsg=errmsg)
       else
          this%prop => const_ptr
@@ -2193,14 +2172,14 @@ CONTAINS
             if (this%prop%const_ind == int_unassigned) then
                this%prop%const_ind = index
             else
-               call append_errvars(1, "ccpp_constituent_prop_ptr_t "//        &
-                    "const index is already set",                             &
-                    errcode=errcode, errmsg=errmsg)
+               call append_errvars(1, "ccpp_constituent_prop_ptr_t "//   &
+                    "const index is already set",                        &
+                    subname, errcode=errcode, errmsg=errmsg)
             end if
          end if
       else
-         call append_errvars(1, subname//": invalid constituent pointer",     &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",         &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_set_const_index
@@ -2225,8 +2204,8 @@ CONTAINS
             this%prop%thermo_active = thermo_flag
          end if
       else
-         call append_errvars(1, subname//": invalid constituent pointer",        &
-              errcode=errcode, errmsg=errmsg)
+         call append_errvars(1, ": invalid constituent pointer",         &
+              subname, errcode=errcode, errmsg=errmsg)
       end if
 
    end subroutine ccpt_set_thermo_active

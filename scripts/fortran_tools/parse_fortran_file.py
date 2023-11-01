@@ -582,8 +582,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, run_env):
                         raise CCPPError(msg.format(statement, ctx))
                     # End if
                     mheaders.append(ddt)
-                    if (run_env.logger and
-                        run_env.debug_on()):
+                    if run_env.debug_on():
                         ctx = context_string(pobj, nodir=True)
                         msg = 'Adding DDT {}{}'
                         run_env.logger.debug(msg.format(ddt.table_name, ctx))

@@ -783,6 +783,7 @@ class Var:
         Currently, an array of DDTs is not processed (return None) since
         Fortran does not support a way to reference those elements.
         """
+        element_names = None
         if self.is_ddt():
             dtitle = self.get_prop_value('type')
             if ddt_lib and (dtitle in ddt_lib):
@@ -798,6 +799,9 @@ class Var:
                 if not element_names:
                     element_names = None
                 # end if
+            else:
+                errmsg = f'No ddt_lib or ddt {dtitle} not in ddt_lib'
+                raise CCPPError(errmsg)
             # end if
         # end if
         children = self.children()

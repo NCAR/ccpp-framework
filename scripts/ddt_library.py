@@ -283,7 +283,7 @@ class DDTLibrary(dict):
                 ntx = context_string(dvar.context)
                 ctx = context_string(pvar.context)
                 emsg = f"Attempt to add duplicate DDT sub-variable, {stdname}{ntx}."
-                emsg += "\nVariable originally defined{ctx}"
+                emsg += f"\nVariable originally defined{ctx}"
                 raise CCPPError(emsg.format(stdname, ntx, ctx))
             # end if
             # Add this intrinsic to <var_dict>
