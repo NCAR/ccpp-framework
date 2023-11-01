@@ -340,9 +340,6 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Exercise
         scheme_headers, table_dict = parse_scheme_files(scheme_files,
                                                         self._run_env_ccpp)
-#        with self.assertRaises(CCPPError) as context:
-#             _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
-#        # Verify correct error messages returned
 
 if __name__ == "__main__":
     unittest.main()

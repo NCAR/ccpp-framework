@@ -83,7 +83,7 @@ def constituent_num_suite_subname(host_model):
 ###############################################################################
     """Return the name of the number of suite constituents for this run
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_num_suite_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_num_suite_constituents"
 
 ###############################################################################
 def constituent_register_subname(host_model):
@@ -91,7 +91,7 @@ def constituent_register_subname(host_model):
     """Return the name of the subroutine used to register the constituent
     properties for this run.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_register_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_register_constituents"
 
 ###############################################################################
 def constituent_initialize_subname(host_model):
@@ -99,7 +99,7 @@ def constituent_initialize_subname(host_model):
     """Return the name of the subroutine used to initialize the
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_initialize_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_initialize_constituents"
 
 ###############################################################################
 def constituent_num_consts_funcname(host_model):
@@ -107,7 +107,7 @@ def constituent_num_consts_funcname(host_model):
     """Return the name of the function to return the number of
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_number_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_number_constituents"
 
 ###############################################################################
 def query_scheme_constituents_funcname(host_model):
@@ -123,7 +123,7 @@ def constituent_copyin_subname(host_model):
     """Return the name of the subroutine to copy constituent fields to the
     host model.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_gather_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_gather_constituents"
 
 ###############################################################################
 def constituent_copyout_subname(host_model):
@@ -131,7 +131,7 @@ def constituent_copyout_subname(host_model):
     """Return the name of the subroutine to update constituent fields from
     the host model.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_update_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_update_constituents"
 
 ###############################################################################
 def unique_local_name(loc_name, host_model):
@@ -163,14 +163,14 @@ def constituent_model_object_name(host_model):
 def constituent_model_const_stdnames(host_model):
 ###############################################################################
     """Return the name of the array of constituent standard names"""
-    hstr = "{}_model_const_stdnames".format(host_model.name)
+    hstr = f"{host_model.name}_model_const_stdnames"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
 def constituent_model_const_indices(host_model):
 ###############################################################################
     """Return the name of the array of constituent field array indices"""
-    hstr = "{}_model_const_indices".format(host_model.name)
+    hstr = f"{host_model.name}_model_const_indices"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -178,7 +178,7 @@ def constituent_model_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
        array of all constituents"""
-    hstr = "{}_constituents_array".format(host_model.name)
+    hstr = f"{host_model.name}_constituents_array"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -186,14 +186,14 @@ def constituent_model_advected_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
        array of advected constituents"""
-    hstr = "{}_advected_constituents_array".format(host_model.name)
+    hstr = f"{host_model.name}_advected_constituents_array"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
 def constituent_model_const_props(host_model):
 ###############################################################################
     """Return the name of the array of constituent property object pointers"""
-    hstr = "{}_model_const_properties".format(host_model.name)
+    hstr = f"{host_model.name}_model_const_properties"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -201,7 +201,7 @@ def constituent_model_const_index(host_model):
 ###############################################################################
     """Return the name of the interface that returns the array index of
        a constituent array given its standard name"""
-    hstr = "{}_const_get_index".format(host_model.name)
+    hstr = f"{host_model.name}_const_get_index"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -239,7 +239,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     # Add entries for each constituent (once per standard name)
     const_stdnames = set()
     for suite in suite_list:
-        if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+        if run_env.debug_on():
             lmsg = "Adding constituents from {} to {}"
             run_env.logger.debug(lmsg.format(suite.name, host_model.name))
         # end if

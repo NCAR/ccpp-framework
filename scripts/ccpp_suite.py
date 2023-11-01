@@ -427,7 +427,7 @@ character(len=16) :: {css_var_name} = '{state}'
                 phase = RUN_PHASE_NAME
             # end if
             lmsg = "Group {}, schemes = {}"
-            if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+            if run_env.debug_on():
                 run_env.logger.debug(lmsg.format(item.name,
                                                  [x.name
                                                   for x in item.schemes()]))
@@ -490,7 +490,7 @@ character(len=16) :: {css_var_name} = '{state}'
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
         filename = '{module_name}.F90'.format(module_name=self.module)
-        if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+        if run_env.debug_on():
             run_env.logger.debug('Writing CCPP suite file, {}'.format(filename))
         # end if
         # Retrieve the name of the constituent module for Group use statements
@@ -841,11 +841,11 @@ class API(VarDictionary):
                         else:
                             inout_vars[0].add(stdname)
                         # end if
-                    elif (intent == 'out' and phase != 'initialize' and constituent
-                         and not const_initialized_in_physics[stdname]):
+                    elif constituent and (intent == 'out' and phase != 'initialize' and not
+                         const_initialized_in_physics[stdname]):
                         # constituents HAVE to be initialized in the init phase because the dycore needs to advect them
-                        emsg = "constituent variable '{}' cannot be initialized in the '{}' phase"
-                        raise CCPPError(emsg.format(stdname, phase))
+                        emsg = f"constituent variable '{stdname}' cannot be initialized in the '{phase}' phase"
+                        raise CCPPError(emsg)
                     elif intent == 'out' and constituent and phase == 'initialize':
                         const_initialized_in_physics[stdname] = True
                     elif intent == 'out':

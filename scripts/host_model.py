@@ -19,6 +19,7 @@ class HostModel(VarDictionary):
     def __init__(self, meta_tables, name_in, run_env):
         """Initialize this HostModel object.
         <meta_tables> is a dictionary of parsed host metadata tables.
+           - dictionary key is title of metadata argtable
         <name_in> is the name for this host model.
         <run_env> is the CCPPFrameworkEnv object for this framework run.
         """
@@ -150,7 +151,7 @@ class HostModel(VarDictionary):
     @property
     def constituent_module(self):
         """Return the name of host model constituent module"""
-        return "{}_ccpp_constituents".format(self.name)
+        return f"{self.name}_ccpp_constituents"
 
     def argument_list(self, loop_vars=True):
         """Return a string representing the host model variable arg list"""

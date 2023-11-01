@@ -25,7 +25,7 @@ from parse_checkers import check_units, check_dimensions, check_cf_standard_name
 from parse_checkers import check_default_value, check_valid_values, check_molar_mass
 from parse_log import init_log, set_log_level, flush_log
 from parse_log import set_log_to_stdout, set_log_to_null
-from parse_log import set_log_to_file
+from parse_log import set_log_to_file, debug_enabled
 from preprocess import PreprocStack
 from xml_tools import find_schema_file, find_schema_version
 from xml_tools import read_xml_file, validate_xml_file

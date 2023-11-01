@@ -176,9 +176,9 @@ def validate_xml_file(filename, schema_root, version, logger,
         schema_file = find_schema_file(schema_root, version, schema_path)
         if not (schema_file and os.path.isfile(schema_file)):
             verstring = '.'.join([str(x) for x in version])
-            emsg = """validate_xml_file: Cannot find schema for version {},
-            {} does not exist"""
-            raise CCPPError(emsg.format(verstring, schema_file))
+            emsg = f"""validate_xml_file: Cannot find schema for version {verstring},
+            {schema_file} does not exist"""
+            raise CCPPError(emsg)
         # end if
     # end if
     if not os.access(schema_file, os.R_OK):
@@ -256,16 +256,11 @@ class PrettyElementTree(ET.ElementTree):
               default_namespace=None, method="xml",
               short_empty_elements=True):
         """Subclassed write method to format output."""
-        if PYSUBVER >= 8:
-            et_str = ET.tostring(self.getroot(),
-                                 encoding=encoding, method=method,
-                                 xml_declaration=xml_declaration,
-                                 default_namespace=default_namespace,
-                                 short_empty_elements=short_empty_elements)
-        else:
-            et_str = ET.tostring(self.getroot(),
-                                 encoding=encoding, method=method,
-                                 short_empty_elements=short_empty_elements)
+        et_str = ET.tostring(self.getroot(),
+                             encoding=encoding, method=method,
+                             xml_declaration=xml_declaration,
+                             default_namespace=default_namespace,
+                             short_empty_elements=short_empty_elements)
         # end if
         fmode = 'wt'
         root = str(et_str, encoding="utf-8")

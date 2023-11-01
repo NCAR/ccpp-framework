@@ -792,8 +792,6 @@ class Var:
                 if not element_names:
                     element_names = None
                 # end if
-            else:
-                element_names = None
             # end if
         # end if
         children = self.children()

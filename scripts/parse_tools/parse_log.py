@@ -47,3 +47,7 @@ def flush_log(logger):
     """Flush all pending output from <logger>"""
     for handler in list(logger.handlers):
         handler.flush()
+
+def debug_enabled(logger):
+    """Return true if debug is enabled for this logger"""
+    return logger.isEnabledFor(logging.DEBUG)

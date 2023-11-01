@@ -9,7 +9,7 @@ module ddt1
    !! \htmlinclude ddt1_t.html
    !!
    type, public :: ddt1_t
-      integer,                 private :: num_vars = 0
+      integer,                 public  :: num_vars = 0
       real(kind_phys), allocatable     :: vars(:,:,:)
 
    end type ddt1_t

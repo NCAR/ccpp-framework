@@ -23,8 +23,8 @@ if not os.path.exists(_SCRIPTS_DIR):
 # end if
 
 if ((sys.version_info[0] < 3) or
-    (sys.version_info[0] == 3) and (sys.version_info[1] < 7)):
-    raise Exception("Python 3.7 or greater required")
+    (sys.version_info[0] == 3) and (sys.version_info[1] < 8)):
+    raise Exception("Python 3.8 or greater required")
 # end if
 
 sys.path.append(_SCRIPTS_DIR)
