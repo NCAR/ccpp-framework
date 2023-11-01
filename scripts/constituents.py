@@ -315,7 +315,7 @@ class ConstituentVarDict(VarDictionary):
                          f'advected={advect_str}',
                          f'errcode={errvar_names["ccpp_error_code"]}',
                          f'errmsg={errvar_names["ccpp_error_message"]}']
-            if default_value is not None:
+            if default_value is not None and default_value != '':
                 init_args.append(f'default_value={default_value}')
             stmt = 'call {}(index)%instantiate({})'
             outfile.write(f'if ({errvar_names["ccpp_error_code"]} == 0) then', indent+1)
