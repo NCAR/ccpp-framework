@@ -14,9 +14,9 @@ import xml.etree.ElementTree as ET
 
 from common import encode_container
 from common import CCPP_STAGES
-from common import CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
+from common import CCPP_T_INSTANCE_VARIABLE, CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_THREAD_NUMBER, CCPP_INTERNAL_VARIABLES
-from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT
+from common import CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_DIMENSION, CCPP_HORIZONTAL_LOOP_EXTENT, CCPP_NUM_INSTANCES
 from common import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from common import CCPP_TYPE, STANDARD_VARIABLE_TYPES, STANDARD_CHARACTER_TYPE
 from common import CCPP_STATIC_API_MODULE, CCPP_STATIC_SUBROUTINE_NAME
@@ -896,7 +896,7 @@ module {module}
    private
    public :: {subroutines}
 
-   logical, save :: initialized = .false.
+   logical, dimension({num_instances}), save :: initialized = .false.
 
    contains
 '''
@@ -930,37 +930,37 @@ end module {module}
 
     initialized_test_blocks = {
         'init' : '''
-      if (initialized) return
+      if (initialized({ccpp_var_name}%ccpp_instance)) return
 ''',
         'timestep_init' : '''
-      if (.not.initialized) then
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_init called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'run' : '''
-      if (.not.initialized) then
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_run called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'timestep_finalize' : '''
-      if (.not.initialized) then
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) then
         write({target_name_msg},'(*(a))') '{name}_timestep_finalize called before {name}_init'
         {target_name_flag} = 1
         return
       end if
 ''',
         'finalize' : '''
-      if (.not.initialized) return
+      if (.not.initialized({ccpp_var_name}%ccpp_instance)) return
 ''',
     }
 
     initialized_set_blocks = {
         'init' : '''
-      initialized = .true.
+      initialized({ccpp_var_name}%ccpp_instance) = .true.
 ''',
         'timestep_init' : '',
         'run' : '',
@@ -999,7 +999,10 @@ end module {module}
         ccpp_loop_extent_target_name = metadata_request[CCPP_LOOP_EXTENT][0].target
         ccpp_error_code_target_name = metadata_request[CCPP_ERROR_CODE_VARIABLE][0].target
         ccpp_error_msg_target_name = metadata_request[CCPP_ERROR_MSG_VARIABLE][0].target
-        #
+        # Then, identify the variable name of the mandatory ccpp_t variable defined by the host model
+        ccpp_var = metadata_define[CCPP_T_INSTANCE_VARIABLE][0]
+
+        # Init
         module_use = ''
         self._module = 'ccpp_{suite}_{name}_cap'.format(name=self._name, suite=self._suite)
         self._filename = '{module_name}.F90'.format(module_name=self._module)
@@ -1608,6 +1611,14 @@ end module {module}
                 if subcycle_body:
                     body += subcycle_body_prefix + subcycle_body + subcycle_body_suffix
 
+            #For the init stage, for the case when the suite doesn't have any schemes with init phases,
+            #we still need to add the host-supplied ccpp_t variable to the init group caps so that it is
+            #available for setting the initialized flag for the particular instance being called. Otherwise,
+            #the initialized_set_block for the init phase tries to reference the unavailable ccpp_t variable.
+            if (ccpp_stage == 'init' and not self.parents[ccpp_stage]):
+                ccpp_var.intent = 'in'
+                self.parents[ccpp_stage].update({ccpp_var.local_name:ccpp_var})
+
             # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
                                                            self.parents[ccpp_stage], metadata_define, tmpvars.values())
@@ -1624,12 +1635,14 @@ end module {module}
             # at least one subroutine that gets called from this group), or skip.
             if self.arguments[ccpp_stage]:
                 initialized_test_block = Group.initialized_test_blocks[ccpp_stage].format(
+                                            ccpp_var_name = ccpp_var.local_name,
                                             target_name_flag=ccpp_error_code_target_name,
                                             target_name_msg=ccpp_error_msg_target_name,
                                             name=self._name)
             else:
                 initialized_test_block = ''
             initialized_set_block = Group.initialized_set_blocks[ccpp_stage].format(
+                                        ccpp_var_name = ccpp_var.local_name,
                                         target_name_flag=ccpp_error_code_target_name,
                                         target_name_msg=ccpp_error_msg_target_name,
                                         name=self._name)
@@ -1665,7 +1678,8 @@ end module {module}
         f.write(Group.header.format(group=self._name,
                                     module=self._module,
                                     module_use=module_use,
-                                    subroutines=', &\n             '.join(self._subroutines)))
+                                    subroutines=', &\n             '.join(self._subroutines),
+                                    num_instances=CCPP_NUM_INSTANCES))
         f.write(local_subs)
         f.write(Group.footer.format(module=self._module))
         if (f is not sys.stdout):

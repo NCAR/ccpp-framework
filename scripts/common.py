@@ -19,6 +19,7 @@ CCPP_STAGES['init']              = 'init'
 CCPP_STAGES['run']               = 'run'
 CCPP_STAGES['finalize']          = 'final'
 
+CCPP_T_INSTANCE_VARIABLE = 'ccpp_t_instance'
 CCPP_CONSTANT_ONE        = 'ccpp_constant_one'
 CCPP_ERROR_CODE_VARIABLE = 'ccpp_error_code'
 CCPP_ERROR_MSG_VARIABLE  = 'ccpp_error_message'
@@ -67,6 +68,9 @@ CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
 
 # Filename pattern for suite definition files
 SUITE_DEFINITION_FILENAME_PATTERN = re.compile('^suite_(.*)\.xml$')
+
+# Maximum number of concurrent CCPP instances per MPI task
+CCPP_NUM_INSTANCES = 200
 
 def execute(cmd, abort = True):
     """Runs a local command in a shell. Waits for completion and

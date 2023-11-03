@@ -44,6 +44,12 @@
   units = index
   dimensions = ()
   type = integer
+[ccpp_instance]
+  standard_name = ccpp_instance
+  long_name = ccpp_instance
+  units = index
+  dimensions = ()
+  type = integer
 
 ########################################################################
 [ccpp-table-properties]
