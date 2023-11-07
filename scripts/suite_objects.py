@@ -1787,7 +1787,7 @@ class Group(SuiteObject):
         # end if
         # Write out the scheme use statements
         scheme_use = 'use {},{} only: {}'
-        for scheme in self._local_schemes:
+        for scheme in sorted(self._local_schemes):
             smod = scheme[0]
             sname = scheme[1]
             slen = ' '*(modmax - len(smod))
@@ -1853,7 +1853,7 @@ class Group(SuiteObject):
                                        'funcname' : self.name})
         # Allocate local arrays
         alloc_stmt = "allocate({}({}))"
-        for lname in allocatable_var_set:
+        for lname in sorted(allocatable_var_set):
             var = subpart_vars[lname][0]
             dims = var.get_dimensions()
             alloc_str = self.allocate_dim_str(dims, var.context)
@@ -1886,7 +1886,7 @@ class Group(SuiteObject):
           item.write(outfile, errcode, indent + 1)
         # end for
         # Deallocate local arrays
-        for lname in allocatable_var_set:
+        for lname in sorted(allocatable_var_set):
             outfile.write('deallocate({})'.format(lname), indent+1)
         # end for
         # Deallocate suite vars

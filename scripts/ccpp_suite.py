@@ -1088,7 +1088,7 @@ class API(VarDictionary):
             ofile.write("allocate({}({}))".format(varlist_name, len(var_list)),
                         indent)
         # end if
-        for ind, var in enumerate(var_list):
+        for ind, var in enumerate(sorted(var_list)):
             if start_var:
                 ind_str = "{} + {}".format(start_var, ind + start_index)
             else:
@@ -1136,7 +1136,7 @@ class API(VarDictionary):
         ofile.write("\nsubroutine {}({})".format(API.__vars_fname, inargs), 1)
         # Declare use statements for suite varlist routines
         mlen = max([len(x.module) for x in self.suites])
-        for suite in self.suites:
+        for suite in sorted(self.suites):
             mod = f"{suite.module}{' '*(mlen - len(suite.module))}"
             ofile.write(f"use {mod}, only: {suite.req_vars_subname()}", 2)
         # end for
