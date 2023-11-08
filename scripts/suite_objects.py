@@ -878,7 +878,7 @@ class SuiteObject(VarDictionary):
                 # end if
             # end if
         # end if
-        return found_var, var_vdim, new_vdims, missing_vert
+        return found_var, dict_var, var_vdim, new_vdims, missing_vert
 
     def in_process_split(self):
         """Find out if we are in a process-split region"""
@@ -1061,6 +1061,7 @@ class Scheme(SuiteObject):
         self.__lib = scheme_xml.get('lib', None)
         self.__has_vertical_dimension = False
         self.__group = None
+        self.__var_debug_checks = list()
         super().__init__(name, context, parent, run_env, active_call_list=True)
 
     def update_group_call_list_variable(self, var):
@@ -1129,8 +1130,15 @@ class Scheme(SuiteObject):
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
             args = self.match_variable(var, vstdname=vstdname, vdims=vdims)
-            found, vert_dim, new_dims, missing_vert = args
+            found, dict_var, vert_dim, new_dims, missing_vert = args
             if found:
+
+                if self.__group.run_env.debug:
+                    # Add variable allocation checks for host model variables only
+                    gvar = self.__group.find_variable(standard_name=vstdname, any_scope=False)
+                    if dict_var and not gvar:
+                        self.add_var_debug_check(dict_var, new_dims)
+                # end if
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
                 # end if
@@ -1195,7 +1203,238 @@ class Scheme(SuiteObject):
         # end if
         return scheme_mods
 
-    def write(self, outfile, errcode, indent):
+    def add_var_debug_check(self, var, new_dims):
+        # Get the basic attributes that decide whether we need
+        # to check the variable when we write the group
+        standard_name = var.get_prop_value('standard_name')
+        # We need to use the new dimensions as determined
+        # by the scheme's analyze logic, not the original
+        # variable dimension of the host variable var.
+        dimensions = new_dims
+        active = var.get_prop_value('active')
+        # The order is important to get the correct local name - DH* not sure ...
+        var_dicts = [ self.__group.call_list ] + self.__group.suite_dicts()
+
+        # If the variable isn't active, skip it
+        if active.lower() =='.false.':
+            return
+        # Also, if the variable is one of the CCPP error handling messages, skip it
+        # since it is defined as intent(out) and we can't do meaningful checks on it
+        elif standard_name == 'ccpp_error_code' or standard_name == 'ccpp_error_message':
+            return
+        # To perform allocation checks, we need to know all variables
+        # that are part of the 'active' attribute conditional and add
+        # it to the group's call list.
+        else:
+            (_, vars_needed) = var.conditional(var_dicts)
+            for var_needed in vars_needed:
+                self.update_group_call_list_variable(var_needed)
+
+        # For scalars and arrays, need a dummy variable (same kind and type)
+        # that we can assign the scalar or the lbound/ubound of the array to.
+        # We need to treat DDTs and variables with kind attributes slightly
+        # differently, and make sure there are no duplicate variables. We
+        # also need to assign a bogus standard name to these local variables. # DH* do we?
+        vtype = var.get_prop_value('type')
+        if var.is_ddt():
+            vkind = ''
+            units = ''
+        else:
+            vkind = var.get_prop_value('kind')
+            units = var.get_prop_value('units')
+        if vkind:
+            dummy_lname = f'dummy_{vtype.replace("=","_")}_{vkind.replace("=","_")}'
+        else:
+            dummy_lname = f'dummy_{vtype.replace("=","_")}'
+        if var.is_ddt():
+            dummy = Var({'local_name':dummy_lname, 'standard_name':f'{dummy_lname}_local',
+                         'ddt_type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
+                         _API_LOCAL, self.run_env)
+        else:
+            dummy = Var({'local_name':dummy_lname, 'standard_name':f'{dummy_lname}_local',
+                         'type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
+                         _API_LOCAL, self.run_env)
+        found = self.__group.find_variable(source_var=dummy)
+        if not found:
+            self.__group.manage_variable(dummy)
+
+        # For arrays, we need to get information on the dimensions and add it to
+        # the group's call list so that we can test for the correct size later on
+        if dimensions:
+            for dim in dimensions:
+                if not ':' in dim:
+                    dim_var = self.find_variable(standard_name=dim)
+                    if not dim_var:
+                        raise Exception(f"No dimension with standard name '{dim}'")
+                    self.update_group_call_list_variable(dim_var)
+                else:
+                    (ldim, udim) = dim.split(":")
+                    ldim_var = self.find_variable(standard_name=ldim)
+                    if not ldim_var:
+                        raise Exception(f"No dimension with standard name '{ldim}'")
+                    self.update_group_call_list_variable(ldim_var)
+                    udim_var = self.find_variable(standard_name=udim)
+                    if not udim_var:
+                        raise Exception(f"No dimension with standard name '{udim}'")
+                    self.update_group_call_list_variable(udim_var)
+
+        # Add the modified host model variable (with new dimension)
+        # to the list of variables to check. Record which dummy to use.
+        subst_dict = {'dimensions':new_dims}
+        clone = var.clone(subst_dict)
+        if var.get_prop_value('local_name') == 'cld_liq_array':
+            print(f"adding var debug check for {var} with dimensions old/new {var.get_dimensions()} / {new_dims}, run phase? {self.run_phase()}")
+        self.__var_debug_checks.append([clone, dummy])
+
+    def write_var_debug_check(self, var, dummy, cldicts, outfile, errcode, errmsg, indent):
+        # Get the basic attributes for writing the check
+        standard_name = var.get_prop_value('standard_name')
+        dimensions = var.get_dimensions()
+        active = var.get_prop_value('active')
+        pointer = var.get_prop_value('pointer')
+        allocatable = var.get_prop_value('allocatable')
+        # DH* TEST
+        # The order is important to get the correct local name - DH* not sure ...
+        #var_dicts = [ self.__group.call_list ] + self.__group.suite_dicts()
+        var_dicts = cldicts
+        # *DH
+
+        # Need the local name as it comes from the group call list
+        # or from the suite,  not how it is called in the scheme (var)
+        dvar = self.__group.call_list.find_variable(standard_name=standard_name, any_scope=False)
+        if dvar:
+            var_in_call_list = True
+        else:
+            var_in_call_list = False
+            for var_dict in self.__group.suite_dicts():
+                dvar = var_dict.find_variable(standard_name=standard_name)
+                if dvar:
+                    break
+        if not dvar:
+            raise Exception(f"No variable with standard name '{standard_name}' in var_dicts")
+        local_name = dvar.get_prop_value('local_name')
+
+        # If the variable is allocatable or a pointer and the intent for the
+        # scheme is 'out', then we can't test anything because the scheme is
+        # going to allocate the variable or associate the pointer. We don't have
+        # this information earlier in add_var_debug_check, therefore need to back
+        # out here, using the information from the scheme variable (call list).
+        svar = self.call_list.find_variable(standard_name=standard_name)
+        intent = svar.get_prop_value('intent')
+        if intent == 'out' and (allocatable or pointer):
+            return
+
+        # Get the condition on which the variable is active
+        (conditional, _) = var.conditional(var_dicts)
+
+        # For scalars, assign to dummy variable if the variable intent is in/inout
+        if not dimensions:
+            if not intent == 'out':
+                dummy_lname = dummy.get_prop_value('local_name')
+                outfile.write(f"if ({conditional}) then", indent)
+                outfile.write(f"! Assign value of {local_name} to dummy", indent+1)
+                outfile.write(f"{dummy_lname} = {local_name}", indent+1)
+                outfile.write(f"end if", indent)
+        # For arrays, check size of array against dimensions in metadata, then assign
+        # the lower and upper bounds to the dummy variable if the intent is in/inout
+        else:
+            array_size = 1
+            dim_strings = []
+            lbound_strings = []
+            ubound_strings = []
+            for dim in dimensions:
+                if not ':' in dim:
+                    # In capgen, any true dimension (that is not a single index) does
+                    # have a colon (:) in the dimension, therefore this is an index
+                    for var_dict in var_dicts:
+                        dvar = var_dict.find_variable(standard_name=dim, any_scope=False)
+                        if dvar is not None:
+                            break
+                    if not dvar:
+                        raise Exception(f"No variable with standard name '{dim}' in var_dicts")
+                    dim_lname = dvar.get_prop_value('local_name')
+                    dim_length = 1
+                    dim_strings.append(dim_lname)
+                    lbound_strings.append(dim_lname)
+                    ubound_strings.append(dim_lname)
+                else:
+                    # I don't know how to do this better. Schemes can rely on the host cap
+                    # passing arrays such that the horizontal dimension of the variable
+                    # seen by the scheme runs from 1:ncol (horizontal_loop_extent)
+                    if is_horizontal_dimension(dim):
+                        if self.run_phase():
+                            if self.find_variable(standard_name="horizontal_loop_extent"):
+                                ldim = "ccpp_constant_one"
+                                udim = "horizontal_loop_extent"
+                            else:
+                                ldim = "horizontal_loop_begin"
+                                udim = "horizontal_loop_end"
+                        else:
+                            ldim = "ccpp_constant_one"
+                            udim = "horizontal_dimension"
+                    else:
+                        (ldim, udim) = dim.split(":")
+                    # Get dimension for lower bound
+                    for var_dict in var_dicts:
+                        dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
+                        if dvar is not None:
+                            break
+                    if not dvar:
+                        raise Exception(f"No variable with standard name '{ldim}' in var_dicts")
+                    ldim_lname = dvar.get_prop_value('local_name')
+                    # Get dimension for upper bound
+                    for var_dict in var_dicts:
+                        dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
+                        if dvar is not None:
+                            break
+                    if not dvar:
+                        raise Exception(f"No variable with standard name '{udim}' in var_dicts")
+                    udim_lname = dvar.get_prop_value('local_name')
+                    # Assemble dimensions and bounds for size checking
+                    dim_length = f'{udim_lname}-{ldim_lname}+1'
+                    if is_horizontal_dimension(dim):
+                        # Is var in the call list or a module variable of this group?
+                        if not var_in_call_list:
+                            dim_strings.append(f"{ldim_lname}:{udim_lname}")
+                            lbound_strings.append(ldim_lname)
+                            ubound_strings.append(udim_lname)
+                        else:
+                            dim_strings.append(":")
+                            lbound_strings.append('1')
+                            ubound_strings.append(f'{udim_lname}-{ldim_lname}+1')
+                    else:
+                        dim_strings.append(":")
+                        lbound_strings.append(ldim_lname)
+                        ubound_strings.append(udim_lname)
+                array_size = f'{array_size}*({dim_length})'
+
+            # Various strings needed to get the right size
+            # and lower/upper bound of the array
+            dim_string = '(' + ','.join(dim_strings) + ')'
+            lbound_string = '(' + ','.join(lbound_strings) + ')'
+            ubound_string = '(' + ','.join(ubound_strings) + ')'
+
+            # Write size check
+            outfile.write(f"if ({conditional}) then", indent)
+            outfile.write(f"! Check size of array {local_name}", indent+1)
+            outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent+1)
+            outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+2)
+            outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+2)
+            outfile.write(f"{errcode} = 1", indent+2)
+            outfile.write(f"return", indent+2)
+            outfile.write(f"end if", indent+1)
+            outfile.write(f"end if", indent)
+
+            # Assign lower/upper bounds to dummy (scalar) if intent is not out
+            if not intent == 'out':
+                dummy_lname = dummy.get_prop_value('local_name')
+                outfile.write(f"if ({conditional}) then", indent)
+                outfile.write(f"! Assign lower/upper bounds of {local_name} to dummy", indent+1)
+                outfile.write(f"{dummy_lname} = {local_name}{lbound_string}", indent+1)
+                outfile.write(f"{dummy_lname} = {local_name}{ubound_string}", indent+1)
+                outfile.write(f"end if", indent)
+
+    def write(self, outfile, errcode, errmsg, indent):
         # Unused arguments are for consistent write interface
         # pylint: disable=unused-argument
         """Write code to call this Scheme to <outfile>"""
@@ -1206,6 +1445,15 @@ class Scheme(SuiteObject):
         my_args = self.call_list.call_string(cldicts=cldicts,
                                              is_func_call=True,
                                              subname=self.subroutine_name)
+
+        # Write debug checks (operating on variables
+        # coming from the group's call list)
+        for (var, dummy) in self.__var_debug_checks:
+            stmt = self.write_var_debug_check(var, dummy, cldicts, outfile, errcode, errmsg, indent)
+
+        # Write variable transformations (to be developed)
+
+        # Write call to routine
         stmt = 'call {}({})'
         outfile.write('if ({} == 0) then'.format(errcode), indent)
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
@@ -1324,13 +1572,13 @@ class VerticalLoop(SuiteObject):
         # end for
         return scheme_mods
 
-    def write(self, outfile, errcode, indent):
+    def write(self, outfile, errcode, errmsg, indent):
         """Write code for the vertical loop, including contents, to <outfile>"""
         outfile.write('do {} = 1, {}'.format(self.name, self.dimension_name),
                       indent)
         # Note that 'scheme' may be a sybcycle or other construct
         for item in self.parts:
-            item.write(outfile, errcode, indent+1)
+            item.write(outfile, errcode, errmsg, indent+1)
         # end for
         outfile.write('end do', 2)
 
@@ -1389,12 +1637,12 @@ class Subcycle(SuiteObject):
         # end for
         return scheme_mods
 
-    def write(self, outfile, errcode, indent):
+    def write(self, outfile, errcode, errmsg, indent):
         """Write code for the subcycle loop, including contents, to <outfile>"""
         outfile.write('do {} = 1, {}'.format(self.name, self.loop), indent)
         # Note that 'scheme' may be a sybcycle or other construct
         for item in self.parts:
-            item.write(outfile, errcode, indent+1)
+            item.write(outfile, errcode, errmsg, indent+1)
         # end for
         outfile.write('end do', 2)
 
@@ -1439,11 +1687,11 @@ class TimeSplit(SuiteObject):
         # end for
         return scheme_mods
 
-    def write(self, outfile, errcode, indent):
+    def write(self, outfile, errcode, errmsg, indent):
         """Write code for this TimeSplit section, including contents,
         to <outfile>"""
         for item in self.parts:
-            item.write(outfile, errcode, indent)
+            item.write(outfile, errcode, errmsg, indent)
         # end for
 
 ###############################################################################
@@ -1468,7 +1716,7 @@ class ProcessSplit(SuiteObject):
         # Handle all the suite objects inside of this group
         raise CCPPError('ProcessSplit not yet implemented')
 
-    def write(self, outfile, errcode, indent):
+    def write(self, outfile, errcode, errmsg, indent):
         """Write code for this ProcessSplit section, including contents,
         to <outfile>"""
         raise CCPPError('ProcessSplit not yet implemented')
@@ -1867,7 +2115,7 @@ class Group(SuiteObject):
         # end for
         # Write the scheme and subcycle calls
         for item in self.parts:
-          item.write(outfile, errcode, indent + 1)
+          item.write(outfile, errcode, errmsg, indent + 1)
         # end for
         # Deallocate local arrays
         for lname in allocatable_var_set:
