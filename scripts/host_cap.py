@@ -432,7 +432,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         mlen = max([len(x.module) for x in api.suites])
         maxmod = max(maxmod, mlen)
         maxmod = max(maxmod, len(CONST_DDT_MOD))
-        for mod in modules:
+        for mod in sorted(modules):
             mspc = (maxmod - len(mod[0]))*' '
             cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
         # End for
@@ -530,7 +530,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
             for suite in api.suites:
                 mspc = (max_suite_len - len(suite.module))*' '
                 spart_list = suite_part_list(suite, stage)
-                for spart in spart_list:
+                for spart in sorted(spart_list):
                     stmt = "use {}, {}only: {}"
                     cap.write(stmt.format(suite.module, mspc, spart.name), 2)
                 # End for
