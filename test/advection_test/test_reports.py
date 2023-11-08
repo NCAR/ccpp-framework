@@ -72,13 +72,19 @@ _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "time_step_for_physics", "water_temperature_at_freezing",
                       "water_vapor_specific_humidity",
                       "cloud_ice_dry_mixing_ratio",
-                      "cloud_liquid_dry_mixing_ratio"]
+                      "cloud_liquid_dry_mixing_ratio",
+                      # Added by --debug option
+                      "horizontal_dimension",
+                      "vertical_layer_dimension"]
 _INPUT_VARS_CLD = ["surface_air_pressure", "temperature",
                    "horizontal_loop_begin", "horizontal_loop_end",
                    "time_step_for_physics", "water_temperature_at_freezing",
                    "water_vapor_specific_humidity",
                    "cloud_ice_dry_mixing_ratio",
-                   "cloud_liquid_dry_mixing_ratio"]
+                   "cloud_liquid_dry_mixing_ratio",
+                   # Added by --debug option
+                   "horizontal_dimension",
+                   "vertical_layer_dimension"]
 _OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "water_vapor_specific_humidity", "temperature",
                     "cloud_ice_dry_mixing_ratio",
