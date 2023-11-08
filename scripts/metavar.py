@@ -85,6 +85,12 @@ CCPP_LOOP_VAR_STDNAMES = ['horizontal_loop_extent',
                           'horizontal_loop_begin', 'horizontal_loop_end',
                           'vertical_layer_index', 'vertical_interface_index']
 
+# DH* Is there a better place for these definitions?
+FORTRAN_CONDITIONAL_REGEX_WORDS = [' ', '(', ')', '==', '/=', '<=', '>=', '<', '>', '.eqv.', '.neqv.',
+                                   '.true.', '.false.', '.lt.', '.le.', '.eq.', '.ge.', '.gt.', '.ne.',
+                                   '.not.', '.and.', '.or.', '.xor.']
+FORTRAN_CONDITIONAL_REGEX = re.compile(r"[\w']+|" + "|".join([word.replace('(','\(').replace(')', '\)') for word in FORTRAN_CONDITIONAL_REGEX_WORDS]))
+
 ###############################################################################
 # Used for creating template variables
 _MVAR_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
@@ -186,6 +192,8 @@ class Var:
                     VariableProperty('protected', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('allocatable', bool,
+                                     optional_in=True, default_in=False),
+                    VariableProperty('pointer', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('diagnostic_name', str,
                                      optional_in=True, default_in='',
@@ -294,6 +302,7 @@ class Var:
             if 'units' not in prop_dict:
                 prop_dict['units'] = ""
             # end if
+            # DH* Why is the DDT type copied into the kind attribute?
             prop_dict['kind'] = prop_dict['ddt_type']
             del prop_dict['ddt_type']
             self.__intrinsic = False
@@ -936,6 +945,39 @@ class Var:
             vdims = dims
         # end if
         return find_vertical_dimension(vdims)[0]
+
+    def conditional(self, vdicts):
+        """Convert conditional expression from active attribute
+        (i.e. in standard name format) to local names based on vdict.
+        Return conditional and a list of variables needed to evaluate
+        the conditional."""
+
+        active = self.get_prop_value('active') 
+        conditional = ''
+        vars_needed = []
+
+        # Find all words in the conditional, for each of them look
+        # for a matching standard name in the list of known variables
+        items = FORTRAN_CONDITIONAL_REGEX.findall(active)
+        for item in items:
+            item = item.lower()
+            if item in FORTRAN_CONDITIONAL_REGEX_WORDS:
+                conditional += item
+            else:
+                # Keep integers
+                try:
+                    int(item)
+                    conditional += item
+                except ValueError:
+                    for vdict in vdicts:
+                        dvar = vdict.find_variable(standard_name=item, any_scope=True) # or any_scope=False ?
+                        if dvar:
+                            break
+                    if not dvar:
+                        raise Exception(f"Cannot find variable '{item}' for generating conditional for '{active}")
+                    conditional += dvar.get_prop_value('local_name')
+                    vars_needed.append(dvar)
+        return (conditional, vars_needed)
 
     def write_def(self, outfile, indent, wdict, allocatable=False,
                   dummy=False, add_intent=None, extra_space=0):
