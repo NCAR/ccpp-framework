@@ -174,23 +174,18 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
                                                          value="ddt_suite"),
                               _OUTPUT_VARS_DDT)
 print("\nChecking variables for temp suite from python")
-print("HERE 0")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="temp_suite"),
                               _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP)
-print("HERE A")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="temp_suite"),
                               _REQUIRED_VARS_TEMP, excl_prot=True)
-print("HERE B")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
                                                          value="temp_suite"),
                               _INPUT_VARS_TEMP + _PROT_VARS_TEMP)
-print("HERE C")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
                                                          value="temp_suite"),
                               _INPUT_VARS_TEMP, excl_prot=True)
-print("HERE Z")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
                                                          value="temp_suite"),
                               _OUTPUT_VARS_TEMP)

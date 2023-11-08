@@ -1282,8 +1282,6 @@ class Scheme(SuiteObject):
         # to the list of variables to check. Record which dummy to use.
         subst_dict = {'dimensions':new_dims}
         clone = var.clone(subst_dict)
-        if var.get_prop_value('local_name') == 'cld_liq_array':
-            print(f"adding var debug check for {var} with dimensions old/new {var.get_dimensions()} / {new_dims}, run phase? {self.run_phase()}")
         self.__var_debug_checks.append([clone, dummy])
 
     def write_var_debug_check(self, var, dummy, cldicts, outfile, errcode, errmsg, indent):
@@ -1293,11 +1291,9 @@ class Scheme(SuiteObject):
         active = var.get_prop_value('active')
         pointer = var.get_prop_value('pointer')
         allocatable = var.get_prop_value('allocatable')
-        # DH* TEST
         # The order is important to get the correct local name - DH* not sure ...
         #var_dicts = [ self.__group.call_list ] + self.__group.suite_dicts()
         var_dicts = cldicts
-        # *DH
 
         # Need the local name as it comes from the group call list
         # or from the suite,  not how it is called in the scheme (var)
@@ -1360,7 +1356,10 @@ class Scheme(SuiteObject):
                 else:
                     # I don't know how to do this better. Schemes can rely on the host cap
                     # passing arrays such that the horizontal dimension of the variable
-                    # seen by the scheme runs from 1:ncol (horizontal_loop_extent)
+                    # seen by the scheme runs from 1:ncol (horizontal_loop_extent). But
+                    # module variables for this group are passed to the schemes with the
+                    # horizontal dimensions in the call dimstring. And it all depends
+                    # on the phase, too.
                     if is_horizontal_dimension(dim):
                         if self.run_phase():
                             if self.find_variable(standard_name="horizontal_loop_extent"):
@@ -1393,7 +1392,7 @@ class Scheme(SuiteObject):
                     # Assemble dimensions and bounds for size checking
                     dim_length = f'{udim_lname}-{ldim_lname}+1'
                     if is_horizontal_dimension(dim):
-                        # Is var in the call list or a module variable of this group?
+                        # See comment above on call list variables vs module variables
                         if not var_in_call_list:
                             dim_strings.append(f"{ldim_lname}:{udim_lname}")
                             lbound_strings.append(ldim_lname)
