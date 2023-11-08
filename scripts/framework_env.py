@@ -24,7 +24,8 @@ class CCPPFrameworkEnv:
                  host_files=None, scheme_files=None, suites=None,
                  preproc_directives=[], generate_docfiles=False, host_name='',
                  kind_types=[], use_error_obj=False, force_overwrite=False,
-                 output_root=os.getcwd(), ccpp_datafile="datatable.xml"):
+                 output_root=os.getcwd(), ccpp_datafile="datatable.xml",
+                 debug = False):
         """Initialize a new CCPPFrameworkEnv object from the input arguments.
         <ndict> is a dict with the parsed command-line arguments (or a
            dictionary created with the necessary arguments).
@@ -197,6 +198,13 @@ class CCPPFrameworkEnv:
             self.__datatable_file = os.path.join(self.output_dir,
                                                  self.datatable_file)
         # end if
+        # Enable or disable variable allocation checks
+        if ndict and ('debug' in ndict):
+            self.__debug = ndict['debug']
+            del ndict['debug']
+        else:
+            self.__debug = debug
+        # end if
         self.__logger = logger
         ## Check to see if anything is left in dictionary
         if ndict:
@@ -305,6 +313,12 @@ CCPPFrameworkEnv object."""
         return self.__datatable_file
 
     @property
+    def debug(self):
+        """Return the <debug> property for this
+        CCPPFrameworkEnv object."""
+        return self.__debug
+
+    @property
     def logger(self):
         """Return the <logger> property for this CCPPFrameworkEnv object."""
         return self.__logger
@@ -379,7 +393,11 @@ instead of ccpp_error_message and ccpp_error_code.""")
                         help="""Overwrite all CCPP-generated files, even
 if unmodified""")
 
+    parser.add_argument("--debug", action='store_true', default=False,
+                        help="Add variable allocation checks to assist debugging")
+
     parser.add_argument("--verbose", action='count', default=0,
                         help="Log more activity, repeat for increased output")
+
     pargs = parser.parse_args(args)
     return CCPPFrameworkEnv(logger, vars(pargs))
