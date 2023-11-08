@@ -78,7 +78,10 @@ _OUTPUT_VARS_DDT = ["ccpp_error_code", "ccpp_error_message", "model_times",
                     "number_of_model_times"]
 _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT
 _PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
-                   "horizontal_dimension", "vertical_layer_dimension"]
+                   "horizontal_dimension", "vertical_layer_dimension",
+                   # Added for --debug
+                   "index_of_water_vapor_specific_humidity",
+                   "vertical_interface_dimension"]
 _REQUIRED_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                        "potential_temperature",
                        "potential_temperature_at_interface",
@@ -171,18 +174,23 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
                                                          value="ddt_suite"),
                               _OUTPUT_VARS_DDT)
 print("\nChecking variables for temp suite from python")
+print("HERE 0")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="temp_suite"),
                               _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP)
+print("HERE A")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="temp_suite"),
                               _REQUIRED_VARS_TEMP, excl_prot=True)
+print("HERE B")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
                                                          value="temp_suite"),
                               _INPUT_VARS_TEMP + _PROT_VARS_TEMP)
+print("HERE C")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
                                                          value="temp_suite"),
                               _INPUT_VARS_TEMP, excl_prot=True)
+print("HERE Z")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
                                                          value="temp_suite"),
                               _OUTPUT_VARS_TEMP)
