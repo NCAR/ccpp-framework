@@ -881,7 +881,7 @@ class SuiteObject(VarDictionary):
                 # end if
             # end if
         # end if
-        return found_var, var_vdim, new_vdims, missing_vert, compat_obj, dict_var
+        return found_var, var_vdim, new_vdims, missing_vert, compat_obj
 
     def in_process_split(self):
         """Find out if we are in a process-split region"""
@@ -1137,7 +1137,7 @@ class Scheme(SuiteObject):
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
             args = self.match_variable(var, self.run_env)
-            found, vert_dim, new_dims, missing_vert, compat_obj, suite_var = args
+            found, vert_dim, new_dims, missing_vert, compat_obj = args
             if found:
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
@@ -1254,6 +1254,7 @@ class Scheme(SuiteObject):
     def schemes(self):
         """Return self as a list for consistency with subcycle"""
         return [self]
+        # end if
 
     def variable_list(self, recursive=False,
                       std_vars=True, loop_vars=True, consts=True):
