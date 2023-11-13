@@ -3,7 +3,7 @@
 
 module effr_calc
 
-   use ccpp_kinds, only: kind_phys, kind_dbl_prec
+   use ccpp_kinds, only: kind_phys
 
    implicit none
    private
@@ -23,7 +23,7 @@ contains
       real(kind_phys),    intent(in)    :: effrr_in(:,:)
       real(kind_phys),    intent(inout) :: effrl_inout(:,:)
       real(kind_phys),    intent(out)   :: effri_out(:,:)
-      real(kind_dbl_prec),intent(inout) :: effrs_inout(:,:)
+      real(8),intent(inout) :: effrs_inout(:,:)
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------
