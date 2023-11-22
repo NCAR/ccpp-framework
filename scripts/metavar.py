@@ -295,7 +295,8 @@ class Var:
             if 'units' not in prop_dict:
                 prop_dict['units'] = ""
             # end if
-            # DH* Why is the DDT type copied into the kind attribute?
+            # DH* To investigate later: Why is the DDT type
+            # copied into the kind attribute? Can we remove this?
             prop_dict['kind'] = prop_dict['ddt_type']
             del prop_dict['ddt_type']
             self.__intrinsic = False
