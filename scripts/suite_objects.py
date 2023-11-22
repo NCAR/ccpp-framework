@@ -1289,11 +1289,7 @@ class Scheme(SuiteObject):
         standard_name = var.get_prop_value('standard_name')
         dimensions = var.get_dimensions()
         active = var.get_prop_value('active')
-        pointer = var.get_prop_value('pointer')
         allocatable = var.get_prop_value('allocatable')
-        # The order is important to get the correct local name - DH* not sure ...
-        #var_dicts = [ self.__group.call_list ] + self.__group.suite_dicts()
-        var_dicts = cldicts
 
         # Need the local name as it comes from the group call list
         # or from the suite,  not how it is called in the scheme (var)
@@ -1307,21 +1303,21 @@ class Scheme(SuiteObject):
                 if dvar:
                     break
         if not dvar:
-            raise Exception(f"No variable with standard name '{standard_name}' in var_dicts")
+            raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
         local_name = dvar.get_prop_value('local_name')
 
-        # If the variable is allocatable or a pointer and the intent for the
-        # scheme is 'out', then we can't test anything because the scheme is
-        # going to allocate the variable or associate the pointer. We don't have
-        # this information earlier in add_var_debug_check, therefore need to back
-        # out here, using the information from the scheme variable (call list).
+        # If the variable is allocatable and the intent for the scheme is 'out',
+        # then we can't test anything because the scheme is going to allocate 
+        # the variable. We don't have this information earlier in
+        # add_var_debug_check, therefore need to back out here,
+        # using the information from the scheme variable (call list).
         svar = self.call_list.find_variable(standard_name=standard_name)
         intent = svar.get_prop_value('intent')
-        if intent == 'out' and (allocatable or pointer):
+        if intent == 'out' and allocatable:
             return
 
         # Get the condition on which the variable is active
-        (conditional, _) = var.conditional(var_dicts)
+        (conditional, _) = var.conditional(cldicts)
 
         # For scalars, assign to dummy variable if the variable intent is in/inout
         if not dimensions:
@@ -1342,12 +1338,12 @@ class Scheme(SuiteObject):
                 if not ':' in dim:
                     # In capgen, any true dimension (that is not a single index) does
                     # have a colon (:) in the dimension, therefore this is an index
-                    for var_dict in var_dicts:
+                    for var_dict in cldicts:
                         dvar = var_dict.find_variable(standard_name=dim, any_scope=False)
                         if dvar is not None:
                             break
                     if not dvar:
-                        raise Exception(f"No variable with standard name '{dim}' in var_dicts")
+                        raise Exception(f"No variable with standard name '{dim}' in cldicts")
                     dim_lname = dvar.get_prop_value('local_name')
                     dim_length = 1
                     dim_strings.append(dim_lname)
@@ -1374,20 +1370,20 @@ class Scheme(SuiteObject):
                     else:
                         (ldim, udim) = dim.split(":")
                     # Get dimension for lower bound
-                    for var_dict in var_dicts:
+                    for var_dict in cldicts:
                         dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
                         if dvar is not None:
                             break
                     if not dvar:
-                        raise Exception(f"No variable with standard name '{ldim}' in var_dicts")
+                        raise Exception(f"No variable with standard name '{ldim}' in cldicts")
                     ldim_lname = dvar.get_prop_value('local_name')
                     # Get dimension for upper bound
-                    for var_dict in var_dicts:
+                    for var_dict in cldicts:
                         dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
                         if dvar is not None:
                             break
                     if not dvar:
-                        raise Exception(f"No variable with standard name '{udim}' in var_dicts")
+                        raise Exception(f"No variable with standard name '{udim}' in cldicts")
                     udim_lname = dvar.get_prop_value('local_name')
                     # Assemble dimensions and bounds for size checking
                     dim_length = f'{udim_lname}-{ldim_lname}+1'

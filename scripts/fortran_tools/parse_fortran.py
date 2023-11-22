@@ -800,9 +800,6 @@ def parse_fortran_var_decl(line, source, run_env):
             if 'allocatable' in varprops:
                 prop_dict['allocatable'] = 'True'
             # end if
-            if 'pointer' in varprops:
-                prop_dict['pointer'] = 'True'
-            # end if
             if intent is not None:
                 prop_dict['intent'] = intent
             # end if

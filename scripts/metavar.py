@@ -22,6 +22,7 @@ from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
 from parse_tools import ParseContext, ParseSource, type_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
+from parse_tools import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
 from var_props import standard_name_to_long_name, default_kind_val
@@ -84,12 +85,6 @@ CCPP_VAR_LOOP_SUBSTS = {}
 CCPP_LOOP_VAR_STDNAMES = ['horizontal_loop_extent',
                           'horizontal_loop_begin', 'horizontal_loop_end',
                           'vertical_layer_index', 'vertical_interface_index']
-
-# DH* Is there a better place for these definitions?
-FORTRAN_CONDITIONAL_REGEX_WORDS = [' ', '(', ')', '==', '/=', '<=', '>=', '<', '>', '.eqv.', '.neqv.',
-                                   '.true.', '.false.', '.lt.', '.le.', '.eq.', '.ge.', '.gt.', '.ne.',
-                                   '.not.', '.and.', '.or.', '.xor.']
-FORTRAN_CONDITIONAL_REGEX = re.compile(r"[\w']+|" + "|".join([word.replace('(','\(').replace(')', '\)') for word in FORTRAN_CONDITIONAL_REGEX_WORDS]))
 
 ###############################################################################
 # Used for creating template variables
@@ -192,8 +187,6 @@ class Var:
                     VariableProperty('protected', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('allocatable', bool,
-                                     optional_in=True, default_in=False),
-                    VariableProperty('pointer', bool,
                                      optional_in=True, default_in=False),
                     VariableProperty('diagnostic_name', str,
                                      optional_in=True, default_in='',
