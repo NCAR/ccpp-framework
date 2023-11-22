@@ -944,7 +944,20 @@ class Var:
         """Convert conditional expression from active attribute
         (i.e. in standard name format) to local names based on vdict.
         Return conditional and a list of variables needed to evaluate
-        the conditional."""
+        the conditional.
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([{}])
+        ('.true.', [])
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'False'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})]) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        Exception: Cannot find variable 'false' for generating conditional for 'False'
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_gone'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ]) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        Exception: Cannot find variable 'mom_gone' for generating conditional for 'mom_gone'
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_home'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ])[0]
+        'bar'
+        >>> len(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_home'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ])[1])
+        1
+        """
 
         active = self.get_prop_value('active') 
         conditional = ''
@@ -963,12 +976,13 @@ class Var:
                     int(item)
                     conditional += item
                 except ValueError:
+                    dvar = None
                     for vdict in vdicts:
                         dvar = vdict.find_variable(standard_name=item, any_scope=True) # or any_scope=False ?
                         if dvar:
                             break
                     if not dvar:
-                        raise Exception(f"Cannot find variable '{item}' for generating conditional for '{active}")
+                        raise Exception(f"Cannot find variable '{item}' for generating conditional for '{active}'")
                     conditional += dvar.get_prop_value('local_name')
                     vars_needed.append(dvar)
         return (conditional, vars_needed)
