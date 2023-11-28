@@ -1204,6 +1204,13 @@ class Scheme(SuiteObject):
         return scheme_mods
 
     def add_var_debug_check(self, var, new_dims):
+        """ Add a debug check for a given variable var (host model variable,
+        suite variable or group module variable) with dimensions new_dims
+        for this scheme. Return a clone of the variable with these dimensions
+        and a dummy variable that managed by the group subroutine that calls the
+        scheme, which is used to assign the scalar or the lower and upper bounds
+        of the array to if the intent is 'inout' or 'out'.
+        """
         # Get the basic attributes that decide whether we need
         # to check the variable when we write the group
         standard_name = var.get_prop_value('standard_name')
@@ -1234,7 +1241,7 @@ class Scheme(SuiteObject):
         # that we can assign the scalar or the lbound/ubound of the array to.
         # We need to treat DDTs and variables with kind attributes slightly
         # differently, and make sure there are no duplicate variables. We
-        # also need to assign a bogus standard name to these local variables. # DH* do we?
+        # also need to assign a bogus standard name to these local variables.
         vtype = var.get_prop_value('type')
         if var.is_ddt():
             vkind = ''
@@ -1285,6 +1292,11 @@ class Scheme(SuiteObject):
         self.__var_debug_checks.append([clone, dummy])
 
     def write_var_debug_check(self, var, dummy, cldicts, outfile, errcode, errmsg, indent):
+        """Write the variable debug check for the given variable, as determined
+        in a previous step (add_var_debug_check). Assign the scalar or lower and
+        upper bounds of the array to the dummy variable, and for arrays also check
+        that the size of the array matches the dimensions from the metadata.
+        """
         # Get the basic attributes for writing the check
         standard_name = var.get_prop_value('standard_name')
         dimensions = var.get_dimensions()
