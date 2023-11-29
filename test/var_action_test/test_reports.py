@@ -67,7 +67,7 @@ _CCPP_FILES = _UTILITY_FILES + \
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_action_suite_cap.F90")]
 _MODULE_LIST = ["effr_calc"]
 _SUITE_LIST = ["var_action_suite"]
-_INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "vertical_layer_dimension",
+_INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
                           "effective_radius_of_stratiform_cloud_rain_particle",
                           "effective_radius_of_stratiform_cloud_snow_particle"]
