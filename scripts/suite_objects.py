@@ -1287,7 +1287,7 @@ class VerticalLoop(SuiteObject):
         # self._local_dim_name is the variable name for self._dim_name
         self._local_dim_name = None
         super().__init__(index_name, context, parent, run_env)
-        if run_env.debug_on():
+        if run_env.verbose:
             lmsg = "Adding VerticalLoop for '{}'"
             run_env.logger.debug(lmsg.format(index_name))
         # end if

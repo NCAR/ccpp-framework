@@ -46,7 +46,7 @@ class VarDDT(Var):
             self.__field = VarDDT(new_field, var_ref.field, run_env, recur=True)
         # end if
         if ((not recur) and
-            run_env.debug_on()):
+            run_env.verbose):
             run_env.logger.debug('Adding DDT field, {}'.format(self))
         # end if
 
@@ -218,7 +218,7 @@ class DDTLibrary(dict):
                 octx = context_string(self[ddt.title].source.context)
                 raise CCPPError(errmsg.format(ddt.title, ctx, octx))
             # end if
-            if run_env.debug_on():
+            if run_env.verbose:
                 lmsg = f"Adding DDT {ddt.title} to {self.name}"
                 run_env.logger.debug(lmsg)
             # end if

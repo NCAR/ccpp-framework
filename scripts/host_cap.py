@@ -239,7 +239,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     # Add entries for each constituent (once per standard name)
     const_stdnames = set()
     for suite in suite_list:
-        if run_env.debug_on():
+        if run_env.verbose:
             lmsg = "Adding constituents from {} to {}"
             run_env.logger.debug(lmsg.format(suite.name, host_model.name))
         # end if

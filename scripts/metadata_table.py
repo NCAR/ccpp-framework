@@ -792,7 +792,7 @@ class MetadataSection(ParseSource):
             self.__pobj.add_syntax_err(mismatch)
             self.__section_valid = False
         # end if
-        if run_env.debug_on():
+        if run_env.verbose:
             run_env.logger.info("Parsing {} {}{}".format(self.header_type,
                                                          self.title, start_ctx))
         # end if
@@ -812,7 +812,7 @@ class MetadataSection(ParseSource):
             newvar, curr_line = self.parse_variable(curr_line, known_ddts)
             valid_lines = newvar is not None
             if valid_lines:
-                if run_env.debug_on():
+                if run_env.verbose:
                     dmsg = 'Adding {} to {}'
                     lname = newvar.get_prop_value('local_name')
                     run_env.logger.debug(dmsg.format(lname, self.title))

@@ -10,7 +10,7 @@ Framework runtime information and parameter values.
 # Python library imports
 import argparse
 import os
-from parse_tools import debug_enabled
+from parse_tools import verbose
 
 _EPILOG = '''
 '''
@@ -276,10 +276,11 @@ class CCPPFrameworkEnv:
         CCPPFrameworkEnv object."""
         return self.__kind_dict.keys()
 
-    def debug_on(self):
+    @property
+    def verbose(self):
         """Return true if debug enabled for the CCPPFrameworkEnv's
         logger object."""
-        return (self.logger and debug_enabled(self.logger))
+        return (self.logger and verbose(self.logger))
 
     @property
     def use_error_obj(self):

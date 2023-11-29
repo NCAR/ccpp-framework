@@ -619,14 +619,14 @@ def capgen(run_env, return_db=False):
     # end if
     # Next, parse the scheme files
     scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
-    if run_env.debug_on():
+    if run_env.verbose:
         ddts = host_model.ddt_lib.keys()
         if ddts:
             run_env.logger.debug("DDT definitions = {}".format(ddts))
         # end if
     # end if
     plist = host_model.prop_list('local_name')
-    if run_env.debug_on():
+    if run_env.verbose:
         run_env.logger.debug("{} variables = {}".format(host_model.name, plist))
         run_env.logger.debug("schemes = {}".format([x.title
                                                     for x in scheme_headers]))

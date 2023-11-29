@@ -48,6 +48,6 @@ def flush_log(logger):
     for handler in list(logger.handlers):
         handler.flush()
 
-def debug_enabled(logger):
+def verbose(logger):
     """Return true if debug is enabled for this logger"""
     return logger.isEnabledFor(logging.DEBUG)

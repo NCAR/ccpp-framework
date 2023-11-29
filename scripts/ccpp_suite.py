@@ -427,7 +427,7 @@ character(len=16) :: {css_var_name} = '{state}'
                 phase = RUN_PHASE_NAME
             # end if
             lmsg = "Group {}, schemes = {}"
-            if run_env.debug_on():
+            if run_env.verbose:
                 run_env.logger.debug(lmsg.format(item.name,
                                                  [x.name
                                                   for x in item.schemes()]))
@@ -490,7 +490,7 @@ character(len=16) :: {css_var_name} = '{state}'
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
         filename = '{module_name}.F90'.format(module_name=self.module)
-        if run_env.debug_on():
+        if run_env.verbose:
             run_env.logger.debug('Writing CCPP suite file, {}'.format(filename))
         # end if
         # Retrieve the name of the constituent module for Group use statements
