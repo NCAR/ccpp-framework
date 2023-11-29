@@ -15,9 +15,8 @@ module test_host_mod
    integer,         parameter   :: ncols = 10
    integer,         parameter   :: pver = 5
    integer,         parameter   :: pverP = pver + 1
-   integer,         parameter   :: num_host_advected = 1
    integer,         protected   :: ncnst = -1
-   integer,         parameter   :: index_qv = 1
+   integer,         protected   :: index_qv = -1
    real(kind_phys)              :: dt
    real(kind_phys), parameter   :: tfreeze = 273.15_kind_phys
    type(physics_state)          :: phys_state
@@ -30,24 +29,35 @@ module test_host_mod
 
    real(kind_phys), private, allocatable :: check_vals(:,:,:)
    real(kind_phys), private              :: check_temp(ncols, pver)
+   integer,         private              :: ind_liq = -1
+   integer,         private              :: ind_ice = -1
 
 contains
 
-   subroutine init_data(num_advected)
+   subroutine init_data(constituent_array, index_qv_use, index_liq, index_ice)
 
-      integer, intent(in) :: num_advected ! From suites
+      ! Dummy arguments
+      real(kind_phys), pointer  :: constituent_array(:,:,:) ! From host & suites
+      integer,       intent(in) :: index_qv_use
+      integer,       intent(in) :: index_liq
+      integer,       intent(in) :: index_ice
 
-      integer             :: col
-      integer             :: lev
-      integer             :: cind
-      integer             :: itime
-      real(kind_phys)     :: qmax
+      ! Local variables
+      integer                    :: col
+      integer                    :: lev
+      integer                    :: cind
+      integer                    :: itime
+      real(kind_phys)            :: qmax
+      real(kind_phys), parameter :: inc = 0.1_kind_phys
 
       ! Allocate and initialize state
       ! Temperature starts above freezing and decreases to -30C
       ! water vapor is initialized in odd columns to different amounts
-      ncnst = num_advected + num_host_advected
-      call allocate_physics_state(ncols, pver, ncnst, phys_state)
+      ncnst = SIZE(constituent_array, 3)
+      call allocate_physics_state(ncols, pver, constituent_array, phys_state)
+      index_qv = index_qv_use
+      ind_liq = index_liq
+      ind_ice = index_ice
       allocate(check_vals(ncols, pver, ncnst))
       check_vals(:,:,:) = 0.0_kind_phys
       do lev = 1, pver
@@ -66,8 +76,8 @@ contains
       ! Do timestep 1
       do col = 1, ncols, 2
          check_temp(col, 1) = check_temp(col, 1) + 0.5_kind_phys
-         check_vals(col, 1, 1) = check_vals(col, 1, 1) - 0.1_kind_phys
-         check_vals(col, 1, 3) = check_vals(col, 1, 3) + 0.1_kind_phys
+         check_vals(col, 1, index_qv) = check_vals(col, 1, index_qv) - inc
+         check_vals(col, 1, ind_liq) = check_vals(col, 1, ind_liq) + inc
       end do
       do itime = 1, num_time_steps
          do cind = 1, ncnst
@@ -82,7 +92,6 @@ contains
       real(kind_phys), intent(inout) :: array(:,:)
 
        ! Local variables
-       integer         :: q_ind      ! Constituent index
        integer         :: icol, ilev ! Field coordinates
        integer         :: idir       ! 'w' sign
        integer         :: levb, leve ! Starting and ending level indices
@@ -111,7 +120,6 @@ contains
       integer            :: col
       integer            :: lev
       integer            :: cind
-      integer            :: nind
       logical            :: need_header
       real(kind_phys)    :: check
       real(kind_phys)    :: denom

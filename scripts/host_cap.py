@@ -11,6 +11,7 @@ import os
 from ccpp_suite import API, API_SOURCE_NAME
 from ccpp_state_machine import CCPP_STATE_MACH
 from constituents import ConstituentVarDict, CONST_DDT_NAME, CONST_DDT_MOD
+from constituents import CONST_OBJ_STDNAME
 from ddt_library import DDTLibrary
 from file_utils import KINDS_MODULE
 from framework_env import CCPPFrameworkEnv
@@ -78,12 +79,27 @@ def suite_part_list(suite, stage):
     return spart_list
 
 ###############################################################################
+def constituent_num_suite_subname(host_model):
+###############################################################################
+    """Return the name of the number of suite constituents for this run
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_num_suite_constituents"
+
+###############################################################################
 def constituent_register_subname(host_model):
 ###############################################################################
-    """Return the name of the subroutine used to register (initialize) the
+    """Return the name of the subroutine used to register the constituent
+    properties for this run.
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_register_constituents"
+
+###############################################################################
+def constituent_initialize_subname(host_model):
+###############################################################################
+    """Return the name of the subroutine used to initialize the
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_register_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_initialize_constituents"
 
 ###############################################################################
 def constituent_num_consts_funcname(host_model):
@@ -91,7 +107,15 @@ def constituent_num_consts_funcname(host_model):
     """Return the name of the function to return the number of
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_number_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_number_constituents"
+
+###############################################################################
+def query_scheme_constituents_funcname(host_model):
+###############################################################################
+    """Return the name of the function to return True if the standard name
+    passed in matches an existing constituent
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_is_scheme_constituent"
 
 ###############################################################################
 def constituent_copyin_subname(host_model):
@@ -99,7 +123,7 @@ def constituent_copyin_subname(host_model):
     """Return the name of the subroutine to copy constituent fields to the
     host model.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_gather_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_gather_constituents"
 
 ###############################################################################
 def constituent_copyout_subname(host_model):
@@ -107,7 +131,7 @@ def constituent_copyout_subname(host_model):
     """Return the name of the subroutine to update constituent fields from
     the host model.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_update_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_update_constituents"
 
 ###############################################################################
 def unique_local_name(loc_name, host_model):
@@ -127,23 +151,57 @@ def unique_local_name(loc_name, host_model):
 ###############################################################################
 def constituent_model_object_name(host_model):
 ###############################################################################
-    """Return the variable name of the object which holds the constiteunt
-    medata and field information."""
-    hstr = "{}_constituents_obj".format(host_model.name)
-    return unique_local_name(hstr, host_model)
+    """Return the variable name of the object which holds the constituent
+       metadata and field information."""
+    hvar = host_model.find_variable(CONST_OBJ_STDNAME)
+    if not hvar:
+        raise CCPPError(f"Host model does not contain Var, {CONST_OBJ_STDNAME}")
+    # end if
+    return hvar.get_prop_value('local_name')
 
 ###############################################################################
 def constituent_model_const_stdnames(host_model):
 ###############################################################################
     """Return the name of the array of constituent standard names"""
-    hstr = "{}_model_const_stdnames".format(host_model.name)
+    hstr = f"{host_model.name}_model_const_stdnames"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
 def constituent_model_const_indices(host_model):
 ###############################################################################
     """Return the name of the array of constituent field array indices"""
-    hstr = "{}_model_const_indices".format(host_model.name)
+    hstr = f"{host_model.name}_model_const_indices"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_consts(host_model):
+###############################################################################
+    """Return the name of the function that will return a pointer to the
+       array of all constituents"""
+    hstr = f"{host_model.name}_constituents_array"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_advected_consts(host_model):
+###############################################################################
+    """Return the name of the function that will return a pointer to the
+       array of advected constituents"""
+    hstr = f"{host_model.name}_advected_constituents_array"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_const_props(host_model):
+###############################################################################
+    """Return the name of the array of constituent property object pointers"""
+    hstr = f"{host_model.name}_model_const_properties"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_const_index(host_model):
+###############################################################################
+    """Return the name of the interface that returns the array index of
+       a constituent array given its standard name"""
+    hstr = f"{host_model.name}_const_get_index"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -159,52 +217,29 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     to create the dictionary.
     """
     # First create a MetadataTable for the constituents DDT
-    stdname_layer = "ccpp_constituents_num_layer_consts"
-    stdname_interface = "ccpp_constituents_num_interface_consts"
-    stdname_2d = "ccpp_constituents_num_2d_consts"
+    stdname_layer = "number_of_ccpp_constituents"
     horiz_dim = "horizontal_dimension"
     vert_layer_dim = "vertical_layer_dimension"
     vert_interface_dim = "vertical_interface_dimension"
     array_layer = "vars_layer"
-    array_interface = "vars_interface"
-    array_2d = "vars_2d"
     # Table preamble (leave off ccpp-table-properties header)
     ddt_mdata = [
         #"[ccpp-table-properties]",
-        " name = {}".format(CONST_DDT_NAME), " type = ddt",
+        f" name = {CONST_DDT_NAME}", " type = ddt",
         "[ccpp-arg-table]",
-        " name = {}".format(CONST_DDT_NAME), " type = ddt",
+        f" name = {CONST_DDT_NAME}", " type = ddt",
         "[ num_layer_vars ]",
-        " standard_name = {}".format(stdname_layer),
+        f" standard_name = {stdname_layer}",
         " units = count", " dimensions = ()", " type = integer",
-        "[ num_interface_vars ]",
-        " standard_name = {}".format(stdname_interface),
-        " units = count", " dimensions = ()", " type = integer",
-        "[ num_2d_vars ]",
-        " standard_name = {}".format(stdname_2d),
-        " units = count", " dimensions = ()", " type = integer",
-        "[ {} ]".format(array_layer),
-        " standard_name = ccpp_constituents_array_of_layer_consts",
+        f"[ {array_layer} ]",
+        " standard_name = ccpp_constituents",
         " units = none",
-        " dimensions = ({}, {}, {})".format(horiz_dim, vert_layer_dim,
-                                            stdname_layer),
-        " type = real", " kind = kind_phys",
-        "[ {} ]".format(array_interface),
-        " standard_name = ccpp_constituents_array_of_interface_consts",
-        " units = none",
-        " dimensions = ({}, {}, {})".format(horiz_dim,
-                                            vert_interface_dim,
-                                            stdname_interface),
-        " type = real", " kind = kind_phys",
-        "[ {} ]".format(array_2d),
-        " standard_name = ccpp_constituents_array_of_2d_consts",
-        " units = none",
-        " dimensions = ({}, {})".format(horiz_dim, stdname_2d),
+        f" dimensions = ({horiz_dim}, {vert_layer_dim}, {stdname_layer})",
         " type = real", " kind = kind_phys"]
     # Add entries for each constituent (once per standard name)
     const_stdnames = set()
     for suite in suite_list:
-        if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+        if run_env.verbose:
             lmsg = "Adding constituents from {} to {}"
             run_env.logger.debug(lmsg.format(suite.name, host_model.name))
         # end if
@@ -233,8 +268,6 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                     vdim = dims[1].split(':')[-1]
                     if vdim == vert_layer_dim:
                         cvar_array_name = array_layer
-                    elif vdim == vert_interface_dim:
-                        cvar_array_name = array_interface
                     else:
                         emsg = "Unsupported vertical constituent dimension, "
                         emsg += "'{}', must be '{}' or '{}'"
@@ -242,44 +275,47 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                                                     vert_interface_dim))
                     # end if
                 else:
-                    cvar_array_name = array_2d
+                    emsg = f"Unsupported 2-D variable, '{std_name}'"
+                    raise CCPPError(emsg)
                 # end if
                 # First, create an index variable for <cvar>
                 ind_std_name = "index_of_{}".format(std_name)
-                loc_name = "{}(:,:,{})".format(cvar_array_name, ind_std_name)
-                ddt_mdata.append("[ {} ]".format(loc_name))
-                ddt_mdata.append(" standard_name = {}".format(std_name))
+                loc_name = f"{cvar_array_name}(:,:,{ind_std_name})"
+                ddt_mdata.append(f"[ {loc_name} ]")
+                ddt_mdata.append(f" standard_name = {std_name}")
                 units = cvar.get_prop_value('units')
-                ddt_mdata.append(" units = {}".format(units))
-                dimstr = "({})".format(", ".join(dims))
-                ddt_mdata.append(" dimensions = {}".format(dimstr))
+                ddt_mdata.append(f" units = {units}")
+                dimstr = f"({', '.join(dims)})"
+                ddt_mdata.append(f" dimensions = {dimstr}")
                 vtype = cvar.get_prop_value('type')
                 vkind = cvar.get_prop_value('kind')
-                ddt_mdata.append(" type = {} | kind = {}".format(vtype, vkind))
+                ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
                 const_stdnames.add(std_name)
             # end if
         # end for
     # end for
     # Parse this table using a fake filename
-    parse_obj = ParseObject("{}_constituent_mod.meta".format(host_model.name),
+    parse_obj = ParseObject(f"{host_model.name}_constituent_mod.meta",
                             ddt_mdata)
     ddt_table = MetadataTable(run_env, parse_object=parse_obj)
-    ddt_name = ddt_table.sections()[0].title
-    ddt_lib = DDTLibrary('{}_constituent_ddtlib'.format(host_model.name),
+    ddt_lib = DDTLibrary(f"{host_model.name}_constituent_ddtlib",
                          run_env, ddts=ddt_table.sections())
     # A bit of cleanup
     del parse_obj
     del ddt_mdata
     # Now, create the "host constituent module" dictionary
-    const_dict = VarDictionary("{}_constituents".format(host_model.name),
+    const_dict = VarDictionary(f"{host_model.name}_constituents",
                                run_env, parent_dict=host_model)
-    # Add in the constituents object
-    prop_dict = {'standard_name' : "ccpp_model_constituents_object",
-                 'local_name' : constituent_model_object_name(host_model),
-                 'dimensions' : '()', 'units' : "None", 'ddt_type' : ddt_name}
-    const_var = Var(prop_dict, _API_SOURCE, run_env)
-    const_var.write_def(cap, 1, const_dict)
-    ddt_lib.collect_ddt_fields(const_dict, const_var, run_env)
+    # Add the constituents object to const_dict and write its declaration
+    const_var = host_model.find_variable(CONST_OBJ_STDNAME)
+    if const_var:
+        const_dict.add_variable(const_var, run_env)
+        const_var.write_def(cap, 1, const_dict)
+    else:
+        raise CCPPError(f"Missing Var, {CONST_OBJ_STDNAME}, in host model")
+    # end if
+    ddt_lib.collect_ddt_fields(const_dict, const_var, run_env,
+                               skip_duplicates=True)
     # Declare variable for the constituent standard names array
     max_csname = max([len(x) for x in const_stdnames]) if const_stdnames else 0
     num_const_fields = len(const_stdnames)
@@ -375,10 +411,9 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):
     return ', '.join(hmvars)
 
 ###############################################################################
-def write_host_cap(host_model, api, output_dir, run_env):
+def write_host_cap(host_model, api, module_name, output_dir, run_env):
 ###############################################################################
     """Write an API to allow <host_model> to call any configured CCPP suite"""
-    module_name = "{}_ccpp_cap".format(host_model.name)
     cap_filename = os.path.join(output_dir, '{}.F90'.format(module_name))
     if run_env.logger is not None:
         msg = 'Writing CCPP Host Model Cap for {} to {}'
@@ -402,14 +437,13 @@ def write_host_cap(host_model, api, output_dir, run_env):
             cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
         # End for
         mspc = ' '*(maxmod - len(CONST_DDT_MOD))
-        cap.write("use {}, {}only: {}".format(CONST_DDT_MOD, mspc,
-                                              CONST_DDT_NAME), 1)
+        cap.write(f"use {CONST_DDT_MOD}, {mspc}only: {CONST_DDT_NAME}", 1)
         cap.write_preamble()
         max_suite_len = 0
         for suite in api.suites:
             max_suite_len = max(max_suite_len, len(suite.module))
         # End for
-        cap.write("! Public Interfaces", 1)
+        cap.comment("Public Interfaces", 1)
         # CCPP_STATE_MACH.transitions represents the host CCPP interface
         for stage in CCPP_STATE_MACH.transitions():
             stmt = "public :: {host_model}_ccpp_physics_{stage}"
@@ -418,21 +452,33 @@ def write_host_cap(host_model, api, output_dir, run_env):
         API.declare_inspection_interfaces(cap)
         # Write the host-model interfaces for constituents
         reg_name = constituent_register_subname(host_model)
-        cap.write("public :: {}".format(reg_name), 1)
+        cap.write(f"public :: {reg_name}", 1)
+        init_name = constituent_initialize_subname(host_model)
+        cap.write(f"public :: {init_name}", 1)
         numconsts_name = constituent_num_consts_funcname(host_model)
-        cap.write("public :: {}".format(numconsts_name), 1)
+        cap.write(f"public :: {numconsts_name}", 1)
+        queryconsts_name = query_scheme_constituents_funcname(host_model)
+        cap.write(f"public :: {queryconsts_name}", 1)
         copyin_name = constituent_copyin_subname(host_model)
-        cap.write("public :: {}".format(copyin_name), 1)
+        cap.write(f"public :: {copyin_name}", 1)
         copyout_name = constituent_copyout_subname(host_model)
-        cap.write("public :: {}".format(copyout_name), 1)
+        cap.write(f"public :: {copyout_name}", 1)
+        const_array_func = constituent_model_consts(host_model)
+        cap.write(f"public :: {const_array_func}", 1)
+        advect_array_func = constituent_model_advected_consts(host_model)
+        cap.write(f"public :: {advect_array_func}", 1)
+        prop_array_func = constituent_model_const_props(host_model)
+        cap.write(f"public :: {prop_array_func}", 1)
+        const_index_func = constituent_model_const_index(host_model)
+        cap.write(f"public :: {const_index_func}", 1)
         cap.write("", 0)
         cap.write("! Private module variables", 1)
         const_dict = add_constituent_vars(cap, host_model, api.suites, run_env)
         cap.end_module_header()
         for stage in CCPP_STATE_MACH.transitions():
             # Create a dict of local variables for stage
-            host_local_vars = VarDictionary("{}_{}".format(host_model.name,
-                                                           stage), run_env)
+            host_local_vars = VarDictionary(f"{host_model.name}_{stage}",
+                                            run_env)
             # Create part call lists
             # Look for any loop-variable mismatch
             for suite in api.suites:
@@ -561,11 +607,16 @@ def write_host_cap(host_model, api, output_dir, run_env):
         cap.write("", 0)
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
-        ConstituentVarDict.write_host_routines(cap, host_model, reg_name,
-                                               numconsts_name, copyin_name,
-                                               copyout_name, const_obj_name,
+        ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
+                                               numconsts_name, queryconsts_name,
+                                               copyin_name, copyout_name, 
+                                               const_obj_name,
                                                const_names_name,
                                                const_indices_name,
+                                               const_array_func,
+                                               advect_array_func,
+                                               prop_array_func,
+                                               const_index_func,
                                                api.suites, err_vars)
     # End with
     return cap_filename

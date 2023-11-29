@@ -44,6 +44,7 @@
 [ cld_ice_array ]
   standard_name = cloud_ice_dry_mixing_ratio
   advected = .true.
+  default_value = 0.0_kind_phys
   units = kg kg-1
   dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real |  kind = kind_phys
@@ -76,6 +77,7 @@
 [ cld_ice_array ]
   standard_name = cloud_ice_dry_mixing_ratio
   advected = .true.
+  default_value = 0.0_kind_phys
   units = kg kg-1
   dimensions = (horizontal_dimension, vertical_layer_dimension)
   type = real |  kind = kind_phys

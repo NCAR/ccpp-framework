@@ -5,12 +5,9 @@ module test_host_data
   !> \section arg_table_physics_state  Argument Table
   !! \htmlinclude arg_table_physics_state.html
   type physics_state
-     real(kind_phys), dimension(:), allocatable ::   &
-          ps                                           ! surface pressure
-     real(kind_phys), dimension(:,:), allocatable :: &
-          temp                                         ! temperature
-     real(kind_phys), dimension(:,:,:),allocatable :: &
-          q         ! constituent mixing ratio (kg/kg moist or dry air depending on type)
+     real(kind_phys), allocatable :: ps(:)              ! surface pressure
+     real(kind_phys), allocatable :: temp(:,:)          ! temperature
+     real(kind_phys), dimension(:,:,:), pointer :: q => NULL() ! constituent array
   end type physics_state
 
   public allocate_physics_state
@@ -20,7 +17,7 @@ contains
   subroutine allocate_physics_state(cols, levels, constituents, state)
     integer,             intent(in)  :: cols
     integer,             intent(in)  :: levels
-    integer,             intent(in)  :: constituents
+    real(kind_phys), pointer         :: constituents(:,:,:)
     type(physics_state), intent(out) :: state
 
     if (allocated(state%ps)) then
@@ -31,10 +28,12 @@ contains
        deallocate(state%temp)
     end if
     allocate(state%temp(cols, levels))
-    if (allocated(state%q)) then
-       deallocate(state%q)
+    if (associated(state%q)) then
+       ! Do not deallocate (we do not own this array)
+       nullify(state%q)
     end if
-    allocate(state%q(cols, levels, constituents))
+    ! Point to the advected constituents array
+    state%q => constituents
 
   end subroutine allocate_physics_state
 

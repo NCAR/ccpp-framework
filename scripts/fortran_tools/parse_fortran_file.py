@@ -563,29 +563,37 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, run_env):
                                         module=spec_name,
                                         var_dict=var_dict)
                 mheaders.append(mheader)
-                if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+                if run_env.verbose:
                     ctx = context_string(pobj, nodir=True)
                     msg = 'Adding header {}{}'
                     run_env.logger.debug(msg.format(mheader.table_name, ctx))
+                # end if
                 break
-            elif ((type_def is not None) and (active_table is not None) and
-                  (type_def[0].lower() == active_table.lower())):
+            elif type_def is not None:
                 # Put statement back so caller knows where we are
                 statements.insert(0, statement)
-                statements, ddt = parse_type_def(statements, type_def,
-                                                 spec_name, pobj, run_env)
-                if ddt is None:
-                    ctx = context_string(pobj, nodir=True)
-                    msg = "No DDT found at '{}'{}"
-                    raise CCPPError(msg.format(statement, ctx))
-                # End if
-                mheaders.append(ddt)
-                if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
-                    ctx = context_string(pobj, nodir=True)
-                    msg = 'Adding DDT {}{}'
-                    run_env.logger.debug(msg.format(ddt.table_name, ctx))
-                # End if
-                active_table = None
+                if ((active_table is not None) and
+                    (type_def[0].lower() == active_table.lower())):
+                    statements, ddt = parse_type_def(statements, type_def,
+                                                     spec_name, pobj, run_env)
+                    if ddt is None:
+                        ctx = context_string(pobj, nodir=True)
+                        msg = "No DDT found at '{}'{}"
+                        raise CCPPError(msg.format(statement, ctx))
+                    # end if
+                    mheaders.append(ddt)
+                    if run_env.verbose:
+                        ctx = context_string(pobj, nodir=True)
+                        msg = 'Adding DDT {}{}'
+                        run_env.logger.debug(msg.format(ddt.table_name, ctx))
+                    # end if
+                    active_table = None
+                else:
+                    # We found a type definition but it is not one with
+                    #   metadata. Just parse it and throw away what is found.
+                    _ = parse_type_def(statements, type_def,
+                                       spec_name, pobj, run_env)
+                # end if
             elif active_table is not None:
                 # We should have a variable definition to add
                 if ((not is_comment_statement(statement)) and
@@ -616,7 +624,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
     inpreamble = False
     insub = True
     seen_contains = False
-    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+    if run_env.verbose:
         ctx = context_string(pobj, nodir=True)
         msg = "Parsing specification of {}{}"
         run_env.logger.debug(msg.format(table_name, ctx))
@@ -786,6 +794,7 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
             # End program or module
             pmatch = endmatch.match(statement)
             asmatch = _ARG_TABLE_START_RE.match(statement)
+            type_def = fortran_type_definition(statement)
             if pmatch is not None:
                 # We never found a contains statement
                 inspec = False
@@ -802,7 +811,7 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
                         errmsg = duplicate_header(mtables[title], tbl)
                         raise CCPPError(errmsg)
                     # end if
-                    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+                    if run_env.verbose:
                         ctx = tbl.start_context()
                         mtype = tbl.table_type
                         msg = "Adding metadata from {}, {}{}"
@@ -812,6 +821,13 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
                 # End if
                 inspec = pobj.in_region('MODULE', region_name=mod_name)
                 break
+            elif type_def:
+                # We have a type definition without metadata
+                # Just parse it and throw away what is found.
+                # Put statement back so caller knows where we are
+                statements.insert(0, statement)
+                _ = parse_type_def(statements, type_def,
+                                   spec_name, pobj, run_env)
             elif is_contains_statement(statement, inmod):
                 inspec = False
                 break
@@ -876,7 +892,7 @@ def parse_module(pobj, statements, run_env):
     # End if
     mod_name = pmatch.group(1)
     pobj.enter_region('MODULE', region_name=mod_name, nested_ok=False)
-    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+    if run_env.verbose:
         ctx = context_string(pobj, nodir=True)
         msg = "Parsing Fortran module, {}{}"
         run_env.logger.debug(msg.format(mod_name, ctx))
@@ -912,7 +928,7 @@ def parse_module(pobj, statements, run_env):
                         errmsg = duplicate_header(mtables[title], mheader)
                         raise CCPPError(errmsg)
                     # end if
-                    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+                    if run_env.verbose:
                         mtype = mheader.table_type
                         ctx = mheader.start_context()
                         msg = "Adding metadata from {}, {}{}"
