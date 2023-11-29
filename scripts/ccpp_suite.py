@@ -427,7 +427,7 @@ character(len=16) :: {css_var_name} = '{state}'
                 phase = RUN_PHASE_NAME
             # end if
             lmsg = "Group {}, schemes = {}"
-            if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+            if run_env.verbose:
                 run_env.logger.debug(lmsg.format(item.name,
                                                  [x.name
                                                   for x in item.schemes()]))
@@ -490,7 +490,7 @@ character(len=16) :: {css_var_name} = '{state}'
         (calling the group caps one after another)"""
         # Set name of module and filename of cap
         filename = '{module_name}.F90'.format(module_name=self.module)
-        if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+        if run_env.verbose:
             run_env.logger.debug('Writing CCPP suite file, {}'.format(filename))
         # end if
         # Retrieve the name of the constituent module for Group use statements
@@ -808,32 +808,46 @@ class API(VarDictionary):
             input_vars = [set(), set(), set()] # leaves, arrays, leaf elements
             inout_vars = [set(), set(), set()] # leaves, arrays, leaf elements
             output_vars = [set(), set(), set()] # leaves, arrays, leaf elements
+            const_initialized_in_physics = {}
             for part in suite.groups:
                 for var in part.call_list.variable_list():
+                    phase = part.phase()
                     stdname = var.get_prop_value("standard_name")
                     intent = var.get_prop_value("intent")
                     protected = var.get_prop_value("protected")
+                    constituent = var.is_constituent()
+                    if stdname not in const_initialized_in_physics:
+                        const_initialized_in_physics[stdname] = False
+                    # end if
                     if (parent is not None) and (not protected):
                         pvar = parent.find_variable(standard_name=stdname)
                         if pvar is not None:
                             protected = pvar.get_prop_value("protected")
                         # end if
                     # end if
-                    elements = var.intrinsic_elements(check_dict=self.parent)
-                    if (intent == 'in') and (not protected):
+                    elements = var.intrinsic_elements(check_dict=self.parent,
+                                                      ddt_lib=self.__ddt_lib)
+                    if (intent == 'in') and (not protected) and (not const_initialized_in_physics[stdname]):
                         if isinstance(elements, list):
                             input_vars[1].add(stdname)
                             input_vars[2].update(elements)
                         else:
                             input_vars[0].add(stdname)
                         # end if
-                    elif intent == 'inout':
+                    elif intent == 'inout' and (not const_initialized_in_physics[stdname]):
                         if isinstance(elements, list):
                             inout_vars[1].add(stdname)
                             inout_vars[2].update(elements)
                         else:
                             inout_vars[0].add(stdname)
                         # end if
+                    elif constituent and (intent == 'out' and phase != 'initialize' and not
+                         const_initialized_in_physics[stdname]):
+                        # constituents HAVE to be initialized in the init phase because the dycore needs to advect them
+                        emsg = f"constituent variable '{stdname}' cannot be initialized in the '{phase}' phase"
+                        raise CCPPError(emsg)
+                    elif intent == 'out' and constituent and phase == 'initialize':
+                        const_initialized_in_physics[stdname] = True
                     elif intent == 'out':
                         if isinstance(elements, list):
                             output_vars[1].add(stdname)

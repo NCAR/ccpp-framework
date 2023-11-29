@@ -14,6 +14,7 @@ import re
 from conversion_tools import unit_conversion
 from framework_env import CCPPFrameworkEnv
 from parse_tools import check_local_name, check_fortran_type, context_string
+from parse_tools import check_molar_mass
 from parse_tools import FORTRAN_DP_RE, FORTRAN_SCALAR_REF_RE, fortran_list_match
 from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
@@ -586,6 +587,8 @@ class VariableProperty:
     'foo(bar)'
     >>> VariableProperty('local_name', str, check_fn_in=check_local_name).valid_value('q(:,:,index_of_water_vapor_specific_humidity)')
     'q(:,:,index_of_water_vapor_specific_humidity)'
+    >>> VariableProperty('molar_mass', float, check_fn_in=check_molar_mass).valid_value('12.1')
+    12.1
     """
 
     __true_vals = ['t', 'true', '.true.']
@@ -597,7 +600,7 @@ class VariableProperty:
         """Conduct sanity checks and initialize this variable property."""
         self._name = name_in
         self._type = type_in
-        if self._type not in [bool, int, list, str]:
+        if self._type not in [bool, int, list, str, float]:
             emsg = "{} has invalid VariableProperty type, '{}'"
             raise CCPPError(emsg.format(name_in, type_in))
         # end if
@@ -688,6 +691,21 @@ class VariableProperty:
                     valid_val = tval
             except CCPPError:
                 valid_val = None # Redundant but more expressive than pass
+        elif self.ptype is float:
+            try:
+                tval = float(test_value)
+                if self._valid_values is not None:
+                    if tval in self._valid_values:
+                        valid_val = tval
+                    else:
+                        valid_val = None # i.e. pass
+                    # end if
+                else:
+                    valid_val = tval
+                # end if
+            except CCPPError:
+                valid_val = None
+            # end try
         elif self.ptype is list:
             if isinstance(test_value, str):
                 tval = fortran_list_match(test_value)
