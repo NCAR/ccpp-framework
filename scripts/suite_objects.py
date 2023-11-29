@@ -1148,12 +1148,11 @@ class Scheme(SuiteObject):
             args = self.match_variable(var, vstdname=vstdname, vdims=vdims)
             found, dict_var, vert_dim, new_dims, missing_vert = args
             if found:
-
                 if self.__group.run_env.debug:
-                    # Add variable allocation checks for host model variables only
+                    # Add variable allocation checks for group, suite, and host model variables
                     gvar = self.__group.find_variable(standard_name=vstdname, any_scope=False)
                     if dict_var and not gvar:
-                        self.add_var_debug_check(dict_var, new_dims)
+                        self.add_var_debug_check(dict_var)
                 # end if
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
@@ -1219,23 +1218,19 @@ class Scheme(SuiteObject):
         # end if
         return scheme_mods
 
-    def add_var_debug_check(self, var, new_dims):
-        """ Add a debug check for a given variable var (host model variable,
-        suite variable or group module variable) with dimensions new_dims
-        for this scheme. Return a clone of the variable with these dimensions
-        and a dummy variable that managed by the group subroutine that calls the
-        scheme, which is used to assign the scalar or the lower and upper bounds
+    def add_var_debug_check(self, var):
+        """Add a debug check for a given variable var (host model variable,
+        suite variable or group module variable) for this scheme.
+        Return the variable and an associated dummy variable that is
+        managed by the group subroutine that calls the scheme, and
+        which is used to assign the scalar or the lower and upper bounds
         of the array to if the intent is 'inout' or 'out'.
         """
         # Get the basic attributes that decide whether we need
         # to check the variable when we write the group
         standard_name = var.get_prop_value('standard_name')
-        # We need to use the new dimensions as determined
-        # by the scheme's analyze logic, not the original
-        # variable dimension of the host variable var.
-        dimensions = new_dims
+        dimensions = var.get_dimensions()
         active = var.get_prop_value('active')
-        # The order is important to get the correct local name - DH* not sure ...
         var_dicts = [ self.__group.call_list ] + self.__group.suite_dicts()
 
         # If the variable isn't active, skip it
@@ -1301,11 +1296,56 @@ class Scheme(SuiteObject):
                         raise Exception(f"No dimension with standard name '{udim}'")
                     self.update_group_call_list_variable(udim_var)
 
-        # Add the modified host model variable (with new dimension)
-        # to the list of variables to check. Record which dummy to use.
-        subst_dict = {'dimensions':new_dims}
-        clone = var.clone(subst_dict)
-        self.__var_debug_checks.append([clone, dummy])
+        # Add the variable to the list of variables to check. Record which dummy to use.
+        self.__var_debug_checks.append([var, dummy])
+
+    def replace_horiz_dim_debug_check(self, dim, cldicts, var_in_call_list):
+        """Determine the correct horizontal dimension to use for a given variable,
+        depending on the CCPP phase and origin of the variable (from the host/suite
+        or defined as a module variable for the parent group. Return the dimension
+        length and other properties needed for the variable debug checks."""
+        if not is_horizontal_dimension(dim):
+            raise Exception(f"Dimension {dim} is not a horizontal dimension")
+        if self.run_phase():
+            if self.find_variable(standard_name="horizontal_loop_extent"):
+                ldim = "ccpp_constant_one"
+                udim = "horizontal_loop_extent"
+            else:
+                ldim = "horizontal_loop_begin"
+                udim = "horizontal_loop_end"
+        else:
+            ldim = "ccpp_constant_one"
+            udim = "horizontal_dimension"
+        # Get dimension for lower bound
+        for var_dict in cldicts:
+            dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
+            if dvar is not None:
+                break
+        if not dvar:
+            raise Exception(f"No variable with standard name '{ldim}' in cldicts")
+        ldim_lname = dvar.get_prop_value('local_name')
+        # Get dimension for upper bound
+        for var_dict in cldicts:
+            dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
+            if dvar is not None:
+                break
+        if not dvar:
+            raise Exception(f"No variable with standard name '{udim}' in cldicts")
+        udim_lname = dvar.get_prop_value('local_name')
+        # Assemble dimensions and bounds for size checking
+        dim_length = f'{udim_lname}-{ldim_lname}+1'
+        # If the variable that uses these dimensions is not in the group's call
+        # list, then it is defined as a module variable for this group and the
+        # dimensions run from ldim to udim, otherwise from 1:dim_length.
+        if not var_in_call_list:
+            dim_string = f"{ldim_lname}:{udim_lname}"
+            lbound_string = ldim_lname
+            ubound_string = udim_lname
+        else:
+            dim_string = ":"
+            lbound_string = '1'
+            ubound_string = f'{udim_lname}-{ldim_lname}+1'
+        return (dim_length, dim_string, lbound_string, ubound_string)
 
     def write_var_debug_check(self, var, dummy, cldicts, outfile, errcode, errmsg, indent):
         """Write the variable debug check for the given variable, as determined
@@ -1378,57 +1418,39 @@ class Scheme(SuiteObject):
                     lbound_strings.append(dim_lname)
                     ubound_strings.append(dim_lname)
                 else:
-                    # I don't know how to do this better. Schemes can rely on the host cap
-                    # passing arrays such that the horizontal dimension of the variable
-                    # seen by the scheme runs from 1:ncol (horizontal_loop_extent). But
-                    # module variables for this group are passed to the schemes with the
-                    # horizontal dimensions in the call dimstring. And it all depends
-                    # on the phase, too.
+                    # Horizontal dimension needs to be dealt with separately, because it
+                    # depends on the CCPP phase, whether the variable is a host/suite
+                    # variable or locally defined on the group level.
                     if is_horizontal_dimension(dim):
-                        if self.run_phase():
-                            if self.find_variable(standard_name="horizontal_loop_extent"):
-                                ldim = "ccpp_constant_one"
-                                udim = "horizontal_loop_extent"
-                            else:
-                                ldim = "horizontal_loop_begin"
-                                udim = "horizontal_loop_end"
-                        else:
-                            ldim = "ccpp_constant_one"
-                            udim = "horizontal_dimension"
+                        (dim_length, dim_string, lbound_string, ubound_string) = \
+                            self.replace_horiz_dim_debug_check(dim, cldicts, var_in_call_list)
                     else:
                         (ldim, udim) = dim.split(":")
-                    # Get dimension for lower bound
-                    for var_dict in cldicts:
-                        dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
-                        if dvar is not None:
-                            break
-                    if not dvar:
-                        raise Exception(f"No variable with standard name '{ldim}' in cldicts")
-                    ldim_lname = dvar.get_prop_value('local_name')
-                    # Get dimension for upper bound
-                    for var_dict in cldicts:
-                        dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
-                        if dvar is not None:
-                            break
-                    if not dvar:
-                        raise Exception(f"No variable with standard name '{udim}' in cldicts")
-                    udim_lname = dvar.get_prop_value('local_name')
-                    # Assemble dimensions and bounds for size checking
-                    dim_length = f'{udim_lname}-{ldim_lname}+1'
-                    if is_horizontal_dimension(dim):
-                        # See comment above on call list variables vs module variables
-                        if not var_in_call_list:
-                            dim_strings.append(f"{ldim_lname}:{udim_lname}")
-                            lbound_strings.append(ldim_lname)
-                            ubound_strings.append(udim_lname)
-                        else:
-                            dim_strings.append(":")
-                            lbound_strings.append('1')
-                            ubound_strings.append(f'{udim_lname}-{ldim_lname}+1')
-                    else:
-                        dim_strings.append(":")
-                        lbound_strings.append(ldim_lname)
-                        ubound_strings.append(udim_lname)
+                        # Get dimension for lower bound
+                        for var_dict in cldicts:
+                            dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
+                            if dvar is not None:
+                                break
+                        if not dvar:
+                            raise Exception(f"No variable with standard name '{ldim}' in cldicts")
+                        ldim_lname = dvar.get_prop_value('local_name')
+                        # Get dimension for upper bound
+                        for var_dict in cldicts:
+                            dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
+                            if dvar is not None:
+                                break
+                        if not dvar:
+                            raise Exception(f"No variable with standard name '{udim}' in cldicts")
+                        udim_lname = dvar.get_prop_value('local_name')
+                        # Assemble dimensions and bounds for size checking
+                        dim_length = f'{udim_lname}-{ldim_lname}+1'
+                        dim_string = ":"
+                        lbound_string = ldim_lname
+                        ubound_string = udim_lname
+                    # end if
+                    dim_strings.append(dim_string)
+                    lbound_strings.append(lbound_string)
+                    ubound_strings.append(ubound_string)
                 array_size = f'{array_size}*({dim_length})'
 
             # Various strings needed to get the right size
