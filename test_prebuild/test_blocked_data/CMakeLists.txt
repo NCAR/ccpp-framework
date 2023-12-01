@@ -53,7 +53,7 @@ else(API)
   message(STATUS "Got CCPP API from cmakefile include file: ${API}")
 endif(API)
 
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -O0 -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -ffpe-trap=invalid,zero,overflow -fbounds-check -ggdb -fbacktrace -ffree-line-length-none") #" -cpp -fno-range-check")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -O0 -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -ffpe-trap=invalid,zero,overflow -fbounds-check -ggdb -fbacktrace -ffree-line-length-none")
 
 #------------------------------------------------------------------------------
 add_library(ccpp_blocked_data STATIC ${SCHEMES} ${CAPS} ${API})
@@ -88,4 +88,3 @@ install(EXPORT ccpp_blocked_data-targets
 # Define where to install the C headers and Fortran modules
 #install(FILES ${HEADERS_C} DESTINATION include)
 install(FILES ${MODULES_F90} DESTINATION include)
-
