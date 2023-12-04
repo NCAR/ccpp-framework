@@ -1248,28 +1248,28 @@ class Scheme(SuiteObject):
         if compat_obj.has_dim_transforms:
             print("SWALES: ",dim)
 
-        # Add any forward transforms.
+        # Add any reverse transforms.
         if (var.get_prop_value('intent') != 'in'):
-            self.__forward_transforms.append([var.get_prop_value('local_name'),
+            self.__reverse_transforms.append([var.get_prop_value('local_name'),
                                               dummy.get_prop_value('local_name'),
                                               lindices, rindices, compat_obj])
 
-        # Add any reverse transforms.
+        # Add any forward transforms.
         if (var.get_prop_value('intent') != 'out'):
-            self.__reverse_transforms.append([dummy.get_prop_value('local_name'),
+            self.__forward_transforms.append([dummy.get_prop_value('local_name'),
                                               var.get_prop_value('local_name'),
                                               rindices, lindices, compat_obj])
 
     def write_var_transform(self, var, dummy, rindices, lindices, compat_obj,
                             outfile, indent, forward):
         """Write variable transformation needed to call this Scheme <outfile>"""
-        if forward:
-            stmt = compat_obj.forward_transform(lvar_lname=dummy,
+        if not forward:
+            stmt = compat_obj.reverse_transform(lvar_lname=dummy,
                                                 rvar_lname=var,
                                                 lvar_indices=lindices,
                                                 rvar_indices=rindices)
         else:
-            stmt = compat_obj.reverse_transform(lvar_lname=var,
+            stmt = compat_obj.forward_transform(lvar_lname=var,
                                                 rvar_lname=dummy,
                                                 lvar_indices=rindices,
                                                 rvar_indices=lindices)
@@ -1288,15 +1288,15 @@ class Scheme(SuiteObject):
                                              subname=self.subroutine_name)
 
         outfile.write('if ({} == 0) then'.format(errcode), indent)
-        # Write any reverse transforms.
-        for (dummy, var, rindices, lindices, compat_obj) in self.__reverse_transforms:
-            tstmt = self.write_var_transform(dummy, var, rindices, lindices, compat_obj, outfile, indent, False)
+        # Write any forward transforms.
+        for (dummy, var, rindices, lindices, compat_obj) in self.__forward_transforms:
+            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent, False)
         # Write the scheme call.
         stmt = 'call {}({})'
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
-        # Write any forward transforms.
-        for (var, dummy, lindices, rindices, compat_obj) in self.__forward_transforms:
-            tstmt = self.write_var_transform(dummy, var, rindices, lindices, compat_obj, outfile, indent, True)
+        # Write any reverse transforms.
+        for (var, dummy, lindices, rindices, compat_obj) in self.__reverse_transforms:
+            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent, True)
         outfile.write('end if', indent)
 
     def schemes(self):
