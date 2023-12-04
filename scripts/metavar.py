@@ -20,6 +20,7 @@ from parse_tools import FORTRAN_SCALAR_REF_RE
 from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
+from parse_tools import check_molar_mass
 from parse_tools import ParseContext, ParseSource, type_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
@@ -204,6 +205,8 @@ class Var:
                     VariableProperty('polymorphic', bool, optional_in=True,
                                      default_in=False),
                     VariableProperty('top_at_one', bool, optional_in=True,
+                                     default_in=False),
+                    VariableProperty('target', bool, optional_in=True,
                                      default_in=False)]
 
 # XXgoldyXX: v debug only
@@ -220,7 +223,10 @@ class Var:
     # Note that all constituent properties must be optional and contain either
     #   a default value or default function.
     __constituent_props = [VariableProperty('advected', bool,
-                                            optional_in=True, default_in=False)]
+                                            optional_in=True, default_in=False),
+                           VariableProperty('molar_mass', float,
+                                            optional_in=True, default_in=0.0,
+                                            check_fn_in=check_molar_mass)]
 
     __constituent_prop_dict = {x.name : x for x in __constituent_props}
 
@@ -620,7 +626,8 @@ class Var:
                             # end if
                         # end for
                         if dvar:
-                            dnames.append(dvar.get_prop_value('local_name'))
+                            # vdict is the dictionary where <dvar> was found
+                            dnames.append(dvar.call_string(vdict))
                         # end if
                         if not dvar:
                             emsg += sepstr + "No variable found in "
@@ -697,9 +704,15 @@ class Var:
                             dvar = var_dict.find_variable(standard_name=item,
                                                           any_scope=False)
                             if dvar is None:
-                                iname = None
+                                try:
+                                    dval = int(item)
+                                    iname = item
+                                except ValueError:
+                                    iname = None
+                                # end try
                             else:
-                                iname = dvar.get_prop_value('local_name')
+                                iname = dvar.call_string(var_dict,
+                                                         loop_vars=loop_vars)
                             # end if
                         else:
                             iname = ''
@@ -759,7 +772,7 @@ class Var:
         match = FORTRAN_SCALAR_REF_RE.match(local_name)
         return match
 
-    def intrinsic_elements(self, check_dict=None):
+    def intrinsic_elements(self, check_dict=None, ddt_lib=None):
         """Return a list of the standard names of this Var object's 'leaf'
         intrinsic elements or this Var object's standard name if it is an
         intrinsic 'leaf' variable.
@@ -774,10 +787,26 @@ class Var:
         Currently, an array of DDTs is not processed (return None) since
         Fortran does not support a way to reference those elements.
         """
+        element_names = None
         if self.is_ddt():
-            element_names = None
-            raise ValueError("shouldn't happen?")
-            # To Do, find and process named elements of DDT
+            dtitle = self.get_prop_value('type')
+            if ddt_lib and (dtitle in ddt_lib):
+                element_names = []
+                ddt_def = ddt_lib[dtitle]
+                for dvar in ddt_def.variable_list():
+                    delems = dvar.intrinsic_elements(check_dict=check_dict,
+                                                     ddt_lib=ddt_lib)
+                    if delems:
+                        element_names.extend(delems)
+                    # end if
+                # end for
+                if not element_names:
+                    element_names = None
+                # end if
+            else:
+                errmsg = f'No ddt_lib or ddt {dtitle} not in ddt_lib'
+                raise CCPPError(errmsg)
+            # end if
         # end if
         children = self.children()
         if (not children) and check_dict:
@@ -853,6 +882,11 @@ class Var:
             # end while
         # end if
         return iter(children) if children else None
+
+    @property
+    def var(self):
+        "Return this object (base behavior for derived classes such as VarDDT)"
+        return self
 
     @property
     def context(self):
@@ -942,7 +976,7 @@ class Var:
         return find_vertical_dimension(vdims)[0]
 
     def write_def(self, outfile, indent, wdict, allocatable=False,
-                  dummy=False, add_intent=None, extra_space=0):
+                  dummy=False, add_intent=None, extra_space=0, public=False):
         """Write the definition line for the variable to <outfile>.
         If <dummy> is True, include the variable's intent.
         If <dummy> is True but the variable has no intent, add the
@@ -1004,10 +1038,9 @@ class Var:
         elif intent is not None:
             alloval = self.get_prop_value('allocatable')
             if (intent.lower()[-3:] == 'out') and alloval:
-                intent_str = 'allocatable, intent({})'.format(intent)
+                intent_str = f"allocatable, intent({intent})"
             else:
-                intent_str = 'intent({}){}'.format(intent,
-                                                   ' '*(5 - len(intent)))
+                intent_str = f"intent({intent}){' '*(5 - len(intent))}"
             # end if
         elif not dummy:
             intent_str = ''
@@ -1019,6 +1052,13 @@ class Var:
         else:
             comma = ' '
         # end if
+        if self.get_prop_value('target'):
+            targ = ", target"
+        else:
+            targ = ""
+        # end if
+        comma = targ + comma
+        extra_space -= len(targ)
         if self.is_ddt():
             if polymorphic:
                 dstr = "class({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
@@ -1036,6 +1076,7 @@ class Var:
                 cspc = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
+            
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
                                   name=name, dims=dimstr, cspc=cspc,
                                   sname=stdname), indent)

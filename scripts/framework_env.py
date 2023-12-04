@@ -10,6 +10,7 @@ Framework runtime information and parameter values.
 # Python library imports
 import argparse
 import os
+from parse_tools import verbose
 
 _EPILOG = '''
 '''
@@ -274,6 +275,12 @@ class CCPPFrameworkEnv:
         """Return a list of all kind types defined in this
         CCPPFrameworkEnv object."""
         return self.__kind_dict.keys()
+
+    @property
+    def verbose(self):
+        """Return true if debug enabled for the CCPPFrameworkEnv's
+        logger object."""
+        return (self.logger and verbose(self.logger))
 
     @property
     def use_error_obj(self):
