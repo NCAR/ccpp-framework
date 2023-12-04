@@ -1,5 +1,7 @@
 program test_blocked_data
 
+   use, intrinsic :: iso_fortran_env, only: error_unit
+
    use ccpp_types, only: ccpp_t
    use data, only: nblks, blksz, ncols
    use data, only: ccpp_data_domain, ccpp_data_blocks, &
@@ -35,7 +37,7 @@ program test_blocked_data
 
    do ib=1,size(blocked_data_instance)
       allocate(blocked_data_instance(ib)%array_data(blksz(ib)))
-      write(0,'(2(a,i3))') "Allocated array_data for block", ib, " to size", size(blocked_data_instance(ib)%array_data)
+      write(error_unit,'(2(a,i3))') "Allocated array_data for block", ib, " to size", size(blocked_data_instance(ib)%array_data)
    end do
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -45,8 +47,8 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_init(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(0,'(a)') "An error occurred in ccpp_physics_init:"
-      write(0,'(a)') trim(cdata%errmsg)
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_init:"
+      write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if
 
@@ -57,8 +59,8 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_timestep_init(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(0,'(a)') "An error occurred in ccpp_physics_timestep_init:"
-      write(0,'(a)') trim(cdata%errmsg)
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_init:"
+      write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if
 
@@ -70,8 +72,8 @@ program test_blocked_data
       cdata => ccpp_data_blocks(ib)
       call ccpp_physics_run(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
       if (ierr/=0) then
-         write(0,'(a,i3,a)') "An error occurred in ccpp_physics_run for block", ib, ":"
-         write(0,'(a)') trim(cdata%errmsg)
+         write(error_unit,'(a,i3,a)') "An error occurred in ccpp_physics_run for block", ib, ":"
+         write(error_unit,'(a)') trim(cdata%errmsg)
          stop 1
       end if
    end do
@@ -83,8 +85,8 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_timestep_finalize(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(0,'(a)') "An error occurred in ccpp_physics_timestep_init:"
-      write(0,'(a)') trim(cdata%errmsg)
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_init:"
+      write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if
 
@@ -95,8 +97,8 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_finalize(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(0,'(a)') "An error occurred in ccpp_physics_timestep_init:"
-      write(0,'(a)') trim(cdata%errmsg)
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_init:"
+      write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if
 
