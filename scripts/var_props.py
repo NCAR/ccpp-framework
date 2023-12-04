@@ -791,49 +791,41 @@ class VarCompatObj:
                                        kind_types=["kind_phys=REAL64", \
                                                    "kind_dyn=REAL32", \
                                                    "kind_host=REAL64"])
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", [],           \
-                     "var1_lname", "var_stdname", "real", "kind_phys",      \
-                     "m", [], "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", [], "var1_lname", False,\
+                     "var_stdname", "real", "kind_phys", "m", [], "var2_lname", False,\
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with no horizontal transform works
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "m", ['horizontal_dimension'],    \
-                     "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "m", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with a horizontal transform works
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "m", ['horizontal_loop_extent'],  \
-                     "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['horizontal_dimension'],   "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "m", ['horizontal_loop_extent'], "var2_lname", False, \
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with unit conversion m->km works
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "km", ['horizontal_dimension'],   \
-                     "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with unit conversion m->km works and that it
     # produces the correct forward transformation
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "km", ['horizontal_dimension'],   \
-                     "var2_lname", _DOCTEST_RUNENV).forward_transform(      \
-                     "var1_lname", "var2_lname", ('i'))
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV).forward_transform("var1_lname", "var2_lname", 'i', 'i')
     'var1_lname(i) = 1.0E-3_kind_phys*var2_lname(i)'
 
     # Test that a 3-D var with unit conversion m->km and vertical flipping
     # works and that it produces the correct reverse transformation
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension', 'vertical_layer_dimension'],  \
-                     "var1_lname", "var_stdname", "real", "kind_phys", "km",\
-                     ['horizontal_dimension', 'vertical_layer_dimension'],  \
-                     "var2_lname", _DOCTEST_RUNENV).reverse_transform(      \
-                     "var1_lname", "var2_lname", ('i','k'), flip_vdim='nk')
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['horizontal_dimension', 'vertical_layer_dimension'], "var1_lname", False,\
+                     "var_stdname", "real", "kind_phys", "km",['horizontal_dimension', 'vertical_layer_dimension'], "var2_lname", True, \
+                     _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", ('i','k'), ('i','nk-k+1'))
     'var1_lname(i,nk-k+1) = 1.0E+3_kind_phys*var2_lname(i,k)'
     """
 
@@ -844,9 +836,9 @@ class VarCompatObj:
         """Initialize this object with information on the equivalence and/or
            conformability of two variables.
         variable 1 is described by <var1_stdname>, <var1_type>, <var1_kind>,
-           <var1_units>, <var1_dims>, <var1_lname>, and <v1_context>.
+           <var1_units>, <var1_dims>, <var1_lname>, <var1_top>, and <v1_context>.
         variable 2 is described by <var2_stdname>, <var2_type>, <var2_kind>,
-           <var2_units>, <var2_dims>, <var2_lname>, and <v2_context>.
+           <var2_units>, <var2_dims>, <var2_lname>, <var2_top>, and <v2_context>.
         <run_env> is the CCPPFrameworkEnv object used here to verify kind
            equivalence or to produce kind transformations.
         """
@@ -1052,9 +1044,9 @@ class VarCompatObj:
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
-                                            "m", [], "var1_lname", "var_stdname", \
+                                            "m", [], "var1_lname", False, "var_stdname", \
                                             "real", "kind_phys", "m", [], \
-                                            "var2_lname", _DOCTEST_RUNENV, \
+                                            "var2_lname", False, _DOCTEST_RUNENV, \
                                             v1_context=_DOCTEST_CONTEXT1, \
                                             v2_context=_DOCTEST_CONTEXT2)
 
@@ -1106,9 +1098,9 @@ class VarCompatObj:
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
-                                            "m", [], "var1_lname", "var_stdname", \
+                                            "m", [], "var1_lname", False, "var_stdname", \
                                             "real", "kind_phys", "m", [], \
-                                            "var2_lname", _DOCTEST_RUNENV, \
+                                            "var2_lname", False, _DOCTEST_RUNENV, \
                                             v1_context=_DOCTEST_CONTEXT1, \
                                             v2_context=_DOCTEST_CONTEXT2)
 
@@ -1178,9 +1170,9 @@ class VarCompatObj:
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
-                                    "m", [], "var1_lname", "var_stdname", \
+                                    "m", [], "var1_lname", False, "var_stdname", \
                                     "real", "kind_phys", "m", [], \
-                                    "var2_lname", _DOCTEST_RUNENV, \
+                                    "var2_lname", False, _DOCTEST_RUNENV, \
                                     v1_context=_DOCTEST_CONTEXT1, \
                                     v2_context=_DOCTEST_CONTEXT2)
 
