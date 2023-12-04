@@ -953,13 +953,15 @@ class VarCompatObj:
         # end if
         self.__incompat_reason = " and ".join([x for x in incompat_reason if x])
 
-    def forward_transform(self, lvar_lname, rvar_lname, indices,
+    def forward_transform(self, lvar_lname, rvar_lname, rvar_indices, lvar_indices,
                           adjust_hdim=None, flip_vdim=None):
         """Compute and return the the forward transform from "var1" to "var2".
         <lvar_lname> is the local name of "var2".
         <rvar_lname> is the local name of "var1".
-        <indices> is a tuple of the loop indices for "var1" (i.e., "var1"
-           will show up in the RHS of the transform as "var1(indices)".
+        <rvar_indices> is a tuple of the loop indices for "var1" (i.e., "var1"
+           will show up in the RHS of the transform as "var1(rvar_indices)".
+        <lvar_indices> is a tuple of the loop indices for "var1" (i.e., "var2"
+           will show up in the LHS of the transform as "var2(lvar_indices)".
         If <adjust_hdim> is not None, it should be a string containing the
            local name of the "horizontal_loop_begin" variable. This is used to
            compute the offset in the horizontal axis index between one and
@@ -972,8 +974,8 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transform (Indices handled externally)
-        rhs_term = f"{rvar_lname}({','.join(indices)})"
-        lhs_term = f"{lvar_lname}"
+        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
 
         if self.has_kind_transforms:
             kind = self.__kind_transforms[1]
@@ -991,13 +993,13 @@ class VarCompatObj:
         # end if
         return f"{lhs_term} = {rhs_term}"
 
-    def reverse_transform(self, lvar_lname, rvar_lname, indices,
+    def reverse_transform(self, lvar_lname, rvar_lname, rvar_indices, lvar_indices,
                           adjust_hdim=None, flip_vdim=None):
         """Compute and return the the reverse transform from "var2" to "var1".
         <lvar_lname> is the local name of "var1".
         <rvar_lname> is the local name of "var2".
-        <indices> is a tuple of the loop indices for "var2" (i.e., "var2"
-           will show up in the RHS of the transform as "var2(indices)".
+        <rvar_indices> is a tuple of the loop indices for "var1" (i.e., "var1"
+           will show up in the RHS of the transform as "var1(rvar_indices)".
         If <adjust_hdim> is not None, it should be a string containing the
            local name of the "horizontal_loop_begin" variable. This is used to
            compute the offset in the horizontal axis index between one and
@@ -1010,8 +1012,8 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transforms (Indices handled exrernally)
-        lhs_term = f"{lvar_lname}({','.join(indices)})"
-        rhs_term = f"{rvar_lname}"
+        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
 
         if self.has_kind_transforms:
             kind = self.__kind_transforms[0]
