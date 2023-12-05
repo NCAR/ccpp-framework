@@ -7,7 +7,7 @@ project(ccpp_framework
 #------------------------------------------------------------------------------
 # Set package definitions
 set(PACKAGE "ccpp-framework")
-set(AUTHORS "Dom Heinzeller" "Grant Firl" "Mike Kavulich" "Steve Goldhaber" "Dustin Swales")
+set(AUTHORS "Dom Heinzeller" "Grant Firl" "Mike Kavulich" "Dustin Swales" "Courtney Peverley")
 string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
