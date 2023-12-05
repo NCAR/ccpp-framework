@@ -921,7 +921,7 @@ class VarCompatObj:
         # end if
         if self.__compat:
             # Check for vertical array flipping (do later)
-            if var1_top or var2_top:
+            if (var1_top or var2_top) and (var1_top != var2_top):
                 self.__compat            = True
                 self.has_vert_transforms = True
             # end if
