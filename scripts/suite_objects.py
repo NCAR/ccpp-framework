@@ -1248,7 +1248,7 @@ class Scheme(SuiteObject):
             for var_needed in vars_needed:
                 self.update_group_call_list_variable(var_needed)
 
-        # For scalars and arrays, need a dummy variable (same kind and type)
+        # For scalars and arrays, need an internal_var variable (same kind and type)
         # that we can assign the scalar or the lbound/ubound of the array to.
         # We need to treat DDTs and variables with kind attributes slightly
         # differently, and make sure there are no duplicate variables. We
@@ -1261,20 +1261,20 @@ class Scheme(SuiteObject):
             vkind = var.get_prop_value('kind')
             units = var.get_prop_value('units')
         if vkind:
-            dummy_lname = f'dummy_{vtype.replace("=","_")}_{vkind.replace("=","_")}'
+            internal_var_lname = f'internal_var_{vtype.replace("=","_")}_{vkind.replace("=","_")}'
         else:
-            dummy_lname = f'dummy_{vtype.replace("=","_")}'
+            internal_var_lname = f'internal_var_{vtype.replace("=","_")}'
         if var.is_ddt():
-            dummy = Var({'local_name':dummy_lname, 'standard_name':f'{dummy_lname}_local',
+            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
                          'ddt_type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
                          _API_LOCAL, self.run_env)
         else:
-            dummy = Var({'local_name':dummy_lname, 'standard_name':f'{dummy_lname}_local',
+            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
                          'type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
                          _API_LOCAL, self.run_env)
-        found = self.__group.find_variable(source_var=dummy)
+        found = self.__group.find_variable(source_var=internal_var, any_scope=False)
         if not found:
-            self.__group.manage_variable(dummy)
+            self.__group.manage_variable(internal_var)
 
         # For arrays, we need to get information on the dimensions and add it to
         # the group's call list so that we can test for the correct size later on
@@ -1296,8 +1296,8 @@ class Scheme(SuiteObject):
                         raise Exception(f"No dimension with standard name '{udim}'")
                     self.update_group_call_list_variable(udim_var)
 
-        # Add the variable to the list of variables to check. Record which dummy to use.
-        self.__var_debug_checks.append([var, dummy])
+        # Add the variable to the list of variables to check. Record which internal_var to use.
+        self.__var_debug_checks.append([var, internal_var])
 
     def replace_horiz_dim_debug_check(self, dim, cldicts, var_in_call_list):
         """Determine the correct horizontal dimension to use for a given variable,
@@ -1347,10 +1347,10 @@ class Scheme(SuiteObject):
             ubound_string = f'{udim_lname}-{ldim_lname}+1'
         return (dim_length, dim_string, lbound_string, ubound_string)
 
-    def write_var_debug_check(self, var, dummy, cldicts, outfile, errcode, errmsg, indent):
+    def write_var_debug_check(self, var, internal_var, cldicts, outfile, errcode, errmsg, indent):
         """Write the variable debug check for the given variable, as determined
         in a previous step (add_var_debug_check). Assign the scalar or lower and
-        upper bounds of the array to the dummy variable, and for arrays also check
+        upper bounds of the array to the internal_var variable, and for arrays also check
         that the size of the array matches the dimensions from the metadata.
         """
         # Get the basic attributes for writing the check
@@ -1387,16 +1387,16 @@ class Scheme(SuiteObject):
         # Get the condition on which the variable is active
         (conditional, _) = var.conditional(cldicts)
 
-        # For scalars, assign to dummy variable if the variable intent is in/inout
+        # For scalars, assign to internal_var variable if the variable intent is in/inout
         if not dimensions:
             if not intent == 'out':
-                dummy_lname = dummy.get_prop_value('local_name')
+                internal_var_lname = internal_var.get_prop_value('local_name')
                 outfile.write(f"if ({conditional}) then", indent)
-                outfile.write(f"! Assign value of {local_name} to dummy", indent+1)
-                outfile.write(f"{dummy_lname} = {local_name}", indent+1)
+                outfile.write(f"! Assign value of {local_name} to internal_var", indent+1)
+                outfile.write(f"{internal_var_lname} = {local_name}", indent+1)
                 outfile.write(f"end if", indent)
         # For arrays, check size of array against dimensions in metadata, then assign
-        # the lower and upper bounds to the dummy variable if the intent is in/inout
+        # the lower and upper bounds to the internal_var variable if the intent is in/inout
         else:
             array_size = 1
             dim_strings = []
@@ -1470,13 +1470,13 @@ class Scheme(SuiteObject):
             outfile.write(f"end if", indent+1)
             outfile.write(f"end if", indent)
 
-            # Assign lower/upper bounds to dummy (scalar) if intent is not out
+            # Assign lower/upper bounds to internal_var (scalar) if intent is not out
             if not intent == 'out':
-                dummy_lname = dummy.get_prop_value('local_name')
+                internal_var_lname = internal_var.get_prop_value('local_name')
                 outfile.write(f"if ({conditional}) then", indent)
-                outfile.write(f"! Assign lower/upper bounds of {local_name} to dummy", indent+1)
-                outfile.write(f"{dummy_lname} = {local_name}{lbound_string}", indent+1)
-                outfile.write(f"{dummy_lname} = {local_name}{ubound_string}", indent+1)
+                outfile.write(f"! Assign lower/upper bounds of {local_name} to internal_var", indent+1)
+                outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", indent+1)
+                outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", indent+1)
                 outfile.write(f"end if", indent)
 
     def write(self, outfile, errcode, errmsg, indent):
@@ -1493,8 +1493,8 @@ class Scheme(SuiteObject):
 
         # Write debug checks (operating on variables
         # coming from the group's call list)
-        for (var, dummy) in self.__var_debug_checks:
-            stmt = self.write_var_debug_check(var, dummy, cldicts, outfile, errcode, errmsg, indent)
+        for (var, internal_var) in self.__var_debug_checks:
+            stmt = self.write_var_debug_check(var, internal_var, cldicts, outfile, errcode, errmsg, indent)
 
         # Write variable transformations (to be developed)
 
