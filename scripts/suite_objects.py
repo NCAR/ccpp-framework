@@ -1149,7 +1149,7 @@ class Scheme(SuiteObject):
             found, dict_var, vert_dim, new_dims, missing_vert = args
             if found:
                 if self.__group.run_env.debug:
-                    # Add variable allocation checks for group, suite, and host model variables
+                    # Add variable allocation checks for suite and host model variables only
                     gvar = self.__group.find_variable(standard_name=vstdname, any_scope=False)
                     if dict_var and not gvar:
                         self.add_var_debug_check(dict_var)
