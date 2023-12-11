@@ -26,7 +26,7 @@ class CCPPFrameworkEnv:
                  preproc_directives=[], generate_docfiles=False, host_name='',
                  kind_types=[], use_error_obj=False, force_overwrite=False,
                  output_root=os.getcwd(), ccpp_datafile="datatable.xml",
-                 debug = False):
+                 debug=False):
         """Initialize a new CCPPFrameworkEnv object from the input arguments.
         <ndict> is a dict with the parsed command-line arguments (or a
            dictionary created with the necessary arguments).
