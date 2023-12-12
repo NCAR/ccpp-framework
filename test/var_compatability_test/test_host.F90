@@ -8,7 +8,7 @@ module test_prog
    public test_host
 
    ! Public data and interfaces
-   integer, public, parameter :: cs = 16
+   integer, public, parameter :: cs = 32
    integer, public, parameter :: cm = 60
 
     !> \section arg_table_suite_info  Argument Table
@@ -375,7 +375,7 @@ CONTAINS
     logical :: run_okay
 
     ! Setup expected test suite info
-    test_suites(1)%suite_name = 'var_action_suite'
+    test_suites(1)%suite_name = 'var_compatability_suite'
 	test_suites(1)%suite_parts => test_parts1
     test_suites(1)%suite_input_vars => test_invars1
     test_suites(1)%suite_output_vars => test_outvars1
