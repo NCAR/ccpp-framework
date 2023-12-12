@@ -952,7 +952,7 @@ class VarCompatObj:
         <rvar_lname> is the local name of "var1".
         <rvar_indices> is a tuple of the loop indices for "var1" (i.e., "var1"
            will show up in the RHS of the transform as "var1(rvar_indices)".
-        <lvar_indices> is a tuple of the loop indices for "var1" (i.e., "var2"
+        <lvar_indices> is a tuple of the loop indices for "var2" (i.e., "var2"
            will show up in the LHS of the transform as "var2(lvar_indices)".
         If <adjust_hdim> is not None, it should be a string containing the
            local name of the "horizontal_loop_begin" variable. This is used to
@@ -992,6 +992,8 @@ class VarCompatObj:
         <rvar_lname> is the local name of "var2".
         <rvar_indices> is a tuple of the loop indices for "var1" (i.e., "var1"
            will show up in the RHS of the transform as "var1(rvar_indices)".
+        <lvar_indices> is a tuple of the loop indices for "var2" (i.e., "var2"
+           will show up in the LHS of the transform as "var2(lvar_indices)".
         If <adjust_hdim> is not None, it should be a string containing the
            local name of the "horizontal_loop_begin" variable. This is used to
            compute the offset in the horizontal axis index between one and
@@ -1003,7 +1005,7 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
-        # Dimension transforms (Indices handled exrernally)
+        # Dimension transforms (Indices handled externally)
         lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
         rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
 
