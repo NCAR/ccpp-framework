@@ -1617,7 +1617,7 @@ end module {module}
             #the initialized_set_block for the init phase tries to reference the unavailable ccpp_t variable.
             if (ccpp_stage == 'init' and not self.parents[ccpp_stage]):
                 ccpp_var.intent = 'in'
-                self.parents[ccpp_stage].update({ccpp_var.local_name:ccpp_var})
+                self.parents[ccpp_stage].update({ccpp_var.standard_name:ccpp_var})
 
             # Get list of arguments, module use statement and variable definitions for this subroutine (=stage for the group)
             (self.arguments[ccpp_stage], sub_module_use, sub_var_defs) = create_arguments_module_use_var_defs(
