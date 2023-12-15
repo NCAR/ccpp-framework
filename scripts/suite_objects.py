@@ -1371,9 +1371,7 @@ class Scheme(SuiteObject):
             # If it is not in the call list, try to find it
             # in the local variables of this group subroutine.
             dvar = self.__group.find_variable(standard_name=standard_name, any_scope=False)
-            if dvar:
-                print(f"DOM DEBUG - found the variable in the LOCAL GROUP!")
-            else:
+            if not dvar:
                 # This variable is handled by the group
                 # and is declared as a module variable
                 for var_dict in self.__group.suite_dicts():
