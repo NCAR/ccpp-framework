@@ -1149,9 +1149,8 @@ class Scheme(SuiteObject):
             found, dict_var, vert_dim, new_dims, missing_vert = args
             if found:
                 if self.__group.run_env.debug:
-                    # Add variable allocation checks for suite and host model variables only
-                    gvar = self.__group.find_variable(standard_name=vstdname, any_scope=False)
-                    if dict_var and not gvar:
+                    # Add variable allocation checks for group, suite and host variables
+                    if dict_var:
                         self.add_var_debug_check(dict_var)
                 # end if
                 if not self.has_vertical_dim:
@@ -1302,12 +1301,13 @@ class Scheme(SuiteObject):
     def replace_horiz_dim_debug_check(self, dim, cldicts, var_in_call_list):
         """Determine the correct horizontal dimension to use for a given variable,
         depending on the CCPP phase and origin of the variable (from the host/suite
-        or defined as a module variable for the parent group. Return the dimension
-        length and other properties needed for the variable debug checks."""
+        or defined as a module variable for the parent group, or local to the group.
+        Return the dimension length and other properties needed for debug checks."""
         if not is_horizontal_dimension(dim):
             raise Exception(f"Dimension {dim} is not a horizontal dimension")
         if self.run_phase():
-            if self.find_variable(standard_name="horizontal_loop_extent"):
+            if var_in_call_list and \
+                self.find_variable(standard_name="horizontal_loop_extent"):
                 ldim = "ccpp_constant_one"
                 udim = "horizontal_loop_extent"
             else:
@@ -1359,17 +1359,27 @@ class Scheme(SuiteObject):
         active = var.get_prop_value('active')
         allocatable = var.get_prop_value('allocatable')
 
-        # Need the local name as it comes from the group call list
-        # or from the suite,  not how it is called in the scheme (var)
+        # Need the local name from the group call list,
+        # from the locally-defined variables of the group,
+        # or from the suite, not how it is called in the scheme (var)
+        # First, check if the variable is in the call list.
         dvar = self.__group.call_list.find_variable(standard_name=standard_name, any_scope=False)
         if dvar:
             var_in_call_list = True
         else:
             var_in_call_list = False
-            for var_dict in self.__group.suite_dicts():
-                dvar = var_dict.find_variable(standard_name=standard_name)
-                if dvar:
-                    break
+            # If it is not in the call list, try to find it
+            # in the local variables of this group subroutine.
+            dvar = self.__group.find_variable(standard_name=standard_name, any_scope=False)
+            if dvar:
+                print(f"DOM DEBUG - found the variable in the LOCAL GROUP!")
+            else:
+                # This variable is handled by the group
+                # and is declared as a module variable
+                for var_dict in self.__group.suite_dicts():
+                    dvar = var_dict.find_variable(standard_name=standard_name, any_scope=False)
+                    if dvar:
+                        break
         if not dvar:
             raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
         local_name = dvar.get_prop_value('local_name')
@@ -1379,7 +1389,7 @@ class Scheme(SuiteObject):
         # the variable. We don't have this information earlier in
         # add_var_debug_check, therefore need to back out here,
         # using the information from the scheme variable (call list).
-        svar = self.call_list.find_variable(standard_name=standard_name)
+        svar = self.call_list.find_variable(standard_name=standard_name, any_scope=False)
         intent = svar.get_prop_value('intent')
         if intent == 'out' and allocatable:
             return
