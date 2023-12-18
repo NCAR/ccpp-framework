@@ -1,0 +1,69 @@
+[ccpp-table-properties]
+  name = blocked_data_type
+  type = ddt
+  dependencies =
+[ccpp-arg-table]
+  name = blocked_data_type
+  type = ddt
+[array_data]
+  standard_name = blocked_data_array
+  long_name = blocked data array
+  units = 1
+  dimensions = (horizontal_loop_extent)
+  type = integer
+
+[ccpp-table-properties]
+  name = data
+  type = module
+  dependencies =
+[ccpp-arg-table]
+  name = data
+  type = module
+[cdata]
+  standard_name = ccpp_t_instance
+  long_name = instance of derived data type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t
+[nblks]
+  standard_name = ccpp_block_count
+  long_name = for explicit data blocking: number of blocks
+  units = count
+  dimensions = ()
+  type = integer
+[blksz]
+  standard_name = ccpp_block_sizes
+  long_name = for explicit data blocking: block sizes of all blocks
+  units = count
+  dimensions = (ccpp_block_count)
+  type = integer
+[blksz(ccpp_block_number)]
+  standard_name = horizontal_loop_extent
+  long_name = horizontal loop extent
+  units = count
+  dimensions = ()
+  type = integer
+[ncols]
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[blocked_data_type]
+  standard_name = blocked_data_type
+  long_name = definition of type blocked_data_type
+  units = DDT
+  dimensions = ()
+  type = blocked_data_type
+[blocked_data_instance(ccpp_block_number)]
+  standard_name = blocked_data_type_instance
+  long_name = instance of derived data type blocked_data_type
+  units = DDT
+  dimensions = ()
+  type = blocked_data_type
+[blocked_data_instance]
+  standard_name = blocked_data_type_instance_all_blocks
+  long_name = instance of derived data type blocked_data_type
+  units = DDT
+  dimensions = (ccpp_block_count)
+  type = blocked_data_type
