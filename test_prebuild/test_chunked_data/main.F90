@@ -3,8 +3,8 @@ program test_chunked_data
    use, intrinsic :: iso_fortran_env, only: error_unit
 
    use ccpp_types, only: ccpp_t
-   use data, only: nblks, blksz, ncols
-   use data, only: ccpp_data_domain, ccpp_data_blocks, &
+   use data, only: nchunks, chunksize, ncols
+   use data, only: ccpp_data_domain, ccpp_data_chunks, &
                    chunked_data_type, chunked_data_instance
 
    use ccpp_static_api, only: ccpp_physics_init, &
@@ -16,29 +16,27 @@ program test_chunked_data
    implicit none
 
    character(len=*), parameter :: ccpp_suite = 'chunked_data_suite'
-   integer :: ib, ierr
+   integer :: ic, ierr
    type(ccpp_t), pointer :: cdata => null()
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! CCPP init step                                 !
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   ! For physics running over the entire domain, block and thread
-   ! number are not used; set to safe values
-   ccpp_data_domain%blk_no = 1
+   ! For physics running over the entire domain,
+   ! ccpp_thread_number is not used; set to safe value
    ccpp_data_domain%thrd_no = 1
+   ccpp_data_domain%chunk_no = 1
 
-   ! Loop over all blocks and threads for ccpp_data_blocks
-   do ib=1,nblks
+   ! Loop over all blocks and threads for ccpp_data_chunks
+   do ic=1,nchunks
       ! Assign the correct block numbers, only one thread
-      ccpp_data_blocks(ib)%blk_no = ib
-      ccpp_data_blocks(ib)%thrd_no = 1
+      ccpp_data_chunks(ic)%blk_no = ic
+      ccpp_data_chunks(ic)%thrd_no = 1
    end do
 
-   do ib=1,size(chunked_data_instance)
-      allocate(chunked_data_instance(ib)%array_data(blksz(ib)))
-      write(error_unit,'(2(a,i3))') "Allocated array_data for block", ib, " to size", size(chunked_data_instance(ib)%array_data)
-   end do
+   call chunked_data_instance%create(ncols)
+   write(error_unit,'(2(a,i3))') "Chunked_data_instance%array_data to size", size(chunked_data_instance%array_data)
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! CCPP physics init step                         !
@@ -68,11 +66,11 @@ program test_chunked_data
    ! CCPP physics run step                          !
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   do ib=1,nblks
-      cdata => ccpp_data_blocks(ib)
+   do ic=1,nchunks
+      cdata => ccpp_data_chunks(ic)
       call ccpp_physics_run(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
       if (ierr/=0) then
-         write(error_unit,'(a,i3,a)') "An error occurred in ccpp_physics_run for block", ib, ":"
+         write(error_unit,'(a,i3,a)') "An error occurred in ccpp_physics_run for block", ic, ":"
          write(error_unit,'(a)') trim(cdata%errmsg)
          stop 1
       end if

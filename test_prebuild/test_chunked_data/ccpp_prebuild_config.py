@@ -24,7 +24,7 @@ TYPEDEFS_NEW_METADATA = {
         'ccpp_types' : '',
         },
     'data' : {
-        'chunked_data_type' : 'chunked_data_instance(cdata%blk_no)',
+        'chunked_data_type' : 'chunked_data_instance',
         'data' : '',
         },
     }

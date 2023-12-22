@@ -9,15 +9,15 @@ module data
 
     private
 
-    public nblks, blksz, ncols
-    public ccpp_data_domain, ccpp_data_blocks, chunked_data_type, chunked_data_instance
+    public nchunks, chunksize, ncols
+    public ccpp_data_domain, ccpp_data_chunks, chunked_data_type, chunked_data_instance
 
-    integer, parameter :: nblks = 4
+    integer, parameter :: nchunks = 4
     type(ccpp_t), target :: ccpp_data_domain
-    type(ccpp_t), dimension(nblks), target :: ccpp_data_blocks
+    type(ccpp_t), dimension(nchunks), target :: ccpp_data_chunks
 
-    integer, parameter, dimension(nblks) :: blksz = (/6,6,6,3/)
-    integer, parameter :: ncols = sum(blksz)
+    integer, parameter, dimension(nchunks) :: chunksize = (/6,6,6,3/)
+    integer, parameter :: ncols = sum(chunksize)
 
 !! \section arg_table_chunked_data_type
 !! \htmlinclude chunked_data_type.html
@@ -28,7 +28,7 @@ module data
       procedure :: create  => chunked_data_create
    end type chunked_data_type
 
-   type(chunked_data_type), dimension(nblks) :: chunked_data_instance
+   type(chunked_data_type) :: chunked_data_instance
 
 contains
 

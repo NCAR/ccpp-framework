@@ -9,8 +9,9 @@
   standard_name = chunked_data_array
   long_name = chunked data array
   units = 1
-  dimensions = (horizontal_loop_extent)
+  dimensions = (ccpp_constant_one:horizontal_dimension)
   type = integer
+# Todo: define an additional array running from -1 to ncols-2
 
 [ccpp-table-properties]
   name = data
@@ -25,24 +26,6 @@
   units = DDT
   dimensions = ()
   type = ccpp_t
-[nblks]
-  standard_name = ccpp_block_count
-  long_name = for explicit data blocking: number of blocks
-  units = count
-  dimensions = ()
-  type = integer
-[blksz]
-  standard_name = ccpp_block_sizes
-  long_name = for explicit data blocking: block sizes of all blocks
-  units = count
-  dimensions = (ccpp_block_count)
-  type = integer
-[blksz(ccpp_block_number)]
-  standard_name = horizontal_loop_extent
-  long_name = horizontal loop extent
-  units = count
-  dimensions = ()
-  type = integer
 [ncols]
   standard_name = horizontal_dimension
   long_name = horizontal dimension
@@ -55,15 +38,9 @@
   units = DDT
   dimensions = ()
   type = chunked_data_type
-[chunked_data_instance(ccpp_block_number)]
+[chunked_data_instance]
   standard_name = chunked_data_type_instance
   long_name = instance of derived data type chunked_data_type
   units = DDT
   dimensions = ()
-  type = chunked_data_type
-[chunked_data_instance]
-  standard_name = chunked_data_type_instance_all_blocks
-  long_name = instance of derived data type chunked_data_type
-  units = DDT
-  dimensions = (ccpp_block_count)
   type = chunked_data_type
