@@ -24,14 +24,17 @@ program test_chunked_data
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    ! For physics running over the entire domain,
-   ! ccpp_thread_number is not used; set to safe value
-   ccpp_data_domain%thrd_no = 1
-   ccpp_data_domain%chunk_no = 1
+   ! ccpp_thread_number and ccpp_chunk_number are
+   ! set to 0, indicating that arrays are to be sent
+   ! following their dimension specification in the
+   ! metadata (must match horizontal_dimension).
+   ccpp_data_domain%thrd_no = 0
+   ccpp_data_domain%chunk_no = 0
 
    ! Loop over all blocks and threads for ccpp_data_chunks
    do ic=1,nchunks
       ! Assign the correct block numbers, only one thread
-      ccpp_data_chunks(ic)%blk_no = ic
+      ccpp_data_chunks(ic)%chunk_no = ic
       ccpp_data_chunks(ic)%thrd_no = 1
    end do
 

@@ -32,6 +32,36 @@
   units = count
   dimensions = ()
   type = integer
+[nchunks]
+  standard_name = ccpp_chunk_extent
+  long_name = number of chunks of array data used in run phase
+  units = count
+  dimensions = ()
+  type = integer
+[chunk_begin]
+  standard_name = horizontal_loop_begin_all_chunks
+  long_name = first index for horizontal loop extent in run phase
+  units = index
+  dimensions = (ccpp_chunk_extent)
+  type = integer
+[chunk_begin(ccpp_chunk_number)]
+  standard_name = horizontal_loop_begin
+  long_name = first index for horizontal loop extent in run phase
+  units = index
+  dimensions = ()
+  type = integer
+[chunk_end]
+  standard_name = horizontal_loop_end_all_chunks
+  long_name = last index for horizontal loop extent in run phase
+  units = index
+  dimensions = (ccpp_chunk_extent)
+  type = integer
+[chunk_end(ccpp_chunk_number)]
+  standard_name = horizontal_loop_end
+  long_name = last index for horizontal loop extent in run phase
+  units = index
+  dimensions = ()
+  type = integer
 [chunked_data_type]
   standard_name = chunked_data_type
   long_name = definition of type chunked_data_type

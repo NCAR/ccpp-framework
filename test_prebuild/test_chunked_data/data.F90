@@ -9,7 +9,7 @@ module data
 
     private
 
-    public nchunks, chunksize, ncols
+    public nchunks, chunksize, chunk_begin, chunk_end, ncols
     public ccpp_data_domain, ccpp_data_chunks, chunked_data_type, chunked_data_instance
 
     integer, parameter :: nchunks = 4
@@ -17,6 +17,8 @@ module data
     type(ccpp_t), dimension(nchunks), target :: ccpp_data_chunks
 
     integer, parameter, dimension(nchunks) :: chunksize = (/6,6,6,3/)
+    integer, parameter, dimension(nchunks) :: chunk_begin = (/1,7,13,19/)
+    integer, parameter, dimension(nchunks) :: chunk_end = (/6,12,18,21/)
     integer, parameter :: ncols = sum(chunksize)
 
 !! \section arg_table_chunked_data_type

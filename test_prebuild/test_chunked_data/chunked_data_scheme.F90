@@ -60,17 +60,17 @@ module chunked_data_scheme
 !! \section arg_table_chunked_data_scheme_run Argument Table
 !! \htmlinclude chunked_data_scheme_run.html
 !!
-   subroutine chunked_data_scheme_run(nb, data_array, errmsg, errflg)
+   subroutine chunked_data_scheme_run(nchunk, data_array, errmsg, errflg)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
-      integer,          intent(in)  :: nb
+      integer,          intent(in)  :: nchunk
       integer,          intent(in)  :: data_array(:)
       ! Initialize CCPP error handling variables
       errmsg = ''
       errflg = 0
       ! Check size of data array
-      write(error_unit,'(2(a,i3))') 'In chunked_data_scheme_run: checking size of data array for block', nb, ' to be', data_array_sizes(nb)
-      if (size(data_array)/=data_array_sizes(nb)) then
+      write(error_unit,'(2(a,i3))') 'In chunked_data_scheme_run: checking size of data array for chunk', nchunk, ' to be', data_array_sizes(nchunk)
+      if (size(data_array)/=data_array_sizes(nchunk)) then
          write(errmsg,'(a,i4)') "Error in chunked_data_scheme_run, expected size(data_array)==6, got ", size(data_array)
          errflg = 1
          return

@@ -76,9 +76,9 @@
   dimensions = ()
   type = integer
   intent = out
-[nb]
-  standard_name = ccpp_block_number
-  long_name = number of block for explicit data blocking in CCPP
+[nchunk]
+  standard_name = ccpp_chunk_number
+  long_name = number of chunk for chunked arrays in CCPP
   units = index
   dimensions = ()
   type = integer
