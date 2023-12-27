@@ -1460,7 +1460,7 @@ end module {module}
           ierr = 1
           return
         end if
-'''.format(var_name=local_vars[var_standard_name]['name'], dim_string=dim_string, var_size_expected=var_size_expected,
+'''.format(var_name=local_vars[var_standard_name]['name'].replace(dim_string_target_name, ''), dim_string=dim_string, var_size_expected=var_size_expected,
            ccpp_errmsg=CCPP_INTERNAL_VARIABLES[CCPP_ERROR_MSG_VARIABLE], group_name = self.name,
            subroutine_name=subroutine_name)
                         # end if debug
