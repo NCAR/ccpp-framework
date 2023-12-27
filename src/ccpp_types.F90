@@ -77,9 +77,9 @@ contains
        class(ccpp_t) :: ccpp_d
        logical :: initialized
        !
-       initialized = ccpp_d%thrd_no /= CCPP_DEFAULT_THREAD_NUMBER .and. &
-                     (ccpp_d%blk_no /= CCPP_DEFAULT_BLOCK_NUMBER .and. &
-                      ccpp_d%chunk_no /= CCPP_DEFAULT_CHUNK_NUMBER)
+       initialized = ccpp_d%thrd_no /= CCPP_DEFAULT_THREAD_NUMBER .or. &
+                     ccpp_d%blk_no /= CCPP_DEFAULT_BLOCK_NUMBER .or. &
+                     ccpp_d%chunk_no /= CCPP_DEFAULT_CHUNK_NUMBER
     end function ccpp_t_initialized
 
 end module ccpp_types
