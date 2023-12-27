@@ -118,11 +118,11 @@ def extract_dimensions_from_local_name(local_name):
                 parent_delimiter_index = i
                 break
             i -= 1
-    print(f"{local_name[parent_delimiter_index+1:]}")
     if '(' in local_name[parent_delimiter_index+1:]:
         dim_string_start = local_name[parent_delimiter_index+1:].find('(')
         dim_string_end = local_name[parent_delimiter_index+1:].rfind(')')
         dim_string = local_name[parent_delimiter_index+1:][dim_string_start:dim_string_end+1]
+        # DH* TODO REMOVE DEBUG STATEMENT
         logging.info(f"found dim_string '{dim_string}' in '{local_name}'")
         # Now that we have a dim_string, find all dimensions in this string;
         # ignore outermost opening and closing parentheses.
@@ -1354,17 +1354,8 @@ end module {module}
                                                     dim0 = metadata_define[CCPP_CONSTANT_ONE][0].local_name
                                                     dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name
                                                 else:
-                                                ## Again provide backward compatibility with blocked data structures.
-                                                ## The following is a limitation of ccpp_prebuild, but I don't know any case
-                                                ## where this would be used in the currently supported models. We
-                                                ## can't have both CCPP_HORIZONTAL_LOOP_BEGIN+CCPP_HORIZONTAL_LOOP_END
-                                                ## and CCPP_HORIZONTAL_LOOP_EXTENT coming from the host model.
-                                                #if CCPP_HORIZONTAL_LOOP_BEGIN in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                                     dim0 = metadata_define[CCPP_HORIZONTAL_LOOP_BEGIN][0].local_name
                                                     dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_END][0].local_name
-                                                #else:
-                                                #    dim0 = metadata_define[CCPP_CONSTANT_ONE][0].local_name
-                                                #    dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name
                                             else:
                                                 if not dims[1].lower() in metadata_define.keys():
                                                     raise Exception('Dimension {}, required by variable {}, not defined in host model metadata'.format(
@@ -1372,6 +1363,7 @@ end module {module}
                                                 dim1 = metadata_define[dims[1].lower()][0].local_name
                                     # Single dimensions are indices
                                     else:
+                                        # DH* TODO UPDATE EXCEPTION MESSAGE AND REMOVE COMMENTS BELOW
                                         raise Exception("THIS SHOULD NOT HAPPEN WITH CAPGEN'S METADATA PARSER")
                                         #try:
                                         #    dim1 = int(dim)
@@ -1389,6 +1381,7 @@ end module {module}
                                         #    dim1 = metadata_define[dim.lower()][0].local_name
                                         #dim0 = dim1
 
+                                    # DH* TODO REMOVE THIS ENTIRE BLOCK
                                     # Handle horizontal dimensions correctly
                                     if ccpp_stage == 'run':
                                         # This should not happen when parsing metadata with capgen's metadata parser, remove?
@@ -1410,6 +1403,8 @@ end module {module}
                                                 CCPP_LOOP_EXTENT in dims:
                                             raise Exception(f"Invalid metadata for scheme {scheme_name}: " + \
                                                             f"horizontal dimension for {var_standard_name} is {var.dimensions}")
+                                    # *DH
+
                                 if dim0 == dim1:
                                     array_size.append('1')
                                     dim_substrings.append(f'{dim1}')
@@ -1446,8 +1441,8 @@ end module {module}
                             var_size_expected = 1
 
                         # To assist debugging efforts, check if arrays have the correct size (ignore scalars for now)
-                        # DH* 20231226 this doesn't make much sense anymore. let's rather check that the lower and upper bounds
-                        # are correct.
+                        # DH* 20231226 This doesn't make much sense anymore. In a future PR, let's rather check that
+                        # the lower and upper bounds of the arrays are correct.
                         assign_test = ''
                         if debug:
                             if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
@@ -1477,8 +1472,6 @@ end module {module}
                         if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
                                 CCPP_INTERNAL_VARIABLES[CCPP_BLOCK_NUMBER] in local_vars[var_standard_name]['name'] and \
                                 '{}:{}'.format(CCPP_CONSTANT_ONE,CCPP_HORIZONTAL_DIMENSION) in var.dimensions:
-                            ## Need to reset dim_string since this is handled separately for blocked data
-                            #dim_string = ''
                             # Reuse existing temporary variable, if possible
                             if local_vars[var_standard_name]['name'] in tmpvars.keys():
                                 # If the variable already has a local variable (tmpvar), reuse it
@@ -1690,8 +1683,6 @@ end module {module}
            actions_in=actions_in.rstrip('\n'))
 
                             # Add to argument list
-                            #if var.local_name == 'qgraupel': #dim_string_target_name and dim_string and var.local_name == 'qgraupel':
-                            #    raise Exception(f"{var.local_name}: {dim_string_target_name}, {dim_string}; replace? {local_vars[var_standard_name]['name']} --> ")
                             arg = '{local_name}={var_name}{dim_string},'.format(local_name=var.local_name, 
                                 var_name=local_vars[var_standard_name]['name'].replace(dim_string_target_name, ''), dim_string=dim_string)
                         else:
