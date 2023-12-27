@@ -1350,12 +1350,12 @@ end module {module}
                                             # Use correct horizontal variables in run phase
                                             if ccpp_stage == 'run' and dims[1].lower() == CCPP_HORIZONTAL_LOOP_EXTENT:
                                                 # Provide backward compatibility with blocked data structures
-                                                if CCPP_BLOCK_COUNT in metadata_define.keys():
-                                                    dim0 = metadata_define[CCPP_CONSTANT_ONE][0].local_name
-                                                    dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name
-                                                else:
+                                                if CCPP_HORIZONTAL_LOOP_BEGIN in metadata_define.keys():
                                                     dim0 = metadata_define[CCPP_HORIZONTAL_LOOP_BEGIN][0].local_name
                                                     dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_END][0].local_name
+                                                else:
+                                                    dim0 = metadata_define[CCPP_CONSTANT_ONE][0].local_name
+                                                    dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name
                                             else:
                                                 if not dims[1].lower() in metadata_define.keys():
                                                     raise Exception('Dimension {}, required by variable {}, not defined in host model metadata'.format(
