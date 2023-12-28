@@ -1093,10 +1093,11 @@ end module {module}
                     args = ''
                     length = 0
 
-                    # First identify all dimensions needed to handle the arguments
-                    # and add them to the list of required variables for the cap
+                    # First, add a few mandatory variables to the list of required
+                    # variables. This is mostly for handling horizontal dimensions
+                    # correctly for the different CCPP phases and for cases when
+                    # blocked data structures or chunked arrays are used.
                     additional_variables_required = []
-                    #
                     if CCPP_HORIZONTAL_LOOP_EXTENT in metadata_define.keys():
                         for add_var in [ CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_LOOP_EXTENT]:
                             if not add_var in local_vars.keys() \
@@ -1112,7 +1113,8 @@ end module {module}
                                     and not add_var in additional_variables_required + arguments[scheme_name][subroutine_name]:
                                 logging.debug("Adding variable {} for handling chunked data arrays".format(add_var))
                                 additional_variables_required.append(add_var)
-                    #
+                    # Next, identify all dimensions needed to handle the arguments
+                    # and add them to the list of required variables for the cap
                     for var_standard_name in arguments[scheme_name][subroutine_name]:
                         if not var_standard_name in metadata_define.keys():
                             raise Exception('Variable {standard_name} not defined in host model metadata'.format(
@@ -1361,25 +1363,9 @@ end module {module}
                                                     raise Exception('Dimension {}, required by variable {}, not defined in host model metadata'.format(
                                                                                                                    dims[1].lower(), var_standard_name))
                                                 dim1 = metadata_define[dims[1].lower()][0].local_name
-                                    # Single dimensions are indices
+                                    # Single dimensions are indices and should not be recorded as a dimension!
                                     else:
-                                        # DH* TODO UPDATE EXCEPTION MESSAGE AND REMOVE COMMENTS BELOW
                                         raise Exception("THIS SHOULD NOT HAPPEN WITH CAPGEN'S METADATA PARSER")
-                                        #try:
-                                        #    dim1 = int(dim)
-                                        #    dim1 = dim
-                                        #except ValueError:
-                                        #    # This should not happen with capgen, because dimensions always have a lower and upper bound (n:m)?
-                                        #    if dim.lower() in [CCPP_HORIZONTAL_LOOP_BEGIN, CCPP_HORIZONTAL_LOOP_END, \
-                                        #            CCPP_HORIZONTAL_LOOP_EXTENT, CCPP_HORIZONTAL_DIMENSION]:
-                                        #        raise Exception(f"Invalid metadata for scheme {scheme_name}: " + \
-                                        #                        f"horizontal dimension for {var_standard_name} is {var.dimensions}")
-                                        #    #
-                                        #    if not dim.lower() in metadata_define.keys():
-                                        #        raise Exception('Dimension {}, required by variable {}, not defined in host model metadata'.format(
-                                        #                                                                           dim.lower(), var_standard_name))
-                                        #    dim1 = metadata_define[dim.lower()][0].local_name
-                                        #dim0 = dim1
 
                                     # DH* TODO REMOVE THIS ENTIRE BLOCK
                                     # Handle horizontal dimensions correctly
@@ -1404,13 +1390,32 @@ end module {module}
                                             raise Exception(f"Invalid metadata for scheme {scheme_name}: " + \
                                                             f"horizontal dimension for {var_standard_name} is {var.dimensions}")
                                     # *DH
-
-                                if dim0 == dim1:
-                                    array_size.append('1')
-                                    dim_substrings.append(f'{dim1}')
+                                # DH* TODO: move this to a function "is_horizontal_dimension" ?
+                                # maybe combine with some of the above logic to get the correct dimensions
+                                # depending on phase etc?
+                                # We only want to be explicit about horizontal dimensions, for which we need
+                                # to subset in certain cases (therefore do it always). Other dimensions are
+                                # passed as ':'.
+                                if dim in [
+                                        f"{CCPP_CONSTANT_ONE}:{CCPP_HORIZONTAL_LOOP_EXTENT}",
+                                        f"{CCPP_CONSTANT_ONE}:{CCPP_HORIZONTAL_DIMENSION}",
+                                        # This should never be the case for schemes, only for hosts!
+                                        #f"{CCPP_HORIZONTAL_LOOP_BEGIN}:{CCPP_HORIZONTAL_LOOP_END}",
+                                        ]:
+                                    if dim0 == dim1:
+                                        array_size.append('1')
+                                        dim_substrings.append(f'{dim1}')
+                                    else:
+                                        array_size.append(f'({dim1}-{dim0}+1)')
+                                        dim_substrings.append(f'{dim0}:{dim1}')
                                 else:
-                                    array_size.append(f'({dim1}-{dim0}+1)')
-                                    dim_substrings.append(f'{dim0}:{dim1}')
+                                    if dim0 == dim1:
+                                        array_size.append('1')
+                                        # DH* TODO - is this correct?
+                                        dim_substrings.append(f':')
+                                    else:
+                                        array_size.append(f'({dim1}-{dim0}+1)')
+                                        dim_substrings.append(f':')
 
                             # Now we need to compare dim_substringa with a possible dim_string_target_name and merge them
                             if dimensions_target_name:
