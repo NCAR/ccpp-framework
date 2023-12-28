@@ -122,8 +122,6 @@ def extract_dimensions_from_local_name(local_name):
         dim_string_start = local_name[parent_delimiter_index+1:].find('(')
         dim_string_end = local_name[parent_delimiter_index+1:].rfind(')')
         dim_string = local_name[parent_delimiter_index+1:][dim_string_start:dim_string_end+1]
-        # DH* TODO REMOVE DEBUG STATEMENT
-        logging.info(f"found dim_string '{dim_string}' in '{local_name}'")
         # Now that we have a dim_string, find all dimensions in this string;
         # ignore outermost opening and closing parentheses.
         opened = 0
@@ -1377,9 +1375,11 @@ end module {module}
                                     else:
                                         raise Exception("THIS SHOULD NOT HAPPEN WITH CAPGEN'S METADATA PARSER")
 
-                                    # DH* TODO REMOVE THIS ENTIRE BLOCK - create a test suite to make sure these things are caught
+                                    # DH* TODO REMOVE THIS ENTIRE BLOCK in a future PR to feature/capgen
+                                    # This block should not be needed, the metadata parser should take care
+                                    # of flagging invalid dimensions for the host model or the physics.
+                                    # TODO: create a test suite to make sure these things are caught
                                     # by the metadata parser - do this on the feature/capgen branch!
-                                    # Handle horizontal dimensions correctly
                                     if ccpp_stage == 'run':
                                         # This should not happen when parsing metadata with capgen's metadata parser, remove?
                                         if dims[1] == CCPP_HORIZONTAL_LOOP_EXTENT and not dim0:
@@ -1402,14 +1402,7 @@ end module {module}
                                                             f"horizontal dimension for {var_standard_name} is {var.dimensions}")
                                     # *DH
 
-                                # DH* TODO: move this to a function "is_horizontal_dimension" ?
-                                # maybe combine with some of the above logic to get the correct dimensions
-                                # depending on phase etc?
-                                # We only want to be explicit about horizontal dimensions, for which we need
-                                # to subset in certain cases (therefore do it always). Other dimensions are
-                                # passed as ':'.
-                                #
-                                # DH* TODO: WE CANNOT ACTIVATE USING EXPLICIT HORIZONTAL BLOCKS
+                                # DH* TODO: WE CANNOT ACTIVATE USING EXPLICIT HORIZONTAL DIMENSIONS
                                 # UNTIL WE HAVE SOLVED THE PROBLEM WITH INACTIVE (NON-ALLOCATED)
                                 # ARRAYS. THIS MUST BE ADDRESSED BEFORE WE SWITCH TO CONTIGUOUS
                                 # ARRAYS FOR MODELS LIKE THE UFS-WEATHER-MODEL!
@@ -1429,7 +1422,7 @@ end module {module}
                                         array_size.append(f'({dim1}-{dim0}+1)')
                                         dim_substrings.append(f':')
 
-                            # Now we need to compare dim_substringa with a possible dim_string_target_name and merge them
+                            # Now we need to compare dim_substrings with a possible dim_string_target_name and merge them
                             if dimensions_target_name:
                                 if len(dimensions_target_name) < len(dim_substrings):
                                     raise Exception("THIS SHOULD NOT HAPPEN")
