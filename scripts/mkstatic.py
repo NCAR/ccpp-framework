@@ -1326,6 +1326,14 @@ end module {module}
                             array_size = []
                             dim_substrings = []
                             for dim in var.dimensions:
+                                # DH* TODO
+                                # By default, don't pass explicit dimensions, only ':'. This is because
+                                # we have not solved the problem of passing inactive arrays correctly
+                                # (something that needs to be done before we can use chunked arrays in
+                                # models like the ufs-weather-model). See also note further down where
+                                # this variable gets set to True and then where it gets used.
+                                use_explicit_dimension = False
+                                # *DH
                                 # This is not supported/implemented: tmpvar would have one dimension less
                                 # than the original array, and the metadata requesting the variable would
                                 # not pass the initial test that host model variables and scheme variables
@@ -1352,9 +1360,11 @@ end module {module}
                                             # Use correct horizontal variables in run phase
                                             if ccpp_stage == 'run' and dims[1].lower() == CCPP_HORIZONTAL_LOOP_EXTENT:
                                                 # Provide backward compatibility with blocked data structures
+                                                # and bypass the unresolved problems with inactive data
                                                 if CCPP_HORIZONTAL_LOOP_BEGIN in metadata_define.keys():
                                                     dim0 = metadata_define[CCPP_HORIZONTAL_LOOP_BEGIN][0].local_name
                                                     dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_END][0].local_name
+                                                    use_explicit_dimension = True
                                                 else:
                                                     dim0 = metadata_define[CCPP_CONSTANT_ONE][0].local_name
                                                     dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name
@@ -1367,7 +1377,8 @@ end module {module}
                                     else:
                                         raise Exception("THIS SHOULD NOT HAPPEN WITH CAPGEN'S METADATA PARSER")
 
-                                    # DH* TODO REMOVE THIS ENTIRE BLOCK
+                                    # DH* TODO REMOVE THIS ENTIRE BLOCK - create a test suite to make sure these things are caught
+                                    # by the metadata parser - do this on the feature/capgen branch!
                                     # Handle horizontal dimensions correctly
                                     if ccpp_stage == 'run':
                                         # This should not happen when parsing metadata with capgen's metadata parser, remove?
@@ -1390,18 +1401,19 @@ end module {module}
                                             raise Exception(f"Invalid metadata for scheme {scheme_name}: " + \
                                                             f"horizontal dimension for {var_standard_name} is {var.dimensions}")
                                     # *DH
+
                                 # DH* TODO: move this to a function "is_horizontal_dimension" ?
                                 # maybe combine with some of the above logic to get the correct dimensions
                                 # depending on phase etc?
                                 # We only want to be explicit about horizontal dimensions, for which we need
                                 # to subset in certain cases (therefore do it always). Other dimensions are
                                 # passed as ':'.
-                                if dim in [
-                                        f"{CCPP_CONSTANT_ONE}:{CCPP_HORIZONTAL_LOOP_EXTENT}",
-                                        f"{CCPP_CONSTANT_ONE}:{CCPP_HORIZONTAL_DIMENSION}",
-                                        # This should never be the case for schemes, only for hosts!
-                                        #f"{CCPP_HORIZONTAL_LOOP_BEGIN}:{CCPP_HORIZONTAL_LOOP_END}",
-                                        ]:
+                                #
+                                # DH* TODO: WE CANNOT ACTIVATE USING EXPLICIT HORIZONTAL BLOCKS
+                                # UNTIL WE HAVE SOLVED THE PROBLEM WITH INACTIVE (NON-ALLOCATED)
+                                # ARRAYS. THIS MUST BE ADDRESSED BEFORE WE SWITCH TO CONTIGUOUS
+                                # ARRAYS FOR MODELS LIKE THE UFS-WEATHER-MODEL!
+                                if use_explicit_dimension:
                                     if dim0 == dim1:
                                         array_size.append('1')
                                         dim_substrings.append(f'{dim1}')
@@ -1446,8 +1458,6 @@ end module {module}
                             var_size_expected = 1
 
                         # To assist debugging efforts, check if arrays have the correct size (ignore scalars for now)
-                        # DH* 20231226 This doesn't make much sense anymore. In a future PR, let's rather check that
-                        # the lower and upper bounds of the arrays are correct.
                         assign_test = ''
                         if debug:
                             if ccpp_stage in ['init', 'timestep_init', 'timestep_finalize', 'finalize'] and \
