@@ -31,9 +31,9 @@ program test_chunked_data
    ccpp_data_domain%thrd_no = 0
    ccpp_data_domain%chunk_no = 0
 
-   ! Loop over all blocks and threads for ccpp_data_chunks
+   ! Loop over all chunks and threads for ccpp_data_chunks
    do ic=1,nchunks
-      ! Assign the correct block numbers, only one thread
+      ! Assign the correct chunk numbers, only one thread
       ccpp_data_chunks(ic)%chunk_no = ic
       ccpp_data_chunks(ic)%thrd_no = 1
    end do
@@ -73,7 +73,7 @@ program test_chunked_data
       cdata => ccpp_data_chunks(ic)
       call ccpp_physics_run(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
       if (ierr/=0) then
-         write(error_unit,'(a,i3,a)') "An error occurred in ccpp_physics_run for block", ic, ":"
+         write(error_unit,'(a,i3,a)') "An error occurred in ccpp_physics_run for chunk", ic, ":"
          write(error_unit,'(a)') trim(cdata%errmsg)
          stop 1
       end if
