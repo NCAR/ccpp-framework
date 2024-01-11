@@ -733,7 +733,7 @@ CONTAINS
               (this%advected .eqv. oconst%advected)                     .and. &
               (this%const_default_value == oconst%const_default_value)  .and. &
               (this%min_val == oconst%min_val)                          .and. &
-              (this%molar_mass = oconst%molar_mass)                     .and. &
+              (this%molar_mass == oconst%molar_mass)                    .and. &
               (this%thermo_active .eqv. oconst%thermo_active)           .and. &
               (this%water_species .eqv. oconst%water_species)
       else
@@ -908,10 +908,10 @@ CONTAINS
    subroutine ccp_set_molec_weight(this, molec_weight, errcode, errmsg)
 
       ! Dummy arguments
-      class(ccpp_constituent_properties_t), intent(in)  :: this
-      real(kind_phys),                      intent(in)  :: molec_weight
-      integer,                              intent(out) :: errcode
-      character(len=*),                     intent(out) :: errmsg
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      real(kind_phys),                      intent(in)    :: molec_weight
+      integer,                              intent(out)   :: errcode
+      character(len=*),                     intent(out)   :: errmsg
 
       if (this%is_instantiated(errcode, errmsg)) then
           this%molar_mass = molec_weight
@@ -2276,10 +2276,10 @@ CONTAINS
    subroutine ccpt_set_molec_weight(this, molec_weight, errcode, errmsg)
 
       ! Dummy arguments
-      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
-      real(kind_phys),                    intent(in)  :: molec_weight
-      integer,                            intent(out) :: errcode
-      character(len=*),                   intent(out) :: errmsg
+      class(ccpp_constituent_prop_ptr_t), intent(inout) :: this
+      real(kind_phys),                    intent(in)    :: molec_weight
+      integer,                            intent(out)   :: errcode
+      character(len=*),                   intent(out)   :: errmsg
       ! Local variable
       character(len=*), parameter :: subname = 'ccpt_set_molec_weight'
 
