@@ -323,7 +323,7 @@ CONTAINS
       call host_constituents(1)%instantiate(std_name="specific_humidity",     &
            long_name="Specific humidity", units="kg kg-1",                    &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
-           min_value=1000._kind_phys, molec_weight=2000._kind_phys,           &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
            errcode=errflg, errmsg=errmsg)
       call check_errflg(subname//'.initialize', errflg, errmsg, errflg_final)
       if (errflg == 0) then
@@ -543,7 +543,7 @@ CONTAINS
 
       !Check that a constituent instantiated with a specified molecular
       !weight actually contains that molecular weight property value:
-      call const_props(index)%molec_weight(check_value, errflg, errmsg)
+      call const_props(index)%molar_mass(check_value, errflg, errmsg)
       if (errflg /= 0) then
          write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
               "to get molecular weight for specific humidity index = ",       &
@@ -552,7 +552,7 @@ CONTAINS
       end if
       if (errflg == 0) then
          if (check_value /= 2000._kind_phys) then !Should be 2000
-            write(6, *) "ERROR: 'molec_weight' should give a value of 2000 ", &
+            write(6, *) "ERROR: 'molar_mass' should give a value of 2000 ", &
                  "for specific humidity, as was set during instantiation."
             errflg_final = -1 !Notify test script that a failure occured
          end if
@@ -563,7 +563,7 @@ CONTAINS
 
       !Check that setting a constituent's molecular weight works
       !as expected:
-      call const_props(index_ice)%set_molec_weight(1._kind_phys, errflg,      &
+      call const_props(index_ice)%set_molar_mass(1._kind_phys, errflg,      &
                        errmsg)
       if (errflg /= 0) then
          write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
@@ -572,7 +572,7 @@ CONTAINS
          errflg_final = -1 !Notify test script that a failure occurred
       end if
       if (errflg == 0) then
-         call const_props(index_ice)%molec_weight(check_value, errflg, errmsg)
+         call const_props(index_ice)%molar_mass(check_value, errflg, errmsg)
          if (errflg /= 0) then
             write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
                  " trying to get molecular weight for cld_ice index = ",      &
@@ -582,7 +582,7 @@ CONTAINS
       end if
       if (errflg == 0) then
          if (check_value /= 1._kind_phys) then !Should be equal to one
-            write(6, *) "ERROR: 'set_molec_weight' did not set constituent",  &
+            write(6, *) "ERROR: 'set_molar_mass' did not set constituent",  &
                  " molecular weight value correctly."
             errflg_final = -1 !Notify test script that a failure occurred
          end if
