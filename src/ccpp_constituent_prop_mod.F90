@@ -45,8 +45,8 @@ module ccpp_constituent_prop_mod
       integer,          private              :: const_water = int_unassigned
       ! minimum_mr is the minimum allowed value (default zero)
       real(kind_phys),  private              :: min_val = 0.0_kind_phys
-      ! molar_mass is the molecular weight of the constituent (g mol-1)
-      real(kind_phys),  private              :: molar_mass = kphys_unassigned
+      ! molar_mass_val is the molar mass of the constituent (kg mol-1)
+      real(kind_phys),  private              :: molar_mass_val = kphys_unassigned
       ! default_value is the default value that the constituent array will be
       ! initialized to
       real(kind_phys),  private              :: const_default_value = kphys_unassigned
@@ -73,7 +73,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_moist                  => ccp_is_moist
       procedure :: is_wet                    => ccp_is_wet
       procedure :: minimum                   => ccp_min_val
-      procedure :: molec_weight              => ccp_molec_weight
+      procedure :: molar_mass                => ccp_molar_mass
       procedure :: default_value             => ccp_default_value
       procedure :: has_default               => ccp_has_default
       ! Copy method (be sure to update this anytime fields are added)
@@ -86,6 +86,7 @@ module ccpp_constituent_prop_mod
       procedure :: set_thermo_active => ccp_set_thermo_active
       procedure :: set_water_species => ccp_set_water_species
       procedure :: set_minimum       => ccp_set_min_val
+      procedure :: set_molar_mass    => ccp_set_molar_mass
    end type ccpp_constituent_properties_t
 
 !! \section arg_table_ccpp_constituent_prop_ptr_t
@@ -112,17 +113,18 @@ module ccpp_constituent_prop_mod
       procedure :: is_moist                  => ccpt_is_moist
       procedure :: is_wet                    => ccpt_is_wet
       procedure :: minimum                   => ccpt_min_val
-      procedure :: molec_weight              => ccpt_molec_weight
+      procedure :: molar_mass                => ccpt_molar_mass
       procedure :: default_value             => ccpt_default_value
       procedure :: has_default               => ccpt_has_default
       ! ccpt_set: Set the internal pointer
-      procedure :: set                     => ccpt_set
+      procedure :: set               => ccpt_set
       ! Methods that change state (XXgoldyXX: make private?)
       procedure :: deallocate        => ccpt_deallocate
       procedure :: set_const_index   => ccpt_set_const_index
       procedure :: set_thermo_active => ccpt_set_thermo_active
       procedure :: set_water_species => ccpt_set_water_species
       procedure :: set_minimum       => ccpt_set_min_val
+      procedure :: set_molar_mass    => ccpt_set_molar_mass
    end type ccpp_constituent_prop_ptr_t
 
 !! \section arg_table_ccpp_model_constituents_t
@@ -208,15 +210,18 @@ CONTAINS
       class(ccpp_constituent_properties_t), intent(inout) :: outConst
       type(ccpp_constituent_properties_t),  intent(in)    :: inConst
 
-      outConst%var_std_name = inConst%var_std_name
-      outConst%var_long_name = inConst%var_long_name
-      outConst%vert_dim = inConst%vert_dim
-      outConst%const_ind = inConst%const_ind
-      outConst%advected = inConst%advected
-      outConst%const_type = inConst%const_type
-      outConst%const_water = inConst%const_water
-      outConst%min_val = inConst%min_val
+      outConst%var_std_name        = inConst%var_std_name
+      outConst%var_long_name       = inConst%var_long_name
+      outConst%vert_dim            = inConst%vert_dim
+      outConst%const_ind           = inConst%const_ind
+      outConst%advected            = inConst%advected
+      outConst%const_type          = inConst%const_type
+      outConst%const_water         = inConst%const_water
+      outConst%min_val             = inConst%min_val
       outConst%const_default_value = inConst%const_default_value
+      outConst%molar_mass_val      = inConst%molar_mass_val
+      outConst%thermo_active       = inConst%thermo_active
+      outConst%water_species       = inConst%water_species
    end subroutine copyConstituent
 
    !#######################################################################
@@ -374,7 +379,7 @@ CONTAINS
    !#######################################################################
 
    subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, default_value, errcode, errmsg)
+        advected, default_value, min_value, molar_mass, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -385,6 +390,8 @@ CONTAINS
       character(len=*),                     intent(in)    :: vertical_dim
       logical, optional,                    intent(in)    :: advected
       real(kind_phys), optional,            intent(in)    :: default_value
+      real(kind_phys), optional,            intent(in)    :: min_value
+      real(kind_phys), optional,            intent(in)    :: molar_mass
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
 
@@ -408,6 +415,12 @@ CONTAINS
          end if
          if (present(default_value)) then
             this%const_default_value = default_value
+         end if
+         if (present(min_value)) then
+            this%min_val = min_value
+         end if
+         if (present(molar_mass)) then
+            this%molar_mass_val = molar_mass
          end if
       end if
       if (errcode == 0) then
@@ -719,6 +732,8 @@ CONTAINS
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
               (this%advected .eqv. oconst%advected)                     .and. &
               (this%const_default_value == oconst%const_default_value)  .and. &
+              (this%min_val == oconst%min_val)                          .and. &
+              (this%molar_mass_val == oconst%molar_mass_val)            .and. &
               (this%thermo_active .eqv. oconst%thermo_active)           .and. &
               (this%water_species .eqv. oconst%water_species)
       else
@@ -872,7 +887,7 @@ CONTAINS
 
    !########################################################################
 
-   subroutine ccp_molec_weight(this, val_out, errcode, errmsg)
+   subroutine ccp_molar_mass(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
       class(ccpp_constituent_properties_t), intent(in)  :: this
@@ -881,12 +896,28 @@ CONTAINS
       character(len=*),                     intent(out) :: errmsg
 
       if (this%is_instantiated(errcode, errmsg)) then
-         val_out = this%molar_mass
+         val_out = this%molar_mass_val
       else
          val_out = kphys_unassigned
       end if
 
-   end subroutine ccp_molec_weight
+   end subroutine ccp_molar_mass
+
+   !########################################################################
+
+   subroutine ccp_set_molar_mass(this, molar_mass, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      real(kind_phys),                      intent(in)    :: molar_mass
+      integer,                              intent(out)   :: errcode
+      character(len=*),                     intent(out)   :: errmsg
+
+      if (this%is_instantiated(errcode, errmsg)) then
+          this%molar_mass_val = molar_mass
+      end if
+
+   end subroutine ccp_set_molar_mass
 
    !########################################################################
 
@@ -2220,7 +2251,7 @@ CONTAINS
 
    !########################################################################
 
-   subroutine ccpt_molec_weight(this, val_out, errcode, errmsg)
+   subroutine ccpt_molar_mass(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
       class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
@@ -2228,17 +2259,38 @@ CONTAINS
       integer,                            intent(out) :: errcode
       character(len=*),                   intent(out) :: errmsg
       ! Local variable
-      character(len=*), parameter :: subname = 'ccpt_molec_weight'
+      character(len=*), parameter :: subname = 'ccpt_molar_mass'
 
       if (associated(this%prop)) then
-         call this%prop%molec_weight(val_out, errcode, errmsg)
+         call this%prop%molar_mass(val_out, errcode, errmsg)
       else
          val_out = kphys_unassigned
          call set_errvars(1, subname//": invalid constituent pointer",        &
               errcode=errcode, errmsg=errmsg)
       end if
 
-   end subroutine ccpt_molec_weight
+   end subroutine ccpt_molar_mass
+
+   !########################################################################
+
+   subroutine ccpt_set_molar_mass(this, molar_mass, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(inout) :: this
+      real(kind_phys),                    intent(in)    :: molar_mass
+      integer,                            intent(out)   :: errcode
+      character(len=*),                   intent(out)   :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_set_molar_mass'
+
+      if (associated(this%prop)) then
+         call this%prop%set_molar_mass(molar_mass, errcode, errmsg)
+      else
+         call set_errvars(1, subname//": invalid constituent pointer",        &
+              errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_set_molar_mass
 
    !########################################################################
 
