@@ -1316,7 +1316,7 @@ end module {module}
                             if container == var.container:
                                 break
 
-
+                        # We need some information about the host model variable
                         (dimensions_target_name, dim_string_target_name) = extract_dimensions_from_local_name(var.target)
 
                         # Derive correct horizontal loop extent for this variable for the rest of this function
@@ -1359,13 +1359,31 @@ end module {module}
                                             if ccpp_stage == 'run' and dims[1].lower() == CCPP_HORIZONTAL_LOOP_EXTENT:
                                                 # Provide backward compatibility with blocked data structures
                                                 # and bypass the unresolved problems with inactive data
-                                                if CCPP_HORIZONTAL_LOOP_BEGIN in metadata_define.keys():
+
+                                                # For this, we need to check if the host model variable
+                                                # is a contiguous array (it's horizontal dimension is
+                                                # CCPP_HORIZONTAL_DIMENSION) or part of a blocked data
+                                                # structure (it's horizontal dimension is CCPP_HORIZONTAL_LOOP_EXTENT)
+                                                for dim in metadata_define[var_standard_name][0].dimensions:
+                                                    if ':' in dim:
+                                                        host_var_dims = [x.lower() for x in dim.split(':')]
+                                                    # Single dimensions are indices and should not be recorded as a dimension!
+                                                    else:
+                                                        raise Exception("THIS SHOULD NOT HAPPEN WITH CAPGEN'S METADATA PARSER")
+                                                    if CCPP_HORIZONTAL_DIMENSION in host_var_dims:
+                                                        host_var_is_contiguous = True
+                                                    elif CCPP_HORIZONTAL_LOOP_EXTENT in host_var_dims:
+                                                        host_var_is_contiguous = False
+                                                if CCPP_HORIZONTAL_LOOP_BEGIN in metadata_define.keys() and host_var_is_contiguous:
                                                     dim0 = metadata_define[CCPP_HORIZONTAL_LOOP_BEGIN][0].local_name
                                                     dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_END][0].local_name
                                                     use_explicit_dimension = True
                                                 else:
                                                     dim0 = metadata_define[CCPP_CONSTANT_ONE][0].local_name
                                                     dim1 = metadata_define[CCPP_HORIZONTAL_LOOP_EXTENT][0].local_name
+                                                # Remove this variable so that we can catch errors
+                                                # if it doesn't get set even though it should
+                                                del host_var_is_contiguous
                                             else:
                                                 if not dims[1].lower() in metadata_define.keys():
                                                     raise Exception('Dimension {}, required by variable {}, not defined in host model metadata'.format(
