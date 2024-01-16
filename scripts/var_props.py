@@ -791,62 +791,54 @@ class VarCompatObj:
                                        kind_types=["kind_phys=REAL64", \
                                                    "kind_dyn=REAL32", \
                                                    "kind_host=REAL64"])
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", [],           \
-                     "var1_lname", "var_stdname", "real", "kind_phys",      \
-                     "m", [], "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", [], "var1_lname", False,\
+                     "var_stdname", "real", "kind_phys", "m", [], "var2_lname", False,\
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with no horizontal transform works
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "m", ['horizontal_dimension'],    \
-                     "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "m", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with a horizontal transform works
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "m", ['horizontal_loop_extent'],  \
-                     "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['horizontal_dimension'],   "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "m", ['horizontal_loop_extent'], "var2_lname", False, \
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with unit conversion m->km works
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "km", ['horizontal_dimension'],   \
-                     "var2_lname", _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
     # Test that a 2-D var with unit conversion m->km works and that it
     # produces the correct forward transformation
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension'], "var1_lname", "var_stdname", \
-                     "real", "kind_phys", "km", ['horizontal_dimension'],   \
-                     "var2_lname", _DOCTEST_RUNENV).forward_transform(      \
-                     "var1_lname", "var2_lname", ('i'))
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV).forward_transform("var1_lname", "var2_lname", 'i', 'i')
     'var1_lname(i) = 1.0E-3_kind_phys*var2_lname(i)'
 
     # Test that a 3-D var with unit conversion m->km and vertical flipping
     # works and that it produces the correct reverse transformation
-    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",               \
-                     ['horizontal_dimension', 'vertical_layer_dimension'],  \
-                     "var1_lname", "var_stdname", "real", "kind_phys", "km",\
-                     ['horizontal_dimension', 'vertical_layer_dimension'],  \
-                     "var2_lname", _DOCTEST_RUNENV).reverse_transform(      \
-                     "var1_lname", "var2_lname", ('i','k'), flip_vdim='nk')
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['horizontal_dimension', 'vertical_layer_dimension'], "var1_lname", False,\
+                     "var_stdname", "real", "kind_phys", "km",['horizontal_dimension', 'vertical_layer_dimension'], "var2_lname", True, \
+                     _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", ('i','k'), ('i','nk-k+1'))
     'var1_lname(i,nk-k+1) = 1.0E+3_kind_phys*var2_lname(i,k)'
     """
 
     def __init__(self, var1_stdname, var1_type, var1_kind, var1_units,
-                 var1_dims, var1_lname, var2_stdname, var2_type, var2_kind,
-                 var2_units, var2_dims, var2_lname, run_env, v1_context=None,
+                 var1_dims, var1_lname, var1_top, var2_stdname, var2_type, var2_kind,
+                 var2_units, var2_dims, var2_lname, var2_top, run_env, v1_context=None,
                  v2_context=None):
         """Initialize this object with information on the equivalence and/or
            conformability of two variables.
         variable 1 is described by <var1_stdname>, <var1_type>, <var1_kind>,
-           <var1_units>, <var1_dims>, <var1_lname>, and <v1_context>.
+           <var1_units>, <var1_dims>, <var1_lname>, <var1_top>, and <v1_context>.
         variable 2 is described by <var2_stdname>, <var2_type>, <var2_kind>,
-           <var2_units>, <var2_dims>, <var2_lname>, and <v2_context>.
+           <var2_units>, <var2_dims>, <var2_lname>, <var2_top>, and <v2_context>.
         <run_env> is the CCPPFrameworkEnv object used here to verify kind
            equivalence or to produce kind transformations.
         """
@@ -861,6 +853,7 @@ class VarCompatObj:
         self.__dim_transforms = None
         self.__kind_transforms = None
         self.__unit_transforms = None
+        self.has_vert_transforms = False
         incompat_reason = list()
         # First, check for fatal incompatibilities
         if var1_stdname != var2_stdname:
@@ -927,6 +920,13 @@ class VarCompatObj:
             # end if
         # end if
         if self.__compat:
+            # Check for vertical array flipping (do later)
+            if var1_top != var2_top:
+                self.__compat            = True
+                self.has_vert_transforms = True
+            # end if
+        # end if
+        if self.__compat:
             # Check dimensions
             ##XXgoldyXX: For now, we always have to create a dimension
             ##           transform because we do not know if the vertical
@@ -945,13 +945,15 @@ class VarCompatObj:
         # end if
         self.__incompat_reason = " and ".join([x for x in incompat_reason if x])
 
-    def forward_transform(self, lvar_lname, rvar_lname, indices,
+    def forward_transform(self, lvar_lname, rvar_lname, rvar_indices, lvar_indices,
                           adjust_hdim=None, flip_vdim=None):
         """Compute and return the the forward transform from "var1" to "var2".
         <lvar_lname> is the local name of "var2".
         <rvar_lname> is the local name of "var1".
-        <indices> is a tuple of the loop indices for "var1" (i.e., "var1"
-           will show up in the RHS of the transform as "var1(indices)".
+        <rvar_indices> is a tuple of the loop indices for "var1" (i.e., "var1"
+           will show up in the RHS of the transform as "var1(rvar_indices)".
+        <lvar_indices> is a tuple of the loop indices for "var2" (i.e., "var2"
+           will show up in the LHS of the transform as "var2(lvar_indices)".
         If <adjust_hdim> is not None, it should be a string containing the
            local name of the "horizontal_loop_begin" variable. This is used to
            compute the offset in the horizontal axis index between one and
@@ -963,16 +965,10 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
-        # Grab any dimension transform
-        if self.has_dim_transforms:
-            dtrans = self.__dim_transforms
-            lhs_term = dtrans.forward_transform(lvar_lname, indices,
-                                                adjust_hdim=adjust_hdim,
-                                                flip_vdim=flip_vdim)
-        else:
-            lhs_term = f"{lvar_lname}({','.join(indices)})"
-        # end if
-        rhs_term = f"{rvar_lname}({','.join(indices)})"
+        # Dimension transform (Indices handled externally)
+        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+
         if self.has_kind_transforms:
             kind = self.__kind_transforms[1]
             rhs_term = f"real({rhs_term}, {kind})"
@@ -989,13 +985,15 @@ class VarCompatObj:
         # end if
         return f"{lhs_term} = {rhs_term}"
 
-    def reverse_transform(self, lvar_lname, rvar_lname, indices,
+    def reverse_transform(self, lvar_lname, rvar_lname, rvar_indices, lvar_indices,
                           adjust_hdim=None, flip_vdim=None):
         """Compute and return the the reverse transform from "var2" to "var1".
         <lvar_lname> is the local name of "var1".
         <rvar_lname> is the local name of "var2".
-        <indices> is a tuple of the loop indices for "var2" (i.e., "var2"
-           will show up in the RHS of the transform as "var2(indices)".
+        <rvar_indices> is a tuple of the loop indices for "var1" (i.e., "var1"
+           will show up in the RHS of the transform as "var1(rvar_indices)".
+        <lvar_indices> is a tuple of the loop indices for "var2" (i.e., "var2"
+           will show up in the LHS of the transform as "var2(lvar_indices)".
         If <adjust_hdim> is not None, it should be a string containing the
            local name of the "horizontal_loop_begin" variable. This is used to
            compute the offset in the horizontal axis index between one and
@@ -1007,16 +1005,10 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
-        # Grab any dimension transform
-        if self.has_dim_transforms:
-            dtrans = self.__dim_transforms
-            lhs_term = dtrans.reverse_transform(lvar_lname, indices,
-                                                adjust_hdim=adjust_hdim,
-                                                flip_vdim=flip_vdim)
-        else:
-            lhs_term = f"{lvar_lname}({','.join(indices)})"
-        # end if
-        rhs_term = f"{rvar_lname}({','.join(indices)})"
+        # Dimension transforms (Indices handled externally)
+        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+
         if self.has_kind_transforms:
             kind = self.__kind_transforms[0]
             rhs_term = f"real({rhs_term}, {kind})"
@@ -1054,9 +1046,9 @@ class VarCompatObj:
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
-                                            "m", [], "var1_lname", "var_stdname", \
+                                            "m", [], "var1_lname", False, "var_stdname", \
                                             "real", "kind_phys", "m", [], \
-                                            "var2_lname", _DOCTEST_RUNENV, \
+                                            "var2_lname", False, _DOCTEST_RUNENV, \
                                             v1_context=_DOCTEST_CONTEXT1, \
                                             v2_context=_DOCTEST_CONTEXT2)
 
@@ -1108,9 +1100,9 @@ class VarCompatObj:
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
-                                            "m", [], "var1_lname", "var_stdname", \
+                                            "m", [], "var1_lname", False, "var_stdname", \
                                             "real", "kind_phys", "m", [], \
-                                            "var2_lname", _DOCTEST_RUNENV, \
+                                            "var2_lname", False, _DOCTEST_RUNENV, \
                                             v1_context=_DOCTEST_CONTEXT1, \
                                             v2_context=_DOCTEST_CONTEXT2)
 
@@ -1180,9 +1172,9 @@ class VarCompatObj:
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
-                                    "m", [], "var1_lname", "var_stdname", \
+                                    "m", [], "var1_lname", False, "var_stdname", \
                                     "real", "kind_phys", "m", [], \
-                                    "var2_lname", _DOCTEST_RUNENV, \
+                                    "var2_lname", False, _DOCTEST_RUNENV, \
                                     v1_context=_DOCTEST_CONTEXT1, \
                                     v2_context=_DOCTEST_CONTEXT2)
 
