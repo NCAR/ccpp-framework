@@ -205,6 +205,8 @@ class Var:
                                      default_in='.true.'),
                     VariableProperty('polymorphic', bool, optional_in=True,
                                      default_in=False),
+                    VariableProperty('top_at_one', bool, optional_in=True,
+                                     default_in=False),
                     VariableProperty('target', bool, optional_in=True,
                                      default_in=False)]
 
@@ -379,15 +381,17 @@ class Var:
         sunits = self.get_prop_value('units')
         sstd_name = self.get_prop_value('standard_name')
         sloc_name = self.get_prop_value('local_name')
+        stopp = self.get_prop_value('top_at_one')
         sdims = self.get_dimensions()
         otype = other.get_prop_value('type')
         okind = other.get_prop_value('kind')
         ounits = other.get_prop_value('units')
         ostd_name = other.get_prop_value('standard_name')
         oloc_name = other.get_prop_value('local_name')
+        otopp = other.get_prop_value('top_at_one')
         odims = other.get_dimensions()
-        compat = VarCompatObj(sstd_name, stype, skind, sunits, sdims, sloc_name,
-                              ostd_name, otype, okind, ounits, odims, oloc_name,
+        compat = VarCompatObj(sstd_name, stype, skind, sunits, sdims, sloc_name, stopp,
+                              ostd_name, otype, okind, ounits, odims, oloc_name, otopp,
                               run_env,
                               v1_context=self.context, v2_context=other.context)
         if (not compat) and (run_env.logger is not None):

@@ -25,6 +25,7 @@
   type = real
   kind = kind_phys
   intent = in
+  top_at_one = .true.
 [effrl_inout]
   standard_name = effective_radius_of_stratiform_cloud_liquid_water_particle
   long_name = effective radius of cloud liquid water particle in micrometer
@@ -47,8 +48,9 @@
   units = um
   dimensions = (horizontal_loop_extent,vertical_layer_dimension)
   type = real
-  kind = kind_phys
+  kind = 8
   intent = inout
+  top_at_one = .true.
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
