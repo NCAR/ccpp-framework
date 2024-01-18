@@ -57,16 +57,16 @@ if (not os.path.exists(_DATABASE)) or (not os.path.isfile(_DATABASE)):
 
 # Check data
 _HOST_FILES = [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90")]
-_SUITE_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatability_suite_cap.F90")]
+_SUITE_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
 _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
                   os.path.join(_SRC_DIR, "ccpp_constituent_prop_mod.F90"),
                   os.path.join(_SRC_DIR, "ccpp_hashable.F90"),
                   os.path.join(_SRC_DIR, "ccpp_hash_table.F90")]
 _CCPP_FILES = _UTILITY_FILES + \
               [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
-               os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatability_suite_cap.F90")]
+               os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
 _MODULE_LIST = ["effr_calc"]
-_SUITE_LIST = ["var_compatability_suite"]
+_SUITE_LIST = ["var_compatibility_suite"]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
                           "effective_radius_of_stratiform_cloud_rain_particle",
@@ -140,15 +140,15 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("module_list"),
                               _MODULE_LIST)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("suite_list"),
                               _SUITE_LIST)
-print("\nChecking variables for var_compatability suite from python")
+print("\nChecking variables for var_compatibility suite from python")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
-                                                         value="var_compatability_suite"),
+                                                         value="var_compatibility_suite"),
                               _REQUIRED_VARS_VAR_ACTION)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
-                                                         value="var_compatability_suite"),
+                                                         value="var_compatibility_suite"),
                               _INPUT_VARS_VAR_ACTION)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
-                                                         value="var_compatability_suite"),
+                                                         value="var_compatibility_suite"),
                               _OUTPUT_VARS_VAR_ACTION)
 
 sys.exit(NUM_ERRORS)

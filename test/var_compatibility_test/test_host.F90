@@ -375,7 +375,7 @@ CONTAINS
     logical :: run_okay
 
     ! Setup expected test suite info
-    test_suites(1)%suite_name = 'var_compatability_suite'
+    test_suites(1)%suite_name = 'var_compatibility_suite'
 	test_suites(1)%suite_parts => test_parts1
     test_suites(1)%suite_input_vars => test_invars1
     test_suites(1)%suite_output_vars => test_outvars1
