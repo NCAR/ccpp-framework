@@ -30,6 +30,7 @@ from preprocess import PreprocStack
 from xml_tools import find_schema_file, find_schema_version
 from xml_tools import read_xml_file, validate_xml_file
 from xml_tools import PrettyElementTree
+from fortran_conditional import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 # pylint: enable=wrong-import-position
 
 __all__ = [
@@ -74,5 +75,7 @@ __all__ = [
     'set_log_to_stdout',
     'type_name',
     'unique_standard_name',
-    'validate_xml_file'
+    'validate_xml_file',
+    'FORTRAN_CONDITIONAL_REGEX_WORDS',
+    'FORTRAN_CONDITIONAL_REGEX'
 ]

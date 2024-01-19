@@ -23,6 +23,7 @@ from parse_tools import check_default_value, check_valid_values
 from parse_tools import check_molar_mass
 from parse_tools import ParseContext, ParseSource, type_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
+from parse_tools import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
 from var_props import standard_name_to_long_name, default_kind_val
@@ -302,6 +303,8 @@ class Var:
             if 'units' not in prop_dict:
                 prop_dict['units'] = ""
             # end if
+            # DH* To investigate later: Why is the DDT type
+            # copied into the kind attribute? Can we remove this?
             prop_dict['kind'] = prop_dict['ddt_type']
             del prop_dict['ddt_type']
             self.__intrinsic = False
@@ -974,6 +977,53 @@ class Var:
             vdims = dims
         # end if
         return find_vertical_dimension(vdims)[0]
+
+    def conditional(self, vdicts):
+        """Convert conditional expression from active attribute
+        (i.e. in standard name format) to local names based on vdict.
+        Return conditional and a list of variables needed to evaluate
+        the conditional.
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([{}])
+        ('.true.', [])
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'False'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})]) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        Exception: Cannot find variable 'false' for generating conditional for 'False'
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_gone'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ]) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        Exception: Cannot find variable 'mom_gone' for generating conditional for 'mom_gone'
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_home'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ])[0]
+        'bar'
+        >>> len(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_home'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ])[1])
+        1
+        """
+
+        active = self.get_prop_value('active') 
+        conditional = ''
+        vars_needed = []
+
+        # Find all words in the conditional, for each of them look
+        # for a matching standard name in the list of known variables
+        items = FORTRAN_CONDITIONAL_REGEX.findall(active)
+        for item in items:
+            item = item.lower()
+            if item in FORTRAN_CONDITIONAL_REGEX_WORDS:
+                conditional += item
+            else:
+                # Keep integers
+                try:
+                    int(item)
+                    conditional += item
+                except ValueError:
+                    dvar = None
+                    for vdict in vdicts:
+                        dvar = vdict.find_variable(standard_name=item, any_scope=True) # or any_scope=False ?
+                        if dvar:
+                            break
+                    if not dvar:
+                        raise Exception(f"Cannot find variable '{item}' for generating conditional for '{active}'")
+                    conditional += dvar.get_prop_value('local_name')
+                    vars_needed.append(dvar)
+        return (conditional, vars_needed)
 
     def write_def(self, outfile, indent, wdict, allocatable=False,
                   dummy=False, add_intent=None, extra_space=0, public=False):

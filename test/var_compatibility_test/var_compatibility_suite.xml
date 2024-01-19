@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suite name="var_compatability_suite" version="1.0">
+<suite name="var_compatibility_suite" version="1.0">
   <group name="radiation">
     <scheme>effr_calc</scheme>
   </group>

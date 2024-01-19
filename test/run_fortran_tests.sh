@@ -37,12 +37,12 @@ if [ $res -ne 0 ]; then
   echo "Failure running advection test"
 fi
 
-# Run var_compatability test
- ./var_compatability_test/run_test
+# Run var_compatibility test
+ ./var_compatibility_test/run_test
  res=$?
  errcnt=$((errcnt + res))
  if [ $res -ne 0 ]; then
-   echo "Failure running var_compatability test"
+   echo "Failure running var_compatibility test"
  fi
 
 if [ $errcnt -eq 0 ]; then

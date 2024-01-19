@@ -151,7 +151,7 @@ def standard_name_to_long_name(prop_dict, context=None):
     ...
     parse_source.CCPPError: No standard name to convert to long name, at foo.F90:4
     """
-    # We assume that standar_name has been checked for validity
+    # We assume that standard_name has been checked for validity
     # Make the first char uppercase and replace each underscore with a space
     if 'standard_name' in prop_dict:
         standard_name = prop_dict['standard_name']
