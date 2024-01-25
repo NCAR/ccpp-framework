@@ -26,6 +26,14 @@
   kind = kind_phys
   intent = in
   top_at_one = .true.
+[effrg_in]
+  standard_name = effective_radius_of_stratiform_cloud_graupel
+  long_name = effective radius of cloud graupel in micrometer
+  units = um
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
 [effrl_inout]
   standard_name = effective_radius_of_stratiform_cloud_liquid_water_particle
   long_name = effective radius of cloud liquid water particle in micrometer

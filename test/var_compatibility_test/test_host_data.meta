@@ -25,3 +25,11 @@
   dimensions = (horizontal_dimension,vertical_layer_dimension)
   type = real
   kind = kind_phys
+[effrg]
+  standard_name = effective_radius_of_stratiform_cloud_graupel
+  long_name = effective radius of cloud graupel in meter
+  units = m
+  dimensions = (horizontal_dimension,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  active = (flag_indicating_cloud_microphysics_has_graupel)

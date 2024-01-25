@@ -8,17 +8,19 @@ module test_host_data
      real(kind_phys), dimension(:,:), allocatable :: &
           effrr,                                     & ! effective radius of cloud rain
           effrl,                                     & ! effective radius of cloud liquid water
-          effri                                        ! effective radius of cloud ice
+          effri,                                     & ! effective radius of cloud ice
+          effrg                                        ! effective radius of cloud graupel
   end type physics_state
 
   public allocate_physics_state
 
 contains
 
-  subroutine allocate_physics_state(cols, levels, state)
+  subroutine allocate_physics_state(cols, levels, state, has_graupel)
     integer,             intent(in)  :: cols
     integer,             intent(in)  :: levels
     type(physics_state), intent(out) :: state
+    logical,             intent(in)  :: has_graupel
 
     if (allocated(state%effrr)) then
        deallocate(state%effrr)
@@ -34,6 +36,13 @@ contains
        deallocate(state%effri)
     end if
     allocate(state%effri(cols, levels))
+
+    if (has_graupel) then
+       if (allocated(state%effrg)) then
+          deallocate(state%effrg)
+       end if
+       allocate(state%effrg(cols, levels))
+    endif
 
   end subroutine allocate_physics_state
 
