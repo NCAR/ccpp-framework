@@ -59,6 +59,13 @@
   kind = 8
   intent = inout
   top_at_one = .true.
+[has_graupel]
+  standard_name = flag_indicating_cloud_microphysics_has_graupel
+  long_name = flag indicating that the cloud microphysics produces graupel
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
