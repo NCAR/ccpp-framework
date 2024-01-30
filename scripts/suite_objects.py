@@ -871,10 +871,20 @@ class SuiteObject(VarDictionary):
                 new_vdims = list()
                 new_dict_dims = dict_dims
                 match = True
+            # end if
             # Create compatability object, containing any necessary forward/reverse 
             # transforms from <var> and <dict_var>
             compat_obj = var.compatible(dict_var, run_env)
-
+            # If variable is defined as "inactive" by the host, ensure that
+            # this variable is declared as "optional" by the scheme. If
+            # not satisfied, return error.
+            host_var_active     = dict_var.get_prop_value('active')
+            scheme_var_optional = var.get_prop_value('optional')
+            if (not scheme_var_optional and host_var_active.lower() != '.true.'):
+                errmsg = "Non optional scheme arguments for conditionally allocatable variables"
+                sname  = dict_var.get_prop_value('standard_name')
+                errmsg += ", {}".format(sname)
+                raise CCPPError(errmsg)
             # end if
             # Add the variable to the parent call tree
             if dict_dims == new_dict_dims:

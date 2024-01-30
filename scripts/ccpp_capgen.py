@@ -293,6 +293,21 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
             # end for
             list_match = mlen == flen
         # end if
+        # Check for consistency between optional variables in metadata and
+        # optional variables in fortran. Error if optional attribute is
+        # missing from fortran declaration.
+        for mind, mvar in enumerate(mlist):
+            mopt  = mvar.get_prop_value('optional')
+            mname = mvar.get_prop_value('local_name')
+            fvar, find = find_var_in_list(mname, flist)
+            if find and mopt:
+                fopt = fvar.get_prop_value('optional')
+                if (not fopt):
+                    errmsg = 'Missing optional attribute in fortran declaration for variable {}, in file {}'
+                    errors_found = add_error(errors_found, errmsg.format(mname,title))
+                # end if
+            # end if
+        # end for
         if not list_match:
             if fht in _EXTRA_VARIABLE_TABLE_TYPES:
                 if flen > mlen:
