@@ -207,6 +207,8 @@ class Var:
                                      default_in=False),
                     VariableProperty('top_at_one', bool, optional_in=True,
                                      default_in=False),
+                    VariableProperty('optional', bool, optional_in=True,
+                                     default_in=False),
                     VariableProperty('target', bool, optional_in=True,
                                      default_in=False)]
 
