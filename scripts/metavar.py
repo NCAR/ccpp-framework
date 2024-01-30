@@ -1079,6 +1079,7 @@ class Var:
                 raise CCPPError(errmsg.format(name))
             # end if
         # end if
+        optional = self.get_prop_value('optional')
         if protected and dummy:
             intent_str = 'intent(in)   '
         elif allocatable:
@@ -1091,6 +1092,9 @@ class Var:
             alloval = self.get_prop_value('allocatable')
             if (intent.lower()[-3:] == 'out') and alloval:
                 intent_str = f"allocatable, intent({intent})"
+            elif optional:
+                intent_str = f"intent({intent}),{' '*(5 - len(intent))}"
+                intent_str += 'optional   '
             else:
                 intent_str = f"intent({intent}){' '*(5 - len(intent))}"
             # end if
