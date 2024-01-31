@@ -217,7 +217,7 @@ FORTRAN_SCALAR_REF_RE = re.compile(FORTRAN_SCALAR_REF+r"$")
 FORTRAN_FUNCTION_REF = r"(?:"+FORTRAN_ID+r"\s*[(]\s*[)])"
 FORTRAN_FUNCTION_REF_RE = re.compile(FORTRAN_FUNCTION_REF)
 FORTRAN_INTRINSIC_TYPES = ["integer", "real", "logical", "complex",
-                           "double precision", "character"]
+                           "double precision", "character", "ccpp_mpi_comm_type"]
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
 FORTRAN_TYPE_RE = re.compile(r"(?i)type\s*\(\s*("+FORTRAN_ID+r")\s*\)")
 

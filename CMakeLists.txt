@@ -12,8 +12,13 @@ string(TIMESTAMP YEAR "%Y")
 
 #------------------------------------------------------------------------------
 # Set MPI flags for C/C++/Fortran
-if (MPI)
+if (MPI_F90 OR MPI_F08)
   find_package(MPI REQUIRED C Fortran)
+  if (MPI_F90)
+    add_definitions(-DMPI_F90)
+  elseif (MPI_F08)
+    add_definitions(-DMPI_F08)
+  endif (MPI_F90)
 endif (MPI)
 
 #------------------------------------------------------------------------------

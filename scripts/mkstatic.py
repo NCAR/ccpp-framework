@@ -216,6 +216,13 @@ class API(object):
 !
 module {module}
 
+#if defined MPI_F08
+    use mpi_f08, only: mpi_comm
+#define ccpp_mpi_comm_type type(mpi_comm)
+#else
+#define ccpp_mpi_comm_type integer
+#endif
+
 {module_use}
    implicit none
 
@@ -532,6 +539,13 @@ class Suite(object):
 !!
 !
 module {module}
+
+#if defined MPI_F08
+    use mpi_f08, only: mpi_comm
+#define ccpp_mpi_comm_type type(mpi_comm)
+#else
+#define ccpp_mpi_comm_type integer
+#endif
 
 {module_use}
 
@@ -888,6 +902,13 @@ class Group(object):
 !!
 !
 module {module}
+
+#if defined MPI_F08
+    use mpi_f08, only: mpi_comm
+#define ccpp_mpi_comm_type type(mpi_comm)
+#else
+#define ccpp_mpi_comm_type integer
+#endif
 
 {module_use}
 
