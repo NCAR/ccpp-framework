@@ -1,0 +1,38 @@
+[ccpp-table-properties]
+  name = mpi_test_scheme
+  type = scheme
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = mpi_test_scheme_init
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ncols]
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ccpp_mpi_comm]
+  standard_name = ccpp_mpi_comm
+  long_name = MPI communicator for use by CCPP
+  units = 1
+  dimensions = ()
+  type = CCPP_MPI_COMM_TYPE
+  intent = in

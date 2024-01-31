@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="mpi_test_suite" version="1">
+  <group name="mpi_test_group">
+    <subcycle loop="1">
+      <scheme>mpi_test_scheme</scheme>
+    </subcycle>
+  </group>
+</suite>
