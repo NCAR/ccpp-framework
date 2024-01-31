@@ -1420,10 +1420,17 @@ class Scheme(SuiteObject):
         if not dimensions:
             if not intent == 'out':
                 internal_var_lname = internal_var.get_prop_value('local_name')
-                outfile.write(f"if ({conditional}) then", indent)
-                outfile.write(f"! Assign value of {local_name} to internal_var", indent+1)
-                outfile.write(f"{internal_var_lname} = {local_name}", indent+1)
-                outfile.write(f"end if", indent)
+                if conditional != '.true.':
+                    outfile.write(f"if {conditional} then", indent)
+                    outfile.write(f"! Assign value of {local_name} to internal_var", indent+1)
+                    outfile.write(f"{internal_var_lname} = {local_name}", indent+1)
+                    outfile.write(f"end if", indent)
+                    outfile.write('',indent)
+                else:
+                    outfile.write(f"! Assign value of {local_name} to internal_var", indent)
+                    outfile.write(f"{internal_var_lname} = {local_name}", indent)
+                    outfile.write('',indent)
+                # endif
         # For arrays, check size of array against dimensions in metadata, then assign
         # the lower and upper bounds to the internal_var variable if the intent is in/inout
         else:
@@ -1489,24 +1496,44 @@ class Scheme(SuiteObject):
             ubound_string = '(' + ','.join(ubound_strings) + ')'
 
             # Write size check
-            outfile.write(f"if ({conditional}) then", indent)
-            outfile.write(f"! Check size of array {local_name}", indent+1)
-            outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent+1)
-            outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+2)
-            outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+2)
-            outfile.write(f"{errcode} = 1", indent+2)
-            outfile.write(f"return", indent+2)
-            outfile.write(f"end if", indent+1)
-            outfile.write(f"end if", indent)
+            if conditional != '.true.':
+                outfile.write(f"if {conditional} then", indent)
+                outfile.write(f"! Check size of array {local_name}", indent+1)
+                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent+1)
+                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+2)
+                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+2)
+                outfile.write(f"{errcode} = 1", indent+2)
+                outfile.write(f"return", indent+2)
+                outfile.write(f"end if", indent+1)
+                outfile.write(f"end if", indent)
+                outfile.write('',indent)
+            else:
+                outfile.write(f"! Check size of array {local_name}", indent)
+                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent)
+                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+1)
+                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+1)
+                outfile.write(f"{errcode} = 1", indent+1)
+                outfile.write(f"return", indent+1)
+                outfile.write(f"end if", indent)
+                outfile.write('',indent)
+            # end if
 
             # Assign lower/upper bounds to internal_var (scalar) if intent is not out
             if not intent == 'out':
                 internal_var_lname = internal_var.get_prop_value('local_name')
-                outfile.write(f"if ({conditional}) then", indent)
-                outfile.write(f"! Assign lower/upper bounds of {local_name} to internal_var", indent+1)
-                outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", indent+1)
-                outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", indent+1)
-                outfile.write(f"end if", indent)
+                if conditional != '.true.':
+                    outfile.write(f"if {conditional} then", indent)
+                    outfile.write(f"! Assign lower/upper bounds of {local_name} to internal_var", indent+1)
+                    outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", indent+1)
+                    outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", indent+1)
+                    outfile.write(f"end if", indent)
+                    outfile.write('',indent)
+                else:
+                    outfile.write(f"! Assign lower/upper bounds of {local_name} to internal_var", indent)
+                    outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", indent)
+                    outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", indent)
+                    outfile.write('',indent)
+                # end if
 
     def add_var_transform(self, var, compat_obj, vert_dim):
         """Register any variable transformation needed by <var> for this Scheme.
@@ -1581,7 +1608,7 @@ class Scheme(SuiteObject):
                                                 rvar_lname=dummy,
                                                 lvar_indices=rindices,
                                                 rvar_indices=lindices)
-        outfile.write(stmt, indent+1)
+        outfile.write(stmt, indent)
 
     def write(self, outfile, errcode, errmsg, indent):
         # Unused arguments are for consistent write interface
@@ -1595,23 +1622,29 @@ class Scheme(SuiteObject):
                                              is_func_call=True,
                                              subname=self.subroutine_name)
 
+        outfile.write('', indent)
         outfile.write('if ({} == 0) then'.format(errcode), indent)
 
         # Write debug checks (operating on variables
         # coming from the group's call list)
         for (var, internal_var) in self.__var_debug_checks:
-            stmt = self.write_var_debug_check(var, internal_var, cldicts, outfile, errcode, errmsg, indent)
-
+            stmt = self.write_var_debug_check(var, internal_var, cldicts, outfile, errcode, errmsg, indent+1)
         # Write any reverse (pre-Scheme) transforms.
+        outfile.write('! Compute reverse (pre-scheme) transforms', indent+1)
         for (dummy, var, rindices, lindices, compat_obj) in self.__reverse_transforms:
-            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent, False)
+            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
         # Write the scheme call.
         stmt = 'call {}({})'
+        outfile.write('',indent+1)
+        outfile.write('! Call scheme', indent+1)
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
         # Write any forward (post-Scheme) transforms.
+        outfile.write('',indent+1)
+        outfile.write('! Compute forward (post-scheme) transforms', indent+1)
         for (var, dummy, lindices, rindices, compat_obj) in self.__forward_transforms:
-            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent, True)
+            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
         #
+        outfile.write('', indent)
         outfile.write('end if', indent)
 
     def schemes(self):
