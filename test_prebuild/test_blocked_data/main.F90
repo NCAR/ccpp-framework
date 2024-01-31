@@ -85,7 +85,7 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_timestep_finalize(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_init:"
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_finalize:"
       write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if
@@ -97,7 +97,7 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_finalize(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_init:"
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_finalize:"
       write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if

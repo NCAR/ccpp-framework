@@ -3,11 +3,17 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ccpp_blocked_data
         VERSION 1.0.0
-        LANGUAGES Fortran)
+        LANGUAGES C Fortran)
 
 #------------------------------------------------------------------------------
 # Request a static build
 option(BUILD_SHARED_LIBS "Build a shared library" OFF)
+
+#------------------------------------------------------------------------------
+# Pass debug/release flag to Fortran files for preprocessor
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_definitions(-DDEBUG)
+endif()
 
 #------------------------------------------------------------------------------
 # Set the sources: physics type definitions
