@@ -29,18 +29,29 @@ module mpi_test_scheme
 !! \htmlinclude mpi_test_scheme_init.html
 !!
    subroutine mpi_test_scheme_init(ncols, ccpp_mpi_comm, errmsg, errflg)
+      ! Interface variables
       integer, intent(in)               :: ncols
       ccpp_mpi_comm_type, intent(in)    :: ccpp_mpi_comm
       character(len=*), intent(out)     :: errmsg
       integer,          intent(out)     :: errflg
+      ! Local variables
+      integer :: mpi_rank, mpi_test, ierr
 
       ! Initialize CCPP error handling variables
       errmsg = ''
       errflg = 0
+
+      ! The MPI_F08 and MPI_F90 blocks are identical except the debug output
 #if defined MPI_F08
-      write(error_unit,'(a,i3)') 'In mpi_test_scheme_init, MPI_F08 branch'
+      call mpi_comm_rank(ccpp_mpi_comm, mpi_rank, ierr)
+      mpi_test = mpi_rank
+      call mpi_bcast(mpi_test, 1, MPI_INTEGER, 0, ccpp_mpi_comm, ierr)
+      write(error_unit,'(a,i3)') 'In mpi_test_scheme_init, MPI_F08 branch: MPI root has rank', mpi_test
 #elif defined MPI_F90
-      write(error_unit,'(a,i3)') 'In mpi_test_scheme_init, MPI_F90 branch'
+      call mpi_comm_rank(ccpp_mpi_comm, mpi_rank, ierr)
+      mpi_test = mpi_rank
+      call mpi_bcast(mpi_test, 1, MPI_INTEGER, 0, ccpp_mpi_comm, ierr)
+      write(error_unit,'(a,i3)') 'In mpi_test_scheme_init, MPI_F90 branch: MPI root has rank', mpi_test
 #else
       write(error_unit,'(a,i3)') 'In mpi_test_scheme_init, NO MPI branch'
 #endif

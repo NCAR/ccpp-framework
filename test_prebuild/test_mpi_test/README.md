@@ -20,16 +20,16 @@ mkdir build_mpi_f90
 cd build_mpi_f90
 cmake -DMPI_F90=ON .. 2>&1 | tee log.cmake
 make 2>&1 | tee log.make
-./test_mpi_test.x
+mpiexec -np 3 ./test_mpi_test.x
 cd ..
 
-rm -fr build_mpi_f90
-mkdir build_mpi_f90
+rm -fr build_mpi_f08
+mkdir build_mpi_f08
 ../../scripts/ccpp_prebuild.py --config=ccpp_prebuild_config.py --builddir=build_mpi_f08
 cd build_mpi_f08
 cmake -DMPI_F08=ON .. 2>&1 | tee log.cmake
 make 2>&1 | tee log.make
-./test_mpi_test.x
+mpiexec -np 3 ./test_mpi_test.x
 cd ..
 
 ```
