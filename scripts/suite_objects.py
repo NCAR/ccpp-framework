@@ -1093,6 +1093,7 @@ class Scheme(SuiteObject):
         self.__var_debug_checks = list()
         self.__forward_transforms = list()
         self.__reverse_transforms = list()
+        self.__optional_vars = list()
         super().__init__(name, context, parent, run_env, active_call_list=True)
 
     def update_group_call_list_variable(self, var):
@@ -1226,6 +1227,14 @@ class Scheme(SuiteObject):
                                            compat_obj.has_unit_transforms or
                                            compat_obj.has_kind_transforms):
                 self.add_var_transform(var, compat_obj, vert_dim)
+            # end if
+
+            # Is this a conditionally allocated variable?
+            # If so, declare local target and pointer varaibles. This is needed to
+            # pass inactive (not present) status through the caps.
+            if var.get_prop_value('optional'):
+                self.add_optional_var(var)
+            # end if
 
         # end for
         if self.needs_vertical is not None:
@@ -1535,6 +1544,12 @@ class Scheme(SuiteObject):
                     outfile.write('',indent)
                 # end if
 
+    def add_optional_var(self, var):
+        newvar_ptr = var.clone(var.get_prop_value('local_name')+'_local_ptr')
+        self.add_variable(newvar_ptr, self.run_env, exists_ok=True)
+        self.__optional_vars.append([var.get_prop_value('local_name')+'_local', 
+                                     newvar_ptr.get_prop_value('local_name')])
+
     def add_var_transform(self, var, compat_obj, vert_dim):
         """Register any variable transformation needed by <var> for this Scheme.
         For any transformation identified in <compat_obj>, create dummy variable
@@ -1608,6 +1623,7 @@ class Scheme(SuiteObject):
                                                 rvar_lname=dummy,
                                                 lvar_indices=rindices,
                                                 rvar_indices=lindices)
+        # end if
         outfile.write(stmt, indent)
 
     def write(self, outfile, errcode, errmsg, indent):
@@ -1633,6 +1649,12 @@ class Scheme(SuiteObject):
         outfile.write('! Compute reverse (pre-scheme) transforms', indent+1)
         for (dummy, var, rindices, lindices, compat_obj) in self.__reverse_transforms:
             tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
+        outfile.write('',indent+1)
+        # Associate conditionally allocated variables.
+        outfile.write('! Associate conditional variables', indent+1)
+        for (lname, lname_ptr) in self.__optional_vars:
+            outfile.write(f"{lname_ptr} => {lname}", indent+1)
+        # end if
         # Write the scheme call.
         stmt = 'call {}({})'
         outfile.write('',indent+1)
@@ -2175,9 +2197,12 @@ class Group(SuiteObject):
         # Collect information on local variables
         subpart_vars = {}
         allocatable_var_set = set()
+        subpart_ptrs = {}
+        pointer_var_set = set()
         for item in [self]:# + self.parts:
             for var in item.declarations():
                 lname = var.get_prop_value('local_name')
+                opt_var = var.get_prop_value('optional')
                 if lname in subpart_vars:
                     if subpart_vars[lname][0].compatible(var, self.run_env):
                         pass # We already are going to declare this variable
@@ -2185,12 +2210,29 @@ class Group(SuiteObject):
                         errmsg = "Duplicate Group variable, {}"
                         raise ParseInternalError(errmsg.format(lname))
                     # end if
+                #elif not opt_var:
                 else:
-                    subpart_vars[lname] = (var, item)
+                    subpart_vars[lname] = (var, item, False, False)
                     dims = var.get_dimensions()
                     if (dims is not None) and dims:
                         allocatable_var_set.add(lname)
                     # end if
+                # end if
+                opt_var = var.get_prop_value('optional')
+                #if lname in subpart_ptrs:
+                #    if subpart_ptrs[lname][0].compatible(var, self.run_env):
+                #        pass
+                #    else:
+                #        errmsg = "Duplicate Group variable, {}"
+                #        raise ParseInternalError(errmsg.format(lname))
+                #    # end if 
+                if opt_var:
+                    subpart_vars[lname] = (var, item, True, True)
+                    subpart_ptrs[lname+'_ptr'] = (var, item)
+                    dims = var.get_dimensions()
+                    if (dims is not None) and dims:
+                        pointer_var_set.add(lname+'_ptr')
+                    # endif
                 # end if
             # end for
         # end for
@@ -2231,13 +2273,18 @@ class Group(SuiteObject):
         self.call_list.declare_variables(outfile, indent+1, dummy=True)
         if subpart_vars:
             outfile.write('\n! Local Variables', indent+1)
+        # end if
         # Write out local variables
         for key in subpart_vars:
             var = subpart_vars[key][0]
             spdict = subpart_vars[key][1]
+            target = subpart_vars[key][2]
+            pointer= subpart_vars[key][3]
             var.write_def(outfile, indent+1, spdict,
-                          allocatable=(key in allocatable_var_set))
+                          allocatable=(key in allocatable_var_set),
+                          target=target, pointer=pointer)
         # end for
+
         outfile.write('', 0)
         # Get error variable names
         if self.run_env.use_error_obj:
@@ -2258,20 +2305,25 @@ class Group(SuiteObject):
                 raise CCPPError(errmsg.format(self.name))
             # end if
             # Initialize error variables
+            outfile.write("! Initialize ccpp error handling", 2)
             outfile.write("{} = 0".format(errcode), 2)
             outfile.write("{} = ''".format(errmsg), 2)
+            outfile.write("",2)
         # end if
         # Output threaded region check (except for run phase)
         if not self.run_phase():
+            outfile.write("! Output threaded region check ",indent+1)
             Group.__thread_check.write(outfile, indent,
                                        {'phase' : self.phase(),
                                         'errcode' : errcode,
                                         'errmsg' : errmsg})
         # Check state machine
+        outfile.write("! Check state machine",indent+1)
         self._phase_check_stmts.write(outfile, indent,
                                       {'errcode' : errcode, 'errmsg' : errmsg,
                                        'funcname' : self.name})
         # Allocate local arrays
+        outfile.write('\n! Allocate local arrays', indent+1)
         alloc_stmt = "allocate({}({}))"
         for lname in allocatable_var_set:
             var = subpart_vars[lname][0]
@@ -2281,6 +2333,7 @@ class Group(SuiteObject):
         # end for
         # Allocate suite vars
         if allocate:
+            outfile.write('\n! Allocate suite_vars', indent+1)
             for svar in suite_vars.variable_list():
                 dims = svar.get_dimensions()
                 if dims:
@@ -2306,9 +2359,18 @@ class Group(SuiteObject):
           item.write(outfile, errcode, errmsg, indent + 1)
         # end for
         # Deallocate local arrays
+        if allocatable_var_set:
+            outfile.write('\n! Deallocate local arrays', indent+1)
+        # end if
         for lname in allocatable_var_set:
             outfile.write('deallocate({})'.format(lname), indent+1)
         # end for
+        # Nullify local pointers
+        if pointer_var_set:
+            outfile.write('\n! Nullify local pointers', indent+1)
+        # end if
+        for lname in pointer_var_set:
+            outfile.write('nullify({})'.format(lname), indent+1)
         # Deallocate suite vars
         if deallocate:
             for svar in suite_vars.variable_list():

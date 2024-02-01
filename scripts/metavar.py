@@ -1027,8 +1027,8 @@ class Var:
                     vars_needed.append(dvar)
         return (conditional, vars_needed)
 
-    def write_def(self, outfile, indent, wdict, allocatable=False,
-                  dummy=False, add_intent=None, extra_space=0, public=False):
+    def write_def(self, outfile, indent, wdict, allocatable=False, target=None,
+                  pointer=None, dummy=False, add_intent=None, extra_space=0, public=False):
         """Write the definition line for the variable to <outfile>.
         If <dummy> is True, include the variable's intent.
         If <dummy> is True but the variable has no intent, add the
@@ -1085,6 +1085,8 @@ class Var:
         elif allocatable:
             if dimstr or polymorphic:
                 intent_str = 'allocatable  '
+                if target:
+                    intent_str += ',target   '
             else:
                 intent_str = ' '*13
             # end if
@@ -1132,10 +1134,20 @@ class Var:
                 cspc = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
-            
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
                                   name=name, dims=dimstr, cspc=cspc,
                                   sname=stdname), indent)
+        if pointer:
+            name = name+'_ptr'
+            if kind:
+                dstr = "{type}({kind}){cspc}pointer    :: {name}{dims} => null()"
+                cspc = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
+            else:
+                dstr = "{type}{cspc}pointer    :: {name}{dims} => null()"
+                cspc = comma + ' '*(extra_space + 22 - len(vtype))
+            # end if
+            outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
+                                      name=name, dims=dimstr, cspc=cspc), indent)
 
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""
