@@ -1233,7 +1233,7 @@ class Scheme(SuiteObject):
             # If so, declare local target and pointer varaibles. This is needed to
             # pass inactive (not present) status through the caps.
             if var.get_prop_value('optional'):
-                self.add_optional_var(var)
+                self.add_optional_var(var, dict_var)
             # end if
 
         # end for
@@ -1544,11 +1544,17 @@ class Scheme(SuiteObject):
                     outfile.write('',indent)
                 # end if
 
-    def add_optional_var(self, var):
+    def add_optional_var(self, var, dict_var):
         newvar_ptr = var.clone(var.get_prop_value('local_name')+'_local_ptr')
         self.add_variable(newvar_ptr, self.run_env, exists_ok=True)
-        self.__optional_vars.append([var.get_prop_value('local_name')+'_local', 
+        self.__optional_vars.append([dict_var, var.get_prop_value('local_name')+'_local', 
                                      newvar_ptr.get_prop_value('local_name')])
+
+    def write_optional_var(self, var, cldicts, lname, lname_ptr, indent, outfile):
+        (conditional, _) = var.conditional(cldicts)
+        outfile.write(f"if {conditional} then", indent)
+        outfile.write(f"{lname_ptr} => {lname}", indent+1)
+        outfile.write(f"end if", indent)
 
     def add_var_transform(self, var, compat_obj, vert_dim):
         """Register any variable transformation needed by <var> for this Scheme.
@@ -1652,8 +1658,8 @@ class Scheme(SuiteObject):
         outfile.write('',indent+1)
         # Associate conditionally allocated variables.
         outfile.write('! Associate conditional variables', indent+1)
-        for (lname, lname_ptr) in self.__optional_vars:
-            outfile.write(f"{lname_ptr} => {lname}", indent+1)
+        for (var, lname, lname_ptr) in self.__optional_vars:
+            tstmt = self.write_optional_var(var, cldicts, lname, lname_ptr, indent+1, outfile)
         # end if
         # Write the scheme call.
         stmt = 'call {}({})'
