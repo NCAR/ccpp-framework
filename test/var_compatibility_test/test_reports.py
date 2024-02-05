@@ -70,7 +70,9 @@ _SUITE_LIST = ["var_compatibility_suite"]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
                           "effective_radius_of_stratiform_cloud_rain_particle",
-                          "effective_radius_of_stratiform_cloud_snow_particle"]
+                          "effective_radius_of_stratiform_cloud_snow_particle",
+                          "effective_radius_of_stratiform_cloud_graupel",
+                          "flag_indicating_cloud_microphysics_has_graupel"]
 _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "effective_radius_of_stratiform_cloud_ice_particle",
                            "effective_radius_of_stratiform_cloud_liquid_water_particle",
