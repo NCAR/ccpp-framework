@@ -91,6 +91,33 @@ CONTAINS
       errflg = 0
 
    end subroutine cld_ice_final
+
+   subroutine cld_ice_dynamic_constituents(dyn_const, errmsg, errflg)
+      use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
+      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
+      character(len=512),                  intent(out) :: errmsg
+      integer,                             intent(out) :: errflg
+
+      ! Local variables
+      integer :: num_const
+      errmsg = ''
+      errflg = 0
+      num_const = 2
+      allocate(dyn_const(2))
+      ! check allocate?
+      call dyn_const(1)%instantiate(std_name='dyn_const1', long_name='dyn const1', &
+           units='kg kg-1', default_value=0._kind_phys,                            &
+           vertical_dim='vertical_layer_dimension', advected=.true.,               &
+           errcode=errflg, errmsg=errmsg)
+      if (errflg /= 0) then
+         return
+      end if
+      call dyn_const(1)%instantiate(std_name='dyn_const2', long_name='dyn const2', &
+           units='kg kg-1', default_value=0._kind_phys,                            &
+           vertical_dim='vertical_layer_dimension', advected=.true.,               &
+           errcode=errflg, errmsg=errmsg)
+
+   end subroutine cld_ice_dynamic_constituents
    !! @}
    !! @}
 
