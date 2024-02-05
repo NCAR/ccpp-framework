@@ -1429,17 +1429,17 @@ class Scheme(SuiteObject):
         if not dimensions:
             if not intent == 'out':
                 internal_var_lname = internal_var.get_prop_value('local_name')
+                tmp_indent = indent
                 if conditional != '.true.':
+                    tmp_indent = indent + 1
                     outfile.write(f"if {conditional} then", indent)
-                    outfile.write(f"! Assign value of {local_name} to internal_var", indent+1)
-                    outfile.write(f"{internal_var_lname} = {local_name}", indent+1)
+                # end if
+                outfile.write(f"! Assign value of {local_name} to {internal_var}", tmp_indent)
+                outfile.write(f"{internal_var_lname} = {local_name}", tmp_indent)
+                outfile.write('',indent)
+                if conditional != '.true.':
                     outfile.write(f"end if", indent)
-                    outfile.write('',indent)
-                else:
-                    outfile.write(f"! Assign value of {local_name} to internal_var", indent)
-                    outfile.write(f"{internal_var_lname} = {local_name}", indent)
-                    outfile.write('',indent)
-                # endif
+                # end if
         # For arrays, check size of array against dimensions in metadata, then assign
         # the lower and upper bounds to the internal_var variable if the intent is in/inout
         else:
@@ -1505,44 +1505,38 @@ class Scheme(SuiteObject):
             ubound_string = '(' + ','.join(ubound_strings) + ')'
 
             # Write size check
+            tmp_indent = indent
             if conditional != '.true.':
+                tmp_indent = indent + 1
                 outfile.write(f"if {conditional} then", indent)
-                outfile.write(f"! Check size of array {local_name}", indent+1)
-                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent+1)
-                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+2)
-                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+2)
-                outfile.write(f"{errcode} = 1", indent+2)
-                outfile.write(f"return", indent+2)
-                outfile.write(f"end if", indent+1)
-                outfile.write(f"end if", indent)
-                outfile.write('',indent)
-            else:
-                outfile.write(f"! Check size of array {local_name}", indent)
-                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent)
-                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+1)
-                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+1)
-                outfile.write(f"{errcode} = 1", indent+1)
-                outfile.write(f"return", indent+1)
-                outfile.write(f"end if", indent)
-                outfile.write('',indent)
             # end if
+            outfile.write(f"! Check size of array {local_name}", tmp_indent)
+            outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", tmp_indent)
+            outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", tmp_indent+1)
+            outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", tmp_indent+1)
+            outfile.write(f"{errcode} = 1", tmp_indent+1)
+            outfile.write(f"return", tmp_indent+1)
+            outfile.write(f"end if", tmp_indent)
+            if conditional != '.true.':
+                outfile.write(f"end if", indent)
+            # end if
+            outfile.write('',indent)
 
             # Assign lower/upper bounds to internal_var (scalar) if intent is not out
             if not intent == 'out':
                 internal_var_lname = internal_var.get_prop_value('local_name')
+                tmp_indent = indent
                 if conditional != '.true.':
+                    tmp_indent = indent + 1
                     outfile.write(f"if {conditional} then", indent)
-                    outfile.write(f"! Assign lower/upper bounds of {local_name} to internal_var", indent+1)
-                    outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", indent+1)
-                    outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", indent+1)
-                    outfile.write(f"end if", indent)
-                    outfile.write('',indent)
-                else:
-                    outfile.write(f"! Assign lower/upper bounds of {local_name} to internal_var", indent)
-                    outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", indent)
-                    outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", indent)
-                    outfile.write('',indent)
                 # end if
+                outfile.write(f"! Assign lower/upper bounds of {local_name} to {internal_var}", tmp_indent+1)
+                outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", tmp_indent+1)
+                outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", tmp_indent+1)
+                if conditional != '.true.':
+                    outfile.write(f"end if", indent)
+                # end if
+                outfile.write('',indent)
 
     def add_optional_var(self, var, dict_var):
         newvar_ptr = var.clone(var.get_prop_value('local_name')+'_local_ptr')
