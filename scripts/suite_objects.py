@@ -1486,24 +1486,20 @@ class Scheme(SuiteObject):
             ubound_string = '(' + ','.join(ubound_strings) + ')'
 
             # Write size check
+            tmp_indent = indent
             if conditional != '.true.':
+                tmp_indent = indent + 1
                 outfile.write(f"if {conditional} then", indent)
-                outfile.write(f"! Check size of array {local_name}", indent+1)
-                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent+1)
-                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+2)
-                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+2)
-                outfile.write(f"{errcode} = 1", indent+2)
-                outfile.write(f"return", indent+2)
-                outfile.write(f"end if", indent+1)
-                outfile.write(f"end if", indent)
-                outfile.write('',indent)
-            else:
-                outfile.write(f"! Check size of array {local_name}", indent)
-                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", indent)
-                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", indent+1)
-                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", indent+1)
-                outfile.write(f"{errcode} = 1", indent+1)
-                outfile.write(f"return", indent+1)
+            # end if
+            outfile.write(f"! Check size of array {local_name}", tmp_indent)
+            outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", tmp_indent)
+            outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", tmp_indent+1)
+            outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", tmp_indent+1)
+            outfile.write(f"{errcode} = 1", tmp_indent+1)
+            outfile.write(f"return", tmp_indent+1)
+            outfile.write(f"end if", tmp_indent)
+            outfile.write('',tmp_indent)
+            if conditional != '.true.':
                 outfile.write(f"end if", indent)
                 outfile.write('',indent)
             # end if
