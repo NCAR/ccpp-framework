@@ -1237,7 +1237,7 @@ class Scheme(SuiteObject):
             # end if
 
             # Is this a conditionally allocated variable?
-            # If so, declare local target and pointer varaibles. This is needed to
+            # If so, declare localpointer varaible. This is needed to
             # pass inactive (not present) status through the caps.
             if var.get_prop_value('optional'):
                 newvar_ptr = var.clone(var.get_prop_value('local_name')+'_ptr')
@@ -1538,9 +1538,9 @@ class Scheme(SuiteObject):
                     tmp_indent = indent + 1
                     outfile.write(f"if {conditional} then", indent)
                 # end if
-                outfile.write(f"! Assign lower/upper bounds of {local_name} to {internal_var_lname}", tmp_indent+1)
-                outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", tmp_indent+1)
-                outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", tmp_indent+1)
+                outfile.write(f"! Assign lower/upper bounds of {local_name} to {internal_var_lname}", tmp_indent)
+                outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", tmp_indent)
+                outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", tmp_indent)
                 if conditional != '.true.':
                     outfile.write(f"end if", indent)
                 # end if
@@ -1548,21 +1548,7 @@ class Scheme(SuiteObject):
 
     def associate_optional_var(self, dict_var, var, var_ptr, has_transform, cldicts, indent, outfile):
         """Write local pointer association for optional variables."""
-        (conditional, _) = dict_var.conditional(cldicts)
-        if (has_transform):
-            lname = var.get_prop_value('local_name')+'_local'
-        else:
-            lname = var.get_prop_value('local_name')
-        # end if
-        lname_ptr = var_ptr.get_prop_value('local_name')
-        outfile.write(f"if {conditional} then", indent)
-        outfile.write(f"{lname_ptr} => {lname}", indent+1)
-        outfile.write(f"end if", indent)
-
-    def assign_pointer_to_var(self, dict_var, var, var_ptr, has_transform, cldicts, indent, outfile):
-        """Assign local pointer to variable."""
-        intent = var.get_prop_value('intent')
-        if (intent == 'out' or intent == 'inout'):
+        if (dict_var):
             (conditional, _) = dict_var.conditional(cldicts)
             if (has_transform):
                 lname = var.get_prop_value('local_name')+'_local'
@@ -1571,8 +1557,27 @@ class Scheme(SuiteObject):
             # end if
             lname_ptr = var_ptr.get_prop_value('local_name')
             outfile.write(f"if {conditional} then", indent)
-            outfile.write(f"{lname} = {lname_ptr}", indent+1)
+            outfile.write(f"{lname_ptr} => {lname}", indent+1)
             outfile.write(f"end if", indent)
+        # end if
+
+    def assign_pointer_to_var(self, dict_var, var, var_ptr, has_transform, cldicts, indent, outfile):
+        """Assign local pointer to variable."""
+        if (dict_var):
+            intent = var.get_prop_value('intent')
+            if (intent == 'out' or intent == 'inout'):
+                (conditional, _) = dict_var.conditional(cldicts)
+                if (has_transform):
+                    lname = var.get_prop_value('local_name')+'_local'
+                else:
+                    lname = var.get_prop_value('local_name')
+                # end if
+                lname_ptr = var_ptr.get_prop_value('local_name')
+                outfile.write(f"if {conditional} then", indent)
+                outfile.write(f"{lname} = {lname_ptr}", indent+1)
+                outfile.write(f"end if", indent)
+            # end if
+        # end if
 
     def add_var_transform(self, var, compat_obj, vert_dim):
         """Register any variable transformation needed by <var> for this Scheme.
@@ -1669,11 +1674,20 @@ class Scheme(SuiteObject):
         # coming from the group's call list)
         #
         if self.__var_debug_checks:
-            outfile.write('! Run debug tests', indent+1)
+            outfile.write('! ##################################################################', indent+1)
+            outfile.write('! Begin debug tests', indent+1)
+            outfile.write('! ##################################################################', indent+1)
+            outfile.write('', indent+1)
         # end if
         for (var, internal_var) in self.__var_debug_checks:
             stmt = self.write_var_debug_check(var, internal_var, cldicts, outfile, errcode, errmsg, indent+1)
         # end for
+        if self.__var_debug_checks:
+            outfile.write('! ##################################################################', indent+1)
+            outfile.write('! End debug tests', indent+1)
+            outfile.write('! ##################################################################', indent+1)
+            outfile.write('', indent+1)
+        # end if
         #
         # Write any reverse (pre-Scheme) transforms.
         #
@@ -2252,12 +2266,17 @@ class Group(SuiteObject):
         # end if
         # Collect information on local variables
         subpart_vars = {}
+        subpart_opts = {}
+        subpart_scl = {}
         allocatable_var_set = set()
+        optional_var_set = set()
         pointer_var_set = list()
+        inactive_var_set = set()
         for item in [self]:# + self.parts:
             for var in item.declarations():
                 lname = var.get_prop_value('local_name')
-                if lname in subpart_vars:
+                sname = var.get_prop_value('standard_name')
+                if (lname in subpart_vars) or (lname in subpart_opts) or (lname in subpart_scl):
                     if subpart_vars[lname][0].compatible(var, self.run_env):
                         pass # We already are going to declare this variable
                     else:
@@ -2266,10 +2285,20 @@ class Group(SuiteObject):
                     # end if
                 else:
                     opt_var = var.get_prop_value('optional')
-                    subpart_vars[lname] = (var, item, opt_var)
                     dims = var.get_dimensions()
                     if (dims is not None) and dims:
-                        allocatable_var_set.add(lname)
+                        if opt_var:
+                            if (self.call_list.find_variable(standard_name=sname)):
+                                subpart_opts[lname] = (var, item, opt_var)
+                                optional_var_set.add(lname)
+                            else:
+                                inactive_var_set.add(var)
+                        else:
+                            subpart_vars[lname] = (var, item, opt_var)
+                            allocatable_var_set.add(lname)
+                        # end if
+                    else:
+                        subpart_scl[lname] = (var, item, opt_var)
                     # end if
                 # end if
             # end for
@@ -2294,6 +2323,25 @@ class Group(SuiteObject):
                     pointer_var_set.append([name,kind,dimstr,vtype])
                 # end if
             # end for
+            # Any optional arguments that are not requested by the host need to have
+            # a local null pointer passed from the group to the scheme.
+            for ivar in inactive_var_set:
+                name = ivar.get_prop_value('local_name')+'_ptr'
+                kind = ivar.get_prop_value('kind')
+                dims = ivar.get_dimensions()
+                if ivar.is_ddt():
+                    vtype = 'type'
+                else:
+                    vtype = ivar.get_prop_value('type')
+                # end if
+                if dims:
+                    dimstr = '(:' + ',:'*(len(dims) - 1) + ')'
+                else:
+                    dimstr = ''
+                # end if
+                pointer_var_set.append([name,kind,dimstr,vtype])
+            # end for
+
         # end for
         # First, write out the subroutine header
         subname = self.name
@@ -2330,10 +2378,19 @@ class Group(SuiteObject):
             self.run_env.logger.debug(msg.format(self.name, call_vars))
         # end if
         self.call_list.declare_variables(outfile, indent+1, dummy=True)
+        # DECLARE local variables
         if subpart_vars:
             outfile.write('\n! Local Variables', indent+1)
         # end if
-        # Write out local variables
+        # Scalars
+        for key in subpart_scl:
+            var = subpart_scl[key][0]
+            spdict = subpart_scl[key][1]
+            target = subpart_scl[key][2]
+            var.write_def(outfile, indent+1, spdict,
+                          allocatable=False, target=target)
+        # end for
+        # Allocatable arrays
         for key in subpart_vars:
             var = subpart_vars[key][0]
             spdict = subpart_vars[key][1]
@@ -2342,10 +2399,16 @@ class Group(SuiteObject):
                           allocatable=(key in allocatable_var_set),
                           target=target)
         # end for
-        # Write out local pointer variables.
-        if pointer_var_set:
-            outfile.write('\n! Local Pointer variables', indent+1)
-        # end if
+        # Target arrays.
+        for key in subpart_opts:
+            var = subpart_opts[key][0]
+            spdict = subpart_opts[key][1]
+            target = subpart_opts[key][2]
+            var.write_def(outfile, indent+1, spdict,
+                          allocatable=(key in optional_var_set),
+                          target=target)
+        # end for
+        # Pointer variables.
         for (name, kind, dim, vtype) in pointer_var_set:
             var.write_ptr_def(outfile, indent+1, name,  kind, dim, vtype)
         # end for
@@ -2395,6 +2458,12 @@ class Group(SuiteObject):
             alloc_str = self.allocate_dim_str(dims, var.context)
             outfile.write(alloc_stmt.format(lname, alloc_str), indent+1)
         # end for
+        for lname in optional_var_set:
+            var = subpart_opts[lname][0]
+            dims = var.get_dimensions()
+            alloc_str = self.allocate_dim_str(dims, var.context)
+            outfile.write(alloc_stmt.format(lname, alloc_str), indent+1)
+        # end for
         # Allocate suite vars
         if allocate:
             outfile.write('\n! Allocate suite_vars', indent+1)
@@ -2427,6 +2496,9 @@ class Group(SuiteObject):
             outfile.write('\n! Deallocate local arrays', indent+1)
         # end if
         for lname in allocatable_var_set:
+            outfile.write('deallocate({})'.format(lname), indent+1)
+        # end for
+        for lname in optional_var_set:
             outfile.write('deallocate({})'.format(lname), indent+1)
         # end for
         # Nullify local pointers

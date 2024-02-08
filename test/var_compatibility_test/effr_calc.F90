@@ -16,7 +16,7 @@ contains
    !! \htmlinclude arg_table_effr_calc_run.html
    !!
    subroutine effr_calc_run(ncol, nlev, effrr_in, effrg_in, ncg_in, nci_out, &
-                            effrl_inout, effri_out, effrs_inout, errmsg, errflg)
+                            effrl_inout, effri_out, effrs_inout, ncl_out, errmsg, errflg)
 
       integer,            intent(in)    :: ncol
       integer,            intent(in)    :: nlev
@@ -27,6 +27,7 @@ contains
       real(kind_phys),    intent(inout) :: effrl_inout(:,:)
       real(kind_phys),    intent(out),optional   :: effri_out(:,:)
       real(8),intent(inout) :: effrs_inout(:,:)
+      real(kind_phys),    intent(out),optional   :: ncl_out(:,:)
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------

@@ -79,6 +79,15 @@
   kind = 8
   intent = inout
   top_at_one = .true.
+[ncl_out]
+  standard_name = cloud_liquid_number_concentration
+  long_name = number concentration of cloud liquid
+  units = kg-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional=.true.
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
