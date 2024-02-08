@@ -1028,7 +1028,7 @@ class Var:
         return (conditional, vars_needed)
 
     def write_def(self, outfile, indent, wdict, allocatable=False, target=None,
-                  pointer=None, dummy=False, add_intent=None, extra_space=0, public=False):
+                  dummy=False, add_intent=None, extra_space=0, public=False):
         """Write the definition line for the variable to <outfile>.
         If <dummy> is True, include the variable's intent.
         If <dummy> is True but the variable has no intent, add the
@@ -1096,7 +1096,7 @@ class Var:
                 intent_str = f"allocatable, intent({intent})"
             elif optional:
                 intent_str = f"intent({intent}),{' '*(5 - len(intent))}"
-                intent_str += 'optional   '
+                intent_str += 'target, optional   '
             else:
                 intent_str = f"intent({intent}){' '*(5 - len(intent))}"
             # end if
@@ -1137,17 +1137,18 @@ class Var:
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
                                   name=name, dims=dimstr, cspc=cspc,
                                   sname=stdname), indent)
-        if pointer:
-            name = name+'_ptr'
-            if kind:
-                dstr = "{type}({kind}){cspc}pointer    :: {name}{dims} => null()"
-                cspc = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
-            else:
-                dstr = "{type}{cspc}pointer    :: {name}{dims} => null()"
-                cspc = comma + ' '*(extra_space + 22 - len(vtype))
-            # end if
-            outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
-                                      name=name, dims=dimstr, cspc=cspc), indent)
+
+    def write_ptr_def(self, outfile, indent, name, kind, dimstr, vtype, extra_space=0):
+        comma = ','
+        if kind:
+            dstr = "{type}({kind}){cspc}pointer    :: {name}{dims} => null()"
+            cspc = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
+        else:
+            dstr = "{type}{cspc}pointer    :: {name}{dims} => null()"
+            cspc = comma + ' '*(extra_space + 22 - len(vtype))
+        # end if
+        outfile.write(dstr.format(type=vtype, kind=kind, name=name, dims=dimstr,
+                                  cspc=cspc), indent)
 
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""

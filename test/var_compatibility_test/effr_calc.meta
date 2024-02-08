@@ -35,6 +35,24 @@
   kind = kind_phys
   intent = in
   optional = .true.
+[ncg_in]
+  standard_name = cloud_graupel_number_concentration
+  long_name = number concentration of cloud graupel
+  units = kg-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = .true.
+[nci_out]
+  standard_name = cloud_ice_number_concentration
+  long_name = number concentration of cloud ice
+  units = kg-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = .true.
 [effrl_inout]
   standard_name = effective_radius_of_stratiform_cloud_liquid_water_particle
   long_name = effective radius of cloud liquid water particle in micrometer
@@ -51,6 +69,7 @@
   type = real
   kind = kind_phys
   intent = out
+  optional=.true.
 [effrs_inout]
   standard_name = effective_radius_of_stratiform_cloud_snow_particle
   long_name = effective radius of cloud snow particle in micrometer
