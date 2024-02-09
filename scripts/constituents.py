@@ -462,8 +462,8 @@ class ConstituentVarDict(VarDictionary):
                             const_index_func, suite_list, dyn_const_dict, err_vars):
         """Write out the host model <reg_funcname> routine which will
         instantiate constituent fields for all the constituents in <suite_list>.
-        <err_vars> is a list of the host model's error variables.
         <dyn_const_dict> is a dictionary (key=scheme name) of dynamic constituent routines
+        <err_vars> is a list of the host model's error variables.
         Also write out the following routines:
            <init_funcname>: Initialize constituent data
            <num_const_funcname>: Number of constituents
