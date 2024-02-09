@@ -51,7 +51,7 @@ _VALID_REPORTS = [{"report" : "host_files", "type" : bool,
                   {"report" : "dependencies", "type" : bool,
                    "help" : ("Return a list of scheme and host "
                              "dependency module names")},
-                  {"report" : "dyn_const_routine", "type" : bool,
+                  {"report" : "dyn_const_routines", "type" : bool,
                    "help" : ("Return the constituent routines for a suite")},
                   {"report" : "suite_list", "type" : bool,
                    "help" : "Return a list of configured suite names"},
@@ -295,13 +295,13 @@ def _retrieve_dyn_const_routines(table):
 ###############################################################################
     """Find and return a list of all scheme constituent routines."""
     result = set()
-    routines = table.find("dyn_const_routine")
+    routines = table.find("dyn_const_routines")
     if routines is None:
         raise CCPPDatatableError("Could not find 'dyn_const_routine' element")
     # end if
     for routine in routines:
         routine_name = routine.text
-        if routine_name is not none:
+        if routine_name is not None:
             result.add(routine_name)
         # end if
     # end for
@@ -508,8 +508,8 @@ def datatable_report(datatable, action, sep, excl_prot=False):
         result = _retrieve_module_list(table)
     elif action.action_is("dependencies"):
         result = _retrieve_dependencies(table)
-    elif action.action_is("dyn_const_routine"):
-        result = _retrieve_const_num_routines(table)
+    elif action.action_is("dyn_const_routines"):
+        result = _retrieve_dyn_const_routines(table)
     elif action.action_is("suite_list"):
         result = _retrieve_suite_list(table)
     elif action.action_is("required_variables"):
@@ -817,14 +817,13 @@ def _add_dependencies(parent, scheme_depends, host_depends):
     # end for
 
 ###############################################################################
-def _add_dyn_const_routines(parent, routines):
+def _add_dyn_const_routine(file_entry, routine, scheme):
 ###############################################################################
     """Add a section to <parent> that lists all the constituent routines
     for the suite"""
-    file_entry = ET.SubElement(parent, "dyn_const_routines")
-    for routine in routines:
-        entry = ET.SubElement(file_entry, "dyn_const_routine")
-        entry.text = routine
+    entry = ET.SubElement(file_entry, "dyn_const_routine")
+    entry.text = routine
+    entry.set("parent", scheme)
     # end for
 
 ###############################################################################
@@ -954,12 +953,14 @@ def generate_ccpp_datatable(run_env, host_model, api, scheme_headers,
     # end for
     _add_dependencies(datatable, scheme_depends, host_depends)
     # Add in all constituent routines
-    dyn_const_routines = set()
+    first_const_routine = True
     for table in scheme_tdict:
         if scheme_tdict[table].dyn_const_routine is not None:
-            dyn_const_routines.add(scheme_tdict[table].dyn_const_routine)
+            if first_const_routine:
+                file_entry = ET.SubElement(datatable, "dyn_const_routines")
+                first_const_routine = False
+            _add_dyn_const_routine(file_entry, scheme_tdict[table].dyn_const_routine, table)
         # end if
-    _add_dyn_const_routines(datatable, dyn_const_routines)
     # Write tree
     datatable_tree = PrettyElementTree(datatable)
     datatable_tree.write(run_env.datatable_file)

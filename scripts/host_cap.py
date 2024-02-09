@@ -617,7 +617,9 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                                                advect_array_func,
                                                prop_array_func,
                                                const_index_func,
-                                               api.suites, err_vars)
+                                               api.suites,
+                                               api.dyn_const_dict,
+                                               err_vars)
     # End with
     return cap_filename
 

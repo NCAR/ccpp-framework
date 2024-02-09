@@ -245,7 +245,7 @@ CONTAINS
        logical                         :: check
        integer                         :: col_start, col_end
        integer                         :: index, sind
-       integer                         :: index_liq, index_ice
+       integer                         :: index_liq, index_ice, index_dyn
        integer                         :: time_step
        integer                         :: num_suites
        integer                         :: num_advected ! Num advected species
@@ -260,6 +260,7 @@ CONTAINS
        real(kind_phys), pointer        :: const_ptr(:,:,:)
        real(kind_phys)                 :: default_value
        type(ccpp_constituent_prop_ptr_t), pointer :: const_props(:)
+       type(ccpp_constituent_properties_t), allocatable :: dynamic_constituents(:)
        character(len=*), parameter     :: subname = 'test_host'
 
        ! Initialized "final" error flag used to report a failure to the larged
@@ -326,7 +327,8 @@ CONTAINS
       call check_errflg(subname//'.initialize', errflg, errmsg, errflg_final)
       if (errflg == 0) then
          call test_host_ccpp_register_constituents(suite_names(:),            &
-              host_constituents, errmsg=errmsg, errflg=errflg)
+              host_constituents, dynamic_constituents=dynamic_constituents,   &
+              errmsg=errmsg, errflg=errflg)
       end if
       if (errflg /= 0) then
          write(6, '(2a)') 'ERROR register_constituents: ', trim(errmsg)
@@ -339,7 +341,7 @@ CONTAINS
               errflg=errflg)
          call check_errflg(subname//".num_advected", errflg, errmsg, errflg_final)
       end if
-      if (num_advected /= 3) then
+      if (num_advected /= 6) then
          write(6, '(a,i0)') "ERROR: num advected constituents = ", num_advected
          retval = .false.
          return
@@ -374,6 +376,18 @@ CONTAINS
            index_ice, errflg, errmsg)
       call check_errflg(subname//".index_cld_ice", errflg, errmsg,            &
            errflg_final)
+
+      ! Check if the dynamic constituents indices can be found
+      call test_host_const_get_index('dyn_const1', index_dyn, errflg, errmsg)
+      call check_errflg(subname//".index_dyn_const1", errflg, errmsg,         &
+           errflg_final)
+      call test_host_const_get_index('dyn_const2', index_dyn, errflg, errmsg)
+      call check_errflg(subname//".index_dyn_const2", errflg, errmsg,         &
+           errflg_final)
+      call test_host_const_get_index('dyn_const3', index_dyn, errflg, errmsg)
+      call check_errflg(subname//".index_dyn_const3", errflg, errmsg,         &
+           errflg_final)
+
 
       !Stop tests here if the index checks failed, as all other tests will
       !likely fail as well:
