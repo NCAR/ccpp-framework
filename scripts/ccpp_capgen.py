@@ -625,6 +625,13 @@ def capgen(run_env, return_db=False):
         scheme_files= [const_prop_mod] + scheme_files
     # end if
     scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
+    # Pull out the dynamic constituent routines, if any
+    dyn_const_dict = {}
+    for table in scheme_tdict:
+        if scheme_tdict[table].dyn_const_routine is not None:
+            dyn_const_dict[table] = scheme_tdict[table].dyn_const_routine
+        # end if
+    # end for
     if run_env.verbose:
         ddts = host_model.ddt_lib.keys()
         if ddts:
@@ -655,7 +662,7 @@ def capgen(run_env, return_db=False):
         # end if
         os.makedirs(outtemp_dir)
     # end if
-    ccpp_api = API(sdfs, host_model, scheme_headers, run_env)
+    ccpp_api = API(sdfs, host_model, scheme_headers, run_env, dyn_const_dict)
     cap_filenames = ccpp_api.write(outtemp_dir, run_env)
     if run_env.generate_host_cap:
         # Create a cap file
