@@ -959,8 +959,10 @@ def generate_ccpp_datatable(run_env, host_model, api, scheme_headers,
             if first_const_routine:
                 file_entry = ET.SubElement(datatable, "dyn_const_routines")
                 first_const_routine = False
+            # end if
             _add_dyn_const_routine(file_entry, scheme_tdict[table].dyn_const_routine, table)
         # end if
+    # end for
     # Write tree
     datatable_tree = PrettyElementTree(datatable)
     datatable_tree.write(run_env.datatable_file)
