@@ -1084,9 +1084,10 @@ class Var:
             intent_str = 'intent(in)   '
         elif allocatable:
             if dimstr or polymorphic:
-                intent_str = 'allocatable  '
+                intent_str = 'allocatable         '
                 if target:
-                    intent_str += ',target   '
+                    intent_str = 'allocatable,'
+                    intent_str += '  target'
             else:
                 intent_str = ' '*13
             # end if
@@ -1096,12 +1097,12 @@ class Var:
                 intent_str = f"allocatable, intent({intent})"
             elif optional:
                 intent_str = f"intent({intent}),{' '*(5 - len(intent))}"
-                intent_str += 'target, optional   '
+                intent_str += 'target, optional '
             else:
                 intent_str = f"intent({intent}){' '*(5 - len(intent))}"
             # end if
         elif not dummy:
-            intent_str = ''
+            intent_str = ' '*20
         else:
             intent_str = ' '*13
         # end if
@@ -1119,36 +1120,39 @@ class Var:
         extra_space -= len(targ)
         if self.is_ddt():
             if polymorphic:
-                dstr = "class({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 12 - len(kind))
+                dstr = "class({kind}){cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 12 - len(kind))
             else:
-                dstr = "type({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 13 - len(kind))
+                dstr = "type({kind}){cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 13 - len(kind))
             # end if
         else:
             if kind:
-                dstr = "{type}({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 17 - len(vtype) - len(kind))
+                dstr = "{type}({kind}){cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 17 - len(vtype) - len(kind))
             else:
-                dstr = "{type}{cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 19 - len(vtype))
+                dstr = "{type}{cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
-                                  name=name, dims=dimstr, cspc=cspc,
+                                  name=name, dims=dimstr, cspace=cspace,
                                   sname=stdname), indent)
 
     def write_ptr_def(self, outfile, indent, name, kind, dimstr, vtype, extra_space=0):
-        comma = ','
+        """Write the definition line for local null pointer declaration to <outfile>."""
+        comma = ', '
         if kind:
-            dstr = "{type}({kind}){cspc}pointer    :: {name}{dims} => null()"
-            cspc = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
+            dstr = "{type}({kind}){cspace}pointer          :: {name}{dims}{cspace2} => null()"
+            cspace = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
+            cspace2 = ' '*(20 -len(name) - len(dimstr))
         else:
-            dstr = "{type}{cspc}pointer    :: {name}{dims} => null()"
-            cspc = comma + ' '*(extra_space + 22 - len(vtype))
+            dstr = "{type}{cspace}pointer          :: {name}{dims}{cspace2} => null()"
+            cspace = comma + ' '*(extra_space + 22 - len(vtype))
+            cspace2 = ' '*(20 -len(name) - len(dimstr))
         # end if
         outfile.write(dstr.format(type=vtype, kind=kind, name=name, dims=dimstr,
-                                  cspc=cspc), indent)
+                                  cspace=cspace, cspace2=cspace2), indent)
 
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""
@@ -1888,8 +1892,21 @@ class VarDictionary(OrderedDict):
                                      any_scope=False)
             if self.include_var_in_list(var, std_vars=std_vars,
                                         loop_vars=loop_vars, consts=consts):
-                self[standard_name].write_def(outfile, indent, self,
-                                              dummy=dummy)
+                if (not var.get_prop_value('optional')):
+                    self[standard_name].write_def(outfile, indent, self,
+                                                  dummy=dummy)
+                # end if
+            # end if
+        # end for
+        for standard_name in self.keys():
+            var = self.find_variable(standard_name=standard_name,
+                                     any_scope=False)
+            if self.include_var_in_list(var, std_vars=std_vars,
+                                        loop_vars=loop_vars, consts=consts):
+                if (var.get_prop_value('optional')):
+                    self[standard_name].write_def(outfile, indent, self,
+                                                  dummy=dummy)
+                # end if
             # end if
         # end for
 

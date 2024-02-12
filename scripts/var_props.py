@@ -983,7 +983,8 @@ class VarCompatObj:
             # end if
             rhs_term = self.__unit_transforms[0].format(var=rhs_term, kind=kind)
         # end if
-        return f"{lhs_term} = {rhs_term}"
+        cspace = ' '*(24-len(lhs_term))
+        return f"{lhs_term}{cspace} = {rhs_term}"
 
     def reverse_transform(self, lvar_lname, rvar_lname, rvar_indices, lvar_indices,
                           adjust_hdim=None, flip_vdim=None):
@@ -1023,7 +1024,8 @@ class VarCompatObj:
             # end if
             rhs_term = self.__unit_transforms[1].format(var=rhs_term, kind=kind)
         # end if
-        return f"{lhs_term} = {rhs_term}"
+        cspace = ' '*(30-len(lhs_term))
+        return f"{lhs_term}{cspace} = {rhs_term}"
 
     def _get_kind_convstrs(self, var1_kind, var2_kind, run_env):
         """Attempt to determine if no transformation is required (i.e., if

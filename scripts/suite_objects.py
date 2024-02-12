@@ -1718,11 +1718,11 @@ class Scheme(SuiteObject):
         #
         # Copy any local pointers.
         #
-        ptrct=True
+        first_ptr_declaration=True
         for (dict_var, var, var_ptr, has_transform) in self.__optional_vars:
-            if ptrct: 
+            if first_ptr_declaration: 
                 outfile.write('! Copy any local pointers to dummy/local variables', indent+1)
-                ptrct=False
+                first_ptr_declaration=False
             # end if
             tstmt = self.assign_pointer_to_var(dict_var, var, var_ptr, has_transform, cldicts, indent+1, outfile)
         # end for
@@ -2265,9 +2265,9 @@ class Group(SuiteObject):
             group_type = 'run'      # Allocate for entire run
         # end if
         # Collect information on local variables
-        subpart_vars = {}
-        subpart_opts = {}
-        subpart_scl = {}
+        subpart_allocate_vars = {}
+        subpart_optional_vars = {}
+        subpart_scalar_vars = {}
         allocatable_var_set = set()
         optional_var_set = set()
         pointer_var_set = list()
@@ -2276,8 +2276,8 @@ class Group(SuiteObject):
             for var in item.declarations():
                 lname = var.get_prop_value('local_name')
                 sname = var.get_prop_value('standard_name')
-                if (lname in subpart_vars) or (lname in subpart_opts) or (lname in subpart_scl):
-                    if subpart_vars[lname][0].compatible(var, self.run_env):
+                if (lname in subpart_allocate_vars) or (lname in subpart_optional_vars) or (lname in subpart_scalar_vars):
+                    if subpart_allocate_vars[lname][0].compatible(var, self.run_env):
                         pass # We already are going to declare this variable
                     else:
                         errmsg = "Duplicate Group variable, {}"
@@ -2289,16 +2289,16 @@ class Group(SuiteObject):
                     if (dims is not None) and dims:
                         if opt_var:
                             if (self.call_list.find_variable(standard_name=sname)):
-                                subpart_opts[lname] = (var, item, opt_var)
+                                subpart_optional_vars[lname] = (var, item, opt_var)
                                 optional_var_set.add(lname)
                             else:
                                 inactive_var_set.add(var)
                         else:
-                            subpart_vars[lname] = (var, item, opt_var)
+                            subpart_allocate_vars[lname] = (var, item, opt_var)
                             allocatable_var_set.add(lname)
                         # end if
                     else:
-                        subpart_scl[lname] = (var, item, opt_var)
+                        subpart_scalar_vars[lname] = (var, item, opt_var)
                     # end if
                 # end if
             # end for
@@ -2366,7 +2366,7 @@ class Group(SuiteObject):
         call_vars = self.call_list.variable_list()
         self._ddt_library.write_ddt_use_statements(call_vars, outfile,
                                                    indent+1, pad=modmax)
-        decl_vars = [x[0] for x in subpart_vars.values()]
+        decl_vars = [x[0] for x in subpart_allocate_vars.values()]
         self._ddt_library.write_ddt_use_statements(decl_vars, outfile,
                                                    indent+1, pad=modmax)
         outfile.write('', 0)
@@ -2379,36 +2379,36 @@ class Group(SuiteObject):
         # end if
         self.call_list.declare_variables(outfile, indent+1, dummy=True)
         # DECLARE local variables
-        if subpart_vars:
+        if subpart_allocate_vars:
             outfile.write('\n! Local Variables', indent+1)
         # end if
         # Scalars
-        for key in subpart_scl:
-            var = subpart_scl[key][0]
-            spdict = subpart_scl[key][1]
-            target = subpart_scl[key][2]
+        for key in subpart_scalar_vars:
+            var = subpart_scalar_vars[key][0]
+            spdict = subpart_scalar_vars[key][1]
+            target = subpart_scalar_vars[key][2]
             var.write_def(outfile, indent+1, spdict,
                           allocatable=False, target=target)
         # end for
         # Allocatable arrays
-        for key in subpart_vars:
-            var = subpart_vars[key][0]
-            spdict = subpart_vars[key][1]
-            target = subpart_vars[key][2]
+        for key in subpart_allocate_vars:
+            var = subpart_allocate_vars[key][0]
+            spdict = subpart_allocate_vars[key][1]
+            target = subpart_allocate_vars[key][2]
             var.write_def(outfile, indent+1, spdict,
                           allocatable=(key in allocatable_var_set),
                           target=target)
         # end for
         # Target arrays.
-        for key in subpart_opts:
-            var = subpart_opts[key][0]
-            spdict = subpart_opts[key][1]
-            target = subpart_opts[key][2]
+        for key in subpart_optional_vars:
+            var = subpart_optional_vars[key][0]
+            spdict = subpart_optional_vars[key][1]
+            target = subpart_optional_vars[key][2]
             var.write_def(outfile, indent+1, spdict,
                           allocatable=(key in optional_var_set),
                           target=target)
         # end for
-        # Pointer variables.
+        # Pointer variables
         for (name, kind, dim, vtype) in pointer_var_set:
             var.write_ptr_def(outfile, indent+1, name,  kind, dim, vtype)
         # end for
@@ -2453,13 +2453,13 @@ class Group(SuiteObject):
         outfile.write('\n! Allocate local arrays', indent+1)
         alloc_stmt = "allocate({}({}))"
         for lname in allocatable_var_set:
-            var = subpart_vars[lname][0]
+            var = subpart_allocate_vars[lname][0]
             dims = var.get_dimensions()
             alloc_str = self.allocate_dim_str(dims, var.context)
             outfile.write(alloc_stmt.format(lname, alloc_str), indent+1)
         # end for
         for lname in optional_var_set:
-            var = subpart_opts[lname][0]
+            var = subpart_optional_vars[lname][0]
             dims = var.get_dimensions()
             alloc_str = self.allocate_dim_str(dims, var.context)
             outfile.write(alloc_stmt.format(lname, alloc_str), indent+1)
@@ -2496,17 +2496,18 @@ class Group(SuiteObject):
             outfile.write('\n! Deallocate local arrays', indent+1)
         # end if
         for lname in allocatable_var_set:
-            outfile.write('deallocate({})'.format(lname), indent+1)
+            outfile.write('if (allocated({})) {} deallocate({})'.format(lname,' '*(20-len(lname)),lname), indent+1)
         # end for
         for lname in optional_var_set:
-            outfile.write('deallocate({})'.format(lname), indent+1)
+            outfile.write('if (allocated({})) {} deallocate({})'.format(lname,' '*(20-len(lname)),lname), indent+1)
         # end for
         # Nullify local pointers
         if pointer_var_set:
             outfile.write('\n! Nullify local pointers', indent+1)
         # end if
         for (name, kind, dim, vtype) in pointer_var_set:
-            outfile.write('nullify({})'.format(name), indent+1)
+            #cspace = ' '*(15-len(name))
+            outfile.write('if (associated({})) {} nullify({})'.format(name,' '*(15-len(name)),name), indent+1)
         # Deallocate suite vars
         if deallocate:
             for svar in suite_vars.variable_list():

@@ -48,7 +48,7 @@ docleanup() {
     echo "WARNING: Cannot clean ${build_dir}"
   else
     cd ${currdir}
-#    rm -rf ${build_dir}
+    rm -rf ${build_dir}
   fi
 }
 
