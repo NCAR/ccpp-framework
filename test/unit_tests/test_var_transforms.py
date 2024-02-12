@@ -8,7 +8,7 @@
 
  Command line arguments: none
 
- Usage: python test_var_transform.py         # run the unit tests
+ Usage: python test_var_transforms.py         # run the unit tests
 -----------------------------------------------------------------------
 """
 import sys
@@ -282,13 +282,12 @@ class VarCompatTestCase(unittest.TestCase):
         self.assertIsInstance(compat, VarCompatObj,
                               msg=self.__inst_emsg.format(type(compat)))
         rindices = ("hind", "vind")
-        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices,
-                                            adjust_hdim=None, flip_vdim=None)
+        lindices = rindices
+        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices, lindices)
         ind_str = ','.join(rindices)
         expected = f"{v2_lname}({ind_str}) = {v1_lname}({ind_str})"
         self.assertEqual(fwd_stmt, expected)
-        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices,
-                                            adjust_hdim=None, flip_vdim=None)
+        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices, lindices)
         expected = f"{v1_lname}({ind_str}) = {v2_lname}({ind_str})"
         self.assertEqual(rev_stmt, expected)
 
@@ -298,17 +297,13 @@ class VarCompatTestCase(unittest.TestCase):
                               msg=self.__inst_emsg.format(type(compat)))
         rindices = ("hind", "vind")
         lindices = ("hind-col_start+1", "vind")
-        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
+        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rind_str = ','.join(rindices)
         expected = f"{v2_lname}({lind_str}) = {v1_lname}({rind_str})"
         self.assertEqual(fwd_stmt, expected)
-        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
         lindices = ("hind+col_start-1", "vind")
+        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         expected = f"{v1_lname}({lind_str}) = {v2_lname}({rind_str})"
         self.assertEqual(rev_stmt, expected)
@@ -320,17 +315,13 @@ class VarCompatTestCase(unittest.TestCase):
                               msg=self.__inst_emsg.format(type(compat)))
         rindices = ("hind", "vind")
         lindices = ("hind-col_start+1", "pver-vind+1")
-        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim='pver')
+        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rind_str = ','.join(rindices)
         expected = f"{v2_lname}({lind_str}) = {v1_lname}({rind_str})"
         self.assertEqual(fwd_stmt, expected)
-        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim='pver')
         lindices = ("hind+col_start-1", "pver-vind+1")
+        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         expected = f"{v1_lname}({lind_str}) = {v2_lname}({rind_str})"
         self.assertEqual(rev_stmt, expected)
@@ -342,17 +333,13 @@ class VarCompatTestCase(unittest.TestCase):
         rindices = ("hind", "vind")
         lindices = ("hind-col_start+1", "vind")
         conv = f"273.15_{real_array1.get_prop_value('kind')}"
-        fwd_stmt = compat.forward_transform(v3_lname, v1_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
+        fwd_stmt = compat.forward_transform(v3_lname, v1_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rind_str = ','.join(rindices)
         expected = f"{v3_lname}({lind_str}) = {v1_lname}({rind_str})+{conv}"
         self.assertEqual(fwd_stmt, expected)
-        rev_stmt = compat.reverse_transform(v1_lname, v3_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
         lindices = ("hind+col_start-1", "vind")
+        rev_stmt = compat.reverse_transform(v1_lname, v3_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         conv = f"273.15_{real_array2.get_prop_value('kind')}"
         expected = f"{v1_lname}({lind_str}) = {v3_lname}({rind_str})-{conv}"
@@ -364,18 +351,14 @@ class VarCompatTestCase(unittest.TestCase):
                               msg=self.__inst_emsg.format(type(compat)))
         rindices = ("hind", "vind")
         lindices = ("hind", "vind")
-        fwd_stmt = compat.forward_transform(v4_lname, v3_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
+        fwd_stmt = compat.forward_transform(v4_lname, v3_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rind_str = ','.join(rindices)
         rkind = real_array3.get_prop_value('kind')
         expected = f"{v4_lname}({lind_str}) = real({v3_lname}({rind_str}), {rkind})"
         self.assertEqual(fwd_stmt, expected)
-        rev_stmt = compat.reverse_transform(v3_lname, v4_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
         lindices = ("hind", "vind")
+        rev_stmt = compat.reverse_transform(v3_lname, v4_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rkind = real_array4.get_prop_value('kind')
         expected = f"{v3_lname}({lind_str}) = real({v4_lname}({rind_str}), {rkind})"
@@ -389,17 +372,13 @@ class VarCompatTestCase(unittest.TestCase):
         lindices = ("hind-col_start+1", "vind")
         rkind = real_array4.get_prop_value('kind')
         conv = f"273.15_{rkind}"
-        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
+        fwd_stmt = compat.forward_transform(v2_lname, v1_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rind_str = ','.join(rindices)
         expected = f"{v2_lname}({lind_str}) = real({v1_lname}({rind_str}), {rkind})+{conv}"
         self.assertEqual(fwd_stmt, expected)
-        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim=None)
         lindices = ("hind+col_start-1", "vind")
+        rev_stmt = compat.reverse_transform(v1_lname, v2_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rkind = real_array1.get_prop_value('kind')
         conv = f"273.15_{rkind}"
@@ -413,9 +392,7 @@ class VarCompatTestCase(unittest.TestCase):
                               msg=self.__inst_emsg.format(type(compat)))
         rindices = ("hind", "vind")
         lindices = ("pver-vind+1", "hind-col_start+1")
-        fwd_stmt = compat.forward_transform(v4_lname, v5_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim='pver')
+        fwd_stmt = compat.forward_transform(v4_lname, v5_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rind_str = ','.join(rindices)
         rkind = real_array3.get_prop_value('kind')
@@ -423,10 +400,8 @@ class VarCompatTestCase(unittest.TestCase):
         self.assertEqual(fwd_stmt, expected)
         rindices = ("vind", "hind")
         rind_str = ','.join(rindices)
-        rev_stmt = compat.reverse_transform(v5_lname, v4_lname, rindices,
-                                            adjust_hdim='col_start',
-                                            flip_vdim='pver')
         lindices = ("hind+col_start-1", "pver-vind+1")
+        rev_stmt = compat.reverse_transform(v5_lname, v4_lname, rindices, lindices)
         lind_str = ','.join(lindices)
         rkind = real_array4.get_prop_value('kind')
         expected = f"{v5_lname}({lind_str}) = {v4_lname}({rind_str})"

@@ -7,7 +7,7 @@ module test_host_data
   type physics_state
      real(kind_phys), allocatable :: ps(:)              ! surface pressure
      real(kind_phys), allocatable :: temp(:,:)          ! temperature
-     real(kind_phys), pointer     :: q(:,:,:) => NULL() ! constituent array
+     real(kind_phys), dimension(:,:,:), pointer :: q => NULL() ! constituent array
   end type physics_state
 
   public allocate_physics_state

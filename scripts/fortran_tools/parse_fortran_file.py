@@ -563,8 +563,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, run_env):
                                         module=spec_name,
                                         var_dict=var_dict)
                 mheaders.append(mheader)
-                if (run_env.logger and
-                    run_env.logger.isEnabledFor(logging.DEBUG)):
+                if run_env.verbose:
                     ctx = context_string(pobj, nodir=True)
                     msg = 'Adding header {}{}'
                     run_env.logger.debug(msg.format(mheader.table_name, ctx))
@@ -581,14 +580,13 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, run_env):
                         ctx = context_string(pobj, nodir=True)
                         msg = "No DDT found at '{}'{}"
                         raise CCPPError(msg.format(statement, ctx))
-                    # End if
+                    # end if
                     mheaders.append(ddt)
-                    if (run_env.logger and
-                        run_env.logger.isEnabledFor(logging.DEBUG)):
+                    if run_env.verbose:
                         ctx = context_string(pobj, nodir=True)
                         msg = 'Adding DDT {}{}'
                         run_env.logger.debug(msg.format(ddt.table_name, ctx))
-                    # End if
+                    # end if
                     active_table = None
                 else:
                     # We found a type definition but it is not one with
@@ -626,7 +624,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
     inpreamble = False
     insub = True
     seen_contains = False
-    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+    if run_env.verbose:
         ctx = context_string(pobj, nodir=True)
         msg = "Parsing specification of {}{}"
         run_env.logger.debug(msg.format(table_name, ctx))
@@ -813,7 +811,7 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
                         errmsg = duplicate_header(mtables[title], tbl)
                         raise CCPPError(errmsg)
                     # end if
-                    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+                    if run_env.verbose:
                         ctx = tbl.start_context()
                         mtype = tbl.table_type
                         msg = "Adding metadata from {}, {}{}"
@@ -894,7 +892,7 @@ def parse_module(pobj, statements, run_env):
     # End if
     mod_name = pmatch.group(1)
     pobj.enter_region('MODULE', region_name=mod_name, nested_ok=False)
-    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+    if run_env.verbose:
         ctx = context_string(pobj, nodir=True)
         msg = "Parsing Fortran module, {}{}"
         run_env.logger.debug(msg.format(mod_name, ctx))
@@ -930,7 +928,7 @@ def parse_module(pobj, statements, run_env):
                         errmsg = duplicate_header(mtables[title], mheader)
                         raise CCPPError(errmsg)
                     # end if
-                    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+                    if run_env.verbose:
                         mtype = mheader.table_type
                         ctx = mheader.start_context()
                         msg = "Adding metadata from {}, {}{}"

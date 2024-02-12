@@ -191,7 +191,7 @@ end module {module}'''
                 # End while
                 # Before looking for best space, reject any that are on a
                 #    comment line but before any significant characters
-                if outstr.lstrip()[0] == '!':
+                if outstr.lstrip().startswith('!'):
                     first_space = outstr.index('!') + 1
                     while ((outstr[first_space] == '!' or
                             outstr[first_space] == ' ') and

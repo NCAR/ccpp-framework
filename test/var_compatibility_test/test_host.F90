@@ -8,7 +8,7 @@ module test_prog
    public test_host
 
    ! Public data and interfaces
-   integer, public, parameter :: cs = 16
+   integer, public, parameter :: cs = 32
    integer, public, parameter :: cm = 60
 
     !> \section arg_table_suite_info  Argument Table
@@ -351,10 +351,12 @@ CONTAINS
 
    character(len=cs), target :: test_parts1(1) = (/ 'radiation       ' /)
 
-   character(len=cm), target :: test_invars1(3) = (/                          &
+   character(len=cm), target :: test_invars1(5) = (/                          &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
-        'effective_radius_of_stratiform_cloud_snow_particle        ' /)
+        'effective_radius_of_stratiform_cloud_snow_particle        ',         &
+        'effective_radius_of_stratiform_cloud_graupel              ',         &
+        'flag_indicating_cloud_microphysics_has_graupel            '/)
 
    character(len=cm), target :: test_outvars1(5) = (/                         &
         'ccpp_error_code                                           ',         &
@@ -363,19 +365,21 @@ CONTAINS
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
         'effective_radius_of_stratiform_cloud_snow_particle        ' /)
 
-   character(len=cm), target :: test_reqvars1(6) = (/                         &
+   character(len=cm), target :: test_reqvars1(8) = (/                         &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
         'effective_radius_of_stratiform_cloud_ice_particle         ',         &
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
-        'effective_radius_of_stratiform_cloud_snow_particle        ' /)
+        'effective_radius_of_stratiform_cloud_snow_particle        ',         &
+        'effective_radius_of_stratiform_cloud_graupel              ',         &
+        'flag_indicating_cloud_microphysics_has_graupel            '/)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
 
     ! Setup expected test suite info
-    test_suites(1)%suite_name = 'var_action_suite'
+    test_suites(1)%suite_name = 'var_compatibility_suite'
 	test_suites(1)%suite_parts => test_parts1
     test_suites(1)%suite_input_vars => test_invars1
     test_suites(1)%suite_output_vars => test_outvars1

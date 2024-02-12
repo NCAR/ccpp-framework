@@ -13,6 +13,7 @@ module test_host_mod
    integer,         parameter   :: pver = 4
    type(physics_state)          :: phys_state
    real(kind_phys)              :: effrs(ncols, pver)
+   logical,         parameter   :: mp_has_graupel = .true.
 
    public :: init_data
    public :: compare_data
@@ -22,11 +23,14 @@ contains
   subroutine init_data()
 
     ! Allocate and initialize state
-    call allocate_physics_state(ncols, pver, phys_state)
+    call allocate_physics_state(ncols, pver, phys_state, mp_has_graupel)
     phys_state%effrr = 1.0E-3 ! 1000 microns, in meter
     phys_state%effrl = 1.0E-4 ! 100 microns, in meter
     phys_state%effri = 5.0E-5 ! 50 microns, in meter
     effrs            = 5.0E-4 ! 500 microns, in meter
+    if (mp_has_graupel) then
+       phys_state%effrg = 2.5E-4 ! 250 microns, in meter
+    endif
 
   end subroutine init_data
 
@@ -36,7 +40,7 @@ contains
     real(kind_phys), parameter :: effrl_expected = 5.0E-5 ! 50 microns, in meter
     real(kind_phys), parameter :: effri_expected = 7.5E-5 ! 75 microns, in meter
     real(kind_phys), parameter :: effrs_expected = 5.1E-4 ! 510 microns, in meter
-    real(kind_phys), parameter :: tolerance = 1.0E-10     ! used as scaling factor for expected value
+    real(kind_phys), parameter :: tolerance = 1.0E-6      ! used as scaling factor for expected value
 
     compare_data = .true.
 

@@ -51,7 +51,7 @@ def test_MetadataTable_parse_table(tmpdir):
     assert len(metadata_header.sections()) == 1
     metadata_section = metadata_header.sections()[0]
     assert metadata_section.name == "<name>"
-    assert metadata_section.header_type == "scheme"
+    assert metadata_section.ptype == "scheme"
     (im_data,) = metadata_section.variable_list()
     assert isinstance(im_data, Var)
     assert im_data.get_dimensions() == []

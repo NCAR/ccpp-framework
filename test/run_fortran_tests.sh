@@ -37,15 +37,13 @@ if [ $res -ne 0 ]; then
   echo "Failure running advection test"
 fi
 
-# Run var_action test
-# TODO: Re-enable after feature fully implemented.
-# ./var_action_test/run_test
-# res=$?
-# errcnt=$((errcnt + res))
-# if [ $res -ne 0 ]; then
-#   echo "Failure running var_action test"
-# fi
-echo "Skipping var_action_test/run_test until feature is fully implemented"
+# Run var_compatibility test
+ ./var_compatibility_test/run_test
+ res=$?
+ errcnt=$((errcnt + res))
+ if [ $res -ne 0 ]; then
+   echo "Failure running var_compatibility test"
+ fi
 
 if [ $errcnt -eq 0 ]; then
   echo "All tests PASSed!"

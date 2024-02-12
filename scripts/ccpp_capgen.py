@@ -586,7 +586,7 @@ def capgen(run_env, return_db=False):
         # Try to create output_dir (let it crash if it fails)
         os.makedirs(run_env.output_dir)
     # end if
-    # Pre-register base CCPP DDT types
+    # Pre-register base CCPP DDT types:
     for ddt_name in _CCPP_FRAMEWORK_DDT_TYPES:
         register_fortran_ddt_name(ddt_name)
     # end for
@@ -612,6 +612,11 @@ def capgen(run_env, return_db=False):
     # end if
     # First up, handle the host files
     host_model = parse_host_model_files(host_files, host_name, run_env)
+    # We always need to parse the ccpp_constituent_prop_ptr_t DDT
+    const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
+    if const_prop_mod not in scheme_files:
+        scheme_files = [const_prop_mod] + scheme_files
+    # end if
     # Next, parse the scheme files
     # We always need to parse the ccpp_constituent_prop_ptr_t DDT
     ##XXgoldyXX: Should this be in framework_env.py?
@@ -620,14 +625,14 @@ def capgen(run_env, return_db=False):
         scheme_files= [const_prop_mod] + scheme_files
     # end if
     scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
-    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+    if run_env.verbose:
         ddts = host_model.ddt_lib.keys()
         if ddts:
             run_env.logger.debug("DDT definitions = {}".format(ddts))
         # end if
     # end if
     plist = host_model.prop_list('local_name')
-    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+    if run_env.verbose:
         run_env.logger.debug("{} variables = {}".format(host_model.name, plist))
         run_env.logger.debug("schemes = {}".format([x.title
                                                     for x in scheme_headers]))

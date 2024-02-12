@@ -46,7 +46,7 @@ class VarDDT(Var):
             self.__field = VarDDT(new_field, var_ref.field, run_env, recur=True)
         # end if
         if ((not recur) and
-            run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG)):
+            run_env.verbose):
             run_env.logger.debug('Adding DDT field, {}'.format(self))
         # end if
 
@@ -188,7 +188,7 @@ class DDTLibrary(dict):
     The dictionary holds known standard names.
     """
 
-    def __init__(self, name, run_env, ddts=None, logger=None):
+    def __init__(self, name, run_env, ddts=None):
         "Our dict is DDT definition headers, key is type"
         self.__name = '{}_ddt_lib'.format(name)
 # XXgoldyXX: v remove?
@@ -218,9 +218,9 @@ class DDTLibrary(dict):
                 octx = context_string(self[ddt.title].source.context)
                 raise CCPPError(errmsg.format(ddt.title, ctx, octx))
             # end if
-            if logger and logger.isEnabledFor(logging.DEBUG):
+            if run_env.verbose:
                 lmsg = f"Adding DDT {ddt.title} to {self.name}"
-                logger.debug(lmsg)
+                run_env.logger.debug(lmsg)
             # end if
             self[ddt.title] = ddt
             dlen = len(ddt.module)
@@ -280,10 +280,10 @@ class DDTLibrary(dict):
             stdname = dvar.get_prop_value('standard_name')
             pvar = var_dict.find_variable(standard_name=stdname, any_scope=True)
             if pvar and (not skip_duplicates):
-                emsg = "Attempt to add duplicate DDT sub-variable, {}{}."
-                emsg += "\nVariable originally defined{}"
                 ntx = context_string(dvar.context)
                 ctx = context_string(pvar.context)
+                emsg = f"Attempt to add duplicate DDT sub-variable, {stdname}{ntx}."
+                emsg += f"\nVariable originally defined{ctx}"
                 raise CCPPError(emsg.format(stdname, ntx, ctx))
             # end if
             # Add this intrinsic to <var_dict>

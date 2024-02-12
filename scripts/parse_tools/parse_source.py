@@ -5,13 +5,14 @@
 
 # Python library imports
 from collections.abc import Iterable
+# end if
 import copy
 import sys
 import os.path
 import logging
 # CCPP framework imports
 
-class _StdNameCounter:
+class _StdNameCounter():
     """Class to hold a global counter to avoid using global keyword"""
     __SNAME_NUM = 0 # Counter for unique standard names
 
@@ -196,7 +197,7 @@ class ContextRegion(Iterable):
 
 ########################################################################
 
-class ParseContext:
+class ParseContext():
     """A class for keeping track of a parsing position
     >>> ParseContext(32, "source.F90") #doctest: +ELLIPSIS
     <parse_tools.parse_source.ParseContext object at 0x...>
@@ -369,7 +370,7 @@ class ParseContext:
 
 ########################################################################
 
-class ParseSource:
+class ParseSource():
     """
     A simple object for providing source information
     >>> ParseSource("myname", "mytype", ParseContext(13, "foo.F90")) #doctest: +ELLIPSIS

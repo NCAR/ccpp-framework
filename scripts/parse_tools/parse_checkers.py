@@ -12,8 +12,14 @@ from parse_source import CCPPError, ParseInternalError
 
 ########################################################################
 
-_UNITS_RE = re.compile(r"^[^/!@#$%^&*=()\|<>\[\]{}?,.]+$")
-_MAX_MOLAR_MASS = 10000.0
+_UNITLESS_REGEX                = "1"
+_NON_LEADING_ZERO_NUM          = "[1-9]\d*"
+_NEGATIVE_NON_LEADING_ZERO_NUM = f"[-]{_NON_LEADING_ZERO_NUM}"
+_UNIT_EXPONENT                 = f"({_NEGATIVE_NON_LEADING_ZERO_NUM}|{_NON_LEADING_ZERO_NUM})"
+_UNIT_REGEX                    = f"[a-zA-Z]+{_UNIT_EXPONENT}?"
+_UNITS_REGEX                   = f"^({_UNIT_REGEX}(\s{_UNIT_REGEX})*|{_UNITLESS_REGEX})$"
+_UNITS_RE                      = re.compile(_UNITS_REGEX)
+_MAX_MOLAR_MASS                = 10000.0
 
 def check_units(test_val, prop_dict, error):
     """Return <test_val> if a valid unit, otherwise, None
@@ -972,7 +978,7 @@ def check_molar_mass(test_val, prop_dict, error):
         test_val = float(test_val)
         if test_val < 0.0 or test_val > _MAX_MOLAR_MASS:
            if error:
-               raise CCPPError("{} is not a valid molar mass".format(test_val))
+               raise CCPPError(f"{test_val} is not a valid molar mass")
            else:
                test_val = None
            # end if
@@ -980,7 +986,7 @@ def check_molar_mass(test_val, prop_dict, error):
     except:
         # not an int or float, conditionally throw error
         if error:
-           raise CCPPError("{} is invalid; not a float or int".format(test_val))
+           raise CCPPError(f"{test_val} is invalid; not a float or int")
         else:
            test_val=None
         # end if

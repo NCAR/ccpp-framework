@@ -23,8 +23,8 @@ if not os.path.exists(_SCRIPTS_DIR):
 # end if
 
 if ((sys.version_info[0] < 3) or
-    (sys.version_info[0] == 3) and (sys.version_info[1] < 7)):
-    raise Exception("Python 3.7 or greater required")
+    (sys.version_info[0] == 3) and (sys.version_info[1] < 8)):
+    raise Exception("Python 3.8 or greater required")
 # end if
 
 sys.path.append(_SCRIPTS_DIR)
@@ -78,7 +78,10 @@ _OUTPUT_VARS_DDT = ["ccpp_error_code", "ccpp_error_message", "model_times",
                     "number_of_model_times"]
 _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT
 _PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
-                   "horizontal_dimension", "vertical_layer_dimension"]
+                   "horizontal_dimension", "vertical_layer_dimension",
+                   # Added for --debug
+                   "index_of_water_vapor_specific_humidity",
+                   "vertical_interface_dimension"]
 _REQUIRED_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                        "potential_temperature",
                        "potential_temperature_at_interface",

@@ -2,7 +2,6 @@
 # Set the sources
 set(SOURCES_F90
     ccpp_types.F90
-    ccpp_api.F90
 )
 
 # Generate list of Fortran modules from defined sources

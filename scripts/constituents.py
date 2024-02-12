@@ -9,7 +9,7 @@ to implement this support.
 """
 
 # CCPP framework imports
-from parse_tools import ParseInternalError, type_name
+from parse_tools import ParseInternalError
 from metavar import VarDictionary
 
 ########################################################################
@@ -310,12 +310,12 @@ class ConstituentVarDict(VarDictionary):
                 vertical_dim = ''
             # end if
             advect_str = self.TF_string(var.get_prop_value('advected'))
-            init_args = [f'std_name="{std_name}"', f'long_name="{long_name}"',
-                         f'units="{units}"', f'vertical_dim="{vertical_dim}"',
+            init_args = [f'{std_name=}', f'{long_name=}',
+                         f'{units=}', f'{vertical_dim=}',
                          f'advected={advect_str}',
                          f'errcode={errvar_names["ccpp_error_code"]}',
                          f'errmsg={errvar_names["ccpp_error_message"]}']
-            if default_value is not None:
+            if default_value is not None and default_value != '':
                 init_args.append(f'default_value={default_value}')
             stmt = 'call {}(index)%instantiate({})'
             outfile.write(f'if ({errvar_names["ccpp_error_code"]} == 0) then', indent+1)
@@ -496,9 +496,9 @@ class ConstituentVarDict(VarDictionary):
         stmt = f"{substmt}({args}, {err_dummy_str})"
         cap.write(stmt, 1)
         cap.comment("Create constituent object for suites in <suite_list>", 2)
-        cap.write("", 0)
+        cap.blank_line()
         ConstituentVarDict.write_constituent_use_statements(cap, suite_list, 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("character(len=*), intent(in)  :: suite_list(:)", 2)
         cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)  :: " +       \
@@ -513,7 +513,7 @@ class ConstituentVarDict(VarDictionary):
         cap.write("integer{} :: index".format(spc), 2)
         cap.write("integer{} :: field_ind".format(spc), 2)
         cap.write(f"type({CONST_PROP_TYPE}), pointer :: const_prop", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.write("{} = 0".format(herrcode), 2)
         cap.write("num_consts = size(host_constituents, 1)", 2)
         for suite in suite_list:
@@ -543,7 +543,7 @@ class ConstituentVarDict(VarDictionary):
         cap.write("end if", 4)
         cap.write("end do", 3)
         cap.write("end if", 2)
-        cap.write("", 0)
+        cap.blank_line()
         # Register suite constituents
         for suite in suite_list:
             errvar_str = ConstituentVarDict.__errcode_callstr(herrcode,
@@ -578,7 +578,7 @@ class ConstituentVarDict(VarDictionary):
             cap.write("end if", 4)
             cap.write("end do", 3)
             cap.write("end if", 2)
-            cap.write("", 0)
+            cap.blank_line()
         # end for
         cap.write(f"if ({herrcode} == 0) then", 2)
         stmt = "call {}%lock_table({})"
@@ -605,33 +605,33 @@ class ConstituentVarDict(VarDictionary):
         cap.write(f"end {substmt}", 1)
         # Write constituent_init routine
         substmt = f"subroutine {init_funcname}"
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"{substmt}(ncols, num_layers, {err_dummy_str})", 1)
         cap.comment("Initialize constituent data", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("integer,            intent(in)    :: ncols", 2)
         cap.write("integer,            intent(in)    :: num_layers", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for evar
-        cap.write("", 0)
+        cap.blank_line()
         call_str = f"call {const_obj_name}%lock_data(ncols, num_layers, {obj_err_callstr})"
         cap.write(call_str, 2)
         cap.write(f"end {substmt}", 1)
         # Write num_consts routine
         substmt = f"subroutine {num_const_funcname}"
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"{substmt}(num_flds, advected, {err_dummy_str})", 1)
         cap.comment("Return the number of constituent fields for this run", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("integer,            intent(out)   :: num_flds", 2)
         cap.write("logical, optional,  intent(in)    :: advected", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
-        cap.write("", 0)
+        cap.blank_line()
         call_str = "call {}%num_constituents(num_flds, advected=advected, {})"
         cap.write(call_str.format(const_obj_name, obj_err_callstr), 2)
         cap.write("end {}".format(substmt), 1)
@@ -658,88 +658,88 @@ class ConstituentVarDict(VarDictionary):
         cap.write(f"end {substmt}", 1)
         # Write copy_in routine
         substmt = "subroutine {}".format(copy_in_funcname)
-        cap.write("", 0)
+        cap.blank_line()
         cap.write("{}(const_array, {})".format(substmt, err_dummy_str), 1)
         cap.comment("Copy constituent field info into <const_array>", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("real(kind_phys),    intent(out)   :: const_array(:,:,:)", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
-        cap.write("", 0)
+        cap.blank_line()
         cap.write("call {}%copy_in(const_array, {})".format(const_obj_name,
                                                             obj_err_callstr), 2)
         cap.write("end {}".format(substmt), 1)
         # Write copy_out routine
         substmt = "subroutine {}".format(copy_out_funcname)
-        cap.write("", 0)
+        cap.blank_line()
         cap.write("{}(const_array, {})".format(substmt, err_dummy_str), 1)
         cap.comment("Update constituent field info from <const_array>", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("real(kind_phys),    intent(in)    :: const_array(:,:,:)", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
-        cap.write("", 0)
+        cap.blank_line()
         cap.write("call {}%copy_out(const_array, {})".format(const_obj_name,
                                                              obj_err_callstr),
                   2)
         cap.write("end {}".format(substmt), 1)
         # Write constituents routine
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"function {const_array_func}() result(const_ptr)", 1)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Return pointer to constituent array", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy argument", 2)
         cap.write("real(kind_phys), pointer :: const_ptr(:,:,:)", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"const_ptr => {const_obj_name}%field_data_ptr()", 2)
         cap.write(f"end function {const_array_func}", 1)
         # Write advected constituents routine
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"function {advect_array_func}() result(const_ptr)", 1)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Return pointer to advected constituent array", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy argument", 2)
         cap.write("real(kind_phys), pointer :: const_ptr(:,:,:)", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"const_ptr => {const_obj_name}%advected_constituents_ptr()",
                   2)
         cap.write(f"end function {advect_array_func}", 1)
         # Write the constituent property array routine
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"function {prop_array_func}() result(const_ptr)", 1)
         cap.write(f"use {CONST_DDT_MOD}, only: {CONST_PROP_PTR_TYPE}", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Return pointer to array of constituent properties", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy argument", 2)
         cap.write("type(ccpp_constituent_prop_ptr_t), pointer :: const_ptr(:)",
                   2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"const_ptr => {const_obj_name}%constituent_props_ptr()",
                   2)
         cap.write(f"end function {prop_array_func}", 1)
         # Write constituent index function
         substmt = f"subroutine {const_index_func}"
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"{substmt}(stdname, const_index, {err_dummy_str})", 1)
         cap.comment("Set <const_index> to the constituent array index " +     \
                     "for <stdname>.", 2)
         cap.comment("If <stdname> is not found, set <const_index> to -1 " +   \
                     "set an error condition", 2)
-        cap.write("", 0)
+        cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("character(len=*),    intent(in)    :: stdname", 2)
         cap.write("integer,             intent(out)   :: const_index", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
-        cap.write("", 0)
+        cap.blank_line()
         cap.write(f"call {const_obj_name}%const_index(const_index, " +        \
                   f"stdname, {obj_err_callstr})", 2)
         cap.write("end {}".format(substmt), 1)
