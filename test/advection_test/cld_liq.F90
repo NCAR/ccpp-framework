@@ -88,7 +88,7 @@ CONTAINS
          errmsg = 'Error allocating dyn_const in cld_liq_dynamic_constituents'
       end if
       call dyn_const(1)%instantiate(std_name="dyn_const3", long_name='dyn const3', &
-           units='kg kg-1', default_value=0._kind_phys,                            &
+           units='kg kg-1', default_value=1._kind_phys,                            &
            vertical_dim='vertical_layer_dimension', advected=.true.,               &
            errcode=errcode, errmsg=errmsg)
 

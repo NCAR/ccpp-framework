@@ -108,11 +108,11 @@ CONTAINS
       call dyn_const(1)%instantiate(std_name='dyn_const1', long_name='dyn const1', &
            units='kg kg-1', default_value=0._kind_phys,                            &
            vertical_dim='vertical_layer_dimension', advected=.true.,               &
-           errcode=errcode, errmsg=errmsg)
+           min_value=1000._kind_phys, errcode=errcode, errmsg=errmsg)
       if (errcode /= 0) then
          return
       end if
-      call dyn_const(2)%instantiate(std_name='dyn_const2', long_name='dyn const2', &
+      call dyn_const(2)%instantiate(std_name='dyn_const2_wrt_moist_air', long_name='dyn const2', &
            units='kg kg-1', default_value=0._kind_phys,                            &
            vertical_dim='vertical_layer_dimension', advected=.true.,               &
            errcode=errcode, errmsg=errmsg)
