@@ -814,6 +814,13 @@ class VarCompatObj:
                      _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
+    # Test that a 2-D var with vertical flipping works and that it
+    # produces the correct reverse transformation
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var1_lname", False,\
+                     "var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var2_lname", True, \
+                     _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", 'k', 'nk-k+1')
+    'var1_lname(nk-k+1) = var2_lname(k)'
+
     # Test that a 2-D var with unit conversion m->km works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
                      "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \
@@ -955,6 +962,12 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transform (Indices handled externally)
+        if isinstance(rvar_indices, str):
+            rvar_indices = (rvar_indices,)
+        # end if
+        if isinstance(lvar_indices, str):
+            lvar_indices = (lvar_indices,)
+        # end if
         rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
         lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
 
@@ -995,6 +1008,12 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transforms (Indices handled externally)
+        if isinstance(lvar_indices, str):
+            lvar_indices = (lvar_indices,)
+        # end if
+        if isinstance(rvar_indices, str):
+            rvar_indices = (rvar_indices,)
+        # end if
         lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
         rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
 
