@@ -941,9 +941,6 @@ class VarCompatObj:
         # end if
         if self.__compat:
             # Check dimensions
-            ##XXgoldyXX: For now, we always have to create a dimension
-            ##           transform because we do not know if the vertical
-            ##           dimension is flipped.
             if var1_dims or var2_dims:
                 _, vdim_ind = find_vertical_dimension(var1_dims)
                 if (var1_dims != var2_dims):
@@ -978,13 +975,6 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
-        # Dimension transform (Indices handled externally)
-#        if isinstance(rvar_indices, str):
- #           rvar_indices = (rvar_indices,)
-        # end if
-  #      if isinstance(lvar_indices, str):
-   #         lvar_indices = (lvar_indices,)
-        # end if
         rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
         lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
 
@@ -1024,13 +1014,6 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
-        # Dimension transforms (Indices handled externally)
-#        if isinstance(lvar_indices, str):
- #           lvar_indices = (lvar_indices,)
-        # end if
-  #      if isinstance(rvar_indices, str):
-   #         rvar_indices = (rvar_indices,)
-        # end if
         lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
         rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
 
