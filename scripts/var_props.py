@@ -975,6 +975,7 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
+        # Dimension transform (Indices handled externally)
         rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
         lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
 
@@ -1014,6 +1015,7 @@ class VarCompatObj:
            "var2" (i.e., "vertical_layer_dimension" or
            "vertical_interface_dimension").
         """
+        # Dimension transforms (Indices handled externally)
         lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
         rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
 
