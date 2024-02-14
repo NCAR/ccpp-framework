@@ -808,6 +808,12 @@ class VarCompatObj:
                      _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
+    # Test that a 2-D var with no vertical transform works
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV) #doctest: +ELLIPSIS
+    <var_props.VarCompatObj object at 0x...>
+
     # Test that a 2-D var with unit conversion m->km works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
                      "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \
@@ -924,23 +930,6 @@ class VarCompatObj:
             if var1_top != var2_top:
                 self.__compat            = True
                 self.has_vert_transforms = True
-            # end if
-        # end if
-        if self.__compat:
-            # Check dimensions
-            ##XXgoldyXX: For now, we always have to create a dimension
-            ##           transform because we do not know if the vertical
-            ##           dimension is flipped.
-            if var1_dims or var2_dims:
-                _, vdim_ind = find_vertical_dimension(var1_dims)
-                if (var1_dims != var2_dims) or (vdim_ind >= 0):
-                    self.__dim_transforms = self._get_dim_transforms(var1_dims,
-                                                                     var2_dims)
-                    self.__compat = self.__dim_transforms is not None
-                # end if
-            # end if
-            if not self.__compat:
-                incompat_reason.append('dimensions')
             # end if
         # end if
         self.__incompat_reason = " and ".join([x for x in incompat_reason if x])
