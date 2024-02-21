@@ -808,13 +808,13 @@ class VarCompatObj:
                      _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
-    # Test that a 2-D var with no vertical transform works
+    # Test that a 1-D var with no vertical transform works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var1_lname", False, \
                      "var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var2_lname", False, \
                      _DOCTEST_RUNENV) #doctest: +ELLIPSIS
     <var_props.VarCompatObj object at 0x...>
 
-    # Test that a 2-D var with vertical flipping works and that it
+    # Test that a 1-D var with vertical flipping works and that it
     # produces the correct reverse transformation
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var1_lname", False,\
                      "var_stdname", "real", "kind_phys", "m", ['vertical_layer_dimension'], "var2_lname", True, \
