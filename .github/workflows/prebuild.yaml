@@ -34,8 +34,7 @@ jobs:
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
         cd test_prebuild
-        python3 test_metadata_parser.py
-        python3 test_mkstatic.py
+        pytest
     - name: ccpp-prebuild blocked data tests
       run: |
         cd test_prebuild/test_blocked_data
