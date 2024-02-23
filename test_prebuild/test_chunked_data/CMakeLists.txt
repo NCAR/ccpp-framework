@@ -3,11 +3,18 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ccpp_chunked_data
         VERSION 1.0.0
-        LANGUAGES Fortran)
+        LANGUAGES C Fortran)
 
 #------------------------------------------------------------------------------
 # Request a static build
 option(BUILD_SHARED_LIBS "Build a shared library" OFF)
+
+#------------------------------------------------------------------------------
+# Set MPI flags for C/C++/Fortran with MPI F08 interface
+find_package(MPI REQUIRED C Fortran)
+if(NOT MPI_Fortran_HAVE_F08_MODULE)
+  message(FATAL_ERROR "MPI implementation does not support the Fortran 2008 mpi_f08 interface")
+endif()
 
 #------------------------------------------------------------------------------
 # Set the sources: physics type definitions
@@ -57,6 +64,7 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -O0 -fno-unsafe-math-optimizatio
 
 #------------------------------------------------------------------------------
 add_library(ccpp_chunked_data STATIC ${SCHEMES} ${CAPS} ${API})
+target_link_libraries(ccpp_chunked_data PRIVATE MPI::MPI_Fortran)
 # Generate list of Fortran modules from defined sources
 foreach(source_f90 ${CAPS} ${API})
     get_filename_component(tmp_source_f90 ${source_f90} NAME)
