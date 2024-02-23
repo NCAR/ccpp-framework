@@ -38,6 +38,12 @@
   units = index
   dimensions = ()
   type = integer
+[chunk_no]
+  standard_name = ccpp_chunk_number
+  long_name = number of chunk for using array chunks in CCPP
+  units = index
+  dimensions = ()
+  type = integer
 [thrd_no]
   standard_name = ccpp_thread_number
   long_name = number of thread for threading in CCPP

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="chunked_data_suite" version="1">
+  <group name="chunked_data_group">
+    <subcycle loop="1">
+      <scheme>chunked_data_scheme</scheme>
+    </subcycle>
+  </group>
+</suite>
