@@ -1,0 +1,147 @@
+[ccpp-table-properties]
+  name = chunked_data_scheme
+  type = scheme
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = chunked_data_scheme_init
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[data_array]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (horizontal_dimension)
+  type = integer
+  intent = in
+
+########################################################################
+[ccpp-arg-table]
+  name = chunked_data_scheme_timestep_init
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[data_array]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (horizontal_dimension)
+  type = integer
+  intent = in
+
+########################################################################
+[ccpp-arg-table]
+  name = chunked_data_scheme_run
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[nchunk]
+  standard_name = ccpp_chunk_number
+  long_name = number of chunk for chunked arrays in CCPP
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[data_array]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (horizontal_loop_extent)
+  type = integer
+  intent = in
+
+########################################################################
+[ccpp-arg-table]
+  name = chunked_data_scheme_timestep_finalize
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[data_array]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (horizontal_dimension)
+  type = integer
+  intent = in
+
+########################################################################
+[ccpp-arg-table]
+  name = chunked_data_scheme_finalize
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[data_array]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (horizontal_dimension)
+  type = integer
+  intent = in
+
