@@ -297,7 +297,7 @@ def _retrieve_dyn_const_routines(table):
     result = set()
     routines = table.find("dyn_const_routines")
     if routines is None:
-        raise CCPPDatatableError("Could not find 'dyn_const_routine' element")
+        raise CCPPDatatableError("Could not find 'dyn_const_routines' element")
     # end if
     for routine in routines:
         routine_name = routine.text

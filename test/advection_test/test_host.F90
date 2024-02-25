@@ -542,7 +542,7 @@ CONTAINS
       end if
       if (errflg == 0) then
          if (const_log) then
-            write(6, *) "ERROR: dyn_const2 is dry"
+            write(6, *) "ERROR: dyn_const2 is dry and should be moist"
             errflg_final = -1
          end if
       else

@@ -401,7 +401,7 @@ class ConstituentVarDict(VarDictionary):
 
     def const_name_subname(self):
         """Return the name of the routine that returns a constituent's
-           given an index"""
+        standard name given an index"""
         return f"{self.name}_const_name"
 
     def copy_const_subname(self):
@@ -470,7 +470,6 @@ class ConstituentVarDict(VarDictionary):
         herrcode, herrmsg = ConstituentVarDict.__errcode_names(err_vars)
         err_dummy_str = f"{herrcode}, {herrmsg}"
         obj_err_callstr = f"errcode={herrcode}, errmsg={herrmsg}"
-        obj_err_callstr = obj_err_callstr
 # XXgoldyXX: ^ need to generalize host model error var type support
         # First up, the registration routine
         substmt = f"subroutine {reg_funcname}"
@@ -483,10 +482,10 @@ class ConstituentVarDict(VarDictionary):
         # Conditionally include use statements for dynamic constituent routines
         if len(dyn_const_dict) > 0:
             cap.comment("Dynamic constituent routines", 2)
+            for scheme in dyn_const_dict:
+                cap.write(f"use {scheme}, only: {dyn_const_dict[scheme]}", 2)
+            # end for
         # end if
-        for scheme in dyn_const_dict:
-            cap.write(f"use {scheme}, only: {dyn_const_dict[scheme]}", 2)
-        # end for
         cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("character(len=*), intent(in)  :: suite_list(:)", 2)
@@ -521,127 +520,119 @@ class ConstituentVarDict(VarDictionary):
             errvar_str = ConstituentVarDict.__errcode_callstr(herrcode,
                                                               herrmsg, suite)
             cap.write(f"num_suite_consts = {funcname}({errvar_str})", 2)
+            cap.write(f"if ({herrcode} /= 0) then", 2)
+            cap.write("return", 3)
+            cap.write("end if", 2)
             cap.write("num_consts = num_consts + num_suite_consts", 2)
         # end for
         # Check for dynamic constituent routines
         if len(dyn_const_dict) > 0:
             cap.comment("Add in dynamic constituents", 2)
             for idx, scheme in enumerate(sorted(dyn_const_dict)):
-                cap.write(f"if ({herrcode} == 0) then", 2)
-                cap.write(f"call {dyn_const_dict[scheme]}(dyn_const_prop_{idx}, {obj_err_callstr})", 3)
-                cap.write(f"num_dyn_consts = num_dyn_consts + size(dyn_const_prop_{idx})", 3)
+                cap.write(f"call {dyn_const_dict[scheme]}(dyn_const_prop_{idx}, {obj_err_callstr})", 2)
+                cap.write(f"if ({herrcode} /= 0) then", 2)
+                cap.write("return", 3)
                 cap.write("end if", 2)
+                cap.write(f"num_dyn_consts = num_dyn_consts + size(dyn_const_prop_{idx})", 2)
             # end for
             cap.write("num_consts = num_consts + num_dyn_consts", 2)
             cap.comment("Pack dynamic_constituents array", 2)
             cap.write(f"allocate(dynamic_constituents(num_dyn_consts), stat={herrcode})", 2)
             cap.write(f"if ({herrcode} /= 0) then", 2)
             cap.write(f"{herrmsg} = 'failed to allocate dynamic_constituents'", 3)
-            cap.write("else", 2)
-            cap.write("index_start = 1", 3)
-            for idx, scheme in enumerate(sorted(dyn_const_dict)):
-                cap.write(f"do index = 1, size(dyn_const_prop_{idx}, 1)", 3)
-                cap.write(f"dynamic_constituents(index + index_start - 1) = dyn_const_prop_{idx}(index)", 4)
-                cap.write("end do", 3)
-                cap.write(f"index_start = size(dyn_const_prop_{idx}, 1) + 1", 3)
-                cap.write(f"deallocate(dyn_const_prop_{idx})", 3)
-            # end for
+            cap.write("return", 3)
             cap.write("end if", 2)
+            cap.write("index_start = 0", 2)
+            for idx, scheme in enumerate(sorted(dyn_const_dict)):
+                cap.write(f"do index = 1, size(dyn_const_prop_{idx}, 1)", 2)
+                cap.write(f"dynamic_constituents(index + index_start) = dyn_const_prop_{idx}(index)", 3)
+                cap.write("end do", 2)
+                cap.write(f"index_start = size(dyn_const_prop_{idx}, 1)", 2)
+                cap.write(f"deallocate(dyn_const_prop_{idx})", 2)
+            # end for
         # end if
-        cap.write(f"if ({herrcode} == 0) then", 2)
-        cap.comment("Initialize constituent data and field object", 3)
+        cap.comment("Initialize constituent data and field object", 2)
         stmt = f"call {const_obj_name}%initialize_table(num_consts)"
-        cap.write(stmt, 3)
+        cap.write(stmt, 2)
         # Register host model constituents
-        cap.comment("Add host model constituent metadata", 3)
-        cap.write("do index = 1, size(host_constituents, 1)", 3)
-        cap.write(f"if ({herrcode} == 0) then", 4)
-        cap.write("const_prop => host_constituents(index)", 5)
+        cap.comment("Add host model constituent metadata", 2)
+        cap.write("do index = 1, size(host_constituents, 1)", 2)
+        cap.write("const_prop => host_constituents(index)", 3)
         stmt = f"call {const_obj_name}%new_field(const_prop, {obj_err_callstr})"
-        cap.write(stmt, 5)
-        cap.write("end if", 4)
-        cap.write("nullify(const_prop)", 4)
-        cap.write(f"if ({herrcode} /= 0) then", 4)
-        cap.write("exit", 5)
-        cap.write("end if", 4)
-        cap.write("end do", 3)
-        cap.write("end if", 2)
+        cap.write(stmt, 3)
+        cap.write("nullify(const_prop)", 3)
+        cap.write(f"if ({herrcode} /= 0) then", 3)
+        cap.write("return", 4)
+        cap.write("end if", 3)
+        cap.write("end do", 2)
         cap.blank_line()
         # Register dynamic constituents
         if len(dyn_const_dict) > 0:
            cap.comment("Add dynamic constituent properties", 2)
-           cap.write(f"if ({herrcode} == 0) then", 2)
-           cap.write(f"do index = 1, size(dynamic_constituents, 1)", 3)
-           cap.write(f"if ({herrcode} == 0) then", 4)
-           cap.write(f"const_prop => dynamic_constituents(index)", 5)
+           cap.write(f"do index = 1, size(dynamic_constituents, 1)", 2)
+           cap.write(f"const_prop => dynamic_constituents(index)", 3)
            stmt = f"call {const_obj_name}%new_field(const_prop, {obj_err_callstr})"
-           cap.write(stmt, 5)
-           cap.write("end if", 4)
-           cap.write("nullify(const_prop)", 4)
-           cap.write(f"if ({herrcode} /= 0) then", 4)
-           cap.write("exit", 5)
-           cap.write("end if", 4)
-           cap.write("end do", 3)
-           cap.write("end if", 2)
+           cap.write(stmt, 3)
+           cap.write("nullify(const_prop)", 3)
+           cap.write(f"if ({herrcode} /= 0) then", 3)
+           cap.write("return", 4)
+           cap.write("end if", 3)
+           cap.write("end do", 2)
         # end if
         
         # Register suite constituents
         for suite in suite_list:
             errvar_str = ConstituentVarDict.__errcode_callstr(herrcode,
                                                               herrmsg, suite)
-            cap.write(f"if ({herrcode} == 0) then", 2)
-            cap.comment(f"Add {suite.name} constituent metadata", 3)
+            cap.comment(f"Add {suite.name} constituent metadata", 2)
             const_dict = suite.constituent_dictionary()
             funcname = const_dict.num_consts_funcname()
-            cap.write(f"num_suite_consts = {funcname}({errvar_str})", 3)
+            cap.write(f"num_suite_consts = {funcname}({errvar_str})", 2)
+            cap.write(f"if ({herrcode} /= 0) then", 2)
+            cap.write("return", 3)
             cap.write("end if", 2)
             funcname = const_dict.copy_const_subname()
-            cap.write(f"if ({herrcode} == 0) then", 2)
-            cap.write("do index = 1, num_suite_consts", 3)
-            cap.write(f"if ({herrcode} == 0) then", 4)
-            cap.write(f"allocate(const_prop, stat={herrcode})", 5)
-            cap.write("end if", 4)
-            cap.write(f"if ({herrcode} /= 0) then", 4)
-            cap.write(f'{herrmsg} = "ERROR allocating const_prop"', 5)
-            cap.write("exit", 5)
-            cap.write("end if", 4)
-            cap.write(f"if ({herrcode} == 0) then", 4)
+            cap.write("do index = 1, num_suite_consts", 2)
+            cap.write(f"allocate(const_prop, stat={herrcode})", 3)
+            cap.write(f"if ({herrcode} /= 0) then", 3)
+            cap.write(f'{herrmsg} = "ERROR allocating const_prop"', 4)
+            cap.write("return", 4)
+            cap.write("end if", 3)
             stmt = f"call {funcname}(index, const_prop, {errvar_str})"
-            cap.write(stmt, 5)
-            cap.write("end if", 4)
-            cap.write(f"if ({herrcode} == 0) then", 4)
+            cap.write(stmt, 3)
+            cap.write(f"if ({herrcode} /= 0) then", 3)
+            cap.write("return", 4)
+            cap.write("end if", 3)
             stmt = f"call {const_obj_name}%new_field(const_prop, {obj_err_callstr})"
-            cap.write(stmt, 5)
-            cap.write("end if", 4)
-            cap.write("nullify(const_prop)", 4)
-            cap.write(f"if ({herrcode} /= 0) then", 4)
-            cap.write("exit", 5)
-            cap.write("end if", 4)
-            cap.write("end do", 3)
-            cap.write("end if", 2)
+            cap.write(stmt, 3)
+            cap.write("nullify(const_prop)", 3)
+            cap.write(f"if ({herrcode} /= 0) then", 3)
+            cap.write("return", 4)
+            cap.write("end if", 3)
+            cap.write("end do", 2)
             cap.blank_line()
         # end for
-        cap.write(f"if ({herrcode} == 0) then", 2)
         stmt = f"call {const_obj_name}%lock_table({obj_err_callstr})"
-        cap.write(stmt, 3)
+        cap.write(stmt, 2)
+        cap.write(f"if ({herrcode} /= 0) then", 2)
+        cap.write("return", 3)
         cap.write("end if", 2)
-        cap.write(f"if ({herrcode} == 0) then", 2)
-        cap.comment("Set the index for each active constituent", 3)
-        cap.write(f"do index = 1, SIZE({const_indices_name})", 3)
+        cap.comment("Set the index for each active constituent", 2)
+        cap.write(f"do index = 1, SIZE({const_indices_name})", 2)
         stmt = f"call {const_obj_name}%const_index(field_ind, {const_names_name}(index), {obj_err_callstr})"
-        cap.write(stmt, 4)
-        cap.write("if (field_ind > 0) then", 4)
-        cap.write(f"{const_indices_name}(index) = field_ind", 5)
-        cap.write("else", 4)
-        cap.write(f"{herrcode} = 1", 5)
+        cap.write(stmt, 3)
+        cap.write(f"if ({herrcode} /= 0) then", 3)
+        cap.write("return", 4)
+        cap.write("end if", 3)
+        cap.write("if (field_ind > 0) then", 3)
+        cap.write(f"{const_indices_name}(index) = field_ind", 4)
+        cap.write("else", 3)
+        cap.write(f"{herrcode} = 1", 4)
         stmt = f"{herrmsg} = 'No field index for '//trim({const_names_name}(index))"
-        cap.write(stmt, 5)
-        cap.write("end if", 4)
-        cap.write(f"if ({herrcode} /= 0) then", 4)
-        cap.write("exit", 5)
-        cap.write("end if", 4)
-        cap.write("end do", 3)
-        cap.write("end if", 2)
+        cap.write(stmt, 4)
+        cap.write("return", 4)
+        cap.write("end if", 3)
+        cap.write("end do", 2)
         cap.write(f"end {substmt}", 1)
         # Write constituent_init routine
         substmt = f"subroutine {init_funcname}"
