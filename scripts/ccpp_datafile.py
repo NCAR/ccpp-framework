@@ -22,13 +22,20 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 # CCPP framework imports
+from framework_env import CCPPFrameworkEnv
 from metadata_table import UNKNOWN_PROCESS_TYPE
 from metavar import Var
 from parse_tools import read_xml_file, PrettyElementTree
+from parse_tools import ParseContext, ParseSource
 from suite_objects import VerticalLoop, Subcycle
 
 # Global data
 _INDENT_STR = "  "
+
+# Used for creating template variables
+_MVAR_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
+                                                    'scheme_files':'',
+                                                    'suites':''})
 
 ## datatable_report must have an action for each report type
 _VALID_REPORTS = [{"report" : "host_files", "type" : bool,
@@ -95,7 +102,20 @@ class DatatableReport(object):
     __valid_actions = [x["report"] for x in _VALID_REPORTS]
 
     def __init__(self, action, value=True):
-        """Initialize this report as report-type, <action>"""
+        """Initialize this report as report-type, <action>
+        # Test a valid action
+        >>> DatatableReport('input_variables', False).action
+        'input_variables'
+        >>> DatatableReport('dyn_const_routines', True).value
+        True
+
+        # Test an invalid action
+        >>> DatatableReport('banana', True).value
+        Traceback (most recent call last):
+        ...
+        ValueError: Invalid action, 'banana'
+
+        """
         if action in DatatableReport.__valid_actions:
             self.__action = action
             self.__value = value
@@ -105,7 +125,13 @@ class DatatableReport(object):
 
     def action_is(self, action):
         """If <action> matches this report type, return True.
-        Otherwise, return False"""
+        Otherwise, return False
+        >>> DatatableReport('suite_files', False).action_is('suite_files')
+        True
+
+        >>> DatatableReport('suite_files', False).action_is('banana')
+        False
+        """
         return action == self.__action
 
     @property
@@ -207,7 +233,19 @@ def _read_datatable(datatable):
 def _find_table_section(table, elem_type):
 ###############################################################################
     """Look for and return an element type, <elem_type>, in <table>.
-    Raise an exception if the element is not found."""
+    Raise an exception if the element is not found.
+    # Test present section
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><ccpp_files></ccpp_files></ccpp_datatable>")
+    >>> _find_table_section(table, "ccpp_files").tag
+    'ccpp_files'
+
+    # Test missing section
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><scheme></scheme></ccpp_datatable>")
+    >>> _find_table_section(table, "ccpp_files").tag
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Element type, 'ccpp_files', not found in table
+    """
     found = table.find(elem_type)
     if found is None:
         emsg = "Element type, '{}', not found in table"
@@ -219,7 +257,26 @@ def _find_table_section(table, elem_type):
 def _retrieve_ccpp_files(table, file_type=None):
 ###############################################################################
     """Find and retrieve a list of generated filenames from <table>.
-    If <file_type> is not None, only return that file type."""
+    If <file_type> is not None, only return that file type.
+    # Test valid ccpp files
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><ccpp_files>"\
+                "<utilities><file>/path/to/file1</file>"\
+                "<file>/path/to/file2</file></utilities>"\
+                "<host_files><file>/path/to/file3</file></host_files>"\
+                "<scheme_files><file>/path/to/file4</file></scheme_files>"\
+                "</ccpp_files></ccpp_datatable>")
+    >>> _retrieve_ccpp_files(table)
+    ['/path/to/file1', '/path/to/file2', '/path/to/file3', '/path/to/file4']
+
+    # Test invalid file type
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><ccpp_files>"\
+                "<utilities><banana>/path/to/file1</banana></utilities>"\
+                "</ccpp_files></ccpp_datatable>")
+    >>> _retrieve_ccpp_files(table)
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Invalid file list entry type, 'banana'
+    """
     ccpp_files = list()
     # Find the files section
     for section in _find_table_section(table, "ccpp_files"):
@@ -239,7 +296,23 @@ def _retrieve_ccpp_files(table, file_type=None):
 ###############################################################################
 def _retrieve_process_list(table):
 ###############################################################################
-    """Find and return a list of all physics scheme processes in <table>."""
+    """Find and return a list of all physics scheme processes in <table>.
+    # Test valid module
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><schemes>"\
+                "<scheme name='scheme1' process='three'><initialize></initialize></scheme>"\
+                "<scheme name='scheme2' process='four'><finalize></finalize></scheme>"\
+                "</schemes></ccpp_datatable>")
+    >>> _retrieve_process_list(table)
+    ['four=scheme2', 'three=scheme1']
+
+    # Test no schemes element
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'></ccpp_datatable>")
+    >>> _retrieve_process_list(table)
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Could not find 'schemes' element
+    """
+
     result = list()
     schemes = table.find("schemes")
     if schemes is None:
@@ -252,12 +325,28 @@ def _retrieve_process_list(table):
             result.append("{}={}".format(proc, name))
         # end if
     # end for
-    return result
+    return sorted(result)
 
 ###############################################################################
 def _retrieve_module_list(table):
 ###############################################################################
-    """Find and return a list of all scheme modules in <table>."""
+    """Find and return a list of all scheme modules in <table>.
+    # Test valid module
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><schemes>"\
+                "<scheme><initialize module='partridge'></initialize></scheme>"\
+                "<scheme><finalize module='turtle_dove'></finalize></scheme>"\
+                "</schemes></ccpp_datatable>")
+    >>> _retrieve_module_list(table)
+    ['partridge', 'turtle_dove']
+
+    # Test no schemes element
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'></ccpp_datatable>")
+    >>> _retrieve_module_list(table)
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Could not find 'schemes' element
+
+    """
     result = set()
     schemes = table.find("schemes")
     if schemes is None:
@@ -276,7 +365,28 @@ def _retrieve_module_list(table):
 ###############################################################################
 def _retrieve_dependencies(table):
 ###############################################################################
-    """Find and return a list of all host and scheme dependencies."""
+    """Find and return a list of all host and scheme dependencies.
+    # Test valid dependencies
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><dependencies>" \
+               "<dependency>banana</dependency><dependency>orange"           \
+               "</dependency></dependencies></ccpp_datatable>")
+    >>> _retrieve_dependencies(table)
+    ['banana', 'orange']
+
+    # Test no dependencies
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><dependencies>" \
+               "</dependencies></ccpp_datatable>")
+    >>> _retrieve_dependencies(table)
+    []
+
+    # Test missing dependencies tag
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'></ccpp_datatable>")
+    >>> _retrieve_dependencies(table)
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Could not find 'dependencies' element
+    """
+
     result = set()
     depends = table.find("dependencies")
     if depends is None:
@@ -293,7 +403,29 @@ def _retrieve_dependencies(table):
 ###############################################################################
 def _retrieve_dyn_const_routines(table):
 ###############################################################################
-    """Find and return a list of all scheme constituent routines."""
+    """Find and return a list of all scheme constituent routines.
+    # Test valid dynamic constituent routines
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><dyn_const_routines>" \
+               "<dyn_const_routine parent='banana'>dyn_const_get"    \
+               "</dyn_const_routine><dyn_const_routine>dyn_const_2"  \
+               "</dyn_const_routine></dyn_const_routines></ccpp_datatable>")
+    >>> _retrieve_dyn_const_routines(table)
+    ['dyn_const_2', 'dyn_const_get']
+
+    # Test no dynamic constituent routines
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><dyn_const_routines>" \
+                              "</dyn_const_routines></ccpp_datatable>")
+    >>> _retrieve_dyn_const_routines(table)
+    []
+
+    # Test missing dynamic constituent routines tag
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'></ccpp_datatable>")
+    >>> _retrieve_dyn_const_routines(table)
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Could not find 'dyn_const_routines' element
+
+    """
     result = set()
     routines = table.find("dyn_const_routines")
     if routines is None:
@@ -311,7 +443,29 @@ def _retrieve_dyn_const_routines(table):
 def _find_var_dictionary(table, dict_name=None, dict_type=None):
 ###############################################################################
     """Find and return a var_dictionary named, <dict_name> in <table>.
-    If not found, return None"""
+    If not found, return None
+    # Test valid table with dict_name provided
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><var_dictionaries>"\
+                "<var_dictionary name='banana' type='host'><variables>"\
+                "<var name='hi'></var></variables></var_dictionary>"\
+                "<var_dictionary name='orange' type='api'></var_dictionary>"\
+                "</var_dictionaries></ccpp_datatable>")
+    >>> _find_var_dictionary(table, dict_name='orange').get("name")
+    'orange'
+
+    # Test valid table with dict_type provided
+    >>> _find_var_dictionary(table, dict_type='host').get("name")
+    'banana'
+
+    # Test no table found (expect None)
+    >>> _find_var_dictionary(table, dict_name='apple')
+
+    # Test error handling
+    >>> _find_var_dictionary(table)
+    Traceback (most recent call last):
+    ...
+    ValueError: At least one of <dict_name> or <dict_type> must contain a string
+    """
     var_dicts = table.find("var_dictionaries")
     target_dict = None
     if (dict_name is None) and (dict_type is None):
@@ -330,7 +484,19 @@ def _find_var_dictionary(table, dict_name=None, dict_type=None):
 ###############################################################################
 def _retrieve_suite_list(table):
 ###############################################################################
-    """Find and return a list of all suites found in <table>."""
+    """Find and return a list of all suites found in <table>.
+    # Test suites are found
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><api><suites>"\
+                "<suite name='umbrella'></suite><suite name='galoshes'></suite>"\
+                "</suites></api></ccpp_datatable>")
+    >>> _retrieve_suite_list(table)
+    ['umbrella', 'galoshes']
+
+    # Test suites not found
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'></ccpp_datatable>")
+    >>> _retrieve_suite_list(table)
+    []
+    """
     result = list()
     # First, find the API variable dictionary
     api_elem = table.find("api")
@@ -347,7 +513,21 @@ def _retrieve_suite_list(table):
 ###############################################################################
 def _retrieve_suite_group_names(table, suite_name):
 ###############################################################################
-    """Find and return a list of the group names for this suite."""
+    """Find and return a list of the group names for this suite.
+    # Test suites are found
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><api><suites>"\
+                "<suite name='umbrella'><group name='florence'></group>"\
+                "<group name='delores'></group><group name='edna'></group></suite>"\
+                "<suite name='galoshes'><group name='clarence'></group></suite>"\
+                "</suites></api></ccpp_datatable>")
+    >>> _retrieve_suite_group_names(table, 'umbrella')
+    ['florence', 'delores', 'edna']
+
+    # Test non-present suite
+    >>> _retrieve_suite_group_names(table, 'poncho')
+    []
+    """
+
     result = list()
     # First, find the API variable dictionary
     api_elem = table.find("api")
@@ -373,6 +553,23 @@ def _is_variable_protected(table, var_name, var_dict):
     """Determine whether variable, <var_name>, from <var_dict> is protected.
     So this by checking for the 'protected' attribute for <var_name> in
     <var_dict> or any of <var_dict>'s ancestors (parent dictionaries).
+    # Test found variable
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><var_dictionaries>"\
+                "<var_dictionary name='banana' type='host'><variables>"\
+                "<var name='hi' protected='True'></var></variables></var_dictionary>"\
+                "<var_dictionary name='orange' type='api'><variables><var name='hello'>"\
+                "</var><var name='howdy'></var></variables></var_dictionary></var_dictionaries></ccpp_datatable>")
+    >>> var_dict = _find_var_dictionary(table, dict_name="banana")
+    >>> _is_variable_protected(table, "hi", var_dict)
+    True
+
+    >>> var_dict = _find_var_dictionary(table, dict_type="api")
+    >>> _is_variable_protected(table, "hello", var_dict)
+    False
+
+    # Test non-present variable also returns False
+    >>> _is_variable_protected(table, "hiya", var_dict)
+    False
     """
     protected = False
     while (not protected) and (var_dict is not None):
@@ -402,7 +599,48 @@ def _retrieve_variable_list(table, suite_name,
     If suite, <suite_name>, is not found in <table>, return an empty list.
     If <intent_type> is present, return only that variable type (input or
     output).
-    If <excl_prot> is True, do not include protected variables"""
+    If <excl_prot> is True, do not include protected variables
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><api><suites><suite name='fruit'>"\
+            "<group name='orange'></group></suite></suites></api><var_dictionaries>"\
+            "<var_dictionary name='banana' type='host'><variables><var name='var1' intent='inout'>"\
+            "</var><var name='var2' intent='out' protected='True'></var></variables></var_dictionary>"\
+            "<var_dictionary name='orange_call_list' type='group_call_list'><variables><var name='var3' intent='in'>"\
+            "</var><var name='var4' intent='out' protected='True'></var><var name='var5' intent='inout' protected='True'>"\
+            "</var></variables></var_dictionary></var_dictionaries></ccpp_datatable>")
+
+    # Test group variable retrieval
+    >>> _retrieve_variable_list(table, 'fruit', excl_prot=False)
+    ['var3', 'var4', 'var5']
+
+    >>> _retrieve_variable_list(table, 'fruit')
+    ['var3']
+
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='input', excl_prot=False)
+    ['var3', 'var5']
+
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='output', excl_prot=False)
+    ['var4', 'var5']
+
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='input')
+    ['var3']
+
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='output')
+    []
+
+    # Test host variable retrieval
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='host', excl_prot=False)
+    ['var1', 'var2']
+
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='host')
+    ['var1']
+
+    # Test invalid intent type
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='banana')
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Invalid intent_type, 'banana'
+
+    """
     # Note that suites do not have call lists so we have to collect
     # all the variables from the suite's groups.
     var_set = set()
@@ -549,6 +787,19 @@ def _format_line(line_in, indent, line_wrap, increase_indent=True):
     If <increase_indent> is True, increase the indent level for new lines
     created by the process.
     A value of <line_wrap> less one means do not wrap the line.
+    >>> line = "This is a very long string that should be wrapped hopefully"
+    >>> _format_line(line, 1, 50)
+    '  This is a very long string that should be\\n      wrapped hopefully\\n'
+
+    >>> _format_line(line, 1, 50, increase_indent=False)
+    '  This is a very long string that should be\\n  wrapped hopefully\\n'
+
+    >>> _format_line(line, 0, 50)
+    'This is a very long string that should be wrapped\\n    hopefully\\n'
+
+    >>> line = 'short line'
+    >>> _format_line(line, 0, 2, increase_indent=False)
+    'short\\nline\\n'
     """
     in_squote = False
     in_dquote = False
@@ -610,7 +861,14 @@ def _format_line(line_in, indent, line_wrap, increase_indent=True):
 ###############################################################################
 def table_entry_pretty_print(entry, indent, line_wrap=-1):
 ###############################################################################
-    """Create and return a pretty print string of the contents of <entry>"""
+    """Create and return a pretty print string of the contents of <entry>
+    >>> table = ET.fromstring("<ccpp_datatable><banana name='apple'></banana></ccpp_datatable>")
+    >>> table_entry_pretty_print(table, 0)
+    '<ccpp_datatable>\\n  <banana name=apple />\\n</ccpp_datatable>\\n'
+
+    >>> table_entry_pretty_print(table, 1, line_wrap=20)
+    '  <ccpp_datatable>\\n    <banana\\n        name=apple\\n        />\\n  </ccpp_datatable>\\n'
+    """
     output = ""
     outline = "<{}".format(entry.tag)
     for name in entry.attrib:
@@ -668,6 +926,16 @@ def _new_var_entry(parent, var, full_entry=True):
 ###############################################################################
     """Create a variable sub-element of <parent> with information from <var>.
     If <full_entry> is False, only include standard name and intent.
+    >>> parent = ET.fromstring('<variables></variables>')
+    >>> var = Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(horizontal_loop_extent)', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'DDT', ParseContext()), _MVAR_DUMMY_RUN_ENV)
+    >>> _new_var_entry(parent, var)
+    >>> table_entry_pretty_print(parent, 0)
+    '<variables>\\n  <var name=hi_mom intent=in local_name=foo active=.true. kind=kind_phys persistence=timestep type=real units=m s-1>\\n    <dimensions>\\n      horizontal_loop_extent\\n    </dimensions>\\n    <source_type>\\n      ddt\\n    </source_type>\\n    <source_name>\\n      vname\\n    </source_name>\\n  </var>\\n</variables>\\n'
+
+    >>> parent = ET.fromstring('<variables></variables>')
+    >>> _new_var_entry(parent, var, full_entry=False)
+    >>> table_entry_pretty_print(parent, 0)
+    '<variables>\\n  <var name=hi_mom intent=in local_name=foo />\\n</variables>\\n'
     """
     prop_list = ["intent", "local_name"]
     if full_entry:
@@ -805,6 +1073,12 @@ def _add_dependencies(parent, scheme_depends, host_depends):
 ###############################################################################
     """Add a section to <parent> that lists all the dependencies
     required by schemes or the host model.
+    >>> parent = ET.fromstring("<ccpp_datafile></ccpp_datafile>")
+    >>> scheme_depends = ['file1', 'file2']
+    >>> host_depends = ['file3', 'file4']
+    >>> _add_dependencies(parent, scheme_depends, host_depends)
+    >>> table_entry_pretty_print(parent, 0)
+    '<ccpp_datafile>\\n  <dependencies>\\n    <dependency>\\n      file3\\n    </dependency>\\n    <dependency>\\n      file4\\n    </dependency>\\n    <dependency>\\n      file1\\n    </dependency>\\n    <dependency>\\n      file2\\n    </dependency>\\n  </dependencies>\\n</ccpp_datafile>\\n'
     """
     file_entry = ET.SubElement(parent, "dependencies")
     for hfile in host_depends:
@@ -820,11 +1094,15 @@ def _add_dependencies(parent, scheme_depends, host_depends):
 def _add_dyn_const_routine(file_entry, routine, scheme):
 ###############################################################################
     """Add a section to <parent> that lists all the constituent routines
-    for the suite"""
+    for the suite
+    >>> file_entry = ET.fromstring("<ccpp_datatable><dyn_const_routines></dyn_const_routines></ccpp_datatable>")
+    >>> _add_dyn_const_routine(file_entry, 'test_dyn_const', 'test_scheme')
+    >>> table_entry_pretty_print(file_entry, 0)
+    '<ccpp_datatable>\\n  <dyn_const_routines />\\n  <dyn_const_routine parent=test_scheme>\\n    test_dyn_const\\n  </dyn_const_routine>\\n</ccpp_datatable>\\n'
+    """
     entry = ET.SubElement(file_entry, "dyn_const_routine")
     entry.text = routine
     entry.set("parent", scheme)
-    # end for
 
 ###############################################################################
 def _add_generated_files(parent, host_files, suite_files, ccpp_kinds, src_dir):
