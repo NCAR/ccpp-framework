@@ -631,7 +631,7 @@ def capgen(run_env, return_db=False):
         routine_name = scheme_tdict[table].dyn_const_routine
         if routine_name is not None:
             if routine_name not in dyn_const_dict.values():
-               dyn_const_dict[table] = scheme_tdict[table].dyn_const_routine
+               dyn_const_dict[table] = routine_name
             else:
                # dynamic constituent routines must have unique names
                scheme_name = list(dyn_const_dict.keys())[list(dyn_const_dict.values()).index(routine_name)]

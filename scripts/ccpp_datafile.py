@@ -431,13 +431,9 @@ def _retrieve_dyn_const_routines(table):
     if routines is None:
         raise CCPPDatatableError("Could not find 'dyn_const_routines' element")
     # end if
-    for routine in routines:
-        routine_name = routine.text
-        if routine_name is not None:
-            result.add(routine_name)
-        # end if
+    routine_names = [routine.text for routine in routines if routine.text]
     # end for
-    return sorted(result)
+    return sorted(routine_names)
 
 ###############################################################################
 def _find_var_dictionary(table, dict_name=None, dict_type=None):
@@ -457,8 +453,13 @@ def _find_var_dictionary(table, dict_name=None, dict_type=None):
     >>> _find_var_dictionary(table, dict_type='host').get("name")
     'banana'
 
+    # Test valid table with both dict_type and dict_name provided
+    >>> _find_var_dictionary(table, dict_type='host', dict_name='banana').get("name")
+    'banana'
+
     # Test no table found (expect None)
-    >>> _find_var_dictionary(table, dict_name='apple')
+    >>> _find_var_dictionary(table, dict_name='apple') is None
+    True
 
     # Test error handling
     >>> _find_var_dictionary(table)
