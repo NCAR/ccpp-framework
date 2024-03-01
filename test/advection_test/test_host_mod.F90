@@ -34,13 +34,14 @@ module test_host_mod
 
 contains
 
-   subroutine init_data(constituent_array, index_qv_use, index_liq, index_ice)
+   subroutine init_data(constituent_array, index_qv_use, index_liq, index_ice, index_dyn)
 
       ! Dummy arguments
       real(kind_phys), pointer  :: constituent_array(:,:,:) ! From host & suites
       integer,       intent(in) :: index_qv_use
       integer,       intent(in) :: index_liq
       integer,       intent(in) :: index_ice
+      integer,       intent(in) :: index_dyn
 
       ! Local variables
       integer                    :: col
@@ -60,6 +61,7 @@ contains
       ind_ice = index_ice
       allocate(check_vals(ncols, pver, ncnst))
       check_vals(:,:,:) = 0.0_kind_phys
+      check_vals(:,:,index_dyn) = 1.0_kind_phys
       do lev = 1, pver
          phys_state%temp(:, lev) = tfreeze + (10.0_kind_phys * (lev - 3))
          qmax = real(lev, kind_phys)
