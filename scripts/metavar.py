@@ -1728,9 +1728,9 @@ class VarDictionary(OrderedDict):
                     err_ret += f"{self.name}: "
                     err_ret += f"Cannot find variable for dimension, {dimname}, of {vstdname}{ctx}"
                     if dvar:
-                        err_ret += f"\nFound {lname} from excluded source, '{dvar.source.ptype}'{dctx}"
                         lname = dvar.get_prop_value('local_name')
                         dctx = context_string(dvar.context)
+                        err_ret += f"\nFound {lname} from excluded source, '{dvar.source.ptype}'{dctx}"
                     # end if
                 # end if
             # end if
