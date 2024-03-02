@@ -1724,6 +1724,10 @@ class VerticalLoop(SuiteObject):
             local_dim = group.call_list.find_variable(standard_name=dim_name,
                                                       any_scope=False)
         # end if
+        # If not found, check the suite level
+        if local_dim is None:
+            local_dim = group.suite.find_variable(standard_name=dim_name)
+        # end if
         if local_dim is None:
             emsg = 'No variable found for vertical loop dimension {}'
             raise ParseInternalError(emsg.format(self._dim_name))
