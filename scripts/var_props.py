@@ -976,8 +976,13 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transform (Indices handled externally)
-        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
-        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+        if len(rvar_indices) == 0:
+            rhs_term = f"{rvar_lname}"
+            lhs_term = f"{lvar_lname}"
+        else:
+            rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+            lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+        # end if
 
         if self.has_kind_transforms:
             kind = self.__kind_transforms[1]
@@ -1016,8 +1021,13 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transforms (Indices handled externally)
-        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
-        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+        if len(rvar_indices) == 0:
+            rhs_term = f"{rvar_lname}"
+            lhs_term = f"{lvar_lname}"
+        else:
+            lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+            rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+        # end if
 
         if self.has_kind_transforms:
             kind = self.__kind_transforms[0]

@@ -1535,6 +1535,16 @@ class Scheme(SuiteObject):
 
         # If needed, modify vertical dimension for vertical orientation flipping
         _, vdim    = find_vertical_dimension(var.get_dimensions())
+        if vdim >= 0:
+           vdim_name  = vert_dim.split(':')[-1]
+           group_vvar = self.__group.call_list.find_variable(vdim_name)
+           vname      = group_vvar.get_prop_value('local_name')
+           lindices[vdim] = '1:'+vname
+           rindices[vdim] = '1:'+vname
+           if compat_obj.has_vert_transforms:
+               rindices[vdim] = vname+':1:-1'
+           # end if
+        # end if
         vdim_name  = vert_dim.split(':')[-1]
         group_vvar = self.__group.call_list.find_variable(vdim_name)
         vname      = group_vvar.get_prop_value('local_name')
@@ -1614,9 +1624,12 @@ class Scheme(SuiteObject):
         for (var, internal_var) in self.__var_debug_checks:
             stmt = self.write_var_debug_check(var, internal_var, cldicts, outfile, errcode, errmsg, indent+1)
         # Write any reverse (pre-Scheme) transforms.
-        outfile.write('! Compute reverse (pre-scheme) transforms', indent+1)
+        if len(self.__reverse_transforms) > 0:
+            outfile.write('! Compute reverse (pre-scheme) transforms', indent+1)
+        # end if
         for (dummy, var, rindices, lindices, compat_obj) in self.__reverse_transforms:
             tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
+        # end for
         # Write the scheme call.
         stmt = 'call {}({})'
         outfile.write('',indent+1)
@@ -1624,10 +1637,12 @@ class Scheme(SuiteObject):
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
         # Write any forward (post-Scheme) transforms.
         outfile.write('',indent+1)
-        outfile.write('! Compute forward (post-scheme) transforms', indent+1)
+        if len(self.__forward_transforms) > 0:
+            outfile.write('! Compute forward (post-scheme) transforms', indent+1)
+        # end if
         for (var, dummy, lindices, rindices, compat_obj) in self.__forward_transforms:
             tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
-        #
+        # end for
         outfile.write('', indent)
         outfile.write('end if', indent)
 
