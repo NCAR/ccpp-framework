@@ -1027,7 +1027,7 @@ class Var:
                     vars_needed.append(dvar)
         return (conditional, vars_needed)
 
-    def write_def(self, outfile, indent, wdict, allocatable=False, target=None,
+    def write_def(self, outfile, indent, wdict, allocatable=False, target=False,
                   dummy=False, add_intent=None, extra_space=0, public=False):
         """Write the definition line for the variable to <outfile>.
         If <dummy> is True, include the variable's intent.
@@ -1892,21 +1892,8 @@ class VarDictionary(OrderedDict):
                                      any_scope=False)
             if self.include_var_in_list(var, std_vars=std_vars,
                                         loop_vars=loop_vars, consts=consts):
-                if (not var.get_prop_value('optional')):
-                    self[standard_name].write_def(outfile, indent, self,
-                                                  dummy=dummy)
-                # end if
-            # end if
-        # end for
-        for standard_name in self.keys():
-            var = self.find_variable(standard_name=standard_name,
-                                     any_scope=False)
-            if self.include_var_in_list(var, std_vars=std_vars,
-                                        loop_vars=loop_vars, consts=consts):
-                if (var.get_prop_value('optional')):
-                    self[standard_name].write_def(outfile, indent, self,
-                                                  dummy=dummy)
-                # end if
+                self[standard_name].write_def(outfile, indent, self,
+                                              dummy=dummy)
             # end if
         # end for
 

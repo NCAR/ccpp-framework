@@ -2293,6 +2293,7 @@ class Group(SuiteObject):
                                 optional_var_set.add(lname)
                             else:
                                 inactive_var_set.add(var)
+                            # end if
                         else:
                             subpart_allocate_vars[lname] = (var, item, opt_var)
                             allocatable_var_set.add(lname)
@@ -2379,7 +2380,7 @@ class Group(SuiteObject):
         # end if
         self.call_list.declare_variables(outfile, indent+1, dummy=True)
         # DECLARE local variables
-        if subpart_allocate_vars:
+        if subpart_allocate_vars or subpart_scalar_vars or subpart_optional_vars:
             outfile.write('\n! Local Variables', indent+1)
         # end if
         # Scalars
@@ -2508,6 +2509,7 @@ class Group(SuiteObject):
         for (name, kind, dim, vtype) in pointer_var_set:
             #cspace = ' '*(15-len(name))
             outfile.write('if (associated({})) {} nullify({})'.format(name,' '*(15-len(name)),name), indent+1)
+        # end fo
         # Deallocate suite vars
         if deallocate:
             for svar in suite_vars.variable_list():
