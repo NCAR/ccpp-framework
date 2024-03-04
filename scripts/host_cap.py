@@ -483,7 +483,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
             # Look for any loop-variable mismatch
             for suite in api.suites:
                 spart_list = suite_part_list(suite, stage)
-                for _, spart in sorted(enumerate(spart_list)):
+                for spart in spart_list:
                     spart_args = spart.call_list.variable_list()
                     for sp_var in spart_args:
                         stdname = sp_var.get_prop_value('standard_name')
@@ -530,7 +530,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
             for suite in api.suites:
                 mspc = (max_suite_len - len(suite.module))*' '
                 spart_list = suite_part_list(suite, stage)
-                for _, spart in sorted(enumerate(spart_list)):
+                for spart in spart_list:
                     stmt = "use {}, {}only: {}"
                     cap.write(stmt.format(suite.module, mspc, spart.name), 2)
                 # End for
