@@ -161,7 +161,7 @@ class Var(object):
     def actions(self, values):
         if isinstance(values, dict):
             for key in values.keys():
-                if key in ['in', 'out'] and isstring(values[key]):
+                if key in ['in', 'out', 'in_inactive', 'out_inactive'] and isstring(values[key]):
                     self._actions[key] = values[key]
                 else:
                     raise Exception('Invalid values for variable attribute actions.')

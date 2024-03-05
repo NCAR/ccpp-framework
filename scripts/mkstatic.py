@@ -1341,6 +1341,8 @@ end module {module}
                                 tmpvar = tmpvars[local_vars[var_standard_name]['name']]
                                 actions_in  = tmpvar.actions['in']
                                 actions_out = tmpvar.actions['out']
+                                actions_in_inactive = tmpvar.actions['in_inactive']
+                                actions_out_inactive = tmpvar.actions['out_inactive']
                             else:
                                 # Add a local variable (tmpvar) for this variable
                                 tmpvar_cnt += 1
@@ -1388,6 +1390,9 @@ end module {module}
                                 var_defs_manual.append('integer :: ib, nb')
 
                                 # Define actions before. Always copy data in, independent of intent.
+                                dims_inactive = ','.join('0' for dim in tmpvar.dimensions)
+                                actions_in_inactive = '''        ! Dummy-allocate local variable to length 0
+        allocate({tmpvar}({dims_inactive}))'''.format(tmpvar=tmpvar.local_name, dims_inactive=dims_inactive)
                                 actions_in = '''        ! Allocate local variable to copy blocked data {var} into a contiguous array
         allocate({tmpvar}({dims}))
         ib = 1
@@ -1421,9 +1426,10 @@ end module {module}
                                 else:
                                     actions_out = '''        deallocate({tmpvar})
 '''.format(tmpvar=tmpvar.local_name)
-
+                                actions_out_inactive = '''        deallocate({tmpvar})
+'''.format(tmpvar=tmpvar.local_name)
                                 # Set/update actions for this temporary variable
-                                tmpvar.actions = {'in' : actions_in, 'out' : actions_out}
+                                tmpvar.actions = {'in' : actions_in, 'out' : actions_out, 'in_inactive' : actions_in_inactive, 'out_inactive' : actions_out_inactive}
                                 tmpvars[local_vars[var_standard_name]['name']] = tmpvar
 
                             # Add unit conversions, if necessary
@@ -1447,16 +1453,20 @@ end module {module}
                             actions_before += '''
       if ({conditional}) then
 {actions_in}
+      else
+{actions_in_inactive}
       end if
 '''.format(conditional=conditionals[var_standard_name],
-           actions_in=actions_in.rstrip('\n'))
+           actions_in=actions_in.rstrip('\n'), actions_in_inactive=actions_in_inactive.rstrip('\n'))
                             # Add the conditionals for the "after" operations
                             actions_after += '''
       if ({conditional}) then
 {actions_out}
+      else
+{actions_out_inactive}
       end if
 '''.format(conditional=conditionals[var_standard_name],
-           actions_out=actions_out.rstrip('\n'))
+           actions_out=actions_out.rstrip('\n'), actions_out_inactive=actions_out_inactive.rstrip('\n'))
 
                             # Add to argument list
                             arg = '{local_name}={var_name},'.format(local_name=var.local_name, var_name=tmpvar.local_name)
