@@ -33,3 +33,10 @@
   type = real
   kind = kind_phys
   active = (flag_indicating_cloud_microphysics_has_graupel)
+[scalar_var]
+  standard_name = scalar_variable_for_testing
+  long_name = unused scalar variable
+  units = m
+  dimensions = ()
+  type = real
+  kind = kind_phys

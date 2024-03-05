@@ -821,6 +821,18 @@ class VarCompatObj:
                      _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", ('k',), ('nk-k+1',))
     'var1_lname(nk-k+1) = var2_lname(k)'
 
+    # Test that unit conversions with a scalar var works
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "Pa", [], "var1_lname", False, \
+                      "var_stdname", "real", "kind_phys", "hPa", [], "var2_lname", False, \
+                      _DOCTEST_RUNENV).forward_transform("var1_lname", "var2_lname", [], []) #doctest: +ELLIPSIS
+    'var1_lname = 1.0E-2_kind_phys*var2_lname'
+
+    # Test that unit conversions with a scalar var works
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "Pa", [], "var1_lname", False, \
+                      "var_stdname", "real", "kind_phys", "hPa", [], "var2_lname", False, \
+                      _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", [], []) #doctest: +ELLIPSIS
+    'var1_lname = 1.0E+2_kind_phys*var2_lname'
+
     # Test that a 2-D var with unit conversion m->km works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
                      "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \

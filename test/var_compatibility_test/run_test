@@ -140,6 +140,7 @@ required_vars_var_compatibility="${required_vars_var_compatibility},flag_indicat
 required_vars_var_compatibility="${required_vars_var_compatibility},horizontal_dimension"
 required_vars_var_compatibility="${required_vars_var_compatibility},horizontal_loop_begin"
 required_vars_var_compatibility="${required_vars_var_compatibility},horizontal_loop_end"
+required_vars_var_compatibility="${required_vars_var_compatibility},scalar_variable_for_testing"
 required_vars_var_compatibility="${required_vars_var_compatibility},vertical_layer_dimension"
 input_vars_var_compatibility="effective_radius_of_stratiform_cloud_graupel"
 input_vars_var_compatibility="${input_vars_var_compatibility},effective_radius_of_stratiform_cloud_liquid_water_particle"
@@ -149,11 +150,13 @@ input_vars_var_compatibility="${input_vars_var_compatibility},flag_indicating_cl
 input_vars_var_compatibility="${input_vars_var_compatibility},horizontal_dimension"
 input_vars_var_compatibility="${input_vars_var_compatibility},horizontal_loop_begin"
 input_vars_var_compatibility="${input_vars_var_compatibility},horizontal_loop_end"
+input_vars_var_compatibility="${input_vars_var_compatibility},scalar_variable_for_testing"
 input_vars_var_compatibility="${input_vars_var_compatibility},vertical_layer_dimension"
 output_vars_var_compatibility="ccpp_error_code,ccpp_error_message"
 output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius_of_stratiform_cloud_ice_particle"
 output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius_of_stratiform_cloud_liquid_water_particle"
 output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius_of_stratiform_cloud_snow_particle"
+output_vars_var_compatibility="${output_vars_var_compatibility},scalar_variable_for_testing"
 
 ##
 ## Run a database report and check the return string
