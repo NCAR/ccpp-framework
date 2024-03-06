@@ -1735,7 +1735,7 @@ class Scheme(SuiteObject):
         # end if
         for (var, dummy, lindices, rindices, compat_obj) in self.__forward_transforms:
             tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
-        # for
+        # end for
         outfile.write('', indent)
         outfile.write('end if', indent)
 
