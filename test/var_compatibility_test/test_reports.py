@@ -72,11 +72,13 @@ _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horiz
                           "effective_radius_of_stratiform_cloud_rain_particle",
                           "effective_radius_of_stratiform_cloud_snow_particle",
                           "effective_radius_of_stratiform_cloud_graupel",
+                          "scalar_variable_for_testing",
                           "flag_indicating_cloud_microphysics_has_graupel"]
 _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "effective_radius_of_stratiform_cloud_ice_particle",
                            "effective_radius_of_stratiform_cloud_liquid_water_particle",
-                           "effective_radius_of_stratiform_cloud_snow_particle"]
+                           "effective_radius_of_stratiform_cloud_snow_particle",
+                           "scalar_variable_for_testing"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 
 def fields_string(field_type, field_list, sep):

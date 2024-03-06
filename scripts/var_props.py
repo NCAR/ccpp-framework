@@ -821,6 +821,18 @@ class VarCompatObj:
                      _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", ('k',), ('nk-k+1',))
     'var1_lname(nk-k+1) = var2_lname(k)'
 
+    # Test that unit conversions with a scalar var works
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "Pa", [], "var1_lname", False, \
+                      "var_stdname", "real", "kind_phys", "hPa", [], "var2_lname", False, \
+                      _DOCTEST_RUNENV).forward_transform("var1_lname", "var2_lname", [], []) #doctest: +ELLIPSIS
+    'var1_lname = 1.0E-2_kind_phys*var2_lname'
+
+    # Test that unit conversions with a scalar var works
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "Pa", [], "var1_lname", False, \
+                      "var_stdname", "real", "kind_phys", "hPa", [], "var2_lname", False, \
+                      _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", [], []) #doctest: +ELLIPSIS
+    'var1_lname = 1.0E+2_kind_phys*var2_lname'
+
     # Test that a 2-D var with unit conversion m->km works
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m",  ['horizontal_dimension'], "var1_lname", False, \
                      "var_stdname", "real", "kind_phys", "km", ['horizontal_dimension'], "var2_lname", False, \
@@ -976,8 +988,13 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transform (Indices handled externally)
-        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
-        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+        if len(rvar_indices) == 0:
+            rhs_term = f"{rvar_lname}"
+            lhs_term = f"{lvar_lname}"
+        else:
+            rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+            lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+        # end if
 
         if self.has_kind_transforms:
             kind = self.__kind_transforms[1]
@@ -1016,8 +1033,13 @@ class VarCompatObj:
            "vertical_interface_dimension").
         """
         # Dimension transforms (Indices handled externally)
-        lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
-        rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+        if len(rvar_indices) == 0:
+            rhs_term = f"{rvar_lname}"
+            lhs_term = f"{lvar_lname}"
+        else:
+            lhs_term = f"{lvar_lname}({','.join(lvar_indices)})"
+            rhs_term = f"{rvar_lname}({','.join(rvar_indices)})"
+        # end if
 
         if self.has_kind_transforms:
             kind = self.__kind_transforms[0]
