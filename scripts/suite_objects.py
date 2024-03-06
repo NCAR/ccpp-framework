@@ -1684,7 +1684,7 @@ class Scheme(SuiteObject):
         # end for
         if self.__var_debug_checks:
             outfile.write('! ##################################################################', indent+1)
-            outfile.write('! End debug tests', indent+1)
+            outfile.comment('End debug tests', indent+1)
             outfile.write('! ##################################################################', indent+1)
             outfile.write('', indent+1)
         # end if
