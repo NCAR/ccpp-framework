@@ -1535,13 +1535,31 @@ class Scheme(SuiteObject):
 
         # If needed, modify vertical dimension for vertical orientation flipping
         _, vdim    = find_vertical_dimension(var.get_dimensions())
-        vdim_name  = vert_dim.split(':')[-1]
-        group_vvar = self.__group.call_list.find_variable(vdim_name)
-        vname      = group_vvar.get_prop_value('local_name')
-        lindices[vdim] = '1:'+vname
-        rindices[vdim] = '1:'+vname
-        if compat_obj.has_vert_transforms:
-            rindices[vdim] = vname+':1:-1'
+        if vdim >= 0:
+           vdims  = vert_dim.split(':')
+           vdim_name  = vdims[-1]
+           group_vvar = self.__group.call_list.find_variable(vdim_name)
+           if group_vvar is None:
+               raise CCPPError(f"add_var_transform: Cannot find dimension variable, {vdim_name}")
+           # end if
+           vname = group_vvar.get_prop_value('local_name')
+           if len(vdims) == 2:
+               sdim_name = vdims[0]
+               group_vvar = self.find_variable(sdim_name)
+               if group_vvar is None:
+                   raise CCPPError(f"add_var_transform: Cannot find dimension variable, {sdim_name}")
+               # end if
+               sname = group_vvar.get_prop_value('local_name')
+           else:
+               sname = '1'
+           # end if
+           lindices[vdim] = sname+':'+vname
+           if compat_obj.has_vert_transforms:
+               rindices[vdim] = vname+':'+sname+':-1'
+           else:
+               rindices[vdim] = sname+':'+vname
+           # end if
+        # end if
 
         # If needed, modify horizontal dimension for loop substitution.
         # NOT YET IMPLEMENTED
@@ -1614,9 +1632,12 @@ class Scheme(SuiteObject):
         for (var, internal_var) in self.__var_debug_checks:
             stmt = self.write_var_debug_check(var, internal_var, cldicts, outfile, errcode, errmsg, indent+1)
         # Write any reverse (pre-Scheme) transforms.
-        outfile.write('! Compute reverse (pre-scheme) transforms', indent+1)
+        if len(self.__reverse_transforms) > 0:
+            outfile.comment('Compute reverse (pre-scheme) transforms', indent+1)
+        # end if
         for (dummy, var, rindices, lindices, compat_obj) in self.__reverse_transforms:
             tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
+        # end for
         # Write the scheme call.
         stmt = 'call {}({})'
         outfile.write('',indent+1)
@@ -1624,10 +1645,12 @@ class Scheme(SuiteObject):
         outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
         # Write any forward (post-Scheme) transforms.
         outfile.write('',indent+1)
-        outfile.write('! Compute forward (post-scheme) transforms', indent+1)
+        if len(self.__forward_transforms) > 0:
+            outfile.comment('Compute forward (post-scheme) transforms', indent+1)
+        # end if
         for (var, dummy, lindices, rindices, compat_obj) in self.__forward_transforms:
             tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
-        #
+        # end for
         outfile.write('', indent)
         outfile.write('end if', indent)
 
@@ -1723,6 +1746,10 @@ class VerticalLoop(SuiteObject):
         if local_dim is None:
             local_dim = group.call_list.find_variable(standard_name=dim_name,
                                                       any_scope=False)
+        # end if
+        # If not found, check the suite level
+        if local_dim is None:
+            local_dim = group.suite.find_variable(standard_name=dim_name)
         # end if
         if local_dim is None:
             emsg = 'No variable found for vertical loop dimension {}'

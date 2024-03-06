@@ -10,6 +10,7 @@ module test_host_data
           effrl,                                     & ! effective radius of cloud liquid water
           effri,                                     & ! effective radius of cloud ice
           effrg                                        ! effective radius of cloud graupel
+     real(kind_phys) :: scalar_var
   end type physics_state
 
   public allocate_physics_state
