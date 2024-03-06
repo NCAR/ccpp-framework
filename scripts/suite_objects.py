@@ -1083,6 +1083,7 @@ class Scheme(SuiteObject):
         self.__var_debug_checks = list()
         self.__forward_transforms = list()
         self.__reverse_transforms = list()
+        self._no_run_phase = False
         super().__init__(name, context, parent, run_env, active_call_list=True)
 
     def update_group_call_list_variable(self, var):
@@ -1127,6 +1128,9 @@ class Scheme(SuiteObject):
             if phase in func:
                 my_header = func[phase]
                 self.__subroutine_name = my_header.title
+            else:
+                self._no_run_phase = True
+                return set()
             # end if
         else:
             estr = 'No schemes found for {}'
