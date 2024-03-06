@@ -52,3 +52,10 @@
   kind = kind_phys
   intent = in
   active = (flag_indicating_cloud_microphysics_has_ice)
+[scalar_var]
+  standard_name = scalar_variable_for_testing
+  long_name = unused scalar variable
+  units = m
+  dimensions = ()
+  type = real
+  kind = kind_phys

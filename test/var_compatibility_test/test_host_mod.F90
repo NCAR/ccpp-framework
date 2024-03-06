@@ -27,7 +27,7 @@ contains
     call allocate_physics_state(ncols, pver, phys_state, has_graupel, has_ice)
     phys_state%effrr = 1.0E-3 ! 1000 microns, in meter
     phys_state%effrl = 1.0E-4 ! 100 microns, in meter
-!    phys_state%effri = 5.0E-5 ! 50 microns, in meter
+    phys_state%scalar_var = 1.0 ! in m
     effrs            = 5.0E-4 ! 500 microns, in meter
     if (has_graupel) then
        phys_state%effrg = 2.5E-4 ! 250 microns, in meter
@@ -46,6 +46,7 @@ contains
     real(kind_phys), parameter :: effrl_expected = 5.0E-5 ! 50 microns, in meter
     real(kind_phys), parameter :: effri_expected = 7.5E-5 ! 75 microns, in meter
     real(kind_phys), parameter :: effrs_expected = 5.1E-4 ! 510 microns, in meter
+    real(kind_phys), parameter :: scalar_expected = 2.0E3 ! 2 km, in meter
     real(kind_phys), parameter :: tolerance = 1.0E-6      ! used as scaling factor for expected value
 
     compare_data = .true.
@@ -71,6 +72,12 @@ contains
     if (maxval(abs(           effrs - effrs_expected)) > tolerance*effrs_expected) then
         write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            effrs from expected value exceeds tolerance: ', &
                                       maxval(abs(           effrs - effrs_expected)), ' > ', tolerance*effrs_expected
+        compare_data = .false.
+    end if
+
+    if (abs(  phys_state%scalar_var - scalar_expected) > tolerance*scalar_expected) then
+        write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            scalar_var from expected value exceeds tolerance: ', &
+                                      abs(  phys_state%scalar_var - scalar_expected), ' > ', tolerance*scalar_expected
         compare_data = .false.
     end if
 

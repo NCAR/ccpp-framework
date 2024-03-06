@@ -12,6 +12,7 @@ module test_host_data
           effrg,                                     & ! effective radius of cloud graupel
           ncg,                                       & ! number concentration of cloud graupel
           nci                                          ! number concentration of cloud ice
+     real(kind_phys) :: scalar_var
   end type physics_state
 
   public allocate_physics_state

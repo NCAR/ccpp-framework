@@ -355,7 +355,8 @@ CONTAINS
 
     implicit none
 
-   character(len=cs), target :: test_parts1(1) = (/ 'physics         ' /)
+   character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
+                                                    'physics2        ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
    character(len=cm), target :: test_invars1(6) = (/                          &
         'potential_temperature               ',                               &
