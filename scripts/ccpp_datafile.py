@@ -27,10 +27,6 @@ from metavar import Var
 from parse_tools import read_xml_file, PrettyElementTree
 from suite_objects import VerticalLoop, Subcycle
 
-# Find python version
-PY3 = sys.version_info[0] > 2
-PYSUBVER = sys.version_info[1]
-
 # Global data
 _INDENT_STR = "  "
 
@@ -652,12 +648,13 @@ def _new_var_entry(parent, var, full_entry=True):
     """Create a variable sub-element of <parent> with information from <var>.
     If <full_entry> is False, only include standard name and intent.
     """
-    prop_list = ["intent"]
+    prop_list = ["intent", "local_name"]
     if full_entry:
         prop_list.extend(["allocatable", "active", "default_value",
                           "diagnostic_name", "diagnostic_name_fixed",
                           "kind", "persistence", "polymorphic", "protected",
-                          "state_variable", "type", "units"])
+                          "state_variable", "type", "units", "molar_mass",
+                          "advected", "top_at_one", "optional"])
         prop_list.extend(Var.constituent_property_names())
     # end if
     ventry = ET.SubElement(parent, "var")
@@ -671,9 +668,13 @@ def _new_var_entry(parent, var, full_entry=True):
     if full_entry:
         dims = var.get_dimensions()
         if dims:
-            dim_entry = ET.SubElement(ventry, "dimensions")
-            dim_entry.text = " ".join(dims)
+            v_entry = ET.SubElement(ventry, "dimensions")
+            v_entry.text = " ".join(dims)
         # end if
+        v_entry = ET.SubElement(ventry, "source_type")
+        v_entry.text = var.source.ptype.lower()
+        v_entry = ET.SubElement(ventry, "source_name")
+        v_entry.text = var.source.name.lower()
     # end if
 
 ###############################################################################

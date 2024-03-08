@@ -22,7 +22,7 @@ CONTAINS
 
     integer,                   intent(in)    :: foo
     real(kind_phys),           intent(in)    :: timestep
-    real(kind_phys),           intent(inout) :: qv(:)
+    real(kind_phys),           intent(inout),optional :: qv(:)
     real(kind_phys),           intent(inout) :: ps(:)
     REAL(kind_phys),           intent(in)    :: temp_prev(:)
     REAL(kind_phys),           intent(inout) :: temp_layer(foo)
@@ -42,7 +42,7 @@ CONTAINS
 
     do col_index = 1, foo
        temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)
-       qv(col_index) = qv(col_index) + 1.0_kind_phys
+       if (present(qv)) qv(col_index) = qv(col_index) + 1.0_kind_phys
     end do
     if (present(innie) .and. present(outie) .and. present(optsie)) then
        outie = innie * optsie

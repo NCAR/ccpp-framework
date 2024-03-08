@@ -10,4 +10,5 @@ mkdir build
 cd build
 cmake .. 2>&1 | tee log.cmake
 make 2>&1 | tee log.make
+./test_blocked_data.x
 ```

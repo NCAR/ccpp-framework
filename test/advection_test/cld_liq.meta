@@ -47,7 +47,7 @@
   units = Pa
   dimensions = (horizontal_loop_extent)
   intent = in
-[ cld_liq ]
+[ cld_liq_array ]
   standard_name = cloud_liquid_dry_mixing_ratio
   advected = .true.
   units = kg kg-1
@@ -79,7 +79,7 @@
   dimensions = ()
   type = real | kind = kind_phys
   intent = in
-[ cld_liq ]
+[ cld_liq_array ]
   standard_name = cloud_liquid_dry_mixing_ratio
   advected = .true.
   units = kg kg-1

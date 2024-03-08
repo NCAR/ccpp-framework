@@ -173,14 +173,7 @@ def escape_tex(text):
 
 def isstring(s):
     """Return true if a variable is a string"""
-    # We use Python 3
-    if (sys.version_info.major == 3):
-        return isinstance(s, str)
-    # We use Python 2
-    elif (sys.version_info.major == 2):
-        return isinstance(s, basestring)
-    else:
-        raise Exception('Unknown Python version')
+    return isinstance(s, str)
 
 def string_to_python_identifier(string):
     """Replaces forbidden characters in strings with standard substitutions

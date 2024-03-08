@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # pylint: disable=wrong-import-position
 from parse_source import ParseContext, ParseSource
 from parse_source import ParseSyntaxError, ParseInternalError
-from parse_source import CCPPError, context_string
+from parse_source import CCPPError, context_string, type_name
 from parse_source import unique_standard_name, reset_standard_name_counter
 from parse_object import ParseObject
 from parse_checkers import check_fortran_id, FORTRAN_ID
@@ -22,14 +22,15 @@ from parse_checkers import fortran_list_match
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
 from parse_checkers import check_units, check_dimensions, check_cf_standard_name
-from parse_checkers import check_default_value, check_valid_values
+from parse_checkers import check_default_value, check_valid_values, check_molar_mass
 from parse_log import init_log, set_log_level, flush_log
 from parse_log import set_log_to_stdout, set_log_to_null
-from parse_log import set_log_to_file
+from parse_log import set_log_to_file, verbose
 from preprocess import PreprocStack
 from xml_tools import find_schema_file, find_schema_version
 from xml_tools import read_xml_file, validate_xml_file
 from xml_tools import PrettyElementTree
+from fortran_conditional import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 # pylint: enable=wrong-import-position
 
 __all__ = [
@@ -47,6 +48,7 @@ __all__ = [
     'check_fortran_type',
     'check_local_name',
     'check_valid_values',
+    'check_molar_mass',
     'context_string',
     'find_schema_file',
     'find_schema_version',
@@ -71,6 +73,9 @@ __all__ = [
     'set_log_to_file',
     'set_log_to_null',
     'set_log_to_stdout',
+    'type_name',
     'unique_standard_name',
-    'validate_xml_file'
+    'validate_xml_file',
+    'FORTRAN_CONDITIONAL_REGEX_WORDS',
+    'FORTRAN_CONDITIONAL_REGEX'
 ]

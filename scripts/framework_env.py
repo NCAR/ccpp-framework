@@ -10,6 +10,7 @@ Framework runtime information and parameter values.
 # Python library imports
 import argparse
 import os
+from parse_tools import verbose
 
 _EPILOG = '''
 '''
@@ -24,7 +25,8 @@ class CCPPFrameworkEnv:
                  host_files=None, scheme_files=None, suites=None,
                  preproc_directives=[], generate_docfiles=False, host_name='',
                  kind_types=[], use_error_obj=False, force_overwrite=False,
-                 output_root=os.getcwd(), ccpp_datafile="datatable.xml"):
+                 output_root=os.getcwd(), ccpp_datafile="datatable.xml",
+                 debug=False):
         """Initialize a new CCPPFrameworkEnv object from the input arguments.
         <ndict> is a dict with the parsed command-line arguments (or a
            dictionary created with the necessary arguments).
@@ -103,8 +105,8 @@ class CCPPFrameworkEnv:
             # String of definitions, separated by spaces
             preproc_list = [x.strip() for x in preproc_defs.split(' ') if x]
         else:
-            wmsg = "Error: Bad preproc list type, '{}'"
-            emsg += esep + wmsg.format(type(preproc_defs))
+            wmsg = f"Error: Bad preproc list type, '{type_name(preproc_defs)}'"
+            emsg += esep + wmsg
             esep = '\n'
         # end if
         # Turn the list into a dictionary
@@ -197,6 +199,13 @@ class CCPPFrameworkEnv:
             self.__datatable_file = os.path.join(self.output_dir,
                                                  self.datatable_file)
         # end if
+        # Enable or disable variable allocation checks
+        if ndict and ('debug' in ndict):
+            self.__debug = ndict['debug']
+            del ndict['debug']
+        else:
+            self.__debug = debug
+        # end if
         self.__logger = logger
         ## Check to see if anything is left in dictionary
         if ndict:
@@ -276,6 +285,12 @@ class CCPPFrameworkEnv:
         return self.__kind_dict.keys()
 
     @property
+    def verbose(self):
+        """Return true if debug enabled for the CCPPFrameworkEnv's
+        logger object."""
+        return (self.logger and verbose(self.logger))
+
+    @property
     def use_error_obj(self):
         """Return the <use_error_obj> property for this
         CCPPFrameworkEnv object."""
@@ -303,6 +318,12 @@ CCPPFrameworkEnv object."""
         """Return the <datatable_file> property for this
         CCPPFrameworkEnv object."""
         return self.__datatable_file
+
+    @property
+    def debug(self):
+        """Return the <debug> property for this
+        CCPPFrameworkEnv object."""
+        return self.__debug
 
     @property
     def logger(self):
@@ -379,7 +400,11 @@ instead of ccpp_error_message and ccpp_error_code.""")
                         help="""Overwrite all CCPP-generated files, even
 if unmodified""")
 
+    parser.add_argument("--debug", action='store_true', default=False,
+                        help="Add variable allocation checks to assist debugging")
+
     parser.add_argument("--verbose", action='count', default=0,
                         help="Log more activity, repeat for increased output")
+
     pargs = parser.parse_args(args)
     return CCPPFrameworkEnv(logger, vars(pargs))
