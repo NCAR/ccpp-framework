@@ -577,7 +577,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
             for suite in api.suites:
                 mspc = (max_suite_len - len(suite.module))*' '
                 spart_list = suite_part_list(suite, stage)
-                for spart in sorted(spart_list):
+                for _, spart in sorted(enumerate(spart_list)):
                     stmt = "use {}, {}only: {}"
                     cap.write(stmt.format(suite.module, mspc, spart.name), 2)
                 # End for
