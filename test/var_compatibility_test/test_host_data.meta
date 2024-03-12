@@ -25,6 +25,7 @@
   dimensions = (horizontal_dimension,vertical_layer_dimension)
   type = real
   kind = kind_phys
+  active = (flag_indicating_cloud_microphysics_has_ice)
 [effrg]
   standard_name = effective_radius_of_stratiform_cloud_graupel
   long_name = effective radius of cloud graupel in meter
@@ -33,3 +34,28 @@
   type = real
   kind = kind_phys
   active = (flag_indicating_cloud_microphysics_has_graupel)
+[ncg]
+  standard_name = cloud_graupel_number_concentration
+  long_name = number concentration of cloud graupel
+  units = kg-1
+  dimensions = (horizontal_dimension,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+  active = (flag_indicating_cloud_microphysics_has_graupel)
+[nci]
+  standard_name = cloud_ice_number_concentration
+  long_name = number concentration of cloud ice
+  units = kg-1
+  dimensions = (horizontal_dimension,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+  active = (flag_indicating_cloud_microphysics_has_ice)
+[scalar_var]
+  standard_name = scalar_variable_for_testing
+  long_name = unused scalar variable
+  units = m
+  dimensions = ()
+  type = real
+  kind = kind_phys

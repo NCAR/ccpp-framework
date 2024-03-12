@@ -41,6 +41,7 @@
   kind = kind_phys
   intent = inout
   diagnostic_name_fixed = Q
+  optional = True
 [ ps ]
   standard_name = surface_air_pressure
   state_variable = true

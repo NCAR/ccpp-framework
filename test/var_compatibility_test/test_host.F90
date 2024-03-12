@@ -351,21 +351,26 @@ CONTAINS
 
    character(len=cs), target :: test_parts1(1) = (/ 'radiation       ' /)
 
-   character(len=cm), target :: test_invars1(5) = (/                          &
+   character(len=cm), target :: test_invars1(8) = (/                          &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
         'effective_radius_of_stratiform_cloud_snow_particle        ',         &
         'effective_radius_of_stratiform_cloud_graupel              ',         &
-        'flag_indicating_cloud_microphysics_has_graupel            '/)
+        'cloud_graupel_number_concentration                        ',         &
+        'scalar_variable_for_testing                               ',         &
+        'flag_indicating_cloud_microphysics_has_graupel            ',         &
+        'flag_indicating_cloud_microphysics_has_ice                '/)
 
-   character(len=cm), target :: test_outvars1(5) = (/                         &
+   character(len=cm), target :: test_outvars1(7) = (/                         &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_ice_particle         ',         &
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
-        'effective_radius_of_stratiform_cloud_snow_particle        ' /)
+        'effective_radius_of_stratiform_cloud_snow_particle        ',         &
+        'cloud_ice_number_concentration                            ',         &
+        'scalar_variable_for_testing                               ' /)
 
-   character(len=cm), target :: test_reqvars1(8) = (/                         &
+   character(len=cm), target :: test_reqvars1(12) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
@@ -373,7 +378,11 @@ CONTAINS
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
         'effective_radius_of_stratiform_cloud_snow_particle        ',         &
         'effective_radius_of_stratiform_cloud_graupel              ',         &
-        'flag_indicating_cloud_microphysics_has_graupel            '/)
+        'cloud_graupel_number_concentration                        ',         &
+        'cloud_ice_number_concentration                            ',         &
+        'scalar_variable_for_testing                               ',         &
+        'flag_indicating_cloud_microphysics_has_graupel            ',         &
+        'flag_indicating_cloud_microphysics_has_ice                '/)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
