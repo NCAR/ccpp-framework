@@ -1732,8 +1732,6 @@ class Scheme(SuiteObject):
         # Write the scheme call.
         #
         if not self._no_run_phase:
-#            outfile.comment('! No run phase', indent+1)
-#        else:
             stmt = 'call {}({})'
             outfile.write('',indent+1)
             outfile.write('! Call scheme', indent+1)
