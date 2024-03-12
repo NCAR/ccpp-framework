@@ -1731,11 +1731,15 @@ class Scheme(SuiteObject):
         # 
         # Write the scheme call.
         #
-        stmt = 'call {}({})'
-        outfile.write('',indent+1)
-        outfile.write('! Call scheme', indent+1)
-        outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
-        outfile.write('',indent+1)
+        if not self._no_run_phase:
+#            outfile.comment('! No run phase', indent+1)
+#        else:
+            stmt = 'call {}({})'
+            outfile.write('',indent+1)
+            outfile.write('! Call scheme', indent+1)
+            outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
+            outfile.write('',indent+1)
+        # end if
         #
         # Copy any local pointers.
         #

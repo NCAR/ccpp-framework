@@ -68,7 +68,7 @@ _CCPP_FILES = _UTILITY_FILES + \
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_ddt_suite_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_temp_suite_cap.F90")]
 _PROCESS_LIST = ["setter=temp_set", "adjusting=temp_calc_adjust"]
-_MODULE_LIST = ["environ_conditions", "make_ddt", "temp_adjust",
+_MODULE_LIST = ["environ_conditions", "make_ddt", "setup_coeffs", "temp_adjust",
                 "temp_calc_adjust", "temp_set"]
 _SUITE_LIST = ["ddt_suite", "temp_suite"]
 _INPUT_VARS_DDT = ["model_times", "number_of_model_times",
@@ -85,17 +85,20 @@ _PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
 _REQUIRED_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                        "potential_temperature",
                        "potential_temperature_at_interface",
+                       "coefficients_for_interpolation",
                        "potential_temperature_increment",
                        "surface_air_pressure", "time_step_for_physics",
                        "water_vapor_specific_humidity"]
 _INPUT_VARS_TEMP = ["potential_temperature",
                     "potential_temperature_at_interface",
+                    "coefficients_for_interpolation",
                     "potential_temperature_increment",
                     "surface_air_pressure", "time_step_for_physics",
                     "water_vapor_specific_humidity"]
 _OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "potential_temperature",
                      "potential_temperature_at_interface",
+                     "coefficients_for_interpolation",
                      "surface_air_pressure", "water_vapor_specific_humidity"]
 
 def fields_string(field_type, field_list, sep):
