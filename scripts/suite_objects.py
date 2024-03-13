@@ -1098,7 +1098,7 @@ class Scheme(SuiteObject):
         self.__var_debug_checks = list()
         self.__forward_transforms = list()
         self.__reverse_transforms = list()
-        self._no_run_phase = False
+        self._has_run_phase = True
         self.__optional_vars = list()
         super().__init__(name, context, parent, run_env, active_call_list=True)
 
@@ -1145,7 +1145,7 @@ class Scheme(SuiteObject):
                 my_header = func[phase]
                 self.__subroutine_name = my_header.title
             else:
-                self._no_run_phase = True
+                self._has_run_phase = False
                 return set()
             # end if
         else:
@@ -1731,7 +1731,7 @@ class Scheme(SuiteObject):
         # 
         # Write the scheme call.
         #
-        if not self._no_run_phase:
+        if self._has_run_phase:
             stmt = 'call {}({})'
             outfile.write('',indent+1)
             outfile.write('! Call scheme', indent+1)
