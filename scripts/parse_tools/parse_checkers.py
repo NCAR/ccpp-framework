@@ -14,10 +14,11 @@ from parse_source import CCPPError, ParseInternalError
 
 _UNITLESS_REGEX                = "1"
 _NON_LEADING_ZERO_NUM          = "[1-9]\d*"
+_CHAR_WITH_UNDERSCORE          = "([a-zA-Z]+_[a-zA-Z]+)+"
 _NEGATIVE_NON_LEADING_ZERO_NUM = f"[-]{_NON_LEADING_ZERO_NUM}"
 _UNIT_EXPONENT                 = f"({_NEGATIVE_NON_LEADING_ZERO_NUM}|{_NON_LEADING_ZERO_NUM})"
 _UNIT_REGEX                    = f"[a-zA-Z]+{_UNIT_EXPONENT}?"
-_UNITS_REGEX                   = f"^({_UNIT_REGEX}(\s{_UNIT_REGEX})*|{_UNITLESS_REGEX})$"
+_UNITS_REGEX                   = f"^({_CHAR_WITH_UNDERSCORE}|{_UNIT_REGEX}(\s{_UNIT_REGEX})*|{_UNITLESS_REGEX})$"
 _UNITS_RE                      = re.compile(_UNITS_REGEX)
 _MAX_MOLAR_MASS                = 10000.0
 
