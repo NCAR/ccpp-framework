@@ -30,6 +30,10 @@ CCPP_BLOCK_COUNT         = 'ccpp_block_count'
 CCPP_BLOCK_SIZES         = 'ccpp_block_sizes'
 CCPP_THREAD_NUMBER       = 'ccpp_thread_number'
 
+CCPP_CHUNK_EXTENT          = 'ccpp_chunk_extent'
+CCPP_HORIZONTAL_LOOP_BEGIN = 'horizontal_loop_begin'
+CCPP_HORIZONTAL_LOOP_END   = 'horizontal_loop_end'
+
 CCPP_HORIZONTAL_LOOP_EXTENT = 'horizontal_loop_extent'
 CCPP_HORIZONTAL_DIMENSION   = 'horizontal_dimension'
 

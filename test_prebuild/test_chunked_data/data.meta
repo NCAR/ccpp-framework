@@ -1,0 +1,76 @@
+[ccpp-table-properties]
+  name = chunked_data_type
+  type = ddt
+  dependencies =
+[ccpp-arg-table]
+  name = chunked_data_type
+  type = ddt
+[array_data]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (ccpp_constant_one:horizontal_dimension)
+  type = integer
+# Todo: define an additional array running from -1 to ncols-2
+
+[ccpp-table-properties]
+  name = data
+  type = module
+  dependencies =
+[ccpp-arg-table]
+  name = data
+  type = module
+[cdata]
+  standard_name = ccpp_t_instance
+  long_name = instance of derived data type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t
+[ncols]
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[nchunks]
+  standard_name = ccpp_chunk_extent
+  long_name = number of chunks of array data used in run phase
+  units = count
+  dimensions = ()
+  type = integer
+[chunk_begin]
+  standard_name = horizontal_loop_begin_all_chunks
+  long_name = first index for horizontal loop extent in run phase
+  units = index
+  dimensions = (ccpp_chunk_extent)
+  type = integer
+[chunk_begin(ccpp_chunk_number)]
+  standard_name = horizontal_loop_begin
+  long_name = first index for horizontal loop extent in run phase
+  units = index
+  dimensions = ()
+  type = integer
+[chunk_end]
+  standard_name = horizontal_loop_end_all_chunks
+  long_name = last index for horizontal loop extent in run phase
+  units = index
+  dimensions = (ccpp_chunk_extent)
+  type = integer
+[chunk_end(ccpp_chunk_number)]
+  standard_name = horizontal_loop_end
+  long_name = last index for horizontal loop extent in run phase
+  units = index
+  dimensions = ()
+  type = integer
+[chunked_data_type]
+  standard_name = chunked_data_type
+  long_name = definition of type chunked_data_type
+  units = DDT
+  dimensions = ()
+  type = chunked_data_type
+[chunked_data_instance]
+  standard_name = chunked_data_type_instance
+  long_name = instance of derived data type chunked_data_type
+  units = DDT
+  dimensions = ()
+  type = chunked_data_type
