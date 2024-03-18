@@ -2474,11 +2474,7 @@ class Group(SuiteObject):
         # Allocate local arrays
         outfile.write('\n! Allocate local arrays', indent+1)
         alloc_stmt = "allocate({}({}))"
-<<<<<<< HEAD
         for lname in sorted(allocatable_var_set):
-            var = subpart_vars[lname][0]
-=======
-        for lname in allocatable_var_set:
             var = subpart_allocate_vars[lname][0]
             dims = var.get_dimensions()
             alloc_str = self.allocate_dim_str(dims, var.context)
@@ -2486,7 +2482,6 @@ class Group(SuiteObject):
         # end for
         for lname in optional_var_set:
             var = subpart_optional_vars[lname][0]
->>>>>>> NCAR/feature/capgen
             dims = var.get_dimensions()
             alloc_str = self.allocate_dim_str(dims, var.context)
             outfile.write(alloc_stmt.format(lname, alloc_str), indent+1)
