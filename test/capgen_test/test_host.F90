@@ -358,23 +358,26 @@ CONTAINS
    character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
                                                     'physics2        ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(6) = (/                          &
+   character(len=cm), target :: test_invars1(7) = (/                          &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
+        'coefficients_for_interpolation      ',                               &
         'surface_air_pressure                ',                               &
         'water_vapor_specific_humidity       ',                               &
         'potential_temperature_increment     ',                               &
         'time_step_for_physics               ' /)
-   character(len=cm), target :: test_outvars1(6) = (/                         &
+   character(len=cm), target :: test_outvars1(7) = (/                         &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
+        'coefficients_for_interpolation      ',                               &
         'surface_air_pressure                ',                               &
         'water_vapor_specific_humidity       ',                               &
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ' /)
-   character(len=cm), target :: test_reqvars1(8) = (/                         &
+   character(len=cm), target :: test_reqvars1(9) = (/                         &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
+        'coefficients_for_interpolation      ',                               &
         'surface_air_pressure                ',                               &
         'water_vapor_specific_humidity       ',                               &
         'potential_temperature_increment     ',                               &
