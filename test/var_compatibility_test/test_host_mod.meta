@@ -28,7 +28,13 @@
   dimensions = (horizontal_dimension,vertical_layer_dimension)
   type = real
   kind = kind_phys
-[mp_has_graupel]
+[has_ice]
+  standard_name = flag_indicating_cloud_microphysics_has_ice
+  long_name = flag indicating that the cloud microphysics produces ice
+  units = flag
+  dimensions = ()
+  type = logical
+[has_graupel]
   standard_name = flag_indicating_cloud_microphysics_has_graupel
   long_name = flag indicating that the cloud microphysics produces graupel
   units = flag

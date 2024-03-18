@@ -13,7 +13,8 @@ module test_host_mod
    integer,         parameter   :: pver = 4
    type(physics_state)          :: phys_state
    real(kind_phys)              :: effrs(ncols, pver)
-   logical,         parameter   :: mp_has_graupel = .true.
+   logical,         parameter   :: has_ice = .true.
+   logical,         parameter   :: has_graupel = .true.
 
    public :: init_data
    public :: compare_data
@@ -23,14 +24,18 @@ contains
   subroutine init_data()
 
     ! Allocate and initialize state
-    call allocate_physics_state(ncols, pver, phys_state, mp_has_graupel)
+    call allocate_physics_state(ncols, pver, phys_state, has_graupel, has_ice)
     phys_state%effrr = 1.0E-3 ! 1000 microns, in meter
     phys_state%effrl = 1.0E-4 ! 100 microns, in meter
-    phys_state%effri = 5.0E-5 ! 50 microns, in meter
     phys_state%scalar_var = 1.0 ! in m
     effrs            = 5.0E-4 ! 500 microns, in meter
-    if (mp_has_graupel) then
+    if (has_graupel) then
        phys_state%effrg = 2.5E-4 ! 250 microns, in meter
+       phys_state%ncg  = 40
+    endif
+    if (has_ice) then
+       phys_state%effri = 5.0E-5 ! 50 microns, in meter
+       phys_state%nci = 80
     endif
 
   end subroutine init_data
