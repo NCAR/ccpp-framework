@@ -102,12 +102,28 @@ def constituent_initialize_subname(host_model):
     return f"{host_model.name}_ccpp_initialize_constituents"
 
 ###############################################################################
+def constituent_initialize_subname(host_model):
+###############################################################################
+    """Return the name of the subroutine used to initialize the
+    constituents for this run.
+    Because this is a user interface API function, the name is fixed."""
+    return "{}_ccpp_initialize_constituents".format(host_model.name)
+
+###############################################################################
 def constituent_num_consts_funcname(host_model):
 ###############################################################################
     """Return the name of the function to return the number of
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
     return f"{host_model.name}_ccpp_number_constituents"
+
+###############################################################################
+def query_scheme_constituents_funcname(host_model):
+###############################################################################
+    """Return the name of the function to return True if the standard name
+    passed in matches an existing constituent
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_is_scheme_constituent"
 
 ###############################################################################
 def query_scheme_constituents_funcname(host_model):
@@ -202,6 +218,37 @@ def constituent_model_const_index(host_model):
     """Return the name of the interface that returns the array index of
        a constituent array given its standard name"""
     hstr = f"{host_model.name}_const_get_index"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_consts(host_model):
+###############################################################################
+    """Return the name of the function that will return a pointer to the
+       array of all constituents"""
+    hstr = "{}_constituents_array".format(host_model.name)
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_advected_consts(host_model):
+###############################################################################
+    """Return the name of the function that will return a pointer to the
+       array of advected constituents"""
+    hstr = "{}_advected_constituents_array".format(host_model.name)
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_const_props(host_model):
+###############################################################################
+    """Return the name of the array of constituent property object pointers"""
+    hstr = "{}_model_const_properties".format(host_model.name)
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_const_index(host_model):
+###############################################################################
+    """Return the name of the interface that returns the array index of
+       a constituent array given its standard name"""
+    hstr = "{}_const_get_index".format(host_model.name)
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -432,7 +479,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         mlen = max([len(x.module) for x in api.suites])
         maxmod = max(maxmod, mlen)
         maxmod = max(maxmod, len(CONST_DDT_MOD))
-        for mod in modules:
+        for mod in sorted(modules):
             mspc = (maxmod - len(mod[0]))*' '
             cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
         # End for
@@ -530,7 +577,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
             for suite in api.suites:
                 mspc = (max_suite_len - len(suite.module))*' '
                 spart_list = suite_part_list(suite, stage)
-                for spart in spart_list:
+                for _, spart in sorted(enumerate(spart_list)):
                     stmt = "use {}, {}only: {}"
                     cap.write(stmt.format(suite.module, mspc, spart.name), 2)
                 # End for
@@ -617,7 +664,9 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                                                advect_array_func,
                                                prop_array_func,
                                                const_index_func,
-                                               api.suites, err_vars)
+                                               api.suites,
+                                               api.dyn_const_dict,
+                                               err_vars)
     # End with
     return cap_filename
 

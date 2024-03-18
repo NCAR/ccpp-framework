@@ -2,6 +2,7 @@
 [ccpp-table-properties]
   name = cld_liq
   type = scheme
+  dynamic_constituent_routine = cld_liq_dynamic_constituents
 [ccpp-arg-table]
   name = cld_liq_run
   type = scheme

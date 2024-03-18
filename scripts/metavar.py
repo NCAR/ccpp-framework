@@ -1068,15 +1068,15 @@ class Var:
             intent = None
         # end if
         if protected and allocatable:
-            errmsg = 'Cannot create allocatable variable from protected, {}'
+            errmsg = "Cannot create allocatable variable from protected, {}"
             raise CCPPError(errmsg.format(name))
         # end if
         if dummy and (intent is None):
             if add_intent is not None:
                 intent = add_intent
             else:
-                errmsg = "<add_intent> is missing for dummy argument, {}"
-                raise CCPPError(errmsg.format(name))
+                errmsg = f"<add_intent> is missing for dummy argument, {name}"
+                raise CCPPError(errmsg)
             # end if
         # end if
         optional = self.get_prop_value('optional')

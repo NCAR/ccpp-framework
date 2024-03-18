@@ -11,7 +11,6 @@ import sys
 import os.path
 import logging
 # CCPP framework imports
-# pylint: enable=wrong-import-position
 
 class _StdNameCounter():
     """Class to hold a global counter to avoid using global keyword"""

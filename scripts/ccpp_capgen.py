@@ -629,7 +629,29 @@ def capgen(run_env, return_db=False):
         scheme_files = [const_prop_mod] + scheme_files
     # end if
     # Next, parse the scheme files
+    # We always need to parse the ccpp_constituent_prop_ptr_t DDT
+    ##XXgoldyXX: Should this be in framework_env.py?
+    const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
+    if const_prop_mod not in scheme_files:
+        scheme_files= [const_prop_mod] + scheme_files
+    # end if
     scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
+    # Pull out the dynamic constituent routines, if any
+    dyn_const_dict = {}
+    for table in scheme_tdict:
+        routine_name = scheme_tdict[table].dyn_const_routine
+        if routine_name is not None:
+            if routine_name not in dyn_const_dict.values():
+               dyn_const_dict[table] = routine_name
+            else:
+               # dynamic constituent routines must have unique names
+               scheme_name = list(dyn_const_dict.keys())[list(dyn_const_dict.values()).index(routine_name)]
+               errmsg = f"ERROR: Dynamic constituent routine names must be unique. Cannot add " \
+                        f"{routine_name} for {table}. Routine already exists in {scheme_name}. "
+               raise CCPPError(errmsg)
+            # end if
+        # end if
+    # end for
     if run_env.verbose:
         ddts = host_model.ddt_lib.keys()
         if ddts:
@@ -660,7 +682,7 @@ def capgen(run_env, return_db=False):
         # end if
         os.makedirs(outtemp_dir)
     # end if
-    ccpp_api = API(sdfs, host_model, scheme_headers, run_env)
+    ccpp_api = API(sdfs, host_model, scheme_headers, run_env, dyn_const_dict)
     cap_filenames = ccpp_api.write(outtemp_dir, run_env)
     if run_env.generate_host_cap:
         # Create a cap file

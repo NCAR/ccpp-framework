@@ -246,6 +246,7 @@ CONTAINS
        integer                         :: col_start, col_end
        integer                         :: index, sind
        integer                         :: index_liq, index_ice
+       integer                         :: index_dyn1, index_dyn2, index_dyn3
        integer                         :: time_step
        integer                         :: num_suites
        integer                         :: num_advected ! Num advected species
@@ -259,7 +260,9 @@ CONTAINS
        integer                         :: errflg_final ! Used to notify testing script of test failure
        real(kind_phys), pointer        :: const_ptr(:,:,:)
        real(kind_phys)                 :: default_value
+       real(kind_phys)                 :: check_value
        type(ccpp_constituent_prop_ptr_t), pointer :: const_props(:)
+       type(ccpp_constituent_properties_t), allocatable :: dynamic_constituents(:)
        character(len=*), parameter     :: subname = 'test_host'
 
        ! Initialized "final" error flag used to report a failure to the larged
@@ -322,11 +325,13 @@ CONTAINS
       call host_constituents(1)%instantiate(std_name="specific_humidity",     &
            long_name="Specific humidity", units="kg kg-1",                    &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
            errcode=errflg, errmsg=errmsg)
       call check_errflg(subname//'.initialize', errflg, errmsg, errflg_final)
       if (errflg == 0) then
          call test_host_ccpp_register_constituents(suite_names(:),            &
-              host_constituents, errmsg=errmsg, errflg=errflg)
+              host_constituents, dynamic_constituents=dynamic_constituents,   &
+              errmsg=errmsg, errflg=errflg)
       end if
       if (errflg /= 0) then
          write(6, '(2a)') 'ERROR register_constituents: ', trim(errmsg)
@@ -339,7 +344,7 @@ CONTAINS
               errflg=errflg)
          call check_errflg(subname//".num_advected", errflg, errmsg, errflg_final)
       end if
-      if (num_advected /= 3) then
+      if (num_advected /= 6) then
          write(6, '(a,i0)') "ERROR: num advected constituents = ", num_advected
          retval = .false.
          return
@@ -375,6 +380,18 @@ CONTAINS
       call check_errflg(subname//".index_cld_ice", errflg, errmsg,            &
            errflg_final)
 
+      ! Check if the dynamic constituents indices can be found
+      call test_host_const_get_index('dyn_const1', index_dyn1, errflg, errmsg)
+      call check_errflg(subname//".index_dyn_const1", errflg, errmsg,         &
+           errflg_final)
+      call test_host_const_get_index('dyn_const2_wrt_moist_air', index_dyn2, errflg, errmsg)
+      call check_errflg(subname//".index_dyn_const2", errflg, errmsg,         &
+           errflg_final)
+      call test_host_const_get_index('dyn_const3', index_dyn3, errflg, errmsg)
+      call check_errflg(subname//".index_dyn_const3", errflg, errmsg,         &
+           errflg_final)
+
+
       !Stop tests here if the index checks failed, as all other tests will
       !likely fail as well:
       if (errflg_final /= 0) then
@@ -382,7 +399,7 @@ CONTAINS
          return
       end if
 
-      call init_data(const_ptr, index, index_liq, index_ice)
+      call init_data(const_ptr, index, index_liq, index_ice, index_dyn3)
 
       ! Check some constituent properties
       !++++++++++++++++++++++++++++++++++
@@ -407,6 +424,25 @@ CONTAINS
          !Reset error flag to continue testing other properties:
          errflg = 0
       end if
+      !Check standard name for a dynamic constituent
+      call const_props(index_dyn2)%standard_name(const_str, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+               "to get standard_name for dyn_const2, index = ",        &
+               index_dyn2, trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occured
+      end if
+      if (errflg == 0) then
+         if (trim(const_str) /= 'dyn_const2_wrt_moist_air') then
+            write(6, *) "ERROR: standard name, '", trim(const_str),           &
+                 "' should be 'dyn_const2_wrt_moist_air'"
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
 
       !Long name:
       call const_props(index_liq)%long_name(const_str, errflg, errmsg)
@@ -426,7 +462,24 @@ CONTAINS
          !Reset error flag to continue testing other properties:
          errflg = 0
       end if
-
+      !Check long name for a dynamic constituent
+      call const_props(index_dyn1)%long_name(const_str, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",    &
+               "to get long_name for dyn_const1 index = ",                       &
+               index_dyn1, trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occured
+      end if
+      if (errflg == 0) then
+         if (trim(const_str) /= 'dyn const1') then
+            write(6, *) "ERROR: long name, '", trim(const_str),               &
+                 "' should be 'dyn const1'"
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
       !Mass mixing ratio:
       call const_props(index_ice)%is_mass_mixing_ratio(const_log, errflg,     &
            errmsg)
@@ -439,6 +492,24 @@ CONTAINS
       if (errflg == 0) then
          if (.not. const_log) then
             write(6, *) "ERROR: cloud ice is not a mass mixing_ratio"
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      !Check mass mixing ratio for a dynamic constituent
+      call const_props(index_dyn2)%is_mass_mixing_ratio(const_log, errflg,     &
+           errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get mass mixing ratio prop for dyn_const2 index = ",           &
+              index_dyn2, trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occured
+      end if
+      if (errflg == 0) then
+         if (.not. const_log) then
+            write(6, *) "ERROR: dyn_const2 is not a mass mixing_ratio"
             errflg_final = -1 !Notify test script that a failure occured
          end if
       else
@@ -462,6 +533,154 @@ CONTAINS
          !Reset error flag to continue testing other properties:
          errflg = 0
       end if
+      !Check moist mixing ratio for a dynamic constituent
+      call const_props(index_dyn2)%is_dry(const_log, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get dry prop for dyn_const2 index = ", index_dyn2, trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (const_log) then
+            write(6, *) "ERROR: dyn_const2 is dry and should be moist"
+            errflg_final = -1
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !-------------------
+
+      !-------------------
+      !minimum value tests:
+      !-------------------
+
+      !Check that a constituent's minimum value defaults to zero:
+      call const_props(index_dyn2)%minimum(check_value, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get minimum value for dyn_const2 index = ", index_dyn2,     &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (check_value /= 0._kind_phys) then !Should be zero
+            write(6, *) "ERROR: 'minimum' should default to zero for all ",   &
+                 "constituents unless set by host model or scheme metadata."
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !Check that a constituent instantiated with a specified minimum value
+      !actually contains that minimum value property:
+      call const_props(index_dyn1)%minimum(check_value, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get minimum value for dyn_const1 index = ", index_dyn1,   &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (check_value /= 1000._kind_phys) then !Should be 1000
+            write(6, *) "ERROR: 'minimum' should give a value of 1000 ",      &
+                 "for dyn_const1, as was set during instantiation."
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !Check that setting a constituent's minimum value works
+      !as expected:
+      call const_props(index_dyn1)%set_minimum(1._kind_phys, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to set minimum value for dyn_const1 index = ", index_dyn1,     &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         call const_props(index_dyn1)%minimum(check_value, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
+                 " trying to get minimum value for dyn_const1 index = ",      &
+                 index_dyn1, trim(errmsg)
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      end if
+      if (errflg == 0) then
+         if (check_value /= 1._kind_phys) then !Should now be one
+            write(6, *) "ERROR: 'set_minimum' did not set constituent",       &
+                 " minimum value correctly."
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !----------------------
+      !molecular weight tests:
+      !----------------------
+
+      !Check that a constituent instantiated with a specified molecular
+      !weight actually contains that molecular weight property value:
+      call const_props(index)%molar_mass(check_value, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get molecular weight for specific humidity index = ",       &
+              index, trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (check_value /= 2000._kind_phys) then !Should be 2000
+            write(6, *) "ERROR: 'molar_mass' should give a value of 2000 ", &
+                 "for specific humidity, as was set during instantiation."
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !Check that setting a constituent's molecular weight works
+      !as expected:
+      call const_props(index_ice)%set_molar_mass(1._kind_phys, errflg,      &
+                       errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to set molecular weight for cld_ice index = ", index_ice,      &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         call const_props(index_ice)%molar_mass(check_value, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
+                 " trying to get molecular weight for cld_ice index = ",      &
+                 index_ice, trim(errmsg)
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      end if
+      if (errflg == 0) then
+         if (check_value /= 1._kind_phys) then !Should be equal to one
+            write(6, *) "ERROR: 'set_molar_mass' did not set constituent",  &
+                 " molecular weight value correctly."
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !-------------------
+      !thermo-active tests:
+      !-------------------
 
       !Check that being thermodynamically active defaults to False:
       call const_props(index_ice)%is_thermo_active(check, errflg, errmsg)
@@ -495,13 +714,13 @@ CONTAINS
          call const_props(index_ice)%is_thermo_active(check, errflg, errmsg)
          if (errflg /= 0) then
             write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
-                 " tryingto get thermo_active prop for cld_ice index = ",     &
+                 " trying to get thermo_active prop for cld_ice index = ",    &
                  index_ice, trim(errmsg)
             errflg_final = -1 !Notify test script that a failure occurred
          end if
       end if
       if (errflg == 0) then
-         if (.not.check) then !Should now be True
+         if (.not. check) then !Should now be True
             write(6, *) "ERROR: 'set_thermo_active' did not set",             &
                  " thermo_active constituent property correctly."
             errflg_final = -1 !Notify test script that a failure occurred
@@ -510,6 +729,60 @@ CONTAINS
          !Reset error flag to continue testing other properties:
          errflg = 0
       end if
+      !-------------------
+
+      !-------------------
+      !water-species tests:
+      !-------------------
+
+      !Check that being a water species defaults to False:
+      call const_props(index_liq)%is_water_species(check, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get water_species prop for cld_liq index = ", index_liq,    &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (check) then !Should be False
+            write(6, *) "ERROR: 'is_water_species' should default to False ", &
+                 "for all constituents unless set by host model."
+            errflg_final = -1 !Notify test script that a failure occured
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
+      !Check that setting a constituent to be a water species works
+      !as expected:
+      call const_props(index_liq)%set_water_species(.true., errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to set water_species prop for cld_liq index = ", index_liq,    &
+              trim(errmsg)
+         errflg_final = -1 !Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         call const_props(index_liq)%is_water_species(check, errflg, errmsg)
+         if (errflg /= 0) then
+            write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,             &
+                 " trying to get water_species prop for cld_liq index = ",    &
+                 index_liq, trim(errmsg)
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      end if
+      if (errflg == 0) then
+         if (.not. check) then !Should now be True
+            write(6, *) "ERROR: 'set_water_species' did not set",             &
+                 " water_species constituent property correctly."
+            errflg_final = -1 !Notify test script that a failure occurred
+         end if
+      else
+         !Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      !-------------------
 
       !Check that setting a constituent's default value works as expected
       call const_props(index_liq)%has_default(has_default, errflg, errmsg)

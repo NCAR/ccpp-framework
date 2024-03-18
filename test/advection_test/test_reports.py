@@ -66,6 +66,7 @@ _CCPP_FILES = _UTILITY_FILES + _HOST_FILES + _SUITE_FILES
 _PROCESS_LIST = list()
 _MODULE_LIST = ["cld_ice", "cld_liq"]
 _SUITE_LIST = ["cld_suite"]
+_DYN_CONST_ROUTINES = ["cld_ice_dynamic_constituents", "cld_liq_dynamic_constituents"]
 _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "horizontal_loop_begin", "horizontal_loop_end",
                       "surface_air_pressure", "temperature",
@@ -154,6 +155,8 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("module_list"),
                               _MODULE_LIST)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("suite_list"),
                               _SUITE_LIST)
+NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("dyn_const_routines"),
+                              _DYN_CONST_ROUTINES)
 print("\nChecking variables for CLD suite from python")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="cld_suite"),
