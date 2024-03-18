@@ -22,8 +22,8 @@ if not os.path.exists(_SCRIPTS_DIR):
 # end if
 
 if ((sys.version_info[0] < 3) or
-    (sys.version_info[0] == 3) and (sys.version_info[1] < 7)):
-    raise Exception("Python 3.7 or greater required")
+    (sys.version_info[0] == 3) and (sys.version_info[1] < 8)):
+    raise Exception("Python 3.8 or greater required")
 # end if
 
 sys.path.append(_SCRIPTS_DIR)
@@ -72,13 +72,19 @@ _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "time_step_for_physics", "water_temperature_at_freezing",
                       "water_vapor_specific_humidity",
                       "cloud_ice_dry_mixing_ratio",
-                      "cloud_liquid_dry_mixing_ratio"]
+                      "cloud_liquid_dry_mixing_ratio",
+                      # Added by --debug option
+                      "horizontal_dimension",
+                      "vertical_layer_dimension"]
 _INPUT_VARS_CLD = ["surface_air_pressure", "temperature",
                    "horizontal_loop_begin", "horizontal_loop_end",
                    "time_step_for_physics", "water_temperature_at_freezing",
                    "water_vapor_specific_humidity",
                    "cloud_ice_dry_mixing_ratio",
-                   "cloud_liquid_dry_mixing_ratio"]
+                   "cloud_liquid_dry_mixing_ratio",
+                   # Added by --debug option
+                   "horizontal_dimension",
+                   "vertical_layer_dimension"]
 _OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "water_vapor_specific_humidity", "temperature",
                     "cloud_ice_dry_mixing_ratio",

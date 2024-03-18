@@ -37,26 +37,22 @@ if [ $res -ne 0 ]; then
   echo "Failure running advection test"
 fi
 
-# Run doctests
-./run_doctest.sh
-res=$?
-errcnt=$((errcnt + res))
-if [ $res -ne 0 ]; then
-  echo "${errcnt} doctest failures"
-fi
-
-for test in `ls unit_tests/test_*.py`; do
-  echo "Running unit test, ${test}"
-  python3 ${test}
-  res=$?
-  errcnt=$((errcnt + res))
-  if [ $res -ne 0 ]; then
-    echo "Failure, '${res}', running unit test, ${test}"
-  fi
-done
+# Run var_compatibility test
+ ./var_compatibility_test/run_test
+ res=$?
+ errcnt=$((errcnt + res))
+ if [ $res -ne 0 ]; then
+   echo "Failure running var_compatibility test"
+ fi
 
 if [ $errcnt -eq 0 ]; then
   echo "All tests PASSed!"
 else
-  echo "${errcnt} tests FAILed"
+  if [ $errcnt -eq 1 ]; then
+    echo "${errcnt} test FAILed"
+  else
+    echo "${errcnt} tests FAILed"
+  fi
+  #Exit with non-zero exit code
+  exit 1
 fi
