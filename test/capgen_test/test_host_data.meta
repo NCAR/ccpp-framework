@@ -49,3 +49,4 @@
   kind = kind_phys
   units = kg kg-1
   dimensions = (horizontal_dimension, vertical_layer_dimension)
+  active = (index_of_water_vapor_specific_humidity > 0)

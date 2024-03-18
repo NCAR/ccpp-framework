@@ -20,8 +20,10 @@ from parse_tools import FORTRAN_SCALAR_REF_RE
 from parse_tools import check_units, check_dimensions, check_cf_standard_name
 from parse_tools import check_diagnostic_id, check_diagnostic_fixed
 from parse_tools import check_default_value, check_valid_values
-from parse_tools import ParseContext, ParseSource
+from parse_tools import check_molar_mass
+from parse_tools import ParseContext, ParseSource, type_name
 from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
+from parse_tools import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
 from var_props import standard_name_to_long_name, default_kind_val
@@ -116,8 +118,14 @@ class Var:
     ['Bob', 'Ray']
     >>> Var.get_prop('active') #doctest: +ELLIPSIS
     <var_props.VariableProperty object at 0x...>
+    >>> Var.get_prop('active').get_default_val({})
+    '.true.'
     >>> Var.get_prop('active').valid_value('flag_for_aerosol_physics')
     'flag_for_aerosol_physics'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'DDT', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('active')
+    '.true.'
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in', 'active' : 'child_is_home==.true.'}, ParseSource('vname', 'DDT', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('active')
+    'child_is_home==.true.'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('long_name')
     'Hi mom'
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV).get_prop_value('intent')
@@ -142,9 +150,19 @@ class Var:
     >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'ino'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid intent variable property, 'ino', at <standard input>:1
-    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm/s', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in', 'optional' : 'false'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ParseSyntaxError: Invalid variable property name, 'optional', at <standard input>:1
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in', 'optional' : 'false'}, ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV) #doctest: +ELLIPSIS
+    <metavar.Var hi_mom: foo at 0x...>
+
+    # Check that two variables that differ in their units - m vs km - are compatible
+    >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm',     \
+             'dimensions' : '()', 'type' : 'real', 'intent' : 'in'},              \
+            ParseSource('vname', 'SCHEME', ParseContext()),                       \
+            _MVAR_DUMMY_RUN_ENV).compatible(Var({'local_name' : 'bar',            \
+             'standard_name' : 'hi_mom', 'units' : 'km',                          \
+             'dimensions' : '()', 'type' : 'real', 'intent' : 'in'},              \
+            ParseSource('vname', 'SCHEME', ParseContext()), _MVAR_DUMMY_RUN_ENV), \
+            _MVAR_DUMMY_RUN_ENV) #doctest: +ELLIPSIS
+    <var_props.VarCompatObj object at ...>
     """
 
     ## Prop lists below define all the allowed CCPP Metadata attributes
@@ -186,7 +204,13 @@ class Var:
                     VariableProperty('active', str, optional_in=True,
                                      default_in='.true.'),
                     VariableProperty('polymorphic', bool, optional_in=True,
-                                     default_in='.false.')]
+                                     default_in=False),
+                    VariableProperty('top_at_one', bool, optional_in=True,
+                                     default_in=False),
+                    VariableProperty('optional', bool, optional_in=True,
+                                     default_in=False),
+                    VariableProperty('target', bool, optional_in=True,
+                                     default_in=False)]
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,
@@ -202,7 +226,10 @@ class Var:
     # Note that all constituent properties must be optional and contain either
     #   a default value or default function.
     __constituent_props = [VariableProperty('advected', bool,
-                                            optional_in=True, default_in=False)]
+                                            optional_in=True, default_in=False),
+                           VariableProperty('molar_mass', float,
+                                            optional_in=True, default_in=0.0,
+                                            check_fn_in=check_molar_mass)]
 
     __constituent_prop_dict = {x.name : x for x in __constituent_props}
 
@@ -251,7 +278,7 @@ class Var:
         if isinstance(prop_dict, Var):
             prop_dict = prop_dict.copy_prop_dict()
         # end if
-        if source.type == 'scheme':
+        if source.ptype == 'scheme':
             self.__required_props = Var.__required_var_props
 # XXgoldyXX: v don't fill in default properties?
 #            mstr_propdict = Var.__var_propdict
@@ -262,7 +289,7 @@ class Var:
             mstr_propdict = Var.__spec_propdict
 # XXgoldyXX: ^ don't fill in default properties?
         # end if
-        self._source = source
+        self.__source = source
         # Grab a frozen copy of the context
         if context is None:
             self._context = ParseContext(context=source.context)
@@ -278,6 +305,8 @@ class Var:
             if 'units' not in prop_dict:
                 prop_dict['units'] = ""
             # end if
+            # DH* To investigate later: Why is the DDT type
+            # copied into the kind attribute? Can we remove this?
             prop_dict['kind'] = prop_dict['ddt_type']
             del prop_dict['ddt_type']
             self.__intrinsic = False
@@ -354,15 +383,17 @@ class Var:
         sunits = self.get_prop_value('units')
         sstd_name = self.get_prop_value('standard_name')
         sloc_name = self.get_prop_value('local_name')
+        stopp = self.get_prop_value('top_at_one')
         sdims = self.get_dimensions()
         otype = other.get_prop_value('type')
         okind = other.get_prop_value('kind')
         ounits = other.get_prop_value('units')
         ostd_name = other.get_prop_value('standard_name')
         oloc_name = other.get_prop_value('local_name')
+        otopp = other.get_prop_value('top_at_one')
         odims = other.get_dimensions()
-        compat = VarCompatObj(sstd_name, stype, skind, sunits, sdims, sloc_name,
-                              ostd_name, otype, okind, ounits, odims, oloc_name,
+        compat = VarCompatObj(sstd_name, stype, skind, sunits, sdims, sloc_name, stopp,
+                              ostd_name, otype, okind, ounits, odims, oloc_name, otopp,
                               run_env,
                               v1_context=self.context, v2_context=other.context)
         if (not compat) and (run_env.logger is not None):
@@ -466,7 +497,7 @@ class Var:
             source_name = self.source.name
         # end if
         if source_type is None:
-            source_type = self.source.type
+            source_type = self.source.ptype
         # end if
         if context is None:
             context = self._context
@@ -486,7 +517,7 @@ class Var:
             pvalue = self._prop_dict[name]
         elif name in Var.__var_propdict:
             vprop = Var.__var_propdict[name]
-            if vprop.has_default_func:
+            if vprop.optional:
                 pvalue = vprop.get_default_val(self._prop_dict,
                                                context=self.context)
             else:
@@ -600,7 +631,8 @@ class Var:
                             # end if
                         # end for
                         if dvar:
-                            dnames.append(dvar.get_prop_value('local_name'))
+                            # vdict is the dictionary where <dvar> was found
+                            dnames.append(dvar.call_string(vdict))
                         # end if
                         if not dvar:
                             emsg += sepstr + "No variable found in "
@@ -677,9 +709,15 @@ class Var:
                             dvar = var_dict.find_variable(standard_name=item,
                                                           any_scope=False)
                             if dvar is None:
-                                iname = None
+                                try:
+                                    dval = int(item)
+                                    iname = item
+                                except ValueError:
+                                    iname = None
+                                # end try
                             else:
-                                iname = dvar.get_prop_value('local_name')
+                                iname = dvar.call_string(var_dict,
+                                                         loop_vars=loop_vars)
                             # end if
                         else:
                             iname = ''
@@ -739,7 +777,7 @@ class Var:
         match = FORTRAN_SCALAR_REF_RE.match(local_name)
         return match
 
-    def intrinsic_elements(self, check_dict=None):
+    def intrinsic_elements(self, check_dict=None, ddt_lib=None):
         """Return a list of the standard names of this Var object's 'leaf'
         intrinsic elements or this Var object's standard name if it is an
         intrinsic 'leaf' variable.
@@ -754,10 +792,26 @@ class Var:
         Currently, an array of DDTs is not processed (return None) since
         Fortran does not support a way to reference those elements.
         """
+        element_names = None
         if self.is_ddt():
-            element_names = None
-            raise ValueError("shouldn't happen?")
-            # To Do, find and process named elements of DDT
+            dtitle = self.get_prop_value('type')
+            if ddt_lib and (dtitle in ddt_lib):
+                element_names = []
+                ddt_def = ddt_lib[dtitle]
+                for dvar in ddt_def.variable_list():
+                    delems = dvar.intrinsic_elements(check_dict=check_dict,
+                                                     ddt_lib=ddt_lib)
+                    if delems:
+                        element_names.extend(delems)
+                    # end if
+                # end for
+                if not element_names:
+                    element_names = None
+                # end if
+            else:
+                errmsg = f'No ddt_lib or ddt {dtitle} not in ddt_lib'
+                raise CCPPError(errmsg)
+            # end if
         # end if
         children = self.children()
         if (not children) and check_dict:
@@ -812,7 +866,7 @@ class Var:
         else:
             emsg = 'Attempting to set parent for {}, bad parent type, {}'
             lname = self.get_prop_value('local_name')
-            raise ParseInternalError(emsg.format(lname, type(parent_var)))
+            raise ParseInternalError(emsg.format(lname, type_name(parent_var)))
         # end if
 
     def add_child(self, cvar):
@@ -835,6 +889,11 @@ class Var:
         return iter(children) if children else None
 
     @property
+    def var(self):
+        "Return this object (base behavior for derived classes such as VarDDT)"
+        return self
+
+    @property
     def context(self):
         """Return this variable's parsed context"""
         return self._context
@@ -842,13 +901,13 @@ class Var:
     @property
     def source(self):
         """Return the source object for this variable"""
-        return self._source
+        return self.__source
 
     @source.setter
     def source(self, new_source):
         """Reset this Var's source if <new_source> seems legit"""
         if isinstance(new_source, ParseSource):
-            self._source = new_source
+            self.__source = new_source
         else:
             errmsg = 'Attemping to set source of {} ({}) to "{}"'
             stdname = self.get_prop_value('standard_name')
@@ -864,7 +923,7 @@ class Var:
     @property
     def host_interface_var(self):
         """True iff self is included in the host model interface calls"""
-        return self.source.type == 'host'
+        return self.source.ptype == 'host'
 
     @property
     def run_env(self):
@@ -921,8 +980,55 @@ class Var:
         # end if
         return find_vertical_dimension(vdims)[0]
 
-    def write_def(self, outfile, indent, wdict, allocatable=False,
-                  dummy=False, add_intent=None, extra_space=0):
+    def conditional(self, vdicts):
+        """Convert conditional expression from active attribute
+        (i.e. in standard name format) to local names based on vdict.
+        Return conditional and a list of variables needed to evaluate
+        the conditional.
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([{}])
+        ('.true.', [])
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'False'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})]) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        Exception: Cannot find variable 'false' for generating conditional for 'False'
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_gone'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ]) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        Exception: Cannot find variable 'mom_gone' for generating conditional for 'mom_gone'
+        >>> Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_home'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ])[0]
+        'bar'
+        >>> len(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'active' : 'mom_home'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).conditional([ VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'bar', 'standard_name' : 'mom_home', 'units' : '', 'dimensions' : '()', 'type' : 'logical'}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) ])[1])
+        1
+        """
+
+        active = self.get_prop_value('active') 
+        conditional = ''
+        vars_needed = []
+
+        # Find all words in the conditional, for each of them look
+        # for a matching standard name in the list of known variables
+        items = FORTRAN_CONDITIONAL_REGEX.findall(active)
+        for item in items:
+            item = item.lower()
+            if item in FORTRAN_CONDITIONAL_REGEX_WORDS:
+                conditional += item
+            else:
+                # Keep integers
+                try:
+                    int(item)
+                    conditional += item
+                except ValueError:
+                    dvar = None
+                    for vdict in vdicts:
+                        dvar = vdict.find_variable(standard_name=item, any_scope=True) # or any_scope=False ?
+                        if dvar:
+                            break
+                    if not dvar:
+                        raise Exception(f"Cannot find variable '{item}' for generating conditional for '{active}'")
+                    conditional += dvar.get_prop_value('local_name')
+                    vars_needed.append(dvar)
+        return (conditional, vars_needed)
+
+    def write_def(self, outfile, indent, wdict, allocatable=False, target=False,
+                  dummy=False, add_intent=None, extra_space=0, public=False):
         """Write the definition line for the variable to <outfile>.
         If <dummy> is True, include the variable's intent.
         If <dummy> is True but the variable has no intent, add the
@@ -973,24 +1079,30 @@ class Var:
                 raise CCPPError(errmsg.format(name))
             # end if
         # end if
+        optional = self.get_prop_value('optional')
         if protected and dummy:
             intent_str = 'intent(in)   '
         elif allocatable:
             if dimstr or polymorphic:
-                intent_str = 'allocatable  '
+                intent_str = 'allocatable         '
+                if target:
+                    intent_str = 'allocatable,'
+                    intent_str += '  target'
             else:
                 intent_str = ' '*13
             # end if
         elif intent is not None:
             alloval = self.get_prop_value('allocatable')
             if (intent.lower()[-3:] == 'out') and alloval:
-                intent_str = 'allocatable, intent({})'.format(intent)
+                intent_str = f"allocatable, intent({intent})"
+            elif optional:
+                intent_str = f"intent({intent}),{' '*(5 - len(intent))}"
+                intent_str += 'target, optional '
             else:
-                intent_str = 'intent({}){}'.format(intent,
-                                                   ' '*(5 - len(intent)))
+                intent_str = f"intent({intent}){' '*(5 - len(intent))}"
             # end if
         elif not dummy:
-            intent_str = ''
+            intent_str = ' '*20
         else:
             intent_str = ' '*13
         # end if
@@ -999,26 +1111,48 @@ class Var:
         else:
             comma = ' '
         # end if
+        if self.get_prop_value('target'):
+            targ = ", target"
+        else:
+            targ = ""
+        # end if
+        comma = targ + comma
+        extra_space -= len(targ)
         if self.is_ddt():
             if polymorphic:
-                dstr = "class({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 12 - len(kind))
+                dstr = "class({kind}){cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 12 - len(kind))
             else:
-                dstr = "type({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 13 - len(kind))
+                dstr = "type({kind}){cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 13 - len(kind))
             # end if
         else:
             if kind:
-                dstr = "{type}({kind}){cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 17 - len(vtype) - len(kind))
+                dstr = "{type}({kind}){cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 17 - len(vtype) - len(kind))
             else:
-                dstr = "{type}{cspc}{intent} :: {name}{dims} ! {sname}"
-                cspc = comma + ' '*(extra_space + 19 - len(vtype))
+                dstr = "{type}{cspace}{intent} :: {name}{dims}"
+                cspace = comma + ' '*(extra_space + 19 - len(vtype))
             # end if
         # end if
         outfile.write(dstr.format(type=vtype, kind=kind, intent=intent_str,
-                                  name=name, dims=dimstr, cspc=cspc,
+                                  name=name, dims=dimstr, cspace=cspace,
                                   sname=stdname), indent)
+
+    def write_ptr_def(self, outfile, indent, name, kind, dimstr, vtype, extra_space=0):
+        """Write the definition line for local null pointer declaration to <outfile>."""
+        comma = ', '
+        if kind:
+            dstr = "{type}({kind}){cspace}pointer          :: {name}{dims}{cspace2} => null()"
+            cspace = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
+            cspace2 = ' '*(20 -len(name) - len(dimstr))
+        else:
+            dstr = "{type}{cspace}pointer          :: {name}{dims}{cspace2} => null()"
+            cspace = comma + ' '*(extra_space + 22 - len(vtype))
+            cspace2 = ' '*(20 -len(name) - len(dimstr))
+        # end if
+        outfile.write(dstr.format(type=vtype, kind=kind, name=name, dims=dimstr,
+                                  cspace=cspace, cspace2=cspace2), indent)
 
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""
@@ -1369,11 +1503,11 @@ class VarDictionary(OrderedDict):
     >>> VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})
     VarDictionary(bar)
     >>> VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)) #doctest: +ELLIPSIS
-    VarDictionary(baz, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(baz, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> print("{}".format(VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV))))
     VarDictionary(baz, ['hi_mom'])
     >>> VarDictionary('qux', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) #doctest: +ELLIPSIS
-    VarDictionary(qux, [('hi_mom', <__main__.Var hi_mom: foo at 0x...>)])
+    VarDictionary(qux, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
     >>> VarDictionary('boo', _MVAR_DUMMY_RUN_ENV).add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV), _MVAR_DUMMY_RUN_ENV)
 
     >>> VarDictionary('who', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]).prop_list('local_name')
@@ -1417,7 +1551,7 @@ class VarDictionary(OrderedDict):
                 self[stdname] = variables[key]
             # end for
         elif variables is not None:
-            raise ParseInternalError('Illegal type for variables, {} in {}'.format(type(variables), self.name))
+            raise ParseInternalError(f'Illegal type for variables, {type_name(variables)} in {self.name}')
         # end if
 
     @property
@@ -1598,7 +1732,7 @@ class VarDictionary(OrderedDict):
             # end if
             if not present:
                 dvar = self.find_variable(standard_name=dimname, any_scope=True)
-                if dvar and (dvar.source.type not in ignore_sources):
+                if dvar and (dvar.source.ptype not in ignore_sources):
                     if to_dict:
                         to_dict.add_variable(dvar, self.__run_env,
                                              exists_ok=True,
@@ -1613,15 +1747,13 @@ class VarDictionary(OrderedDict):
                     else:
                         ctx = context_string(var.context)
                     # end if
-                    err_ret += "{}: ".format(self.name)
-                    err_ret += "Cannot find variable for dimension, {}, of {}{}"
                     vstdname = var.get_prop_value('standard_name')
-                    err_ret = err_ret.format(dimname, vstdname, ctx)
+                    err_ret += f"{self.name}: "
+                    err_ret += f"Cannot find variable for dimension, {dimname}, of {vstdname}{ctx}"
                     if dvar:
-                        err_ret += "\nFound {} from excluded source, '{}'{}"
                         lname = dvar.get_prop_value('local_name')
                         dctx = context_string(dvar.context)
-                        err_ret = err_ret.format(lname, dvar.source.type, dctx)
+                        err_ret += f"\nFound {lname} from excluded source, '{dvar.source.ptype}'{dctx}"
                     # end if
                 # end if
             # end if
@@ -1972,11 +2104,3 @@ CCPP_CONSTANT_VARS =                                                         \
                                                _MVAR_DUMMY_RUN_ENV)])
 
 ###############################################################################
-if __name__ == "__main__":
-    # pylint: disable=ungrouped-imports
-    import doctest
-    import sys
-    # pylint: enable=ungrouped-imports
-    fail, _ = doctest.testmod()
-    sys.exit(fail)
-# end if

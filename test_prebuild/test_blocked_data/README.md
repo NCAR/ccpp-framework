@@ -11,6 +11,4 @@ cd build
 cmake .. 2>&1 | tee log.cmake
 make 2>&1 | tee log.make
 ./test_blocked_data.x
-# On systems where linking against the MPI library requires a parallel launcher,
-# use 'mpirun -np 1 ./test_blocked_data.x' or 'srun -n 1 ./test_blocked_data.x' etc.
 ```

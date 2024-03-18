@@ -15,6 +15,7 @@ import os
 import logging
 import re
 # CCPP framework imports
+from ccpp_database_obj import CCPPDatabaseObj
 from ccpp_datafile import generate_ccpp_datatable
 from ccpp_suite import API
 from file_utils import check_for_writeable_file, remove_dir, replace_paths
@@ -26,11 +27,13 @@ from host_cap import write_host_cap
 from host_model import HostModel
 from metadata_table import parse_metadata_file, SCHEME_HEADER_TYPE
 from parse_tools import init_log, set_log_level, context_string
+from parse_tools import register_fortran_ddt_name
 from parse_tools import CCPPError, ParseInternalError
 
 ## Capture the Framework root
-__SCRIPT_PATH = os.path.dirname(__file__)
-__FRAMEWORK_ROOT = os.path.abspath(os.path.join(__SCRIPT_PATH, os.pardir))
+_SCRIPT_PATH = os.path.dirname(__file__)
+_FRAMEWORK_ROOT = os.path.abspath(os.path.join(_SCRIPT_PATH, os.pardir))
+_SRC_ROOT = os.path.join(_FRAMEWORK_ROOT, "src")
 ## Init this now so that all Exceptions can be trapped
 _LOGGER = init_log(os.path.basename(__file__))
 
@@ -42,6 +45,11 @@ _EXTRA_VARIABLE_TABLE_TYPES = ['module', 'host', 'ddt']
 
 ## Metadata table types where order is significant
 _ORDERED_TABLE_TYPES = [SCHEME_HEADER_TYPE]
+
+## CCPP Framework supported DDT types
+_CCPP_FRAMEWORK_DDT_TYPES = ["ccpp_hash_table_t",
+                             "ccpp_hashable_t",
+                             "ccpp_hashable_char_t"]
 
 ###############################################################################
 def delete_pathnames_from_file(capfile, logger):
@@ -306,6 +314,17 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
             lname = mvar.get_prop_value('local_name')
             arrayref = is_arrayspec(lname)
             fvar, find = find_var_in_list(lname, flist)
+            # Check for consistency between optional variables in metadata and
+            # optional variables in fortran. Error if optional attribute is
+            # missing from fortran declaration.
+            mopt  = mvar.get_prop_value('optional')
+            if find and mopt:
+                fopt = fvar.get_prop_value('optional')
+                if (not fopt):
+                    errmsg = 'Missing optional attribute in fortran declaration for variable {}, in file {}'
+                    errors_found = add_error(errors_found, errmsg.format(mname,title))
+                # end if
+            # end if
             if mind >= flen:
                 if arrayref:
                     # Array reference, variable not in Fortran table
@@ -559,7 +578,7 @@ def clean_capgen(cap_output_file, logger):
     set_log_level(logger, log_level)
 
 ###############################################################################
-def capgen(run_env):
+def capgen(run_env, return_db=False):
 ###############################################################################
     """Parse indicated host, scheme, and suite files.
     Generate code to allow host model to run indicated CCPP suites."""
@@ -578,12 +597,22 @@ def capgen(run_env):
         # Try to create output_dir (let it crash if it fails)
         os.makedirs(run_env.output_dir)
     # end if
+    # Pre-register base CCPP DDT types:
+    for ddt_name in _CCPP_FRAMEWORK_DDT_TYPES:
+        register_fortran_ddt_name(ddt_name)
+    # end for
+    src_dir = os.path.join(_FRAMEWORK_ROOT, "src")
     host_files = run_env.host_files
     host_name = run_env.host_name
     scheme_files = run_env.scheme_files
     # We need to create three lists of files, hosts, schemes, and SDFs
     host_files = create_file_list(run_env.host_files, ['meta'], 'Host',
                                   run_env.logger)
+    # The host model needs to know about the constituents module
+    const_mod = os.path.join(_SRC_ROOT, "ccpp_constituent_prop_mod.meta")
+    if const_mod not in host_files:
+        host_files.append(const_mod)
+    # end if
     scheme_files = create_file_list(run_env.scheme_files, ['meta'],
                                     'Scheme', run_env.logger)
     sdfs = create_file_list(run_env.suites, ['xml'], 'Suite', run_env.logger)
@@ -594,14 +623,21 @@ def capgen(run_env):
     # end if
     # First up, handle the host files
     host_model = parse_host_model_files(host_files, host_name, run_env)
+    # We always need to parse the ccpp_constituent_prop_ptr_t DDT
+    const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
+    if const_prop_mod not in scheme_files:
+        scheme_files = [const_prop_mod] + scheme_files
+    # end if
     # Next, parse the scheme files
     scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
-    ddts = host_model.ddt_lib.keys()
-    if ddts and run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
-        run_env.logger.debug("DDT definitions = {}".format(ddts))
+    if run_env.verbose:
+        ddts = host_model.ddt_lib.keys()
+        if ddts:
+            run_env.logger.debug("DDT definitions = {}".format(ddts))
+        # end if
     # end if
     plist = host_model.prop_list('local_name')
-    if run_env.logger and run_env.logger.isEnabledFor(logging.DEBUG):
+    if run_env.verbose:
         run_env.logger.debug("{} variables = {}".format(host_model.name, plist))
         run_env.logger.debug("schemes = {}".format([x.title
                                                     for x in scheme_headers]))
@@ -628,7 +664,8 @@ def capgen(run_env):
     cap_filenames = ccpp_api.write(outtemp_dir, run_env)
     if run_env.generate_host_cap:
         # Create a cap file
-        host_files = [write_host_cap(host_model, ccpp_api,
+        cap_module = host_model.ccpp_cap_name()
+        host_files = [write_host_cap(host_model, ccpp_api, cap_module,
                                      outtemp_dir, run_env)]
     else:
         host_files = list()
@@ -646,10 +683,13 @@ def capgen(run_env):
     # end if
     # Finally, create the database of generated files and caps
     # This can be directly in output_dir because it will not affect dependencies
-    src_dir = os.path.join(__FRAMEWORK_ROOT, "src")
     generate_ccpp_datatable(run_env, host_model, ccpp_api,
                             scheme_headers, scheme_tdict, host_files,
                             cap_filenames, kinds_file, src_dir)
+    if return_db:
+        return CCPPDatabaseObj(run_env, host_model=host_model, api=ccpp_api)
+    # end if
+    return None
 
 ###############################################################################
 def _main_func():
@@ -665,7 +705,7 @@ def _main_func():
     if framework_env.clean:
         clean_capgen(framework_env.datatable_file, framework_env.logger)
     else:
-        capgen(framework_env)
+        _ = capgen(framework_env)
     # end if (clean)
 
 ###############################################################################
