@@ -90,3 +90,9 @@
   dimensions = (number_of_model_times)
   type = integer
   allocatable = True
+[ coeffs ]
+  standard_name = coefficients_for_interpolation
+  long_name = coefficients for interpolation
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real | kind = kind_phys
