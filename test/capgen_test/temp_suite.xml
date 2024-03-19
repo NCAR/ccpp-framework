@@ -2,7 +2,6 @@
 
 <suite name="temp_suite" version="1.0">
   <group name="physics1">
-    <scheme>setup_coeffs</scheme>
     <scheme>temp_set</scheme>
   </group>
   <group name="physics2">

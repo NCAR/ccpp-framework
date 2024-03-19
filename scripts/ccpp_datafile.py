@@ -704,9 +704,6 @@ def _new_scheme_entry(parent, scheme, group_name, scheme_headers):
             emsg = "Scheme entry already exists for {} but name is {}"
             raise CCPPDatatableError(emsg.format(sch_name, pname))
         # end if
-    # Special case: Scheme w/o run phase.
-    if not scheme._has_run_phase:
-        return
     else:
         phase_entry = ET.SubElement(sch_entry, sch_tag)
         phase_entry.set("name", sch_name)
