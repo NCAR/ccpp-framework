@@ -58,6 +58,16 @@
   type = integer
 
 ########################################################################
+[ccpp-table-properties]
+  name = MPI_Comm
+  type = ddt
+  dependencies =
+
+[ccpp-arg-table]
+  name = MPI_Comm
+  type = ddt
+
+########################################################################
 
 [ccpp-table-properties]
   name = ccpp_types
@@ -79,3 +89,9 @@
   units = 1
   dimensions = ()
   type = integer
+[MPI_Comm]
+  standard_name = MPI_Comm
+  long_name = definition of type MPI_Comm
+  units = DDT
+  dimensions = ()
+  type = MPI_Comm
