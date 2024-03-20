@@ -32,6 +32,7 @@ class Var(object):
         self._kind          = None
         self._intent        = None
         self._active        = None
+        self._optional      = None
         self._target        = None
         self._actions       = { 'in' : None, 'out' : None }
         for key, value in kwargs.items():
@@ -133,6 +134,17 @@ class Var(object):
         if not isinstance(value, str):
             raise ValueError('Invalid value {0} for variable property active, must be a string'.format(value))
         self._active = value
+
+    @property
+    def optional(self):
+        '''Get the optional attribute of the variable.'''
+        return self._optional
+
+    @optional.setter
+    def optional(self, value):
+        if not isinstance(value, str):
+            raise ValueError('Invalid value {0} for variable property optional, must be a string'.format(value))
+        self._optional = value
 
     @property
     def target(self):
@@ -323,6 +335,7 @@ class Var(object):
         kind          = {s.kind} *
         intent        = {s.intent}
         active        = {s.active}
+        optional      = {s.optional}
         target        = {s.target}
         container     = {s.container}
         actions       = {s.actions}'''
