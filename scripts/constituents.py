@@ -507,7 +507,7 @@ class ConstituentVarDict(VarDictionary):
         # Declare dynamic constituent properties variables
         for idx, scheme in enumerate(sorted(dyn_const_dict)):
             cap.comment(f"dynamic constituent props variable for {scheme}", 2)
-            cap.write(f"type({CONST_PROP_TYPE}), allocatable, target :: dyn_const_prop_{idx}(:)", 2)
+            cap.write(f"type({CONST_PROP_TYPE}), allocatable :: dyn_const_prop_{idx}(:)", 2)
         # end for
         cap.blank_line()
         cap.write(f"{herrcode} = 0", 2)
