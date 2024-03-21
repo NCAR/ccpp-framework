@@ -19,6 +19,9 @@ jobs:
       matrix:
         python-version: ["3.8","3.9","3.10","3.11","3.12"]
 
+    env:
+      MPIHOME: /home/runner/openmpi
+
     steps:
     - uses: actions/checkout@v4
 
@@ -31,6 +34,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Install open mpi
+      run: |
+        wget https://github.com/open-mpi/ompi/archive/refs/tags/v4.1.6.tar.gz
+        tar -xvf v4.1.6.tar.gz
+        ls
+        cd openmpi-v4.1.6
+        ./configure --prefix=${MPIHOME}
+        make -j4
+        make install
+        export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${MPIHOME}/lib
+
     - name: ccpp-prebuild unit tests
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
