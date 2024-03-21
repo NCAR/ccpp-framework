@@ -35,9 +35,7 @@ jobs:
       run: |
         wget https://github.com/open-mpi/ompi/archive/refs/tags/v4.1.6.tar.gz
         tar -xvf v4.1.6.tar.gz
-        ls
         cd ompi-4.1.6
-        ls
         ./autogen.pl
         ./configure --prefix=/home/runner/ompi-4.1.6
         make -j4
