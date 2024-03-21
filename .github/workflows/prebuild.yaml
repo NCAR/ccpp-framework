@@ -31,7 +31,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
     - name: Install open mpi
       run: |
         wget https://github.com/open-mpi/ompi/archive/refs/tags/v4.1.6.tar.gz
@@ -43,8 +42,8 @@ jobs:
         ./configure --prefix=/home/runner/ompi-4.1.6
         make -j4
         make install
-        export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/runner/ompi-4.1.6/lib
-
+        echo "LD_LIBRARY_PATH=/home/runner/ompi-4.1.6/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PATH=/home/runner/ompi-4.1.6/bin:$PATH" >> $GITHUB_ENV
     - name: ccpp-prebuild unit tests
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
