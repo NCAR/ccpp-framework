@@ -19,9 +19,6 @@ jobs:
       matrix:
         python-version: ["3.8","3.9","3.10","3.11","3.12"]
 
-    env:
-      MPIHOME: /home/runner/openmpi
-
     steps:
     - uses: actions/checkout@v4
 
@@ -41,6 +38,7 @@ jobs:
         tar -xvf v4.1.6.tar.gz
         ls
         cd ompi-4.1.6
+        ls
         ./configure --prefix=/home/runner/ompi-4.1.6
         make -j4
         make install
