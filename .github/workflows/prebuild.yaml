@@ -40,11 +40,11 @@ jobs:
         wget https://github.com/open-mpi/ompi/archive/refs/tags/v4.1.6.tar.gz
         tar -xvf v4.1.6.tar.gz
         ls
-        cd openmpi-v4.1.6
-        ./configure --prefix=${MPIHOME}
+        cd ompi-4.1.6
+        ./configure --prefix=/home/runner/ompi-4.1.6
         make -j4
         make install
-        export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${MPIHOME}/lib
+        export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/runner/ompi-4.1.6/lib
 
     - name: ccpp-prebuild unit tests
       run: |
