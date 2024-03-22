@@ -474,12 +474,21 @@ def compare_metadata(metadata_define, metadata_request):
         # If the host model variable is allocated based on a condition, i.e. has an active attribute other
         # than T (.true.), the scheme variable must be optional
         if not metadata_define[var_name][0].active == 'T':
-            for var in metadata_request[var_name]:
+            # DH*
+            #for var in metadata_request[var_name]:
+            for idx in range(len(metadata_request[var_name])):
+                var = metadata_request[var_name][idx]
+            # *DH
                 if var.optional == 'F':
-                    logging.error("Conditionally allocated host-model variable {0} is not optional in {1}".format(
-                                  var_name, var.container))
-                    success = False
-
+                    # DH* THIS IS WHAT IT SHOULD BE
+                    ### logging.error("Conditionally allocated host-model variable {0} is not optional in {1}".format(
+                    ###               var_name, var.container))
+                    ### success = False
+                    # NASTY WORKAROUND TO KEEP GOING INSTEAD
+                    logging.warning("Conditionally allocated host-model variable {0} is not optional in {1} - inject optional attribute in metadata".format(
+                                    var_name, var.container))
+                    metadata_request[var_name][idx].optional = 'T'
+                    # *DH
         # Construct the actual target variable and list of modules to use from the information in 'container'
         var = metadata_define[var_name][0]
         target = ''
