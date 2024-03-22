@@ -1,0 +1,157 @@
+[ccpp-table-properties]
+  name = opt_arg_scheme
+  type = scheme
+  dependencies = ccpp_kinds.F90
+
+########################################################################
+[ccpp-arg-table]
+  name = opt_arg_scheme_timestep_init
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[nx]
+  standard_name = size_of_std_arg
+  long_name = size of std_arg
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[var]
+  standard_name = std_arg
+  long_name = mandatory variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+  intent = in
+[opt_var]
+  standard_name = opt_arg
+  long_name = optional variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+  intent = out
+  optional = True
+[opt_var_2]
+  standard_name = opt_arg_2
+  long_name = optional variable with unit conversions
+  units = m
+  dimensions = (size_of_std_arg)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = True
+
+########################################################################
+[ccpp-arg-table]
+  name = opt_arg_scheme_run
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[nx]
+  standard_name = size_of_std_arg
+  long_name = size of std_arg
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[var]
+  standard_name = std_arg
+  long_name = mandatory variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+  intent = in
+[opt_var]
+  standard_name = opt_arg
+  long_name = optional variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+  intent = inout
+  optional = True
+[opt_var_2]
+  standard_name = opt_arg_2
+  long_name = optional variable with unit conversions
+  units = m
+  dimensions = (size_of_std_arg)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = True
+
+########################################################################
+[ccpp-arg-table]
+  name = opt_arg_scheme_timestep_finalize
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[nx]
+  standard_name = size_of_std_arg
+  long_name = size of std_arg
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[var]
+  standard_name = std_arg
+  long_name = mandatory variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+  intent = inout
+[opt_var]
+  standard_name = opt_arg
+  long_name = optional variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+  intent = in
+  optional = True
+[opt_var_2]
+  standard_name = opt_arg_2
+  long_name = optional variable with unit conversions
+  units = m
+  dimensions = (size_of_std_arg)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = True
