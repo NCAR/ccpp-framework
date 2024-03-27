@@ -28,7 +28,7 @@ set(${PACKAGE}_LIB_DIRS
 #------------------------------------------------------------------------------
 # Define the executable and what to link
 add_library(ccpp_framework STATIC ${SOURCES_F90})
-target_link_libraries(ccpp_framework LINK_PUBLIC ${LIBS} ${CMAKE_DL_LIBS})
+target_link_libraries(ccpp_framework PUBLIC MPI::MPI_Fortran)
 set_target_properties(ccpp_framework PROPERTIES VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}
                                       LINK_FLAGS ${CMAKE_Fortran_FLAGS})

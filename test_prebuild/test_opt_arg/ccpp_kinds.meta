@@ -1,0 +1,15 @@
+[ccpp-table-properties]
+  name = ccpp_kinds
+  type = module
+  dependencies = 
+
+########################################################################
+[ccpp-arg-table]
+  name = ccpp_kinds
+  type = module
+[kind_phys]
+  standard_name = kind_phys
+  long_name = definition of kind_phys
+  units = none
+  dimensions = ()
+  type = integer
