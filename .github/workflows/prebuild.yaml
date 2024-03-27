@@ -1,6 +1,7 @@
 name: ccpp-prebuild
 
 on:
+  push:
   pull_request:
 
 concurrency:
@@ -55,3 +56,12 @@ jobs:
         cmake ..
         make
         ./test_blocked_data.x
+    - name: ccpp-prebuild chunked data tests
+      run: |
+        cd test_prebuild/test_chunked_data
+        python3 ../../scripts/ccpp_prebuild.py --config=ccpp_prebuild_config.py --builddir=build
+        cd build
+        cmake ..
+        make
+        ./test_chunked_data.x
+
