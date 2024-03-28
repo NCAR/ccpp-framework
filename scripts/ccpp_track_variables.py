@@ -170,20 +170,29 @@ def create_var_graph(suite, var, config, metapath, run_env):
 
     return (success,var_graph)
 
-def main():
+def track_variables(sdf,metadata_path,config,variable,debug):
     """Main routine that traverses a CCPP suite and outputs the list of schemes that use given
-       variable, broken down by group"""
+       variable, broken down by group
 
-    args = parse_arguments()
+    Args:
+        sdf           (str) : The full path of the suite definition file to parse
+        metadata_path (str) : path to CCPP scheme metadata files
+        config        (str) : path to CCPP prebuild configuration file
+        variable      (str) : variable to track through CCPP suite
+        debug        (bool) : Enable extra output for debugging
 
-    logger = setup_logging(args.debug)
+    Returns:
+        None
+"""
+
+    logger = setup_logging(debug)
 
     #Use new capgen class CCPPFrameworkEnv
     run_env = CCPPFrameworkEnv(logger, host_files="", scheme_files="", suites="")
 
-    suite = parse_suite(args.sdf,run_env)
+    suite = parse_suite(sdf,run_env)
 
-    (success, config) = import_config(args.config, None)
+    (success, config) = import_config(config, None)
     if not success:
         raise Exception('Call to import_config failed.')
 
@@ -194,10 +203,10 @@ def main():
     if not success:
         raise Exception('Call to gather_variable_definitions failed.')
 
-    (success, var_graph) = create_var_graph(suite, args.variable, config, args.metadata_path, run_env)
+    (success, var_graph) = create_var_graph(suite, variable, config, metadata_path, run_env)
     if success:
         print(f"For suite {suite.sdf_name}, the following schemes (in order for each group) "
-              f"use the variable {args.variable}:")
+              f"use the variable {variable}:")
         for group in var_graph:
             if var_graph[group]:
                 print(f"In group {group}")
@@ -206,4 +215,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+
+    args = parse_arguments()
+
+    track_variables(args.sdf,args.metadata_path,args.config,args.variable,args.debug)
