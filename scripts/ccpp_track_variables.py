@@ -57,7 +57,6 @@ def parse_suite(sdf, run_env):
        the ordered list of schemes for the suite specified by the provided sdf"""
     run_env.logger.info(f'Reading sdf {sdf} and populating Suite object')
     suite = Suite(sdf_name=sdf)
-    run_env.logger.info(f'Reading sdf {sdf} and populating Suite object')
     success = suite.parse(make_call_tree=True)
     if not success:
         raise Exception(f'Parsing suite definition file {sdf} failed.')
@@ -99,9 +98,6 @@ def create_var_graph(suite, var, config, metapath, run_env):
 
     run_env.logger.debug(f"reading .meta files in path:\n {metapath}")
     metadata_dict=create_metadata_filename_dict(metapath)
-
-    run_env.logger.debug(f"reading metadata files for schemes defined in config file: "
-                  f"{config['scheme_files']}")
 
     # Loop through call tree, find matching filename for scheme via dictionary schemes_in_files,
     # then parse that metadata file to find variable info
