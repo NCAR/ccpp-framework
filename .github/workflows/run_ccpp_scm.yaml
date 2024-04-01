@@ -58,6 +58,12 @@ jobs:
     - name: Update ccpp-framework hash in ccpp-scm
       run: |
         cd ${SCM_ROOT}/ccpp/framework
+        echo "Slug URL variables"
+        echo " - ${{ env.GITHUB_REF_SLUG_URL }}"
+        echo " - ${{ env.GITHUB_HEAD_REF_SLUG_URL }}"
+        echo " - ${{ env.GITHUB_BASE_REF_SLUG_URL }}"
+        echo " - ${{ env.GITHUB_REPOSITORY_SLUG_URL }}"
+        echo " - "
         echo ${{ github.head_ref }}
         echo $GIT_REMOTE_URL
         echo $GIT_REMOTE_BRANCH
