@@ -47,7 +47,7 @@ jobs:
 
     - name: Checkout latest CCPP SCM code.
       run: |
-        git clone --recursive https://github.com/NCAR/ccpp-scm.git
+        git clone https://github.com/NCAR/ccpp-scm.git
 
     - name: Initialize submodules
       run: |
@@ -55,6 +55,7 @@ jobs:
         git submodule update --init --recursive
 
     - name: Update ccpp-framework hash in ccpp-scm
+      if: github.event.pull_request == false
       run: |
         cd ${SCM_ROOT}/ccpp/framework
         echo $GIT_REMOTE_URL
