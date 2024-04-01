@@ -51,6 +51,7 @@ jobs:
 
     - name: Update ccpp-framework hash in ccpp-scm
       run: |
+        ls ${SCM_ROOT}
         cd ${SCM_ROOT}/ccpp/framework
         ls ${SCM_ROOT}
         echo $GIT_REMOTE_URL
