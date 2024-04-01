@@ -1,6 +1,6 @@
 name: CI test to build and run the CCPP SCM regression tests
 
-on: [pull_request, workflow_dispatch]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   run_scm_rts:
