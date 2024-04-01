@@ -45,12 +45,14 @@ jobs:
     - name: Store hash for HEAD of current ccpp-framework code
       run: echo "GIT_REMOTE_HASH=`git rev-parse HEAD`" >> $GITHUB_ENV
 
-    - name: Initialize submodules
-      run: git submodule update --init --recursive
-
-    - name: Grab CCPP SCM code
+    - name: Checkout latest CCPP SCM code.
       run: |
         git clone --recursive https://github.com/NCAR/ccpp-scm.git
+
+    - name: Initialize submodules
+      run: |
+        cd ${SCM_ROOT}
+        git submodule update --init --recursive
 
     - name: Update ccpp-framework hash in ccpp-scm
       run: |
