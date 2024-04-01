@@ -33,6 +33,8 @@ jobs:
     #######################################################################################
     - name: Checkout current framework code (into /home/runner/work/ccpp-framework/)
       uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
 
     - name: Store remote-URL for current ccpp-framework code
       run: echo "GIT_REMOTE_URL=`git remote get-url origin`" >> $GITHUB_ENV
@@ -49,14 +51,10 @@ jobs:
     - name: Grab CCPP SCM code
       run: |
         git clone --recursive https://github.com/NCAR/ccpp-scm.git
-        pwd
-        ls
 
     - name: Update ccpp-framework hash in ccpp-scm
       run: |
-        ls ${SCM_ROOT}
         cd ${SCM_ROOT}/ccpp/framework
-        ls ${SCM_ROOT}
         echo $GIT_REMOTE_URL
         echo $GIT_REMOTE_BRANCH
         echo ${{github.repository}}
