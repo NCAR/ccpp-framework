@@ -58,21 +58,16 @@ jobs:
     - name: Update ccpp-framework hash in ccpp-scm
       run: |
         cd ${SCM_ROOT}/ccpp/framework
-        echo "Slug URL variables"
-        echo " - ${{ env.GITHUB_REF_SLUG_URL }}"
-        echo " - ${{ env.GITHUB_HEAD_REF_SLUG_URL }}"
-        echo " - ${{ env.GITHUB_BASE_REF_SLUG_URL }}"
-        echo " - ${{ env.GITHUB_REPOSITORY_SLUG_URL }}"
-        echo " - "
+        echo ${{ github.repositoryUrl }}
         echo ${{ github.head_ref }}
         echo $GIT_REMOTE_URL
         echo $GIT_REMOTE_BRANCH
         echo ${{github.repository}}
         echo ${{ github.event.pull_request.head.sha }}
         echo $GITHUB_SHA
-        git remote add remote_local $GIT_REMOTE_URL
-        git fetch remote_local $GIT_REMOTE_BRANCH
-        git checkout remote_local/$GIT_REMOTE_BRANCH
+        git remote add remote_local ${{ github.repositoryUrl }}
+        git fetch remote_local ${{ github.head_ref }}
+        git checkout remote_local/${{ github.head_ref }}
 
     #######################################################################################
     # Python setup
