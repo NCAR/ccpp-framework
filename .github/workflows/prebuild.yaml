@@ -1,7 +1,6 @@
 name: ccpp-prebuild
 
 on:
-  push:
   pull_request:
 
 concurrency:
