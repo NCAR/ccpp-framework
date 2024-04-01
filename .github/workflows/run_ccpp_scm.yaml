@@ -55,7 +55,6 @@ jobs:
         git submodule update --init --recursive
 
     - name: Update ccpp-framework hash in ccpp-scm
-      if: github.event.pull_request == false
       run: |
         cd ${SCM_ROOT}/ccpp/framework
         echo $GIT_REMOTE_URL
