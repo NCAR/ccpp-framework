@@ -37,15 +37,6 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Store remote-URL for current ccpp-framework code
-      run: echo "GIT_REMOTE_URL=`git remote get-url origin`" >> $GITHUB_ENV
-
-    - name: Store branch name for current ccpp-framework code
-      run: echo "GIT_REMOTE_BRANCH=`git rev-parse --abbrev-ref HEAD`" >> $GITHUB_ENV
-
-    - name: Store hash for HEAD of current ccpp-framework code
-      run: echo "GIT_REMOTE_HASH=`git rev-parse HEAD`" >> $GITHUB_ENV
-
     - name: Checkout latest CCPP SCM code.
       run: |
         git clone https://github.com/NCAR/ccpp-scm.git
@@ -55,18 +46,9 @@ jobs:
         cd ${SCM_ROOT}
         git submodule update --init --recursive
 
-    - name: Update ccpp-framework hash in ccpp-scm
+    - name: Update ccpp-framework hash in ccpp-scm.
       run: |
         cd ${SCM_ROOT}/ccpp/framework
-        echo ${{ github.repository }}
-        echo ${{ github.head_ref }}
-        echo ${{ github.event.pull_request.head.repo.name }}
-        echo ${{ github.event.pull_request.head.repo.clone_url }}
-        echo $GIT_REMOTE_URL
-        echo $GIT_REMOTE_BRANCH
-        echo ${{github.repository}}
-        echo ${{ github.event.pull_request.head.sha }}
-        echo $GITHUB_SHA
         git remote add remote_local ${{ github.event.pull_request.head.repo.clone_url }}
         git fetch remote_local ${{ github.head_ref }}
         git checkout remote_local/${{ github.head_ref }}
