@@ -20,11 +20,11 @@ jobs:
       bacio_ROOT: /home/runner/bacio
       sp_ROOT:    /home/runner/NCEPLIBS-sp
       w3emc_ROOT: /home/runner/myw3emc
-      SCM_ROOT:   /home/runner/work/ccpp-scm
+      SCM_ROOT:   /home/runner/ccpp-scm
       suites:     SCM_GFS_v15p2,SCM_GFS_v16,SCM_GFS_v17_p8,SCM_HRRR,SCM_RRFS_v1beta,SCM_RAP,SCM_WoFS_v0
       suites_ps:  SCM_GFS_v15p2_ps,SCM_GFS_v16_ps,SCM_GFS_v17_p8_ps,SCM_HRRR_ps,SCM_RRFS_v1beta_ps,SCM_RAP_ps,SCM_WoFS_v0_ps
-      dir_rt:     /home/runner/work/ccpp-scm/test/artifact-${{matrix.build-type}}
-      dir_bl:     /home/runner/work/ccpp-scm/test/BL-${{matrix.build-type}}
+      dir_rt:     /home/runner/ccpp-scm/test/artifact-${{matrix.build-type}}
+      dir_bl:     /home/runner/ccpp-scm/test/BL-${{matrix.build-type}}
 
     # Workflow steps
     steps:
@@ -211,12 +211,12 @@ jobs:
     - name: Run SCM RTs
       run: |
         cd ${SCM_ROOT}/scm/bin
-        ./run_scm.py --file /home/runner/work/ccpp-scm/test/rt_test_cases.py --runtime_mult 0.1
+        ./run_scm.py --file /home/runner/ccpp-scm/test/rt_test_cases.py --runtime_mult 0.1
 
     - name: Gather SCM RT output
       run: |
         cd ${SCM_ROOT}/test
-        mkdir /home/runner/work/ccpp-scm/test/artifact-${{matrix.build-type}}
+        mkdir /home/runner/ccpp-scm/test/artifact-${{matrix.build-type}}
         ./ci_util.py -b ${{matrix.build-type}}
 
     - name: Create directory for SCM RT baselines
@@ -237,4 +237,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: rt-baselines-${{matrix.build-type}}
-        path: /home/runner/work/ccpp-scm/test/artifact-${{matrix.build-type}}
+        path: /home/runner/ccpp-scm/test/artifact-${{matrix.build-type}}
