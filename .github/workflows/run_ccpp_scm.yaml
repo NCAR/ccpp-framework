@@ -31,6 +31,7 @@ jobs:
     #######################################################################################
     # Initial
     #######################################################################################
+
     - name: Checkout current framework code (into /home/runner/work/ccpp-framework/)
       uses: actions/checkout@v3
       with:
