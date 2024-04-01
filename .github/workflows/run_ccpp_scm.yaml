@@ -60,6 +60,8 @@ jobs:
         cd ${SCM_ROOT}/ccpp/framework
         echo ${{ github.repository }}
         echo ${{ github.head_ref }}
+        echo ${{ github.event.pull_request.head.repo.name }}
+        echo ${{ github.event.pull_request.head.repo.url }}
         echo $GIT_REMOTE_URL
         echo $GIT_REMOTE_BRANCH
         echo ${{github.repository}}
