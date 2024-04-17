@@ -138,5 +138,5 @@ def test_bad_config(capsys):
 
 if __name__ == "__main__":
     print("This test file is designed to be run with pytest; can not be run directly")
-
+    sys.exit(1)
 
