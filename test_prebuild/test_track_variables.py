@@ -3,11 +3,12 @@
 -----------------------------------------------------------------------
  Description:  Contains unit tests for ccpp_track_variables.py script
 
- Assumptions:
+ Assumptions:  Assumes user has correct environment for running ccpp_track_variables.py script.
+               This script should not be run directly, but rather invoked with pytest.
 
  Command line arguments: none
 
- Usage: python test_var_transforms.py         # run the unit tests
+ Usage: pytest test_track_variables.py         # run the unit tests
 -----------------------------------------------------------------------
 """
 import sys
@@ -28,6 +29,9 @@ sys.path.append(SCRIPTS_DIR)
 from ccpp_track_variables import track_variables
 
 def test_successful_match(capsys):
+    """Tests whether test_track_variables.py produces expected output from sample suite and
+       metadata files for a case with a successful match (user provided a variable that exists
+       within the schemes specified by the test suite)"""
     expected_output = """For suite test_track_variables/suite_small_suite.xml, the following schemes (in order for each group) use the variable air_pressure:
 In group group1
   scheme_1_run (intent in)
@@ -43,6 +47,11 @@ In group group1
         i+=1
 
 def test_successful_match_with_subcycles(capsys):
+    """Tests whether test_track_variables.py produces expected output from sample suite and
+       metadata files for a case with a successful match(user provided a variable that exists
+       within the schemes specified by the test suite). In this case, the test suite file
+       contains subcycles, so the output should reflect this."""
+
     expected_output = """For suite test_track_variables/suite_TEST_SUITE.xml, the following schemes (in order for each group) use the variable surface_air_pressure:
 In group group1
   scheme_3_run (intent inout)
@@ -69,6 +78,11 @@ In group group2
 
 
 def test_partial_match(capsys):
+    """Tests whether test_track_variables.py produces expected output from sample suite and
+       metadata files for a case with a partial match: user provided a variable that does not
+       exist in the test suite, but is a substring of one or more other variables that do
+       exist."""
+
     expected_output = """Variable surface not found in any suites for sdf test_track_variables/suite_TEST_SUITE.xml
 
 ERROR:ccpp_track_variables:Variable surface not found in any suites for sdf test_track_variables/suite_TEST_SUITE.xml
@@ -96,6 +110,10 @@ In scheme_B_run found variable(s) ['flag_nonzero_wet_surface_fraction', 'sea_sur
 
 
 def test_no_match(capsys):
+    """Tests whether test_track_variables.py produces expected output from sample suite and
+       metadata files for a case with no match (user provided a variable that does not exist
+       within the schemes specified by the test suite)"""
+
     expected_output = """Variable abc not found in any suites for sdf test_track_variables/suite_TEST_SUITE.xml
 
 ERROR:ccpp_track_variables:Variable abc not found in any suites for sdf test_track_variables/suite_TEST_SUITE.xml"""
@@ -111,6 +129,8 @@ ERROR:ccpp_track_variables:Variable abc not found in any suites for sdf test_tra
 
 
 def test_bad_config(capsys):
+    """Tests whether test_track_variables.py fails gracefully when provided a config file that does
+       not exist."""
     with pytest.raises(Exception) as excinfo:
         track_variables(SUITE_FILE,SAMPLE_FILES_DIR,f'{SAMPLE_FILES_DIR}/nofile','abc',False)
     assert str(excinfo.value) == "Call to import_config failed."
