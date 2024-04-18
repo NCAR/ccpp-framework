@@ -1330,15 +1330,14 @@ end module {module}
                             # DH* TODO REMOVE IF NOT NEEDED
                             dim_substrings_assumed_shape = []
                             for dim in var.dimensions:
-                                # DH* TODO - REMOVE IN A LATER STEP (WHEN MOVING TO CHUNKED ARRAYS)
-                                # By default, don't pass explicit dimensions, only ':'. This is because
-                                # we have not solved the problem of passing inactive arrays correctly
-                                # (something that needs to be done before we can use chunked arrays in
-                                # models like the ufs-weather-model). See also note further down where
-                                # this variable gets set to True and then where it gets used.
-                                #use_explicit_dimension = False
-                                use_explicit_dimension = True
-                                # *DH
+
+                                # Work around for GNU compiler bugs related to allocatable strings
+                                # in older versions of GNU (at least 9.2.0)
+                                if var.rank and var.type == 'character':
+                                    use_explicit_dimension = False
+                                else:
+                                    use_explicit_dimension = True
+ 
                                 # This is not supported/implemented: tmpvar would have one dimension less
                                 # than the original array, and the metadata requesting the variable would
                                 # not pass the initial test that host model variables and scheme variables
@@ -1441,14 +1440,12 @@ end module {module}
                                         dim_substrings.append(f'{dim0}:{dim1}')
                                         dim_substrings_assumed_shape.append(':')
                                 else:
-                                    raise Exception("THIS IS NO LONGER POSSIBLE?")
-                                    #if dim0 == dim1:
-                                    #    array_size.append('1')
-                                    #    # DH* TODO - is this correct?
-                                    #    dim_substrings.append(f':')
-                                    #else:
-                                    #    array_size.append(f'({dim1}-{dim0}+1)')
-                                    #    dim_substrings.append(f':')
+                                    if dim0 == dim1:
+                                        array_size.append('1')
+                                        dim_substrings.append(f':')
+                                    else:
+                                        array_size.append(f'({dim1}-{dim0}+1)')
+                                        dim_substrings.append(f':')
 
                             # Now we need to compare dim_substrings with a possible dim_string_target_name and merge them
                             if dimensions_target_name:
@@ -1489,7 +1486,10 @@ end module {module}
                                 # will catch any out of bound reads with the appropriate compiler flags. It naturally
                                 # deals with non-uniform block sizes etc.
                                 pass
-                            elif var.rank:
+                            # Some older versions of GNU currently in use can not do these variable size tests on strings
+                            # 0x5b6fdd gimplify_expr(tree_node**, gimple**, gimple**, bool (*)(tree_node*), int)
+                            #   /tmp/role.apps/spack-stage/spack-stage-gcc-9.2.0-ku6r4f5qa5obpfnqpa6pezhogxq6sp7h/spack-src/gcc/gimplify.c:13477
+                            elif var.rank and not var.type == 'character':
                                 assign_test = '''        ! Check if variable {var_name} is associated/allocated and has the correct size
         if (size({var_name}{dim_string})/={var_size_expected}) then
           write({ccpp_errmsg}, '(2(a,i8))') 'Detected size mismatch for variable {var_name}{dim_string} in group {group_name} before {subroutine_name}, expected ', &
@@ -1627,9 +1627,12 @@ end module {module}
                                                  '        {t} = {c}\n'.format(t=tmpvar.local_name,
                                                                             c=var.actions['in'].format(var=tmpvar.local_name,
                                                                                                     kind=kind_string))
-                                # If the variable is conditionally allocated, assign pointer
-                                if not conditional == '.true.':
-                                    actions_in += '        {p} => {t}{d}\n'.format(p=tmpptr.local_name, t=tmpvar.local_name, d=dim_string)
+
+                            # If the variable is conditionally allocated, assign pointer
+                            if not conditional == '.true.':
+                                # We don't want the dimstring here - this can lead to dimension mismatches.
+                                # We know for sure that we need to reference the entire de-blocked array anyway.
+                                actions_in += '        {p} => {t}\n'.format(p=tmpptr.local_name, t=tmpvar.local_name, d=dim_string)
 
                             if var.actions['out']:
                                 # Add unit conversion after returning from the subroutine, before copying the non-blocked
@@ -1638,9 +1641,10 @@ end module {module}
                                                                             c=var.actions['out'].format(var=tmpvar.local_name,
                                                                                                         kind=kind_string)) + \
                                                  actions_out
-                                # If the variable is conditionally allocated, nullify pointer
-                                if not conditional == '.true.':
-                                    actions_out += '        nullify({p})\n'.format(p=tmpptr.local_name)
+
+                            # If the variable is conditionally allocated, nullify pointer
+                            if not conditional == '.true.':
+                                actions_out += '        nullify({p})\n'.format(p=tmpptr.local_name)
 
                             # Add the conditionals for the "before" operations
                             actions_before += '''
