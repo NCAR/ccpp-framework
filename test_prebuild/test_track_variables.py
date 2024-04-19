@@ -40,15 +40,12 @@ In group group1
     streams = capsys.readouterr()
     expected_output_list = expected_output.splitlines()
     streams_err_list = streams.err.splitlines()
-    # Split into lines to ignore whitespace differences
-    i = 0
-    for line in streams_err_list:
-        assert streams_err_list[i].strip() == expected_output_list[i].strip()
-        i+=1
+    for (err, expected) in zip(streams_err_list, expected_output_list):
+        assert err.strip() == expected.strip()
 
 def test_successful_match_with_subcycles(capsys):
     """Tests whether test_track_variables.py produces expected output from sample suite and
-       metadata files for a case with a successful match(user provided a variable that exists
+       metadata files for a case with a successful match (user provided a variable that exists
        within the schemes specified by the test suite). In this case, the test suite file
        contains subcycles, so the output should reflect this."""
 
@@ -70,11 +67,8 @@ In group group2
     streams = capsys.readouterr()
     expected_output_list = expected_output.splitlines()
     streams_err_list = streams.err.splitlines()
-    # Split into lines to ignore whitespace differences
-    i = 0
-    for line in streams_err_list:
-        assert streams_err_list[i].strip() == expected_output_list[i].strip()
-        i+=1
+    for (err, expected) in zip(streams_err_list, expected_output_list):
+        assert err.strip() == expected.strip()
 
 
 def test_partial_match(capsys):
@@ -102,11 +96,8 @@ In scheme_B_run found variable(s) ['flag_nonzero_wet_surface_fraction', 'sea_sur
     streams = capsys.readouterr()
     expected_output_list = expected_output.splitlines()
     streams_err_list = streams.err.splitlines()
-    # Split into lines to ignore whitespace differences
-    i = 0
-    for line in streams_err_list:
-        assert streams_err_list[i].strip() == expected_output_list[i].strip()
-        i+=1
+    for (err, expected) in zip(streams_err_list, expected_output_list):
+        assert err.strip() == expected.strip()
 
 
 def test_no_match(capsys):
@@ -121,11 +112,8 @@ ERROR:ccpp_track_variables:Variable abc not found in any suites for sdf test_tra
     streams = capsys.readouterr()
     expected_output_list = expected_output.splitlines()
     streams_err_list = streams.err.splitlines()
-    # Split into lines to ignore whitespace differences
-    i = 0
-    for line in streams_err_list:
-        assert streams_err_list[i].strip() == expected_output_list[i].strip()
-        i+=1
+    for (err, expected) in zip(streams_err_list, expected_output_list):
+        assert err.strip() == expected.strip()
 
 
 def test_bad_config(capsys):
