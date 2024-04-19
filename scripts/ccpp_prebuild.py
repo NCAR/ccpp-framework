@@ -489,6 +489,19 @@ def compare_metadata(metadata_define, metadata_request):
                     ###                 var_name, var.container))
                     ### metadata_request[var_name][idx].optional = 'T'
                     # *DH
+        # DH*
+        # TEMPORARY CHECK? IF THE VARIABLE IS ALWAYS ALLOCATED, THE SCHEME VARIABLE SHOULDN'T BE OPTIONAL
+        else:
+            # DH*
+            #for var in metadata_request[var_name]:
+            for idx in range(len(metadata_request[var_name])):
+                var = metadata_request[var_name][idx]
+            # *DH
+                if var.optional == 'T':
+                    logging.warn("Unconditionally allocated host-model variable {0} is  optional in {1}".format(
+                                  var_name, var.container))
+                    #success = False
+        # *DH
         # Construct the actual target variable and list of modules to use from the information in 'container'
         var = metadata_define[var_name][0]
         target = ''
