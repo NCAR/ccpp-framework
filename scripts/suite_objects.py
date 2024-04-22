@@ -1098,6 +1098,7 @@ class Scheme(SuiteObject):
         self.__var_debug_checks = list()
         self.__forward_transforms = list()
         self.__reverse_transforms = list()
+        self._has_run_phase = True
         self.__optional_vars = list()
         super().__init__(name, context, parent, run_env, active_call_list=True)
 
@@ -1143,6 +1144,9 @@ class Scheme(SuiteObject):
             if phase in func:
                 my_header = func[phase]
                 self.__subroutine_name = my_header.title
+            else:
+                self._has_run_phase = False
+                return set()
             # end if
         else:
             estr = 'No schemes found for {}'
@@ -1727,11 +1731,13 @@ class Scheme(SuiteObject):
         # 
         # Write the scheme call.
         #
-        stmt = 'call {}({})'
-        outfile.write('',indent+1)
-        outfile.write('! Call scheme', indent+1)
-        outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
-        outfile.write('',indent+1)
+        if self._has_run_phase:
+            stmt = 'call {}({})'
+            outfile.write('',indent+1)
+            outfile.write('! Call scheme', indent+1)
+            outfile.write(stmt.format(self.subroutine_name, my_args), indent+1)
+            outfile.write('',indent+1)
+        # end if
         #
         # Copy any local pointers.
         #

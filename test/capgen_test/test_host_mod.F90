@@ -17,6 +17,7 @@ module test_host_mod
    integer,         parameter   :: index_qv = 1
    real(kind_phys), allocatable :: temp_midpoints(:,:)
    real(kind_phys)              :: temp_interfaces(ncols, pverP)
+   real(kind_phys)              :: coeffs(ncols)
    real(kind_phys), dimension(DiagDimStart:ncols, DiagDimStart:pver) ::       &
         diag1,                                                                &
         diag2

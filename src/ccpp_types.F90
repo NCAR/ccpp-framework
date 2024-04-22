@@ -19,6 +19,8 @@
 !
 module ccpp_types
 
+    use mpi_f08, only: MPI_Comm
+
 !! \section arg_table_ccpp_types
 !! \htmlinclude ccpp_types.html
 !!
@@ -27,6 +29,7 @@ module ccpp_types
 
     private
     public :: ccpp_t, one
+    public :: MPI_Comm
 
     !> @var Definition of constant one
     integer, parameter :: one = 1
