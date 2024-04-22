@@ -638,14 +638,16 @@ def capgen(run_env, return_db=False):
     scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
     # Pull out the dynamic constituent routines, if any
     dyn_const_dict = {}
+    dyn_val_dict = {}
     for table in scheme_tdict:
         routine_name = scheme_tdict[table].dyn_const_routine
         if routine_name is not None:
-            if routine_name not in dyn_const_dict.values():
+            if routine_name not in dyn_val_dict:
                dyn_const_dict[table] = routine_name
+               dyn_val_dict[routine_name] = table
             else:
                # dynamic constituent routines must have unique names
-               scheme_name = list(dyn_const_dict.keys())[list(dyn_const_dict.values()).index(routine_name)]
+               scheme_name = dyn_val_dict[routine_name]
                errmsg = f"ERROR: Dynamic constituent routine names must be unique. Cannot add " \
                         f"{routine_name} for {table}. Routine already exists in {scheme_name}. "
                raise CCPPError(errmsg)

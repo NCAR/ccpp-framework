@@ -329,9 +329,9 @@ CONTAINS
            errcode=errflg, errmsg=errmsg)
       call check_errflg(subname//'.initialize', errflg, errmsg, errflg_final)
       if (errflg == 0) then
-         call test_host_ccpp_register_constituents(suite_names(:),            &
-              host_constituents, dynamic_constituents=dynamic_constituents,   &
-              errmsg=errmsg, errflg=errflg)
+         call test_host_ccpp_register_constituents(host_constituents,         &
+                 dynamic_constituents=dynamic_constituents,                   &
+                 errmsg=errmsg, errflg=errflg)
       end if
       if (errflg /= 0) then
          write(6, '(2a)') 'ERROR register_constituents: ', trim(errmsg)

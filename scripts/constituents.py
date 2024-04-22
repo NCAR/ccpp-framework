@@ -473,7 +473,7 @@ class ConstituentVarDict(VarDictionary):
 # XXgoldyXX: ^ need to generalize host model error var type support
         # First up, the registration routine
         substmt = f"subroutine {reg_funcname}"
-        args = "suite_list, host_constituents, dynamic_constituents "
+        args = "host_constituents, dynamic_constituents "
         stmt = f"{substmt}({args}, {err_dummy_str})"
         cap.write(stmt, 1)
         cap.comment("Create constituent object for suites in <suite_list>", 2)
@@ -488,7 +488,6 @@ class ConstituentVarDict(VarDictionary):
         # end if
         cap.blank_line()
         cap.comment("Dummy arguments", 2)
-        cap.write("character(len=*), intent(in)  :: suite_list(:)", 2)
         cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)  :: " +       \
                   "host_constituents(:)", 2)
         cap.write(f"type({CONST_PROP_TYPE}), allocatable, target, intent(inout) :: " +   \
