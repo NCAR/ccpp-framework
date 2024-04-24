@@ -524,7 +524,7 @@ def parse_host_model_files(host_filenames, host_name, run_env):
     return host_model
 
 ###############################################################################
-def parse_scheme_files(scheme_filenames, run_env, known_ddts=None):
+def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -532,14 +532,14 @@ def parse_scheme_files(scheme_filenames, run_env, known_ddts=None):
     """
     table_dict = {} # Duplicate check and for dependencies processing
     header_dict = {} # To check for duplicates
-    if not known_ddts:
-        known_ddts = list()
+    known_ddts = list()
     # end if
     logger = run_env.logger
     for filename in scheme_filenames:
         logger.info('Reading CCPP schemes from {}'.format(filename))
         # parse metadata file
-        mtables = parse_metadata_file(filename, known_ddts, run_env)
+        mtables = parse_metadata_file(filename, known_ddts, run_env,
+                                      skip_ddt_check=skip_ddt_check)
         fort_file = find_associated_fortran_file(filename)
         ftables = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)
