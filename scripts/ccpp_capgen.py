@@ -387,7 +387,7 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
 
 ###############################################################################
 def check_fortran_against_metadata(meta_headers, fort_headers,
-                                   mfilname, ffilename, logger,
+                                   mfilename, ffilename, logger,
                                    dyn_routines=None, fortran_routines=None):
 ###############################################################################
     """Compare a set of metadata headers from <mfilename> against the
