@@ -312,17 +312,28 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
         # end if
         for mind, mvar in enumerate(mlist):
             lname = mvar.get_prop_value('local_name')
+            mname = mvar.get_prop_value('standard_name')
             arrayref = is_arrayspec(lname)
             fvar, find = find_var_in_list(lname, flist)
             # Check for consistency between optional variables in metadata and
             # optional variables in fortran. Error if optional attribute is
             # missing from fortran declaration.
+            # first check: if metadata says the variable is optional, does the fortran match?
             mopt  = mvar.get_prop_value('optional')
             if find and mopt:
                 fopt = fvar.get_prop_value('optional')
                 if (not fopt):
-                    errmsg = 'Missing optional attribute in fortran declaration for variable {}, in file {}'
+                    errmsg = 'Missing "optional" attribute in fortran declaration for variable {}, for {}'
                     errors_found = add_error(errors_found, errmsg.format(mname,title))
+                # end if
+            # end if
+            # now check: if fortran says the variable is optional, does the metadata match?
+            if fvar:
+                fopt = fvar.get_prop_value('optional')
+                mopt = mvar.get_prop_value('optional')
+                if (fopt and not mopt):
+                    errmsg = 'Missing "optional" metadata property for variable {}, for {}'
+                    errors_found = add_error(errors_found, errmsg.format(mname, title))
                 # end if
             # end if
             if mind >= flen:
@@ -511,7 +522,7 @@ def parse_host_model_files(host_filenames, host_name, run_env):
     return host_model
 
 ###############################################################################
-def parse_scheme_files(scheme_filenames, run_env):
+def parse_scheme_files(scheme_filenames, run_env, known_ddts=None):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -519,7 +530,9 @@ def parse_scheme_files(scheme_filenames, run_env):
     """
     table_dict = {} # Duplicate check and for dependencies processing
     header_dict = {} # To check for duplicates
-    known_ddts = list()
+    if not known_ddts:
+        known_ddts = list()
+    # end if
     logger = run_env.logger
     for filename in scheme_filenames:
         logger.info('Reading CCPP schemes from {}'.format(filename))
