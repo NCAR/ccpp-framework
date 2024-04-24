@@ -2,15 +2,19 @@
 
 """
 Recursively compare all fortran and metadata files in user-supplied directory, and report any problems
-USAGE: set PYTHONPATH environment variable to the the scripts directory, then:
-    python offline_check_fortran_vs_metadata.py --directory <full path to directory with scheme files> (--debug)
+USAGE:
+    ./offline_check_fortran_vs_metadata.py --directory <full path to directory with scheme files> (--debug)
 """
 
 
 import sys
 import os
+import glob
 import logging
 import argparse
+import site
+# Enable imports from parent directory
+site.addsitedir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # CCPP framework imports
 from framework_env import CCPPFrameworkEnv
@@ -35,12 +39,8 @@ _CCPP_FRAMEWORK_DDT_TYPES = ["ccpp_hash_table_t",
 
 def find_files_to_compare(directory):
     metadata_files = []
-    for root, _, files in os.walk(directory, topdown=True):
-       for name in files:
-          if os.path.splitext(name)[1] == '.meta':
-              metadata_files.append(os.path.join(root, name))
-          # end if
-       # end for
+    for file in glob.glob(os.path.join(directory,'**','*.meta'), recursive=True):
+        metadata_files.append(file)
     # end for
     return metadata_files
 

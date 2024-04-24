@@ -323,8 +323,9 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
             if find and mopt:
                 fopt = fvar.get_prop_value('optional')
                 if (not fopt):
-                    errmsg = 'Missing "optional" attribute in fortran declaration for variable {}, for {}'
-                    errors_found = add_error(errors_found, errmsg.format(mname,title))
+                    errmsg = f'Missing "optional" attribute in fortran declaration for variable {mname}, ' \
+                            'for {title}'
+                    errors_found = add_error(errors_found, errmsg)
                 # end if
             # end if
             # now check: if fortran says the variable is optional, does the metadata match?
@@ -332,8 +333,9 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
                 fopt = fvar.get_prop_value('optional')
                 mopt = mvar.get_prop_value('optional')
                 if (fopt and not mopt):
-                    errmsg = 'Missing "optional" metadata property for variable {}, for {}'
-                    errors_found = add_error(errors_found, errmsg.format(mname, title))
+                    errmsg = f'Missing "optional" metadata property for variable {mname}, ' \
+                            'for {title}'
+                    errors_found = add_error(errors_found, errmsg)
                 # end if
             # end if
             if mind >= flen:
