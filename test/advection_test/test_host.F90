@@ -262,7 +262,6 @@ CONTAINS
        real(kind_phys)                 :: default_value
        real(kind_phys)                 :: check_value
        type(ccpp_constituent_prop_ptr_t), pointer :: const_props(:)
-       type(ccpp_constituent_properties_t), allocatable :: dynamic_constituents(:)
        character(len=*), parameter     :: subname = 'test_host'
 
        ! Initialized "final" error flag used to report a failure to the larged
@@ -330,7 +329,6 @@ CONTAINS
       call check_errflg(subname//'.initialize', errflg, errmsg, errflg_final)
       if (errflg == 0) then
          call test_host_ccpp_register_constituents(host_constituents,         &
-                 dynamic_constituents=dynamic_constituents,                   &
                  errmsg=errmsg, errflg=errflg)
       end if
       if (errflg /= 0) then

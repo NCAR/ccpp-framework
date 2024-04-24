@@ -63,6 +63,7 @@ An example argument table is shown below.
   type = scheme
   relative_path = <relative path>
   dependencies = <dependencies>
+  dynamic_constituent_routine = <routine name>
 
 [ccpp-arg-table]
   name = <name>

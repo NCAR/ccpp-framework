@@ -440,7 +440,7 @@ class ConstituentVarDict(VarDictionary):
     @staticmethod
     def write_host_routines(cap, host, reg_funcname, init_funcname, num_const_funcname,
                             query_const_funcname, copy_in_funcname, copy_out_funcname,
-                            const_obj_name, const_names_name, const_indices_name,
+                            const_obj_name, dyn_const_name, const_names_name, const_indices_name,
                             const_array_func, advect_array_func, prop_array_func,
                             const_index_func, suite_list, dyn_const_dict, err_vars):
         """Write out the host model <reg_funcname> routine which will
@@ -473,7 +473,7 @@ class ConstituentVarDict(VarDictionary):
 # XXgoldyXX: ^ need to generalize host model error var type support
         # First up, the registration routine
         substmt = f"subroutine {reg_funcname}"
-        args = "host_constituents, dynamic_constituents "
+        args = "host_constituents "
         stmt = f"{substmt}({args}, {err_dummy_str})"
         cap.write(stmt, 1)
         cap.comment("Create constituent object for suites in <suite_list>", 2)
@@ -490,8 +490,6 @@ class ConstituentVarDict(VarDictionary):
         cap.comment("Dummy arguments", 2)
         cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)  :: " +       \
                   "host_constituents(:)", 2)
-        cap.write(f"type({CONST_PROP_TYPE}), allocatable, target, intent(inout) :: " +   \
-                  "dynamic_constituents(:)", 2)
         for evar in err_vars:
             evar.write_def(cap, 2, host, dummy=True, add_intent="out")
         # end for
@@ -535,16 +533,16 @@ class ConstituentVarDict(VarDictionary):
                 cap.write(f"num_dyn_consts = num_dyn_consts + size(dyn_const_prop_{idx})", 2)
             # end for
             cap.write("num_consts = num_consts + num_dyn_consts", 2)
-            cap.comment("Pack dynamic_constituents array", 2)
-            cap.write(f"allocate(dynamic_constituents(num_dyn_consts), stat={herrcode})", 2)
+            cap.comment(f"Pack {dyn_const_name} array", 2)
+            cap.write(f"allocate({dyn_const_name}(num_dyn_consts), stat={herrcode})", 2)
             cap.write(f"if ({herrcode} /= 0) then", 2)
-            cap.write(f"{herrmsg} = 'failed to allocate dynamic_constituents'", 3)
+            cap.write(f"{herrmsg} = 'failed to allocate {dyn_const_name}'", 3)
             cap.write("return", 3)
             cap.write("end if", 2)
             cap.write("index_start = 0", 2)
             for idx, scheme in enumerate(sorted(dyn_const_dict)):
                 cap.write(f"do index = 1, size(dyn_const_prop_{idx}, 1)", 2)
-                cap.write(f"dynamic_constituents(index + index_start) = dyn_const_prop_{idx}(index)", 3)
+                cap.write(f"{dyn_const_name}(index + index_start) = dyn_const_prop_{idx}(index)", 3)
                 cap.write("end do", 2)
                 cap.write(f"index_start = size(dyn_const_prop_{idx}, 1)", 2)
                 cap.write(f"deallocate(dyn_const_prop_{idx})", 2)
@@ -568,8 +566,8 @@ class ConstituentVarDict(VarDictionary):
         # Register dynamic constituents
         if len(dyn_const_dict) > 0:
            cap.comment("Add dynamic constituent properties", 2)
-           cap.write(f"do index = 1, size(dynamic_constituents, 1)", 2)
-           cap.write(f"const_prop => dynamic_constituents(index)", 3)
+           cap.write(f"do index = 1, size({dyn_const_name}, 1)", 2)
+           cap.write(f"const_prop => {dyn_const_name}(index)", 3)
            stmt = f"call {const_obj_name}%new_field(const_prop, {obj_err_callstr})"
            cap.write(stmt, 3)
            cap.write("nullify(const_prop)", 3)

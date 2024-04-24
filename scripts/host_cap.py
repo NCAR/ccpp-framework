@@ -11,7 +11,7 @@ import os
 from ccpp_suite import API, API_SOURCE_NAME
 from ccpp_state_machine import CCPP_STATE_MACH
 from constituents import ConstituentVarDict, CONST_DDT_NAME, CONST_DDT_MOD
-from constituents import CONST_OBJ_STDNAME
+from constituents import CONST_OBJ_STDNAME, CONST_PROP_TYPE
 from ddt_library import DDTLibrary
 from file_utils import KINDS_MODULE
 from framework_env import CCPPFrameworkEnv
@@ -174,6 +174,13 @@ def constituent_model_object_name(host_model):
         raise CCPPError(f"Host model does not contain Var, {CONST_OBJ_STDNAME}")
     # end if
     return hvar.get_prop_value('local_name')
+
+###############################################################################
+def dynamic_constituent_array_name(host_model):
+###############################################################################
+    """Return the name of the allocatable dynamic constituent properites array"""
+    hstr = f"{host_model.name}_dynamic_constituents"
+    return unique_local_name(hstr, host_model)
 
 ###############################################################################
 def constituent_model_const_stdnames(host_model):
@@ -363,6 +370,9 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     # end if
     ddt_lib.collect_ddt_fields(const_dict, const_var, run_env,
                                skip_duplicates=True)
+    # Declare the allocatable dynamic constituents array
+    dyn_const_name = dynamic_constituent_array_name(host_model)
+    cap.write(f"type({CONST_PROP_TYPE}), allocatable, target :: {dyn_const_name}(:)", 1)
     # Declare variable for the constituent standard names array
     max_csname = max([len(x) for x in const_stdnames]) if const_stdnames else 0
     num_const_fields = len(const_stdnames)
@@ -485,6 +495,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         # End for
         mspc = ' '*(maxmod - len(CONST_DDT_MOD))
         cap.write(f"use {CONST_DDT_MOD}, {mspc}only: {CONST_DDT_NAME}", 1)
+        cap.write(f"use {CONST_DDT_MOD}, {mspc}only: {CONST_PROP_TYPE}", 1)
         cap.write_preamble()
         max_suite_len = 0
         for suite in api.suites:
@@ -654,10 +665,12 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write("", 0)
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
+        dyn_const_name = dynamic_constituent_array_name(host_model)
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
                                                numconsts_name, queryconsts_name,
                                                copyin_name, copyout_name, 
                                                const_obj_name,
+                                               dyn_const_name,
                                                const_names_name,
                                                const_indices_name,
                                                const_array_func,

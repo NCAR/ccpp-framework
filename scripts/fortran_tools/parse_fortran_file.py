@@ -40,6 +40,7 @@ _CONTINUE_RE = re.compile(r"(?i)&\s*(!.*)?$")
 _FIXED_CONTINUE_RE = re.compile(r"(?i)     [^0 ]")
 _BLANK_RE = re.compile(r"\s+")
 _ARG_TABLE_START_RE = re.compile(r"(?i)\s*![!>]\s*(?:\\section)?\s*arg_table_"+FORTRAN_ID)
+_SUBOURTINE_RE = re.compile(r"(?i)\s*subroutine\s+"+FORTRAN_ID)
 _PREFIX_SPECS = [r"(?:recursive)", r"(?:pure)", r"(?:elemental)"]
 _PREFIX_SPEC = r"(?:{})?\s*".format('|'.join(_PREFIX_SPECS))
 _SUBNAME_SPEC = r"subroutine\s*"
@@ -904,12 +905,14 @@ def parse_module(pobj, statements, run_env):
     statements = read_statements(pobj, statements)
     inmodule = pobj.in_region('MODULE', region_name=mod_name)
     active_table = None
+    additional_subroutines = []
     while inmodule and (statements is not None):
         while statements:
             statement = statements.pop(0)
             # End module
             pmatch = _ENDMODULE_RE.match(statement)
             asmatch = _ARG_TABLE_START_RE.match(statement)
+            smatch = _SUBROUTINE_RE.match(statement)
             if asmatch is not None:
                 active_table = asmatch.group(1)
             elif pmatch is not None:
@@ -917,6 +920,13 @@ def parse_module(pobj, statements, run_env):
                 pobj.leave_region('MODULE', region_name=mod_name)
                 inmodule = False
                 break
+            elif smatch is not None:
+                # parse out the subroutine name
+                routine_name = statement.split()[1]
+                if '(' in routine_name:
+                    routine_name = routine_name.split('(')[0]
+                # end if
+                additional_subroutines.append(routine_name)
             elif active_table is not None:
                 statements, mheader = parse_scheme_metadata(statements, pobj,
                                                             mod_name,
@@ -945,7 +955,7 @@ def parse_module(pobj, statements, run_env):
             statements = read_statements(pobj)
         # End if
     # End while
-    return statements, mtables
+    return statements, mtables, additional_subroutines
 
 ########################################################################
 
@@ -970,14 +980,14 @@ def parse_fortran_file(filename, run_env):
         elif _MODULE_RE.match(statement) is not None:
             # push statement back so parse_module can use it
             statements.insert(0, statement)
-            statements, ptables = parse_module(pobj, statements, run_env)
+            statements, ptables, additional_routines = parse_module(pobj, statements, run_env)
             mtables.extend(ptables)
         # End if
         if (statements is not None) and (len(statements) == 0):
             statements = read_statements(pobj)
         # End if
     # End while
-    return mtables
+    return mtables, additional_routines
 
 ########################################################################
 

@@ -387,7 +387,8 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
 
 ###############################################################################
 def check_fortran_against_metadata(meta_headers, fort_headers,
-                                   mfilename, ffilename, logger):
+                                   mfilname, ffilename, logger,
+                                   dyn_routines=None, fortran_routines=None):
 ###############################################################################
     """Compare a set of metadata headers from <mfilename> against the
     code in the associated Fortran file, <ffilename>.
@@ -439,6 +440,17 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
                                       's' if num_errors > 1 else '',
                                       mfilename, ffilename))
     # end if
+    # Check that any dynamic constituent routines declared in the metadata are
+    # present in the Fortran
+    if dyn_routines:
+        for routine in dyn_routines:
+            if routine not in fortran_routines:
+                # throw an error - it's not in the Fortran
+                errmsg = f"Dynamic constituent routine {routine} not found in fortran {ffilename}"
+                raise CCPPError(errmsg)
+            # end if
+        # end for
+    # end if
     # No return, an exception is raised on error
 
 ###############################################################################
@@ -470,7 +482,7 @@ def parse_host_model_files(host_filenames, host_name, run_env):
         # parse metadata file
         mtables = parse_metadata_file(filename, known_ddts, run_env)
         fort_file = find_associated_fortran_file(filename)
-        ftables = parse_fortran_file(fort_file, run_env)
+        ftables, _ = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
         for sect in [x.sections() for x in mtables]:
@@ -526,7 +538,7 @@ def parse_scheme_files(scheme_filenames, run_env):
         # parse metadata file
         mtables = parse_metadata_file(filename, known_ddts, run_env)
         fort_file = find_associated_fortran_file(filename)
-        ftables = parse_fortran_file(fort_file, run_env)
+        ftables, additional_routines = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
         for sect in [x.sections() for x in mtables]:
@@ -536,8 +548,16 @@ def parse_scheme_files(scheme_filenames, run_env):
         for sect in [x.sections() for x in ftables]:
             fheaders.extend(sect)
         # end for
+        dyn_routines = []
+        for table in mtables:
+            if table.dyn_const_routine:
+                dyn_routines.append(table.dyn_const_routine)
+            # end if
+        # end for
         check_fortran_against_metadata(mheaders, fheaders,
-                                       filename, fort_file, logger)
+                                       filename, fort_file, logger,
+                                       dyn_routines=dyn_routines,
+                                       fortran_routines=additional_routines)
         # Check for duplicate tables, then add to dict
         for table in mtables:
             if table.table_name in table_dict:
