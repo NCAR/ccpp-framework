@@ -18,7 +18,7 @@ CONTAINS
   !! \htmlinclude arg_table_temp_adjust_run.html
   !!
   subroutine temp_adjust_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
-       errmsg, errflg, innie, outie, optsie)
+       to_promote, errmsg, errflg, innie, outie, optsie)
 
     integer,                   intent(in)    :: foo
     real(kind_phys),           intent(in)    :: timestep
@@ -26,6 +26,7 @@ CONTAINS
     real(kind_phys),           intent(inout) :: ps(:)
     REAL(kind_phys),           intent(in)    :: temp_prev(:)
     REAL(kind_phys),           intent(inout) :: temp_layer(foo)
+    real(kind_phys),           intent(in)    :: to_promote(:)
     character(len=512),        intent(out)   :: errmsg
     integer,         optional, intent(out)   :: errflg
     real(kind_phys), optional, intent(in)    :: innie

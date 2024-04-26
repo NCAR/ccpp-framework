@@ -23,6 +23,7 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from parse_tools import init_log, set_log_to_null
 from suite_objects import CallList, Group, Scheme
 from metavar import CCPP_LOOP_VAR_STDNAMES
+from var_props import find_horizontal_dimension, find_vertical_dimension
 
 # pylint: disable=too-many-lines
 
@@ -308,6 +309,45 @@ character(len=16) :: {css_var_name} = '{state}'
                     self.add_variable(var, self.__run_env)
                     # Remove the variable from the group
                     group.remove_variable(standard_name)
+                    # Make sure the variable's dimensions are available
+                    # at the init stage (for allocation)
+                    for group in self.groups:
+                        # only add dimension variables to init phase calling list
+                        if group.name == self.__suite_init_group.name:
+                            horiz_dim = find_horizontal_dimension(var.get_dimensions())[0]
+                            vert_dim = find_vertical_dimension(var.get_dimensions())[0]
+                            if horiz_dim and 'horizontal_loop' in horiz_dim:
+                                # can't use horizontal_loop_being/end/extent in init phase
+                                # must allocate to horizontal_dimension
+                                new_horiz_dim = 'ccpp_constant_one:horizontal_dimension'
+                            else:
+                                new_horiz_dim = horiz_dim
+                            # end if
+                            if horiz_dim:
+                                # make new variable with "correct" dimensions
+                                if vert_dim:
+                                    new_dims = [new_horiz_dim, vert_dim]
+                                else:
+                                    new_dims = [new_horiz_dim]
+                                # end if
+                                subst_dict = {'dimensions': new_dims}
+                                prop_dict = var.copy_prop_dict(subst_dict=subst_dict)
+                                temp_var = Var(prop_dict,
+                                               ParseSource(var.get_prop_value('scheme'),
+                                               var.get_prop_value('local_name'), var.context),
+                                               self.__run_env)
+                                # Add dimensions if they're not already there
+                                group.add_variable_dimensions(temp_var, [],
+                                                              adjust_intent=True,
+                                                              to_dict=group.call_list)
+                            else:
+                                # Add dimensions if they're not already there
+                                group.add_variable_dimensions(var, [],
+                                                              adjust_intent=True,
+                                                              to_dict=group.call_list)
+                            # end if
+                        # end if
+                    # end for
                 else:
                     emsg = ("Group, {}, claimed it had created {} "
                             "but variable was not found")
