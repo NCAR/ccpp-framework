@@ -334,12 +334,12 @@ CONTAINS
       call host_constituents(1)%instantiate(std_name="specific_humidity",     &
            long_name="Specific humidity", units="kg kg-1",                    &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
-           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,             &
            errcode=errflg, errmsg=errmsg)
       call host_constituents(2)%instantiate(std_name="specific_humidity",     &
-           long_name="Specific humidity", units="kg kg-1",                    &
-           vertical_dim="vertical_layer_dimension", advected=.false.,          &
-           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
+           long_name="Specific humidity", units="kg kg",                      &
+           vertical_dim="vertical_layer_dimension", advected=.true.,          &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,             &
            errcode=errflg, errmsg=errmsg)
       call check_errflg(subname//'.initialize', errflg, errmsg, errflg_final)
       if (errflg == 0) then

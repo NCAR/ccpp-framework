@@ -57,6 +57,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_instantiated           => ccp_is_instantiated
       procedure :: standard_name             => ccp_get_standard_name
       procedure :: long_name                 => ccp_get_long_name
+      procedure :: units                     => ccp_get_units
       procedure :: is_layer_var              => ccp_is_layer_var
       procedure :: is_interface_var          => ccp_is_interface_var
       procedure :: is_2d_var                 => ccp_is_2d_var
@@ -99,6 +100,7 @@ module ccpp_constituent_prop_mod
       ! Informational methods
       procedure :: standard_name             => ccpt_get_standard_name
       procedure :: long_name                 => ccpt_get_long_name
+      procedure :: units                     => ccpt_get_units
       procedure :: is_layer_var              => ccpt_is_layer_var
       procedure :: is_interface_var          => ccpt_is_interface_var
       procedure :: is_2d_var                 => ccpt_is_2d_var
@@ -498,6 +500,25 @@ CONTAINS
       end if
 
    end subroutine ccp_get_long_name
+
+   !#######################################################################
+
+   subroutine ccp_get_units(this, units, errcode, errmsg)
+      ! Return this constituent's units
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      character(len=*),                     intent(out) :: units
+      integer,          optional,           intent(out) :: errcode
+      character(len=*), optional,           intent(out) :: errmsg
+
+      if (this%is_instantiated(errcode, errmsg)) then
+         units = this%var_units
+      else
+         units = ''
+      end if
+
+   end subroutine ccp_get_units
 
    !#######################################################################
 
@@ -956,29 +977,36 @@ CONTAINS
       type(ccpp_constituent_properties_t),  intent(in) :: comp_props
       ! Local variable
       logical :: val, comp_val
+      character(len=stdname_len) :: char_val, char_comp_val
       logical :: check
 
       ! By default, every constituent is a match
       is_match = .true.
-      ! Check: advected, thermo_active, water_species
-      ! peverwhee: also check min_value, molar_mass, default_value?
+      ! Check: advected, thermo_active, water_species, units
       call this%is_advected(val)
       call comp_props%is_advected(comp_val)
-      if (val /= comp_val) then
+      if (val .neqv. comp_val) then
          is_match = .false.
          return
       end if
 
       call this%is_thermo_active(val)
       call comp_props%is_thermo_active(comp_val)
-      if (val /= comp_val) then
+      if (val .neqv. comp_val) then
          is_match = .false.
          return
       end if
 
       call this%is_water_species(val)
       call comp_props%is_water_species(comp_val)
-      if (val /= comp_val) then
+      if (val .neqv. comp_val) then
+         is_match = .false.
+         return
+      end if
+
+      call this%units(char_val)
+      call comp_props%units(char_comp_val)
+      if (trim(char_val) /= trim(char_comp_val)) then
          is_match = .false.
          return
       end if
@@ -1918,6 +1946,29 @@ CONTAINS
       end if
 
    end subroutine ccpt_get_long_name
+
+   !#######################################################################
+
+   subroutine ccpt_get_units(this, units, errcode, errmsg)
+      ! Return this constituent's units
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      character(len=*),                   intent(out) :: units
+      integer,          optional,         intent(out) :: errcode
+      character(len=*), optional,         intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_get_units'
+
+      if (associated(this%prop)) then
+         call this%prop%units(units, errcode, errmsg)
+      else
+         units = ''
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_get_units
 
    !#######################################################################
 
