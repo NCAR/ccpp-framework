@@ -667,7 +667,6 @@ def capgen(run_env, return_db=False):
     # end if
     # Next, parse the scheme files
     # We always need to parse the ccpp_constituent_prop_ptr_t DDT
-    ##XXgoldyXX: Should this be in framework_env.py?
     const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
     if const_prop_mod not in scheme_files:
         scheme_files= [const_prop_mod] + scheme_files

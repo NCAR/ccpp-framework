@@ -107,7 +107,7 @@ def constituent_initialize_subname(host_model):
     """Return the name of the subroutine used to initialize the
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
-    return "{}_ccpp_initialize_constituents".format(host_model.name)
+    return f"{host_model.name}_ccpp_initialize_constituents"
 
 ###############################################################################
 def constituent_num_consts_funcname(host_model):
@@ -240,7 +240,7 @@ def constituent_model_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
        array of all constituents"""
-    hstr = "{}_constituents_array".format(host_model.name)
+    hstr = f"{host_model.name}_constituents_array"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -248,14 +248,14 @@ def constituent_model_advected_consts(host_model):
 ###############################################################################
     """Return the name of the function that will return a pointer to the
        array of advected constituents"""
-    hstr = "{}_advected_constituents_array".format(host_model.name)
+    hstr = f"{host_model.name}_advected_constituents_array"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
 def constituent_model_const_props(host_model):
 ###############################################################################
     """Return the name of the array of constituent property object pointers"""
-    hstr = "{}_model_const_properties".format(host_model.name)
+    hstr = f"{host_model.name}_model_const_properties"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -263,7 +263,7 @@ def constituent_model_const_index(host_model):
 ###############################################################################
     """Return the name of the interface that returns the array index of
        a constituent array given its standard name"""
-    hstr = "{}_const_get_index".format(host_model.name)
+    hstr = f"{host_model.name}_const_get_index"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################

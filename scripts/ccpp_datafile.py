@@ -426,7 +426,6 @@ def _retrieve_dyn_const_routines(table):
     ccpp_datafile.CCPPDatatableError: Could not find 'dyn_const_routines' element
 
     """
-    result = set()
     routines = table.find("dyn_const_routines")
     if routines is None:
         raise CCPPDatatableError("Could not find 'dyn_const_routines' element")
