@@ -150,6 +150,14 @@ def constituent_copyout_subname(host_model):
     return f"{host_model.name}_ccpp_update_constituents"
 
 ###############################################################################
+def constituent_cleanup_subname(host_model):
+###############################################################################
+    """Return the name of the subroutine to deallocate dynamic constituent
+    arrays
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_deallocate_dynamic_constituents"
+
+###############################################################################
 def unique_local_name(loc_name, host_model):
 ###############################################################################
     """Create a unique local name based on the local_name property,
@@ -521,6 +529,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write(f"public :: {copyin_name}", 1)
         copyout_name = constituent_copyout_subname(host_model)
         cap.write(f"public :: {copyout_name}", 1)
+        cleanup_name = constituent_cleanup_subname(host_model)
+        cap.write(f"public :: {cleanup_name}", 1)
         const_array_func = constituent_model_consts(host_model)
         cap.write(f"public :: {const_array_func}", 1)
         advect_array_func = constituent_model_advected_consts(host_model)
@@ -668,7 +678,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         dyn_const_name = dynamic_constituent_array_name(host_model)
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
                                                numconsts_name, queryconsts_name,
-                                               copyin_name, copyout_name, 
+                                               copyin_name, copyout_name,
+                                               cleanup_name,
                                                const_obj_name,
                                                dyn_const_name,
                                                const_names_name,

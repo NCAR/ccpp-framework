@@ -580,6 +580,23 @@ def parse_scheme_files(scheme_filenames, run_env):
             # end if
         # end for
     # end for
+    # Check for duplicate dynamic constituent routine names
+    dyn_val_dict = {}
+    for table in table_dict:
+        routine_name = table_dict[table].dyn_const_routine
+        if routine_name:
+            if routine_name in dyn_val_dict:
+                # dynamic constituent routines must have unique names
+                scheme_name = dyn_val_dict[routine_name]
+                errmsg = f"ERROR: Dynamic constituent routine names must be unique. Cannot add " \
+                         f"{routine_name} for {table}. Routine already exists in {scheme_name}. "
+                raise CCPPError(errmsg)
+            else:
+                dyn_val_dict[routine_name] = table
+            # end if
+        # end if
+    # end for
+
     return header_dict.values(), table_dict
 
 ###############################################################################
@@ -665,12 +682,6 @@ def capgen(run_env, return_db=False):
             if routine_name not in dyn_val_dict:
                dyn_const_dict[table] = routine_name
                dyn_val_dict[routine_name] = table
-            else:
-               # dynamic constituent routines must have unique names
-               scheme_name = dyn_val_dict[routine_name]
-               errmsg = f"ERROR: Dynamic constituent routine names must be unique. Cannot add " \
-                        f"{routine_name} for {table}. Routine already exists in {scheme_name}. "
-               raise CCPPError(errmsg)
             # end if
         # end if
     # end for

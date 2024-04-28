@@ -23,7 +23,7 @@ module test_prog
       character(len=cm), pointer :: suite_required_vars(:) => NULL()
    end type suite_info
 
-   type(ccpp_constituent_properties_t), private, target :: host_constituents(1)
+   type(ccpp_constituent_properties_t), private, target, allocatable :: host_constituents(:)
 
 
    private :: check_list
@@ -225,6 +225,7 @@ CONTAINS
        use test_host_mod,      only: num_time_steps
        use test_host_mod,      only: init_data, compare_data
        use test_host_mod,      only: ncols, pver
+       use test_host_ccpp_cap, only: test_host_ccpp_deallocate_dynamic_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_register_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_is_scheme_constituent
        use test_host_ccpp_cap, only: test_host_ccpp_initialize_constituents
@@ -256,6 +257,7 @@ CONTAINS
        character(len=128), allocatable :: suite_names(:)
        character(len=256)              :: const_str
        character(len=512)              :: errmsg
+       character(len=512)              :: expected_error
        integer                         :: errflg
        integer                         :: errflg_final ! Used to notify testing script of test failure
        real(kind_phys), pointer        :: const_ptr(:,:,:)
@@ -321,7 +323,50 @@ CONTAINS
 
 
       ! Register the constituents to find out what needs advecting
+      ! DO A COUPLE OF TESTS FIRST
+
+      ! First confirm the correct error occurs if you try to add an
+      ! incompatible constituent with the same standard name
+      expected_error = 'ccp_model_const_add_metadata ERROR: Trying to add ' //&
+              'constituent specific_humidity but an incompatible ' //         &
+              'constituent with this name already exists'
+      allocate(host_constituents(2))
       call host_constituents(1)%instantiate(std_name="specific_humidity",     &
+           long_name="Specific humidity", units="kg kg-1",                    &
+           vertical_dim="vertical_layer_dimension", advected=.true.,          &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
+           errcode=errflg, errmsg=errmsg)
+      call host_constituents(2)%instantiate(std_name="specific_humidity",     &
+           long_name="Specific humidity", units="kg kg-1",                    &
+           vertical_dim="vertical_layer_dimension", advected=.false.,          &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
+           errcode=errflg, errmsg=errmsg)
+      call check_errflg(subname//'.initialize', errflg, errmsg, errflg_final)
+      if (errflg == 0) then
+         call test_host_ccpp_register_constituents(host_constituents,         &
+                 errmsg=errmsg, errflg=errflg)
+      end if
+      ! Check the error 
+      if (errflg == 0) then
+         write(6, '(2a)') 'ERROR register_constituents: expected this error: ', &
+                 trim(expected_error)
+      else
+         if (trim(errmsg) /= trim(expected_error)) then
+            write(6, '(4a)') 'ERROR register_constituents: expected this error: ', &
+                 trim(expected_error), ' Got: ', trim(errmsg)
+         end if
+      end if
+      ! Now try again but with a compatible constituent - should be ignored when
+      ! the constituents object is created
+      call test_host_ccpp_deallocate_dynamic_constituents()
+      deallocate(host_constituents)
+      allocate(host_constituents(2))
+      call host_constituents(1)%instantiate(std_name="specific_humidity",     &
+           long_name="Specific humidity", units="kg kg-1",                    &
+           vertical_dim="vertical_layer_dimension", advected=.true.,          &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
+           errcode=errflg, errmsg=errmsg)
+      call host_constituents(2)%instantiate(std_name="specific_humidity",     &
            long_name="Specific humidity", units="kg kg-1",                    &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
            min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &

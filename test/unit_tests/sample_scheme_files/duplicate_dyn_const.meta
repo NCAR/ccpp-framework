@@ -1,11 +1,11 @@
 [ccpp-table-properties]
-  name = temp_adjust
+  name = duplicate_dyn_const
   type = scheme
   dynamic_constituent_routine = dyn_consts
   
 ########################################################################
 [ccpp-arg-table]
-  name = temp_adjust_run
+  name = duplicate_dyn_const_run
   type = scheme
 [ foo ]
   standard_name = horizontal_loop_extent
@@ -41,6 +41,7 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
+  advected = true
   intent = inout
 [ ps ]
   standard_name = surface_air_pressure
@@ -66,7 +67,7 @@
   type = integer
   intent = out
 [ccpp-arg-table]
-  name = temp_adjust_init
+  name = duplicate_dyn_const_init
   type = scheme
 [ errmsg ]
   standard_name = ccpp_error_message
@@ -84,7 +85,7 @@
   type = integer
   intent = out
 [ccpp-arg-table]
-  name = temp_adjust_finalize
+  name = duplicate_dyn_const_finalize
   type = scheme
 [ errmsg ]
   standard_name = ccpp_error_message

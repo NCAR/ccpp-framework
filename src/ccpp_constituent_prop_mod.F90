@@ -76,6 +76,7 @@ module ccpp_constituent_prop_mod
       procedure :: molar_mass                => ccp_molar_mass
       procedure :: default_value             => ccp_default_value
       procedure :: has_default               => ccp_has_default
+      procedure :: is_match                  => ccp_is_match
       ! Copy method (be sure to update this anytime fields are added)
       procedure :: copyConstituent
       generic :: assignment(=) => copyConstituent
@@ -943,6 +944,48 @@ CONTAINS
    end subroutine ccp_has_default
 
    !########################################################################
+
+   logical function ccp_is_match(this, comp_props) result(is_match)
+      ! Return .true. iff the constituent's properties match the checked
+      ! attributes of another constituent properties object
+      ! Since this is a private function, error checking for locked status
+      !    is *not* performed.
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in) :: this
+      type(ccpp_constituent_properties_t),  intent(in) :: comp_props
+      ! Local variable
+      logical :: val, comp_val
+      logical :: check
+
+      ! By default, every constituent is a match
+      is_match = .true.
+      ! Check: advected, thermo_active, water_species
+      ! peverwhee: also check min_value, molar_mass, default_value?
+      call this%is_advected(val)
+      call comp_props%is_advected(comp_val)
+      if (val /= comp_val) then
+         is_match = .false.
+         return
+      end if
+
+      call this%is_thermo_active(val)
+      call comp_props%is_thermo_active(comp_val)
+      if (val /= comp_val) then
+         is_match = .false.
+         return
+      end if
+
+      call this%is_water_species(val)
+      call comp_props%is_water_species(comp_val)
+      if (val /= comp_val) then
+         is_match = .false.
+         return
+      end if
+
+   end function ccp_is_match
+
+   !########################################################################
    !
    ! CCPP_MODEL_CONSTITUENTS_T (constituent field data) methods
    !
@@ -1090,13 +1133,35 @@ CONTAINS
       integer,                             optional, intent(out)   :: errcode
       character(len=*),                    optional, intent(out)   :: errmsg
       ! Local variables
-      character(len=errmsg_len)   :: error
-      character(len=*), parameter :: subname = 'ccp_model_const_add_metadata'
+      character(len=errmsg_len)                    :: error
+      character(len=*), parameter                  :: subname = 'ccp_model_const_add_metadata'
+      type(ccpp_constituent_properties_t), pointer :: cprop
+      character(len=stdname_len)                   :: standard_name
+      integer                                      :: cindex
+      logical                                      :: match
 
       if (this%okay_to_add(errcode=errcode, errmsg=errmsg,                    &
            warn_func=subname)) then
          error = ''
-!!XXgoldyXX: Add check on key to see if incompatible item already there.
+         ! Check to see if standard name is already in the table
+         call field_data%standard_name(standard_name, errcode, errmsg)
+         cprop => this%find_const(standard_name)
+         if (associated(cprop)) then
+            ! Standard name already in table, let's see if the existing constituent is the same
+            cindex = cprop%const_index()
+            match = cprop%is_match(field_data)
+            if (match) then
+               ! Existing constituent is a match - no need to throw an error, just don't add
+               return
+            else
+               ! Existing constituent is not a match - this is ane rror
+               call append_errvars(1, "ERROR: Trying to add constituent " //  &
+                    trim(standard_name) // " but an incompatible" //          &
+                    " constituent with this name already exists", subname,    &
+                    errcode=errcode, errmsg=errmsg)
+               return
+            end if
+         end if
          call this%hash_table%add_hash_key(field_data, error)
          if (len_trim(error) > 0) then
             call append_errvars(1, trim(error), subname, errcode=errcode, errmsg=errmsg)
@@ -1541,7 +1606,7 @@ CONTAINS
       character(len=*), parameter :: subname = "ccp_model_const_index"
 
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
-         cprop => this%find_const(standard_name, errcode=errcode, errmsg=errmsg)
+         cprop => this%find_const(standard_name)
          if (associated(cprop)) then
             index = cprop%const_index()
          else

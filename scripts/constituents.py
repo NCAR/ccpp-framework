@@ -439,7 +439,7 @@ class ConstituentVarDict(VarDictionary):
 
     @staticmethod
     def write_host_routines(cap, host, reg_funcname, init_funcname, num_const_funcname,
-                            query_const_funcname, copy_in_funcname, copy_out_funcname,
+                            query_const_funcname, copy_in_funcname, copy_out_funcname, cleanup_funcname,
                             const_obj_name, dyn_const_name, const_names_name, const_indices_name,
                             const_array_func, advect_array_func, prop_array_func,
                             const_index_func, suite_list, dyn_const_dict, err_vars):
@@ -711,6 +711,14 @@ class ConstituentVarDict(VarDictionary):
         # end for
         cap.blank_line()
         cap.write(f"call {const_obj_name}%copy_out(const_array, {obj_err_callstr})", 2)
+        cap.write(f"end {substmt}", 1)
+        # Write cleanup routine
+        substmt = f"subroutine {cleanup_funcname}"
+        cap.blank_line()
+        cap.write(f"{substmt}()", 1)
+        cap.comment("Deallocate dynamic constituent array", 2)
+        cap.blank_line()
+        cap.write(f"deallocate({dyn_const_name})", 2)
         cap.write(f"end {substmt}", 1)
         # Write constituents routine
         cap.blank_line()

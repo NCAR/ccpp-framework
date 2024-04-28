@@ -1,24 +1,24 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE temp_adjust
+MODULE duplicate_dyn_const
 
   USE ccpp_kinds, ONLY: kind_phys
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: temp_adjust_init
-  PUBLIC :: temp_adjust_run
-  PUBLIC :: temp_adjust_finalize
+  PUBLIC :: duplicate_dyn_const_init
+  PUBLIC :: duplicate_dyn_const_run
+  PUBLIC :: duplicate_dyn_const_finalize
   PUBLIC :: dyn_consts
 
 CONTAINS
 
-  !> \section arg_table_temp_adjust_run  Argument Table
-  !! \htmlinclude arg_table_temp_adjust_run.html
+  !> \section arg_table_duplicate_dyn_const_run  Argument Table
+  !! \htmlinclude arg_table_duplicate_dyn_const_run.html
   !!
-  subroutine temp_adjust_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
+  subroutine duplicate_dyn_const_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
        errmsg, errflg)
 
     integer,            intent(in)    :: foo
@@ -41,12 +41,12 @@ CONTAINS
        qv(col_index) = qv(col_index) + 1.0_kind_phys
     end do
 
-  END SUBROUTINE temp_adjust_run
+  END SUBROUTINE duplicate_dyn_const_run
 
-  !> \section arg_table_temp_adjust_init  Argument Table
-  !! \htmlinclude arg_table_temp_adjust_init.html
+  !> \section arg_table_duplicate_dyn_const_init  Argument Table
+  !! \htmlinclude arg_table_duplicate_dyn_const_init.html
   !!
-  subroutine temp_adjust_init (errmsg, errflg)
+  subroutine duplicate_dyn_const_init (errmsg, errflg)
 
     character(len=512),      intent(out)   :: errmsg
     integer,                 intent(out)   :: errflg
@@ -56,12 +56,12 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  end subroutine temp_adjust_init
+  end subroutine duplicate_dyn_const_init
 
-  !> \section arg_table_temp_adjust_finalize  Argument Table
-  !! \htmlinclude arg_table_temp_adjust_finalize.html
+  !> \section arg_table_duplicate_dyn_const_finalize  Argument Table
+  !! \htmlinclude arg_table_duplicate_dyn_const_finalize.html
   !!
-  subroutine temp_adjust_finalize (errmsg, errflg)
+  subroutine duplicate_dyn_const_finalize (errmsg, errflg)
 
     character(len=512),      intent(out)   :: errmsg
     integer,                 intent(out)   :: errflg
@@ -71,7 +71,7 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  end subroutine temp_adjust_finalize
+  end subroutine duplicate_dyn_const_finalize
 
   subroutine dyn_consts(dyn_const, errcode, errmsg)
       use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
@@ -93,4 +93,4 @@ CONTAINS
    end subroutine dyn_consts
 
 
-END MODULE temp_adjust
+END MODULE duplicate_dyn_const

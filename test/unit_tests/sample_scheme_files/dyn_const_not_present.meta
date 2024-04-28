@@ -41,6 +41,7 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
+  advected = true
   intent = inout
 [ ps ]
   standard_name = surface_air_pressure
