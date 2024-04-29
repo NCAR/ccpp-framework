@@ -73,24 +73,28 @@ CONTAINS
 
   end subroutine temp_adjust_finalize
 
-  subroutine dyn_consts (dyn_const, errcode, errmsg)
-      use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
-      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
-      integer,                             intent(out) :: errcode
-      character(len=512),                  intent(out) :: errmsg
+  subroutine some_subroutine()
+  contains
+     subroutine dyn_consts(dyn_const, errcode, errmsg)
+         use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
+         type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
+         integer,                             intent(out) :: errcode
+         character(len=512),                  intent(out) :: errmsg
 
-      errmsg = ''
-      errcode = 0
-      allocate(dyn_const(1), stat=errcode)
-      if (errcode /= 0) then
-         errmsg = 'Error allocating dyn_const in dyn_consts'
-      end if
-      call dyn_const(1)%instantiate(std_name="dyn_const1", long_name='dyn const1', &
-           units='kg kg-1', default_value=1._kind_phys,                            &
-           vertical_dim='vertical_layer_dimension', advected=.true.,               &
-           errcode=errcode, errmsg=errmsg)
+         errmsg = ''
+         errcode = 0
+         allocate(dyn_const(1), stat=errcode)
+         if (errcode /= 0) then
+            errmsg = 'Error allocating dyn_const in dyn_consts'
+         end if
+         call dyn_const(1)%instantiate(std_name="dyn_const1", long_name='dyn const1', &
+              units='kg kg-1', default_value=1._kind_phys,                            &
+              vertical_dim='vertical_layer_dimension', advected=.true.,               &
+              errcode=errcode, errmsg=errmsg)
 
-   end subroutine dyn_consts
+      end subroutine dyn_consts
+
+   end subroutine some_subroutine
 
 
 END MODULE temp_adjust

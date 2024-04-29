@@ -40,7 +40,6 @@ _CONTINUE_RE = re.compile(r"(?i)&\s*(!.*)?$")
 _FIXED_CONTINUE_RE = re.compile(r"(?i)     [^0 ]")
 _BLANK_RE = re.compile(r"\s+")
 _ARG_TABLE_START_RE = re.compile(r"(?i)\s*![!>]\s*(?:\\section)?\s*arg_table_"+FORTRAN_ID)
-_SUBOURTINE_RE = re.compile(r"(?i)\s*subroutine\s+"+FORTRAN_ID)
 _PREFIX_SPECS = [r"(?:recursive)", r"(?:pure)", r"(?:elemental)"]
 _PREFIX_SPEC = r"(?:{})?\s*".format('|'.join(_PREFIX_SPECS))
 _SUBNAME_SPEC = r"subroutine\s*"
@@ -906,6 +905,8 @@ def parse_module(pobj, statements, run_env):
     inmodule = pobj.in_region('MODULE', region_name=mod_name)
     active_table = None
     additional_subroutines = []
+    seen_contains = False
+    insub = False
     while inmodule and (statements is not None):
         while statements:
             statement = statements.pop(0)
@@ -913,6 +914,8 @@ def parse_module(pobj, statements, run_env):
             pmatch = _ENDMODULE_RE.match(statement)
             asmatch = _ARG_TABLE_START_RE.match(statement)
             smatch = _SUBROUTINE_RE.match(statement)
+            esmatch = _END_SUBROUTINE_RE.match(statement)
+            seen_contains = seen_contains or is_contains_statement(statement, insub)
             if asmatch is not None:
                 active_table = asmatch.group(1)
             elif pmatch is not None:
@@ -920,13 +923,6 @@ def parse_module(pobj, statements, run_env):
                 pobj.leave_region('MODULE', region_name=mod_name)
                 inmodule = False
                 break
-            elif smatch is not None:
-                # parse out the subroutine name
-                routine_name = statement.split()[1]
-                if '(' in routine_name:
-                    routine_name = routine_name.split('(')[0]
-                # end if
-                additional_subroutines.append(routine_name)
             elif active_table is not None:
                 statements, mheader = parse_scheme_metadata(statements, pobj,
                                                             mod_name,
@@ -949,6 +945,14 @@ def parse_module(pobj, statements, run_env):
                 active_table = None
                 inmodule = pobj.in_region('MODULE', region_name=mod_name)
                 break
+            elif smatch is not None and not seen_contains:
+                routine_name = smatch.group(1).strip()
+                additional_subroutines.append(routine_name)
+                insub = True
+            elif esmatch is not None and not seen_contains:
+                insub = False
+            elif esmatch is not None:
+                seen_contains = False
             # End if
         # End while
         if inmodule and (statements is not None) and (len(statements) == 0):

@@ -355,6 +355,16 @@ class MetadataHeaderTestCase(unittest.TestCase):
         emsg = "Dynamic constituent routine dyn_consts not found in fortran"
         self.assertTrue(emsg in str(context.exception))
 
+    def test_not_present_nested_dynamic_constituents_routine(self):
+        scheme_files = [os.path.join(self._sample_files_dir,
+                                     "dyn_const_not_present_nested.meta")]
+
+        with self.assertRaises(CCPPError) as context:
+            _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
+
+        emsg = "Dynamic constituent routine dyn_consts not found in fortran"
+        self.assertTrue(emsg in str(context.exception))
+
     def test_duplicate_dynamic_constituents_routine_name(self):
         scheme_files = [os.path.join(self._sample_files_dir,
                                      "temp_adjust.meta"),
