@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="small_suite" ver="1">
+  <group name="group1">
+    <subcycle loop="1">
+      <scheme>scheme_1</scheme>
+    </subcycle>
+  </group>
+  <group name="group2">
+    <subcycle loop="1">
+      <scheme>scheme_4</scheme>
+    </subcycle>
+  </group>
+</suite>

@@ -1,0 +1,87 @@
+[ccpp-table-properties]
+  name = scheme_2
+  type = scheme
+  relative_path = ../../
+  dependencies = hooks/machine.F
+
+########################################################################
+[ccpp-arg-table]
+  name = scheme_2_init
+  type = scheme
+[semis_file]
+  standard_name = surface_emissivity_data_file
+  long_name = surface emissivity data file for radiation
+  units = none
+  dimensions =  ()
+  type = character
+  kind = len=26
+  intent = in
+
+########################################################################
+[ccpp-arg-table]
+  name = scheme_2_run
+  type = scheme
+[zorl]
+  standard_name = surface_roughness_length
+  long_name = surface roughness length
+  units = cm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+[tsfg]
+  standard_name = surface_ground_temperature_for_radiation
+  long_name = surface ground temperature for radiation
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+[tsfa]
+  standard_name = surface_air_temperature_for_radiation
+  long_name = lowest model layer air temperature for radiation
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+[tisfc]
+  standard_name = surface_skin_temperature_over_ice
+  long_name = surface_skin_temperature_over_ice
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+[semisbase]
+  standard_name = baseline_surface_longwave_emissivity
+  long_name = baseline surface lw emissivity in fraction
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+[semis]
+  standard_name = surface_longwave_emissivity
+  long_name = surface lw emissivity in fraction
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+[sfcalb]
+  standard_name = surface_albedo_components
+  long_name = surface albedo IR/UV/VIS components
+  units = frac
+  dimensions = (horizontal_loop_extent,number_of_components_for_surface_albedo)
+  type = real
+  kind = kind_phys
+  intent = inout
+[sfc_alb_dif]
+  standard_name = surface_albedo_for_diffused_shortwave_on_radiation_timestep
+  long_name = mean surface diffused sw albedo
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
