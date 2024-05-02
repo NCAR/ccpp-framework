@@ -55,7 +55,7 @@ def parse_arguments():
     verbose = args.verbose
     debug = args.debug
     if args.suites:
-        sdfs = ['suite_{0}.xml'.format(x) for x in args.suites.split(',')]
+        sdfs = ['{0}.xml'.format(x) for x in args.suites.split(',')]
     else:
         sdfs = None
     builddir = args.builddir
@@ -181,8 +181,22 @@ def parse_suites(suites_dir, sdfs):
     logging.info('Parsing suite definition files ...')
     suites = []
     for sdf in sdfs:
-        logging.info('Parsing suite definition file {0} ...'.format(os.path.join(suites_dir, sdf)))
-        suite = Suite(sdf_name=os.path.join(suites_dir, sdf))
+        sdf_file=os.path.join(suites_dir, sdf)
+        if not os.path.exists(sdf_file):
+            sdf_file_legacy=os.path.join(suites_dir, f"suite_{sdf}")
+            if not os.path.exists(sdf_file_legacy):
+                logging.critical(f"Suite definition file {sdf_file} not found.")
+                success = False
+                return success
+            else:
+                logging.info("Parsing suite definition file using legacy naming convention")
+                logging.info(f"Filename {os.path.basename(sdf_file_legacy)}")
+                logging.info(f"Suite name {sdf}")
+                sdf_file=sdf_file_legacy
+        else:
+            logging.info(f'Parsing suite definition file {sdf_file} ...')
+
+        suite = Suite(sdf_name=sdf_file)
         success = suite.parse()
         if not success:
             logging.error('Parsing suite definition file {0} failed.'.format(sdf))
