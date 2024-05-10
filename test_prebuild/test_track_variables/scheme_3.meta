@@ -1,0 +1,143 @@
+[ccpp-table-properties]
+  name = scheme_3
+  type = scheme
+  dependencies = ../../hooks/machine.F,../../hooks/physcons.F90,module_sf_mynn.F90
+########################################################################
+[ccpp-arg-table]
+  name = scheme_3_init
+  type = scheme
+[do_mynnsfclay]
+  standard_name = flag_for_mellor_yamada_nakanishi_niino_surface_layer_scheme
+  long_name = flag to activate MYNN surface layer
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+########################################################################
+[ccpp-arg-table]
+  name = scheme_3_timestep_init
+  type = scheme
+[do_mynnsfclay]
+  standard_name = flag_for_mellor_yamada_nakanishi_niino_surface_layer_scheme
+  long_name = flag to activate MYNN surface layer
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+########################################################################
+[ccpp-arg-table]
+  name = scheme_3_run
+  type = scheme
+[sfclay_compute_flux]
+  standard_name = do_compute_surface_scalar_fluxes
+  long_name = flag for computing surface scalar fluxes in mynnsfclay
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[sfclay_compute_diag]
+  standard_name = do_compute_surface_diagnostics
+  long_name = flag for computing surface diagnostics in mynnsfclay
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[prsl]
+  standard_name = air_pressure
+  long_name = mean layer pressure
+  units = Pa
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ps]
+  standard_name = surface_air_pressure
+  long_name = surface pressure
+  units = Pa
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+[pr_ps]
+  standard_name = reference_air_pressure_normalized_by_surface_air_pressure
+  long_name = reference pressure normalized by surface pressure
+  units = cm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+
+########################################################################
+[ccpp-arg-table]
+  name = scheme_3_timestep_finalize
+  type = scheme
+[prsl]
+  standard_name = air_pressure
+  long_name = mean layer pressure
+  units = Pa
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+[ps]
+  standard_name = surface_air_pressure
+  long_name = surface pressure
+  units = Pa
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+
+########################################################################
+[ccpp-arg-table]
+  name = scheme_3_timestep_finalize
+  type = scheme
+[prsl]
+  standard_name = air_pressure
+  long_name = mean layer pressure
+  units = Pa
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+[ps]
+  standard_name = surface_air_pressure
+  long_name = surface pressure
+  units = Pa
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+
