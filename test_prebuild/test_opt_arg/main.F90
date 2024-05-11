@@ -20,8 +20,9 @@ program test_opt_arg
    ! CCPP init step                                 !
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   cdata%blk_no = 1
-   cdata%thrd_no = 1
+   cdata%blk_no   = 1
+   cdata%thrd_no  = 1
+   cdata%thrd_cnt = 1
 
    std_arg = 1
    flag_for_opt_arg = .true.

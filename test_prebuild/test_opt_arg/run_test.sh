@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 rm -fr build
 mkdir build
 ../../scripts/ccpp_prebuild.py --debug --config=ccpp_prebuild_config.py --builddir=build
