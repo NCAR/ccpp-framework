@@ -1350,8 +1350,6 @@ end module {module}
                         if var.rank:
                             array_size = []
                             dim_substrings = []
-                            # DH* TODO REMOVE IF NOT NEEDED
-                            dim_substrings_assumed_shape = []
                             for dim in var.dimensions:
 
                                 # Work around for GNU compiler bugs related to allocatable strings
@@ -1457,11 +1455,9 @@ end module {module}
                                     if dim0 == dim1:
                                         array_size.append('1')
                                         dim_substrings.append(f'{dim1}')
-                                        dim_substrings_assumed_shape.append(f'{dim1}')
                                     else:
                                         array_size.append(f'({dim1}-{dim0}+1)')
                                         dim_substrings.append(f'{dim0}:{dim1}')
-                                        dim_substrings_assumed_shape.append(':')
                                 else:
                                     if dim0 == dim1:
                                         array_size.append('1')
@@ -1490,7 +1486,6 @@ end module {module}
                                         f"scheme {scheme_name} / phase {ccpp_stage}")
                             else:
                                 dim_string = '({})'.format(','.join(dim_substrings))
-                            dim_string_assumed_shape  = '({})'.format(','.join(dim_substrings_assumed_shape))
                             var_size_expected = '({})'.format('*'.join(array_size))
                         else:
                             if dimensions_target_name:
@@ -1521,7 +1516,7 @@ end module {module}
           return
         end if
 '''.format(var_name=local_vars[var_standard_name]['name'].replace(dim_string_target_name, ''),
-           dim_string=dim_string, #dim_string=dim_string_assumed_shape,
+           dim_string=dim_string,
            var_size_expected=var_size_expected,
            ccpp_errmsg=CCPP_INTERNAL_VARIABLES[CCPP_ERROR_MSG_VARIABLE], group_name = self.name,
            subroutine_name=subroutine_name)

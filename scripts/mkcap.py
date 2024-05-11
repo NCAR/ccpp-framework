@@ -277,10 +277,7 @@ class Var(object):
                                                                                dim.lower(), self.standard_name))
                     dim1 = metadata[dim.lower()][0].local_name
             if assume_shape:
-                # DH* TEST w/o lower dim?
                 dimstring.append('{}:'.format(dim0))
-                #dimstring.append(':')
-                # *DH
             else:
                 dimstring.append('{}:{}'.format(dim0, dim1))
         return '({})'.format(','.join(dimstring))
