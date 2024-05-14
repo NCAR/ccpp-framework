@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        fortran-compiler: [gfortran-10, gfortran-11, gfortran-12]
+        fortran-compiler: [gfortran-9, gfortran-10, gfortran-11, gfortran-12, gfortran-13]
     steps:
     - uses: actions/checkout@v3
     - name: update repos and install dependencies
