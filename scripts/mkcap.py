@@ -335,14 +335,14 @@ class Var(object):
             if self.type in STANDARD_VARIABLE_TYPES:
                 if self.kind:
                     if self.rank:
-                        str = "{s.type}({s._kind}), dimension{s.rank}, pointer :: p"
+                        str = "{s.type}({s._kind}), dimension{s.rank}, pointer :: p => null()"
                     else:
-                        str = "{s.type}({s._kind}), pointer :: p"
+                        str = "{s.type}({s._kind}), pointer :: p => null()"
                 else:
                     if self.rank:
-                        str = "{s.type}, dimension{s.rank}, pointer :: p"
+                        str = "{s.type}, dimension{s.rank}, pointer :: p => null()"
                     else:
-                        str = "{s.type}, pointer :: p"
+                        str = "{s.type}, pointer :: p => null()"
             else:
                 if self.kind:
                     error_message = "Generating variable definition statements for derived types with" + \
@@ -350,9 +350,9 @@ class Var(object):
                     raise Exception(error_message)
                 else:
                     if self.rank:
-                        str = "type({s.type}), dimension{s.rank}, pointer :: p"
+                        str = "type({s.type}), dimension{s.rank}, pointer :: p => null()"
                     else:
-                        str = "type({s.type}), pointer :: p"
+                        str = "type({s.type}), pointer :: p => null()"
             return str.format(s=self)
         else:
             # If the host variable is potentially unallocated, the active attribute is
