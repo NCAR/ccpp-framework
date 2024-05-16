@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="opt_arg_suite" version="1">
+  <group name="opt_arg_group">
+    <subcycle loop="1">
+      <scheme>opt_arg_scheme</scheme>
+    </subcycle>
+  </group>
+</suite>

@@ -1,0 +1,46 @@
+[ccpp-table-properties]
+  name = data
+  type = module
+  dependencies =
+[ccpp-arg-table]
+  name = data
+  type = module
+[cdata]
+  standard_name = ccpp_t_instance
+  long_name = instance of derived data type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t
+[nx]
+  standard_name = size_of_std_arg
+  long_name = size of std_arg
+  units = count
+  dimensions = ()
+  type = integer
+[std_arg]
+  standard_name = std_arg
+  long_name = mandatory variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+[opt_arg]
+  standard_name = opt_arg
+  long_name = optional variable
+  units = 1
+  dimensions = (size_of_std_arg)
+  type = integer
+  active = flag_for_opt_arg
+[opt_arg_2]
+  standard_name = opt_arg_2
+  long_name = optional variable with unit conversions
+  units = km
+  dimensions = (size_of_std_arg)
+  type = real
+  kind = kind_phys
+  active = flag_for_opt_arg
+[flag_for_opt_arg]
+  standard_name = flag_for_opt_arg
+  long_name = flag for optional variable
+  units = 1
+  dimensions = ()
+  type = logical
