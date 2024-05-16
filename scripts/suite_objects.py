@@ -2230,22 +2230,9 @@ class Group(SuiteObject):
             self.run_env.logger.debug("{}".format(self))
         # end if
 
-    def allocate_dim_str(self, dims, context, suite_var=False):
+    def allocate_dim_str(self, dims, context):
         """Create the dimension string for an allocate statement"""
         rdims = list()
-        if suite_var:
-            # adjust horizontal dimension if horizontal_loop_* specified
-            horiz_dim = find_horizontal_dimension(dims)[0]
-            vert_dim = find_vertical_dimension(dims)[0]
-            if horiz_dim and 'horizontal_loop' in horiz_dim:
-                new_horiz_dim = 'ccpp_constant_one:horizontal_dimension'
-                if vert_dim:
-                    dims = [new_horiz_dim, vert_dim]
-                else:
-                    dims = [new_horiz_dim]
-                # end if
-            # end if
-        # end if
         for dim in dims:
             rdparts = list()
             dparts = dim.split(':')
@@ -2513,7 +2500,7 @@ class Group(SuiteObject):
                 if dims:
                     timestep_var = svar.get_prop_value('persistence')
                     if group_type == timestep_var:
-                        alloc_str = self.allocate_dim_str(dims, svar.context, suite_var=True)
+                        alloc_str = self.allocate_dim_str(dims, svar.context)
                         lname = svar.get_prop_value('local_name')
                         outfile.write(alloc_stmt.format(lname, alloc_str),
                                       indent+1)
