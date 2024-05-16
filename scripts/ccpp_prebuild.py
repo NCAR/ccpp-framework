@@ -70,7 +70,7 @@ def import_config(configfile, builddir):
     if not os.path.isfile(configfile):
         logging.error("Configuration file {0} not found".format(configfile))
         success = False
-        return
+        return(success, config)
 
     # Import the host-model specific CCPP prebuild config;
     # split into path and module name for import
