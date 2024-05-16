@@ -101,14 +101,14 @@ def fields_string(field_type, field_list, sep):
     return fmsg
 
 def check_datatable(database, report_type, check_list,
-                    sep=',', excl_prot=False):
+                    sep=',', exclude_protected=False):
     """Run a database report and check the return string.
     If an error is found, print an error message.
     Return the number of errors"""
     if sep is None:
         sep = ','
     # end if
-    test_str = datatable_report(database, report_type, sep, excl_prot=excl_prot)
+    test_str = datatable_report(database, report_type, sep, exclude_protected=exclude_protected)
     test_list = [x for x in test_str.split(sep) if x]
     missing = list()
     unexpected = list()

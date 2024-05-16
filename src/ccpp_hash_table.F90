@@ -396,7 +396,7 @@ CONTAINS
 
       ! Dummy arguments
       class(ccpp_hash_iterator_t)      :: this
-      type(ccpp_hash_table_t), intent(in), target :: hash_table
+      class(ccpp_hash_table_t), target :: hash_table
 
       this%hash_table => hash_table
       this%index = 0

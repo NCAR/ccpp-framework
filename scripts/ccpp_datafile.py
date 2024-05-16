@@ -593,13 +593,13 @@ def _is_variable_protected(table, var_name, var_dict):
 
 ###############################################################################
 def _retrieve_variable_list(table, suite_name,
-                            intent_type=None, excl_prot=True):
+                            intent_type=None, exclude_protected=True):
 ###############################################################################
     """Find and return a list of all the required variables in <suite_name>.
     If suite, <suite_name>, is not found in <table>, return an empty list.
     If <intent_type> is present, return only that variable type (input or
     output).
-    If <excl_prot> is True, do not include protected variables
+    If <exclude_protected> is True, do not include protected variables
     >>> table = ET.fromstring("<ccpp_datatable version='1.0'><api><suites><suite name='fruit'>"\
             "<group name='orange'></group></suite></suites></api><var_dictionaries>"\
             "<var_dictionary name='banana' type='host'><variables><var name='var1' intent='inout'>"\
@@ -609,16 +609,16 @@ def _retrieve_variable_list(table, suite_name,
             "</var></variables></var_dictionary></var_dictionaries></ccpp_datatable>")
 
     # Test group variable retrieval
-    >>> _retrieve_variable_list(table, 'fruit', excl_prot=False)
+    >>> _retrieve_variable_list(table, 'fruit', exclude_protected=False)
     ['var3', 'var4', 'var5']
 
     >>> _retrieve_variable_list(table, 'fruit')
     ['var3']
 
-    >>> _retrieve_variable_list(table, 'fruit', intent_type='input', excl_prot=False)
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='input', exclude_protected=False)
     ['var3', 'var5']
 
-    >>> _retrieve_variable_list(table, 'fruit', intent_type='output', excl_prot=False)
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='output', exclude_protected=False)
     ['var4', 'var5']
 
     >>> _retrieve_variable_list(table, 'fruit', intent_type='input')
@@ -628,7 +628,7 @@ def _retrieve_variable_list(table, suite_name,
     []
 
     # Test host variable retrieval
-    >>> _retrieve_variable_list(table, 'fruit', intent_type='host', excl_prot=False)
+    >>> _retrieve_variable_list(table, 'fruit', intent_type='host', exclude_protected=False)
     ['var1', 'var2']
 
     >>> _retrieve_variable_list(table, 'fruit', intent_type='host')
@@ -657,14 +657,14 @@ def _retrieve_variable_list(table, suite_name,
         emsg = "Invalid intent_type, '{}'"
         raise CCPPDatatableError(emsg.format(intent_type))
     # end if
-    if excl_prot or (intent_type == "host"):
+    if exclude_protected or (intent_type == "host"):
         host_dict = _find_var_dictionary(table, dict_type="host")
         if host_dict is not None:
             hvars = host_dict.find("variables")
             if hvars is not None:
                 for var in hvars:
                     vname = var.get("name")
-                    if excl_prot:
+                    if exclude_protected:
                         exclude = _is_variable_protected(table, vname,
                                                          host_dict)
                     else:
@@ -697,7 +697,7 @@ def _retrieve_variable_list(table, suite_name,
                     for var in gvars:
                         vname = var.get("name")
                         vintent = var.get("intent")
-                        if excl_prot:
+                        if exclude_protected:
                             exclude = vname in excl_vars
                             if not exclude:
                                 exclude = _is_variable_protected(table, vname,
@@ -717,7 +717,7 @@ def _retrieve_variable_list(table, suite_name,
     return sorted(var_set)
 
 ###############################################################################
-def datatable_report(datatable, action, sep, excl_prot=False):
+def datatable_report(datatable, action, sep, exclude_protected=False):
 ###############################################################################
     """Perform a lookup <action> on <datatable> and return the result.
     """
@@ -752,17 +752,17 @@ def datatable_report(datatable, action, sep, excl_prot=False):
         result = _retrieve_suite_list(table)
     elif action.action_is("required_variables"):
         result = _retrieve_variable_list(table, action.value,
-                                         excl_prot=excl_prot)
+                                         exclude_protected=exclude_protected)
     elif action.action_is("input_variables"):
         result = _retrieve_variable_list(table, action.value,
                                          intent_type="input",
-                                         excl_prot=excl_prot)
+                                         exclude_protected=exclude_protected)
     elif action.action_is("output_variables"):
         result = _retrieve_variable_list(table, action.value,
                                          intent_type="output",
-                                         excl_prot=excl_prot)
+                                         exclude_protected=exclude_protected)
     elif action.action_is("host_variables"):
-        result = _retrieve_variable_list(table, "host", excl_prot=excl_prot,
+        result = _retrieve_variable_list(table, "host", exclude_protected=exclude_protected,
                                          intent_type="host")
     else:
         result = ''
