@@ -20,7 +20,7 @@ jobs:
             fortran-compiler: gfortran-11
           - os: ubuntu-24.04
             fortran-compiler: gfortran-12
-	  - os: ubuntu-22.04
+          - os: ubuntu-22.04
             fortran-compiler: gfortran-13	    
           - os: ubuntu-22.04
             fortran-compiler: gfortran-14
