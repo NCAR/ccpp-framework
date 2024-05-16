@@ -7,10 +7,20 @@ on:
 
 jobs:
   unit_tests:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        fortran-compiler: [gfortran-9, gfortran-10, gfortran-11, gfortran-12, gfortran-13]
+        os: [ubuntu-22.04, ubuntu-24.04]
+        fortran-compiler: [gfortran-9, gfortran-10, gfortran-11, gfortran-12, gfortran-13, gfortran-14]
+        exclude:
+          - os: ubuntu-24.04
+            fortran-compiler: gfortran-9
+          - os: ubuntu-24.04
+            fortran-compiler: gfortran-10
+          - os: ubuntu-24.04
+            fortran-compiler: gfortran-11
+          - os: ubuntu-22.04
+            fortran-compiler: gfortran-14
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
     - name: update repos and install dependencies
