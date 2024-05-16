@@ -324,17 +324,16 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
                 fopt = fvar.get_prop_value('optional')
                 if (not fopt):
                     errmsg = f'Missing "optional" attribute in fortran declaration for variable {mname}, ' \
-                            'for {title}'
+                            f'for {title}'
                     errors_found = add_error(errors_found, errmsg)
                 # end if
             # end if
             # now check: if fortran says the variable is optional, does the metadata match?
             if fvar:
                 fopt = fvar.get_prop_value('optional')
-                mopt = mvar.get_prop_value('optional')
                 if (fopt and not mopt):
                     errmsg = f'Missing "optional" metadata property for variable {mname}, ' \
-                            'for {title}'
+                            f'for {title}'
                     errors_found = add_error(errors_found, errmsg)
                 # end if
             # end if
@@ -533,7 +532,6 @@ def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False):
     table_dict = {} # Duplicate check and for dependencies processing
     header_dict = {} # To check for duplicates
     known_ddts = list()
-    # end if
     logger = run_env.logger
     for filename in scheme_filenames:
         logger.info('Reading CCPP schemes from {}'.format(filename))

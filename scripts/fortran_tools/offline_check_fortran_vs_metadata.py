@@ -21,7 +21,7 @@ from framework_env import CCPPFrameworkEnv
 from fortran_tools import parse_fortran_file
 from metadata_table import parse_metadata_file
 from ccpp_capgen import find_associated_fortran_file
-from ccpp_capgen import check_fortran_against_metadata, parse_scheme_files
+from ccpp_capgen import parse_scheme_files
 from parse_tools import init_log, set_log_level
 from parse_tools import register_fortran_ddt_name
 from parse_tools import CCPPError, ParseInternalError
