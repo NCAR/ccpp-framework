@@ -23,6 +23,7 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from parse_tools import init_log, set_log_to_null
 from suite_objects import CallList, Group, Scheme
 from metavar import CCPP_LOOP_VAR_STDNAMES
+from var_props import is_horizontal_dimension
 
 # pylint: disable=too-many-lines
 
@@ -308,6 +309,32 @@ character(len=16) :: {css_var_name} = '{state}'
                     self.add_variable(var, self.__run_env)
                     # Remove the variable from the group
                     group.remove_variable(standard_name)
+                    # Make sure the variable's dimensions are available
+                    # at the init stage (for allocation)
+                    for group in self.groups:
+                        # only add dimension variables to init phase calling list
+                        if group.name == self.__suite_init_group.name:
+                            dims = var.get_dimensions()
+                            # replace horizontal loop dimension if necessary
+                            for idx, dim in enumerate(dims):
+                                if is_horizontal_dimension(dim):
+                                    if 'horizontal_loop' in dim:
+                                        dims[idx] = 'ccpp_constant_one:horizontal_dimension'
+                                    # end if
+                                # end if
+                            # end for
+                            subst_dict = {'dimensions': dims}
+                            prop_dict = var.copy_prop_dict(subst_dict=subst_dict)
+                            temp_var = Var(prop_dict,
+                                           ParseSource(var.get_prop_value('scheme'),
+                                           var.get_prop_value('local_name'), var.context),
+                                           self.__run_env)
+                            # Add dimensions if they're not already there
+                            group.add_variable_dimensions(temp_var, [],
+                                                          adjust_intent=True,
+                                                          to_dict=group.call_list)
+                        # end if
+                    # end for
                 else:
                     emsg = ("Group, {}, claimed it had created {} "
                             "but variable was not found")

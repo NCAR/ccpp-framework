@@ -50,6 +50,20 @@
   units = Pa
   dimensions = (horizontal_loop_extent)
   intent = inout
+[ to_promote ]
+  standard_name = promote_this_variable_to_suite
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+[ promote_pcnst ]
+  standard_name = promote_this_variable_with_no_horizontal_dimension
+  units = K
+  dimensions = (number_of_tracers)
+  type = real
+  kind = kind_phys
+  intent = in
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
