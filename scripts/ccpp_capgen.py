@@ -312,17 +312,29 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
         # end if
         for mind, mvar in enumerate(mlist):
             lname = mvar.get_prop_value('local_name')
+            mname = mvar.get_prop_value('standard_name')
             arrayref = is_arrayspec(lname)
             fvar, find = find_var_in_list(lname, flist)
             # Check for consistency between optional variables in metadata and
             # optional variables in fortran. Error if optional attribute is
             # missing from fortran declaration.
+            # first check: if metadata says the variable is optional, does the fortran match?
             mopt  = mvar.get_prop_value('optional')
             if find and mopt:
                 fopt = fvar.get_prop_value('optional')
                 if (not fopt):
-                    errmsg = 'Missing optional attribute in fortran declaration for variable {}, in file {}'
-                    errors_found = add_error(errors_found, errmsg.format(mname,title))
+                    errmsg = f'Missing "optional" attribute in fortran declaration for variable {mname}, ' \
+                            f'for {title}'
+                    errors_found = add_error(errors_found, errmsg)
+                # end if
+            # end if
+            # now check: if fortran says the variable is optional, does the metadata match?
+            if fvar:
+                fopt = fvar.get_prop_value('optional')
+                if (fopt and not mopt):
+                    errmsg = f'Missing "optional" metadata property for variable {mname}, ' \
+                            f'for {title}'
+                    errors_found = add_error(errors_found, errmsg)
                 # end if
             # end if
             if mind >= flen:
@@ -523,7 +535,7 @@ def parse_host_model_files(host_filenames, host_name, run_env):
     return host_model
 
 ###############################################################################
-def parse_scheme_files(scheme_filenames, run_env):
+def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -536,7 +548,8 @@ def parse_scheme_files(scheme_filenames, run_env):
     for filename in scheme_filenames:
         logger.info('Reading CCPP schemes from {}'.format(filename))
         # parse metadata file
-        mtables = parse_metadata_file(filename, known_ddts, run_env)
+        mtables = parse_metadata_file(filename, known_ddts, run_env,
+                                      skip_ddt_check=skip_ddt_check)
         fort_file = find_associated_fortran_file(filename)
         ftables, additional_routines = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)

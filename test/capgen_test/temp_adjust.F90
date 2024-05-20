@@ -27,7 +27,7 @@ CONTAINS
     REAL(kind_phys),           intent(in)    :: temp_prev(:)
     REAL(kind_phys),           intent(inout) :: temp_layer(foo)
     character(len=512),        intent(out)   :: errmsg
-    integer,         optional, intent(out)   :: errflg
+    integer,                   intent(out)   :: errflg
     real(kind_phys), optional, intent(in)    :: innie
     real(kind_phys), optional, intent(out)   :: outie
     real(kind_phys), optional, intent(inout) :: optsie
@@ -36,9 +36,7 @@ CONTAINS
     integer :: col_index
 
     errmsg = ''
-    if (present(errflg)) then
-       errflg = 0
-    end if
+    errflg = 0
 
     do col_index = 1, foo
        temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)
