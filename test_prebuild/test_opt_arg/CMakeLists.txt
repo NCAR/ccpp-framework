@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.10)
 
-project(ccpp_chunked_data
+project(ccpp_opt_arg
         VERSION 1.0.0
         LANGUAGES Fortran)
 
@@ -60,11 +60,11 @@ else(API)
   message(STATUS "Got CCPP API from cmakefile include file: ${API}")
 endif(API)
 
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -O0 -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -ffpe-trap=invalid,zero,overflow -fbounds-check -ggdb -fbacktrace -ffree-line-length-none")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -O0 -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -ffpe-trap=invalid,zero,overflow -fcheck=all -ggdb -fbacktrace -ffree-line-length-none")
 
 #------------------------------------------------------------------------------
-add_library(ccpp_chunked_data STATIC ${SCHEMES} ${CAPS} ${API})
-target_link_libraries(ccpp_chunked_data PRIVATE MPI::MPI_Fortran)
+add_library(ccpp_opt_arg STATIC ${SCHEMES} ${CAPS} ${API})
+target_link_libraries(ccpp_opt_arg PRIVATE MPI::MPI_Fortran)
 # Generate list of Fortran modules from defined sources
 foreach(source_f90 ${CAPS} ${API})
     get_filename_component(tmp_source_f90 ${source_f90} NAME)
@@ -73,24 +73,24 @@ foreach(source_f90 ${CAPS} ${API})
     list(APPEND MODULES_F90 ${CMAKE_CURRENT_BINARY_DIR}/${module_f90})
 endforeach()
 
-set_target_properties(ccpp_chunked_data PROPERTIES VERSION ${PROJECT_VERSION}
+set_target_properties(ccpp_opt_arg PROPERTIES VERSION ${PROJECT_VERSION}
                       SOVERSION ${PROJECT_VERSION_MAJOR})
 
-add_executable(test_chunked_data.x main.F90)
-add_dependencies(test_chunked_data.x ccpp_chunked_data)
-target_link_libraries(test_chunked_data.x ccpp_chunked_data)
-set_target_properties(test_chunked_data.x PROPERTIES LINKER_LANGUAGE Fortran)
+add_executable(test_opt_arg.x main.F90)
+add_dependencies(test_opt_arg.x ccpp_opt_arg)
+target_link_libraries(test_opt_arg.x ccpp_opt_arg)
+set_target_properties(test_opt_arg.x PROPERTIES LINKER_LANGUAGE Fortran)
 
 # Define where to install the library
-install(TARGETS ccpp_chunked_data
-        EXPORT ccpp_chunked_data-targets
+install(TARGETS ccpp_opt_arg
+        EXPORT ccpp_opt_arg-targets
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION lib
 )
 # Export our configuration
-install(EXPORT ccpp_chunked_data-targets
-        FILE ccpp_chunked_data-config.cmake
+install(EXPORT ccpp_opt_arg-targets
+        FILE ccpp_opt_arg-config.cmake
         DESTINATION lib/cmake
 )
 # Define where to install the C headers and Fortran modules
