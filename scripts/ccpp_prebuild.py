@@ -7,7 +7,6 @@ import copy
 import filecmp
 import importlib
 import itertools
-import json
 import logging
 import os
 import re
@@ -179,35 +178,14 @@ def get_all_suites(suites_dir):
 
 def parse_suites(suites_dir, sdfs):
     """Parse suite definition files for prebuild"""
-    alias_file=os.path.join(suites_dir,"alias.json")
-    aliases = {}
-    if os.path.exists(alias_file):
-        logging.debug(f'Reading alias file {alias_file}')
-        with open(alias_file) as json_file:
-            aliases = json.load(json_file)
-    else:
-        logging.debug(f'No alias file {alias_file} found')
     logging.info('Parsing suite definition files ...')
     suites = []
     for sdf in sdfs:
         sdf_file=os.path.join(suites_dir, sdf)
         if not os.path.exists(sdf_file):
-            # If suite file not found, check alias file if available
-            # If alias found, check old filename convention (suite_[suitename].xml)
-            sdf_file_alias=''
-            if aliases:
-                print(aliases)
-                if aliases.get(os.path.basename(sdf_file)):
-                    logging.info(f"Found alias for SDF {sdf} ==> {aliases[sdf]}")
-                    sdf_file_alias=os.path.join(suites_dir,aliases[sdf])
-                else:
-                    logging.debug(f"No alias found in alias file {alias_file}")
-                    logging.debug(f"for SDF {sdf}") 
-
+            # If suite file not found, check old filename convention (suite_[suitename].xml)
             sdf_file_legacy=os.path.join(suites_dir, f"suite_{sdf}")
-            if os.path.exists(sdf_file_alias):
-                sdf_file=sdf_file_alias
-            elif os.path.exists(sdf_file_legacy):
+            if os.path.exists(sdf_file_legacy):
                 logging.info("Parsing suite definition file using legacy naming convention")
                 logging.info(f"Filename {os.path.basename(sdf_file_legacy)}")
                 logging.info(f"Suite name {sdf}")
