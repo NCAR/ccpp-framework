@@ -28,14 +28,16 @@ program test_chunked_data
    ! set to 0, indicating that arrays are to be sent
    ! following their dimension specification in the
    ! metadata (must match horizontal_dimension).
-   ccpp_data_domain%thrd_no = 0
+   ccpp_data_domain%thrd_no  = 0
    ccpp_data_domain%chunk_no = 0
+   ccpp_data_domain%thrd_cnt = 1
 
    ! Loop over all chunks and threads for ccpp_data_chunks
    do ic=1,nchunks
       ! Assign the correct chunk numbers, only one thread
       ccpp_data_chunks(ic)%chunk_no = ic
-      ccpp_data_chunks(ic)%thrd_no = 1
+      ccpp_data_chunks(ic)%thrd_no  = 1
+      ccpp_data_chunks(ic)%thrd_cnt = 1
    end do
 
    call chunked_data_instance%create(ncols)

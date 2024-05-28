@@ -471,6 +471,21 @@ def compare_metadata(metadata_define, metadata_request):
                 var.convert_from(metadata_define[var_name][0].units)
             elif var.intent=='out':
                 var.convert_to(metadata_define[var_name][0].units)
+        # If the host model variable is allocated based on a condition, i.e. has an active attribute other
+        # than T (.true.), the scheme variable must be optional
+        if not metadata_define[var_name][0].active == 'T':
+            for var in metadata_request[var_name]:
+                if var.optional == 'F':
+                    logging.error("Conditionally allocated host-model variable {0} is not optional in {1}".format(
+                                  var_name, var.container))
+                    success = False
+        # TEMPORARY CHECK - IF THE VARIABLE IS ALWAYS ALLOCATED, THE SCHEME VARIABLE SHOULDN'T BE OPTIONAL
+        else:
+            for var in metadata_request[var_name]:
+                if var.optional == 'T':
+                    logging.warn("Unconditionally allocated host-model variable {0} is  optional in {1}".format(
+                                  var_name, var.container))
+
         # Construct the actual target variable and list of modules to use from the information in 'container'
         var = metadata_define[var_name][0]
         target = ''
@@ -483,6 +498,7 @@ def compare_metadata(metadata_define, metadata_request):
                 pass
             else:
                 logging.error('Unknown identifier {0} in container value of defined variable {1}'.format(subitems[0], var_name))
+                success = False
         target += var.local_name
         # Copy the length kind from the variable definition to update len=* in the variable requests
         if var.type == 'character':

@@ -29,6 +29,7 @@ CCPP_BLOCK_NUMBER        = 'ccpp_block_number'
 CCPP_BLOCK_COUNT         = 'ccpp_block_count'
 CCPP_BLOCK_SIZES         = 'ccpp_block_sizes'
 CCPP_THREAD_NUMBER       = 'ccpp_thread_number'
+CCPP_THREAD_COUNT        = 'ccpp_thread_count'
 
 CCPP_CHUNK_EXTENT          = 'ccpp_chunk_extent'
 CCPP_HORIZONTAL_LOOP_BEGIN = 'horizontal_loop_begin'
@@ -60,6 +61,7 @@ CCPP_INTERNAL_VARIABLES = {
     CCPP_LOOP_COUNTER        : 'cdata%loop_cnt',
     CCPP_BLOCK_NUMBER        : 'cdata%blk_no',
     CCPP_THREAD_NUMBER       : 'cdata%thrd_no',
+    CCPP_THREAD_COUNT        : 'cdata%thrd_cnt',
     }
 
 STANDARD_CHARACTER_TYPE = 'character'

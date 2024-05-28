@@ -50,6 +50,12 @@
   units = index
   dimensions = ()
   type = integer
+[thrd_cnt]
+  standard_name = ccpp_thread_count
+  long_name = total number of threads for threading in CCPP
+  units = index
+  dimensions = ()
+  type = integer
 [ccpp_instance]
   standard_name = ccpp_instance
   long_name = ccpp_instance

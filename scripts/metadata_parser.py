@@ -198,15 +198,27 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 # *DH  2020-05-26
 
                 if not new_var.get_prop_value('active'):
-                    # If it doesn't have an active attribute, then the variable is always active (default)
-                    active = 'T'
+                    raise Exception("Unexpected result: no active attribute received from capgen metadata parser for {} / {}".format(standard_name,table_name))
+                elif scheme_name and not new_var.get_prop_value('active').lower() == '.true.':
+                    raise Exception("Scheme variable {} in table {} has metadata attribute active={}, which is not allowed".format(
+                                    standard_name, table_name, new_var.get_prop_value('active').lower()))
                 elif new_var.get_prop_value('active').lower() == '.true.':
                     active = 'T'
-                elif new_var.get_prop_value('active') and new_var.get_prop_value('active').lower() == '.false.':
+                elif new_var.get_prop_value('active').lower() == '.false.':
                     active = 'F'
                 else:
                     # Replace multiple whitespaces, preserve case
                     active = ' '.join(new_var.get_prop_value('active').split())
+
+                if not new_var.get_prop_value('optional') in [False, True]:
+                    raise Exception("Unexpected result: no optional attribute received from metadata parser for {} / {}".format(standard_name,table_name))
+                elif not scheme_name and new_var.get_prop_value('optional'):
+                    raise Exception("Host variable {} in table {} has metadata attribute optional={}, which is not allowed".format(
+                                    standard_name,table_name, new_var.get_prop_value('optional').lower()))
+                elif new_var.get_prop_value('optional'):
+                    optional = 'T'
+                else:
+                    optional = 'F'
 
                 # DH* 20210812
                 # Workaround for Fortran DDTs incorrectly having the type of
@@ -228,6 +240,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                           kind          = kind,
                           intent        = new_var.get_prop_value('intent'),
                           active        = active,
+                          optional      = optional,
                           )
                 # Check for duplicates in same table
                 if standard_name in metadata.keys():
