@@ -673,11 +673,6 @@ def capgen(run_env, return_db=False):
     # end if
     # First up, handle the host files
     host_model = parse_host_model_files(host_files, host_name, run_env)
-    # We always need to parse the ccpp_constituent_prop_ptr_t DDT
-    const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
-    if const_prop_mod not in scheme_files:
-        scheme_files = [const_prop_mod] + scheme_files
-    # end if
     # Next, parse the scheme files
     # We always need to parse the ccpp_constituent_prop_ptr_t DDT
     const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")

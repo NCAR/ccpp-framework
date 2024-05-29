@@ -592,6 +592,21 @@ CONTAINS
          ! Reset error flag to continue testing other properties:
          errflg = 0
       end if
+      call const_props(index_dyn2)%is_moist(const_log, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get moist prop for dyn_const2 index = ", index_dyn2, trim(errmsg)
+         errflg_final = -1 ! Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (.not. const_log) then
+            write(6, *) "ERROR: dyn_const2 is not moist but should be"
+            errflg_final = -1
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
 
       ! -------------------
 

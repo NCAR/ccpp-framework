@@ -1,4 +1,4 @@
-! Test parameterization with no vertical level
+! Test parameterization with a dynamic constituents routine with the same name as another parameterization's
 !
 
 MODULE duplicate_dyn_const

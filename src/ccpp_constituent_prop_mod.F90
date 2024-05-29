@@ -1163,9 +1163,8 @@ CONTAINS
       ! Local variables
       character(len=errmsg_len)                    :: error
       character(len=*), parameter                  :: subname = 'ccp_model_const_add_metadata'
-      type(ccpp_constituent_properties_t), pointer :: cprop
+      type(ccpp_constituent_properties_t), pointer :: cprop => NULL()
       character(len=stdname_len)                   :: standard_name
-      integer                                      :: cindex
       logical                                      :: match
 
       if (this%okay_to_add(errcode=errcode, errmsg=errmsg,                    &
@@ -1176,13 +1175,12 @@ CONTAINS
          cprop => this%find_const(standard_name)
          if (associated(cprop)) then
             ! Standard name already in table, let's see if the existing constituent is the same
-            cindex = cprop%const_index()
             match = cprop%is_match(field_data)
             if (match) then
                ! Existing constituent is a match - no need to throw an error, just don't add
                return
             else
-               ! Existing constituent is not a match - this is ane rror
+               ! Existing constituent is not a match - this is an error
                call append_errvars(1, "ERROR: Trying to add constituent " //  &
                     trim(standard_name) // " but an incompatible" //          &
                     " constituent with this name already exists", subname,    &
@@ -1261,6 +1259,7 @@ CONTAINS
       character(len=*), parameter     :: subname = 'ccp_model_const_find_const'
 
       nullify(cprop)
+
       hval => this%hash_table%table_value(standard_name, errmsg=error)
       if (len_trim(error) > 0) then
          call append_errvars(1, trim(error), subname,                  &
@@ -1630,7 +1629,7 @@ CONTAINS
       integer,          optional,       intent(out) :: errcode
       character(len=*), optional,       intent(out) :: errmsg
       ! Local variables
-      type(ccpp_constituent_properties_t), pointer  :: cprop
+      type(ccpp_constituent_properties_t), pointer  :: cprop => NULL()
       character(len=*), parameter :: subname = "ccp_model_const_index"
 
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
@@ -1660,7 +1659,7 @@ CONTAINS
       integer,                   optional, intent(out) :: errcode
       character(len=*),          optional, intent(out) :: errmsg
       ! Local variables
-      type(ccpp_constituent_properties_t), pointer     :: cprop
+      type(ccpp_constituent_properties_t), pointer     :: cprop => NULL()
       character(len=*), parameter :: subname = "ccp_model_const_metadata"
 
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then

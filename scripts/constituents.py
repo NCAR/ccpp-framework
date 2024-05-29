@@ -500,7 +500,7 @@ class ConstituentVarDict(VarDictionary):
         cap.write(f"integer{spc} :: num_dyn_consts", 2)
         cap.write(f"integer{spc} :: index, index_start", 2)
         cap.write(f"integer{spc} :: field_ind", 2)
-        cap.write(f"type({CONST_PROP_TYPE}), pointer :: const_prop", 2)
+        cap.write(f"type({CONST_PROP_TYPE}), pointer :: const_prop => NULL()", 2)
         # Declare dynamic constituent properties variables
         for idx, scheme in enumerate(sorted(dyn_const_dict)):
             cap.comment(f"dynamic constituent props variable for {scheme}", 2)

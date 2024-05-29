@@ -1,4 +1,4 @@
-! Test parameterization with no vertical level
+! Test parameterization that is missing the specified dynamic constituents routine
 !
 
 MODULE temp_adjust

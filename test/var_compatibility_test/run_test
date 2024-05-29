@@ -6,7 +6,7 @@ scriptdir="$( cd $( dirname $0 ); pwd -P )"
 ##
 ## Option default values
 ##
-defdir="va_build"
+defdir="ct_build"
 build_dir="${currdir}/${defdir}"
 cleanup="PASS" # Other supported options are ALWAYS and NEVER
 verbosity=0
