@@ -186,9 +186,9 @@ def parse_suites(suites_dir, sdfs):
             # If suite file not found, check old filename convention (suite_[suitename].xml)
             sdf_file_legacy=os.path.join(suites_dir, f"suite_{sdf}")
             if os.path.exists(sdf_file_legacy):
-                logging.info("Parsing suite definition file using legacy naming convention")
-                logging.info(f"Filename {os.path.basename(sdf_file_legacy)}")
-                logging.info(f"Suite name {sdf}")
+                logging.warning("Parsing suite definition file using legacy naming convention")
+                logging.warning(f"Filename {os.path.basename(sdf_file_legacy)}")
+                logging.warning(f"Suite name {sdf}")
                 sdf_file=sdf_file_legacy
             else:
                 logging.critical(f"Suite definition file {sdf_file} not found.")
