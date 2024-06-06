@@ -2109,7 +2109,7 @@ CONTAINS
       integer,          optional,         intent(out) :: errcode
       character(len=*), optional,         intent(out) :: errmsg
       ! Local variable
-      character(len=*), parameter :: subname = 'ccpt_is_thermo_active'
+      character(len=*), parameter :: subname = 'ccpt_is_water_species'
 
       if (associated(this%prop)) then
          call this%prop%is_water_species(val_out, errcode, errmsg)
