@@ -544,7 +544,7 @@ class ConstituentVarDict(VarDictionary):
                 cap.write(f"do index = 1, size(dyn_const_prop_{idx}, 1)", 2)
                 cap.write(f"{dyn_const_name}(index + index_start) = dyn_const_prop_{idx}(index)", 3)
                 cap.write("end do", 2)
-                cap.write(f"index_start = size(dyn_const_prop_{idx}, 1)", 2)
+                cap.write(f"index_start = index_start + size(dyn_const_prop_{idx}, 1)", 2)
                 cap.write(f"deallocate(dyn_const_prop_{idx})", 2)
             # end for
         # end if
