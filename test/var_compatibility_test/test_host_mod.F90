@@ -37,6 +37,7 @@ contains
        phys_state%effri = 5.0E-5 ! 50 microns, in meter
        phys_state%nci = 80
     endif
+    phys_state%tke = 10.0 !J kg-1
 
   end subroutine init_data
 

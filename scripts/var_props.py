@@ -1426,7 +1426,7 @@ class VarCompatObj:
            and <var> arguments to produce code to transform one variable into
            the correct units of the other.
         """
-        return self.__unit_transforms is not None
+        return self.__unit_transforms is not None and self.__unit_transforms[0]
 
     def __bool__(self):
         """Return True if this object describes two Var objects which are

@@ -103,6 +103,14 @@
   type = real
   kind = kind_phys
   intent = inout
+[ tke_inout ]
+  standard_name = turbulent_kinetic_energy
+  long_name = turbulent_kinetic_energy
+  units = m2 s-2
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = inout
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
