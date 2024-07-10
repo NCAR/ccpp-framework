@@ -23,6 +23,7 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from parse_tools import init_log, set_log_to_null
 from suite_objects import CallList, Group, Scheme
 from metavar import CCPP_LOOP_VAR_STDNAMES
+from var_props import is_horizontal_dimension
 
 # pylint: disable=too-many-lines
 
@@ -308,6 +309,32 @@ character(len=16) :: {css_var_name} = '{state}'
                     self.add_variable(var, self.__run_env)
                     # Remove the variable from the group
                     group.remove_variable(standard_name)
+                    # Make sure the variable's dimensions are available
+                    # at the init stage (for allocation)
+                    for group in self.groups:
+                        # only add dimension variables to init phase calling list
+                        if group.name == self.__suite_init_group.name:
+                            dims = var.get_dimensions()
+                            # replace horizontal loop dimension if necessary
+                            for idx, dim in enumerate(dims):
+                                if is_horizontal_dimension(dim):
+                                    if 'horizontal_loop' in dim:
+                                        dims[idx] = 'ccpp_constant_one:horizontal_dimension'
+                                    # end if
+                                # end if
+                            # end for
+                            subst_dict = {'dimensions': dims}
+                            prop_dict = var.copy_prop_dict(subst_dict=subst_dict)
+                            temp_var = Var(prop_dict,
+                                           ParseSource(var.get_prop_value('scheme'),
+                                           var.get_prop_value('local_name'), var.context),
+                                           self.__run_env)
+                            # Add dimensions if they're not already there
+                            group.add_variable_dimensions(temp_var, [],
+                                                          adjust_intent=True,
+                                                          to_dict=group.call_list)
+                        # end if
+                    # end for
                 else:
                     emsg = ("Group, {}, claimed it had created {} "
                             "but variable was not found")
@@ -588,7 +615,7 @@ class API(VarDictionary):
                         'kind':'len=*', 'units':'',
                         'dimensions':'()'}, _API_SOURCE, _API_DUMMY_RUN_ENV)
 
-    def __init__(self, sdfs, host_model, scheme_headers, run_env):
+    def __init__(self, sdfs, host_model, scheme_headers, run_env, dyn_const_dict={}):
         """Initialize this API.
         <sdfs> is the list of Suite Definition Files to be parsed for
             data needed by the CCPP cap.
@@ -597,11 +624,14 @@ class API(VarDictionary):
         <scheme_headers> is the list of parsed physics scheme metadata files.
             Every scheme referenced by an SDF in <sdfs> MUST be in this list,
             however, unused schemes are allowed.
+        <dyn_const_dict> is the dictionary (key = scheme name) of dynamic
+            constituent routine names
         <run_env> is the CCPPFrameworkEnv object for this framework run.
         """
         self.__module = 'ccpp_physics_api'
         self.__host = host_model
         self.__suites = list()
+        self.__dyn_const_dict = dyn_const_dict
         super().__init__(self.module, run_env, parent_dict=self.host_model)
         # Create a usable library out of scheme_headers
         # Structure is dictionary of dictionaries
@@ -721,7 +751,7 @@ class API(VarDictionary):
             ofile.write("allocate({}({}))".format(varlist_name, len(var_list)),
                         indent)
         # end if
-        for ind, var in enumerate(var_list):
+        for ind, var in enumerate(sorted(var_list)):
             if start_var:
                 ind_str = "{} + {}".format(start_var, ind + start_index)
             else:
@@ -1156,6 +1186,11 @@ class API(VarDictionary):
     def suites(self):
         "Return the list of this API's suites"
         return self.__suites
+
+    @property
+    def dyn_const_dict(self):
+        """Return the dynamic constituent routine dictionary"""
+        return self.__dyn_const_dict
 
 ###############################################################################
 if __name__ == "__main__":

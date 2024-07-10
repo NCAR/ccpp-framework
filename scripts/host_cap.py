@@ -11,7 +11,7 @@ import os
 from ccpp_suite import API, API_SOURCE_NAME
 from ccpp_state_machine import CCPP_STATE_MACH
 from constituents import ConstituentVarDict, CONST_DDT_NAME, CONST_DDT_MOD
-from constituents import CONST_OBJ_STDNAME
+from constituents import CONST_OBJ_STDNAME, CONST_PROP_TYPE
 from ddt_library import DDTLibrary
 from file_utils import KINDS_MODULE
 from framework_env import CCPPFrameworkEnv
@@ -102,12 +102,28 @@ def constituent_initialize_subname(host_model):
     return f"{host_model.name}_ccpp_initialize_constituents"
 
 ###############################################################################
+def constituent_initialize_subname(host_model):
+###############################################################################
+    """Return the name of the subroutine used to initialize the
+    constituents for this run.
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_initialize_constituents"
+
+###############################################################################
 def constituent_num_consts_funcname(host_model):
 ###############################################################################
     """Return the name of the function to return the number of
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
     return f"{host_model.name}_ccpp_number_constituents"
+
+###############################################################################
+def query_scheme_constituents_funcname(host_model):
+###############################################################################
+    """Return the name of the function to return True if the standard name
+    passed in matches an existing constituent
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_is_scheme_constituent"
 
 ###############################################################################
 def query_scheme_constituents_funcname(host_model):
@@ -132,6 +148,14 @@ def constituent_copyout_subname(host_model):
     the host model.
     Because this is a user interface API function, the name is fixed."""
     return f"{host_model.name}_ccpp_update_constituents"
+
+###############################################################################
+def constituent_cleanup_subname(host_model):
+###############################################################################
+    """Return the name of the subroutine to deallocate dynamic constituent
+    arrays
+    Because this is a user interface API function, the name is fixed."""
+    return f"{host_model.name}_ccpp_deallocate_dynamic_constituents"
 
 ###############################################################################
 def unique_local_name(loc_name, host_model):
@@ -160,6 +184,13 @@ def constituent_model_object_name(host_model):
     return hvar.get_prop_value('local_name')
 
 ###############################################################################
+def dynamic_constituent_array_name(host_model):
+###############################################################################
+    """Return the name of the allocatable dynamic constituent properites array"""
+    hstr = f"{host_model.name}_dynamic_constituents"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
 def constituent_model_const_stdnames(host_model):
 ###############################################################################
     """Return the name of the array of constituent standard names"""
@@ -171,6 +202,37 @@ def constituent_model_const_indices(host_model):
 ###############################################################################
     """Return the name of the array of constituent field array indices"""
     hstr = f"{host_model.name}_model_const_indices"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_consts(host_model):
+###############################################################################
+    """Return the name of the function that will return a pointer to the
+       array of all constituents"""
+    hstr = f"{host_model.name}_constituents_array"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_advected_consts(host_model):
+###############################################################################
+    """Return the name of the function that will return a pointer to the
+       array of advected constituents"""
+    hstr = f"{host_model.name}_advected_constituents_array"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_const_props(host_model):
+###############################################################################
+    """Return the name of the array of constituent property object pointers"""
+    hstr = f"{host_model.name}_model_const_properties"
+    return unique_local_name(hstr, host_model)
+
+###############################################################################
+def constituent_model_const_index(host_model):
+###############################################################################
+    """Return the name of the interface that returns the array index of
+       a constituent array given its standard name"""
+    hstr = f"{host_model.name}_const_get_index"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -316,6 +378,9 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     # end if
     ddt_lib.collect_ddt_fields(const_dict, const_var, run_env,
                                skip_duplicates=True)
+    # Declare the allocatable dynamic constituents array
+    dyn_const_name = dynamic_constituent_array_name(host_model)
+    cap.write(f"type({CONST_PROP_TYPE}), allocatable, target :: {dyn_const_name}(:)", 1)
     # Declare variable for the constituent standard names array
     max_csname = max([len(x) for x in const_stdnames]) if const_stdnames else 0
     num_const_fields = len(const_stdnames)
@@ -432,12 +497,13 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         mlen = max([len(x.module) for x in api.suites])
         maxmod = max(maxmod, mlen)
         maxmod = max(maxmod, len(CONST_DDT_MOD))
-        for mod in modules:
+        for mod in sorted(modules):
             mspc = (maxmod - len(mod[0]))*' '
             cap.write("use {}, {}only: {}".format(mod[0], mspc, mod[1]), 1)
         # End for
         mspc = ' '*(maxmod - len(CONST_DDT_MOD))
         cap.write(f"use {CONST_DDT_MOD}, {mspc}only: {CONST_DDT_NAME}", 1)
+        cap.write(f"use {CONST_DDT_MOD}, {mspc}only: {CONST_PROP_TYPE}", 1)
         cap.write_preamble()
         max_suite_len = 0
         for suite in api.suites:
@@ -463,6 +529,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write(f"public :: {copyin_name}", 1)
         copyout_name = constituent_copyout_subname(host_model)
         cap.write(f"public :: {copyout_name}", 1)
+        cleanup_name = constituent_cleanup_subname(host_model)
+        cap.write(f"public :: {cleanup_name}", 1)
         const_array_func = constituent_model_consts(host_model)
         cap.write(f"public :: {const_array_func}", 1)
         advect_array_func = constituent_model_advected_consts(host_model)
@@ -530,7 +598,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
             for suite in api.suites:
                 mspc = (max_suite_len - len(suite.module))*' '
                 spart_list = suite_part_list(suite, stage)
-                for spart in spart_list:
+                for _, spart in sorted(enumerate(spart_list)):
                     stmt = "use {}, {}only: {}"
                     cap.write(stmt.format(suite.module, mspc, spart.name), 2)
                 # End for
@@ -607,17 +675,22 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write("", 0)
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
+        dyn_const_name = dynamic_constituent_array_name(host_model)
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
                                                numconsts_name, queryconsts_name,
-                                               copyin_name, copyout_name, 
+                                               copyin_name, copyout_name,
+                                               cleanup_name,
                                                const_obj_name,
+                                               dyn_const_name,
                                                const_names_name,
                                                const_indices_name,
                                                const_array_func,
                                                advect_array_func,
                                                prop_array_func,
                                                const_index_func,
-                                               api.suites, err_vars)
+                                               api.suites,
+                                               api.dyn_const_dict,
+                                               err_vars)
     # End with
     return cap_filename
 

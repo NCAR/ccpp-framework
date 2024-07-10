@@ -1,6 +1,7 @@
 [ccpp-table-properties]
   name = temp_adjust
   type = scheme
+  dynamic_constituent_routine = dyn_consts
   
 ########################################################################
 [ccpp-arg-table]

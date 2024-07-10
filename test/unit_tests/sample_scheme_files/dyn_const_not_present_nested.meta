@@ -1,6 +1,9 @@
 [ccpp-table-properties]
   name = temp_adjust
   type = scheme
+  dynamic_constituent_routine = dyn_consts
+  
+########################################################################
 [ccpp-arg-table]
   name = temp_adjust_run
   type = scheme
@@ -32,16 +35,14 @@
   type = real
   kind = kind_phys
   intent = inout
-  diagnostic_name = temperature
 [ qv ]
   standard_name = water_vapor_specific_humidity
   units = kg kg-1
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
+  advected = true
   intent = inout
-  diagnostic_name_fixed = Q
-  optional = True
 [ ps ]
   standard_name = surface_air_pressure
   state_variable = true
@@ -50,20 +51,6 @@
   units = Pa
   dimensions = (horizontal_loop_extent)
   intent = inout
-[ to_promote ]
-  standard_name = promote_this_variable_to_suite
-  units = K
-  dimensions = (horizontal_loop_extent)
-  type = real
-  kind = kind_phys
-  intent = in
-[ promote_pcnst ]
-  standard_name = promote_this_variable_with_no_horizontal_dimension
-  units = K
-  dimensions = (number_of_tracers)
-  type = real
-  kind = kind_phys
-  intent = in
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

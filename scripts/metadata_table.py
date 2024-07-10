@@ -63,6 +63,7 @@ An example argument table is shown below.
   type = scheme
   relative_path = <relative path>
   dependencies = <dependencies>
+  dynamic_constituent_routine = <routine name>
 
 [ccpp-arg-table]
   name = <name>
@@ -179,7 +180,7 @@ def _parse_config_line(line, context):
 
 ########################################################################
 
-def parse_metadata_file(filename, known_ddts, run_env):
+def parse_metadata_file(filename, known_ddts, run_env, skip_ddt_check=False):
     """Parse <filename> and return list of parsed metadata tables"""
     # Read all lines of the file at once
     meta_tables = []
@@ -196,7 +197,8 @@ def parse_metadata_file(filename, known_ddts, run_env):
     while curr_line is not None:
         if MetadataTable.table_start(curr_line):
             new_table = MetadataTable(run_env, parse_object=parse_obj,
-                                      known_ddts=known_ddts)
+                                      known_ddts=known_ddts,
+                                      skip_ddt_check=skip_ddt_check)
             ntitle = new_table.table_name
             if ntitle not in table_titles:
                 meta_tables.append(new_table)
@@ -270,8 +272,9 @@ class MetadataTable():
     __table_start = re.compile(r"(?i)\s*\[\s*ccpp-table-properties\s*\]")
 
     def __init__(self, run_env, table_name_in=None, table_type_in=None,
-                 dependencies=None, relative_path=None, known_ddts=None,
-                 var_dict=None, module=None, parse_object=None):
+                 dependencies=None, relative_path=None, dyn_const_routine=None,
+                 known_ddts=None, var_dict=None, module=None, parse_object=None,
+                 skip_ddt_check=False):
         """Initialize a MetadataTable, either with a name, <table_name_in>, and
         type, <table_type_in>, or with information from a file (<parse_object>).
         if <parse_object> is None, <dependencies> and <relative_path> are
@@ -283,6 +286,7 @@ class MetadataTable():
         self.__pobj = parse_object
         self.__dependencies = dependencies
         self.__relative_path = relative_path
+        self.__dyn_const_routine = dyn_const_routine
         self.__sections = []
         self.__run_env = run_env
         if parse_object is None:
@@ -317,7 +321,8 @@ class MetadataTable():
                 sect = MetadataSection(self.table_name, self.table_type,
                                        run_env, title=stitle,
                                        type_in=self.table_type, module=module,
-                                       var_dict=var_dict, known_ddts=known_ddts)
+                                       var_dict=var_dict, known_ddts=known_ddts,
+                                       skip_ddt_check=skip_ddt_check)
                 self.__sections.append(sect)
             # end if
         else:
@@ -342,10 +347,10 @@ class MetadataTable():
                 known_ddts = []
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
-            self.__init_from_file(known_ddts, self.__run_env)
+            self.__init_from_file(known_ddts, self.__run_env, skip_ddt_check=skip_ddt_check)
         # end if
 
-    def __init_from_file(self, known_ddts, run_env):
+    def __init_from_file(self, known_ddts, run_env, skip_ddt_check=False):
         """ Read the table preamble, assume the caller already figured out
         the first line of the header using the header_start method."""
         curr_line, _ = self.__pobj.next_line()
@@ -395,6 +400,8 @@ class MetadataTable():
                         # end if
                     elif key == 'relative_path':
                         self.__relative_path = value
+                    elif key == 'dynamic_constituent_routine':
+                        self.__dyn_const_routine = value
                     else:
                         tok_type = "metadata table start property"
                         self.__pobj.add_syntax_err(tok_type, token=value)
@@ -407,7 +414,8 @@ class MetadataTable():
                     skip_rest_of_section = False
                     section = MetadataSection(self.table_name, self.table_type,
                                               run_env, parse_object=self.__pobj,
-                                              known_ddts=known_ddts)
+                                              known_ddts=known_ddts,
+                                              skip_ddt_check=skip_ddt_check)
                     # Some table types only allow for one associated section
                     if ((len(self.__sections) == 1) and
                         (self.table_type in _SINGLETON_TABLE_TYPES)):
@@ -474,6 +482,12 @@ class MetadataTable():
     def relative_path(self):
         """Return the relative path for the table's dependencies"""
         return self.__relative_path
+
+    @property
+    def dyn_const_routine(self):
+        """Return the name of the routine that will dynamically return
+        an array of constituent properties"""
+        return self.__dyn_const_routine
 
     @property
     def run_env(self):
@@ -623,7 +637,7 @@ class MetadataSection(ParseSource):
 
     def __init__(self, table_name, table_type, run_env, parse_object=None,
                  title=None, type_in=None, module=None, process_type=None,
-                 var_dict=None, known_ddts=None):
+                 var_dict=None, known_ddts=None, skip_ddt_check=False):
         """Initialize a new MetadataSection object.
         If <parse_object> is not None, initialize from the current file and
         location in <parse_object>.
@@ -693,7 +707,8 @@ class MetadataSection(ParseSource):
                 known_ddts = []
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
-            self.__init_from_file(table_name, table_type, known_ddts, run_env)
+            self.__init_from_file(table_name, table_type, known_ddts, run_env,
+                                  skip_ddt_check=skip_ddt_check)
         # end if
         # Register this header if it is a DDT
         if self.header_type == 'ddt':
@@ -724,7 +739,7 @@ class MetadataSection(ParseSource):
         # end if
         return def_mod
 
-    def __init_from_file(self, table_name, table_type, known_ddts, run_env):
+    def __init_from_file(self, table_name, table_type, known_ddts, run_env, skip_ddt_check=False):
         """ Read the section preamble, assume the caller already figured out
         the first line of the header using the header_start method."""
         start_ctx = context_string(self.__pobj)
@@ -809,7 +824,8 @@ class MetadataSection(ParseSource):
         valid_lines = True
         self.__variables = VarDictionary(self.title, run_env)
         while valid_lines:
-            newvar, curr_line = self.parse_variable(curr_line, known_ddts)
+            newvar, curr_line = self.parse_variable(curr_line, known_ddts,
+                                                    skip_ddt_check=skip_ddt_check)
             valid_lines = newvar is not None
             if valid_lines:
                 if run_env.verbose:
@@ -828,7 +844,7 @@ class MetadataSection(ParseSource):
             # end if
         # end while
 
-    def parse_variable(self, curr_line, known_ddts):
+    def parse_variable(self, curr_line, known_ddts, skip_ddt_check=False):
         """Parse a new metadata variable beginning on <curr_line>.
         The header line has the format [ <valid_fortran_symbol> ].
         """
@@ -872,7 +888,10 @@ class MetadataSection(ParseSource):
                     pval_str = prop[1].strip()
                     if ((pname == 'type') and
                         (not check_fortran_intrinsic(pval_str, error=False))):
-                        if pval_str in known_ddts:
+                        if skip_ddt_check or pval_str in known_ddts:
+                            if skip_ddt_check:
+                                register_fortran_ddt_name(pval_str)
+                            # end if
                             pval = pval_str
                             pname = 'ddt_type'
                         else:

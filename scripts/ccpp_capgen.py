@@ -312,17 +312,29 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
         # end if
         for mind, mvar in enumerate(mlist):
             lname = mvar.get_prop_value('local_name')
+            mname = mvar.get_prop_value('standard_name')
             arrayref = is_arrayspec(lname)
             fvar, find = find_var_in_list(lname, flist)
             # Check for consistency between optional variables in metadata and
             # optional variables in fortran. Error if optional attribute is
             # missing from fortran declaration.
+            # first check: if metadata says the variable is optional, does the fortran match?
             mopt  = mvar.get_prop_value('optional')
             if find and mopt:
                 fopt = fvar.get_prop_value('optional')
                 if (not fopt):
-                    errmsg = 'Missing optional attribute in fortran declaration for variable {}, in file {}'
-                    errors_found = add_error(errors_found, errmsg.format(mname,title))
+                    errmsg = f'Missing "optional" attribute in fortran declaration for variable {mname}, ' \
+                            f'for {title}'
+                    errors_found = add_error(errors_found, errmsg)
+                # end if
+            # end if
+            # now check: if fortran says the variable is optional, does the metadata match?
+            if fvar:
+                fopt = fvar.get_prop_value('optional')
+                if (fopt and not mopt):
+                    errmsg = f'Missing "optional" metadata property for variable {mname}, ' \
+                            f'for {title}'
+                    errors_found = add_error(errors_found, errmsg)
                 # end if
             # end if
             if mind >= flen:
@@ -387,7 +399,8 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
 
 ###############################################################################
 def check_fortran_against_metadata(meta_headers, fort_headers,
-                                   mfilename, ffilename, logger):
+                                   mfilename, ffilename, logger,
+                                   dyn_routines=None, fortran_routines=None):
 ###############################################################################
     """Compare a set of metadata headers from <mfilename> against the
     code in the associated Fortran file, <ffilename>.
@@ -439,6 +452,17 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
                                       's' if num_errors > 1 else '',
                                       mfilename, ffilename))
     # end if
+    # Check that any dynamic constituent routines declared in the metadata are
+    # present in the Fortran
+    if dyn_routines:
+        for routine in dyn_routines:
+            if routine not in fortran_routines:
+                # throw an error - it's not in the Fortran
+                errmsg = f"Dynamic constituent routine {routine} not found in fortran {ffilename}"
+                raise CCPPError(errmsg)
+            # end if
+        # end for
+    # end if
     # No return, an exception is raised on error
 
 ###############################################################################
@@ -470,7 +494,7 @@ def parse_host_model_files(host_filenames, host_name, run_env):
         # parse metadata file
         mtables = parse_metadata_file(filename, known_ddts, run_env)
         fort_file = find_associated_fortran_file(filename)
-        ftables = parse_fortran_file(fort_file, run_env)
+        ftables, _ = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
         for sect in [x.sections() for x in mtables]:
@@ -511,7 +535,7 @@ def parse_host_model_files(host_filenames, host_name, run_env):
     return host_model
 
 ###############################################################################
-def parse_scheme_files(scheme_filenames, run_env):
+def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -524,9 +548,10 @@ def parse_scheme_files(scheme_filenames, run_env):
     for filename in scheme_filenames:
         logger.info('Reading CCPP schemes from {}'.format(filename))
         # parse metadata file
-        mtables = parse_metadata_file(filename, known_ddts, run_env)
+        mtables = parse_metadata_file(filename, known_ddts, run_env,
+                                      skip_ddt_check=skip_ddt_check)
         fort_file = find_associated_fortran_file(filename)
-        ftables = parse_fortran_file(fort_file, run_env)
+        ftables, additional_routines = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
         for sect in [x.sections() for x in mtables]:
@@ -536,8 +561,16 @@ def parse_scheme_files(scheme_filenames, run_env):
         for sect in [x.sections() for x in ftables]:
             fheaders.extend(sect)
         # end for
+        dyn_routines = []
+        for table in mtables:
+            if table.dyn_const_routine:
+                dyn_routines.append(table.dyn_const_routine)
+            # end if
+        # end for
         check_fortran_against_metadata(mheaders, fheaders,
-                                       filename, fort_file, logger)
+                                       filename, fort_file, logger,
+                                       dyn_routines=dyn_routines,
+                                       fortran_routines=additional_routines)
         # Check for duplicate tables, then add to dict
         for table in mtables:
             if table.table_name in table_dict:
@@ -560,6 +593,23 @@ def parse_scheme_files(scheme_filenames, run_env):
             # end if
         # end for
     # end for
+    # Check for duplicate dynamic constituent routine names
+    dyn_val_dict = {}
+    for table in table_dict:
+        routine_name = table_dict[table].dyn_const_routine
+        if routine_name:
+            if routine_name in dyn_val_dict:
+                # dynamic constituent routines must have unique names
+                scheme_name = dyn_val_dict[routine_name]
+                errmsg = f"ERROR: Dynamic constituent routine names must be unique. Cannot add " \
+                         f"{routine_name} for {table}. Routine already exists in {scheme_name}. "
+                raise CCPPError(errmsg)
+            else:
+                dyn_val_dict[routine_name] = table
+            # end if
+        # end if
+    # end for
+
     return header_dict.values(), table_dict
 
 ###############################################################################
@@ -623,13 +673,25 @@ def capgen(run_env, return_db=False):
     # end if
     # First up, handle the host files
     host_model = parse_host_model_files(host_files, host_name, run_env)
+    # Next, parse the scheme files
     # We always need to parse the ccpp_constituent_prop_ptr_t DDT
     const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
     if const_prop_mod not in scheme_files:
-        scheme_files = [const_prop_mod] + scheme_files
+        scheme_files= [const_prop_mod] + scheme_files
     # end if
-    # Next, parse the scheme files
     scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
+    # Pull out the dynamic constituent routines, if any
+    dyn_const_dict = {}
+    dyn_val_dict = {}
+    for table in scheme_tdict:
+        routine_name = scheme_tdict[table].dyn_const_routine
+        if routine_name is not None:
+            if routine_name not in dyn_val_dict:
+               dyn_const_dict[table] = routine_name
+               dyn_val_dict[routine_name] = table
+            # end if
+        # end if
+    # end for
     if run_env.verbose:
         ddts = host_model.ddt_lib.keys()
         if ddts:
@@ -660,7 +722,7 @@ def capgen(run_env, return_db=False):
         # end if
         os.makedirs(outtemp_dir)
     # end if
-    ccpp_api = API(sdfs, host_model, scheme_headers, run_env)
+    ccpp_api = API(sdfs, host_model, scheme_headers, run_env, dyn_const_dict)
     cap_filenames = ccpp_api.write(outtemp_dir, run_env)
     if run_env.generate_host_cap:
         # Create a cap file

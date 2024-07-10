@@ -177,7 +177,7 @@ def parse_fortran_files(filenames, run_env, output_dir, sep, logger):
     for filename in filenames:
         logger.info('Looking for arg_tables from {}'.format(filename))
         reset_standard_name_counter()
-        ftables = parse_fortran_file(filename, run_env)
+        ftables, _ = parse_fortran_file(filename, run_env)
         # Create metadata filename
         filepath = '.'.join(os.path.basename(filename).split('.')[0:-1])
         fname = filepath + '.meta'

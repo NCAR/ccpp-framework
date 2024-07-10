@@ -151,6 +151,7 @@ CONTAINS
                exit
             end if
          end do
+         call hash_iter%finalize()
          if (ANY(.not. hash_found)) then
             write(errmsg, '(a,i0,a)') "ERROR: ",                              &
                  COUNT(.not. hash_found), " test keys not found in table."

@@ -2,6 +2,7 @@
 [ccpp-table-properties]
   name = cld_ice
   type = scheme
+  dynamic_constituent_routine = cld_ice_dynamic_constituents
 [ccpp-arg-table]
   name = cld_ice_run
   type = scheme

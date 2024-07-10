@@ -2,6 +2,7 @@
   name = test_host
   type = host
   dependencies =
+  dynamic_constituent_routine = dyn_consts
 
 ########################################################################
 [ccpp-arg-table]
