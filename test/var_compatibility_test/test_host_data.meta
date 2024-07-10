@@ -59,3 +59,10 @@
   dimensions = ()
   type = real
   kind = kind_phys
+[ tke ]
+  standard_name = turbulent_kinetic_energy
+  long_name = turbulent_kinetic_energy
+  units = J kg-1
+  dimensions = ()
+  type = real
+  kind = kind_phys
