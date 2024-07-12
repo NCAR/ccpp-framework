@@ -1,6 +1,8 @@
 [ccpp-table-properties]
   name = temp_adjust
   type = scheme
+  dependencies = qux.F90
+  relative_path = adjust
 [ccpp-arg-table]
   name = temp_adjust_run
   type = scheme
