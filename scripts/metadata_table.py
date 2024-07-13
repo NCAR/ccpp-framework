@@ -348,7 +348,7 @@ class MetadataTable():
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
             self.__init_from_file(known_ddts, self.__run_env, skip_ddt_check=skip_ddt_check)
-            # Set absolute path (if available) for all dependencies
+            # Set absolute path for all dependencies
             path = os.path.dirname(self.__pobj.filename)
             if self.relative_path:
                 path = os.path.join(path, self.relative_path)
