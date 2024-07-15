@@ -3,7 +3,7 @@ name: Capgen Unit Tests
 on:
   workflow_dispatch:
   pull_request:
-    branches: [feature/capgen, main]
+    branches: [develop, main]
 
 jobs:
   unit_tests:
