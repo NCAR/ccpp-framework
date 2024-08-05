@@ -566,8 +566,13 @@ character(len=16) :: {css_var_name} = '{state}'
             outfile.end_module_header()
             for group in self.__groups:
                 if group.name in self._beg_groups:
-                    group.write(outfile, self.__host_arg_list_noloop,
-                                1, const_mod, suite_vars=self, allocate=True)
+                    if group.name == self.__suite_reg_group.name:
+                        group.write(outfile, self.__host_arg_list_noloop,
+                                    1, const_mod, suite_vars=self)
+                    else:
+                        group.write(outfile, self.__host_arg_list_noloop,
+                                    1, const_mod, suite_vars=self, allocate=True)
+                    # end if
                 elif group.name in self._end_groups:
                     group.write(outfile, self.__host_arg_list_noloop,
                                 1, const_mod, suite_vars=self, deallocate=True)
