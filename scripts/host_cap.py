@@ -184,13 +184,6 @@ def constituent_model_object_name(host_model):
     return hvar.get_prop_value('local_name')
 
 ###############################################################################
-def dynamic_constituent_array_name(host_model):
-###############################################################################
-    """Return the name of the allocatable dynamic constituent properites array"""
-    hstr = f"{host_model.name}_dynamic_constituents"
-    return unique_local_name(hstr, host_model)
-
-###############################################################################
 def suite_dynamic_constituent_array_name(host_model, suite):
 ###############################################################################
     """Return the name of the allocatable dynamic constituent properites array"""
@@ -770,7 +763,6 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         for suite in api.suites:
             dyn_const_names.append(suite_dynamic_constituent_array_name(host_model, suite.name))
         # end for
-        dyn_const_name = dynamic_constituent_array_name(host_model)
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
                                                numconsts_name, queryconsts_name,
                                                copyin_name, copyout_name,

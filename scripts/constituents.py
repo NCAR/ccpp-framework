@@ -489,14 +489,12 @@ class ConstituentVarDict(VarDictionary):
         spc = ' '*37
         cap.write(f"integer{spc} :: num_suite_consts", 2)
         cap.write(f"integer{spc} :: num_consts", 2)
-        cap.write(f"integer{spc} :: num_dyn_consts", 2)
         cap.write(f"integer{spc} :: index, index_start", 2)
         cap.write(f"integer{spc} :: field_ind", 2)
         cap.write(f"type({CONST_PROP_TYPE}), pointer :: const_prop => NULL()", 2)
         cap.blank_line()
         cap.write(f"{herrcode} = 0", 2)
         cap.write("num_consts = size(host_constituents, 1)", 2)
-        cap.write("num_dyn_consts = 0", 2)
         for suite in suite_list:
             const_dict = suite.constituent_dictionary()
             funcname = const_dict.num_consts_funcname()
@@ -509,7 +507,6 @@ class ConstituentVarDict(VarDictionary):
             cap.write("end if", 2)
             cap.write("num_consts = num_consts + num_suite_consts", 2)
         # end for
-        # Check for dynamic constituent routines
         cap.comment("Initialize constituent data and field object", 2)
         stmt = f"call {const_obj_name}%initialize_table(num_consts)"
         cap.write(stmt, 2)
