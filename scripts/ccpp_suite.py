@@ -70,6 +70,8 @@ character(len=16) :: {css_var_name} = '{state}'
 '''
 
     # Note that these group names need to match CCPP_STATE_MACH
+    __register_group_name = 'register'
+
     __initial_group_name = 'initialize'
 
     __final_group_name = 'finalize'
@@ -205,6 +207,8 @@ character(len=16) :: {css_var_name} = '{state}'
         if run_env.logger and run_env.logger.isEnabledFor(logging.INFO):
             run_env.logger.info(lmsg.format(self.name))
         # end if
+        gname = Suite.__register_group_name
+        self.__suite_reg_group = self.new_group_from_name(gname, run_env)
         gname = Suite.__initial_group_name
         self.__suite_init_group = self.new_group_from_name(gname, run_env)
         gname = Suite.__final_group_name
@@ -214,11 +218,13 @@ character(len=16) :: {css_var_name} = '{state}'
         gname = Suite.__timestep_final_group_name
         self.__timestep_final_group = self.new_group_from_name(gname, run_env)
         # Set up some groupings for later efficiency
-        self._beg_groups = [self.__suite_init_group.name,
+        self._beg_groups = [self.__suite_reg_group.name,
+                            self.__suite_init_group.name,
                             self.__timestep_init_group.name]
         self._end_groups = [self.__suite_final_group.name,
                             self.__timestep_final_group.name]
         # Build hierarchical structure as in SDF
+        self.__groups.append(self.__suite_reg_group)
         self.__groups.append(self.__suite_init_group)
         self.__groups.append(self.__timestep_init_group)
         for suite_item in suite_xml:

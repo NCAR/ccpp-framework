@@ -74,6 +74,8 @@ _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "water_vapor_specific_humidity",
                       "cloud_ice_dry_mixing_ratio",
                       "cloud_liquid_dry_mixing_ratio",
+                      "dynamic_constituents_for_cld_ice",
+                      "dynamic_constituents_for_cld_liq",
                       # Added by --debug option
                       "horizontal_dimension",
                       "vertical_layer_dimension"]
@@ -83,13 +85,17 @@ _INPUT_VARS_CLD = ["surface_air_pressure", "temperature",
                    "water_vapor_specific_humidity",
                    "cloud_ice_dry_mixing_ratio",
                    "cloud_liquid_dry_mixing_ratio",
+                   "dynamic_constituents_for_cld_ice",
+                   "dynamic_constituents_for_cld_liq",
                    # Added by --debug option
                    "horizontal_dimension",
                    "vertical_layer_dimension"]
 _OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "water_vapor_specific_humidity", "temperature",
                     "cloud_ice_dry_mixing_ratio",
-                    "cloud_liquid_dry_mixing_ratio"]
+                    "cloud_liquid_dry_mixing_ratio",
+                    "dynamic_constituents_for_cld_ice",
+                    "dynamic_constituents_for_cld_liq"]
 
 def fields_string(field_type, field_list, sep):
     """Create an error string for <field_type> field(s), <field_list>.
@@ -155,8 +161,6 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("module_list"),
                               _MODULE_LIST)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("suite_list"),
                               _SUITE_LIST)
-NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("dyn_const_routines"),
-                              _DYN_CONST_ROUTINES)
 print("\nChecking variables for CLD suite from python")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="cld_suite"),

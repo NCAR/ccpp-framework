@@ -26,6 +26,9 @@ module ccpp_constituent_prop_mod
    integer,         parameter :: int_unassigned = -HUGE(1)
    real(kind_phys), parameter :: kphys_unassigned = HUGE(1.0_kind_phys)
 
+!! \section arg_table_ccpp_constituent_properties_t
+!! \htmlinclude ccpp_constituent_properties_t.html
+!!
    type, public, extends(ccpp_hashable_char_t) :: ccpp_constituent_properties_t
       ! A ccpp_constituent_properties_t object holds relevant metadata
       !   for a constituent species and provides interfaces to access that data.

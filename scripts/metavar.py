@@ -1052,6 +1052,8 @@ class Var:
             name = aref.group(1)
         # end if
         dims = self.get_dimensions()
+        #if (stdname == 'dynamic_constituents_for_cld_liq') and not allocatable:
+            #raise ParseInternalError('hi')
         if dims:
             if allocatable or dummy:
                 dimstr = '(:' + ',:'*(len(dims) - 1) + ')'
@@ -1896,10 +1898,11 @@ class VarDictionary(OrderedDict):
         for standard_name in self.keys():
             var = self.find_variable(standard_name=standard_name,
                                      any_scope=False)
+            allocatable = var.get_prop_value('allocatable')
             if self.include_var_in_list(var, std_vars=std_vars,
                                         loop_vars=loop_vars, consts=consts):
                 self[standard_name].write_def(outfile, indent, self,
-                                              dummy=dummy)
+                                              dummy=dummy, allocatable=allocatable)
             # end if
         # end for
 
