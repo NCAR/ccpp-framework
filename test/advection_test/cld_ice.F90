@@ -22,7 +22,7 @@ CONTAINS
    !!
    subroutine cld_ice_register(dyn_const_ice, errmsg, errcode)
       use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
-      type(ccpp_constituent_properties_t), allocatable, intent(inout) :: dyn_const_ice(:)
+      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const_ice(:)
       integer,                             intent(out) :: errcode
       character(len=512),                  intent(out) :: errmsg
 

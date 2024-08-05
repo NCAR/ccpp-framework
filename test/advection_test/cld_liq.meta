@@ -9,8 +9,7 @@
   standard_name = dynamic_constituents_for_cld_liq
   dimensions = (:)
   type = ccpp_constituent_properties_t
-  kind = len=512
-  intent = inout
+  intent = out
   allocatable = true
 [ errmsg ]
   standard_name = ccpp_error_message

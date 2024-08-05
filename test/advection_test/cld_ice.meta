@@ -11,7 +11,7 @@
   dimensions = (:)
   allocatable = True
   type = ccpp_constituent_properties_t
-  intent = inout
+  intent = out
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

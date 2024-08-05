@@ -1034,7 +1034,7 @@ CONTAINS
     implicit none
 
    character(len=cs), target :: test_parts1(1)
-   character(len=cm), target :: test_invars1(9)
+   character(len=cm), target :: test_invars1(7)
    character(len=cm), target :: test_outvars1(8)
    character(len=cm), target :: test_reqvars1(11)
 
@@ -1045,8 +1045,6 @@ CONTAINS
     test_invars1 = (/                          &
         'cloud_ice_dry_mixing_ratio          ',                               &
         'cloud_liquid_dry_mixing_ratio       ',                               &
-        'dynamic_constituents_for_cld_liq    ',                               &
-        'dynamic_constituents_for_cld_ice    ',                               &
         'surface_air_pressure                ',                               &
         'temperature                         ',                               &
         'time_step_for_physics               ',                               &

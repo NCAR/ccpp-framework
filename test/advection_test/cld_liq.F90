@@ -19,7 +19,7 @@ CONTAINS
    !! \htmlinclude arg_table_cld_liq_register.html
    !!
    subroutine cld_liq_register(dyn_const, errmsg, errflg)
-      type(ccpp_constituent_properties_t), allocatable, intent(inout) :: dyn_const(:)
+      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
       character(len=512), intent(out) :: errmsg
       integer,            intent(out) :: errflg
 
