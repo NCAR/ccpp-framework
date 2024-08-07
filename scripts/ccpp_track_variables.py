@@ -69,7 +69,7 @@ def create_metadata_filename_dict(metapath):
        with that scheme"""
 
     metadata_dict = {}
-    scheme_filenames = glob.glob(os.path.join(metapath, "*.meta"))
+    scheme_filenames = glob.glob(os.path.join(metapath, "*.meta"), recursive=True)
     if not scheme_filenames:
         raise Exception(f'No files found in {metapath} with ".meta" extension')
 
