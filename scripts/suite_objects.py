@@ -444,12 +444,17 @@ class SuiteObject(VarDictionary):
                 newvar = oldvar.clone(subst_dict, source_name=self.name,
                                       source_type=stype, context=self.context)
             # end if
+            stdname = newvar.get_prop_value('standard_name')
+            vtype = newvar.get_prop_value('type')
+            dimensions = newvar.get_prop_value('dimensions')
             self.call_list.add_variable(newvar, self.run_env,
                                         exists_ok=exists_ok,
                                         gen_unique=gen_unique,
                                         adjust_intent=True)
             # We need to make sure that this variable's dimensions are available
             for vardim in newvar.get_dim_stdnames(include_constants=False):
+                if vardim == '':
+                    continue
                 dvar = self.find_variable(standard_name=vardim,
                                           any_scope=True)
                 if dvar is None:
@@ -838,12 +843,26 @@ class SuiteObject(VarDictionary):
         else:
             vmatch = None
         # end if
-        
+
         found_var = False
         missing_vert = None
         new_vdims = list()
         var_vdim = var.has_vertical_dimension(dims=vdims)
         compat_obj = None
+        dict_var = None
+        if var.get_prop_value('type') == 'ccpp_constituent_properties_t':
+            if self.phase() == 'register':
+                found_var = True
+                new_vdims = [':']
+                return found_var, dict_var, var_vdim, new_vdims, missing_vert, compat_obj
+            else:
+                errmsg = "Variables of type ccpp_constituent_properties_t only allowed in register phase: "
+                sname  = var.get_prop_value('standard_name')
+                errmsg += ", {}".format(sname)
+                raise CCPPError(errmsg)
+            # end if
+        # end if
+
         # Does this variable exist in the calling tree?
         dict_var = self.find_variable(source_var=var, any_scope=True)
         if dict_var is None:

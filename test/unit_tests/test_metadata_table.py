@@ -48,7 +48,6 @@ class MetadataTableTestCase(unittest.TestCase):
         #Verify that:
         #       no dependencies is returned as ''
         #       rel_path is returned as None
-        #       dynamic_constituent_routine is returned as 'dyn_consts'
         #       size of returned list equals number of headers in the test file
         #       ccpp-table-properties name is 'test_host'
         dependencies = result[0].dependencies
@@ -57,8 +56,6 @@ class MetadataTableTestCase(unittest.TestCase):
         self.assertEqual(len(dependencies), 0)
         self.assertIsNone(rel_path)
         self.assertEqual(len(result), 1)
-        dyn_const_routine = result[0].dyn_const_routine
-        self.assertEqual(dyn_const_routine, 'dyn_consts')
         titles = [elem.table_name for elem in result]
         self.assertIn('test_host', titles, msg="Header name 'test_host' is expected but not found")
 

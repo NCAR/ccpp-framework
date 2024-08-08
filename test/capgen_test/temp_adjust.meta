@@ -4,6 +4,30 @@
   dependencies = qux.F90
   relative_path = adjust
 [ccpp-arg-table]
+  name = temp_adjust_register
+  type = scheme
+[ config_var ]
+  standard_name = configuration_variable
+  type = logical
+  units = none
+  dimensions = ()
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
   name = temp_adjust_run
   type = scheme
 [ foo ]
