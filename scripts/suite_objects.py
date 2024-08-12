@@ -453,8 +453,14 @@ class SuiteObject(VarDictionary):
                                         adjust_intent=True)
             # We need to make sure that this variable's dimensions are available
             for vardim in newvar.get_dim_stdnames(include_constants=False):
-                if vardim == '':
+                # Unnamed dimensions are ok for allocatable variables
+                if vardim == '' and newvar.get_prop_value('allocatable'):
                     continue
+                elif vardim == '':
+                    emsg = f"{self.name}: Cannot have unnamed/empty string dimension"
+                    raise ParseInternalError(emsg.format(self.name,
+                                                         vardim, stdname))
+                # end if
                 dvar = self.find_variable(standard_name=vardim,
                                           any_scope=True)
                 if dvar is None:

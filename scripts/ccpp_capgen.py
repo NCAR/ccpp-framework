@@ -575,7 +575,6 @@ def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False):
             # end if
         # end for
     # end for
-    # Check for duplicate dynamic constituent routine names
 
     return header_dict.values(), table_dict
 

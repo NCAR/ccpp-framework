@@ -566,7 +566,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     spart_args = spart.call_list.variable_list()
                     for sp_var in spart_args:
                         stdname = sp_var.get_prop_value('standard_name')
-                        # Skip any dynamic constituent objects in register phases
+                        # Special handling for run-time constituents in register phase
                         if sp_var.get_prop_value('type') == 'ccpp_constituent_properties_t':
                             if spart.phase() == 'register':
                                 prop_dict = {'standard_name' : sp_var.get_prop_value('standard_name'),
@@ -661,7 +661,6 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                               allocatable=var.get_prop_value('allocatable'))
             # End for
             cap.write('', 0)
-            cap.write('character(len=256) :: stdname', 2)
             # Write out the body clauses
             errmsg_name, errflg_name = api.get_errinfo_names()
             # Initialize err variables
@@ -696,8 +695,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     dyn_const_array = suite_dynamic_constituent_array_name(host_model, suite.name)
                     call_str = suite_part_call_list(host_model, const_dict, spart, False,
                                                                        dyn_const=True)
-                    stmt = "call {}_{}({})"
-                    cap.write(stmt.format(suite.name, stage, call_str), 3)
+                    cap.write(f"call {suite.name}_{stage}({call_str})", 3)
                     # Allocate the suite's dynamic constituents array
                     size_string = "0+"
                     for var in host_local_vars.variable_list():
@@ -721,15 +719,10 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                             continue
                         # end if
                         cap.write(f"do const_index = 1, size({local_name})", 3)
-                        cap.write(f"call {local_name}(1)%standard_name(stdname, errcode=errflg, errmsg=errmsg)", 4)
                         cap.write(f"{dyn_const_array}(num_dyn_consts + const_index) = {local_name}(const_index)", 4)
-                        cap.write(f"call {dyn_const_array}(num_dyn_consts + const_index)%standard_name(stdname, errcode=errflg, errmsg=errmsg)", 4)
                         cap.write("end do", 3)
                         cap.write(f"num_dyn_consts = num_dyn_consts + size({local_name})", 3)
                         cap.write(f"deallocate({local_name})", 3)
-                        cap.write(f"do const_index = 1, size({dyn_const_array})", 3)
-                        cap.write(f"call {dyn_const_array}(const_index)%standard_name(stdname, errcode=errflg, errmsg=errmsg)", 4)
-                        cap.write("end do", 3)
                     # end for
 
                 else:
