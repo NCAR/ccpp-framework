@@ -70,6 +70,7 @@ _DYN_CONST_ROUTINES = ["cld_ice_dynamic_constituents", "cld_liq_dynamic_constitu
 _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "horizontal_loop_begin", "horizontal_loop_end",
                       "surface_air_pressure", "temperature",
+                      "tendency_of_cloud_liquid_dry_mixing_ratio",
                       "time_step_for_physics", "water_temperature_at_freezing",
                       "water_vapor_specific_humidity",
                       "cloud_ice_dry_mixing_ratio",
@@ -83,11 +84,13 @@ _INPUT_VARS_CLD = ["surface_air_pressure", "temperature",
                    "water_vapor_specific_humidity",
                    "cloud_ice_dry_mixing_ratio",
                    "cloud_liquid_dry_mixing_ratio",
+                   "tendency_of_cloud_liquid_dry_mixing_ratio",
                    # Added by --debug option
                    "horizontal_dimension",
                    "vertical_layer_dimension"]
 _OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "water_vapor_specific_humidity", "temperature",
+                    "tendency_of_cloud_liquid_dry_mixing_ratio",
                     "cloud_ice_dry_mixing_ratio",
                     "cloud_liquid_dry_mixing_ratio"]
 
