@@ -18,7 +18,7 @@ CONTAINS
    !! \htmlinclude arg_table_cld_liq_run.html
    !!
    subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, ps, cld_liq_array,    &
-        errmsg, errflg)
+       cld_liq_tend, errmsg, errflg)
 
       integer,            intent(in)    :: ncol
       real(kind_phys),    intent(in)    :: timestep
@@ -27,6 +27,8 @@ CONTAINS
       real(kind_phys),    intent(inout) :: qv(:,:)
       real(kind_phys),    intent(in)    :: ps(:)
       REAL(kind_phys),    intent(inout) :: cld_liq_array(:,:)
+      REAL(kind_phys),    intent(inout) :: cld_liq_tend(:,:)
+!      integer, intent(in) :: cld_liq_ind
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------

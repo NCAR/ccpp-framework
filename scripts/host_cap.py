@@ -284,6 +284,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     vert_layer_dim = "vertical_layer_dimension"
     vert_interface_dim = "vertical_interface_dimension"
     array_layer = "vars_layer"
+    tend_layer = "vars_layer_tend"
     # Table preamble (leave off ccpp-table-properties header)
     ddt_mdata = [
         #"[ccpp-table-properties]",
@@ -340,19 +341,35 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                     emsg = f"Unsupported 2-D variable, '{std_name}'"
                     raise CCPPError(emsg)
                 # end if
-                # First, create an index variable for <cvar>
-                ind_std_name = "index_of_{}".format(std_name)
-                loc_name = f"{cvar_array_name}(:,:,{ind_std_name})"
-                ddt_mdata.append(f"[ {loc_name} ]")
-                ddt_mdata.append(f" standard_name = {std_name}")
-                units = cvar.get_prop_value('units')
-                ddt_mdata.append(f" units = {units}")
-                dimstr = f"({', '.join(dims)})"
-                ddt_mdata.append(f" dimensions = {dimstr}")
-                vtype = cvar.get_prop_value('type')
-                vkind = cvar.get_prop_value('kind')
-                ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
-                const_stdnames.add(std_name)
+                if "tendency_of" not in std_name:
+                    # Create an index variable for <cvar>
+                    ind_std_name = "index_of_{}".format(std_name)
+                    loc_name = f"{cvar_array_name}(:,:,{ind_std_name})"
+                    ddt_mdata.append(f"[ {loc_name} ]")
+                    ddt_mdata.append(f" standard_name = {std_name}")
+                    units = cvar.get_prop_value('units')
+                    ddt_mdata.append(f" units = {units}")
+                    dimstr = f"({', '.join(dims)})"
+                    ddt_mdata.append(f" dimensions = {dimstr}")
+                    vtype = cvar.get_prop_value('type')
+                    vkind = cvar.get_prop_value('kind')
+                    ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
+                    const_stdnames.add(std_name)
+                else:
+                    # Create an index variable for tendency of constituent
+                    const_std_name = std_name.split('tendency_of_')[1]
+                    ind_std_name = "index_of_{}".format(const_std_name)
+                    loc_name = f"{tend_layer}(:,:,{ind_std_name})"
+                    ddt_mdata.append(f"[ {loc_name} ]")
+                    ddt_mdata.append(f" standard_name = {std_name}")
+                    units = cvar.get_prop_value('units')
+                    ddt_mdata.append(f" units = {units} s-1")
+                    dimstr = f"({', '.join(dims)})"
+                    ddt_mdata.append(f" dimensions = {dimstr}")
+                    vtype = cvar.get_prop_value('type')
+                    vkind = cvar.get_prop_value('kind')
+                    ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
+                # end if
             # end if
         # end for
     # end for

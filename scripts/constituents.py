@@ -115,6 +115,14 @@ class ConstituentVarDict(VarDictionary):
             var = source_var.clone({'dimensions' : newdims}, remove_intent=True,
                                    source_type=self.__constituent_type)
             self.add_variable(var, self.__run_env)
+            # Also add a nearly-identical tendency_of_{standard_name} variable
+            new_stdname = f"tendency_of_{standard_name}"
+            new_units = f"{source_var.get_prop_value('units')} s-1"
+            new_lname = f"{source_var.get_prop_value('local_name')}_tend"
+            var_tend = source_var.clone({'dimensions' : newdims, 'standard_name' : new_stdname,
+                                    'units': new_units, 'local_name': new_lname},
+                                   remove_intent=True, source_type=self.__constituent_type)
+            self.add_variable(var_tend, self.__run_env)
         return var
 
     @staticmethod
@@ -276,10 +284,18 @@ class ConstituentVarDict(VarDictionary):
         for evar in err_vars:
             evar.write_def(outfile, indent+1, self, dummy=True)
         # end for
+        # Figure out how many constituents variables we have
+        const_num = 0
+        for std_name, var in self.items():
+            if 'tendency_of' in std_name or 'index_of' in std_name:
+                continue
+            # end if
+            const_num += 1
+        # end for
         if self:
             outfile.write("! Local variables", indent+1)
             outfile.write("integer :: index", indent+1)
-            stmt = f"allocate({self.constituent_prop_array_name()}({len(self)}))"
+            stmt = f"allocate({self.constituent_prop_array_name()}({const_num}))"
             outfile.write(stmt, indent+1)
             outfile.write("index = 0", indent+1)
         # end if
@@ -287,6 +303,9 @@ class ConstituentVarDict(VarDictionary):
             self.__init_err_var(evar, outfile, indent+1)
         # end for
         for std_name, var in self.items():
+            if 'tendency_of' in std_name or 'index_of' in std_name:
+                continue
+            # end if
             outfile.write("index = index + 1", indent+1)
             long_name = var.get_prop_value('long_name')
             units = var.get_prop_value('units')
@@ -336,7 +355,7 @@ class ConstituentVarDict(VarDictionary):
         outfile.write(stmt, indent+1)
         outfile.write(f"call {self.constituent_prop_init_consts()}({local_call})", indent+2)
         outfile.write("end if", indent+1)
-        outfile.write(f"{fname} = {len(self)}", indent+1)
+        outfile.write(f"{fname} = {const_num}", indent+1)
         outfile.write(f"end function {fname}", indent)
         outfile.write(f"\n! {border}\n", 1)
         # Return the name of a constituent given an index

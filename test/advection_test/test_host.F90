@@ -10,7 +10,7 @@ module test_prog
 
    ! Public data and interfaces
    integer, public, parameter :: cs = 16
-   integer, public, parameter :: cm = 36
+   integer, public, parameter :: cm = 41
 
    !> \section arg_table_suite_info  Argument Table
    !! \htmlinclude arg_table_suite_info.html
@@ -1008,39 +1008,42 @@ CONTAINS
     implicit none
 
    character(len=cs), target :: test_parts1(1)
-   character(len=cm), target :: test_invars1(7)
-   character(len=cm), target :: test_outvars1(6)
-   character(len=cm), target :: test_reqvars1(9)
+   character(len=cm), target :: test_invars1(8)
+   character(len=cm), target :: test_outvars1(7)
+   character(len=cm), target :: test_reqvars1(10)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
 
     test_parts1 = (/ 'physics         '/)
     test_invars1 = (/                          &
-        'cloud_ice_dry_mixing_ratio          ',                               &
-        'cloud_liquid_dry_mixing_ratio       ',                               &
-        'surface_air_pressure                ',                               &
-        'temperature                         ',                               &
-        'time_step_for_physics               ',                               &
-        'water_temperature_at_freezing       ',                               &
-        'water_vapor_specific_humidity       ' /)
+        'cloud_ice_dry_mixing_ratio               ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'surface_air_pressure                     ',                          &
+        'temperature                              ',                          &
+        'time_step_for_physics                    ',                          &
+        'water_temperature_at_freezing            ',                          &
+        'water_vapor_specific_humidity            ' /)
     test_outvars1 = (/                         &
-        'ccpp_error_message                  ',                               &
-        'ccpp_error_code                     ',                               &
-        'temperature                         ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'cloud_liquid_dry_mixing_ratio       ',                               &
-        'cloud_ice_dry_mixing_ratio          ' /)
+        'ccpp_error_message                       ',                          &
+        'ccpp_error_code                          ',                          &
+        'temperature                              ',                          &
+        'water_vapor_specific_humidity            ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'cloud_ice_dry_mixing_ratio               ' /)
     test_reqvars1 = (/                         &
-        'surface_air_pressure                ',                               &
-        'temperature                         ',                               &
-        'time_step_for_physics               ',                               &
-        'cloud_liquid_dry_mixing_ratio       ',                               &
-        'cloud_ice_dry_mixing_ratio          ',                               &
-        'water_temperature_at_freezing       ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'ccpp_error_message                  ',                               &
-        'ccpp_error_code                     ' /)
+        'surface_air_pressure                     ',                          &
+        'temperature                              ',                          &
+        'time_step_for_physics                    ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'cloud_ice_dry_mixing_ratio               ',                          &
+        'water_temperature_at_freezing            ',                          &
+        'water_vapor_specific_humidity            ',                          &
+        'ccpp_error_message                       ',                          &
+        'ccpp_error_code                          ' /)
 
 
     ! Setup expected test suite info

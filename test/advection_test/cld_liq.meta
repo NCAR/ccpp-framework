@@ -55,6 +55,12 @@
   dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real |  kind = kind_phys
   intent = inout
+[ cld_liq_tend ]
+  standard_name = tendency_of_cloud_liquid_dry_mixing_ratio
+  units = kg kg-1 s-1
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  type = real |  kind = kind_phys
+  intent = inout
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
