@@ -19,7 +19,7 @@ from metadata_table import MetadataTable
 from metavar import Var, VarDictionary, CCPP_CONSTANT_VARS
 from metavar import CCPP_LOOP_VAR_STDNAMES
 from fortran_tools import FortranWriter
-from parse_tools import CCPPError
+from parse_tools import CCPPError, ParseInternalError
 from parse_tools import ParseObject, ParseSource, ParseContext
 
 ###############################################################################
@@ -341,35 +341,32 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                     emsg = f"Unsupported 2-D variable, '{std_name}'"
                     raise CCPPError(emsg)
                 # end if
-                if "tendency_of" not in std_name:
-                    # Create an index variable for <cvar>
-                    ind_std_name = "index_of_{}".format(std_name)
-                    loc_name = f"{cvar_array_name}(:,:,{ind_std_name})"
-                    ddt_mdata.append(f"[ {loc_name} ]")
-                    ddt_mdata.append(f" standard_name = {std_name}")
-                    units = cvar.get_prop_value('units')
-                    ddt_mdata.append(f" units = {units}")
-                    dimstr = f"({', '.join(dims)})"
-                    ddt_mdata.append(f" dimensions = {dimstr}")
-                    vtype = cvar.get_prop_value('type')
-                    vkind = cvar.get_prop_value('kind')
-                    ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
-                    const_stdnames.add(std_name)
-                else:
-                    # Create an index variable for tendency of constituent
-                    const_std_name = std_name.split('tendency_of_')[1]
-                    ind_std_name = "index_of_{}".format(const_std_name)
-                    loc_name = f"{tend_layer}(:,:,{ind_std_name})"
-                    ddt_mdata.append(f"[ {loc_name} ]")
-                    ddt_mdata.append(f" standard_name = {std_name}")
-                    units = cvar.get_prop_value('units')
-                    ddt_mdata.append(f" units = {units} s-1")
-                    dimstr = f"({', '.join(dims)})"
-                    ddt_mdata.append(f" dimensions = {dimstr}")
-                    vtype = cvar.get_prop_value('type')
-                    vkind = cvar.get_prop_value('kind')
-                    ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
-                # end if
+                # Create an index variable for <cvar>
+                ind_std_name = "index_of_{}".format(std_name)
+                loc_name = f"{cvar_array_name}(:,:,{ind_std_name})"
+                ddt_mdata.append(f"[ {loc_name} ]")
+                ddt_mdata.append(f" standard_name = {std_name}")
+                units = cvar.get_prop_value('units')
+                ddt_mdata.append(f" units = {units}")
+                dimstr = f"({', '.join(dims)})"
+                ddt_mdata.append(f" dimensions = {dimstr}")
+                vtype = cvar.get_prop_value('type')
+                vkind = cvar.get_prop_value('kind')
+                ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
+                const_stdnames.add(std_name)
+
+                # Create a tendency variable for the constituent
+                ind_std_name = "index_of_{}".format(std_name)
+                loc_name = f"{tend_layer}(:,:,{ind_std_name})"
+                ddt_mdata.append(f"[ {loc_name} ]")
+                ddt_mdata.append(f" standard_name = tendency_of_{std_name}")
+                units = cvar.get_prop_value('units')
+                ddt_mdata.append(f" units = {units} s-1")
+                dimstr = f"({', '.join(dims)})"
+                ddt_mdata.append(f" dimensions = {dimstr}")
+                vtype = cvar.get_prop_value('type')
+                vkind = cvar.get_prop_value('kind')
+                ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
             # end if
         # end for
     # end for
@@ -384,7 +381,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     del ddt_mdata
     # Now, create the "host constituent module" dictionary
     const_dict = VarDictionary(f"{host_model.name}_constituents",
-                               run_env, parent_dict=host_model)
+                                    run_env, parent_dict=host_model)
     # Add the constituents object to const_dict and write its declaration
     const_var = host_model.find_variable(CONST_OBJ_STDNAME)
     if const_var:
@@ -483,7 +480,7 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):
         # end for
         if hvar is None:
             errmsg = 'No host model variable for {} in {}'
-            raise CCPPError(errmsg.format(stdname, suite_part.name))
+            raise ParseInternalError(errmsg.format(stdname, suite_part.name))
         # End if
         if stdname not in CCPP_CONSTANT_VARS:
             lname = var_dict.var_call_string(hvar, loop_vars=loop_vars)
@@ -574,9 +571,10 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                         stdname = sp_var.get_prop_value('standard_name')
                         hvar = const_dict.find_variable(standard_name=stdname,
                                                         any_scope=True)
+                        # end if
                         if hvar is None:
-                            errmsg = 'No host model variable for {} in {}'
-                            raise CCPPError(errmsg.format(stdname, spart.name))
+                            errmsg = '2No host model variable for {} in {}'
+                            raise ParseInternalError(errmsg.format(stdname, spart.name))
                         # End if
                     # End for (loop over part variables)
                 # End for (loop of suite parts)

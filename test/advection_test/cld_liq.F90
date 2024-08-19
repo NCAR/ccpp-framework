@@ -47,6 +47,7 @@ CONTAINS
                  (temp(icol, ilev) <= tcld)) then
                cond = MIN(qv(icol, ilev), 0.1_kind_phys)
                cld_liq_array(icol, ilev) = cld_liq_array(icol, ilev) + cond
+               cld_liq_tend(icol, ilev) = cond
                qv(icol, ilev) = qv(icol, ilev) - cond
                if (cond > 0.0_kind_phys) then
                   temp(icol, ilev) = temp(icol, ilev) + (cond * 5.0_kind_phys)
