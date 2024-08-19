@@ -115,6 +115,14 @@ class ConstituentVarDict(VarDictionary):
             var = source_var.clone({'dimensions' : newdims}, remove_intent=True,
                                    source_type=self.__constituent_type)
             self.add_variable(var, self.__run_env)
+            # Also add a nearly-identical tendency_of_{standard_name} variable
+            new_stdname = f"tendency_of_{standard_name}"
+            new_units = f"{source_var.get_prop_value('units')} s-1"
+            new_lname = f"{source_var.get_prop_value('local_name')}_tend"
+            var_tend = source_var.clone({'dimensions' : newdims, 'standard_name' : new_stdname,
+                                    'units': new_units, 'local_name': new_lname},
+                                   remove_intent=True, source_type=self.__constituent_type)
+            self.add_variable(var_tend, self.__run_env)
         return var
 
     @staticmethod
