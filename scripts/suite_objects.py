@@ -1257,7 +1257,6 @@ class Scheme(SuiteObject):
                                                   suite_vars, level)
             # end if
         # end if
-
         return scheme_mods
 
     def add_var_debug_check(self, var):
@@ -1431,13 +1430,10 @@ class Scheme(SuiteObject):
         # add_var_debug_check, therefore need to back out here,
         # using the information from the scheme variable (call list).
         svar = self.call_list.find_variable(standard_name=standard_name, any_scope=False)
-        if svar:
-            intent = svar.get_prop_value('intent')
-        else:
-            intent = 'in'
-        # end if
+        intent = svar.get_prop_value('intent')
         if intent == 'out' and allocatable:
             return
+        # end if
 
         # Get the condition on which the variable is active
         (conditional, _) = var.conditional(cldicts)

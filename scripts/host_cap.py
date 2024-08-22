@@ -19,7 +19,7 @@ from metadata_table import MetadataTable
 from metavar import Var, VarDictionary, CCPP_CONSTANT_VARS
 from metavar import CCPP_LOOP_VAR_STDNAMES
 from fortran_tools import FortranWriter
-from parse_tools import CCPPError, ParseInternalError
+from parse_tools import CCPPError
 from parse_tools import ParseObject, ParseSource, ParseContext
 
 ###############################################################################
@@ -394,7 +394,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     del ddt_mdata
     # Now, create the "host constituent module" dictionary
     const_dict = VarDictionary(f"{host_model.name}_constituents",
-                                    run_env, parent_dict=host_model)
+                               run_env, parent_dict=host_model)
     # Add the constituents object to const_dict and write its declaration
     const_var = host_model.find_variable(CONST_OBJ_STDNAME)
     if const_var:
@@ -469,6 +469,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
 
 ###############################################################################
 def check_tendency_variables(tend_vars, const_vars):
+###############################################################################
     """Return an error flag and relevant error message if there are mismatches
     between the tendency variable and the constituent variable (standard name,
     units)
@@ -576,7 +577,6 @@ def check_tendency_variables(tend_vars, const_vars):
     # end if
 
     return errmsg, errflg
-###############################################################################
 
 ###############################################################################
 def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):
@@ -698,7 +698,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                         # end if
                         if hvar is None:
                             errmsg = 'No host model variable for {} in {}'
-                            raise ParseInternalError(errmsg.format(stdname, spart.name))
+                            raise CCPPError(errmsg.format(stdname, spart.name))
                         # End if
                     # End for (loop over part variables)
                 # End for (loop of suite parts)

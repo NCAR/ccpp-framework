@@ -276,13 +276,12 @@ class ConstituentVarDict(VarDictionary):
         for evar in err_vars:
             evar.write_def(outfile, indent+1, self, dummy=True)
         # end for
-        # Figure out how many constituents variables we have
+        # Figure out how many unique (non-tendency) constituent variables we have
         const_num = 0
         for std_name, var in self.items():
-            if 'tendency_of' in std_name:
-                continue
+            if 'tendency_of' not in std_name:
+                const_num += 1
             # end if
-            const_num += 1
         # end for
         if self:
             outfile.write("! Local variables", indent+1)
