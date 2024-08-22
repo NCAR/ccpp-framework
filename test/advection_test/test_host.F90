@@ -1008,9 +1008,9 @@ CONTAINS
     implicit none
 
    character(len=cs), target :: test_parts1(1)
-   character(len=cm), target :: test_invars1(8)
-   character(len=cm), target :: test_outvars1(7)
-   character(len=cm), target :: test_reqvars1(10)
+   character(len=cm), target :: test_invars1(11)
+   character(len=cm), target :: test_outvars1(9)
+   character(len=cm), target :: test_reqvars1(13)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
@@ -1024,6 +1024,9 @@ CONTAINS
         'temperature                              ',                          &
         'time_step_for_physics                    ',                          &
         'water_temperature_at_freezing            ',                          &
+        'ccpp_constituent_tendencies              ',                          &
+        'ccpp_constituents                        ',                          &
+        'number_of_ccpp_constituents              ',                          &
         'water_vapor_specific_humidity            ' /)
     test_outvars1 = (/                         &
         'ccpp_error_message                       ',                          &
@@ -1031,6 +1034,8 @@ CONTAINS
         'temperature                              ',                          &
         'water_vapor_specific_humidity            ',                          &
         'cloud_liquid_dry_mixing_ratio            ',                          &
+        'ccpp_constituent_tendencies              ',                          &
+        'ccpp_constituents                        ',                          &
         'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
         'cloud_ice_dry_mixing_ratio               ' /)
     test_reqvars1 = (/                         &
@@ -1041,6 +1046,9 @@ CONTAINS
         'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
         'cloud_ice_dry_mixing_ratio               ',                          &
         'water_temperature_at_freezing            ',                          &
+        'ccpp_constituent_tendencies              ',                          &
+        'ccpp_constituents                        ',                          &
+        'number_of_ccpp_constituents              ',                          &
         'water_vapor_specific_humidity            ',                          &
         'ccpp_error_message                       ',                          &
         'ccpp_error_code                          ' /)

@@ -115,14 +115,6 @@ class ConstituentVarDict(VarDictionary):
             var = source_var.clone({'dimensions' : newdims}, remove_intent=True,
                                    source_type=self.__constituent_type)
             self.add_variable(var, self.__run_env)
-            # Also add a nearly-identical tendency_of_{standard_name} variable
-            new_stdname = f"tendency_of_{standard_name}"
-            new_units = f"{source_var.get_prop_value('units')} s-1"
-            new_lname = f"{source_var.get_prop_value('local_name')}_tend"
-            var_tend = source_var.clone({'dimensions' : newdims, 'standard_name' : new_stdname,
-                                    'units': new_units, 'local_name': new_lname},
-                                   remove_intent=True, source_type=self.__constituent_type)
-            self.add_variable(var_tend, self.__run_env)
         return var
 
     @staticmethod
@@ -287,7 +279,7 @@ class ConstituentVarDict(VarDictionary):
         # Figure out how many constituents variables we have
         const_num = 0
         for std_name, var in self.items():
-            if 'tendency_of' in std_name or 'index_of' in std_name:
+            if 'tendency_of' in std_name:
                 continue
             # end if
             const_num += 1
@@ -303,7 +295,8 @@ class ConstituentVarDict(VarDictionary):
             self.__init_err_var(evar, outfile, indent+1)
         # end for
         for std_name, var in self.items():
-            if 'tendency_of' in std_name or 'index_of' in std_name:
+            if 'tendency_of' in std_name:
+                # Skip tendency variables
                 continue
             # end if
             outfile.write("index = index + 1", indent+1)

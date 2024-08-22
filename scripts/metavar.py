@@ -229,7 +229,9 @@ class Var:
                                             optional_in=True, default_in=False),
                            VariableProperty('molar_mass', float,
                                             optional_in=True, default_in=0.0,
-                                            check_fn_in=check_molar_mass)]
+                                            check_fn_in=check_molar_mass),
+                           VariableProperty('constituent', bool,
+                                            optional_in=True, default_in=False)]
 
     __constituent_prop_dict = {x.name : x for x in __constituent_props}
 

@@ -1137,7 +1137,6 @@ class Scheme(SuiteObject):
 
     def analyze(self, phase, group, scheme_library, suite_vars, level):
         """Analyze the scheme's interface to prepare for writing"""
-        constituent_prefixes = ['tendency_of_', 'index_of_']
         self.__group = group
         my_header = None
         if self.name in scheme_library:
@@ -1166,16 +1165,11 @@ class Scheme(SuiteObject):
         # end if
         scheme_mods = set()
         scheme_mods.add((my_header.module, self.subroutine_name))
-        secondary_const_vars = []
-        primary_const_vars = []
         for var in my_header.variable_list():
             vstdname = var.get_prop_value('standard_name')
             def_val = var.get_prop_value('default_value')
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
-            if var.is_constituent:
-                primary_const_vars.append(var)
-            # end if
             args = self.match_variable(var, self.run_env)
             found, dict_var, vert_dim, new_dims, missing_vert, compat_obj = args
             if found:
@@ -1220,9 +1214,6 @@ class Scheme(SuiteObject):
                     self.__group.manage_variable(var)
                     # We still need it in our call list (the group uses a clone)
                     self.add_call_list_variable(var)
-                elif any(prefix in vstdname for prefix in constituent_prefixes):
-                    # Ignore these, but save them for later checking
-                    secondary_const_vars.append(var)
                 else:
                     errmsg = 'Input argument for {}, {}, not found.'
                     if self.find_variable(source_var=var) is not None:
@@ -1266,53 +1257,8 @@ class Scheme(SuiteObject):
                                                   suite_vars, level)
             # end if
         # end if
-        # Check any secondary constituent variables (index, tendency)
-        errflg, errmsg = self.check_secondary_constituent_variables(secondary_const_vars, primary_const_vars,
-                                                   constituent_prefixes)
-        if errflg == 1:
-            raise CCPPError(errmsg)
-        # end if
-
-        # Add secondary constituent variables to group and call list
-        # peverwhee TODO - variable transforms?
-        for var in secondary_const_vars:
-            #self.__group.manage_variable(var)
-            self.add_call_list_variable(var)
-            self.update_group_call_list_variable(var)
-        # end for
-#        if self.call_list.name == 'cld_liq_call_list' and len(secondary_const_vars) > 0:
-#            raise ParseInternalError('hi')
 
         return scheme_mods
-
-    def check_secondary_constituent_variables(self, secondary_list, primary_list, secondary_prefixes):
-        """Return an error if there are any secondary variables that reference
-        a nonexisting constituent"""
-        errflg = 0
-        errmsg = ''
-        for secondary_const in secondary_list:
-            valid_var = False
-            for primary_const in primary_list:
-                sec_stdname = secondary_const.get_prop_value('standard_name')
-                prim_stdname = primary_const.get_prop_value('standard_name')
-                for prefix in secondary_prefixes:
-                    if prefix in sec_stdname:
-                        sec_stdname = sec_stdname.split(prefix, 1)[1]
-                        exit
-                    # end if
-                # end for
-                if prim_stdname == sec_stdname:
-                    valid_var = True
-                    exit
-                # end if
-            if not valid_var:
-                errmsg = f'Invalid index or tendency variable {sec_stdname}.'
-                errmsg += f'\n   Host model must handle non-constituent index and tendency variables'
-                errflg = 1
-                return errflg, errmsg
-            # end for
-        # end for
-        return errflg, errmsg
 
     def add_var_debug_check(self, var):
         """Add a debug check for a given variable var (host model variable,

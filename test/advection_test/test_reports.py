@@ -64,7 +64,7 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
                   os.path.join(_FRAMEWORK_DIR, "src", "ccpp_hash_table.F90")]
 _CCPP_FILES = _UTILITY_FILES + _HOST_FILES + _SUITE_FILES
 _PROCESS_LIST = list()
-_MODULE_LIST = ["cld_ice", "cld_liq"]
+_MODULE_LIST = ["cld_ice", "cld_liq", "apply_constituent_tendencies"]
 _SUITE_LIST = ["cld_suite"]
 _DYN_CONST_ROUTINES = ["cld_ice_dynamic_constituents", "cld_liq_dynamic_constituents"]
 _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
@@ -75,6 +75,9 @@ _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "water_vapor_specific_humidity",
                       "cloud_ice_dry_mixing_ratio",
                       "cloud_liquid_dry_mixing_ratio",
+                      "ccpp_constituents",
+                      "ccpp_constituent_tendencies",
+                      "number_of_ccpp_constituents",
                       # Added by --debug option
                       "horizontal_dimension",
                       "vertical_layer_dimension"]
@@ -85,6 +88,9 @@ _INPUT_VARS_CLD = ["surface_air_pressure", "temperature",
                    "cloud_ice_dry_mixing_ratio",
                    "cloud_liquid_dry_mixing_ratio",
                    "tendency_of_cloud_liquid_dry_mixing_ratio",
+                   "ccpp_constituents",
+                   "ccpp_constituent_tendencies",
+                   "number_of_ccpp_constituents",
                    # Added by --debug option
                    "horizontal_dimension",
                    "vertical_layer_dimension"]
@@ -92,6 +98,8 @@ _OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "water_vapor_specific_humidity", "temperature",
                     "tendency_of_cloud_liquid_dry_mixing_ratio",
                     "cloud_ice_dry_mixing_ratio",
+                    "ccpp_constituents",
+                    "ccpp_constituent_tendencies",
                     "cloud_liquid_dry_mixing_ratio"]
 
 def fields_string(field_type, field_list, sep):
