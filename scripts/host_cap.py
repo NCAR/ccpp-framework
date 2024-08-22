@@ -695,7 +695,6 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                         stdname = sp_var.get_prop_value('standard_name')
                         hvar = const_dict.find_variable(standard_name=stdname,
                                                         any_scope=True)
-                        # end if
                         if hvar is None:
                             errmsg = 'No host model variable for {} in {}'
                             raise CCPPError(errmsg.format(stdname, spart.name))
