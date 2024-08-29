@@ -51,6 +51,13 @@ def call_command(commands, logger, silent=False):
     False
     >>> call_command(['ls'], _LOGGER)
     True
+    >>> try:
+    ...    call_command(['ls','--invalid-option'], _LOGGER)
+    ... except CCPPError as e:
+    ...    print(str(e))
+    Execution of 'ls --invalid-option' failed with code:
+    Error output: ls: unrecognized option '--invalid-option'
+    Try 'ls --help' for more information.
     """
     result = False
     outstr = ''
