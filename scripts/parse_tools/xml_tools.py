@@ -68,7 +68,13 @@ def call_command(commands, logger, silent=False):
             cmd = ' '.join(commands)
             emsg = "Execution of '{}' failed with code:\n"
             outstr = emsg.format(cmd, err.returncode)
-            outstr += "{}".format(err.output)
+            outstr += f"{err.output.decode('utf-8', errors='replace').strip()}"
+            if hasattr(err, 'stderr') and err.stderr:
+                stderr_str = err.stderr.decode('utf-8', errors='replace').strip()
+                if stderr_str:
+                    outstr += f"Error output: {stderr_str}"
+                # end if
+            # end if
             raise CCPPError(outstr) from err
         # end if
     # end of try
