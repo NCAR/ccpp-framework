@@ -26,7 +26,7 @@
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
-  units = none
+  units = None
   dimensions = ()
   type = character
   kind = len=512
