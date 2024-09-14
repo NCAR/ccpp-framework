@@ -278,8 +278,8 @@ class ConstituentVarDict(VarDictionary):
         # end for
         # Figure out how many unique (non-tendency) constituent variables we have
         const_num = 0
-        for std_name, var in self.items():
-            if 'tendency_of' not in std_name:
+        for std_name, _ in self.items():
+            if not std_name.startswith('tendency_of_'):
                 const_num += 1
             # end if
         # end for
@@ -294,7 +294,7 @@ class ConstituentVarDict(VarDictionary):
             self.__init_err_var(evar, outfile, indent+1)
         # end for
         for std_name, var in self.items():
-            if 'tendency_of' in std_name:
+            if std_name.startswith('tendency_of_'):
                 # Skip tendency variables
                 continue
             # end if

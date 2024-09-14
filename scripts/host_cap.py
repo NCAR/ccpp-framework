@@ -355,7 +355,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                 else:
                     const_std_name = std_name
                 # end if
-                ind_std_name = "index_of_{}".format(const_std_name)
+                ind_std_name = f"index_of_{const_std_name}"
                 loc_name = f"{cvar_array_name}(:,:,{ind_std_name})"
                 ddt_mdata.append(f"[ {loc_name} ]")
                 ddt_mdata.append(f" standard_name = {std_name}")
@@ -492,8 +492,9 @@ def check_tendency_variables(tend_vars, const_vars):
     ("\\nMismatch tendency variable type 'character' for variable 'tendency_of_water_vapor'. Type should match constituent type of 'real'\\nMismatch tendency variable kind 'len=32' for variable 'tendency_of_water_vapor'. Kind should match constituent kind of 'kind_phys'", 1)
     >>> tendency_vars = [Var({'local_name':'qv_tend', 'standard_name':'tendency_of_water_vapor_mixing_ratio', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV)]
     >>> tendency_vars.append(Var({'local_name':'qc_tend', 'standard_name':'tendency_of_cloud_liquid', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV))
+    >>> tendency_vars.append(Var({'local_name':'qc_tend', 'standard_name':'typotendency_of_cloud_liquid', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV))
     >>> check_tendency_variables(tendency_vars, const_vars)
-    ("\\nInvalid tendency variable 'tendency_of_water_vapor_mixing_ratio'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'\\nInvalid tendency variable 'tendency_of_cloud_liquid'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'", 1)
+    ("\\nInvalid tendency variable 'tendency_of_water_vapor_mixing_ratio'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'\\nInvalid tendency variable 'tendency_of_cloud_liquid'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'\\nInvalid tendency variable 'typotendency_of_cloud_liquid'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'", 1)
     """
     errflg = 0
     errmsg = ''
@@ -503,6 +504,13 @@ def check_tendency_variables(tend_vars, const_vars):
         valid_var = False
         tend_stdname = tend_var.get_prop_value('standard_name')
         tend_units = tend_var.get_prop_value('units')
+        if not tend_stdname.startswith('tendency_of_'):
+            # Tendency standard name is invalid
+            errmsg += f"\nInvalid tendency variable '{tend_stdname}'."
+            errmsg += " All constituent tendency variable standard names must "
+            errmsg += "be of the form 'tendency_of_<constituent_stdname>'"
+            errflg = 1
+            continue
         tend_stdname_split = tend_stdname.split('tendency_of_')[1]
         tend_dimensions = tend_var.get_dimensions()
         tend_type = tend_var.get_prop_value('type')
