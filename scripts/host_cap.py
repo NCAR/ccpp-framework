@@ -526,7 +526,7 @@ def check_tendency_variables(tend_vars, const_vars):
                 if tend_units.split('s-1')[0].strip() != const_units:
                     errmsg += f"\nMismatch tendency variable units '{tend_units}'"
                     errmsg += f" for variable '{tend_stdname}'."
-                    errmsg += f" No variable transforms supported for constituent tendencies."
+                    errmsg += " No variable transforms supported for constituent tendencies."
                     errmsg += f" Tendency units should be '{const_units} s-1' to match constituent."
                     prop_error = True
                 # end if
@@ -580,9 +580,6 @@ def check_tendency_variables(tend_vars, const_vars):
             errflg = 1
         # end if
     # end for
-    if errflg != 0:
-        return errmsg, errflg
-    # end if
 
     return errmsg, errflg
 
