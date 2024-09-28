@@ -225,6 +225,7 @@ CONTAINS
       outConst%molar_mass_val      = inConst%molar_mass_val
       outConst%thermo_active       = inConst%thermo_active
       outConst%water_species       = inConst%water_species
+      outConst%var_units           = inConst%var_units
    end subroutine copyConstituent
 
    !#######################################################################
@@ -737,6 +738,7 @@ CONTAINS
          equiv = (trim(this%var_std_name) == trim(oconst%var_std_name)) .and. &
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
+              (trim(this%var_units) == trim(oconst%var_units))          .and. &
               (this%advected .eqv. oconst%advected)                     .and. &
               (this%const_default_value == oconst%const_default_value)  .and. &
               (this%min_val == oconst%min_val)                          .and. &
