@@ -369,7 +369,8 @@ CONTAINS
    !#######################################################################
 
    subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, default_value, min_value, molar_mass, water_species, errcode, errmsg)
+        advected, default_value, min_value, molar_mass, water_species,         &
+        mixing_ratio_type, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -383,6 +384,7 @@ CONTAINS
       real(kind_phys), optional,            intent(in)    :: min_value
       real(kind_phys), optional,            intent(in)    :: molar_mass
       logical, optional,                    intent(in)    :: water_species
+      character(len=*), optional,           intent(in)    :: mixing_ratio_type
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
 
@@ -428,14 +430,29 @@ CONTAINS
       end if
       if (errcode == 0) then
          ! Determine if this mixing ratio is dry, moist, or "wet".
-         if (index(this%var_std_name, "wrt_moist_air") > 0) then
-            this%const_water = moist_mixing_ratio
-         else if (this%var_std_name == "specific_humidity") then
-            this%const_water = moist_mixing_ratio
-         else if (this%var_std_name == "wrt_total_mass") then
-            this%const_water = wet_mixing_ratio
+         ! If a type was provided, use that (if it's valid)
+         if (present(mixing_ratio_type)) then
+            if (trim(mixing_ratio_type) == 'wet') then
+               this%const_water = wet_mixing_ratio
+            else if (trim(mixing_ratio_type) == 'moist') then
+               this%const_water = moist_mixing_ratio
+            else if (trim(mixing_ratio_type) == 'dry') then
+               this%const_water = dry_mixing_ratio
+            else
+               errcode = 1
+               write(errmsg, *) 'ccp_instantiate: invalid mixing ratio type. ', &
+                  'Must be one of: "wet", "moist", or "dry". Got: "', &
+                  trim(mixing_ratio_type), '"'
+            end if
          else
-            this%const_water = dry_mixing_ratio
+            ! Otherwise, parse it from the standard name
+            if (index(this%var_std_name, "wrt_moist_air_and_condensed_water") > 0) then
+               this%const_water = wet_mixing_ratio
+            else if (index(this%var_std_name, "wrt_moist_air") > 0) then
+               this%const_water = moist_mixing_ratio
+            else
+               this%const_water = dry_mixing_ratio
+            end if
          end if
       end if
       if (errcode /= 0) then
