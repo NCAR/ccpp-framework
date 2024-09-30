@@ -369,7 +369,7 @@ CONTAINS
    !#######################################################################
 
    subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, default_value, min_value, molar_mass, errcode, errmsg)
+        advected, default_value, min_value, molar_mass, water_species, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -382,6 +382,7 @@ CONTAINS
       real(kind_phys), optional,            intent(in)    :: default_value
       real(kind_phys), optional,            intent(in)    :: min_value
       real(kind_phys), optional,            intent(in)    :: molar_mass
+      logical, optional,                    intent(in)    :: water_species
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
 
@@ -411,6 +412,9 @@ CONTAINS
          end if
          if (present(molar_mass)) then
             this%molar_mass_val = molar_mass
+         end if
+         if (present(water_species)) then
+            this%water_species = water_species
          end if
       end if
       if (errcode == 0) then
