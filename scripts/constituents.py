@@ -488,10 +488,11 @@ class ConstituentVarDict(VarDictionary):
         # end if
         cap.blank_line()
         cap.comment("Dummy arguments", 2)
-        cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)  :: " +       \
+        cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)    :: " +     \
                   "host_constituents(:)", 2)
         for evar in err_vars:
-            evar.write_def(cap, 2, host, dummy=True, add_intent="out")
+            evar.write_def(cap, 2, host, dummy=True,
+                           add_intent="out", extra_space=25)
         # end for
         cap.comment("Local variables", 2)
         spc = ' '*37
@@ -576,7 +577,7 @@ class ConstituentVarDict(VarDictionary):
            cap.write("end if", 3)
            cap.write("end do", 2)
         # end if
-        
+
         # Register suite constituents
         for suite in suite_list:
             errvar_str = ConstituentVarDict.__errcode_callstr(herrcode,
@@ -770,7 +771,8 @@ class ConstituentVarDict(VarDictionary):
         cap.write("character(len=*),    intent(in)    :: stdname", 2)
         cap.write("integer,             intent(out)   :: const_index", 2)
         for evar in err_vars:
-            evar.write_def(cap, 2, host, dummy=True, add_intent="out")
+            evar.write_def(cap, 2, host, dummy=True,
+                           add_intent="out", extra_space=1)
         # end for
         cap.blank_line()
         cap.write(f"call {const_obj_name}%const_index(const_index, " +        \

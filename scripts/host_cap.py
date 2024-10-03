@@ -465,12 +465,12 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):
             # end if
         # end for
         if hvar is None:
-            errmsg = 'No host model variable for {} in {}'
-            raise CCPPError(errmsg.format(stdname, suite_part.name))
+            errmsg = f"No host model variable for {stdname} in {suite_part.name}"
+            raise CCPPError(errmsg)
         # End if
         if stdname not in CCPP_CONSTANT_VARS:
             lname = var_dict.var_call_string(hvar, loop_vars=loop_vars)
-            hmvars.append("{}={}".format(sp_lname, lname))
+            hmvars.append(f"{sp_lname}={lname}")
         # End if
     # End for
     return ', '.join(hmvars)
@@ -505,7 +505,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write(f"use {CONST_DDT_MOD}, {mspc}only: {CONST_DDT_NAME}", 1)
         cap.write(f"use {CONST_DDT_MOD}, {mspc}only: {CONST_PROP_TYPE}", 1)
         cap.write_preamble()
-        max_suite_len = 0
+        max_suite_len = host_model.ddt_lib.max_mod_name_len
         for suite in api.suites:
             max_suite_len = max(max_suite_len, len(suite.module))
         # End for
@@ -608,12 +608,12 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                                                         pad=max_suite_len)
 
             cap.write("", 1)
-            # Write out dummy arguments
+            # Write out dummy argument definitions
             for var in apivars:
-                var.write_def(cap, 2, host_model)
+                var.write_def(cap, 2, host_model, dummy=True)
             # End for
             for var in hdvars:
-                var.write_def(cap, 2, host_model)
+                var.write_def(cap, 2, host_model, dummy=True)
             # End for
             for var in host_local_vars.variable_list():
                 var.write_def(cap, 2, host_model)
