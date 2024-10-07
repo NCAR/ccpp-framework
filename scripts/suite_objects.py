@@ -864,7 +864,7 @@ class SuiteObject(VarDictionary):
             else:
                 errmsg = "Variables of type ccpp_constituent_properties_t only allowed in register phase: "
                 sname  = var.get_prop_value('standard_name')
-                errmsg += ", {}".format(sname)
+                errmsg += f"'{sname}' found in {self.phase()} phase"
                 raise CCPPError(errmsg)
             # end if
         # end if

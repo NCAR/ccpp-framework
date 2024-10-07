@@ -68,7 +68,7 @@
   state_variable = true
   type = real
   kind = kind_phys
-  units = Pa
+  units = hPa
   dimensions = (horizontal_loop_extent)
   intent = in
 [ cld_liq_array ]

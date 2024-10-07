@@ -534,7 +534,7 @@ class ConstituentVarDict(VarDictionary):
            cap.write("return", 4)
            cap.write("end if", 3)
            cap.write("end do", 2)
-        # end do
+        # end for
         
         # Register suite constituents
         for suite in suite_list:
