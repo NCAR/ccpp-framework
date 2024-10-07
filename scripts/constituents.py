@@ -440,12 +440,11 @@ class ConstituentVarDict(VarDictionary):
     @staticmethod
     def write_host_routines(cap, host, reg_funcname, init_funcname, num_const_funcname,
                             query_const_funcname, copy_in_funcname, copy_out_funcname, cleanup_funcname,
-                            const_obj_name, dyn_const_name, const_names_name, const_indices_name,
+                            const_obj_name, dyn_const_names, const_names_name, const_indices_name,
                             const_array_func, advect_array_func, prop_array_func,
-                            const_index_func, suite_list, dyn_const_dict, err_vars):
+                            const_index_func, suite_list, err_vars):
         """Write out the host model <reg_funcname> routine which will
         instantiate constituent fields for all the constituents in <suite_list>.
-        <dyn_const_dict> is a dictionary (key=scheme name) of dynamic constituent routines
         <err_vars> is a list of the host model's error variables.
         Also write out the following routines:
            <init_funcname>: Initialize constituent data
@@ -479,13 +478,6 @@ class ConstituentVarDict(VarDictionary):
         cap.comment("Create constituent object for suites in <suite_list>", 2)
         cap.blank_line()
         ConstituentVarDict.write_constituent_use_statements(cap, suite_list, 2)
-        # Conditionally include use statements for dynamic constituent routines
-        if len(dyn_const_dict) > 0:
-            cap.comment("Dynamic constituent routines", 2)
-            for scheme in dyn_const_dict:
-                cap.write(f"use {scheme}, only: {dyn_const_dict[scheme]}", 2)
-            # end for
-        # end if
         cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write(f"type({CONST_PROP_TYPE}), target, intent(in)  :: " +       \
@@ -497,19 +489,12 @@ class ConstituentVarDict(VarDictionary):
         spc = ' '*37
         cap.write(f"integer{spc} :: num_suite_consts", 2)
         cap.write(f"integer{spc} :: num_consts", 2)
-        cap.write(f"integer{spc} :: num_dyn_consts", 2)
         cap.write(f"integer{spc} :: index, index_start", 2)
         cap.write(f"integer{spc} :: field_ind", 2)
         cap.write(f"type({CONST_PROP_TYPE}), pointer :: const_prop => NULL()", 2)
-        # Declare dynamic constituent properties variables
-        for idx, scheme in enumerate(sorted(dyn_const_dict)):
-            cap.comment(f"dynamic constituent props variable for {scheme}", 2)
-            cap.write(f"type({CONST_PROP_TYPE}), allocatable :: dyn_const_prop_{idx}(:)", 2)
-        # end for
         cap.blank_line()
         cap.write(f"{herrcode} = 0", 2)
         cap.write("num_consts = size(host_constituents, 1)", 2)
-        cap.write("num_dyn_consts = 0", 2)
         for suite in suite_list:
             const_dict = suite.constituent_dictionary()
             funcname = const_dict.num_consts_funcname()
@@ -522,32 +507,6 @@ class ConstituentVarDict(VarDictionary):
             cap.write("end if", 2)
             cap.write("num_consts = num_consts + num_suite_consts", 2)
         # end for
-        # Check for dynamic constituent routines
-        if len(dyn_const_dict) > 0:
-            cap.comment("Add in dynamic constituents", 2)
-            for idx, scheme in enumerate(sorted(dyn_const_dict)):
-                cap.write(f"call {dyn_const_dict[scheme]}(dyn_const_prop_{idx}, {obj_err_callstr})", 2)
-                cap.write(f"if ({herrcode} /= 0) then", 2)
-                cap.write("return", 3)
-                cap.write("end if", 2)
-                cap.write(f"num_dyn_consts = num_dyn_consts + size(dyn_const_prop_{idx})", 2)
-            # end for
-            cap.write("num_consts = num_consts + num_dyn_consts", 2)
-            cap.comment(f"Pack {dyn_const_name} array", 2)
-            cap.write(f"allocate({dyn_const_name}(num_dyn_consts), stat={herrcode})", 2)
-            cap.write(f"if ({herrcode} /= 0) then", 2)
-            cap.write(f"{herrmsg} = 'failed to allocate {dyn_const_name}'", 3)
-            cap.write("return", 3)
-            cap.write("end if", 2)
-            cap.write("index_start = 0", 2)
-            for idx, scheme in enumerate(sorted(dyn_const_dict)):
-                cap.write(f"do index = 1, size(dyn_const_prop_{idx}, 1)", 2)
-                cap.write(f"{dyn_const_name}(index + index_start) = dyn_const_prop_{idx}(index)", 3)
-                cap.write("end do", 2)
-                cap.write(f"index_start = index_start + size(dyn_const_prop_{idx}, 1)", 2)
-                cap.write(f"deallocate(dyn_const_prop_{idx})", 2)
-            # end for
-        # end if
         cap.comment("Initialize constituent data and field object", 2)
         stmt = f"call {const_obj_name}%initialize_table(num_consts)"
         cap.write(stmt, 2)
@@ -564,10 +523,10 @@ class ConstituentVarDict(VarDictionary):
         cap.write("end do", 2)
         cap.blank_line()
         # Register dynamic constituents
-        if len(dyn_const_dict) > 0:
-           cap.comment("Add dynamic constituent properties", 2)
-           cap.write(f"do index = 1, size({dyn_const_name}, 1)", 2)
-           cap.write(f"const_prop => {dyn_const_name}(index)", 3)
+        cap.comment("Add dynamic constituent properties", 2)
+        for dyn_const in dyn_const_names:
+           cap.write(f"do index = 1, size({dyn_const}, 1)", 2)
+           cap.write(f"const_prop => {dyn_const}(index)", 3)
            stmt = f"call {const_obj_name}%new_field(const_prop, {obj_err_callstr})"
            cap.write(stmt, 3)
            cap.write("nullify(const_prop)", 3)
@@ -575,7 +534,7 @@ class ConstituentVarDict(VarDictionary):
            cap.write("return", 4)
            cap.write("end if", 3)
            cap.write("end do", 2)
-        # end if
+        # end for
         
         # Register suite constituents
         for suite in suite_list:
@@ -718,7 +677,12 @@ class ConstituentVarDict(VarDictionary):
         cap.write(f"{substmt}()", 1)
         cap.comment("Deallocate dynamic constituent array", 2)
         cap.blank_line()
-        cap.write(f"deallocate({dyn_const_name})", 2)
+        for dyn_const in dyn_const_names:
+            cap.write(f"if (allocated({dyn_const})) then", 2)
+            cap.write(f"deallocate({dyn_const})", 3)
+            cap.write("end if", 2)
+            cap.write(f"call {const_obj_name}%reset()", 2)
+        # end if
         cap.write(f"end {substmt}", 1)
         # Write constituents routine
         cap.blank_line()

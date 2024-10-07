@@ -1,4 +1,15 @@
 ########################################################################
+
+[ccpp-table-properties]
+  name = ccpp_constituent_properties_t
+  type = ddt
+
+[ccpp-arg-table]
+  name = ccpp_constituent_properties_t
+  type = ddt
+
+########################################################################
+
 [ccpp-table-properties]
   name = ccpp_constituent_prop_ptr_t
   type = ddt

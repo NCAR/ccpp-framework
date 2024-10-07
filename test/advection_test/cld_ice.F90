@@ -8,14 +8,41 @@ MODULE cld_ice
    IMPLICIT NONE
    PRIVATE
 
+   PUBLIC :: cld_ice_register
    PUBLIC :: cld_ice_init
    PUBLIC :: cld_ice_run
    PUBLIC :: cld_ice_final
-   PUBLIC :: cld_ice_dynamic_constituents
 
    real(kind_phys), private :: tcld = HUGE(1.0_kind_phys)
 
 CONTAINS
+
+   !> \section arg_table_cld_ice_register  Argument Table
+   !! \htmlinclude arg_table_cld_ice_register.html
+   !!
+   subroutine cld_ice_register(dyn_const_ice, errmsg, errcode)
+      use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
+      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const_ice(:)
+      integer,                             intent(out) :: errcode
+      character(len=512),                  intent(out) :: errmsg
+
+      errmsg = ''
+      errcode = 0
+      allocate(dyn_const_ice(2), stat=errcode)
+      if (errcode /= 0) then
+         errmsg = 'Error allocating dyn_const in cld_ice_dynamic_constituents'
+         return
+      end if
+      call dyn_const_ice(1)%instantiate(std_name='dyn_const1', long_name='dyn const1', &
+           units='kg kg-1', default_value=0._kind_phys,                            &
+           vertical_dim='vertical_layer_dimension', advected=.true.,               &
+           min_value=1000._kind_phys, errcode=errcode, errmsg=errmsg)
+      call dyn_const_ice(2)%instantiate(std_name='dyn_const2_wrt_moist_air', long_name='dyn const2', &
+           units='kg kg-1', default_value=0._kind_phys,                            &
+           vertical_dim='vertical_layer_dimension', advected=.true.,               &
+           errcode=errcode, errmsg=errmsg)
+
+   end subroutine cld_ice_register
 
    !> \section arg_table_cld_ice_run  Argument Table
    !! \htmlinclude arg_table_cld_ice_run.html
@@ -93,31 +120,6 @@ CONTAINS
 
    end subroutine cld_ice_final
 
-   subroutine cld_ice_dynamic_constituents(dyn_const, errcode, errmsg)
-      use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
-      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
-      integer,                             intent(out) :: errcode
-      character(len=512),                  intent(out) :: errmsg
-
-      errmsg = ''
-      errcode = 0
-      allocate(dyn_const(2), stat=errcode)
-      if (errcode /= 0) then
-         errmsg = 'Error allocating dyn_const in cld_ice_dynamic_constituents'
-      end if
-      call dyn_const(1)%instantiate(std_name='dyn_const1', long_name='dyn const1', &
-           units='kg kg-1', default_value=0._kind_phys,                            &
-           vertical_dim='vertical_layer_dimension', advected=.true.,               &
-           min_value=1000._kind_phys, errcode=errcode, errmsg=errmsg)
-      if (errcode /= 0) then
-         return
-      end if
-      call dyn_const(2)%instantiate(std_name='dyn_const2_wrt_moist_air', long_name='dyn const2', &
-           units='kg kg-1', default_value=0._kind_phys,                            &
-           vertical_dim='vertical_layer_dimension', advected=.true.,               &
-           errcode=errcode, errmsg=errmsg)
-
-   end subroutine cld_ice_dynamic_constituents
    !! @}
    !! @}
 

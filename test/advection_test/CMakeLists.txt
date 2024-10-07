@@ -20,8 +20,10 @@ get_filename_component(CCPP_ROOT "${TEST_ROOT}" DIRECTORY)
 #
 #------------------------------------------------------------------------------
 LIST(APPEND SCHEME_FILES "cld_suite_files.txt")
+LIST(APPEND SCHEME_FILES_ERROR "cld_suite_files_error.txt")
 LIST(APPEND HOST_FILES  "test_host_data" "test_host_mod")
 LIST(APPEND SUITE_FILES "cld_suite.xml")
+LIST(APPEND SUITE_FILES_ERROR "cld_suite_error.xml")
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
 SET(HOST "${CMAKE_PROJECT_NAME}")
@@ -114,6 +116,13 @@ FOREACH(FILE ${SCHEME_FILES})
 ENDFOREACH(FILE)
 string(REPLACE ";" "," SCHEME_METADATA "${SCHEME_FILES}")
 
+# Create metadata and source file lists
+FOREACH(FILE ${SCHEME_FILES_ERROR})
+  FILE(STRINGS ${FILE} FILENAMES)
+  LIST(APPEND SCHEME_FILENAMES_ERROR ${FILENAMES})
+ENDFOREACH(FILE)
+string(REPLACE ";" "," SCHEME_METADATA_ERROR "${SCHEME_FILES_ERROR}")
+
 FOREACH(FILE ${SCHEME_FILENAMES})
   # target_sources prefers absolute pathnames
   string(REPLACE ".meta" ".F90" TEMP "${FILE}")
@@ -132,6 +141,42 @@ string(REPLACE ";" ".meta," HOST_METADATA "${HOST_FILES}")
 set(HOST_METADATA "${HOST_METADATA}.meta,${HOST}.meta")
 
 string(REPLACE ";" "," SUITE_XML "${SUITE_FILES}")
+string(REPLACE ";" "," SUITE_XML_ERROR "${SUITE_FILES_ERROR}")
+
+# Run ccpp_capgen that we expect to fail
+set(CAPGEN_CMD "${CCPP_FRAMEWORK}/ccpp_capgen.py")
+list(APPEND CAPGEN_CMD "--host-files")
+list(APPEND CAPGEN_CMD "${HOST_METADATA}")
+list(APPEND CAPGEN_CMD "--scheme-files")
+list(APPEND CAPGEN_CMD "${SCHEME_METADATA_ERROR}")
+list(APPEND CAPGEN_CMD "--suites")
+list(APPEND CAPGEN_CMD "${SUITE_XML_ERROR}")
+list(APPEND CAPGEN_CMD "--host-name")
+list(APPEND CAPGEN_CMD "test_host")
+list(APPEND CAPGEN_CMD "--output-root")
+list(APPEND CAPGEN_CMD "${CCPP_CAP_FILES}")
+while (VERBOSITY GREATER 0)
+  list(APPEND CAPGEN_CMD "--verbose")
+  MATH(EXPR VERBOSITY "${VERBOSITY} - 1")
+endwhile ()
+list(APPEND CAPGEN_CMD "--debug")
+string(REPLACE ";" " " CAPGEN_STRING "${CAPGEN_CMD}")
+MESSAGE(STATUS "Running: ${CAPGEN_STRING}")
+EXECUTE_PROCESS(COMMAND ${CAPGEN_CMD} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE CAPGEN_OUT ERROR_VARIABLE CAPGEN_OUT RESULT_VARIABLE RES)
+MESSAGE(STATUS "${CAPGEN_OUT}")
+if (RES EQUAL 0)
+  MESSAGE(STATUS "CCPP cap generation completed")
+else()
+  # Example: Validate the error message
+  string(FIND "${CAPGEN_OUT}" "Variables of type ccpp_constituent_properties_t only allowed in register phase" ERROR_INDEX)
+
+  if (ERROR_INDEX GREATER -1)
+    MESSAGE(STATUS "Capgen build produces expected error message.")
+  else()
+    MESSAGE(FATAL_ERROR "CCPP cap generation did not generate expected error. Expected 'Variables of type ccpp_cosntituent_properties_t only allowed in register phase. Got: " ${CAPGEN_OUT}"")
+  endif()
+endif(RES EQUAL 0)
 
 # Run ccpp_capgen
 set(CAPGEN_CMD "${CCPP_FRAMEWORK}/ccpp_capgen.py")

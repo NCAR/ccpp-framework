@@ -8,11 +8,28 @@ MODULE temp_adjust
   IMPLICIT NONE
   PRIVATE
 
+  PUBLIC :: temp_adjust_register
   PUBLIC :: temp_adjust_init
   PUBLIC :: temp_adjust_run
   PUBLIC :: temp_adjust_finalize
 
+  logical :: module_level_config = .false.
+
 CONTAINS
+
+  !> \section arg_table_temp_adjust_register Argument Table
+  !! \htmlinclude arg_table_temp_adjust_register.hml
+  !!
+  subroutine temp_adjust_register(config_var, errmsg, errflg)
+      logical, intent(in) :: config_var
+      character(len=512),        intent(out)   :: errmsg
+      integer,                   intent(out)   :: errflg
+
+      module_level_config = config_var
+      errflg = 0
+      errmsg = ''
+
+  end subroutine temp_adjust_register
 
   !> \section arg_table_temp_adjust_run  Argument Table
   !! \htmlinclude arg_table_temp_adjust_run.html
@@ -39,6 +56,11 @@ CONTAINS
 
     errmsg = ''
     errflg = 0
+
+    if (.not. module_level_config) then
+       ! do nothing
+       return
+    end if
 
     do col_index = 1, foo
        temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)

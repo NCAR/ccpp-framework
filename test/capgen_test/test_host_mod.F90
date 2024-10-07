@@ -15,6 +15,7 @@ module test_host_mod
    integer,         parameter   :: pcnst = 2
    integer,         parameter   :: DiagDimStart = 2
    integer,         parameter   :: index_qv = 1
+   logical,         parameter   :: config_var = .true.
    real(kind_phys), allocatable :: temp_midpoints(:,:)
    real(kind_phys)              :: temp_interfaces(ncols, pverP)
    real(kind_phys)              :: coeffs(ncols)

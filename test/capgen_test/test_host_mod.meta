@@ -10,6 +10,12 @@
   type = integer
   protected = True
   dimensions = ()
+[ config_var ]
+  standard_name = configuration_variable
+  units = none
+  type = logical
+  protected = True
+  dimensions = ()
 [ ncols]
   standard_name = horizontal_dimension
   units = count
