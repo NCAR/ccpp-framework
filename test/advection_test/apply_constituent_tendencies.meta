@@ -1,0 +1,36 @@
+#####################################################################
+[ccpp-table-properties]
+  name = apply_constituent_tendencies
+  type = scheme
+[ccpp-arg-table]
+  name = apply_constituent_tendencies_run
+  type = scheme
+[ const_tend ]
+  standard_name = ccpp_constituent_tendencies
+  long_name = ccpp constituent tendencies
+  units = none
+  type = real | kind = kind_phys
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension, number_of_ccpp_constituents)
+  intent = inout
+[ const ]
+  standard_name = ccpp_constituents
+  long_name = ccpp constituents
+  units = none
+  type = real | kind = kind_phys
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension, number_of_ccpp_constituents)
+  intent = inout
+[ errcode ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  type = integer
+  dimensions = ()
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  type = character | kind = len=512
+  dimensions = ()
+  intent = out
+#########################################################
