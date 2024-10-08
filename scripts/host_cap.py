@@ -20,7 +20,7 @@ from metavar import Var, VarDictionary, CCPP_CONSTANT_VARS
 from metavar import CCPP_LOOP_VAR_STDNAMES
 from fortran_tools import FortranWriter
 from parse_tools import CCPPError
-from parse_tools import ParseObject, ParseSource, ParseContext
+from parse_tools import ParseObject, ParseSource, ParseContext, ParseSyntaxError
 
 ###############################################################################
 _HEADER = "cap for {host_model} calls to CCPP API"
@@ -378,11 +378,32 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
         # end for
     # end for
     # Check that all tendency variables are valid
-    errmsg, errflg = check_tendency_variables(tend_vars, const_vars)
-    if errflg != 0:
-        # There is at least one invalid tendency variable - this is a fatal error
-        raise CCPPError(errmsg)
-    # end if
+    for tendency_variable in tend_vars:
+        tend_stdname = tendency_variable.get_prop_value('standard_name')
+        tend_const_name = tend_stdname.split('tendency_of_')[1]
+        found = False
+        # Find the corresponding constituent variable
+        for const_variable in const_vars:
+            const_stdname = const_variable.get_prop_value('standard_name')
+            if const_stdname == tend_const_name:
+                found = True
+                compat = tendency_variable.compatible(const_variable, run_env, is_tend=True)
+                if not compat:
+                    errstr = f"Tendency variable, '{tend_stdname}'"
+                    errstr += f", incompatible with associated state variable '{tend_const_name}'"
+                    errstr += f". Reason: '{compat.incompat_reason}'"
+                    raise ParseSyntaxError(errstr, token=tend_stdname,
+                                           context=tendency_variable.context)
+                # end if
+            # end if
+        # end for
+        if not found:
+            # error because we couldn't find the associated constituent
+            errstr = f"No associated state variable for tendency variable, '{tend_stdname}'"
+            raise ParseSyntaxError(errstr, token=tend_stdname,
+                                   context=tendency_variable.context)
+        # end if
+    # end for
     # Parse this table using a fake filename
     parse_obj = ParseObject(f"{host_model.name}_constituent_mod.meta",
                             ddt_mdata)
@@ -466,122 +487,6 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     # end if
 
     return const_dict
-
-###############################################################################
-def check_tendency_variables(tend_vars, const_vars):
-###############################################################################
-    """Return an error flag and relevant error message if there are mismatches
-    between the tendency variable and the constituent variable (standard name,
-    units)
-    >>> tendency_vars = [Var({'local_name':'qv_tend', 'standard_name':'tendency_of_water_vapor', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV)]
-    >>> const_vars = [Var({'local_name':'qv', 'standard_name':'water_vapor', 'units': 'kg kg-1', 'dimensions': '(horizontal_dimension, vertical_layer_dimension)', 'type': 'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV)]
-    >>> check_tendency_variables(tendency_vars, const_vars)
-    ('', 0)
-    >>> tendency_vars.append(Var({'local_name':'qc_tend', 'standard_name':'tendency_of_cloud_liquid_water_mixing_ratio', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV))
-    >>> const_vars.append(Var({'local_name':'qc', 'standard_name':'cloud_liquid_water_mixing_ratio', 'units': 'kg kg-1', 'dimensions': '(horizontal_dimension, vertical_layer_dimension)', 'type': 'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV))
-    >>> check_tendency_variables(tendency_vars, const_vars)
-    ('', 0)
-    >>> tendency_vars = [Var({'local_name':'qv_tend', 'standard_name':'tendency_of_water_vapor', 'units':'mol m-3 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV)]
-    >>> check_tendency_variables(tendency_vars, const_vars)
-    ("\\nMismatch tendency variable units 'mol m-3 s-1' for variable 'tendency_of_water_vapor'. No variable transforms supported for constituent tendencies. Tendency units should be 'kg kg-1 s-1' to match constituent.", 1)
-    >>> tendency_vars.append(Var({'local_name':'qc_tend', 'standard_name':'tendency_of_cloud_liquid_water_mixing_ratio', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_interface_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV))
-    >>> check_tendency_variables(tendency_vars, const_vars)
-    ("\\nMismatch tendency variable units 'mol m-3 s-1' for variable 'tendency_of_water_vapor'. No variable transforms supported for constituent tendencies. Tendency units should be 'kg kg-1 s-1' to match constituent.\\nMismatch tendency variable dimension for dim 2: 'vertical_interface_dimension' for variable 'tendency_of_cloud_liquid_water_mixing_ratio'. Dimension should match constituent dimension of 'vertical_layer_dimension'", 1)
-    >>> tendency_vars = [Var({'local_name':'qv_tend', 'standard_name':'tendency_of_water_vapor', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'character', 'kind':'len=32'}, _API_SOURCE, _API_DUMMY_RUN_ENV)]
-    >>> check_tendency_variables(tendency_vars, const_vars)
-    ("\\nMismatch tendency variable type 'character' for variable 'tendency_of_water_vapor'. Type should match constituent type of 'real'\\nMismatch tendency variable kind 'len=32' for variable 'tendency_of_water_vapor'. Kind should match constituent kind of 'kind_phys'", 1)
-    >>> tendency_vars = [Var({'local_name':'qv_tend', 'standard_name':'tendency_of_water_vapor_mixing_ratio', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV)]
-    >>> tendency_vars.append(Var({'local_name':'qc_tend', 'standard_name':'tendency_of_cloud_liquid', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV))
-    >>> tendency_vars.append(Var({'local_name':'qc_tend', 'standard_name':'typotendency_of_cloud_liquid', 'units':'kg kg-1 s-1', 'dimensions':'(horizontal_dimension, vertical_layer_dimension)', 'type':'real', 'kind':'kind_phys'}, _API_SOURCE, _API_DUMMY_RUN_ENV))
-    >>> check_tendency_variables(tendency_vars, const_vars)
-    ("\\nInvalid tendency variable 'tendency_of_water_vapor_mixing_ratio'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'\\nInvalid tendency variable 'tendency_of_cloud_liquid'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'\\nInvalid tendency variable 'typotendency_of_cloud_liquid'. All constituent tendency variable standard names must be of the form 'tendency_of_<constituent_stdname>'", 1)
-    """
-    errflg = 0
-    errmsg = ''
-
-    for tend_var in tend_vars:
-        prop_error = False
-        valid_var = False
-        tend_stdname = tend_var.get_prop_value('standard_name')
-        tend_units = tend_var.get_prop_value('units')
-        if not tend_stdname.startswith('tendency_of_'):
-            # Tendency standard name is invalid
-            errmsg += f"\nInvalid tendency variable '{tend_stdname}'."
-            errmsg += " All constituent tendency variable standard names must "
-            errmsg += "be of the form 'tendency_of_<constituent_stdname>'"
-            errflg = 1
-            continue
-        tend_stdname_split = tend_stdname.split('tendency_of_')[1]
-        tend_dimensions = tend_var.get_dimensions()
-        tend_type = tend_var.get_prop_value('type')
-        tend_kind = tend_var.get_prop_value('kind')
-        for const_var in const_vars:
-            const_stdname = const_var.get_prop_value('standard_name')
-            const_units = const_var.get_prop_value('units')
-            const_dimensions = const_var.get_dimensions()
-            const_type = const_var.get_prop_value('type')
-            const_kind = const_var.get_prop_value('kind')
-            if tend_stdname_split == const_stdname:
-                # We found a match! Check units
-                if tend_units.split('s-1')[0].strip() != const_units:
-                    errmsg += f"\nMismatch tendency variable units '{tend_units}'"
-                    errmsg += f" for variable '{tend_stdname}'."
-                    errmsg += " No variable transforms supported for constituent tendencies."
-                    errmsg += f" Tendency units should be '{const_units} s-1' to match constituent."
-                    prop_error = True
-                # end if
-                # Check the dimensions
-                for index, dim in enumerate(tend_dimensions):
-                    # dimension replacement for horizontal_loop_extent
-                    if dim == 'horizontal_loop_extent':
-                        tend_dim = 'horizontal_dimension'
-                    else:
-                        tend_dim = dim
-                    # end if
-                    if const_dimensions[index] == 'horizontal_loop_extent':
-                        const_dim = 'horizontal_dimension'
-                    else:
-                        const_dim = const_dimensions[index]
-                    # end if
-                    if tend_dim != const_dim:
-                        errmsg += f"\nMismatch tendency variable dimension for dim {index + 1}: '{tend_dim}'"
-                        errmsg += f" for variable '{tend_stdname}'."
-                        errmsg += f" Dimension should match constituent dimension of '{const_dim}'"
-                        prop_error = True
-                    # end if
-                # end for
-                # Check the type
-                if const_type != tend_type:
-                    errmsg += f"\nMismatch tendency variable type '{tend_type}'"
-                    errmsg += f" for variable '{tend_stdname}'."
-                    errmsg += f" Type should match constituent type of '{const_type}'"
-                    prop_error = True
-                # end if
-                # Check the kind
-                if const_kind != tend_kind:
-                    errmsg += f"\nMismatch tendency variable kind '{tend_kind}'"
-                    errmsg += f" for variable '{tend_stdname}'."
-                    errmsg += f" Kind should match constituent kind of '{const_kind}'"
-                    prop_error = True
-                # end if
-                if prop_error == 0:
-                    valid_var = True
-                    exit
-                # end if
-            # end if
-        # end for
-        if not valid_var and not prop_error:
-            # Tendency standard name doesn't match an existing constituent
-            errmsg += f"\nInvalid tendency variable '{tend_stdname}'."
-            errmsg += " All constituent tendency variable standard names must "
-            errmsg += "be of the form 'tendency_of_<constituent_stdname>'"
-            errflg = 1
-        elif prop_error:
-            errflg = 1
-        # end if
-    # end for
-
-    return errmsg, errflg
 
 ###############################################################################
 def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):

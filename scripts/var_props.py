@@ -857,7 +857,7 @@ class VarCompatObj:
     def __init__(self, var1_stdname, var1_type, var1_kind, var1_units,
                  var1_dims, var1_lname, var1_top, var2_stdname, var2_type, var2_kind,
                  var2_units, var2_dims, var2_lname, var2_top, run_env, v1_context=None,
-                 v2_context=None):
+                 v2_context=None, is_tend=False):
         """Initialize this object with information on the equivalence and/or
            conformability of two variables.
         variable 1 is described by <var1_stdname>, <var1_type>, <var1_kind>,
@@ -866,6 +866,8 @@ class VarCompatObj:
            <var2_units>, <var2_dims>, <var2_lname>, <var2_top>, and <v2_context>.
         <run_env> is the CCPPFrameworkEnv object used here to verify kind
            equivalence or to produce kind transformations.
+        <is_tend> is a flag where, if true, we are validating a tendency variable (var1)
+           against it's equivalent state variable (var2)
         """
         self.__equiv = True   # No transformation required
         self.__compat = True  # Callable with transformation
@@ -881,7 +883,9 @@ class VarCompatObj:
         self.has_vert_transforms = False
         incompat_reason = list()
         # First, check for fatal incompatibilities
-        if var1_stdname != var2_stdname:
+        # If it's a tendency variable, it's assumed the standard name is of the
+        #  form "tendency_of_var2_stdname"
+        if not is_tend and  var1_stdname != var2_stdname:
             self.__equiv = False
             self.__compat = False
             incompat_reason.append("standard names")
@@ -944,7 +948,20 @@ class VarCompatObj:
                 var2_units = 'none'
             # end if
             # Check units argument
-            if var1_units != var2_units:
+            if is_tend:
+                # A tendency variable's units should be "<var2_units> s-1"
+                tendency_split_units = var1_units.split('s-1')[0].strip()
+                if tendency_split_units != var2_units:
+                    # We don't currently support unit conversions for tendency variables
+                    emsg = f"\nMismatch tendency variable units '{var1_units}'"
+                    emsg += f" for variable '{var1_stdname}'."
+                    emsg += " No variable transforms supported for tendencies."
+                    emsg += f" Tendency units should be '{var2_units} s-1' to match state variable."
+                    self.__equiv = False
+                    self.__compat = False
+                    incompat_reason.append(emsg)
+                # end if
+            elif var1_units != var2_units:
                 self.__equiv = False
                 # Try to find a set of unit conversions
                 self.__unit_transforms = self._get_unit_convstrs(var1_units,
