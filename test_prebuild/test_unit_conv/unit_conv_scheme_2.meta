@@ -1,0 +1,41 @@
+[ccpp-table-properties]
+  name = unit_conv_scheme_2
+  type = scheme
+  dependencies =
+
+########################################################################
+[ccpp-arg-table]
+  name = unit_conv_scheme_2_run
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[data_array]
+  standard_name = data_array
+  long_name = data array in km
+  units = km
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+[data_array_opt]
+  standard_name = data_array_opt
+  long_name = optional data array in km
+  units = km
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = True
