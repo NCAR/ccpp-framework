@@ -29,7 +29,7 @@ module unit_conv_scheme_1
       errmsg = ''
       errflg = 0
       ! Check values in data array
-      write(error_unit,'(a,e12.4))') 'In unit_conv_scheme_1_run: checking min/max values of data array to be approximately ', target_value
+      write(error_unit,'(a,e12.4)') 'In unit_conv_scheme_1_run: checking min/max values of data array to be approximately ', target_value
       if (minval(data_array)<0.99*target_value .or. maxval(data_array)>1.01*target_value) then
          write(errmsg,'(3(a,e12.4),a)') "Error in unit_conv_scheme_1_run, expected values of approximately ", &
                                         target_value, "  but got [ ", minval(data_array), " : ", maxval(data_array), " ]"
@@ -37,13 +37,13 @@ module unit_conv_scheme_1
          return
       end if
       ! Check for presence of optional data array, then check its values
-      write(error_unit,'(a))') 'In unit_conv_scheme_1_run: checking for presence of optional data array'
+      write(error_unit,'(a)') 'In unit_conv_scheme_1_run: checking for presence of optional data array'
       if (.not. present(data_array_opt)) then
-         write(error_unit,'(a))') 'Error in unit_conv_scheme_1_run, optional data array expected but not present'
+         write(error_unit,'(a)') 'Error in unit_conv_scheme_1_run, optional data array expected but not present'
          errflg = 1
          return
       endif
-      write(error_unit,'(a,e12.4))') 'In unit_conv_scheme_1_run: checking min/max values of optional data array to be approximately ', target_value
+      write(error_unit,'(a,e12.4)') 'In unit_conv_scheme_1_run: checking min/max values of optional data array to be approximately ', target_value
       if (minval(data_array_opt)<0.99*target_value .or. maxval(data_array_opt)>1.01*target_value) then
          write(errmsg,'(3(a,e12.4),a)') 'Error in unit_conv_scheme_1_run, expected values of approximately ', &
                                         target_value, '  but got [ ', minval(data_array_opt), ' : ', maxval(data_array_opt), ' ]'
