@@ -927,7 +927,6 @@ class SuiteObject(VarDictionary):
         # forward/reverse transforms to/from <var> and <dict_var>.
         if dict_var is not None:
             dict_var = self.parent.find_variable(source_var=var, any_scope=True)
-            print("SWALES dict_varA",dict_var,dict_var.get_prop_value('units'),var.get_prop_value('units'))
             compat_obj = var.compatible(dict_var, run_env)
         # end if
         return found_var, dict_var, var_vdim, new_vdims, missing_vert, compat_obj
