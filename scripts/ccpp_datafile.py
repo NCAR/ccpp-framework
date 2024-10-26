@@ -163,51 +163,49 @@ def _command_line_parser():
     the list of optional arguments below.
     Note that exactly one action is required.
     """
-    parser = argparse.ArgumentParser(description=description)
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("datatable", type=str,
                         help="Path to a data table XML file created by capgen")
     ### Only one action per call
     group = parser.add_mutually_exclusive_group(required=True)
     for report in _VALID_REPORTS:
-        rep_type = "--{}".format(report["report"].replace("_", "-"))
+        report_name = report["report"].replace("_", "-")
+        report_name_option = f"--{report_name}"
         if report["type"] is bool:
-            group.add_argument(rep_type, action='store_true', default=False,
+            group.add_argument(report_name_option, action='store_true', default=False,
                                help=report["help"])
         elif report["type"] is str:
             if "metavar" in report:
-                group.add_argument(rep_type, required=False, type=str,
-                                   metavar=report["metavar"], default='',
-                                   help=report["help"])
+                report_help = report["help"]
+                default_str = ''
+                group.add_argument(report_name_option, required=False, type=str,
+                                   default=default_str, help=report_help,
+                                   metavar=report["metavar"],)
             else:
-                group.add_argument(rep_type, required=False, type=str,
-                                   default='', help=report["help"])
+                group.add_argument(report_name_option, required=False, type=str,
+                                   default=default_str, help=report_help)
             # end if
         else:
-            raise ValueError("Unknown report type, '{}'".format(report["type"]))
+            raise ValueError(f"Unknown report type, '{report['type']}'")
         # end if
     # end for
     ###
-    defval = ","
-    help_str = "String to separate items in a list (default: '{}')"
-    parser.add_argument("--separator", type=str, required=False, default=defval,
-                        metavar="SEP", dest="sep", help=help_str.format(defval))
-    defval = False
+
+    parser.add_argument("--separator", type=str, required=False, default=",",
+                        metavar="SEP", dest="sep",
+                        help="String to separate items in a list")
+
     help_str = ("Exclude protected variables (only has an effect if the "
-                "requested report is returning a list of variables)."
-                " (default: {})")
+                "requested report is returning a list of variables).")
     parser.add_argument("--exclude-protected", action='store_true',
-                        required=False,
-                        default=defval, help=help_str.format(defval))
-    defval = -1
-    help_str = ("Screen width for '--show' line wrapping. -1 means do not "
-                "wrap. (default: {})")
+                        required=False, default=False, help=help_str)
     parser.add_argument("--line-wrap", type=int, required=False,
                         metavar="LINE_WIDTH", dest="line_wrap",
-                        default=defval, help=help_str.format(defval))
-    defval = 2
-    help_str = "Indent depth for '--show' output (default: {})"
+                        default=-1,
+                        help="Screen width for '--show' line wrapping. -1 means do not wrap.")
     parser.add_argument("--indent", type=int, required=False, default=2,
-                        help=help_str.format(defval))
+                        help="Indent depth for '--show' output")
     return parser
 
 ###############################################################################
