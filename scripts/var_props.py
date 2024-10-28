@@ -940,6 +940,13 @@ class VarCompatObj:
             # end if
         # end if
         if self.__compat:
+            # Only "none" units are case-insensitive
+            if var1_units.lower() == 'none':
+                var1_units = 'none'
+            # end if
+            if var2_units.lower() == 'none':
+                var2_units = 'none'
+            # end if
             # Check units argument
             if var1_units != var2_units:
                 # Try to find a set of unit conversions

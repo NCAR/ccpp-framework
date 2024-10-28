@@ -691,11 +691,16 @@ end module {module}
         suite_xml = tree.getroot()
         self._name = suite_xml.get('name')
         # Validate name of suite in XML tag against filename; could be moved to common.py
-        if not (os.path.basename(self._sdf_name) == 'suite_{}.xml'.format(self._name)):
-            logging.critical("Invalid suite name {0} in suite definition file {1}.".format(
-                                                               self._name, self._sdf_name))
-            success = False
-            return success
+        if not (os.path.basename(self._sdf_name) == '{}.xml'.format(self._name)):
+            if (os.path.basename(self._sdf_name) == 'suite_{}.xml'.format(self._name)):
+                logging.debug("Parsing suite using legacy naming convention")
+                logging.debug(f"Filename {os.path.basename(self._sdf_name)}")
+                logging.debug(f"Suite name {format(self._name)}")
+            else:
+                logging.critical("Invalid suite name {0} in suite definition file {1}.".format(
+                                                                   self._name, self._sdf_name))
+                success = False
+                return success
 
         # Check if suite name is too long
         if len(self._name) > SUITE_NAME_MAX_CHARS:
