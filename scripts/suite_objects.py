@@ -163,7 +163,7 @@ class CallList(VarDictionary):
                 # If so, change Var's local_name need to local dummy array containing
                 # transformed argument, var_trans_local.
                 if sub_lname_list:
-                    for (sname, var_trans_local) in sub_lname_list:
+                    for (var_trans_local, var_lname, sname, rindices, lindices, compat_obj, __) in sub_lname_list:
                         if (sname == stdname):
                             lname = var_trans_local
                         # end if
@@ -1115,8 +1115,6 @@ class Scheme(SuiteObject):
         self.__var_debug_checks = list()
         self.__forward_transforms = list()
         self.__reverse_transforms = list()
-        self.__forward_sub_lname_list = list()
-        self.__reverse_sub_lname_list = list()
         self._has_run_phase = True
         self.__optional_vars = list()
         super().__init__(name, context, parent, run_env, active_call_list=True)
@@ -1675,10 +1673,9 @@ class Scheme(SuiteObject):
                                                  compat_obj.v1_stdname))
             self.__reverse_transforms.append([local_trans_var.get_prop_value('local_name'),
                                               var.get_prop_value('local_name'),
+                                              var.get_prop_value('standard_name'),
                                               rindices, lindices, compat_obj,
                                               var.get_prop_value('standard_name')])
-            self.__reverse_sub_lname_list.append([var.get_prop_value('standard_name'),
-                                                  local_trans_var.get_prop_value('local_name')])
         # end if
         # Register any forward (post-Scheme) transforms.
         if (var.get_prop_value('intent') != 'in'):
@@ -1688,10 +1685,9 @@ class Scheme(SuiteObject):
                                                  compat_obj.v1_stdname,
                                                  compat_obj.v2_stdname))
             self.__forward_transforms.append([var.get_prop_value('local_name'),
+                                              var.get_prop_value('standard_name'),
                                               local_trans_var.get_prop_value('local_name'),
                                               lindices, rindices, compat_obj])
-            self.__forward_sub_lname_list.append([var.get_prop_value('standard_name'),
-                                                  local_trans_var.get_prop_value('local_name')])
         # end if
     def write_var_transform(self, var, dummy, rindices, lindices, compat_obj,
                             outfile, indent, forward):
@@ -1735,7 +1731,7 @@ class Scheme(SuiteObject):
         my_args = self.call_list.call_string(cldicts=cldicts,
                                              is_func_call=True,
                                              subname=self.subroutine_name,
-                                             sub_lname_list = self.__reverse_sub_lname_list)
+                                             sub_lname_list = self.__reverse_transforms)
         #
         outfile.write('', indent)
         outfile.write('if ({} == 0) then'.format(errcode), indent)
@@ -1763,14 +1759,13 @@ class Scheme(SuiteObject):
         if len(self.__reverse_transforms) > 0:
             outfile.comment('Compute reverse (pre-scheme) transforms', indent+1)
         # end if
-        for rcnt, (dummy, var, rindices, lindices, compat_obj, __) in enumerate(self.__reverse_transforms):
+        for rcnt, (dummy, var_lname, var_sname, rindices, lindices, compat_obj, __) in enumerate(self.__reverse_transforms):
             # Any transform(s) were added during the Group's analyze phase, but
             # the local_name(s) of the <var> assoicated with the transform(s)
             # may have since changed. Here we need to use the standard_name
             # from <var> and replace its local_name with the local_name from the
             # Group's call_list.
-            lname      = self.__reverse_sub_lname_list[rcnt][0]
-            lvar       = self.__group.call_list.find_variable(standard_name=lname)
+            lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
             lvar_lname = lvar.get_prop_value('local_name')
             tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
         # end for
@@ -1812,16 +1807,15 @@ class Scheme(SuiteObject):
         if len(self.__forward_transforms) > 0:
             outfile.comment('Compute forward (post-scheme) transforms', indent+1)
         # end if
-        for fcnt, (var, dummy, lindices, rindices, compat_obj) in enumerate(self.__forward_transforms):
+        for fcnt, (var_lname, var_sname, dummy, lindices, rindices, compat_obj) in enumerate(self.__forward_transforms):
             # Any transform(s) were added during the Group's analyze phase, but
             # the local_name(s) of the <var> assoicated with the transform(s)
             # may have since changed. Here we need to use the standard_name
             # from <var> and replace its local_name with the local_name from the
             # Group's call_list.
-            lname      = self.__forward_sub_lname_list[fcnt][0]
-            lvar       = self.__group.call_list.find_variable(standard_name=lname)
+            lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
             lvar_lname = lvar.get_prop_value('local_name')
-            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
+            tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
         # end for
         outfile.write('', indent)
         outfile.write('end if', indent)
