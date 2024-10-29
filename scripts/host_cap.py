@@ -461,7 +461,7 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars,
         sp_lname = sp_var.get_prop_value('local_name')
         if sp_var.get_prop_value('type') == 'ccpp_constituent_properties_t':
             if dyn_const:
-                hmvars.append("{}={}".format(sp_lname, sp_lname))
+                hmvars.append(f"{sp_lname}={sp_lname}")
             # end if
             continue
         # end if
@@ -578,8 +578,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                                 has_dyn_consts = True
                                 continue
                             else:
-                                errmsg = 'ccpp_constituent_properties_t object "{}" not allowed in "{}" phase'
-                                raise CCPPError(errmsg.format(stdname, spart.phase()))
+                                errmsg = f'ccpp_constituent_properties_t object "{stdname}" not allowed in "{spart.phase()}" phase'
+                                raise CCPPError(errmsg)
                             # end if
                         # end if
                         hvar = const_dict.find_variable(standard_name=stdname,
@@ -700,8 +700,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     size_string = "0+"
                     for var in host_local_vars.variable_list():
                         vtype = var.get_prop_value('type')
-                        local_name = var.get_prop_value('local_name')
                         if vtype == 'ccpp_constituent_properties_t':
+                            local_name = var.get_prop_value('local_name')
                             size_string += f"size({local_name})+"
                         # end if
                     # end for
@@ -714,10 +714,10 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                         cap.write("num_dyn_consts = 0", 3)
                     for var in host_local_vars.variable_list():
                         vtype = var.get_prop_value('type')
-                        local_name = var.get_prop_value('local_name')
                         if vtype != 'ccpp_constituent_properties_t':
                             continue
                         # end if
+                        local_name = var.get_prop_value('local_name')
                         cap.write(f"do const_index = 1, size({local_name})", 3)
                         cap.write(f"{dyn_const_array}(num_dyn_consts + const_index) = {local_name}(const_index)", 4)
                         cap.write("end do", 3)
@@ -752,10 +752,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write("", 0)
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
-        dyn_const_names = list()
-        for suite in api.suites:
-            dyn_const_names.append(suite_dynamic_constituent_array_name(host_model, suite.name))
-        # end for
+        dyn_const_names = [suite_dynamic_constituent_array_name(host_model, suite.name) for suite in api.suites]
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
                                                numconsts_name, queryconsts_name,
                                                copyin_name, copyout_name,

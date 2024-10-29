@@ -444,9 +444,6 @@ class SuiteObject(VarDictionary):
                 newvar = oldvar.clone(subst_dict, source_name=self.name,
                                       source_type=stype, context=self.context)
             # end if
-            stdname = newvar.get_prop_value('standard_name')
-            vtype = newvar.get_prop_value('type')
-            dimensions = newvar.get_prop_value('dimensions')
             self.call_list.add_variable(newvar, self.run_env,
                                         exists_ok=exists_ok,
                                         gen_unique=gen_unique,
@@ -458,8 +455,7 @@ class SuiteObject(VarDictionary):
                     continue
                 elif vardim == '':
                     emsg = f"{self.name}: Cannot have unnamed/empty string dimension"
-                    raise ParseInternalError(emsg.format(self.name,
-                                                         vardim, stdname))
+                    raise ParseInternalError(emsg)
                 # end if
                 dvar = self.find_variable(standard_name=vardim,
                                           any_scope=True)
