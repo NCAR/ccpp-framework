@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: update repos and install dependencies
-      run: sudo apt-get update && sudo apt-get install -y build-essential ${{matrix.fortran-compiler}} cmake python3 git
+      run: sudo apt-get update && sudo apt-get install -y build-essential libopenmpi3 ${{matrix.fortran-compiler}} cmake python3 git
 
     - name: Build the framework
       run: |
