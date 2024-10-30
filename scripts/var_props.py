@@ -950,6 +950,7 @@ class VarCompatObj:
             # Check units argument
             if var1_units != var2_units:
                 # Try to find a set of unit conversions
+                self.__equiv = False
                 self.__unit_transforms = self._get_unit_convstrs(var1_units,
                                                                  var2_units)
             # end if
