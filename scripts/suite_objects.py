@@ -163,7 +163,7 @@ class CallList(VarDictionary):
                 # If so, change Var's local_name need to local dummy array containing
                 # transformed argument, var_trans_local.
                 if sub_lname_list:
-                    for (var_trans_local, var_lname, sname, rindices, lindices, compat_obj, __) in sub_lname_list:
+                    for (var_trans_local, var_lname, sname, rindices, lindices, compat_obj) in sub_lname_list:
                         if (sname == stdname):
                             lname = var_trans_local
                         # end if
@@ -1674,8 +1674,7 @@ class Scheme(SuiteObject):
             self.__reverse_transforms.append([local_trans_var.get_prop_value('local_name'),
                                               var.get_prop_value('local_name'),
                                               var.get_prop_value('standard_name'),
-                                              rindices, lindices, compat_obj,
-                                              var.get_prop_value('standard_name')])
+                                              rindices, lindices, compat_obj])
         # end if
         # Register any forward (post-Scheme) transforms.
         if (var.get_prop_value('intent') != 'in'):
@@ -1759,7 +1758,7 @@ class Scheme(SuiteObject):
         if len(self.__reverse_transforms) > 0:
             outfile.comment('Compute reverse (pre-scheme) transforms', indent+1)
         # end if
-        for rcnt, (dummy, var_lname, var_sname, rindices, lindices, compat_obj, __) in enumerate(self.__reverse_transforms):
+        for rcnt, (dummy, var_lname, var_sname, rindices, lindices, compat_obj) in enumerate(self.__reverse_transforms):
             # Any transform(s) were added during the Group's analyze phase, but
             # the local_name(s) of the <var> assoicated with the transform(s)
             # may have since changed. Here we need to use the standard_name
@@ -2358,7 +2357,6 @@ class Group(SuiteObject):
         optional_var_set = set()
         pointer_var_set = list()
         inactive_var_set = set()
-        local_var_set = set()
         for item in [self]:# + self.parts:
             for var in item.declarations():
                 lname = var.get_prop_value('local_name')
