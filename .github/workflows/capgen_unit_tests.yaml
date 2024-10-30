@@ -20,6 +20,8 @@ jobs:
     - name: Build the framework
       run: |
         cmake -S. -B./build -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
+        cd build
+        make
 
     - name: Run unit tests
       run: |
