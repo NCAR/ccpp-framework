@@ -78,4 +78,4 @@ set_target_properties(${HOST} PROPERTIES
                               LINK_FLAGS "${CMAKE_Fortran_FLAGS}")
 
 enable_testing()
-add_test(NAME ${HOST} COMMAND ${HOST})
+add_test(NAME capgen_${HOST} COMMAND ${HOST})
