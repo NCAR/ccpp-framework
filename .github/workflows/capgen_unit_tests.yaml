@@ -31,4 +31,4 @@ jobs:
     - name: Run python tests
       run: |
         pip install --user pytest
-        BUILD_DIR=./build pytest-3 test/capgen_test/test_reports.py
+        BUILD_DIR=./build pytest test/capgen_test/test_reports.py
