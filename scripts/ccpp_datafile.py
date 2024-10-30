@@ -1258,12 +1258,10 @@ if __name__ == "__main__":
         ARG_VARS = vars(PARGS)
         _ACTION = None
         _ERRMSG = ''
-        _ESEP = ''
         for opt in ARG_VARS:
             if (opt in DatatableReport.valid_actions()) and ARG_VARS[opt]:
                 if _ACTION:
-                    _ERRMSG += _ESEP + "Duplicate action, '{}'".format(opt)
-                    _ESEP = '\n'
+                    _ERRMSG += f"Duplicate action, '{opt}'\n"
                 else:
                     _ACTION = DatatableReport(opt, ARG_VARS[opt])
                 # end if
@@ -1275,5 +1273,5 @@ if __name__ == "__main__":
         REPORT = datatable_report(PARGS.datatable, _ACTION,
                                   PARGS.sep, PARGS.exclude_protected)
     # end if
-    print("{}".format(REPORT.rstrip()))
+    print(f"{REPORT.rstrip()}")
     sys.exit(0)
