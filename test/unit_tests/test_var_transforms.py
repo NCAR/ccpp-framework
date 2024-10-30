@@ -136,7 +136,7 @@ class VarCompatTestCase(unittest.TestCase):
         compat = real_scalar1.compatible(real_scalar2, self.__run_env)
         self.assertIsInstance(compat, VarCompatObj,
                               msg=self.__inst_emsg.format(type(compat)))
-        self.assertTrue(compat)
+        self.assertFalse(compat.equiv)
         self.assertTrue(compat.compat)
         self.assertEqual(compat.incompat_reason, '')
         self.assertFalse(compat.has_kind_transforms)
@@ -150,7 +150,7 @@ class VarCompatTestCase(unittest.TestCase):
         compat = real_scalar1.compatible(real_scalar2, self.__run_env)
         self.assertIsInstance(compat, VarCompatObj,
                               msg=self.__inst_emsg.format(type(compat)))
-        self.assertTrue(compat)
+        self.assertFalse(compat.equiv)
         self.assertTrue(compat.compat)
         self.assertEqual(compat.incompat_reason, '')
         self.assertFalse(compat.has_kind_transforms)
