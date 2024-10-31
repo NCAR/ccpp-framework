@@ -883,8 +883,12 @@ class VarCompatObj:
         self.has_vert_transforms = False
         incompat_reason = list()
         # First, check for fatal incompatibilities
-        # If it's a tendency variable, it's assumed the standard name is of the
+        # If it's a tendency variable, the standard name should be of the
         #  form "tendency_of_var2_stdname"
+        if is_tend and not var1_stdname.startswith('tendency_of'):
+            self.__equiv = False
+            self.__compat = False
+            incompat_reason.append('not a tendency variable')
         if not is_tend and  var1_stdname != var2_stdname:
             self.__equiv = False
             self.__compat = False
