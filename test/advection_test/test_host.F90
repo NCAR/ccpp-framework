@@ -1062,8 +1062,8 @@ CONTAINS
         'cloud_liquid_dry_mixing_ratio            ',                          &
         'ccpp_constituent_tendencies              ',                          &
         'ccpp_constituents                        ',                          &
-        'dynamic_constituents_for_cld_liq    ',                               &
-        'dynamic_constituents_for_cld_ice    ',                               &
+        'dynamic_constituents_for_cld_liq         ',                          &
+        'dynamic_constituents_for_cld_ice         ',                          &
         'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
         'cloud_ice_dry_mixing_ratio               ' /)
     test_reqvars1 = (/                         &
@@ -1073,8 +1073,8 @@ CONTAINS
         'cloud_liquid_dry_mixing_ratio            ',                          &
         'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
         'cloud_ice_dry_mixing_ratio               ',                          &
-        'dynamic_constituents_for_cld_liq    ',                               &
-        'dynamic_constituents_for_cld_ice    ',                               &
+        'dynamic_constituents_for_cld_liq         ',                          &
+        'dynamic_constituents_for_cld_ice         ',                          &
         'water_temperature_at_freezing            ',                          &
         'ccpp_constituent_tendencies              ',                          &
         'ccpp_constituents                        ',                          &
