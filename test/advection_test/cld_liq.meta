@@ -2,7 +2,30 @@
 [ccpp-table-properties]
   name = cld_liq
   type = scheme
-  dynamic_constituent_routine = cld_liq_dynamic_constituents
+[ccpp-arg-table]
+  name = cld_liq_register
+  type = scheme
+[ dyn_const ]
+  standard_name = dynamic_constituents_for_cld_liq
+  dimensions = (:)
+  type = ccpp_constituent_properties_t
+  intent = out
+  allocatable = true
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
 [ccpp-arg-table]
   name = cld_liq_run
   type = scheme
@@ -45,7 +68,7 @@
   state_variable = true
   type = real
   kind = kind_phys
-  units = Pa
+  units = hPa
   dimensions = (horizontal_loop_extent)
   intent = in
 [ cld_liq_tend ]
