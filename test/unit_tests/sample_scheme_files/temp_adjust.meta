@@ -1,8 +1,39 @@
 [ccpp-table-properties]
   name = temp_adjust
   type = scheme
-  dynamic_constituent_routine = dyn_consts
   
+########################################################################
+[ccpp-arg-table]
+  name = temp_adjust_register
+  type = scheme
+[ config_var ]
+  standard_name = configuration_variable
+  type = logical
+  units = none
+  dimensions = ()
+  intent = in
+[ dyn_const ]
+  standard_name = dynamic_constituents_for_temp_adjust
+  type = ccpp_constituent_properties_t
+  units = none
+  dimensions = ()
+  intent = out
+  allocatable = True
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
 ########################################################################
 [ccpp-arg-table]
   name = temp_adjust_run
