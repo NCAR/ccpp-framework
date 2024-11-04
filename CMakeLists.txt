@@ -49,7 +49,7 @@ endif()
 
 #------------------------------------------------------------------------------
 # Set MPI flags for Fortran with MPI F08 interface
-# find_package(MPI REQUIRED Fortran)
+find_package(MPI REQUIRED COMPONENTS Fortran)
 if(NOT MPI_Fortran_HAVE_F08_MODULE)
   message(FATAL_ERROR "MPI implementation does not support the Fortran 2008 mpi_f08 interface")
 endif()
