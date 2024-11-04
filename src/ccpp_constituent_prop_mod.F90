@@ -769,7 +769,7 @@ CONTAINS
               (this%min_val == oconst%min_val)                          .and. &
               (this%molar_mass_val == oconst%molar_mass_val)            .and. &
               (this%thermo_active .eqv. oconst%thermo_active)           .and. &
-              (this%const_water .eqv. oconst%const_water)               .and. &
+              (this%const_water == oconst%const_water)               .and. &
               (this%water_species .eqv. oconst%water_species)
       else
          equiv = .false.
