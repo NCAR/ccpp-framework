@@ -13,12 +13,6 @@ LIST(APPEND SUITE_FILES "ddt_suite.xml" "temp_suite.xml")
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
 SET(HOST "test_host")
 
-#------------------------------------------------------------------------------
-#
-# End of project-specific input
-#
-#------------------------------------------------------------------------------
-
 # By default, generated caps go in ccpp subdir
 SET(CCPP_CAP_FILES "${CMAKE_CURRENT_BINARY_DIR}/ccpp" CACHE
   STRING "Location of CCPP-generated cap files")
