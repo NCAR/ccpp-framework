@@ -229,6 +229,7 @@ CONTAINS
       outConst%thermo_active       = inConst%thermo_active
       outConst%water_species       = inConst%water_species
       outConst%var_units           = inConst%var_units
+      outConst%const_water         = inConst%const_water
    end subroutine copyConstituent
 
    !#######################################################################
