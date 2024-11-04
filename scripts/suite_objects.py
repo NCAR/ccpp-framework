@@ -923,7 +923,7 @@ class SuiteObject(VarDictionary):
         # end if
         # We have a match!
         # Are the Scheme's <var> and Host's <dict_var> compatible?
-        # If so, create compatability object, containing any necessary
+        # If so, create compatibility object, containing any necessary
         # forward/reverse transforms to/from <var> and <dict_var>.
         if dict_var is not None:
             dict_var = self.parent.find_variable(source_var=var, any_scope=True)
