@@ -184,10 +184,10 @@ def constituent_model_object_name(host_model):
     return hvar.get_prop_value('local_name')
 
 ###############################################################################
-def dynamic_constituent_array_name(host_model):
+def suite_dynamic_constituent_array_name(host_model, suite):
 ###############################################################################
     """Return the name of the allocatable dynamic constituent properites array"""
-    hstr = f"{host_model.name}_dynamic_constituents"
+    hstr = f"{suite}_dynamic_constituents"
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
@@ -378,9 +378,12 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     # end if
     ddt_lib.collect_ddt_fields(const_dict, const_var, run_env,
                                skip_duplicates=True)
-    # Declare the allocatable dynamic constituents array
-    dyn_const_name = dynamic_constituent_array_name(host_model)
-    cap.write(f"type({CONST_PROP_TYPE}), allocatable, target :: {dyn_const_name}(:)", 1)
+    # Declare the allocatable dynamic constituents array(s)
+    # One per suite
+    for suite in suite_list:
+        dyn_const_name = suite_dynamic_constituent_array_name(host_model, suite.name)
+        cap.write(f"type({CONST_PROP_TYPE}), allocatable, target :: {dyn_const_name}(:)", 1)
+    # end if
     # Declare variable for the constituent standard names array
     max_csname = max([len(x) for x in const_stdnames]) if const_stdnames else 0
     num_const_fields = len(const_stdnames)
@@ -441,7 +444,8 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     return const_dict
 
 ###############################################################################
-def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):
+def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars,
+                         dyn_const=False):
 ###############################################################################
     """Return the <host_model> controlled call list for <suite_part>.
     <const_dict> is the constituent dictionary"""
@@ -455,6 +459,12 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars):
     for sp_var in spart_args:
         stdname = sp_var.get_prop_value('standard_name')
         sp_lname = sp_var.get_prop_value('local_name')
+        if sp_var.get_prop_value('type') == 'ccpp_constituent_properties_t':
+            if dyn_const:
+                hmvars.append(f"{sp_lname}={sp_lname}")
+            # end if
+            continue
+        # end if
         var_dicts = [host_model, const_dict]
         # Figure out which dictionary has the variable
         for vdict in var_dicts:
@@ -547,6 +557,7 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
             # Create a dict of local variables for stage
             host_local_vars = VarDictionary(f"{host_model.name}_{stage}",
                                             run_env)
+            has_dyn_consts = False
             # Create part call lists
             # Look for any loop-variable mismatch
             for suite in api.suites:
@@ -555,6 +566,22 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     spart_args = spart.call_list.variable_list()
                     for sp_var in spart_args:
                         stdname = sp_var.get_prop_value('standard_name')
+                        # Special handling for run-time constituents in register phase
+                        if sp_var.get_prop_value('type') == 'ccpp_constituent_properties_t':
+                            if spart.phase() == 'register':
+                                prop_dict = {'standard_name' : sp_var.get_prop_value('standard_name'),
+                                             'local_name' : sp_var.get_prop_value('local_name'),
+                                             'dimensions' : '(:)', 'units' : 'none',
+                                             'allocatable' : True, 'ddt_type' : 'ccpp_constituent_properties_t'}
+                                newvar = Var(prop_dict, _API_SOURCE, run_env)
+                                host_local_vars.add_variable(newvar, run_env)
+                                has_dyn_consts = True
+                                continue
+                            else:
+                                errmsg = f'ccpp_constituent_properties_t object "{stdname}" not allowed in "{spart.phase()}" phase'
+                                raise CCPPError(errmsg)
+                            # end if
+                        # end if
                         hvar = const_dict.find_variable(standard_name=stdname,
                                                         any_scope=True)
                         if hvar is None:
@@ -564,6 +591,20 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     # End for (loop over part variables)
                 # End for (loop of suite parts)
             # End for (loop over suites)
+            if has_dyn_consts:
+                prop_dict = {'standard_name' : 'unused_count',
+                             'local_name' : 'num_dyn_consts',
+                             'dimensions' : '()', 'units' : 'count',
+                             'type' : 'integer'}
+                newvar = Var(prop_dict, _API_SOURCE, run_env)
+                host_local_vars.add_variable(newvar, run_env)
+                prop_dict = {'standard_name' : 'unused_index',
+                             'local_name' : 'const_index',
+                             'dimensions' : '()', 'units' : 'none',
+                             'type': 'integer'}
+                newvar = Var(prop_dict, _API_SOURCE, run_env)
+                host_local_vars.add_variable(newvar, run_env)
+            # end if
             run_stage = stage == 'run'
             # All interfaces need the suite name
             apivars = [_SUITE_NAME_VAR]
@@ -616,7 +657,8 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                 var.write_def(cap, 2, host_model)
             # End for
             for var in host_local_vars.variable_list():
-                var.write_def(cap, 2, host_model)
+                var.write_def(cap, 2, host_model,
+                              allocatable=var.get_prop_value('allocatable'))
             # End for
             cap.write('', 0)
             # Write out the body clauses
@@ -648,6 +690,44 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     cap.write(emsg, 4)
                     cap.write("{errflg} = 1".format(errflg=errflg_name), 4)
                     cap.write("end if", 3)
+                elif stage == 'register':
+                    spart = suite.phase_group(stage)
+                    dyn_const_array = suite_dynamic_constituent_array_name(host_model, suite.name)
+                    call_str = suite_part_call_list(host_model, const_dict, spart, False,
+                                                                       dyn_const=True)
+                    cap.write(f"call {suite.name}_{stage}({call_str})", 3)
+                    cap.write("if (errflg /= 0) then", 3)
+                    cap.write("return", 4)
+                    cap.write("end if", 3)
+                    # Allocate the suite's dynamic constituents array
+                    size_string = "0+"
+                    for var in host_local_vars.variable_list():
+                        vtype = var.get_prop_value('type')
+                        if vtype == 'ccpp_constituent_properties_t':
+                            local_name = var.get_prop_value('local_name')
+                            size_string += f"size({local_name})+"
+                        # end if
+                    # end for
+                    if not has_dyn_consts:
+                        cap.comment("Suite does not return dynamic constituents; allocate to zero", 3)
+                    # end if
+                    cap.write(f"allocate({dyn_const_array}({size_string[:-1]}))", 3)
+                    if has_dyn_consts:
+                        cap.comment("Pack the suite-level dynamic, run-time constituents array", 3)
+                        cap.write("num_dyn_consts = 0", 3)
+                    for var in host_local_vars.variable_list():
+                        vtype = var.get_prop_value('type')
+                        if vtype != 'ccpp_constituent_properties_t':
+                            continue
+                        # end if
+                        local_name = var.get_prop_value('local_name')
+                        cap.write(f"do const_index = 1, size({local_name})", 3)
+                        cap.write(f"{dyn_const_array}(num_dyn_consts + const_index) = {local_name}(const_index)", 4)
+                        cap.write("end do", 3)
+                        cap.write(f"num_dyn_consts = num_dyn_consts + size({local_name})", 3)
+                        cap.write(f"deallocate({local_name})", 3)
+                    # end for
+
                 else:
                     spart = suite.phase_group(stage)
                     call_str = suite_part_call_list(host_model, const_dict,
@@ -675,13 +755,13 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
         cap.write("", 0)
         const_names_name = constituent_model_const_stdnames(host_model)
         const_indices_name = constituent_model_const_indices(host_model)
-        dyn_const_name = dynamic_constituent_array_name(host_model)
+        dyn_const_names = [suite_dynamic_constituent_array_name(host_model, suite.name) for suite in api.suites]
         ConstituentVarDict.write_host_routines(cap, host_model, reg_name, init_name,
                                                numconsts_name, queryconsts_name,
                                                copyin_name, copyout_name,
                                                cleanup_name,
                                                const_obj_name,
-                                               dyn_const_name,
+                                               dyn_const_names,
                                                const_names_name,
                                                const_indices_name,
                                                const_array_func,
@@ -689,7 +769,6 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                                                prop_array_func,
                                                const_index_func,
                                                api.suites,
-                                               api.dyn_const_dict,
                                                err_vars)
     # End with
     return cap_filename

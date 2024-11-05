@@ -231,6 +231,7 @@ CONTAINS
        use test_host_ccpp_cap, only: test_host_ccpp_initialize_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_number_constituents
        use test_host_ccpp_cap, only: test_host_constituents_array
+       use test_host_ccpp_cap, only: test_host_ccpp_physics_register
        use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
        use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_initial
        use test_host_ccpp_cap, only: test_host_ccpp_physics_run
@@ -321,6 +322,18 @@ CONTAINS
          errflg_final = -1 ! Notify test script that a failure occurred
       end if
 
+      ! Use the suite information to call the register phase
+      do sind = 1, num_suites
+         if (errflg == 0) then
+            call test_host_ccpp_physics_register(                           &
+                 test_suites(sind)%suite_name, errmsg, errflg)
+            if (errflg /= 0) then
+               write(6, '(4a)') 'ERROR in register of ',                   &
+                    trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
+               exit
+            end if
+         end if
+       end do
 
       ! Register the constituents to find out what needs advecting
       ! DO A COUPLE OF TESTS FIRST
@@ -358,8 +371,21 @@ CONTAINS
       end if
       ! Now try again but with a compatible constituent - should be ignored when
       ! the constituents object is created
+      ! Use the suite information to call the register phase
+      errflg = 0
       call test_host_ccpp_deallocate_dynamic_constituents()
       deallocate(host_constituents)
+      do sind = 1, num_suites
+         if (errflg == 0) then
+            call test_host_ccpp_physics_register(                           &
+                 test_suites(sind)%suite_name, errmsg, errflg)
+            if (errflg /= 0) then
+               write(6, '(4a)') 'ERROR in register of ',                   &
+                    trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
+               exit
+            end if
+         end if
+      end do
       allocate(host_constituents(2))
       call host_constituents(1)%instantiate(std_name="specific_humidity",     &
            long_name="Specific humidity", units="kg kg-1",                    &
@@ -430,7 +456,7 @@ CONTAINS
       call test_host_const_get_index('dyn_const2_wrt_moist_air', index_dyn2, errflg, errmsg)
       call check_errflg(subname//".index_dyn_const2", errflg, errmsg,         &
            errflg_final)
-      call test_host_const_get_index('dyn_const3', index_dyn3, errflg, errmsg)
+      call test_host_const_get_index('dyn_const3_wrt_moist_air_and_condensed_water', index_dyn3, errflg, errmsg)
       call check_errflg(subname//".index_dyn_const3", errflg, errmsg,         &
            errflg_final)
 
@@ -576,7 +602,38 @@ CONTAINS
          ! Reset error flag to continue testing other properties:
          errflg = 0
       end if
-      ! Check moist mixing ratio for a dynamic constituent
+      ! Check wet mixing ratio for dynamic constituent 1
+      call const_props(index_dyn1)%is_dry(const_log, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get dry prop for dyn_const1 index = ", index_dyn1, trim(errmsg)
+         errflg_final = -1 ! Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (const_log) then
+            write(6, *) "ERROR: dyn_const1 is dry and should be wet"
+            errflg_final = -1
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      call const_props(index_dyn1)%is_wet(const_log, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get wet prop for dyn_const1 index = ", index_dyn1, trim(errmsg)
+         errflg_final = -1 ! Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (.not. const_log) then
+            write(6, *) "ERROR: dyn_const1 is not wet but should be"
+            errflg_final = -1
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      ! Check moist mixing ratio for dynamic constituent 2
       call const_props(index_dyn2)%is_dry(const_log, errflg, errmsg)
       if (errflg /= 0) then
          write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
@@ -601,6 +658,22 @@ CONTAINS
       if (errflg == 0) then
          if (.not. const_log) then
             write(6, *) "ERROR: dyn_const2 is not moist but should be"
+            errflg_final = -1
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      ! Check dry mixing ratio for dynamic constituent 3
+      call const_props(index_dyn3)%is_dry(const_log, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get dry prop for dyn_const3 index = ", index_dyn3, trim(errmsg)
+         errflg_final = -1 ! Notify test script that a failure occurred
+      end if
+      if (errflg == 0) then
+         if (.not. const_log) then
+            write(6, *) "ERROR: dyn_const3 is not dry and should be"
             errflg_final = -1
          end if
       else
@@ -840,6 +913,41 @@ CONTAINS
          ! Reset error flag to continue testing other properties:
          errflg = 0
       end if
+
+      ! Check that setting a constituent to be a water species via the
+      ! instantiate call works as expected
+      call const_props(index_dyn1)%is_water_species(check, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,                &
+              "trying to get water_species prop for dyn_const1 index = ",     &
+              index_dyn1, trim(errmsg)
+      end if
+      if (errflg == 0) then
+         if (.not. check) then ! Should now be True
+            write(6,*) "ERROR: 'water_species=.true. did not set",            &
+                    " water_species constituent property correctly"
+            errflg_final = -1 ! Notify test script that a failure occurred
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      call const_props(index_dyn2)%is_water_species(check, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg,                &
+              "trying to get water_species prop for dyn_const2 index = ",     &
+              index_dyn2, trim(errmsg)
+      end if
+      if (errflg == 0) then
+         if (check) then ! Should now be False
+            write(6,*) "ERROR: 'water_species=.false. did not set",           &
+                    " water_species constituent property correctly"
+            errflg_final = -1 ! Notify test script that a failure occurred
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
       ! -------------------
 
       ! Check that setting a constituent's default value works as expected
@@ -1009,8 +1117,8 @@ CONTAINS
 
    character(len=cs), target :: test_parts1(1)
    character(len=cm), target :: test_invars1(7)
-   character(len=cm), target :: test_outvars1(6)
-   character(len=cm), target :: test_reqvars1(9)
+   character(len=cm), target :: test_outvars1(8)
+   character(len=cm), target :: test_reqvars1(11)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
@@ -1030,6 +1138,8 @@ CONTAINS
         'temperature                         ',                               &
         'water_vapor_specific_humidity       ',                               &
         'cloud_liquid_dry_mixing_ratio       ',                               &
+        'dynamic_constituents_for_cld_liq    ',                               &
+        'dynamic_constituents_for_cld_ice    ',                               &
         'cloud_ice_dry_mixing_ratio          ' /)
     test_reqvars1 = (/                         &
         'surface_air_pressure                ',                               &
@@ -1037,6 +1147,8 @@ CONTAINS
         'time_step_for_physics               ',                               &
         'cloud_liquid_dry_mixing_ratio       ',                               &
         'cloud_ice_dry_mixing_ratio          ',                               &
+        'dynamic_constituents_for_cld_liq    ',                               &
+        'dynamic_constituents_for_cld_ice    ',                               &
         'water_temperature_at_freezing       ',                               &
         'water_vapor_specific_humidity       ',                               &
         'ccpp_error_message                  ',                               &

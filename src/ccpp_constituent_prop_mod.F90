@@ -26,6 +26,9 @@ module ccpp_constituent_prop_mod
    integer,         parameter :: int_unassigned = -HUGE(1)
    real(kind_phys), parameter :: kphys_unassigned = HUGE(1.0_kind_phys)
 
+!! \section arg_table_ccpp_constituent_properties_t
+!! \htmlinclude ccpp_constituent_properties_t.html
+!!
    type, public, extends(ccpp_hashable_char_t) :: ccpp_constituent_properties_t
       ! A ccpp_constituent_properties_t object holds relevant metadata
       !   for a constituent species and provides interfaces to access that data.
@@ -225,6 +228,8 @@ CONTAINS
       outConst%molar_mass_val      = inConst%molar_mass_val
       outConst%thermo_active       = inConst%thermo_active
       outConst%water_species       = inConst%water_species
+      outConst%var_units           = inConst%var_units
+      outConst%const_water         = inConst%const_water
    end subroutine copyConstituent
 
    !#######################################################################
@@ -368,7 +373,8 @@ CONTAINS
    !#######################################################################
 
    subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, default_value, min_value, molar_mass, errcode, errmsg)
+        advected, default_value, min_value, molar_mass, water_species,         &
+        mixing_ratio_type, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -381,6 +387,8 @@ CONTAINS
       real(kind_phys), optional,            intent(in)    :: default_value
       real(kind_phys), optional,            intent(in)    :: min_value
       real(kind_phys), optional,            intent(in)    :: molar_mass
+      logical, optional,                    intent(in)    :: water_species
+      character(len=*), optional,           intent(in)    :: mixing_ratio_type
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
 
@@ -411,6 +419,9 @@ CONTAINS
          if (present(molar_mass)) then
             this%molar_mass_val = molar_mass
          end if
+         if (present(water_species)) then
+            this%water_species = water_species
+         end if
       end if
       if (errcode == 0) then
          if (index(this%var_std_name, "volume_mixing_ratio") > 0) then
@@ -423,14 +434,29 @@ CONTAINS
       end if
       if (errcode == 0) then
          ! Determine if this mixing ratio is dry, moist, or "wet".
-         if (index(this%var_std_name, "wrt_moist_air") > 0) then
-            this%const_water = moist_mixing_ratio
-         else if (this%var_std_name == "specific_humidity") then
-            this%const_water = moist_mixing_ratio
-         else if (this%var_std_name == "wrt_total_mass") then
-            this%const_water = wet_mixing_ratio
+         ! If a type was provided, use that (if it's valid)
+         if (present(mixing_ratio_type)) then
+            if (trim(mixing_ratio_type) == 'wet') then
+               this%const_water = wet_mixing_ratio
+            else if (trim(mixing_ratio_type) == 'moist') then
+               this%const_water = moist_mixing_ratio
+            else if (trim(mixing_ratio_type) == 'dry') then
+               this%const_water = dry_mixing_ratio
+            else
+               errcode = 1
+               write(errmsg, *) 'ccp_instantiate: invalid mixing ratio type. ', &
+                  'Must be one of: "wet", "moist", or "dry". Got: "', &
+                  trim(mixing_ratio_type), '"'
+            end if
          else
-            this%const_water = dry_mixing_ratio
+            ! Otherwise, parse it from the standard name
+            if (index(this%var_std_name, "wrt_moist_air_and_condensed_water") > 0) then
+               this%const_water = wet_mixing_ratio
+            else if (index(this%var_std_name, "wrt_moist_air") > 0) then
+               this%const_water = moist_mixing_ratio
+            else
+               this%const_water = dry_mixing_ratio
+            end if
          end if
       end if
       if (errcode /= 0) then
@@ -737,11 +763,13 @@ CONTAINS
          equiv = (trim(this%var_std_name) == trim(oconst%var_std_name)) .and. &
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
+              (trim(this%var_units) == trim(oconst%var_units))          .and. &
               (this%advected .eqv. oconst%advected)                     .and. &
               (this%const_default_value == oconst%const_default_value)  .and. &
               (this%min_val == oconst%min_val)                          .and. &
               (this%molar_mass_val == oconst%molar_mass_val)            .and. &
               (this%thermo_active .eqv. oconst%thermo_active)           .and. &
+              (this%const_water == oconst%const_water)                  .and. &
               (this%water_species .eqv. oconst%water_species)
       else
          equiv = .false.

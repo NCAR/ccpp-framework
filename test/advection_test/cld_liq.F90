@@ -4,15 +4,39 @@
 MODULE cld_liq
 
    USE ccpp_kinds, ONLY: kind_phys
+   use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
 
    IMPLICIT NONE
    PRIVATE
 
+   PUBLIC :: cld_liq_register
    PUBLIC :: cld_liq_init
    PUBLIC :: cld_liq_run
-   PUBLIC :: cld_liq_dynamic_constituents
 
 CONTAINS
+
+   !> \section arg_table_cld_liq_register  Argument Table
+   !! \htmlinclude arg_table_cld_liq_register.html
+   !!
+   subroutine cld_liq_register(dyn_const, errmsg, errflg)
+      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
+      character(len=512), intent(out) :: errmsg
+      integer,            intent(out) :: errflg
+
+      errmsg = ''
+      errflg = 0
+      allocate(dyn_const(1), stat=errflg)
+      if (errflg /= 0) then
+         errmsg = 'Error allocating dyn_const in cld_liq_register'
+         return
+      end if
+      call dyn_const(1)%instantiate(std_name="dyn_const3_wrt_moist_air_and_condensed_water", long_name='dyn const3', &
+           units='kg kg-1', default_value=1._kind_phys,                            &
+           vertical_dim='vertical_layer_dimension', advected=.true.,               &
+           water_species=.true., mixing_ratio_type='dry',                          &
+           errcode=errflg, errmsg=errmsg)
+
+   end subroutine cld_liq_register
 
    !> \section arg_table_cld_liq_run  Argument Table
    !! \htmlinclude arg_table_cld_liq_run.html
@@ -74,25 +98,5 @@ CONTAINS
       tcld = tfreeze - 20.0_kind_phys
 
    end subroutine cld_liq_init
-
-   subroutine cld_liq_dynamic_constituents(dyn_const, errcode, errmsg)
-      use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
-      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
-      integer,                             intent(out) :: errcode
-      character(len=512),                  intent(out) :: errmsg
-
-      errmsg = ''
-      errcode = 0
-      allocate(dyn_const(1), stat=errcode)
-      if (errcode /= 0) then
-         errmsg = 'Error allocating dyn_const in cld_liq_dynamic_constituents'
-      end if
-      call dyn_const(1)%instantiate(std_name="dyn_const3", long_name='dyn const3', &
-           units='kg kg-1', default_value=1._kind_phys,                            &
-           vertical_dim='vertical_layer_dimension', advected=.true.,               &
-           errcode=errcode, errmsg=errmsg)
-
-   end subroutine cld_liq_dynamic_constituents
-
 
 END MODULE cld_liq
