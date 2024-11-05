@@ -24,6 +24,7 @@ contains
        deallocate(state%ps)
     end if
     allocate(state%ps(cols))
+    state%ps = 0.0_kind_phys
     if (allocated(state%temp)) then
        deallocate(state%temp)
     end if

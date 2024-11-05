@@ -696,6 +696,9 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     call_str = suite_part_call_list(host_model, const_dict, spart, False,
                                                                        dyn_const=True)
                     cap.write(f"call {suite.name}_{stage}({call_str})", 3)
+                    cap.write("if (errflg /= 0) then", 3)
+                    cap.write("return", 4)
+                    cap.write("end if", 3)
                     # Allocate the suite's dynamic constituents array
                     size_string = "0+"
                     for var in host_local_vars.variable_list():
