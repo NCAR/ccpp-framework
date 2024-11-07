@@ -276,10 +276,17 @@ class ConstituentVarDict(VarDictionary):
         for evar in err_vars:
             evar.write_def(outfile, indent+1, self, dummy=True)
         # end for
+        # Figure out how many unique (non-tendency) constituent variables we have
+        const_num = 0
+        for std_name, _ in self.items():
+            if not std_name.startswith('tendency_of_'):
+                const_num += 1
+            # end if
+        # end for
         if self:
             outfile.write("! Local variables", indent+1)
             outfile.write("integer :: index", indent+1)
-            stmt = f"allocate({self.constituent_prop_array_name()}({len(self)}))"
+            stmt = f"allocate({self.constituent_prop_array_name()}({const_num}))"
             outfile.write(stmt, indent+1)
             outfile.write("index = 0", indent+1)
         # end if
@@ -287,6 +294,10 @@ class ConstituentVarDict(VarDictionary):
             self.__init_err_var(evar, outfile, indent+1)
         # end for
         for std_name, var in self.items():
+            if std_name.startswith('tendency_of_'):
+                # Skip tendency variables
+                continue
+            # end if
             outfile.write("index = index + 1", indent+1)
             long_name = var.get_prop_value('long_name')
             units = var.get_prop_value('units')
@@ -336,7 +347,7 @@ class ConstituentVarDict(VarDictionary):
         outfile.write(stmt, indent+1)
         outfile.write(f"call {self.constituent_prop_init_consts()}({local_call})", indent+2)
         outfile.write("end if", indent+1)
-        outfile.write(f"{fname} = {len(self)}", indent+1)
+        outfile.write(f"{fname} = {const_num}", indent+1)
         outfile.write(f"end function {fname}", indent)
         outfile.write(f"\n! {border}\n", 1)
         # Return the name of a constituent given an index

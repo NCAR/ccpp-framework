@@ -20,7 +20,7 @@ from metavar import Var, VarDictionary, CCPP_CONSTANT_VARS
 from metavar import CCPP_LOOP_VAR_STDNAMES
 from fortran_tools import FortranWriter
 from parse_tools import CCPPError
-from parse_tools import ParseObject, ParseSource, ParseContext
+from parse_tools import ParseObject, ParseSource, ParseContext, ParseSyntaxError
 
 ###############################################################################
 _HEADER = "cap for {host_model} calls to CCPP API"
@@ -284,6 +284,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
     vert_layer_dim = "vertical_layer_dimension"
     vert_interface_dim = "vertical_interface_dimension"
     array_layer = "vars_layer"
+    tend_layer = "vars_layer_tend"
     # Table preamble (leave off ccpp-table-properties header)
     ddt_mdata = [
         #"[ccpp-table-properties]",
@@ -300,6 +301,9 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
         " type = real", " kind = kind_phys"]
     # Add entries for each constituent (once per standard name)
     const_stdnames = set()
+    tend_stdnames = set()
+    const_vars = set()
+    tend_vars = set()
     for suite in suite_list:
         if run_env.verbose:
             lmsg = "Adding constituents from {} to {}"
@@ -308,12 +312,13 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
         scdict = suite.constituent_dictionary()
         for cvar in scdict.variable_list():
             std_name = cvar.get_prop_value('standard_name')
-            if std_name not in const_stdnames:
+            if std_name not in const_stdnames and std_name not in tend_stdnames:
                 # Add a metadata entry for this constituent
                 # Check dimensions and figure vertical dimension
                 # Currently, we only support variables with first dimension,
                 #   horizontal_dimension, and second (optional) dimension,
                 #   vertical_layer_dimension or vertical_interface_dimension
+                is_tend_var = 'tendency_of' in std_name
                 dims = cvar.get_dimensions()
                 if (len(dims) < 1) or (len(dims) > 2):
                     emsg = "Unsupported constituent dimensions, '{}'"
@@ -329,7 +334,11 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                 if len(dims) > 1:
                     vdim = dims[1].split(':')[-1]
                     if vdim == vert_layer_dim:
-                        cvar_array_name = array_layer
+                        if is_tend_var:
+                            cvar_array_name = tend_layer
+                        else:
+                            cvar_array_name = array_layer
+                        # end if
                     else:
                         emsg = "Unsupported vertical constituent dimension, "
                         emsg += "'{}', must be '{}' or '{}'"
@@ -340,8 +349,13 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                     emsg = f"Unsupported 2-D variable, '{std_name}'"
                     raise CCPPError(emsg)
                 # end if
-                # First, create an index variable for <cvar>
-                ind_std_name = "index_of_{}".format(std_name)
+                # Create an index variable for <cvar>
+                if is_tend_var:
+                    const_std_name = std_name.split("tendency_of_")[1]
+                else:
+                    const_std_name = std_name
+                # end if
+                ind_std_name = f"index_of_{const_std_name}"
                 loc_name = f"{cvar_array_name}(:,:,{ind_std_name})"
                 ddt_mdata.append(f"[ {loc_name} ]")
                 ddt_mdata.append(f" standard_name = {std_name}")
@@ -352,9 +366,43 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
                 vtype = cvar.get_prop_value('type')
                 vkind = cvar.get_prop_value('kind')
                 ddt_mdata.append(f" type = {vtype} | kind = {vkind}")
-                const_stdnames.add(std_name)
+                if is_tend_var:
+                    tend_vars.add(cvar)
+                    tend_stdnames.add(std_name)
+                else:
+                    const_vars.add(cvar)
+                    const_stdnames.add(std_name)
+                # end if
+
             # end if
         # end for
+    # end for
+    # Check that all tendency variables are valid
+    for tendency_variable in tend_vars:
+        tend_stdname = tendency_variable.get_prop_value('standard_name')
+        tend_const_name = tend_stdname.split('tendency_of_')[1]
+        found = False
+        # Find the corresponding constituent variable
+        for const_variable in const_vars:
+            const_stdname = const_variable.get_prop_value('standard_name')
+            if const_stdname == tend_const_name:
+                found = True
+                compat = tendency_variable.compatible(const_variable, run_env, is_tend=True)
+                if not compat:
+                    errstr = f"Tendency variable, '{tend_stdname}'"
+                    errstr += f", incompatible with associated state variable '{tend_const_name}'"
+                    errstr += f". Reason: '{compat.incompat_reason}'"
+                    raise ParseSyntaxError(errstr, token=tend_stdname,
+                                           context=tendency_variable.context)
+                # end if
+            # end if
+        # end for
+        if not found:
+            # error because we couldn't find the associated constituent
+            errstr = f"No associated state variable for tendency variable, '{tend_stdname}'"
+            raise ParseSyntaxError(errstr, token=tend_stdname,
+                                   context=tendency_variable.context)
+        # end if
     # end for
     # Parse this table using a fake filename
     parse_obj = ParseObject(f"{host_model.name}_constituent_mod.meta",

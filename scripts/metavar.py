@@ -229,7 +229,9 @@ class Var:
                                             optional_in=True, default_in=False),
                            VariableProperty('molar_mass', float,
                                             optional_in=True, default_in=0.0,
-                                            check_fn_in=check_molar_mass)]
+                                            check_fn_in=check_molar_mass),
+                           VariableProperty('constituent', bool,
+                                            optional_in=True, default_in=False)]
 
     __constituent_prop_dict = {x.name : x for x in __constituent_props}
 
@@ -372,7 +374,7 @@ class Var:
                                    context=self.context) from cperr
         # end try
 
-    def compatible(self, other, run_env):
+    def compatible(self, other, run_env, is_tend=False):
         """Return a VarCompatObj object which describes the equivalence,
         compatibility, or incompatibility between <self> and <other>.
         """
@@ -395,7 +397,7 @@ class Var:
         compat = VarCompatObj(sstd_name, stype, skind, sunits, sdims, sloc_name, stopp,
                               ostd_name, otype, okind, ounits, odims, oloc_name, otopp,
                               run_env,
-                              v1_context=self.context, v2_context=other.context)
+                              v1_context=self.context, v2_context=other.context, is_tend=is_tend)
         if (not compat) and (run_env.logger is not None):
             incompat_str = compat.incompat_reason
             if incompat_str is not None:
