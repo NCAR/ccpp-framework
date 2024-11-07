@@ -151,6 +151,7 @@ module ccpp_constituent_prop_mod
       ! These fields are public to allow for efficient (i.e., no copying)
       !   usage even though it breaks object independence
       real(kind_phys), allocatable     :: vars_layer(:,:,:)
+      real(kind_phys), allocatable     :: vars_layer_tend(:,:,:)
       real(kind_phys), allocatable     :: vars_minvalue(:)
       ! An array containing all the constituent metadata
       ! Each element contains a pointer to a constituent from the hash table
@@ -1494,11 +1495,20 @@ CONTAINS
               subname, errcode=errcode, errmsg=errmsg)
          errcode_local = astat
          if (astat == 0) then
+            allocate(this%vars_layer_tend(ncols, num_layers, this%hash_table%num_values()), &
+                 stat=astat)
+            call handle_allocate_error(astat, 'vars_layer_tend',           &
+                 subname, errcode=errcode, errmsg=errmsg)
+            errcode_local = astat
+         end if
+         if (astat == 0) then
             allocate(this%vars_minvalue(this%hash_table%num_values()), stat=astat)
             call handle_allocate_error(astat, 'vars_minvalue',             &
                  subname, errcode=errcode, errmsg=errmsg)
             errcode_local = astat
          end if
+         ! Initialize tendencies to 0
+         this%vars_layer_tend(:,:,:) = 0._kind_phys
          if (errcode_local == 0) then
             this%num_layers = num_layers
             do index = 1, this%hash_table%num_values()
@@ -1548,6 +1558,9 @@ CONTAINS
       end if
       if (allocated(this%vars_minvalue)) then
          deallocate(this%vars_minvalue)
+      end if
+      if (allocated(this%vars_layer_tend)) then
+         deallocate(this%vars_layer_tend)
       end if
       if (allocated(this%const_metadata)) then
          if (clear_table) then

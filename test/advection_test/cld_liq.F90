@@ -41,8 +41,8 @@ CONTAINS
    !> \section arg_table_cld_liq_run  Argument Table
    !! \htmlinclude arg_table_cld_liq_run.html
    !!
-   subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, ps, cld_liq_array,    &
-        errmsg, errflg)
+   subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, ps, &
+       cld_liq_tend, errmsg, errflg)
 
       integer,            intent(in)    :: ncol
       real(kind_phys),    intent(in)    :: timestep
@@ -50,7 +50,7 @@ CONTAINS
       real(kind_phys),    intent(inout) :: temp(:,:)
       real(kind_phys),    intent(inout) :: qv(:,:)
       real(kind_phys),    intent(in)    :: ps(:)
-      REAL(kind_phys),    intent(inout) :: cld_liq_array(:,:)
+      REAL(kind_phys),    intent(inout) :: cld_liq_tend(:,:)
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------
@@ -68,7 +68,7 @@ CONTAINS
             if ( (qv(icol, ilev) > 0.0_kind_phys) .and.                       &
                  (temp(icol, ilev) <= tcld)) then
                cond = MIN(qv(icol, ilev), 0.1_kind_phys)
-               cld_liq_array(icol, ilev) = cld_liq_array(icol, ilev) + cond
+               cld_liq_tend(icol, ilev) = cond
                qv(icol, ilev) = qv(icol, ilev) - cond
                if (cond > 0.0_kind_phys) then
                   temp(icol, ilev) = temp(icol, ilev) + (cond * 5.0_kind_phys)

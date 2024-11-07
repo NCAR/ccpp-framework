@@ -1471,6 +1471,7 @@ class Scheme(SuiteObject):
         intent = svar.get_prop_value('intent')
         if intent == 'out' and allocatable:
             return
+        # end if
 
         # Get the condition on which the variable is active
         (conditional, _) = var.conditional(cldicts)

@@ -71,13 +71,13 @@
   units = hPa
   dimensions = (horizontal_loop_extent)
   intent = in
-[ cld_liq_array ]
-  standard_name = cloud_liquid_dry_mixing_ratio
-  advected = .true.
-  units = kg kg-1
+[ cld_liq_tend ]
+  standard_name = tendency_of_cloud_liquid_dry_mixing_ratio
+  units = kg kg-1 s-1
   dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real |  kind = kind_phys
   intent = inout
+  constituent = True
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
