@@ -1634,7 +1634,7 @@ class VarDictionary(OrderedDict):
         # end if
         if cvar is not None:
             compat = cvar.compatible(newvar, run_env)
-            if compat:
+            if compat.compat:
                 # Check for intent mismatch
                 vintent = cvar.get_prop_value('intent')
                 dintent = newvar.get_prop_value('intent')

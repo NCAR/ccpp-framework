@@ -876,6 +876,10 @@ class VarCompatObj:
         self.__v2_context = v2_context
         self.__v1_kind = var1_kind
         self.__v2_kind = var2_kind
+        self.v1_units = var1_units
+        self.v2_units = var2_units
+        self.v1_stdname = var1_stdname
+        self.v2_stdname = var2_stdname
         # Default (null) transform information
         self.__dim_transforms = None
         self.__kind_transforms = None
@@ -966,8 +970,8 @@ class VarCompatObj:
                     incompat_reason.append(emsg)
                 # end if
             elif var1_units != var2_units:
-                self.__equiv = False
                 # Try to find a set of unit conversions
+                self.__equiv = False
                 self.__unit_transforms = self._get_unit_convstrs(var1_units,
                                                                  var2_units)
             # end if
