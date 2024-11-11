@@ -23,6 +23,16 @@ option(CCPP_FRAMEWORK_ENABLE_TESTS "Enable building/running tests" OFF)
 option(BUILD_SHARED_LIBS "Build a static library" OFF)
 set(CCPP_VERBOSITY "0" CACHE STRING "Verbosity level of output (default: 0)")
 
+if(CCPP_FRAMEWORK_ENABLE_TESTS)
+  FetchContent_Declare(
+    pFUnit
+    GIT_REPOSITORY https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
+    GIT_TAG        26dadb1157819ea1bd9c355c60ed52f42dd36432 # v4.10.0
+  )
+  FetchContent_MakeAvailable(pFUnit)
+  enable_testing()
+endif()
+
 # Use rpaths on MacOSX
 set(CMAKE_MACOSX_RPATH 1)
 
@@ -81,13 +91,6 @@ endif()
 add_subdirectory(src)
 
 if(CCPP_FRAMEWORK_ENABLE_TESTS)
-  FetchContent_Declare(
-    pFUnit
-    GIT_REPOSITORY https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
-    GIT_TAG        26dadb1157819ea1bd9c355c60ed52f42dd36432 # v4.10.0
-  )
-  FetchContent_MakeAvailable(pFUnit)
-  enable_testing()
   add_subdirectory(test)
 endif()
 
