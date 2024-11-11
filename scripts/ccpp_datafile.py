@@ -58,8 +58,6 @@ _VALID_REPORTS = [{"report" : "host_files", "type" : bool,
                   {"report" : "dependencies", "type" : bool,
                    "help" : ("Return a list of scheme and host "
                              "dependency module names")},
-                  {"report" : "dyn_const_routines", "type" : bool,
-                   "help" : ("Return the constituent routines for a suite")},
                   {"report" : "suite_list", "type" : bool,
                    "help" : "Return a list of configured suite names"},
                   {"report" : "required_variables", "type" : str,
@@ -106,8 +104,6 @@ class DatatableReport(object):
         # Test a valid action
         >>> DatatableReport('input_variables', False).action
         'input_variables'
-        >>> DatatableReport('dyn_const_routines', True).value
-        True
 
         # Test an invalid action
         >>> DatatableReport('banana', True).value
@@ -397,40 +393,6 @@ def _retrieve_dependencies(table):
         # end if
     # end for
     return sorted(result)
-
-###############################################################################
-def _retrieve_dyn_const_routines(table):
-###############################################################################
-    """Find and return a list of all scheme constituent routines.
-    # Test valid dynamic constituent routines
-    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><dyn_const_routines>" \
-               "<dyn_const_routine parent='banana'>dyn_const_get"    \
-               "</dyn_const_routine><dyn_const_routine>dyn_const_2"  \
-               "</dyn_const_routine></dyn_const_routines></ccpp_datatable>")
-    >>> _retrieve_dyn_const_routines(table)
-    ['dyn_const_2', 'dyn_const_get']
-
-    # Test no dynamic constituent routines
-    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><dyn_const_routines>" \
-                              "</dyn_const_routines></ccpp_datatable>")
-    >>> _retrieve_dyn_const_routines(table)
-    []
-
-    # Test missing dynamic constituent routines tag
-    >>> table = ET.fromstring("<ccpp_datatable version='1.0'></ccpp_datatable>")
-    >>> _retrieve_dyn_const_routines(table)
-    Traceback (most recent call last):
-    ...
-    ccpp_datafile.CCPPDatatableError: Could not find 'dyn_const_routines' element
-
-    """
-    routines = table.find("dyn_const_routines")
-    if routines is None:
-        raise CCPPDatatableError("Could not find 'dyn_const_routines' element")
-    # end if
-    routine_names = [routine.text for routine in routines if routine.text]
-    # end for
-    return sorted(routine_names)
 
 ###############################################################################
 def _find_var_dictionary(table, dict_name=None, dict_type=None):
@@ -744,8 +706,6 @@ def datatable_report(datatable, action, sep, exclude_protected=False):
         result = _retrieve_module_list(table)
     elif action.action_is("dependencies"):
         result = _retrieve_dependencies(table)
-    elif action.action_is("dyn_const_routines"):
-        result = _retrieve_dyn_const_routines(table)
     elif action.action_is("suite_list"):
         result = _retrieve_suite_list(table)
     elif action.action_is("required_variables"):
@@ -1092,20 +1052,6 @@ def _add_dependencies(parent, scheme_depends, host_depends):
     # end for
 
 ###############################################################################
-def _add_dyn_const_routine(file_entry, routine, scheme):
-###############################################################################
-    """Add a section to <parent> that lists all the constituent routines
-    for the suite
-    >>> file_entry = ET.fromstring("<ccpp_datatable><dyn_const_routines></dyn_const_routines></ccpp_datatable>")
-    >>> _add_dyn_const_routine(file_entry, 'test_dyn_const', 'test_scheme')
-    >>> table_entry_pretty_print(file_entry, 0)
-    '<ccpp_datatable>\\n  <dyn_const_routines />\\n  <dyn_const_routine parent=test_scheme>\\n    test_dyn_const\\n  </dyn_const_routine>\\n</ccpp_datatable>\\n'
-    """
-    entry = ET.SubElement(file_entry, "dyn_const_routine")
-    entry.text = routine
-    entry.set("parent", scheme)
-
-###############################################################################
 def _add_generated_files(parent, host_files, suite_files, ccpp_kinds, src_dir):
 ###############################################################################
     """Add a section to <parent> that lists all the files generated
@@ -1231,17 +1177,6 @@ def generate_ccpp_datatable(run_env, host_model, api, scheme_headers,
         # end for
     # end for
     _add_dependencies(datatable, scheme_depends, host_depends)
-    # Add in all constituent routines
-    first_const_routine = True
-    for table in scheme_tdict:
-        if scheme_tdict[table].dyn_const_routine is not None:
-            if first_const_routine:
-                file_entry = ET.SubElement(datatable, "dyn_const_routines")
-                first_const_routine = False
-            # end if
-            _add_dyn_const_routine(file_entry, scheme_tdict[table].dyn_const_routine, table)
-        # end if
-    # end for
     # Write tree
     datatable_tree = PrettyElementTree(datatable)
     datatable_tree.write(run_env.datatable_file)
