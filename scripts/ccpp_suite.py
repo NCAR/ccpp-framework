@@ -683,7 +683,6 @@ class API(VarDictionary):
         # end for
         # We will need the correct names for errmsg and errcode
         evar = self.host_model.find_variable(standard_name='ccpp_error_message')
-        subst_dict = {'intent':'out'}
         if evar is not None:
             self._errmsg_var = evar
         else:
@@ -749,7 +748,12 @@ class API(VarDictionary):
         ofile.write(f"public :: {API.__schemes_fname}", 1)
 
     def get_errinfo_names(self, base_only=False):
-        """Return a tuple of error output local names"""
+        """Return a tuple of error output local names.
+        If base_only==True, return only the name string of the variable.
+        If base_only=False, return the local name as a full reference.
+        If the error variables are intrinsic variables, this makes no
+        difference, however, for a DDT variable, the full reference is
+        <ddt_name>%<errvar_name> while the local name is just <errvar_name>."""
         if base_only:
             errmsg_name = self._errmsg_var.get_prop_value('local_name')
             errcode_name = self._errcode_var.get_prop_value('local_name')

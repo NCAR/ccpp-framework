@@ -58,7 +58,7 @@ contains
               ', should be ', nbox
       else
          ! NOTE -- This is prototyping one approach to passing a large number of
-         ! chemical VMR values and is the predecssor for adding in methods and
+         ! chemical VMR values and is the predecessor for adding in methods and
          ! maybe nesting DDTs (especially for aerosols)
          vmr%vmr_array(cols:cole, 1) = O3(:)
          vmr%vmr_array(cols:cole, 2) = HNO3(:)
