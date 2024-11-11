@@ -56,7 +56,6 @@ endfunction()
 
 
 function(ccpp_datafile)
-  # set(oneValueArgs DATATABLE REPORT_NAME SEPERATOR CCPP_CAPS_LIB_FILES)
   set(oneValueArgs DATATABLE REPORT_NAME CCPP_CAPS_LIB_FILES)
   cmake_parse_arguments(arg "" "${oneValueArgs}" "" ${ARGN})
 
@@ -71,13 +70,6 @@ function(ccpp_datafile)
     message(FATAL_ERROR "function(ccpp_datafile): REPORT_NAME not set.  Must specify the report to generate to run cpp_datafile.py")
   endif()
   list(APPEND CCPP_DATAFILE_CMD "${arg_REPORT_NAME}")
-
-  # message(STATUS "${arg_SEPERATOR}")
-
-  # if(DEFINED arg_SEPERATOR)
-  #   message(STATUS "Adding seperator")
-  #   list(APPEND CCPP_DATAFILE_CMD "--seperator=\\${arg_SEPERATOR}")
-  # endif()
 
   message(STATUS "${CCPP_DATAFILE_CMD}")
   message(STATUS "Running ccpp_datafile from ${CMAKE_CURRENT_SOURCE_DIR}")
