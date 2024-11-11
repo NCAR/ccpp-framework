@@ -1,34 +1,34 @@
 !Test 3D parameterization
 !
 
-MODULE temp_set
+module temp_set
 
-  USE ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
 
-  IMPLICIT NONE
-  PRIVATE
+  implicit none
+  private
 
-  PUBLIC :: temp_set_init
-  PUBLIC :: temp_set_timestep_initialize
-  PUBLIC :: temp_set_run
-  PUBLIC :: temp_set_finalize
+  public :: temp_set_init
+  public :: temp_set_timestep_initialize
+  public :: temp_set_run
+  public :: temp_set_finalize
 
-CONTAINS
+contains
 
 !> \section arg_table_temp_set_run  Argument Table
 !! \htmlinclude arg_table_temp_set_run.html
 !!
-  SUBROUTINE temp_set_run(ncol, lev, timestep, temp_level, temp, ps,         &
+  subroutine temp_set_run(ncol, lev, timestep, temp_level, temp, ps,         &
        to_promote, promote_pcnst, errmsg, errflg)
 !----------------------------------------------------------------
-   IMPLICIT NONE
+   implicit none
 !----------------------------------------------------------------
 
    integer,            intent(in)    :: ncol, lev
-   REAL(kind_phys),    intent(out)   :: temp(:,:)
+   real(kind_phys),    intent(out)   :: temp(:,:)
    real(kind_phys),    intent(in)    :: timestep
    real(kind_phys),    intent(in)    :: ps(:)
-   REAL(kind_phys),    INTENT(inout) :: temp_level(:, :)
+   real(kind_phys),    intent(inout) :: temp_level(:, :)
    real(kind_phys),    intent(out)   :: to_promote(:, :)
    real(kind_phys),    intent(out)   :: promote_pcnst(:)
    character(len=512), intent(out)   :: errmsg
@@ -56,7 +56,7 @@ CONTAINS
        end do
     end do
 
-  END SUBROUTINE temp_set_run
+  end subroutine temp_set_run
 
 !> \section arg_table_temp_set_init  Argument Table
 !! \htmlinclude arg_table_temp_set_init.html
@@ -110,4 +110,4 @@ CONTAINS
 
   end subroutine temp_set_finalize
 
-END MODULE temp_set
+end module temp_set

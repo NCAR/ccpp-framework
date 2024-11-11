@@ -1,18 +1,18 @@
-MODULE environ_conditions
+module environ_conditions
 
-  USE ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
 
-  IMPLICIT NONE
-  PRIVATE
+  implicit none
+  private
 
-  PUBLIC :: environ_conditions_init
-  PUBLIC :: environ_conditions_run
-  PUBLIC :: environ_conditions_finalize
+  public :: environ_conditions_init
+  public :: environ_conditions_run
+  public :: environ_conditions_finalize
 
   integer, parameter :: input_model_times = 3
   integer, parameter :: input_model_values(input_model_times) = (/ 31, 37, 41 /)
 
-CONTAINS
+contains
 
 !> \section arg_table_environ_conditions_run  Argument Table
 !! \htmlinclude arg_table_environ_conditions_run.html
@@ -28,7 +28,7 @@ CONTAINS
     errmsg = ''
     errflg = 0
 
-  END SUBROUTINE environ_conditions_run
+  end subroutine environ_conditions_run
 
 !> \section arg_table_environ_conditions_init  Argument Table
 !! \htmlinclude arg_table_environ_conditions_init.html
@@ -82,7 +82,7 @@ CONTAINS
        errflg = 1
        write(errmsg, '(2(a,i0))') 'model_times size mismatch, ',              &
             size(model_times), ' should be ', input_model_times
-    else if (ANY(model_times /= input_model_values)) then
+    else if (any(model_times /= input_model_values)) then
        errflg = 1
        write(errmsg, *) 'model_times mismatch, ',                             &
             model_times, ' should be ', input_model_values
@@ -93,4 +93,4 @@ CONTAINS
 
   end subroutine environ_conditions_finalize
 
-END MODULE environ_conditions
+end module environ_conditions

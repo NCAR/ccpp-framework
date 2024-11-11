@@ -1,29 +1,29 @@
 !Test parameterization with no vertical level and hanging intent(out) variable
 !
 
-MODULE temp_calc_adjust
+module temp_calc_adjust
 
-   USE ccpp_kinds, ONLY: kind_phys
+   use ccpp_kinds, only: kind_phys
 
-   IMPLICIT NONE
-   PRIVATE
+   implicit none
+   private
 
-   PUBLIC :: temp_calc_adjust_init
-   PUBLIC :: temp_calc_adjust_run
-   PUBLIC :: temp_calc_adjust_finalize
+   public :: temp_calc_adjust_init
+   public :: temp_calc_adjust_run
+   public :: temp_calc_adjust_finalize
 
-CONTAINS
+contains
 
    !> \section arg_table_temp_calc_adjust_run  Argument Table
    !! \htmlinclude arg_table_temp_calc_adjust_run.html
    !!
-   SUBROUTINE temp_calc_adjust_run(nbox, timestep, temp_level, temp_calc,     &
+   subroutine temp_calc_adjust_run(nbox, timestep, temp_level, temp_calc,     &
         errmsg, errflg)
 
       integer,            intent(in)    :: nbox
       real(kind_phys),    intent(in)    :: timestep
       real(kind_phys),    intent(in)    :: temp_level(:,:)
-      REAL(kind_phys),    intent(out)   :: temp_calc(:)
+      real(kind_phys),    intent(out)   :: temp_calc(:)
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------
@@ -39,28 +39,28 @@ CONTAINS
          call foo(bar)
       end if
 
-   CONTAINS
+   contains
 
-      ELEMENTAL SUBROUTINE temp_calc_adjust_nested_subroutine(temp)
+      elemental subroutine temp_calc_adjust_nested_subroutine(temp)
 
-         REAL(kind_phys),    intent(out)   :: temp
+         real(kind_phys),    intent(out)   :: temp
          !-------------------------------------------------------------
 
          temp = 1.0_kind_phys
 
-      END SUBROUTINE temp_calc_adjust_nested_subroutine
+      end subroutine temp_calc_adjust_nested_subroutine
 
-      SUBROUTINE foo(bar)
-         REAL(kind_phys), intent(inout) :: bar
+      subroutine foo(bar)
+         real(kind_phys), intent(inout) :: bar
          bar = bar + 1.0_kind_phys
 
-      END SUBROUTINE
+      end subroutine
 
       logical function check_foo()
          check_foo = .true.
       end function check_foo
 
-   END SUBROUTINE
+   end subroutine
 
    !> \section arg_table_temp_calc_adjust_init  Argument Table
    !! \htmlinclude arg_table_temp_calc_adjust_init.html
@@ -92,4 +92,4 @@ CONTAINS
 
    end subroutine temp_calc_adjust_finalize
 
-END MODULE temp_calc_adjust
+end module temp_calc_adjust

@@ -1,5 +1,5 @@
 module setup_coeffs
-  use ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
   implicit none
 
   public :: setup_coeffs_timestep_init

@@ -1,17 +1,17 @@
 !Hello demonstration parameterization
 !
 
-MODULE make_ddt
+module make_ddt
 
-   USE ccpp_kinds, ONLY: kind_phys
+   use ccpp_kinds, only: kind_phys
 
-   IMPLICIT NONE
-   PRIVATE
+   implicit none
+   private
 
-   PUBLIC :: make_ddt_init
-   PUBLIC :: make_ddt_run
-   PUBLIC :: make_ddt_timestep_final
-   PUBLIC :: vmr_type
+   public :: make_ddt_init
+   public :: make_ddt_run
+   public :: make_ddt_timestep_final
+   public :: vmr_type
 
    !> \section arg_table_vmr_type  Argument Table
    !! \htmlinclude arg_table_vmr_type.html
@@ -22,21 +22,21 @@ MODULE make_ddt
    end type vmr_type
 
 
-CONTAINS
+contains
 
    !> \section arg_table_make_ddt_run  Argument Table
    !! \htmlinclude arg_table_make_ddt_run.html
    !!
-   SUBROUTINE make_ddt_run(cols, cole, O3, HNO3, vmr, errmsg, errflg)
+   subroutine make_ddt_run(cols, cole, O3, HNO3, vmr, errmsg, errflg)
       !----------------------------------------------------------------
-      IMPLICIT NONE
+      implicit none
       !----------------------------------------------------------------
 
       ! Dummy arguments
       integer,            intent(in)    :: cols
       integer,            intent(in)    :: cole
-      REAL(kind_phys),    intent(in)    :: O3(:)
-      REAL(kind_phys),    intent(in)    :: HNO3(:)
+      real(kind_phys),    intent(in)    :: O3(:)
+      real(kind_phys),    intent(in)    :: HNO3(:)
       type(vmr_type),     intent(inout) :: vmr
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
@@ -64,7 +64,7 @@ CONTAINS
          vmr%vmr_array(cols:cole, 2) = HNO3(:)
       end if
 
-   END SUBROUTINE make_ddt_run
+   end subroutine make_ddt_run
 
    !> \section arg_table_make_ddt_init  Argument Table
    !! \htmlinclude arg_table_make_ddt_init.html
@@ -129,4 +129,4 @@ CONTAINS
 
    end subroutine make_ddt_timestep_final
 
-END MODULE make_ddt
+end module make_ddt

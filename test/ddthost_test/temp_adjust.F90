@@ -1,18 +1,18 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE temp_adjust
+module temp_adjust
 
-  USE ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
 
-  IMPLICIT NONE
-  PRIVATE
+  implicit none
+  private
 
-  PUBLIC :: temp_adjust_init
-  PUBLIC :: temp_adjust_run
-  PUBLIC :: temp_adjust_finalize
+  public :: temp_adjust_init
+  public :: temp_adjust_run
+  public :: temp_adjust_finalize
 
-CONTAINS
+contains
 
   !> \section arg_table_temp_adjust_run  Argument Table
   !! \htmlinclude arg_table_temp_adjust_run.html
@@ -24,8 +24,8 @@ CONTAINS
     real(kind_phys),           intent(in)    :: timestep
     real(kind_phys),           intent(inout),optional :: qv(:)
     real(kind_phys),           intent(inout) :: ps(:)
-    REAL(kind_phys),           intent(in)    :: temp_prev(:)
-    REAL(kind_phys),           intent(inout) :: temp_layer(foo)
+    real(kind_phys),           intent(in)    :: temp_prev(:)
+    real(kind_phys),           intent(inout) :: temp_layer(foo)
     real(kind_phys),           intent(in)    :: to_promote(:)
     real(kind_phys),           intent(in)    :: promote_pcnst(:)
     character(len=512),        intent(out)   :: errmsg
@@ -49,7 +49,7 @@ CONTAINS
        optsie = optsie + 1.0_kind_phys
     end if
 
-  END SUBROUTINE temp_adjust_run
+  end subroutine temp_adjust_run
 
   !> \section arg_table_temp_adjust_init  Argument Table
   !! \htmlinclude arg_table_temp_adjust_init.html
@@ -81,4 +81,4 @@ CONTAINS
 
   end subroutine temp_adjust_finalize
 
-END MODULE temp_adjust
+end module temp_adjust

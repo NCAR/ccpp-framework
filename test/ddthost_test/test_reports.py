@@ -22,37 +22,27 @@ if not os.path.exists(_SCRIPTS_DIR):
     raise ImportError("Cannot find scripts directory")
 # end if
 
-if ((sys.version_info[0] < 3) or
-    (sys.version_info[0] == 3) and (sys.version_info[1] < 8)):
-    raise Exception("Python 3.8 or greater required")
-# end if
-
 sys.path.append(_SCRIPTS_DIR)
 # pylint: disable=wrong-import-position
 from ccpp_datafile import datatable_report, DatatableReport
 # pylint: enable=wrong-import-position
 
-def usage(errmsg=None):
-    """Raise an exception with optional error message and usage message"""
-    emsg = "usage: {} <build_dir> <database_filepath>"
-    if errmsg:
-        emsg = errmsg + '\n' + emsg
-    # end if
-    raise ValueError(emsg.format(sys.argv[0]))
+import argparse
 
-if len(sys.argv) != 3:
-    usage()
+parser = argparse.ArgumentParser(description="Test capgen database report python interface")
+parser.add_argument('build_dir')
+parser.add_argument('database_filepath')
+if len(sys.argv) > 3:
+    parser.error("Too many arguments")
 # end if
-
-_BUILD_DIR = os.path.abspath(sys.argv[1])
-_DATABASE = os.path.abspath(sys.argv[2])
+args = parser.parse_args()
+_BUILD_DIR = os.path.abspath(args.build_dir)
+_DATABASE = os.path.abspath(args.database_filepath)
 if not os.path.isdir(_BUILD_DIR):
-    _EMSG = "<build_dir> must be an existing build directory"
-    usage(_EMSG)
+    parser.error("<build_dir> must be an existing build directory")
 # end if
 if (not os.path.exists(_DATABASE)) or (not os.path.isfile(_DATABASE)):
-    _EMSG = "<database_filepath> must be an existing CCPP database file"
-    usage(_EMSG)
+    parser.error("<database_filepath> must be an existing CCPP database file")
 # end if
 
 # Check data
@@ -106,15 +96,14 @@ def fields_string(field_type, field_list, sep):
     """Create an error string for <field_type> field(s), <field_list>.
     <sep> is used to separate items in <field_list>"""
     indent = ' '*11
+    fmsg = ""
     if field_list:
         if len(field_list) > 1:
-            field_str = "{} Fields: ".format(field_type)
+            field_str = f"{field_type} Fields: "
         else:
-            field_str = "{} Field: ".format(field_type)
+            field_str = f"{field_type} Field: "
         # end if
-        fmsg = "\n{}{}{}".format(indent, field_str, sep.join(field_list))
-    else:
-        fmsg = ""
+        fmsg = f"\n{indent}{field_str}{sep.join(sorted(field_list))}"
     # end if
     return fmsg
 
@@ -128,25 +117,17 @@ def check_datatable(database, report_type, check_list,
     # end if
     test_str = datatable_report(database, report_type, sep, exclude_protected=exclude_protected)
     test_list = [x for x in test_str.split(sep) if x]
-    missing = list()
-    unexpected = list()
-    for item in check_list:
-        if item not in test_list:
-            missing.append(item)
-        # end if
-    # end for
-    for item in test_list:
-        if item not in check_list:
-            unexpected.append(item)
-        # end if
-    # end for
+    tests_run = set(test_list)
+    expected_tests = set(check_list)
+    missing = expected_tests - tests_run
+    unexpected = tests_run - expected_tests
     if missing or unexpected:
-        vmsg = "ERROR in {} datafile check:".format(report_type.action)
+        vmsg = f"ERROR in {report_type.action} datafile check:"
         vmsg += fields_string("Missing", missing, sep)
         vmsg += fields_string("Unexpected", unexpected, sep)
         print(vmsg)
     else:
-        print("{} report okay".format(report_type.action))
+        print(f"{report_type.action} report okay")
     # end if
     return len(missing) + len(unexpected)
 

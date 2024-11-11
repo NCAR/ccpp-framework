@@ -1247,7 +1247,6 @@ class VarSpec:
     def __repr__(self):
         """Return a representation of this object"""
         if self.__dims is not None:
-
             repr_str = f"{self.__name}({', '.join(self.__dims)})"
         else:
             repr_str = self.__name
