@@ -3,6 +3,7 @@
 # CCPP framework imports
 from state_machine import StateMachine
 
+_REG_ST = r"(?:register)"
 _INIT_ST = r"(?:init(?:ial(?:ize)?)?)"
 _FINAL_ST = r"(?:final(?:ize)?)"
 _RUN_ST = r"(?:run)"
@@ -12,7 +13,9 @@ _TS_FINAL_ST = r"(?:timestep_final(?:ize)?)"
 # Allowed CCPP transitions
 # pylint: disable=bad-whitespace
 RUN_PHASE_NAME = 'run'
-CCPP_STATE_MACH = StateMachine((('initialize', 'uninitialized',
+CCPP_STATE_MACH = StateMachine((('register', 'uninitialized',
+                                 'uninitialized', _REG_ST),
+                                ('initialize', 'uninitialized',
                                  'initialized', _INIT_ST),
                                 ('timestep_initial', 'initialized',
                                  'in_time_step', _TS_INIT_ST),

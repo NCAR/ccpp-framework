@@ -51,6 +51,21 @@ def call_command(commands, logger, silent=False):
     False
     >>> call_command(['ls'], _LOGGER)
     True
+    >>> try:
+    ...    call_command(['ls','--invalid-option'], _LOGGER)
+    ... except CCPPError as e:
+    ...    print(str(e))
+    Execution of 'ls --invalid-option' failed with code: 2
+    Error output: ls: unrecognized option '--invalid-option'
+    Try 'ls --help' for more information.
+    >>> try:
+    ...    os.chdir(os.path.dirname(__file__))
+    ...    call_command(['ls', os.path.basename(__file__), 'foo.bar.baz'], _LOGGER)
+    ... except CCPPError as e:
+    ...    print(str(e))
+    Execution of 'ls xml_tools.py foo.bar.baz' failed with code: 2
+    xml_tools.py
+    Error output: ls: cannot access 'foo.bar.baz': No such file or directory
     """
     result = False
     outstr = ''
@@ -66,9 +81,17 @@ def call_command(commands, logger, silent=False):
             result = False
         else:
             cmd = ' '.join(commands)
-            emsg = "Execution of '{}' failed with code:\n"
-            outstr = emsg.format(cmd, err.returncode)
-            outstr += "{}".format(err.output)
+            outstr = f"Execution of '{cmd}' failed with code: {err.returncode}\n"
+            outstr += f"{err.output.decode('utf-8', errors='replace').strip()}"
+            if hasattr(err, 'stderr') and err.stderr:
+                stderr_str = err.stderr.decode('utf-8', errors='replace').strip()
+                if stderr_str:
+                    if err.output:
+                        outstr += os.linesep
+                    # end if
+                    outstr += f"Error output: {stderr_str}"
+                # end if
+            # end if
             raise CCPPError(outstr) from err
         # end if
     # end of try

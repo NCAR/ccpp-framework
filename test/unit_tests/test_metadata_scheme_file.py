@@ -35,10 +35,6 @@
                   - Correctly interpret Fortran with preprocessor logic
                     which affects the subroutine statement and/or the dummy
                     argument statements resulting in incorrect Fortran
-                  - Correctly detect a missing dynamic constituent routine
-                    in Fortran
-                  - Correctly raise an error if there are two dynamic
-                    constituent routines with the same name
 
  Assumptions:
 
@@ -98,13 +94,15 @@ class MetadataHeaderTestCase(unittest.TestCase):
                                      "temp_adjust.meta")]
         # Exercise
         scheme_headers, table_dict = parse_scheme_files(scheme_files,
-                                                        self._run_env)
+                                                        self._run_env,
+                                                        skip_ddt_check=True)
         # Verify size of returned list equals number of scheme headers
         #   in the test file and that header (subroutine) names are
-        #   'temp_adjust_[init,run,finalize]'
-        self.assertEqual(len(scheme_headers), 3)
+        #   'temp_adjust_[register,init,run,finalize]'
+        self.assertEqual(len(scheme_headers), 4)
         # Verify header titles
         titles = [elem.title for elem in scheme_headers]
+        self.assertTrue('temp_adjust_register' in titles)
         self.assertTrue('temp_adjust_init' in titles)
         self.assertTrue('temp_adjust_run' in titles)
         self.assertTrue('temp_adjust_finalize' in titles)
@@ -344,37 +342,6 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Exercise
         scheme_headers, table_dict = parse_scheme_files(scheme_files,
                                                         self._run_env_ccpp)
-
-    def test_not_present_dynamic_constituents_routine(self):
-        scheme_files = [os.path.join(self._sample_files_dir,
-                                     "dyn_const_not_present.meta")]
-
-        with self.assertRaises(CCPPError) as context:
-            _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
-
-        emsg = "Dynamic constituent routine dyn_consts not found in fortran"
-        self.assertTrue(emsg in str(context.exception))
-
-    def test_not_present_nested_dynamic_constituents_routine(self):
-        scheme_files = [os.path.join(self._sample_files_dir,
-                                     "dyn_const_not_present_nested.meta")]
-
-        with self.assertRaises(CCPPError) as context:
-            _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
-
-        emsg = "Dynamic constituent routine dyn_consts not found in fortran"
-        self.assertTrue(emsg in str(context.exception))
-
-    def test_duplicate_dynamic_constituents_routine_name(self):
-        scheme_files = [os.path.join(self._sample_files_dir,
-                                     "temp_adjust.meta"),
-                        os.path.join(self._sample_files_dir,
-                                     "duplicate_dyn_const.meta")]
-
-        with self.assertRaises(CCPPError) as context:
-            _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
-        emsg = "ERROR: Dynamic constituent routine names must be unique."
-        self.assertTrue(emsg in str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()

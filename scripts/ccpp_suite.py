@@ -70,6 +70,8 @@ character(len=16) :: {css_var_name} = '{state}'
 '''
 
     # Note that these group names need to match CCPP_STATE_MACH
+    __register_group_name = 'register'
+
     __initial_group_name = 'initialize'
 
     __final_group_name = 'finalize'
@@ -205,6 +207,8 @@ character(len=16) :: {css_var_name} = '{state}'
         if run_env.logger and run_env.logger.isEnabledFor(logging.INFO):
             run_env.logger.info(lmsg.format(self.name))
         # end if
+        gname = Suite.__register_group_name
+        self.__suite_reg_group = self.new_group_from_name(gname, run_env)
         gname = Suite.__initial_group_name
         self.__suite_init_group = self.new_group_from_name(gname, run_env)
         gname = Suite.__final_group_name
@@ -214,11 +218,13 @@ character(len=16) :: {css_var_name} = '{state}'
         gname = Suite.__timestep_final_group_name
         self.__timestep_final_group = self.new_group_from_name(gname, run_env)
         # Set up some groupings for later efficiency
-        self._beg_groups = [self.__suite_init_group.name,
+        self._beg_groups = [self.__suite_reg_group.name,
+                            self.__suite_init_group.name,
                             self.__timestep_init_group.name]
         self._end_groups = [self.__suite_final_group.name,
                             self.__timestep_final_group.name]
         # Build hierarchical structure as in SDF
+        self.__groups.append(self.__suite_reg_group)
         self.__groups.append(self.__suite_init_group)
         self.__groups.append(self.__timestep_init_group)
         for suite_item in suite_xml:
@@ -560,8 +566,13 @@ character(len=16) :: {css_var_name} = '{state}'
             outfile.end_module_header()
             for group in self.__groups:
                 if group.name in self._beg_groups:
-                    group.write(outfile, self.__host_arg_list_noloop,
-                                1, const_mod, suite_vars=self, allocate=True)
+                    if group.name == self.__suite_reg_group.name:
+                        group.write(outfile, self.__host_arg_list_noloop,
+                                    1, const_mod, suite_vars=self)
+                    else:
+                        group.write(outfile, self.__host_arg_list_noloop,
+                                    1, const_mod, suite_vars=self, allocate=True)
+                    # end if
                 elif group.name in self._end_groups:
                     group.write(outfile, self.__host_arg_list_noloop,
                                 1, const_mod, suite_vars=self, deallocate=True)
@@ -615,7 +626,7 @@ class API(VarDictionary):
                         'kind':'len=*', 'units':'',
                         'dimensions':'()'}, _API_SOURCE, _API_DUMMY_RUN_ENV)
 
-    def __init__(self, sdfs, host_model, scheme_headers, run_env, dyn_const_dict={}):
+    def __init__(self, sdfs, host_model, scheme_headers, run_env):
         """Initialize this API.
         <sdfs> is the list of Suite Definition Files to be parsed for
             data needed by the CCPP cap.
@@ -624,14 +635,11 @@ class API(VarDictionary):
         <scheme_headers> is the list of parsed physics scheme metadata files.
             Every scheme referenced by an SDF in <sdfs> MUST be in this list,
             however, unused schemes are allowed.
-        <dyn_const_dict> is the dictionary (key = scheme name) of dynamic
-            constituent routine names
         <run_env> is the CCPPFrameworkEnv object for this framework run.
         """
         self.__module = 'ccpp_physics_api'
         self.__host = host_model
         self.__suites = list()
-        self.__dyn_const_dict = dyn_const_dict
         super().__init__(self.module, run_env, parent_dict=self.host_model)
         # Create a usable library out of scheme_headers
         # Structure is dictionary of dictionaries
@@ -1202,11 +1210,6 @@ class API(VarDictionary):
     def suites(self):
         "Return the list of this API's suites"
         return self.__suites
-
-    @property
-    def dyn_const_dict(self):
-        """Return the dynamic constituent routine dictionary"""
-        return self.__dyn_const_dict
 
 ###############################################################################
 if __name__ == "__main__":

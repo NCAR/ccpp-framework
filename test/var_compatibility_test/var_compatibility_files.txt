@@ -1,1 +1,4 @@
 effr_calc.meta
+effr_diag.meta
+effr_pre.meta
+effr_post.meta

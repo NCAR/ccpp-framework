@@ -65,7 +65,7 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
 _CCPP_FILES = _UTILITY_FILES + \
               [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
-_MODULE_LIST = ["effr_calc"]
+_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "effr_pre"]
 _SUITE_LIST = ["var_compatibility_suite"]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
@@ -81,6 +81,7 @@ _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "effective_radius_of_stratiform_cloud_liquid_water_particle",
                            "effective_radius_of_stratiform_cloud_snow_particle",
                            "cloud_ice_number_concentration",
+                           "effective_radius_of_stratiform_cloud_rain_particle",
                            "scalar_variable_for_testing"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 
