@@ -1,0 +1,18 @@
+[ccpp-table-properties]
+  name = suite_info
+  type = ddt
+[ccpp-arg-table]
+  name = suite_info
+  type = ddt
+
+[ccpp-table-properties]
+  name = test_host
+  type = host
+[ccpp-arg-table]
+  name = test_host
+  type = host
+[ ccpp ]
+  standard_name = host_standard_ccpp_type
+  type = ccpp_info_t
+  dimensions = ()
+  protected = False
