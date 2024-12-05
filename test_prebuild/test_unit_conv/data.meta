@@ -1,0 +1,53 @@
+[ccpp-table-properties]
+  name = data
+  type = module
+  dependencies =
+[ccpp-arg-table]
+  name = data
+  type = module
+[cdata]
+  standard_name = ccpp_t_instance
+  long_name = instance of derived data type ccpp_t
+  units = DDT
+  dimensions = ()
+  type = ccpp_t
+[ncols]
+  standard_name = horizontal_loop_extent
+  long_name = horizontal loop extent
+  units = count
+  dimensions = ()
+  type = integer
+[nspecies]
+  standard_name = number_of_species
+  long_name = number of species in data array
+  units = count
+  dimensions = ()
+  type = integer
+[data_array]
+  standard_name = data_array_all_species
+  long_name = data array in module
+  units = m
+  dimensions = (horizontal_loop_extent, number_of_species)
+  type = real
+  kind = kind_phys
+[data_array(:,2)]
+  standard_name = data_array
+  long_name = data array in module
+  units = m
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+[opt_array_flag]
+  standard_name = flag_for_opt_array
+  long_name = flag for passing optional data array
+  units = 1
+  dimensions = ()
+  type = logical
+[data_array(:,1)]
+  standard_name = data_array_opt
+  long_name = optional data array in km
+  units = m
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  active = (flag_for_opt_array)
