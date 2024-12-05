@@ -15,9 +15,10 @@ import sys
 import os
 import unittest
 
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPTS_DIR = os.path.abspath(os.path.join(TEST_DIR, os.pardir, os.pardir, "scripts"))
-SAMPLE_FILES_DIR = os.path.join(TEST_DIR, "sample_files")
+UNIT_TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+TEST_DIR = os.path.abspath(os.path.join(UNIT_TEST_DIR, os.pardir))
+SCRIPTS_DIR = os.path.abspath(os.path.join(TEST_DIR, os.pardir, "scripts"))
+SAMPLE_FILES_DIR = os.path.join(UNIT_TEST_DIR, "sample_files")
 
 if not os.path.exists(SCRIPTS_DIR):
     raise ImportError("Cannot find scripts directory")
@@ -47,7 +48,6 @@ class MetadataTableTestCase(unittest.TestCase):
         #Verify that:
         #       no dependencies is returned as ''
         #       rel_path is returned as None
-        #       dynamic_constituent_routine is returned as 'dyn_consts'
         #       size of returned list equals number of headers in the test file
         #       ccpp-table-properties name is 'test_host'
         dependencies = result[0].dependencies
@@ -56,8 +56,6 @@ class MetadataTableTestCase(unittest.TestCase):
         self.assertEqual(len(dependencies), 0)
         self.assertIsNone(rel_path)
         self.assertEqual(len(result), 1)
-        dyn_const_routine = result[0].dyn_const_routine
-        self.assertEqual(dyn_const_routine, 'dyn_consts')
         titles = [elem.table_name for elem in result]
         self.assertIn('test_host', titles, msg="Header name 'test_host' is expected but not found")
 
@@ -374,11 +372,15 @@ class MetadataTableTestCase(unittest.TestCase):
         titles = [elem.table_name for elem in result]
 
         self.assertEqual(len(dependencies), 4)
-        self.assertIn('machine.F', dependencies, msg="Dependency 'machine.F' is expected but not found")
-        self.assertIn('physcons.F90', dependencies, msg="Dependency 'physcons.F90' is expected but not found")
-        self.assertIn('GFDL_parse_tracers.F90', dependencies, msg="Dependency 'GFDL_parse_tracers.F90' is expected but not found")
-        self.assertIn('rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90', dependencies, \
-                       msg="Header name 'rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90' is expected but not found")
+        phys_dir = os.path.join(TEST_DIR, "ccpp", "physics", "physics")
+        self.assertIn(os.path.join(phys_dir, 'machine.F'), dependencies, \
+                      msg="Dependency 'machine.F' is expected but not found")
+        self.assertIn(os.path.join(phys_dir, 'physcons.F90'), dependencies, \
+                      msg="Dependency 'physcons.F90' is expected but not found")
+        self.assertIn(os.path.join(phys_dir, 'GFDL_parse_tracers.F90'), dependencies, \
+                      msg="Dependency 'GFDL_parse_tracers.F90' is expected but not found")
+        self.assertIn(os.path.join(phys_dir, 'rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90'), dependencies, \
+                      msg="Header name 'rte-rrtmgp/rrtmgp/mo_gas_optics_rrtmgp.F90' is expected but not found")
 
         self.assertIn(rel_path, "../../ccpp/physics/physics")
         self.assertEqual(len(result), 1)
@@ -399,4 +401,3 @@ class MetadataTableTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

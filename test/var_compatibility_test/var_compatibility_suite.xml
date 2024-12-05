@@ -2,6 +2,9 @@
 
 <suite name="var_compatibility_suite" version="1.0">
   <group name="radiation">
+    <scheme>effr_pre</scheme>
     <scheme>effr_calc</scheme>
+    <scheme>effr_post</scheme> 
+    <scheme>effr_diag</scheme>
   </group>
 </suite>

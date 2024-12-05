@@ -272,7 +272,7 @@ class MetadataTable():
     __table_start = re.compile(r"(?i)\s*\[\s*ccpp-table-properties\s*\]")
 
     def __init__(self, run_env, table_name_in=None, table_type_in=None,
-                 dependencies=None, relative_path=None, dyn_const_routine=None,
+                 dependencies=None, relative_path=None,
                  known_ddts=None, var_dict=None, module=None, parse_object=None,
                  skip_ddt_check=False):
         """Initialize a MetadataTable, either with a name, <table_name_in>, and
@@ -286,7 +286,6 @@ class MetadataTable():
         self.__pobj = parse_object
         self.__dependencies = dependencies
         self.__relative_path = relative_path
-        self.__dyn_const_routine = dyn_const_routine
         self.__sections = []
         self.__run_env = run_env
         if parse_object is None:
@@ -348,6 +347,14 @@ class MetadataTable():
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
             self.__init_from_file(known_ddts, self.__run_env, skip_ddt_check=skip_ddt_check)
+            # Set absolute path for all dependencies
+            path = os.path.dirname(self.__pobj.filename)
+            if self.relative_path:
+                path = os.path.join(path, self.relative_path)
+            # end if
+            for ind, dep in enumerate(self.__dependencies):
+                self.__dependencies[ind] = os.path.abspath(os.path.join(path, dep))
+            # end for
         # end if
 
     def __init_from_file(self, known_ddts, run_env, skip_ddt_check=False):
@@ -400,8 +407,6 @@ class MetadataTable():
                         # end if
                     elif key == 'relative_path':
                         self.__relative_path = value
-                    elif key == 'dynamic_constituent_routine':
-                        self.__dyn_const_routine = value
                     else:
                         tok_type = "metadata table start property"
                         self.__pobj.add_syntax_err(tok_type, token=value)
@@ -482,12 +487,6 @@ class MetadataTable():
     def relative_path(self):
         """Return the relative path for the table's dependencies"""
         return self.__relative_path
-
-    @property
-    def dyn_const_routine(self):
-        """Return the name of the routine that will dynamically return
-        an array of constituent properties"""
-        return self.__dyn_const_routine
 
     @property
     def run_env(self):

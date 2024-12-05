@@ -187,6 +187,7 @@ CONTAINS
     subroutine test_host(retval, test_suites)
 
        use test_host_mod,      only: ncols, num_time_steps
+       use test_host_ccpp_cap, only: test_host_ccpp_physics_register
        use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
        use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_initial
        use test_host_ccpp_cap, only: test_host_ccpp_physics_run
@@ -237,6 +238,15 @@ CONTAINS
           return
        end if
 
+       ! Use the suite information to call the register phase
+       do sind = 1, num_suites
+          call test_host_ccpp_physics_register(test_suites(sind)%suite_name, &
+               errmsg, errflg)
+          if (errflg /= 0) then
+             write(6, '(4a)') 'ERROR in register of ',                       &
+                  trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
+          end if
+       end do
        ! Use the suite information to setup the run
        do sind = 1, num_suites
           call test_host_ccpp_physics_initialize(test_suites(sind)%suite_name, &
