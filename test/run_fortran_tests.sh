@@ -37,6 +37,14 @@ if [ $res -ne 0 ]; then
   echo "Failure running advection test"
 fi
 
+# Run DDT host variable test
+./ddthost_test/run_test
+res=$?
+errcnt=$((errcnt + res))
+if [ $res -ne 0 ]; then
+  echo "Failure running ddthost test"
+fi
+
 # Run var_compatibility test
  ./var_compatibility_test/run_test
  res=$?
