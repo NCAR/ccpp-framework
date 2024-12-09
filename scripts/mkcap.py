@@ -299,13 +299,14 @@ class Var(object):
         # It is an error for host model variables to have the optional attribute in the metadata
         if self.optional == 'T':
             error_message = "This routine should only be called for host model variables" + \
-                            " that cannot be optional, but got self.optional=T"
+                            " that cannot have the optional metadata attribute, but got self.optional=T"
             raise Exception(error_message)
         # If the host variable is potentially unallocated, add optional and target to variable declaration
         elif not self.active == 'T':
             optional = ', optional, target'
         else:
-            optional = ''
+            # Always declare as target variable so that locally defined pointers can point to it
+            optional = ', target'
         #
         if self.type in STANDARD_VARIABLE_TYPES:
             if self.kind:
