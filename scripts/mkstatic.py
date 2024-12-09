@@ -211,7 +211,8 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
                 kind_var_standard_name = variable_dictionary[standard_name].kind
                 if not kind_var_standard_name in local_kind_and_type_vars:
                     if not kind_var_standard_name in metadata_define.keys():
-                        raise Exception("Kind {kind} not defined by host model".format(kind=kind_var_standard_name))
+                        raise Exception("Kind {kind}, required by {std_name}, not defined by host model".format(
+                            kind=kind_var_standard_name, std_name=standard_name))
                     kind_var = metadata_define[kind_var_standard_name][0]
                     module_use.append(kind_var.print_module_use())
                     local_kind_and_type_vars.append(kind_var_standard_name)
@@ -219,7 +220,8 @@ def create_arguments_module_use_var_defs(variable_dictionary, metadata_define, t
                 type_var_standard_name = variable_dictionary[standard_name].type
                 if not type_var_standard_name in local_kind_and_type_vars:
                     if not type_var_standard_name in metadata_define.keys():
-                        raise Exception("Type {type} not defined by host model".format(type=type_var_standard_name))
+                        raise Exception("Type {type}, required by {std_name}, not defined by host model".format(
+                            type=type_var_standard_name, std_name=standard_name))
                     type_var = metadata_define[type_var_standard_name][0]
                     module_use.append(type_var.print_module_use())
                     local_kind_and_type_vars.append(type_var_standard_name)
@@ -1476,14 +1478,34 @@ end module {module}
                                 if len(dimensions_target_name) < len(dim_substrings):
                                     raise Exception("THIS SHOULD NOT HAPPEN")
                                 dim_counter = 0
+                                # We need two different dim strings for the following. The first,
+                                # called 'dim_string' is used for the incoming variable (host model
+                                # variable) and must contain all dimensions and indices. The second,
+                                # called 'dim_string_allocate' is used for the allocation of temporary
+                                # variables used for unit conversions etc. This 'dim_string_allocate'
+                                # only contains the dimensions, not the indices of the target variable.
+                                # Example: a scheme requests a variable foo that is a slice of a host
+                                # model variable bar: foo(1:n) = bar(1:n,1). If a variable transformation
+                                # is required, mkstatic creates a temporary variable tmpvar of rank 1.
+                                # The allocation and assignment of this variable must then be
+                                #     allocate(tmpvar(1:n))
+                                #     tmpvar(1:n) = bar(1:n,1)
+                                # Likewise, when scheme baz is called, the callstring must be
+                                #     call baz(...,foo=tmpvar(1:n),...)
+                                # Hence the need for two different dim strings in the following code.
+                                # See also https://github.com/NCAR/ccpp-framework/issues/598.
                                 dim_string = '('
+                                dim_string_allocate = '('
                                 for dim in dimensions_target_name:
                                     if ':' in dim:
                                         dim_string += dim_substrings[dim_counter] + ','
+                                        dim_string_allocate += dim_substrings[dim_counter] + ','
                                         dim_counter += 1
                                     else:
                                         dim_string += dim + ','
+                                        # Don't add to dim_string_allocate!
                                 dim_string = dim_string.rstrip(',') + ')'
+                                dim_string_allocate = dim_string_allocate.rstrip(',') + ')'
                                 # Consistency check to make sure all dimensions from metadata are 'used'
                                 if dim_counter < len(dim_substrings):
                                     raise Exception(f"Mismatch of derived dimensions from metadata {dim_substrings} " + \
@@ -1491,12 +1513,15 @@ end module {module}
                                         f"scheme {scheme_name} / phase {ccpp_stage}")
                             else:
                                 dim_string = '({})'.format(','.join(dim_substrings))
+                                dim_string_allocate = dim_string
                             var_size_expected = '({})'.format('*'.join(array_size))
                         else:
                             if dimensions_target_name:
                                 dim_string = dim_string_target_name
                             else:
                                 dim_string = ''
+                            # A scalar variable doesn't get allocated, set to safe value
+                            dim_string_allocate = ''
                             var_size_expected = 1
 
                         # To assist debugging efforts, check if arrays have the correct size (ignore scalars for now)
@@ -1722,7 +1747,7 @@ end module {module}
                                 tmpvars[local_vars[var_standard_name]['name']] = tmpvar
                             if tmpvar.rank:
                                 # Add allocate statement if the variable has a rank > 0 using the dimstring derived above
-                                actions_in += f'        allocate({tmpvar.local_name}{dim_string})\n'
+                                actions_in += f'        allocate({tmpvar.local_name}{dim_string_allocate})\n'
                             if var.actions['in']:
                                 # Add unit conversion before entering the subroutine
                                 actions_in += '        {t} = {c}{d}\n'.format(t=tmpvar.local_name,
@@ -1732,7 +1757,7 @@ end module {module}
                                 # If the variable is conditionally allocated, assign pointer
                                 if not conditional == '.true.':
                                     actions_in += '        {p} => {t}{d}\n'.format(p=f"{tmpptr.local_name}_array({CCPP_INTERNAL_VARIABLES[CCPP_THREAD_NUMBER]})%p",
-                                                                                   t=tmpvar.local_name, d=dim_string)
+                                                                                   t=tmpvar.local_name, d=dim_string_allocate)
                             if var.actions['out']:
                                 # Add unit conversion after returning from the subroutine
                                 actions_out  += '        {v}{d} = {c}\n'.format(v=tmpvar.target.replace(dim_string_target_name, ''),
@@ -1763,7 +1788,7 @@ end module {module}
                             # Add to argument list
                             if conditional == '.true.':
                                 arg = '{local_name}={var_name}{dim_string},'.format(local_name=var.local_name,
-                                    var_name=tmpvar.local_name.replace(dim_string_target_name, ''), dim_string=dim_string)
+                                    var_name=tmpvar.local_name.replace(dim_string_target_name, ''), dim_string=dim_string_allocate)
                             else:
                                 arg = '{local_name}={ptr_name},'.format(local_name=var.local_name,
                                                                         ptr_name=f"{tmpptr.local_name}_array({CCPP_INTERNAL_VARIABLES[CCPP_THREAD_NUMBER]})%p")
