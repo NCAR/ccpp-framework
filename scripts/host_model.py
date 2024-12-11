@@ -79,6 +79,9 @@ class HostModel(VarDictionary):
                 # End for
                 loop_vars = header.variable_list(std_vars=False,
                                                  loop_vars=True, consts=False)
+                loop_vars.extend(self.__ddt_dict.variable_list(std_vars=False,
+                                                               loop_vars=True,
+                                                               consts=False))
                 if loop_vars:
                     # loop_vars are part of the host-model interface call
                     # at run time. As such, they override the host-model

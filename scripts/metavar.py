@@ -695,7 +695,7 @@ class Var:
             call_str, dims = self.handle_array_ref()
         # end if
         if dims:
-            call_str = call_str + '('
+            call_str += '('
             dsep = ''
             for dim in dims:
                 if loop_vars:
@@ -736,7 +736,7 @@ class Var:
                     # end for
                 # end if
                 if lname is not None:
-                    call_str = call_str + dsep + lname
+                    call_str += dsep + lname
                     dsep = ', '
                 else:
                     errmsg = 'Unable to convert {} to local variables in {}{}'
@@ -744,7 +744,7 @@ class Var:
                     raise CCPPError(errmsg.format(dim, var_dict.name, ctx))
                 # end if
             # end for
-            call_str = call_str + ')'
+            call_str += ')'
         # end if
         return call_str
 
@@ -1001,7 +1001,7 @@ class Var:
         1
         """
 
-        active = self.get_prop_value('active') 
+        active = self.get_prop_value('active')
         conditional = ''
         vars_needed = []
 
@@ -1096,7 +1096,7 @@ class Var:
         elif intent is not None:
             alloval = self.get_prop_value('allocatable')
             if (intent.lower()[-3:] == 'out') and alloval:
-                intent_str = f"allocatable, intent({intent})"
+                intent_str = f"allocatable, intent({intent}){' '*(5 - len(intent))}"
             elif optional:
                 intent_str = f"intent({intent}),{' '*(5 - len(intent))}"
                 intent_str += 'target, optional '
@@ -1228,28 +1228,28 @@ class VarSpec:
 
     def __init__(self, var):
         """Initialize the common properties of this VarSpec-based object"""
-        self._name = var.get_prop_value('standard_name')
-        self._dims = var.get_dimensions()
-        if not self._dims:
-            self._dims = None
+        self.__name = var.get_prop_value('standard_name')
+        self.__dims = var.get_dimensions()
+        if not self.__dims:
+            self.__dims = None
         # end if
 
     @property
     def name(self):
         """Return the name of this VarSpec-based object"""
-        return self._name
+        return self.__name
 
     def get_dimensions(self):
         """Return the dimensions of this VarSpec-based object."""
-        rdims = self._dims
+        rdims = self.__dims
         return rdims
 
     def __repr__(self):
         """Return a representation of this object"""
-        if self._dims is not None:
-            repr_str = "{}({})".format(self._name, ', '.join(self._dims))
+        if self.__dims is not None:
+            repr_str = f"{self.__name}({', '.join(self.__dims)})"
         else:
-            repr_str = self._name
+            repr_str = self.__name
         # end if
         return repr_str
 
@@ -1931,7 +1931,7 @@ class VarDictionary(OrderedDict):
 
     def __str__(self):
         """Return a string that represents this dictionary object"""
-        return "VarDictionary({}, {})".format(self.name, list(self.keys()))
+        return f"VarDictionary({self.name}, {list(self.keys())})"
 
     def __repr__(self):
         """Return an unique representation for this object"""
@@ -1942,7 +1942,7 @@ class VarDictionary(OrderedDict):
         else:
             comma = ""
         # end if
-        return "VarDictionary({}{}{}".format(self.name, comma, srepr[vstart:])
+        return f"VarDictionary({self.name}{comma}{srepr[vstart:]}"
 
     def __del__(self):
         """Attempt to delete all of the variables in this dictionary"""
@@ -1982,7 +1982,7 @@ class VarDictionary(OrderedDict):
             for ssubst in std_subst:
                 svar = self.find_variable(standard_name=ssubst, any_scope=False)
                 if svar is not None:
-                    lnames.append(svar.get_prop_value('local_name'))
+                    lnames.append(svar.call_string(self))
                 else:
                     break
                 # end if
