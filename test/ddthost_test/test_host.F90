@@ -391,10 +391,11 @@ contains
         'number_of_model_times               ',                               &
         'surface_air_pressure                ' /)
 
-   character(len=cm), target :: test_outvars2(4) = (/                         &
+   character(len=cm), target :: test_outvars2(5) = (/                         &
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ',                               &
         'model_times                         ',                               &
+        'surface_air_pressure                ',                               &
         'number_of_model_times               ' /)
 
    character(len=cm), target :: test_reqvars2(5) = (/                         &
