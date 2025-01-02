@@ -65,7 +65,7 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
 _CCPP_FILES = _UTILITY_FILES + \
               [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
-_MODULE_LIST = ["effr_calc"]
+_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "effr_pre"]
 _SUITE_LIST = ["var_compatibility_suite"]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
@@ -82,8 +82,8 @@ _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "effective_radius_of_stratiform_cloud_liquid_water_particle",
                            "effective_radius_of_stratiform_cloud_snow_particle",
                            "cloud_ice_number_concentration",
-                           "scalar_variable_for_testing",
-                           "turbulent_kinetic_energy"]
+                           "effective_radius_of_stratiform_cloud_rain_particle",
+                           "scalar_variable_for_testing"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 
 def fields_string(field_type, field_list, sep):
@@ -103,14 +103,14 @@ def fields_string(field_type, field_list, sep):
     return fmsg
 
 def check_datatable(database, report_type, check_list,
-                    sep=',', excl_prot=False):
+                    sep=',', exclude_protected=False):
     """Run a database report and check the return string.
     If an error is found, print an error message.
     Return the number of errors"""
     if sep is None:
         sep = ','
     # end if
-    test_str = datatable_report(database, report_type, sep, excl_prot=excl_prot)
+    test_str = datatable_report(database, report_type, sep, exclude_protected=exclude_protected)
     test_list = [x for x in test_str.split(sep) if x]
     missing = list()
     unexpected = list()

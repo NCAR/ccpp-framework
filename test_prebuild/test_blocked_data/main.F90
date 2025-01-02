@@ -23,16 +23,21 @@ program test_blocked_data
    ! CCPP init step                                 !
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   ! For physics running over the entire domain, block and thread
-   ! number are not used; set to safe values
+   ! For physics running over the entire domain,
+   ! ccpp_thread_number and ccpp_chunk_number are
+   ! set to 1, indicating that arrays are to be sent
+   ! following their dimension specification in the
+   ! metadata (must match horizontal_dimension).
    ccpp_data_domain%blk_no = 1
    ccpp_data_domain%thrd_no = 1
+   ccpp_data_domain%thrd_cnt = 1
 
    ! Loop over all blocks and threads for ccpp_data_blocks
    do ib=1,nblks
       ! Assign the correct block numbers, only one thread
-      ccpp_data_blocks(ib)%blk_no = ib
-      ccpp_data_blocks(ib)%thrd_no = 1
+      ccpp_data_blocks(ib)%blk_no   = ib
+      ccpp_data_blocks(ib)%thrd_no  = 1
+      ccpp_data_blocks(ib)%thrd_cnt = 1
    end do
 
    do ib=1,size(blocked_data_instance)
@@ -85,7 +90,7 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_timestep_finalize(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_init:"
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_finalize:"
       write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if
@@ -97,7 +102,7 @@ program test_blocked_data
    cdata => ccpp_data_domain
    call ccpp_physics_finalize(cdata, suite_name=trim(ccpp_suite), ierr=ierr)
    if (ierr/=0) then
-      write(error_unit,'(a)') "An error occurred in ccpp_physics_timestep_init:"
+      write(error_unit,'(a)') "An error occurred in ccpp_physics_finalize:"
       write(error_unit,'(a)') trim(cdata%errmsg)
       stop 1
    end if

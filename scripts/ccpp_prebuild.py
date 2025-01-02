@@ -55,7 +55,7 @@ def parse_arguments():
     verbose = args.verbose
     debug = args.debug
     if args.suites:
-        sdfs = ['suite_{0}.xml'.format(x) for x in args.suites.split(',')]
+        sdfs = ['{0}.xml'.format(x) for x in args.suites.split(',')]
     else:
         sdfs = None
     builddir = args.builddir
@@ -181,8 +181,22 @@ def parse_suites(suites_dir, sdfs):
     logging.info('Parsing suite definition files ...')
     suites = []
     for sdf in sdfs:
-        logging.info('Parsing suite definition file {0} ...'.format(os.path.join(suites_dir, sdf)))
-        suite = Suite(sdf_name=os.path.join(suites_dir, sdf))
+        sdf_file=os.path.join(suites_dir, sdf)
+        if not os.path.exists(sdf_file):
+            # If suite file not found, check old filename convention (suite_[suitename].xml)
+            sdf_file_legacy=os.path.join(suites_dir, f"suite_{sdf}")
+            if os.path.exists(sdf_file_legacy):
+                logging.warning("Parsing suite definition file using legacy naming convention")
+                logging.warning(f"Filename {os.path.basename(sdf_file_legacy)}")
+                logging.warning(f"Suite name {sdf}")
+                sdf_file=sdf_file_legacy
+            else:
+                logging.critical(f"Suite definition file {sdf_file} not found.")
+                success = False
+                return (success, suites)
+
+        logging.info(f'Parsing suite definition file {sdf_file} ...')
+        suite = Suite(sdf_name=sdf_file)
         success = suite.parse()
         if not success:
             logging.error('Parsing suite definition file {0} failed.'.format(sdf))
@@ -476,9 +490,12 @@ def compare_metadata(metadata_define, metadata_request):
         if not metadata_define[var_name][0].active == 'T':
             for var in metadata_request[var_name]:
                 if var.optional == 'F':
-                    logging.error("Conditionally allocated host-model variable {0} is not optional in {1}".format(
+                    # DH 20241022 - change logging.error to logging.warn, because it is known
+                    # that this strict check is not correct and will be reverted soon
+                    #logging.error(
+                    logging.warn("Conditionally allocated host-model variable {0} is not optional in {1}".format(
                                   var_name, var.container))
-                    success = False
+                    #success = False
         # TEMPORARY CHECK - IF THE VARIABLE IS ALWAYS ALLOCATED, THE SCHEME VARIABLE SHOULDN'T BE OPTIONAL
         else:
             for var in metadata_request[var_name]:

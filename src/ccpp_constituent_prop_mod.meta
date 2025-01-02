@@ -1,4 +1,15 @@
 ########################################################################
+
+[ccpp-table-properties]
+  name = ccpp_constituent_properties_t
+  type = ddt
+
+[ccpp-arg-table]
+  name = ccpp_constituent_properties_t
+  type = ddt
+
+########################################################################
+
 [ccpp-table-properties]
   name = ccpp_constituent_prop_ptr_t
   type = ddt
@@ -32,6 +43,12 @@
   long_name = Array of constituents managed by CCPP Framework
   units = none
   state_variable = true
+  dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_ccpp_constituents)
+  type = real | kind = kind_phys
+[ vars_layer_tend ]
+  standard_name = ccpp_constituent_tendencies
+  long_name = Array of constituent tendencies managed by CCPP Framework
+  units = none
   dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_ccpp_constituents)
   type = real | kind = kind_phys
 [ const_metadata ]

@@ -8,17 +8,34 @@ MODULE temp_adjust
   IMPLICIT NONE
   PRIVATE
 
+  PUBLIC :: temp_adjust_register
   PUBLIC :: temp_adjust_init
   PUBLIC :: temp_adjust_run
   PUBLIC :: temp_adjust_finalize
 
+  logical :: module_level_config = .false.
+
 CONTAINS
+
+  !> \section arg_table_temp_adjust_register Argument Table
+  !! \htmlinclude arg_table_temp_adjust_register.hml
+  !!
+  subroutine temp_adjust_register(config_var, errmsg, errflg)
+      logical, intent(in) :: config_var
+      character(len=512),        intent(out)   :: errmsg
+      integer,                   intent(out)   :: errflg
+
+      module_level_config = config_var
+      errflg = 0
+      errmsg = ''
+
+  end subroutine temp_adjust_register
 
   !> \section arg_table_temp_adjust_run  Argument Table
   !! \htmlinclude arg_table_temp_adjust_run.html
   !!
   subroutine temp_adjust_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
-       errmsg, errflg, innie, outie, optsie)
+       to_promote, promote_pcnst, errmsg, errflg, innie, outie, optsie)
 
     integer,                   intent(in)    :: foo
     real(kind_phys),           intent(in)    :: timestep
@@ -26,8 +43,10 @@ CONTAINS
     real(kind_phys),           intent(inout) :: ps(:)
     REAL(kind_phys),           intent(in)    :: temp_prev(:)
     REAL(kind_phys),           intent(inout) :: temp_layer(foo)
+    real(kind_phys),           intent(in)    :: to_promote(:)
+    real(kind_phys),           intent(in)    :: promote_pcnst(:)
     character(len=512),        intent(out)   :: errmsg
-    integer,         optional, intent(out)   :: errflg
+    integer,                   intent(out)   :: errflg
     real(kind_phys), optional, intent(in)    :: innie
     real(kind_phys), optional, intent(out)   :: outie
     real(kind_phys), optional, intent(inout) :: optsie
@@ -36,8 +55,11 @@ CONTAINS
     integer :: col_index
 
     errmsg = ''
-    if (present(errflg)) then
-       errflg = 0
+    errflg = 0
+
+    if (.not. module_level_config) then
+       ! do nothing
+       return
     end if
 
     do col_index = 1, foo

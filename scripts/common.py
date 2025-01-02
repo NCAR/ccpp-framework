@@ -73,7 +73,7 @@ CCPP_STATIC_API_MODULE = 'ccpp_static_api'
 CCPP_STATIC_SUBROUTINE_NAME = 'ccpp_physics_{stage}'
 
 # Filename pattern for suite definition files
-SUITE_DEFINITION_FILENAME_PATTERN = re.compile('^suite_(.*)\.xml$')
+SUITE_DEFINITION_FILENAME_PATTERN = re.compile('^(.*)\.xml$')
 
 # Maximum number of concurrent CCPP instances per MPI task
 CCPP_NUM_INSTANCES = 200

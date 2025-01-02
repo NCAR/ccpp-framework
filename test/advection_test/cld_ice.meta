@@ -3,6 +3,31 @@
   name = cld_ice
   type = scheme
 [ccpp-arg-table]
+  name = cld_ice_register
+  type = scheme
+[ dyn_const_ice ]
+  standard_name = dynamic_constituents_for_cld_ice
+  units = none
+  dimensions = (:)
+  allocatable = True
+  type = ccpp_constituent_properties_t
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errcode ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
   name = cld_ice_run
   type = scheme
 [ ncol ]

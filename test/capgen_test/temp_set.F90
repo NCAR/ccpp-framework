@@ -19,7 +19,7 @@ CONTAINS
 !! \htmlinclude arg_table_temp_set_run.html
 !!
   SUBROUTINE temp_set_run(ncol, lev, timestep, temp_level, temp, ps,         &
-       errmsg, errflg)
+       to_promote, promote_pcnst, errmsg, errflg)
 !----------------------------------------------------------------
    IMPLICIT NONE
 !----------------------------------------------------------------
@@ -29,6 +29,8 @@ CONTAINS
    real(kind_phys),    intent(in)    :: timestep
    real(kind_phys),    intent(in)    :: ps(:)
    REAL(kind_phys),    INTENT(inout) :: temp_level(:, :)
+   real(kind_phys),    intent(out)   :: to_promote(:, :)
+   real(kind_phys),    intent(out)   :: promote_pcnst(:)
    character(len=512), intent(out)   :: errmsg
    integer,            intent(out)   :: errflg
 !----------------------------------------------------------------

@@ -94,13 +94,15 @@ class MetadataHeaderTestCase(unittest.TestCase):
                                      "temp_adjust.meta")]
         # Exercise
         scheme_headers, table_dict = parse_scheme_files(scheme_files,
-                                                        self._run_env)
+                                                        self._run_env,
+                                                        skip_ddt_check=True)
         # Verify size of returned list equals number of scheme headers
         #   in the test file and that header (subroutine) names are
-        #   'temp_adjust_[init,run,finalize]'
-        self.assertEqual(len(scheme_headers), 3)
+        #   'temp_adjust_[register,init,run,finalize]'
+        self.assertEqual(len(scheme_headers), 4)
         # Verify header titles
         titles = [elem.title for elem in scheme_headers]
+        self.assertTrue('temp_adjust_register' in titles)
         self.assertTrue('temp_adjust_init' in titles)
         self.assertTrue('temp_adjust_run' in titles)
         self.assertTrue('temp_adjust_finalize' in titles)

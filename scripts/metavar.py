@@ -229,7 +229,9 @@ class Var:
                                             optional_in=True, default_in=False),
                            VariableProperty('molar_mass', float,
                                             optional_in=True, default_in=0.0,
-                                            check_fn_in=check_molar_mass)]
+                                            check_fn_in=check_molar_mass),
+                           VariableProperty('constituent', bool,
+                                            optional_in=True, default_in=False)]
 
     __constituent_prop_dict = {x.name : x for x in __constituent_props}
 
@@ -372,7 +374,7 @@ class Var:
                                    context=self.context) from cperr
         # end try
 
-    def compatible(self, other, run_env):
+    def compatible(self, other, run_env, is_tend=False):
         """Return a VarCompatObj object which describes the equivalence,
         compatibility, or incompatibility between <self> and <other>.
         """
@@ -395,7 +397,7 @@ class Var:
         compat = VarCompatObj(sstd_name, stype, skind, sunits, sdims, sloc_name, stopp,
                               ostd_name, otype, okind, ounits, odims, oloc_name, otopp,
                               run_env,
-                              v1_context=self.context, v2_context=other.context)
+                              v1_context=self.context, v2_context=other.context, is_tend=is_tend)
         if (not compat) and (run_env.logger is not None):
             incompat_str = compat.incompat_reason
             if incompat_str is not None:
@@ -693,7 +695,7 @@ class Var:
             call_str, dims = self.handle_array_ref()
         # end if
         if dims:
-            call_str = call_str + '('
+            call_str += '('
             dsep = ''
             for dim in dims:
                 if loop_vars:
@@ -734,7 +736,7 @@ class Var:
                     # end for
                 # end if
                 if lname is not None:
-                    call_str = call_str + dsep + lname
+                    call_str += dsep + lname
                     dsep = ', '
                 else:
                     errmsg = 'Unable to convert {} to local variables in {}{}'
@@ -742,7 +744,7 @@ class Var:
                     raise CCPPError(errmsg.format(dim, var_dict.name, ctx))
                 # end if
             # end for
-            call_str = call_str + ')'
+            call_str += ')'
         # end if
         return call_str
 
@@ -999,7 +1001,7 @@ class Var:
         1
         """
 
-        active = self.get_prop_value('active') 
+        active = self.get_prop_value('active')
         conditional = ''
         vars_needed = []
 
@@ -1068,15 +1070,15 @@ class Var:
             intent = None
         # end if
         if protected and allocatable:
-            errmsg = 'Cannot create allocatable variable from protected, {}'
+            errmsg = "Cannot create allocatable variable from protected, {}"
             raise CCPPError(errmsg.format(name))
         # end if
         if dummy and (intent is None):
             if add_intent is not None:
                 intent = add_intent
             else:
-                errmsg = "<add_intent> is missing for dummy argument, {}"
-                raise CCPPError(errmsg.format(name))
+                errmsg = f"<add_intent> is missing for dummy argument, {name}"
+                raise CCPPError(errmsg)
             # end if
         # end if
         optional = self.get_prop_value('optional')
@@ -1094,7 +1096,7 @@ class Var:
         elif intent is not None:
             alloval = self.get_prop_value('allocatable')
             if (intent.lower()[-3:] == 'out') and alloval:
-                intent_str = f"allocatable, intent({intent})"
+                intent_str = f"allocatable, intent({intent}){' '*(5 - len(intent))}"
             elif optional:
                 intent_str = f"intent({intent}),{' '*(5 - len(intent))}"
                 intent_str += 'target, optional '
@@ -1226,28 +1228,28 @@ class VarSpec:
 
     def __init__(self, var):
         """Initialize the common properties of this VarSpec-based object"""
-        self._name = var.get_prop_value('standard_name')
-        self._dims = var.get_dimensions()
-        if not self._dims:
-            self._dims = None
+        self.__name = var.get_prop_value('standard_name')
+        self.__dims = var.get_dimensions()
+        if not self.__dims:
+            self.__dims = None
         # end if
 
     @property
     def name(self):
         """Return the name of this VarSpec-based object"""
-        return self._name
+        return self.__name
 
     def get_dimensions(self):
         """Return the dimensions of this VarSpec-based object."""
-        rdims = self._dims
+        rdims = self.__dims
         return rdims
 
     def __repr__(self):
         """Return a representation of this object"""
-        if self._dims is not None:
-            repr_str = "{}({})".format(self._name, ', '.join(self._dims))
+        if self.__dims is not None:
+            repr_str = f"{self.__name}({', '.join(self.__dims)})"
         else:
-            repr_str = self._name
+            repr_str = self.__name
         # end if
         return repr_str
 
@@ -1502,12 +1504,18 @@ class VarDictionary(OrderedDict):
     VarDictionary(foo)
     >>> VarDictionary('bar', _MVAR_DUMMY_RUN_ENV, variables={})
     VarDictionary(bar)
-    >>> VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)) #doctest: +ELLIPSIS
-    VarDictionary(baz, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
+    >>> test_dict = VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV))
+    >>> print(test_dict.name)
+    baz
+    >>> print(test_dict.variable_list()) #doctest: +ELLIPSIS
+    [<metavar.Var hi_mom: foo at 0x...>]
     >>> print("{}".format(VarDictionary('baz', _MVAR_DUMMY_RUN_ENV, variables=Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV))))
     VarDictionary(baz, ['hi_mom'])
-    >>> VarDictionary('qux', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]) #doctest: +ELLIPSIS
-    VarDictionary(qux, [('hi_mom', <metavar.Var hi_mom: foo at 0x...>)])
+    >>> test_dict = VarDictionary('qux', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)])
+    >>> print(test_dict.name)
+    qux
+    >>> print(test_dict.variable_list()) #doctest: +ELLIPSIS
+    [<metavar.Var hi_mom: foo at 0x...>]
     >>> VarDictionary('boo', _MVAR_DUMMY_RUN_ENV).add_variable(Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV), _MVAR_DUMMY_RUN_ENV)
 
     >>> VarDictionary('who', _MVAR_DUMMY_RUN_ENV, variables=[Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '()', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'scheme', ParseContext()), _MVAR_DUMMY_RUN_ENV)]).prop_list('local_name')
@@ -1626,7 +1634,7 @@ class VarDictionary(OrderedDict):
         # end if
         if cvar is not None:
             compat = cvar.compatible(newvar, run_env)
-            if compat:
+            if compat.compat:
                 # Check for intent mismatch
                 vintent = cvar.get_prop_value('intent')
                 dintent = newvar.get_prop_value('intent')
@@ -1923,7 +1931,7 @@ class VarDictionary(OrderedDict):
 
     def __str__(self):
         """Return a string that represents this dictionary object"""
-        return "VarDictionary({}, {})".format(self.name, list(self.keys()))
+        return f"VarDictionary({self.name}, {list(self.keys())})"
 
     def __repr__(self):
         """Return an unique representation for this object"""
@@ -1934,7 +1942,7 @@ class VarDictionary(OrderedDict):
         else:
             comma = ""
         # end if
-        return "VarDictionary({}{}{}".format(self.name, comma, srepr[vstart:])
+        return f"VarDictionary({self.name}{comma}{srepr[vstart:]}"
 
     def __del__(self):
         """Attempt to delete all of the variables in this dictionary"""
@@ -1974,7 +1982,7 @@ class VarDictionary(OrderedDict):
             for ssubst in std_subst:
                 svar = self.find_variable(standard_name=ssubst, any_scope=False)
                 if svar is not None:
-                    lnames.append(svar.get_prop_value('local_name'))
+                    lnames.append(svar.call_string(self))
                 else:
                     break
                 # end if

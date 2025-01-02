@@ -367,6 +367,7 @@ CONTAINS
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_ice_particle         ',         &
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
+        'effective_radius_of_stratiform_cloud_rain_particle        ',         &
         'effective_radius_of_stratiform_cloud_snow_particle        ',         &
         'cloud_ice_number_concentration                            ',         &
         'scalar_variable_for_testing                               ',         &

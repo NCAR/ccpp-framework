@@ -23,6 +23,7 @@ from parse_tools import read_xml_file, validate_xml_file, find_schema_version
 from parse_tools import init_log, set_log_to_null
 from suite_objects import CallList, Group, Scheme
 from metavar import CCPP_LOOP_VAR_STDNAMES
+from var_props import is_horizontal_dimension
 
 # pylint: disable=too-many-lines
 
@@ -69,6 +70,8 @@ character(len=16) :: {css_var_name} = '{state}'
 '''
 
     # Note that these group names need to match CCPP_STATE_MACH
+    __register_group_name = 'register'
+
     __initial_group_name = 'initialize'
 
     __final_group_name = 'finalize'
@@ -204,6 +207,8 @@ character(len=16) :: {css_var_name} = '{state}'
         if run_env.logger and run_env.logger.isEnabledFor(logging.INFO):
             run_env.logger.info(lmsg.format(self.name))
         # end if
+        gname = Suite.__register_group_name
+        self.__suite_reg_group = self.new_group_from_name(gname, run_env)
         gname = Suite.__initial_group_name
         self.__suite_init_group = self.new_group_from_name(gname, run_env)
         gname = Suite.__final_group_name
@@ -213,11 +218,13 @@ character(len=16) :: {css_var_name} = '{state}'
         gname = Suite.__timestep_final_group_name
         self.__timestep_final_group = self.new_group_from_name(gname, run_env)
         # Set up some groupings for later efficiency
-        self._beg_groups = [self.__suite_init_group.name,
+        self._beg_groups = [self.__suite_reg_group.name,
+                            self.__suite_init_group.name,
                             self.__timestep_init_group.name]
         self._end_groups = [self.__suite_final_group.name,
                             self.__timestep_final_group.name]
         # Build hierarchical structure as in SDF
+        self.__groups.append(self.__suite_reg_group)
         self.__groups.append(self.__suite_init_group)
         self.__groups.append(self.__timestep_init_group)
         for suite_item in suite_xml:
@@ -308,6 +315,32 @@ character(len=16) :: {css_var_name} = '{state}'
                     self.add_variable(var, self.__run_env)
                     # Remove the variable from the group
                     group.remove_variable(standard_name)
+                    # Make sure the variable's dimensions are available
+                    # at the init stage (for allocation)
+                    for group in self.groups:
+                        # only add dimension variables to init phase calling list
+                        if group.name == self.__suite_init_group.name:
+                            dims = var.get_dimensions()
+                            # replace horizontal loop dimension if necessary
+                            for idx, dim in enumerate(dims):
+                                if is_horizontal_dimension(dim):
+                                    if 'horizontal_loop' in dim:
+                                        dims[idx] = 'ccpp_constant_one:horizontal_dimension'
+                                    # end if
+                                # end if
+                            # end for
+                            subst_dict = {'dimensions': dims}
+                            prop_dict = var.copy_prop_dict(subst_dict=subst_dict)
+                            temp_var = Var(prop_dict,
+                                           ParseSource(var.get_prop_value('scheme'),
+                                           var.get_prop_value('local_name'), var.context),
+                                           self.__run_env)
+                            # Add dimensions if they're not already there
+                            group.add_variable_dimensions(temp_var, [],
+                                                          adjust_intent=True,
+                                                          to_dict=group.call_list)
+                        # end if
+                    # end for
                 else:
                     emsg = ("Group, {}, claimed it had created {} "
                             "but variable was not found")
@@ -533,8 +566,13 @@ character(len=16) :: {css_var_name} = '{state}'
             outfile.end_module_header()
             for group in self.__groups:
                 if group.name in self._beg_groups:
-                    group.write(outfile, self.__host_arg_list_noloop,
-                                1, const_mod, suite_vars=self, allocate=True)
+                    if group.name == self.__suite_reg_group.name:
+                        group.write(outfile, self.__host_arg_list_noloop,
+                                    1, const_mod, suite_vars=self)
+                    else:
+                        group.write(outfile, self.__host_arg_list_noloop,
+                                    1, const_mod, suite_vars=self, allocate=True)
+                    # end if
                 elif group.name in self._end_groups:
                     group.write(outfile, self.__host_arg_list_noloop,
                                 1, const_mod, suite_vars=self, deallocate=True)
@@ -609,9 +647,15 @@ class API(VarDictionary):
         # Secondary level is by phase
         scheme_library = {}
         # First, process DDT headers
+        all_ddts = [d for d in scheme_headers if d.header_type == 'ddt']
+        ddt_titles = [d.title for d in all_ddts]
+        for ddt_title in self.host_model.ddt_lib:
+            if ddt_title not in ddt_titles:
+                all_ddts.append(self.host_model.ddt_lib[ddt_title])
+            # end if
+        # end for
         self.__ddt_lib = DDTLibrary('{}_api'.format(self.host_model.name),
-                                    run_env, ddts=[d for d in scheme_headers
-                                                   if d.header_type == 'ddt'])
+                                    run_env, ddts=all_ddts)
         for header in [d for d in scheme_headers if d.header_type != 'ddt']:
             if header.header_type != 'scheme':
                 errmsg = "{} is an unknown CCPP API metadata header type, {}"
@@ -639,15 +683,14 @@ class API(VarDictionary):
         # end for
         # We will need the correct names for errmsg and errcode
         evar = self.host_model.find_variable(standard_name='ccpp_error_message')
-        subst_dict = {'intent':'out'}
         if evar is not None:
-            self._errmsg_var = evar.clone(subst_dict)
+            self._errmsg_var = evar
         else:
             raise CCPPError('Required variable, ccpp_error_message, not found')
         # end if
         evar = self.host_model.find_variable(standard_name='ccpp_error_code')
         if evar is not None:
-            self._errcode_var = evar.clone(subst_dict)
+            self._errcode_var = evar
         else:
             raise CCPPError('Required variable, ccpp_error_code, not found')
         # end if
@@ -699,15 +742,25 @@ class API(VarDictionary):
     @classmethod
     def declare_inspection_interfaces(cls, ofile):
         """Declare the API interfaces for the suite inquiry functions"""
-        ofile.write("public :: {}".format(API.__suite_fname), 1)
-        ofile.write("public :: {}".format(API.__part_fname), 1)
-        ofile.write("public :: {}".format(API.__vars_fname), 1)
-        ofile.write("public :: {}".format(API.__schemes_fname), 1)
+        ofile.write(f"public :: {API.__suite_fname}", 1)
+        ofile.write(f"public :: {API.__part_fname}", 1)
+        ofile.write(f"public :: {API.__vars_fname}", 1)
+        ofile.write(f"public :: {API.__schemes_fname}", 1)
 
-    def get_errinfo_names(self):
-        """Return a tuple of error output local names"""
-        errmsg_name = self._errmsg_var.get_prop_value('local_name')
-        errcode_name = self._errcode_var.get_prop_value('local_name')
+    def get_errinfo_names(self, base_only=False):
+        """Return a tuple of error output local names.
+        If base_only==True, return only the name string of the variable.
+        If base_only=False, return the local name as a full reference.
+        If the error variables are intrinsic variables, this makes no
+        difference, however, for a DDT variable, the full reference is
+        <ddt_name>%<errvar_name> while the local name is just <errvar_name>."""
+        if base_only:
+            errmsg_name = self._errmsg_var.get_prop_value('local_name')
+            errcode_name = self._errcode_var.get_prop_value('local_name')
+        else:
+            errmsg_name = self._errmsg_var.call_string(self)
+            errcode_name = self._errcode_var.call_string(self)
+        # end if
         return (errmsg_name, errcode_name)
 
     @staticmethod
@@ -718,29 +771,29 @@ class API(VarDictionary):
         beginning at <start_index>.
         """
         if add_allocate:
-            ofile.write("allocate({}({}))".format(varlist_name, len(var_list)),
-                        indent)
+            ofile.write(f"allocate({varlist_name}({len(var_list)}))", indent)
         # end if
-        for ind, var in enumerate(var_list):
+        for ind, var in enumerate(sorted(var_list)):
             if start_var:
-                ind_str = "{} + {}".format(start_var, ind + start_index)
+                ind_str = f"{start_var} + {ind + start_index}"
             else:
-                ind_str = "{}".format(ind + start_index)
+                ind_str = f"{ind + start_index}"
             # end if
-            ofile.write("{}({}) = '{}'".format(varlist_name, ind_str, var),
-                        indent)
+            ofile.write(f"{varlist_name}({ind_str}) = '{var}'", indent)
         # end for
 
     def write_suite_part_list_sub(self, ofile, errmsg_name, errcode_name):
         """Write the suite-part list subroutine"""
         inargs = f"suite_name, part_list, {errmsg_name}, {errcode_name}"
         ofile.write(f"subroutine {API.__part_fname}({inargs})", 1)
-        oline = "character(len=*),              intent(in)  :: suite_name"
+        oline = "character(len=*),              intent(in)    :: suite_name"
         ofile.write(oline, 2)
-        oline = "character(len=*), allocatable, intent(out) :: part_list(:)"
+        oline = "character(len=*), allocatable, intent(out)   :: part_list(:)"
         ofile.write(oline, 2)
-        self._errmsg_var.write_def(ofile, 2, self)
-        self._errcode_var.write_def(ofile, 2, self)
+        self._errmsg_var.write_def(ofile, 2, self, dummy=True, add_intent="out",
+                                   extra_space=11)
+        self._errcode_var.write_def(ofile, 2, self, dummy=True, add_intent="out",
+                                    extra_space=11)
         else_str = ''
         ename = self._errcode_var.get_prop_value('local_name')
         ofile.write(f"{ename} = 0", 2)
@@ -767,17 +820,19 @@ class API(VarDictionary):
         inargs = oline.format(errmsg=errmsg_name, errcode=errcode_name)
         ofile.write("\nsubroutine {}({})".format(API.__vars_fname, inargs), 1)
         ofile.write("! Dummy arguments", 2)
-        oline = "character(len=*),              intent(in)  :: suite_name"
+        oline = "character(len=*),              intent(in)    :: suite_name"
         ofile.write(oline, 2)
-        oline = "character(len=*), allocatable, intent(out) :: variable_list(:)"
+        oline = "character(len=*), allocatable, intent(out)   :: variable_list(:)"
         ofile.write(oline, 2)
-        self._errmsg_var.write_def(ofile, 2, self, extra_space=22)
-        self._errcode_var.write_def(ofile, 2, self, extra_space=22)
-        oline = "logical, optional,             intent(in) :: input_vars"
+        self._errmsg_var.write_def(ofile, 2, self, dummy=True,
+                                   add_intent="out", extra_space=11)
+        self._errcode_var.write_def(ofile, 2, self, dummy=True,
+                                    add_intent="out", extra_space=11)
+        oline = "logical, optional,             intent(in)    :: input_vars"
         ofile.write(oline, 2)
-        oline = "logical, optional,             intent(in) :: output_vars"
+        oline = "logical, optional,             intent(in)    :: output_vars"
         ofile.write(oline, 2)
-        oline = "logical, optional,             intent(in) :: struct_elements"
+        oline = "logical, optional,             intent(in)    :: struct_elements"
         ofile.write(oline, 2)
         ofile.write("! Local variables", 2)
         ofile.write("logical {}:: input_vars_use".format(' '*34), 2)
@@ -1082,12 +1137,14 @@ class API(VarDictionary):
         inargs = oline.format(errmsg=errmsg_name, errcode=errcode_name)
         ofile.write("\nsubroutine {}({})".format(API.__schemes_fname,
                                                  inargs), 1)
-        oline = "character(len=*),              intent(in)  :: suite_name"
+        oline = "character(len=*),              intent(in)    :: suite_name"
         ofile.write(oline, 2)
-        oline = "character(len=*), allocatable, intent(out) :: scheme_list(:)"
+        oline = "character(len=*), allocatable, intent(out)   :: scheme_list(:)"
         ofile.write(oline, 2)
-        self._errmsg_var.write_def(ofile, 2, self)
-        self._errcode_var.write_def(ofile, 2, self)
+        self._errmsg_var.write_def(ofile, 2, self, dummy=True,
+                                   add_intent="out", extra_space=11)
+        self._errcode_var.write_def(ofile, 2, self, dummy=True,
+                                    add_intent="out", extra_space=11)
         else_str = ''
         ename = self._errcode_var.get_prop_value('local_name')
         ofile.write("{} = 0".format(ename), 2)
@@ -1115,16 +1172,17 @@ class API(VarDictionary):
 
     def write_inspection_routines(self, ofile):
         """Write the list_suites and list_suite_parts subroutines"""
-        errmsg_name, errcode_name = self.get_errinfo_names()
+        errmsg_name, errcode_name = self.get_errinfo_names(base_only=True)
         ofile.write("subroutine {}(suites)".format(API.__suite_fname), 1)
         nsuites = len(self.suites)
-        oline = "character(len=*), allocatable, intent(out) :: suites(:)"
+        oline = "character(len=*), allocatable, intent(out)   :: suites(:)"
         ofile.write(oline, 2)
         ofile.write("\nallocate(suites({}))".format(nsuites), 2)
         for ind, suite in enumerate(self.suites):
             ofile.write("suites({}) = '{}'".format(ind+1, suite.name), 2)
         # end for
         ofile.write("end subroutine {}".format(API.__suite_fname), 1)
+        ofile.blank_line()
         # Write out the suite part list subroutine
         self.write_suite_part_list_sub(ofile, errmsg_name, errcode_name)
         # Write out the suite required variable subroutine

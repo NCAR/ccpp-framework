@@ -26,6 +26,9 @@ module ccpp_constituent_prop_mod
    integer,         parameter :: int_unassigned = -HUGE(1)
    real(kind_phys), parameter :: kphys_unassigned = HUGE(1.0_kind_phys)
 
+!! \section arg_table_ccpp_constituent_properties_t
+!! \htmlinclude ccpp_constituent_properties_t.html
+!!
    type, public, extends(ccpp_hashable_char_t) :: ccpp_constituent_properties_t
       ! A ccpp_constituent_properties_t object holds relevant metadata
       !   for a constituent species and provides interfaces to access that data.
@@ -36,6 +39,7 @@ module ccpp_constituent_prop_mod
       integer,          private              :: const_ind = int_unassigned
       logical,          private              :: advected = .false.
       logical,          private              :: thermo_active = .false.
+      logical,          private              :: water_species = .false.
       ! While the quantities below can be derived from the standard name,
       !    this implementation avoids string searching in parameterizations
       ! const_type distinguishes mass, volume, and number conc. mixing ratios
@@ -44,8 +48,8 @@ module ccpp_constituent_prop_mod
       integer,          private              :: const_water = int_unassigned
       ! minimum_mr is the minimum allowed value (default zero)
       real(kind_phys),  private              :: min_val = 0.0_kind_phys
-      ! molar_mass is the molecular weight of the constituent (g mol-1)
-      real(kind_phys),  private              :: molar_mass = kphys_unassigned
+      ! molar_mass_val is the molar mass of the constituent (kg mol-1)
+      real(kind_phys),  private              :: molar_mass_val = kphys_unassigned
       ! default_value is the default value that the constituent array will be
       ! initialized to
       real(kind_phys),  private              :: const_default_value = kphys_unassigned
@@ -56,6 +60,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_instantiated           => ccp_is_instantiated
       procedure :: standard_name             => ccp_get_standard_name
       procedure :: long_name                 => ccp_get_long_name
+      procedure :: units                     => ccp_get_units
       procedure :: is_layer_var              => ccp_is_layer_var
       procedure :: is_interface_var          => ccp_is_interface_var
       procedure :: is_2d_var                 => ccp_is_2d_var
@@ -63,6 +68,7 @@ module ccpp_constituent_prop_mod
       procedure :: const_index               => ccp_const_index
       procedure :: is_advected               => ccp_is_advected
       procedure :: is_thermo_active          => ccp_is_thermo_active
+      procedure :: is_water_species          => ccp_is_water_species
       procedure :: equivalent                => ccp_is_equivalent
       procedure :: is_mass_mixing_ratio      => ccp_is_mass_mixing_ratio
       procedure :: is_volume_mixing_ratio    => ccp_is_volume_mixing_ratio
@@ -71,9 +77,10 @@ module ccpp_constituent_prop_mod
       procedure :: is_moist                  => ccp_is_moist
       procedure :: is_wet                    => ccp_is_wet
       procedure :: minimum                   => ccp_min_val
-      procedure :: molec_weight              => ccp_molec_weight
+      procedure :: molar_mass                => ccp_molar_mass
       procedure :: default_value             => ccp_default_value
       procedure :: has_default               => ccp_has_default
+      procedure :: is_match                  => ccp_is_match
       ! Copy method (be sure to update this anytime fields are added)
       procedure :: copyConstituent
       generic :: assignment(=) => copyConstituent
@@ -82,6 +89,9 @@ module ccpp_constituent_prop_mod
       procedure :: deallocate        => ccp_deallocate
       procedure :: set_const_index   => ccp_set_const_index
       procedure :: set_thermo_active => ccp_set_thermo_active
+      procedure :: set_water_species => ccp_set_water_species
+      procedure :: set_minimum       => ccp_set_min_val
+      procedure :: set_molar_mass    => ccp_set_molar_mass
    end type ccpp_constituent_properties_t
 
 !! \section arg_table_ccpp_constituent_prop_ptr_t
@@ -93,6 +103,7 @@ module ccpp_constituent_prop_mod
       ! Informational methods
       procedure :: standard_name             => ccpt_get_standard_name
       procedure :: long_name                 => ccpt_get_long_name
+      procedure :: units                     => ccpt_get_units
       procedure :: is_layer_var              => ccpt_is_layer_var
       procedure :: is_interface_var          => ccpt_is_interface_var
       procedure :: is_2d_var                 => ccpt_is_2d_var
@@ -100,6 +111,7 @@ module ccpp_constituent_prop_mod
       procedure :: const_index               => ccpt_const_index
       procedure :: is_advected               => ccpt_is_advected
       procedure :: is_thermo_active          => ccpt_is_thermo_active
+      procedure :: is_water_species          => ccpt_is_water_species
       procedure :: is_mass_mixing_ratio      => ccpt_is_mass_mixing_ratio
       procedure :: is_volume_mixing_ratio    => ccpt_is_volume_mixing_ratio
       procedure :: is_number_concentration   => ccpt_is_number_concentration
@@ -107,7 +119,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_moist                  => ccpt_is_moist
       procedure :: is_wet                    => ccpt_is_wet
       procedure :: minimum                   => ccpt_min_val
-      procedure :: molec_weight              => ccpt_molec_weight
+      procedure :: molar_mass                => ccpt_molar_mass
       procedure :: default_value             => ccpt_default_value
       procedure :: has_default               => ccpt_has_default
       ! ccpt_set: Set the internal pointer
@@ -116,6 +128,9 @@ module ccpp_constituent_prop_mod
       procedure :: deallocate        => ccpt_deallocate
       procedure :: set_const_index   => ccpt_set_const_index
       procedure :: set_thermo_active => ccpt_set_thermo_active
+      procedure :: set_water_species => ccpt_set_water_species
+      procedure :: set_minimum       => ccpt_set_min_val
+      procedure :: set_molar_mass    => ccpt_set_molar_mass
    end type ccpp_constituent_prop_ptr_t
 
 !! \section arg_table_ccpp_model_constituents_t
@@ -136,6 +151,7 @@ module ccpp_constituent_prop_mod
       ! These fields are public to allow for efficient (i.e., no copying)
       !   usage even though it breaks object independence
       real(kind_phys), allocatable     :: vars_layer(:,:,:)
+      real(kind_phys), allocatable     :: vars_layer_tend(:,:,:)
       real(kind_phys), allocatable     :: vars_minvalue(:)
       ! An array containing all the constituent metadata
       ! Each element contains a pointer to a constituent from the hash table
@@ -201,15 +217,20 @@ CONTAINS
       class(ccpp_constituent_properties_t), intent(inout) :: outConst
       type(ccpp_constituent_properties_t),  intent(in)    :: inConst
 
-      outConst%var_std_name = inConst%var_std_name
-      outConst%var_long_name = inConst%var_long_name
-      outConst%vert_dim = inConst%vert_dim
-      outConst%const_ind = inConst%const_ind
-      outConst%advected = inConst%advected
-      outConst%const_type = inConst%const_type
-      outConst%const_water = inConst%const_water
-      outConst%min_val = inConst%min_val
+      outConst%var_std_name        = inConst%var_std_name
+      outConst%var_long_name       = inConst%var_long_name
+      outConst%vert_dim            = inConst%vert_dim
+      outConst%const_ind           = inConst%const_ind
+      outConst%advected            = inConst%advected
+      outConst%const_type          = inConst%const_type
+      outConst%const_water         = inConst%const_water
+      outConst%min_val             = inConst%min_val
       outConst%const_default_value = inConst%const_default_value
+      outConst%molar_mass_val      = inConst%molar_mass_val
+      outConst%thermo_active       = inConst%thermo_active
+      outConst%water_species       = inConst%water_species
+      outConst%var_units           = inConst%var_units
+      outConst%const_water         = inConst%const_water
    end subroutine copyConstituent
 
    !#######################################################################
@@ -353,7 +374,8 @@ CONTAINS
    !#######################################################################
 
    subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, default_value, errcode, errmsg)
+        advected, default_value, min_value, molar_mass, water_species,         &
+        mixing_ratio_type, errcode, errmsg)
       ! Initialize all fields in <this>
 
       ! Dummy arguments
@@ -364,6 +386,10 @@ CONTAINS
       character(len=*),                     intent(in)    :: vertical_dim
       logical, optional,                    intent(in)    :: advected
       real(kind_phys), optional,            intent(in)    :: default_value
+      real(kind_phys), optional,            intent(in)    :: min_value
+      real(kind_phys), optional,            intent(in)    :: molar_mass
+      logical, optional,                    intent(in)    :: water_species
+      character(len=*), optional,           intent(in)    :: mixing_ratio_type
       integer,                              intent(out)   :: errcode
       character(len=*),                     intent(out)   :: errmsg
 
@@ -388,7 +414,17 @@ CONTAINS
          if (present(default_value)) then
             this%const_default_value = default_value
          end if
-         ! Determine if this is a (moist) mixing ratio or volume mixing ratio
+         if (present(min_value)) then
+            this%min_val = min_value
+         end if
+         if (present(molar_mass)) then
+            this%molar_mass_val = molar_mass
+         end if
+         if (present(water_species)) then
+            this%water_species = water_species
+         end if
+      end if
+      if (errcode == 0) then
          if (index(this%var_std_name, "volume_mixing_ratio") > 0) then
             this%const_type = volume_mixing_ratio
          else if (index(this%var_std_name, "number_concentration") > 0) then
@@ -396,15 +432,32 @@ CONTAINS
          else
             this%const_type = mass_mixing_ratio
          end if
+      end if
+      if (errcode == 0) then
          ! Determine if this mixing ratio is dry, moist, or "wet".
-         if (index(this%var_std_name, "wrt_moist_air") > 0) then
-            this%const_water = moist_mixing_ratio
-         else if (this%var_std_name == "specific_humidity") then
-            this%const_water = moist_mixing_ratio
-         else if (this%var_std_name == "wrt_total_mass") then
-            this%const_water = wet_mixing_ratio
+         ! If a type was provided, use that (if it's valid)
+         if (present(mixing_ratio_type)) then
+            if (trim(mixing_ratio_type) == 'wet') then
+               this%const_water = wet_mixing_ratio
+            else if (trim(mixing_ratio_type) == 'moist') then
+               this%const_water = moist_mixing_ratio
+            else if (trim(mixing_ratio_type) == 'dry') then
+               this%const_water = dry_mixing_ratio
+            else
+               errcode = 1
+               write(errmsg, *) 'ccp_instantiate: invalid mixing ratio type. ', &
+                  'Must be one of: "wet", "moist", or "dry". Got: "', &
+                  trim(mixing_ratio_type), '"'
+            end if
          else
-            this%const_water = dry_mixing_ratio
+            ! Otherwise, parse it from the standard name
+            if (index(this%var_std_name, "wrt_moist_air_and_condensed_water") > 0) then
+               this%const_water = wet_mixing_ratio
+            else if (index(this%var_std_name, "wrt_moist_air") > 0) then
+               this%const_water = moist_mixing_ratio
+            else
+               this%const_water = dry_mixing_ratio
+            end if
          end if
       end if
       if (errcode /= 0) then
@@ -474,6 +527,25 @@ CONTAINS
       end if
 
    end subroutine ccp_get_long_name
+
+   !#######################################################################
+
+   subroutine ccp_get_units(this, units, errcode, errmsg)
+      ! Return this constituent's units
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      character(len=*),                     intent(out) :: units
+      integer,          optional,           intent(out) :: errcode
+      character(len=*), optional,           intent(out) :: errmsg
+
+      if (this%is_instantiated(errcode, errmsg)) then
+         units = this%var_units
+      else
+         units = ''
+      end if
+
+   end subroutine ccp_get_units
 
    !#######################################################################
 
@@ -603,6 +675,26 @@ CONTAINS
 
    !#######################################################################
 
+   subroutine ccp_set_water_species(this, water_flag, errcode, errmsg)
+      ! Set whether this constituent is a water species, which means
+      ! that this constituent represents a particular phase or type
+      ! of water in the atmosphere.
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      logical,                              intent(in)    :: water_flag
+      integer,          optional,           intent(out)   :: errcode
+      character(len=*), optional,           intent(out)   :: errmsg
+
+      !Set water species flag for this constituent:
+      if (this%is_instantiated(errcode, errmsg)) then
+         this%water_species = water_flag
+      end if
+
+   end subroutine ccp_set_water_species
+
+   !#######################################################################
+
    subroutine ccp_is_thermo_active(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
@@ -619,6 +711,25 @@ CONTAINS
          val_out = .false.
       end if
    end subroutine ccp_is_thermo_active
+
+   !#######################################################################
+
+   subroutine ccp_is_water_species(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      logical,                              intent(out) :: val_out
+      integer,          optional,           intent(out) :: errcode
+      character(len=*), optional,           intent(out) :: errmsg
+
+      !If instantiated then check if constituent is
+      !a water species, otherwise return false:
+      if (this%is_instantiated(errcode, errmsg)) then
+         val_out = this%water_species
+      else
+         val_out = .false.
+      end if
+   end subroutine ccp_is_water_species
 
    !#######################################################################
 
@@ -648,14 +759,19 @@ CONTAINS
       integer,          optional,           intent(out) :: errcode
       character(len=*), optional,           intent(out) :: errmsg
 
-      if (this%is_instantiated(errcode, errmsg) .and.                          &
+      if (this%is_instantiated(errcode, errmsg) .and.                         &
            oconst%is_instantiated(errcode, errmsg)) then
          equiv = (trim(this%var_std_name) == trim(oconst%var_std_name)) .and. &
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
+              (trim(this%var_units) == trim(oconst%var_units))          .and. &
               (this%advected .eqv. oconst%advected)                     .and. &
               (this%const_default_value == oconst%const_default_value)  .and. &
-              (this%thermo_active .eqv. oconst%thermo_active)
+              (this%min_val == oconst%min_val)                          .and. &
+              (this%molar_mass_val == oconst%molar_mass_val)            .and. &
+              (this%thermo_active .eqv. oconst%thermo_active)           .and. &
+              (this%const_water == oconst%const_water)                  .and. &
+              (this%water_species .eqv. oconst%water_species)
       else
          equiv = .false.
       end if
@@ -787,7 +903,27 @@ CONTAINS
 
    !########################################################################
 
-   subroutine ccp_molec_weight(this, val_out, errcode, errmsg)
+   subroutine ccp_set_min_val(this, min_value, errcode, errmsg)
+      ! Set the minimum value of this particular constituent.
+      ! If this subroutine is never used then the minimum
+      ! value defaults to zero.
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      real(kind_phys),                      intent(in)    :: min_value
+      integer,          optional,           intent(out)   :: errcode
+      character(len=*), optional,           intent(out)   :: errmsg
+
+      !Set minimum allowed value for this constituent:
+      if (this%is_instantiated(errcode, errmsg)) then
+         this%min_val = min_value
+      end if
+
+   end subroutine ccp_set_min_val
+
+   !########################################################################
+
+   subroutine ccp_molar_mass(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
       class(ccpp_constituent_properties_t), intent(in)  :: this
@@ -796,12 +932,28 @@ CONTAINS
       character(len=*),                     intent(out) :: errmsg
 
       if (this%is_instantiated(errcode, errmsg)) then
-         val_out = this%molar_mass
+         val_out = this%molar_mass_val
       else
          val_out = kphys_unassigned
       end if
 
-   end subroutine ccp_molec_weight
+   end subroutine ccp_molar_mass
+
+   !########################################################################
+
+   subroutine ccp_set_molar_mass(this, molar_mass, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(inout) :: this
+      real(kind_phys),                      intent(in)    :: molar_mass
+      integer,                              intent(out)   :: errcode
+      character(len=*),                     intent(out)   :: errmsg
+
+      if (this%is_instantiated(errcode, errmsg)) then
+          this%molar_mass_val = molar_mass
+      end if
+
+   end subroutine ccp_set_molar_mass
 
    !########################################################################
 
@@ -840,6 +992,55 @@ CONTAINS
       end if
 
    end subroutine ccp_has_default
+
+   !########################################################################
+
+   logical function ccp_is_match(this, comp_props) result(is_match)
+      ! Return .true. iff the constituent's properties match the checked
+      ! attributes of another constituent properties object
+      ! Since this is a private function, error checking for locked status
+      !    is *not* performed.
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in) :: this
+      type(ccpp_constituent_properties_t),  intent(in) :: comp_props
+      ! Local variable
+      logical :: val, comp_val
+      character(len=stdname_len) :: char_val, char_comp_val
+      logical :: check
+
+      ! By default, every constituent is a match
+      is_match = .true.
+      ! Check: advected, thermo_active, water_species, units
+      call this%is_advected(val)
+      call comp_props%is_advected(comp_val)
+      if (val .neqv. comp_val) then
+         is_match = .false.
+         return
+      end if
+
+      call this%is_thermo_active(val)
+      call comp_props%is_thermo_active(comp_val)
+      if (val .neqv. comp_val) then
+         is_match = .false.
+         return
+      end if
+
+      call this%is_water_species(val)
+      call comp_props%is_water_species(comp_val)
+      if (val .neqv. comp_val) then
+         is_match = .false.
+         return
+      end if
+
+      call this%units(char_val)
+      call comp_props%units(char_comp_val)
+      if (trim(char_val) /= trim(char_comp_val)) then
+         is_match = .false.
+         return
+      end if
+
+   end function ccp_is_match
 
    !########################################################################
    !
@@ -989,13 +1190,33 @@ CONTAINS
       integer,                             optional, intent(out)   :: errcode
       character(len=*),                    optional, intent(out)   :: errmsg
       ! Local variables
-      character(len=errmsg_len)   :: error
-      character(len=*), parameter :: subname = 'ccp_model_const_add_metadata'
+      character(len=errmsg_len)                    :: error
+      character(len=*), parameter                  :: subname = 'ccp_model_const_add_metadata'
+      type(ccpp_constituent_properties_t), pointer :: cprop => NULL()
+      character(len=stdname_len)                   :: standard_name
+      logical                                      :: match
 
       if (this%okay_to_add(errcode=errcode, errmsg=errmsg,                    &
            warn_func=subname)) then
          error = ''
-!!XXgoldyXX: Add check on key to see if incompatible item already there.
+         ! Check to see if standard name is already in the table
+         call field_data%standard_name(standard_name, errcode, errmsg)
+         cprop => this%find_const(standard_name)
+         if (associated(cprop)) then
+            ! Standard name already in table, let's see if the existing constituent is the same
+            match = cprop%is_match(field_data)
+            if (match) then
+               ! Existing constituent is a match - no need to throw an error, just don't add
+               return
+            else
+               ! Existing constituent is not a match - this is an error
+               call append_errvars(1, "ERROR: Trying to add constituent " //  &
+                    trim(standard_name) // " but an incompatible" //          &
+                    " constituent with this name already exists", subname,    &
+                    errcode=errcode, errmsg=errmsg)
+               return
+            end if
+         end if
          call this%hash_table%add_hash_key(field_data, error)
          if (len_trim(error) > 0) then
             call append_errvars(1, trim(error), subname, errcode=errcode, errmsg=errmsg)
@@ -1067,6 +1288,7 @@ CONTAINS
       character(len=*), parameter     :: subname = 'ccp_model_const_find_const'
 
       nullify(cprop)
+
       hval => this%hash_table%table_value(standard_name, errmsg=error)
       if (len_trim(error) > 0) then
          call append_errvars(1, trim(error), subname,                  &
@@ -1251,6 +1473,7 @@ CONTAINS
       ! Local variables
       integer                                         :: astat, index, errcode_local
       real(kind=kind_phys)                            :: default_value
+      real(kind=kind_phys)                            :: minvalue
       character(len=*), parameter :: subname = 'ccp_model_const_data_lock'
 
       errcode_local = 0
@@ -1272,19 +1495,33 @@ CONTAINS
               subname, errcode=errcode, errmsg=errmsg)
          errcode_local = astat
          if (astat == 0) then
+            allocate(this%vars_layer_tend(ncols, num_layers, this%hash_table%num_values()), &
+                 stat=astat)
+            call handle_allocate_error(astat, 'vars_layer_tend',           &
+                 subname, errcode=errcode, errmsg=errmsg)
+            errcode_local = astat
+         end if
+         if (astat == 0) then
             allocate(this%vars_minvalue(this%hash_table%num_values()), stat=astat)
             call handle_allocate_error(astat, 'vars_minvalue',             &
                  subname, errcode=errcode, errmsg=errmsg)
             errcode_local = astat
          end if
+         ! Initialize tendencies to 0
+         this%vars_layer_tend(:,:,:) = 0._kind_phys
          if (errcode_local == 0) then
             this%num_layers = num_layers
             do index = 1, this%hash_table%num_values()
+               !Set all constituents to their default values:
                call this%const_metadata(index)%default_value(default_value, &
                                errcode, errmsg)
                this%vars_layer(:,:,index) = default_value
+
+               ! Also set the minimum allowed value array
+               call this%const_metadata(index)%minimum(minvalue, errcode,   &
+                               errmsg)
+               this%vars_minvalue(index) = minvalue
             end do
-            this%vars_minvalue = 0.0_kind_phys
          end if
          if (present(errcode)) then
             if (errcode /= 0) then
@@ -1322,6 +1559,9 @@ CONTAINS
       if (allocated(this%vars_minvalue)) then
          deallocate(this%vars_minvalue)
       end if
+      if (allocated(this%vars_layer_tend)) then
+         deallocate(this%vars_layer_tend)
+      end if
       if (allocated(this%const_metadata)) then
          if (clear_table) then
             do index = 1, size(this%const_metadata, 1)
@@ -1342,7 +1582,7 @@ CONTAINS
    !########################################################################
 
    logical function ccp_model_const_is_match(this, index, advected,            &
-        thermo_active) result(is_match)
+        thermo_active, water_species) result(is_match)
       ! Return .true. iff the constituent at <index> matches a pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1354,6 +1594,7 @@ CONTAINS
       integer,                          intent(in) :: index
       logical, optional,                intent(in) :: advected
       logical, optional,                intent(in) :: thermo_active
+      logical, optional,                intent(in) :: water_species
       ! Local variable
       logical :: check
 
@@ -1373,13 +1614,20 @@ CONTAINS
          end if
       end if
 
+      if (present(water_species)) then
+         call this%const_metadata(index)%is_water_species(check)
+         if (water_species .neqv. check) then
+            is_match = .false.
+         end if
+      end if
+
 
    end function ccp_model_const_is_match
 
    !########################################################################
 
    subroutine ccp_model_const_num_match(this, nmatch, advected, thermo_active, &
-        errcode, errmsg)
+        water_species, errcode, errmsg)
       ! Query number of constituents matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1390,6 +1638,7 @@ CONTAINS
       integer,                          intent(out) :: nmatch
       logical,          optional,       intent(in)  :: advected
       logical,          optional,       intent(in)  :: thermo_active
+      logical,          optional,       intent(in)  :: water_species
       integer,          optional,       intent(out) :: errcode
       character(len=*), optional,       intent(out) :: errmsg
       ! Local variables
@@ -1399,7 +1648,8 @@ CONTAINS
       nmatch = 0
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
          do index = 1, SIZE(this%const_metadata)
-            if (this%is_match(index, advected=advected, thermo_active=thermo_active)) then
+            if (this%is_match(index, advected=advected, thermo_active=thermo_active, &
+                              water_species=water_species)) then
                nmatch = nmatch + 1
             end if
          end do
@@ -1420,11 +1670,11 @@ CONTAINS
       integer,          optional,       intent(out) :: errcode
       character(len=*), optional,       intent(out) :: errmsg
       ! Local variables
-      type(ccpp_constituent_properties_t), pointer  :: cprop
+      type(ccpp_constituent_properties_t), pointer  :: cprop => NULL()
       character(len=*), parameter :: subname = "ccp_model_const_index"
 
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
-         cprop => this%find_const(standard_name, errcode=errcode, errmsg=errmsg)
+         cprop => this%find_const(standard_name)
          if (associated(cprop)) then
             index = cprop%const_index()
          else
@@ -1450,7 +1700,7 @@ CONTAINS
       integer,                   optional, intent(out) :: errcode
       character(len=*),          optional, intent(out) :: errmsg
       ! Local variables
-      type(ccpp_constituent_properties_t), pointer     :: cprop
+      type(ccpp_constituent_properties_t), pointer     :: cprop => NULL()
       character(len=*), parameter :: subname = "ccp_model_const_metadata"
 
       if (this%const_props_locked(errcode=errcode, errmsg=errmsg, warn_func=subname)) then
@@ -1465,7 +1715,7 @@ CONTAINS
    !########################################################################
 
    subroutine ccp_model_const_copy_in_3d(this, const_array, advected,         &
-        thermo_active, errcode, errmsg)
+        thermo_active, water_species, errcode, errmsg)
       ! Gather constituent fields matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1476,6 +1726,7 @@ CONTAINS
       real(kind_phys),                     intent(out) :: const_array(:,:,:)
       logical,          optional,          intent(in)  :: advected
       logical,          optional,          intent(in)  :: thermo_active
+      logical,          optional,          intent(in)  :: water_species
       integer,          optional,          intent(out) :: errcode
       character(len=*), optional,          intent(out) :: errmsg
       ! Local variables
@@ -1493,7 +1744,8 @@ CONTAINS
          num_levels = SIZE(const_array, 2)
          do index = 1, SIZE(this%const_metadata)
             if (this%is_match(index, advected=advected,                       &
-                              thermo_active=thermo_active)) then
+                              thermo_active=thermo_active,                    &
+                              water_species=water_species)) then
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
@@ -1541,7 +1793,7 @@ CONTAINS
    !########################################################################
 
    subroutine ccp_model_const_copy_out_3d(this, const_array, advected,        &
-        thermo_active, errcode, errmsg)
+        thermo_active, water_species, errcode, errmsg)
       ! Update constituent fields matching pattern
       ! Each (optional) property which is present represents something
       !    which is required as part of a match.
@@ -1552,6 +1804,7 @@ CONTAINS
       real(kind_phys),                  intent(in)    :: const_array(:,:,:)
       logical,          optional,       intent(in)    :: advected
       logical,          optional,       intent(in)    :: thermo_active
+      logical,          optional,       intent(in)    :: water_species
       integer,          optional,       intent(out)   :: errcode
       character(len=*), optional,       intent(out)   :: errmsg
       ! Local variables
@@ -1569,7 +1822,8 @@ CONTAINS
          num_levels = SIZE(const_array, 2)
          do index = 1, SIZE(this%const_metadata)
             if (this%is_match(index, advected=advected,                       &
-                              thermo_active=thermo_active)) then
+                              thermo_active=thermo_active,                    &
+                              water_species=water_species)) then
                ! See if we have room for another constituent
                cindex = cindex + 1
                if (cindex > max_cind) then
@@ -1735,6 +1989,29 @@ CONTAINS
 
    !#######################################################################
 
+   subroutine ccpt_get_units(this, units, errcode, errmsg)
+      ! Return this constituent's units
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      character(len=*),                   intent(out) :: units
+      integer,          optional,         intent(out) :: errcode
+      character(len=*), optional,         intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_get_units'
+
+      if (associated(this%prop)) then
+         call this%prop%units(units, errcode, errmsg)
+      else
+         units = ''
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_get_units
+
+   !#######################################################################
+
    subroutine ccpt_get_vertical_dimension(this, vert_dim, errcode, errmsg)
       ! Return the standard name of this constituent's vertical dimension
 
@@ -1862,6 +2139,28 @@ CONTAINS
       end if
 
    end subroutine ccpt_is_thermo_active
+
+   !#######################################################################
+
+   subroutine ccpt_is_water_species(this, val_out, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      logical,                            intent(out) :: val_out
+      integer,          optional,         intent(out) :: errcode
+      character(len=*), optional,         intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_is_water_species'
+
+      if (associated(this%prop)) then
+         call this%prop%is_water_species(val_out, errcode, errmsg)
+      else
+         val_out = .false.
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_is_water_species
 
    !#######################################################################
 
@@ -2041,7 +2340,32 @@ CONTAINS
 
    !########################################################################
 
-   subroutine ccpt_molec_weight(this, val_out, errcode, errmsg)
+   subroutine ccpt_set_min_val(this, min_value, errcode, errmsg)
+      ! Set the minimum value of this particular constituent.
+      ! If this subroutine is never used then the minimum
+      ! value defaults to zero.
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t),   intent(inout) :: this
+      real(kind_phys),                      intent(in)    :: min_value
+      integer,          optional,           intent(out)   :: errcode
+      character(len=*), optional,           intent(out)   :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_set_min_val'
+
+      !Set minimum value for this constituent:
+      if (associated(this%prop)) then
+         call this%prop%set_minimum(min_value, errcode, errmsg)
+      else
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_set_min_val
+
+   !########################################################################
+
+   subroutine ccpt_molar_mass(this, val_out, errcode, errmsg)
 
       ! Dummy arguments
       class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
@@ -2049,17 +2373,38 @@ CONTAINS
       integer,                            intent(out) :: errcode
       character(len=*),                   intent(out) :: errmsg
       ! Local variable
-      character(len=*), parameter :: subname = 'ccpt_molec_weight'
+      character(len=*), parameter :: subname = 'ccpt_molar_mass'
 
       if (associated(this%prop)) then
-         call this%prop%molec_weight(val_out, errcode, errmsg)
+         call this%prop%molar_mass(val_out, errcode, errmsg)
       else
          val_out = kphys_unassigned
          call append_errvars(1, ": invalid constituent pointer",        &
               subname, errcode=errcode, errmsg=errmsg)
       end if
 
-   end subroutine ccpt_molec_weight
+   end subroutine ccpt_molar_mass
+
+   !########################################################################
+
+   subroutine ccpt_set_molar_mass(this, molar_mass, errcode, errmsg)
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(inout) :: this
+      real(kind_phys),                    intent(in)    :: molar_mass
+      integer,                            intent(out)   :: errcode
+      character(len=*),                   intent(out)   :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_set_molar_mass'
+
+      if (associated(this%prop)) then
+         call this%prop%set_molar_mass(molar_mass, errcode, errmsg)
+      else
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_set_molar_mass
 
    !########################################################################
 
@@ -2209,5 +2554,31 @@ CONTAINS
       end if
 
    end subroutine ccpt_set_thermo_active
+
+   !#######################################################################
+
+   subroutine ccpt_set_water_species(this, water_flag, errcode, errmsg)
+      ! Set whether this constituent is a water species, which means
+      ! that this constituent represents a particular phase or type
+      ! of water in the atmosphere.
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(inout) :: this
+      logical,                            intent(in)    :: water_flag
+      integer,          optional,         intent(out)   :: errcode
+      character(len=*), optional,         intent(out)   :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_set_water_species'
+
+      if (associated(this%prop)) then
+         if (this%prop%is_instantiated(errcode, errmsg)) then
+            this%prop%water_species = water_flag
+         end if
+      else
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_set_water_species
 
 end module ccpp_constituent_prop_mod

@@ -107,13 +107,14 @@ class CallList(VarDictionary):
         super().add_variable(newvar, run_env, exists_ok=exists_ok,
                              gen_unique=gen_unique, adjust_intent=adjust_intent)
 
-    def call_string(self, cldicts=None, is_func_call=False, subname=None):
+    def call_string(self, cldicts=None, is_func_call=False, subname=None, sub_lname_list=None):
         """Return a dummy argument string for this call list.
         <cldict> may be a list of VarDictionary objects to search for
         local_names (default is to use self).
         <is_func_call> should be set to True to construct a call statement.
         If <is_func_call> is False, construct a subroutine dummy argument
         list.
+        <sub_lname_list> may be a list of local_name substitutions.
         """
         arg_str = ""
         arg_sep = ""
@@ -156,6 +157,17 @@ class CallList(VarDictionary):
                     else:
                         lname = dummy
                     # end if
+                # end if
+                # Modify Scheme call_list to handle local_name change for this var.
+                # Are there any variable transforms for this scheme?
+                # If so, change Var's local_name need to local dummy array containing
+                # transformed argument, var_trans_local.
+                if sub_lname_list:
+                    for (var_trans_local, var_lname, sname, rindices, lindices, compat_obj) in sub_lname_list:
+                        if (sname == stdname):
+                            lname = var_trans_local
+                        # end if
+                    # end for
                 # end if
                 if is_func_call:
                     if cldicts is not None:
@@ -450,6 +462,13 @@ class SuiteObject(VarDictionary):
                                         adjust_intent=True)
             # We need to make sure that this variable's dimensions are available
             for vardim in newvar.get_dim_stdnames(include_constants=False):
+                # Unnamed dimensions are ok for allocatable variables
+                if vardim == '' and newvar.get_prop_value('allocatable'):
+                    continue
+                elif vardim == '':
+                    emsg = f"{self.name}: Cannot have unnamed/empty string dimension"
+                    raise ParseInternalError(emsg)
+                # end if
                 dvar = self.find_variable(standard_name=vardim,
                                           any_scope=True)
                 if dvar is None:
@@ -838,12 +857,26 @@ class SuiteObject(VarDictionary):
         else:
             vmatch = None
         # end if
-        
+
         found_var = False
         missing_vert = None
         new_vdims = list()
         var_vdim = var.has_vertical_dimension(dims=vdims)
         compat_obj = None
+        dict_var = None
+        if var.get_prop_value('type') == 'ccpp_constituent_properties_t':
+            if self.phase() == 'register':
+                found_var = True
+                new_vdims = [':']
+                return found_var, dict_var, var_vdim, new_vdims, missing_vert, compat_obj
+            else:
+                errmsg = "Variables of type ccpp_constituent_properties_t only allowed in register phase: "
+                sname  = var.get_prop_value('standard_name')
+                errmsg += f"'{sname}' found in {self.phase()} phase"
+                raise CCPPError(errmsg)
+            # end if
+        # end if
+
         # Does this variable exist in the calling tree?
         dict_var = self.find_variable(source_var=var, any_scope=True)
         if dict_var is None:
@@ -877,9 +910,6 @@ class SuiteObject(VarDictionary):
                 new_dict_dims = dict_dims
                 match = True
             # end if
-            # Create compatability object, containing any necessary forward/reverse 
-            # transforms from <var> and <dict_var>
-            compat_obj = var.compatible(dict_var, run_env)
             # If variable is defined as "inactive" by the host, ensure that
             # this variable is declared as "optional" by the scheme. If
             # not satisfied, return error.
@@ -911,6 +941,14 @@ class SuiteObject(VarDictionary):
                     # end if
                 # end if
             # end if
+        # end if
+        # We have a match!
+        # Are the Scheme's <var> and Host's <dict_var> compatible?
+        # If so, create compatibility object, containing any necessary
+        # forward/reverse transforms to/from <var> and <dict_var>.
+        if dict_var is not None:
+            dict_var = self.parent.find_variable(source_var=var, any_scope=True)
+            compat_obj = var.compatible(dict_var, run_env)
         # end if
         return found_var, dict_var, var_vdim, new_vdims, missing_vert, compat_obj
 
@@ -1241,7 +1279,7 @@ class Scheme(SuiteObject):
             # end if
 
             # Is this a conditionally allocated variable?
-            # If so, declare localpointer varaible. This is needed to
+            # If so, declare localpointer variable. This is needed to
             # pass inactive (not present) status through the caps.
             if var.get_prop_value('optional'):
                 newvar_ptr = var.clone(var.get_prop_value('local_name')+'_ptr')
@@ -1433,6 +1471,7 @@ class Scheme(SuiteObject):
         intent = svar.get_prop_value('intent')
         if intent == 'out' and allocatable:
             return
+        # end if
 
         # Get the condition on which the variable is active
         (conditional, _) = var.conditional(cldicts)
@@ -1589,9 +1628,25 @@ class Scheme(SuiteObject):
         from <var> to perform the transformation. Determine the indices needed
         for the transform and save for use during write stage"""
 
-        # Add dummy variable (<var>_local) needed for transformation.
-        dummy = var.clone(var.get_prop_value('local_name')+'_local')
-        self.__group.manage_variable(dummy)
+        # Add local variable (<var(local_name)>_local) needed for transformation.
+        # Do not let the Group manage this variable. Handle local var
+        # when writing Group.
+        prop_dict = var.copy_prop_dict()
+        prop_dict['local_name'] = var.get_prop_value('local_name')+'_local'
+        # This is a local variable.
+        if 'intent' in prop_dict:
+            del prop_dict['intent']
+        # end if
+        local_trans_var = Var(prop_dict,
+                              ParseSource(_API_SOURCE_NAME,
+                                          _API_LOCAL_VAR_NAME, var.context),
+                              self.run_env)
+        found = self.__group.find_variable(source_var=local_trans_var, any_scope=False)
+        if not found:
+            lmsg = "Adding new local variable, '{}', for variable transform"
+            self.run_env.logger.info(lmsg.format(local_trans_var.get_prop_value('local_name')))
+            self.__group.transform_locals.append(local_trans_var)
+        # end if
 
         # Create indices (default) for transform.
         lindices   = [':']*var.get_rank()
@@ -1630,26 +1685,35 @@ class Scheme(SuiteObject):
         #hdim = find_horizontal_dimension(var.get_dimensions())
         #if compat_obj.has_dim_transforms:
 
-        #
-        # Register any reverse (pre-Scheme) transforms.
-        #
+        # Register any reverse (pre-Scheme) transforms. Also, save local_name used in
+        # transform (used in write stage).
         if (var.get_prop_value('intent') != 'out'):
-            self.__reverse_transforms.append([dummy.get_prop_value('local_name'),
+            lmsg = "Automatic unit conversion from '{}' to '{}' for '{}' before entering '{}'"
+            self.run_env.logger.info(lmsg.format(compat_obj.v2_units,
+                                                 compat_obj.v1_units,
+                                                 compat_obj.v2_stdname,
+                                                 compat_obj.v1_stdname))
+            self.__reverse_transforms.append([local_trans_var.get_prop_value('local_name'),
                                               var.get_prop_value('local_name'),
+                                              var.get_prop_value('standard_name'),
                                               rindices, lindices, compat_obj])
-
-        #
+        # end if
         # Register any forward (post-Scheme) transforms.
-        #
         if (var.get_prop_value('intent') != 'in'):
+            lmsg = "Automatic unit conversion from '{}' to '{}' for '{}' after returning '{}'"
+            self.run_env.logger.info(lmsg.format(compat_obj.v1_units,
+                                                 compat_obj.v2_units,
+                                                 compat_obj.v1_stdname,
+                                                 compat_obj.v2_stdname))
             self.__forward_transforms.append([var.get_prop_value('local_name'),
-                                              dummy.get_prop_value('local_name'),
+                                              var.get_prop_value('standard_name'),
+                                              local_trans_var.get_prop_value('local_name'),
                                               lindices, rindices, compat_obj])
-
+        # end if
     def write_var_transform(self, var, dummy, rindices, lindices, compat_obj,
                             outfile, indent, forward):
         """Write variable transformation needed to call this Scheme in <outfile>.
-        <var> is the varaible that needs transformation before and after calling Scheme.
+        <var> is the variable that needs transformation before and after calling Scheme.
         <dummy> is the local variable needed for the transformation..
         <lindices> are the LHS indices of <dummy> for reverse transforms (before Scheme).
         <rindices> are the RHS indices of <var>   for reverse transforms (before Scheme).
@@ -1687,7 +1751,8 @@ class Scheme(SuiteObject):
         cldicts.extend(self.__group.suite_dicts())
         my_args = self.call_list.call_string(cldicts=cldicts,
                                              is_func_call=True,
-                                             subname=self.subroutine_name)
+                                             subname=self.subroutine_name,
+                                             sub_lname_list = self.__reverse_transforms)
         #
         outfile.write('', indent)
         outfile.write('if ({} == 0) then'.format(errcode), indent)
@@ -1715,8 +1780,15 @@ class Scheme(SuiteObject):
         if len(self.__reverse_transforms) > 0:
             outfile.comment('Compute reverse (pre-scheme) transforms', indent+1)
         # end if
-        for (dummy, var, rindices, lindices, compat_obj) in self.__reverse_transforms:
-            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
+        for rcnt, (dummy, var_lname, var_sname, rindices, lindices, compat_obj) in enumerate(self.__reverse_transforms):
+            # Any transform(s) were added during the Group's analyze phase, but
+            # the local_name(s) of the <var> assoicated with the transform(s)
+            # may have since changed. Here we need to use the standard_name
+            # from <var> and replace its local_name with the local_name from the
+            # Group's call_list.
+            lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
+            lvar_lname = lvar.get_prop_value('local_name')
+            tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
         # end for
         outfile.write('',indent+1)
         #
@@ -1756,8 +1828,15 @@ class Scheme(SuiteObject):
         if len(self.__forward_transforms) > 0:
             outfile.comment('Compute forward (post-scheme) transforms', indent+1)
         # end if
-        for (var, dummy, lindices, rindices, compat_obj) in self.__forward_transforms:
-            tstmt = self.write_var_transform(var, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
+        for fcnt, (var_lname, var_sname, dummy, lindices, rindices, compat_obj) in enumerate(self.__forward_transforms):
+            # Any transform(s) were added during the Group's analyze phase, but
+            # the local_name(s) of the <var> assoicated with the transform(s)
+            # may have since changed. Here we need to use the standard_name
+            # from <var> and replace its local_name with the local_name from the
+            # Group's call_list.
+            lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
+            lvar_lname = lvar.get_prop_value('local_name')
+            tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
         # end for
         outfile.write('', indent)
         outfile.write('end if', indent)
@@ -2103,6 +2182,7 @@ class Group(SuiteObject):
         self._phase_check_stmts = list()
         self._set_state = None
         self._ddt_library = None
+        self.transform_locals = list()
 
     def phase_match(self, scheme_name):
         """If scheme_name matches the group phase, return the group and
@@ -2369,6 +2449,19 @@ class Group(SuiteObject):
                 # end if
                 pointer_var_set.append([name,kind,dimstr,vtype])
             # end for
+            # Any arguments used in variable transforms before or after the
+            # Scheme call? If so, declare local copy for reuse in the Group cap.
+            for ivar in self.transform_locals:
+                lname = ivar.get_prop_value('local_name')
+                opt_var = ivar.get_prop_value('optional')
+                dims = ivar.get_dimensions()
+                if (dims is not None) and dims:
+                    subpart_allocate_vars[lname] = (ivar, item, opt_var)
+                    allocatable_var_set.add(lname)
+                else:
+                    subpart_scalar_vars[lname] = (ivar, item, opt_var)
+                # end if
+            # end for
 
         # end for
         # First, write out the subroutine header
@@ -2384,7 +2477,7 @@ class Group(SuiteObject):
         # end if
         # Write out the scheme use statements
         scheme_use = 'use {},{} only: {}'
-        for scheme in self._local_schemes:
+        for scheme in sorted(self._local_schemes):
             smod = scheme[0]
             sname = scheme[1]
             slen = ' '*(modmax - len(smod))
@@ -2477,10 +2570,18 @@ class Group(SuiteObject):
         self._phase_check_stmts.write(outfile, indent,
                                       {'errcode' : errcode, 'errmsg' : errmsg,
                                        'funcname' : self.name})
+        # Write any loop match calculations
+        outfile.write("! Set horizontal loop extent",indent+1)
+        for vmatch in self._loop_var_matches:
+            action = vmatch.write_action(self, dict2=self.call_list)
+            if action:
+                outfile.write(action, indent+1)
+            # end if
+        # end for
         # Allocate local arrays
         outfile.write('\n! Allocate local arrays', indent+1)
         alloc_stmt = "allocate({}({}))"
-        for lname in allocatable_var_set:
+        for lname in sorted(allocatable_var_set):
             var = subpart_allocate_vars[lname][0]
             dims = var.get_dimensions()
             alloc_str = self.allocate_dim_str(dims, var.context)
@@ -2508,13 +2609,6 @@ class Group(SuiteObject):
                 # end if dims (do not allocate scalars)
             # end for
         # end if
-        # Write any loop match calculations
-        for vmatch in self._loop_var_matches:
-            action = vmatch.write_action(self, dict2=self.call_list)
-            if action:
-                outfile.write(action, indent+1)
-            # end if
-        # end for
         # Write the scheme and subcycle calls
         for item in self.parts:
             item.write(outfile, errcode, errmsg, indent + 1)
@@ -2523,7 +2617,7 @@ class Group(SuiteObject):
         if allocatable_var_set:
             outfile.write('\n! Deallocate local arrays', indent+1)
         # end if
-        for lname in allocatable_var_set:
+        for lname in sorted(allocatable_var_set):
             outfile.write('if (allocated({})) {} deallocate({})'.format(lname,' '*(20-len(lname)),lname), indent+1)
         # end for
         for lname in optional_var_set:

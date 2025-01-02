@@ -14,6 +14,27 @@ MODULE temp_adjust
 
 CONTAINS
 
+  !> \section arg_table_temp_adjust_register  Argument Table
+  !! \htmlinclude arg_table_temp_adjust_register.html
+  !!
+  subroutine temp_adjust_register(config_var, dyn_const, errmsg, errflg)
+     logical,          intent(in)     :: config_var
+     type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const
+     character(len=512), intent(out)   :: errmsg
+     integer,            intent(out)   :: errflg
+
+     if (.not. config_var) then
+         return
+     end if
+
+     allocate(dyn_const(1))
+     call dyn_const(1)%instantiate(std_name="dyn_const", long_name='dyn const', &
+          units='kg kg-1', default_value=1._kind_phys,                          &
+          vertical_dim='vertical_layer_dimension', advected=.true.,             &
+          errcode=errflg, errmsg=errmsg)
+
+  end subroutine temp_adjust_register
+
   !> \section arg_table_temp_adjust_run  Argument Table
   !! \htmlinclude arg_table_temp_adjust_run.html
   !!
