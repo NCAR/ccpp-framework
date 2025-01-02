@@ -182,8 +182,8 @@ def erg_cm_minus_2_s_minus_1__to__W_m_minus_2():
 ##################
 def m2_s_minus_2__to__J_kg_minus_1():
     """Equivalent units"""
-    return None
+    return '{var}'
 
 def J_kg_minus_1__to__m2_s_minus_2():
     """Equivalent units"""
-    return None
+    return '{var}'

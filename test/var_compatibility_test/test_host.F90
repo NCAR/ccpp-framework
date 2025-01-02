@@ -362,7 +362,7 @@ CONTAINS
         'flag_indicating_cloud_microphysics_has_graupel            ',         &
         'flag_indicating_cloud_microphysics_has_ice                '/)
 
-   character(len=cm), target :: test_outvars1(8) = (/                         &
+   character(len=cm), target :: test_outvars1(9) = (/                         &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_ice_particle         ',         &
