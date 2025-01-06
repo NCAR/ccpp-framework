@@ -75,7 +75,7 @@ _INPUT_VARS_DDT = ["model_times", "number_of_model_times",
                    "horizontal_loop_begin", "horizontal_loop_end",
                    "surface_air_pressure", "horizontal_dimension"]
 _OUTPUT_VARS_DDT = ["ccpp_error_code", "ccpp_error_message", "model_times",
-                    "number_of_model_times"]
+                    "surface_air_pressure", "number_of_model_times"]
 _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT
 _PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
                    "horizontal_dimension", "vertical_layer_dimension",
