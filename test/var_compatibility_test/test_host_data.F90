@@ -2,6 +2,9 @@ module test_host_data
 
   use ccpp_kinds, only: kind_phys
 
+   implicit none
+   private
+
   !> \section arg_table_physics_state  Argument Table
   !! \htmlinclude arg_table_physics_state.html
   type physics_state
@@ -15,7 +18,8 @@ module test_host_data
      real(kind_phys) :: scalar_var
   end type physics_state
 
-  public allocate_physics_state
+  public :: physics_state
+  public :: allocate_physics_state
 
 contains
 

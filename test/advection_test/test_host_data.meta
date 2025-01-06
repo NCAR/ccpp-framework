@@ -30,3 +30,41 @@
   kind = kind_phys
   units = kg kg-1
   dimensions = (horizontal_dimension, vertical_layer_dimension)
+
+[ccpp-table-properties]
+  name = test_host_data
+  type = module
+[ccpp-arg-table]
+  name = test_host_data
+  type = module
+[ num_consts ]
+  standard_name = banana_array_dim
+  long_name = Size of test_banana_name_array
+  units = 1
+  dimensions = ()
+  type = integer
+[ std_name_array ]
+  standard_name = test_banana_name_array
+  type = character | kind = len=32
+  units = count
+  dimensions = (banana_array_dim)
+  protected = true
+[ const_std_name ]
+  standard_name = test_banana_name
+  type = character | kind = len=32
+  units = 1
+  dimensions = ()
+  protected = true
+[ const_inds ]
+  standard_name = test_banana_constituent_indices
+  long_name = Array of constituent indices
+  units = 1
+  dimensions = (banana_array_dim)
+  protected = true
+  type = integer
+[ const_index ]
+  standard_name = test_banana_constituent_index
+  long_name = Constituent index
+  units = 1
+  dimensions = ()
+  type = integer
