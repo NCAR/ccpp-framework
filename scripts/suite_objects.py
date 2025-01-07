@@ -86,9 +86,7 @@ class CallList(VarDictionary):
         """Add new variables from another CallList (<call_list>)"""
         for var in call_list.variable_list():
             stdname = var.get_prop_value('standard_name')
-            if stdname not in self:
-                self.add_variable(var, run_env, gen_unique=gen_unique)
-            # end if
+            self.add_variable(var, run_env, gen_unique=gen_unique, adjust_intent=True, exists_ok=True)
         # end for
 
     def add_variable(self, newvar, run_env, exists_ok=False, gen_unique=False,
