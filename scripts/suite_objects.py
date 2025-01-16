@@ -2485,9 +2485,9 @@ class Group(SuiteObject):
         call_vars = self.call_list.variable_list()
         self._ddt_library.write_ddt_use_statements(call_vars, outfile,
                                                    indent+1, pad=modmax)
-        decl_vars = [x[0] for x in subpart_allocate_vars.values()] + \
-                    [x[0] for x in subpart_scalar_vars.values()] + \
-                    [x[0] for x in subpart_optional_vars.values()]
+        decl_vars = ([x[0] for x in subpart_allocate_vars.values()] +
+                     [x[0] for x in subpart_scalar_vars.values()] +
+                     [x[0] for x in subpart_optional_vars.values()])
         self._ddt_library.write_ddt_use_statements(decl_vars, outfile,
                                                    indent+1, pad=modmax)
         outfile.write('', 0)
