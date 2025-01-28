@@ -8,9 +8,21 @@ module effr_diag
    implicit none
    private
 
-   public :: effr_diag_run
+   public :: effr_diag_run, effr_diag_init
 
 contains
+
+  !> \section arg_table_effr_diag_init Argument Table
+  !! \htmlinclude arg_table_effr_diag_init.html
+  !!
+  subroutine effr_diag_init(errmsg, errflg)
+    character(len=512), intent(out)   :: errmsg
+    integer,            intent(out)   :: errflg
+ 
+    errmsg = ''
+    errflg = 0
+
+  end subroutine effr_diag_init
 
    !> \section arg_table_effr_diag_run  Argument Table
    !! \htmlinclude arg_table_effr_diag_run.html

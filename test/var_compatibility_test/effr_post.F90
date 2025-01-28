@@ -8,9 +8,21 @@ module effr_post
    implicit none
    private
 
-   public :: effr_post_run
+   public :: effr_post_run, effr_post_init
 
 contains
+
+   !> \section arg_table_effr_post_init Argument Table
+   !! \htmlinclude arg_table_effr_post_init.html
+   !!
+   subroutine effr_post_init(errmsg, errflg)
+     character(len=512), intent(out)   :: errmsg
+     integer,            intent(out)   :: errflg
+
+     errmsg = ''
+     errflg = 0
+
+   end subroutine effr_post_init
 
    !> \section arg_table_effr_post_run  Argument Table
    !! \htmlinclude arg_table_effr_post_run.html

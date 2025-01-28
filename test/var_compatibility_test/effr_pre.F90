@@ -8,9 +8,20 @@ module effr_pre
    implicit none
    private
 
-   public :: effr_pre_run
+   public :: effr_pre_run, effr_pre_init
 
 contains
+   !> \section arg_table_effr_pre_init Argument Table
+   !! \htmlinclude arg_table_effr_pre_init.html
+   !!
+   subroutine effr_pre_init(errmsg, errflg)
+     character(len=512), intent(out)   :: errmsg
+     integer,            intent(out)   :: errflg
+
+     errmsg = ''
+     errflg = 0
+
+   end subroutine effr_pre_init
 
    !> \section arg_table_effr_pre_run  Argument Table
    !! \htmlinclude arg_table_effr_pre_run.html

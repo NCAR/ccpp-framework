@@ -8,10 +8,21 @@ module effr_calc
    implicit none
    private
 
-   public :: effr_calc_run
+   public :: effr_calc_run, effr_calc_init
 
-contains
+ contains
+   !> \section arg_table_effr_calc_init Argument Table
+   !! \htmlinclude arg_table_effr_calc_init.html
+   !!
+   subroutine effr_calc_init(errmsg, errflg)
+     character(len=512), intent(out)   :: errmsg
+     integer,            intent(out)   :: errflg
+     
+     errmsg = ''
+     errflg = 0
 
+   end subroutine effr_calc_init
+  
    !> \section arg_table_effr_calc_run  Argument Table
    !! \htmlinclude arg_table_effr_calc_run.html
    !!
