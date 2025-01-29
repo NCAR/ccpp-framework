@@ -80,3 +80,9 @@
   dimensions = ()
   type = real
   kind = kind_phys
+[scheme_order]
+  standard_name = scheme_order_in_suite
+  long_name = scheme order in suite definition file
+  units = None
+  dimensions = ()
+  type = integer

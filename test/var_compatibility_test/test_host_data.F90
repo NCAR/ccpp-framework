@@ -16,6 +16,8 @@ module test_host_data
      real(kind_phys) :: scalar_varA
      real(kind_phys) :: scalar_varB
      real(kind_phys) :: scalar_varC
+     integer :: scheme_order
+
   end type physics_state
 
   public allocate_physics_state
@@ -64,6 +66,9 @@ contains
        end if
        allocate(state%nci(cols, levels))
     endif
+
+    ! Initialize scheme counter.
+    state%scheme_order = 1
 
   end subroutine allocate_physics_state
 

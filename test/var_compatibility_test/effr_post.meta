@@ -6,6 +6,13 @@
 [ccpp-arg-table]
   name = effr_post_init
   type = scheme
+[ scheme_order ]
+  standard_name = scheme_order_in_suite
+  long_name = scheme order in suite definition file
+  units = None
+  dimensions = ()
+  type = integer
+  intent = inout
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP
