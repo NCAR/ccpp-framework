@@ -27,9 +27,10 @@ contains
    !> \section arg_table_effr_diag_run  Argument Table
    !! \htmlinclude arg_table_effr_diag_run.html
    !!
-   subroutine effr_diag_run( effrr_in,  errmsg, errflg)
+   subroutine effr_diag_run( effrr_in,  scalar_var, errmsg, errflg)
 
       real(kind_phys),    intent(in)    :: effrr_in(:,:)
+      real(kind_phys),    intent(in)    :: scalar_var
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------

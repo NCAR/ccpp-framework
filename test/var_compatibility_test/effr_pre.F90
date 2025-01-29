@@ -26,9 +26,10 @@ contains
    !> \section arg_table_effr_pre_run  Argument Table
    !! \htmlinclude arg_table_effr_pre_run.html
    !!
-   subroutine effr_pre_run( effrr_inout,  errmsg, errflg)
+   subroutine effr_pre_run( effrr_inout, scalar_var,  errmsg, errflg)
 
       real(kind_phys),    intent(inout) :: effrr_inout(:,:)
+      real(kind_phys),    intent(in)    :: scalar_var
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------

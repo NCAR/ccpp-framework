@@ -13,6 +13,9 @@ module test_host_data
           ncg,                                       & ! number concentration of cloud graupel
           nci                                          ! number concentration of cloud ice
      real(kind_phys) :: scalar_var
+     real(kind_phys) :: scalar_varA
+     real(kind_phys) :: scalar_varB
+     real(kind_phys) :: scalar_varC
   end type physics_state
 
   public allocate_physics_state
