@@ -14,12 +14,21 @@ contains
    !> \section arg_table_effr_pre_init Argument Table
    !! \htmlinclude arg_table_effr_pre_init.html
    !!
-   subroutine effr_pre_init(errmsg, errflg)
+   subroutine effr_pre_init(scheme_order, errmsg, errflg)
      character(len=512), intent(out)   :: errmsg
      integer,            intent(out)   :: errflg
+     integer,            intent(inout) :: scheme_order
 
      errmsg = ''
      errflg = 0
+
+     if (scheme_order .ne. 1) then
+        errflg = 1
+        errmsg = 'ERROR: effr_pre_init() needs to be called first'
+        return
+     else
+        scheme_order = scheme_order + 1
+     endif
 
    end subroutine effr_pre_init
 
