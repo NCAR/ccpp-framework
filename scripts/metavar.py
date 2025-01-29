@@ -1677,8 +1677,8 @@ class VarDictionary(OrderedDict):
                                        context=newvar.context)
             # end if
         # end if
-        # Check if local_name exists in Group. If applicable, Create new 
-        # variable with uniquie name. There are two instances when new names are
+        # Check if local_name exists in Group. If applicable, create new 
+        # variable with unique name. There are two instances when new names are
         # created:
         # - Same <local_name> used in different DDTs.
         # - Different <standard_name> using the same <local_name> in a Group.
