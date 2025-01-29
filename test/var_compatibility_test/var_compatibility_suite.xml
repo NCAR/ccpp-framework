@@ -5,6 +5,8 @@
     <scheme>effr_pre</scheme>
     <scheme>effr_calc</scheme>
     <scheme>effr_post</scheme> 
-    <scheme>effr_diag</scheme>
+    <subcycle loop="1">
+      <scheme>effr_diag</scheme>
+    </subcycle>
   </group>
 </suite>

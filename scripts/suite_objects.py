@@ -2006,12 +2006,11 @@ class Subcycle(SuiteObject):
         if self.name is None:
             self.name = "subcycle_index{}".format(level)
         # end if
-        # Create a variable for the loop index
-        self.add_variable(Var({'local_name':self.name,
-                               'standard_name':'loop_variable',
-                               'type':'integer', 'units':'count',
-                               'dimensions':'()'}, _API_SOURCE, self.run_env),
-                          self.run_env)
+        # Create a Group variable for the subcycle index.
+        newvar = Var({'local_name':self.name, 'standard_name':self.name,
+                      'type':'integer', 'units':'count', 'dimensions':'()'},
+                     _API_LOCAL, self.run_env)
+        group.manage_variable(newvar)
         # Handle all the suite objects inside of this subcycle
         scheme_mods = set()
         for item in self.parts:
@@ -2025,7 +2024,7 @@ class Subcycle(SuiteObject):
 
     def write(self, outfile, errcode, errmsg, indent):
         """Write code for the subcycle loop, including contents, to <outfile>"""
-        outfile.write('do {} = 1, {}'.format(self.name, self.loop), indent)
+        outfile.write('do {} = 1, {}'.format(self.name, self._loop), indent)
         # Note that 'scheme' may be a sybcycle or other construct
         for item in self.parts:
             item.write(outfile, errcode, errmsg, indent+1)
