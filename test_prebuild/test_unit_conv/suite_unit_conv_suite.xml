@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="unit_conv_suite" version="1">
+  <group name="unit_conv_group">
+    <subcycle loop="1">
+      <scheme>unit_conv_scheme_1</scheme>
+      <scheme>unit_conv_scheme_2</scheme>
+      <scheme>unit_conv_scheme_1</scheme>
+    </subcycle>
+  </group>
+</suite>

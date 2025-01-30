@@ -86,9 +86,7 @@ class CallList(VarDictionary):
         """Add new variables from another CallList (<call_list>)"""
         for var in call_list.variable_list():
             stdname = var.get_prop_value('standard_name')
-            if stdname not in self:
-                self.add_variable(var, run_env, gen_unique=gen_unique)
-            # end if
+            self.add_variable(var, run_env, gen_unique=gen_unique, adjust_intent=True, exists_ok=True)
         # end for
 
     def add_variable(self, newvar, run_env, exists_ok=False, gen_unique=False,
@@ -2487,7 +2485,9 @@ class Group(SuiteObject):
         call_vars = self.call_list.variable_list()
         self._ddt_library.write_ddt_use_statements(call_vars, outfile,
                                                    indent+1, pad=modmax)
-        decl_vars = [x[0] for x in subpart_allocate_vars.values()]
+        decl_vars = ([x[0] for x in subpart_allocate_vars.values()] +
+                     [x[0] for x in subpart_scalar_vars.values()] +
+                     [x[0] for x in subpart_optional_vars.values()])
         self._ddt_library.write_ddt_use_statements(decl_vars, outfile,
                                                    indent+1, pad=modmax)
         outfile.write('', 0)
