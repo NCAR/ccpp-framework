@@ -55,7 +55,6 @@ if(CCPP_FRAMEWORK_ENABLE_TESTS)
   else()
     message (WARNING "This program has only been compiled with gfortran and ifx.")
   endif()
-  enable_testing()
 endif()
 
 # Use rpaths on MacOSX
@@ -95,6 +94,8 @@ endif()
 add_subdirectory(src)
 
 if(CCPP_FRAMEWORK_ENABLE_TESTS)
+  find_package(PFUNIT REQUIRED)
+  enable_testing()
   add_subdirectory(test)
 endif()
 
