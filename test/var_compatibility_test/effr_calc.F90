@@ -72,7 +72,7 @@ module effr_calc
       if (present(nci_out)) nci_out_local = nci_out
       effrl_inout = min(max(effrl_inout,re_qc_min),re_qc_max)
       if (present(effri_out)) effri_out   = re_qi_avg
-      effrs_inout = effrs_inout + 10.0 ! in micrometer
+      effrs_inout = effrs_inout + 5.0 ! in micrometer
       scalar_var = 2.0 ! in km
 
    end subroutine effr_calc_run
