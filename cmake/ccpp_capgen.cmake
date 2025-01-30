@@ -1,23 +1,26 @@
 function(ccpp_capgen)
-  set(optionalArgs CAPGEN_DEBUG)
+  set(optionalArgs CAPGEN_DEBUG CAPGEN_EXPECT_THROW_ERROR)
   set(oneValueArgs HOSTFILES SCHEMEFILES SUITES HOST_NAME OUTPUT_ROOT VERBOSITY)
 
   cmake_parse_arguments(arg "${optionalArgs}" "${oneValueArgs}" "" ${ARGN})
 
   list(APPEND CCPP_CAPGEN_CMD "${CMAKE_SOURCE_DIR}/scripts/ccpp_capgen.py")
 
-  if(DEFINED arg_CAPGEN_DEBUG AND arg_CAPGEN_DEBUG)
+  if(DEFINED arg_CAPGEN_DEBUG)
     list(APPEND CCPP_CAPGEN_CMD "--debug")
   endif()
 
   if(DEFINED arg_HOSTFILES)
-    list(APPEND CCPP_CAPGEN_CMD "--host-files" "${arg_HOSTFILES}")
+    list(JOIN arg_HOSTFILES "," HOSTFILES_SEPARATED)
+    list(APPEND CCPP_CAPGEN_CMD "--host-files" "${HOSTFILES_SEPARATED}")
   endif()
   if(DEFINED arg_SCHEMEFILES)
-    list(APPEND CCPP_CAPGEN_CMD "--scheme-files" "${arg_SCHEMEFILES}")
+    list(JOIN arg_SCHEMEFILES "," SCHEMEFILES_SEPARATED)
+    list(APPEND CCPP_CAPGEN_CMD "--scheme-files" "${SCHEMEFILES_SEPARATED}")
   endif()
   if(DEFINED arg_SUITES)
-    list(APPEND CCPP_CAPGEN_CMD "--suites" "${arg_SUITES}")
+    list(JOIN arg_SUITES "," SUITES_SEPARATED)
+    list(APPEND CCPP_CAPGEN_CMD "--suites" "${SUITES_SEPARATED}")
   endif()
   if(DEFINED arg_HOST_NAME)
     list(APPEND CCPP_CAPGEN_CMD "--host-name" "${arg_HOST_NAME}")
@@ -34,8 +37,8 @@ function(ccpp_capgen)
   endif()
 
   message(STATUS "Running ccpp_capgen from ${CMAKE_CURRENT_SOURCE_DIR}")
-  
-  string(REPLACE ";" " " CAPGEN_CMD_PARAMS_LIST "${CCPP_CAPGEN_CMD}")
+
+  list(JOIN CAPGEN_CMD_PARAMS_LIST " " CCPP_CAPGEN_CMD)
   message(STATUS "Running ccpp_capgen: ${CAPGEN_CMD_PARAMS_LIST}")
 
   execute_process(COMMAND ${CCPP_CAPGEN_CMD}
@@ -46,10 +49,20 @@ function(ccpp_capgen)
 
   message(STATUS "ccpp-capgen stdout:" ${CAPGEN_OUT})
 
-  if(RES EQUAL 0)
-    message(STATUS "ccpp-capgen completed successfully")
+  if(arg_CAPGEN_EXPECT_THROW_ERROR)
+    string(FIND "${CAPGEN_OUT}" "Variables of type ccpp_constituent_properties_t only allowed in register phase" ERROR_INDEX)
+
+    if (ERROR_INDEX GREATER -1)
+      MESSAGE(STATUS "Capgen build produces expected error message.")
+    else()
+      MESSAGE(FATAL_ERROR "CCPP cap generation did not generate expected error. Expected 'Variables of type ccpp_cosntituent_properties_t only allowed in register phase.")
+    endif()
   else()
-    message(FATAL_ERROR "CCPP cap generation FAILED: result = ${RES}")
+    if(RES EQUAL 0)
+      message(STATUS "ccpp-capgen completed successfully")
+    else()
+      message(FATAL_ERROR "CCPP cap generation FAILED: result = ${RES}")
+    endif()
   endif()
 endfunction()
 
@@ -89,6 +102,7 @@ function(ccpp_datafile)
   else()
     message(FATAL_ERROR "CCPP cap file retrieval FAILED: result = ${RES}")
   endif()
-  set(CCPP_CAPS "${CCPP_CAPS}" PARENT_SCOPE)
+  string(replace "," ";" CCPP_CAPS_LIST ${CCPP_CAPS})
+  set(CCPP_CAPS_LIST "${CCPP_CAPS_LIST}" PARENT_SCOPE)
 endfunction()
 
