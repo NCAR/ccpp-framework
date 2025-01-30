@@ -17,9 +17,19 @@ jobs:
     - name: update repos and install dependencies
       run: sudo apt-get update && sudo apt-get install -y build-essential libopenmpi-dev ${{matrix.fortran-compiler}} cmake python3 git libxml2-utils
 
+    - name: Build pFUnit
+      run: |
+        git clone --depth 1 --branch v4.10.0 https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
+        cd pFUnit
+        cmake -B./build -S.
+        cd build
+        make install
+
     - name: Build the framework
       run: |
-        cmake -S. -B./build -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
+        cmake -S. -B./build                \
+          -DCCPP_FRAMEWORK_ENABLE_TESTS=ON \
+          -DCMAKE_PREFIX_PATH=/home/runner/work/ccpp-framework/ccpp-framework/pFUnit/build/installed
         cd build
         make
 
