@@ -12,6 +12,9 @@
 """
 import sys
 import os
+import unittest
+import subprocess
+
 _BUILD_DIR = os.path.join(os.path.abspath(os.environ['BUILD_DIR']), "test", "advection_test")
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _FRAMEWORK_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir, os.pardir))
