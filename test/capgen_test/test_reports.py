@@ -81,7 +81,7 @@ _OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "surface_air_pressure", "water_vapor_specific_humidity"]
 _SEP = ","
 
-class TestDataTables(unittest.TestCase):
+class TestCapgenDataTables(unittest.TestCase):
     def test_host_files(self):
         test_str = datatable_report(_DATABASE, DatatableReport("host_files"), _SEP)
         self.assertSetEqual(set(_HOST_FILES), set(test_str.split(_SEP)))
@@ -147,7 +147,7 @@ class TestTempSuite(unittest.TestCase):
         self.assertSetEqual(set(_OUTPUT_VARS_TEMP), set(test_str.split(_SEP)))
 
 
-class CommandLineDatafileRequiredFiles(unittest.TestCase):
+class CommandLineCapgenDatafileRequiredFiles(unittest.TestCase):
     def test_host_files(self):
         completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--host-files"],
                                           capture_output=True,
