@@ -20,38 +20,30 @@ SET(CCPP_CAP_FILES "${CMAKE_CURRENT_BINARY_DIR}/ccpp" CACHE
 SET(CCPP_FRAMEWORK ${CMAKE_SOURCE_DIR}/scripts)
 
 # Create metadata and source file lists
-FOREACH(FILE ${SCHEME_FILES})
-  FILE(STRINGS ${FILE} FILENAMES)
-  LIST(APPEND SCHEME_FILENAMES ${FILENAMES})
-ENDFOREACH(FILE)
-string(REPLACE ";" "," SCHEME_METADATA "${SCHEME_FILES}")
+foreach(SCHEME_FILE ${SCHEME_FILES})
+  file(STRINGS ${SCHEME_FILE} FILENAMES)
+  foreach(filename ${FILENAMES})
+    string(REPLACE ".meta" ".F90" TEMP "${filename}")
+    file(REAL_PATH ${TEMP} ABS_PATH)
+    list(APPEND LIBRARY_LIST ${ABS_PATH})
+  endforeach()
+endforeach(FILE)
 
-FOREACH(FILE ${SCHEME_FILENAMES})
-  # target_sources prefers absolute pathnames
-  string(REPLACE ".meta" ".F90" TEMP "${FILE}")
-  get_filename_component(ABS_PATH "${TEMP}" ABSOLUTE)
-  list(APPEND LIBRARY_LIST ${ABS_PATH})
-ENDFOREACH(FILE)
-
-FOREACH(FILE ${HOST_FILES})
+foreach(FILE ${HOST_FILES})
   LIST(APPEND HOST_METADATA "${FILE}.meta")
   # target_sources prefers absolute pathnames
-  get_filename_component(ABS_PATH "${FILE}.F90" ABSOLUTE)
-  LIST(APPEND HOST_SOURCE   "${ABS_PATH}")
-ENDFOREACH(FILE)
+  file(REAL_PATH "${FILE}.F90" ABS_PATH)
+  list(APPEND LIBRARY_LIST "${ABS_PATH}")
+endforeach(FILE)
 
-list(APPEND LIBRARY_LIST ${HOST_SOURCE})
-string(REPLACE ";" ".meta," HOST_METADATA "${HOST_FILES}")
-set(HOST_METADATA "${HOST_METADATA}.meta,${HOST}.meta")
-
-string(REPLACE ";" "," SUITE_XML "${SUITE_FILES}")
+list(APPEND HOST_METADATA "${HOST}.meta")
 
 message(STATUS "CCPP_VERBOSITY = ${CCPP_VERBOSITY}")
 ccpp_capgen(CAPGEN_DEBUG ON
             VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA}
-            SCHEMEFILES ${SCHEME_METADATA}
-            SUITES ${SUITE_XML}
+            SCHEMEFILES ${SCHEME_FILES}
+            SUITES ${SUITE_FILES}
             HOST_NAME "test_host"
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
 
@@ -59,17 +51,15 @@ ccpp_capgen(CAPGEN_DEBUG ON
 ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
               REPORT_NAME "--ccpp-files")
 
-string(REPLACE "," ";" CCPP_CAPS_LIST ${CCPP_CAPS})
 message(STATUS "Adding ${CCPP_CAPS_LIST} to library list")
 list(APPEND LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(TESTLIB OBJECT ${LIBRARY_LIST})
-ADD_EXECUTABLE(${HOST} ${HOST}.F90 $<TARGET_OBJECTS:TESTLIB>)
+add_executable(${HOST} ${HOST}.F90 $<TARGET_OBJECTS:TESTLIB>)
 
-TARGET_INCLUDE_DIRECTORIES(${HOST} PRIVATE ${CCPP_CAP_FILES})
+target_include_directories(${HOST} PRIVATE ${CCPP_CAP_FILES})
 
 set_target_properties(${HOST} PROPERTIES
                               COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                               LINK_FLAGS "${CMAKE_Fortran_FLAGS}")
 
-enable_testing()
 add_test(NAME capgen_${HOST} COMMAND ${HOST})

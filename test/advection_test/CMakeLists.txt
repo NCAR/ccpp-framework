@@ -36,38 +36,28 @@ SET(CCPP_FRAMEWORK ${CMAKE_SOURCE_DIR}/scripts)
 # Create metadata and source file lists
 FOREACH(FILE ${SCHEME_FILES})
   FILE(STRINGS ${FILE} FILENAMES)
-  LIST(APPEND SCHEME_FILENAMES ${FILENAMES})
-ENDFOREACH(FILE)
-
-# Create metadata and source file lists
-FOREACH(FILE ${SCHEME_FILES_ERROR})
-  FILE(STRINGS ${FILE} FILENAMES)
-  LIST(APPEND SCHEME_FILENAMES_ERROR ${FILENAMES})
-ENDFOREACH(FILE)
-
-FOREACH(FILE ${SCHEME_FILENAMES})
-  # target_sources prefers absolute pathnames
-  string(REPLACE ".meta" ".F90" TEMP "${FILE}")
-  get_filename_component(ABS_PATH "${TEMP}" ABSOLUTE)
-  list(APPEND LIBRARY_LIST ${ABS_PATH})
+  list(TRANSFORM FILENAMES REPLACE ".meta" ".F90")
+  foreach(filename ${FILENAMES})
+    file(REAL_PATH "${filename}" ABS_PATH)
+    list(APPEND LIBRARY_LIST ${ABS_PATH})
+  ENDFOREACH()
 ENDFOREACH(FILE)
 
 FOREACH(FILE ${HOST_FILES})
   LIST(APPEND HOST_METADATA "${FILE}.meta")
   # target_sources prefers absolute pathnames
-  get_filename_component(ABS_PATH "${FILE}.F90" ABSOLUTE)
-  LIST(APPEND HOST_SOURCE   "${ABS_PATH}")
+  file(REAL_PATH "${FILE}.F90" ABS_PATH)
+  list(APPEND LIBRARY_LIST "${ABS_PATH}")
 ENDFOREACH(FILE)
-list(APPEND LIBRARY_LIST ${HOST_SOURCE})
-string(REPLACE ";" ".meta," HOST_METADATA "${HOST_FILES}")
-set(HOST_METADATA "${HOST_METADATA}.meta,${HOST}.meta")
+
+list(APPEND HOST_METADATA "${HOST}.meta")
 
 # Run ccpp_capgen that we expect to fail
 ccpp_capgen(CAPGEN_EXPECT_THROW_ERROR ON
             CAPGEN_DEBUG ON
             VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA}
-            SCHEMEFILES ${SCHEME_METADATA_ERROR}
+            SCHEMEFILES ${SCHEME_FILES_ERROR}
             SUITES ${SUITE_FILES_ERROR}
             HOST_NAME "test_host"
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
@@ -76,7 +66,7 @@ ccpp_capgen(CAPGEN_EXPECT_THROW_ERROR ON
 ccpp_capgen(CAPGEN_DEBUG ON
             VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA}
-            SCHEMEFILES ${SCHEME_METADATA}
+            SCHEMEFILES ${SCHEME_FILES}
             SUITES ${SUITE_FILES}
             HOST_NAME "test_host"
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
@@ -89,8 +79,10 @@ list(APPEND LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(TESTLIB OBJECT  ${LIBRARY_LIST})
 ADD_EXECUTABLE(${HOST} ${HOST}.F90 $<TARGET_OBJECTS:TESTLIB>)
 
-INCLUDE_DIRECTORIES(${CCPP_CAP_FILES})
+TARGET_INCLUDE_DIRECTORIES(${HOST} PUBLIC ${CCPP_CAP_FILES})
 
 set_target_properties(${HOST} PROPERTIES
                               COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                               LINK_FLAGS "${CMAKE_Fortran_FLAGS}")
+                              
+add_test(NAME capgen_${HOST} COMMAND ${HOST})
