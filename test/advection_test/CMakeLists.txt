@@ -84,5 +84,5 @@ TARGET_INCLUDE_DIRECTORIES(${HOST} PUBLIC ${CCPP_CAP_FILES})
 set_target_properties(${HOST} PROPERTIES
                               COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                               LINK_FLAGS "${CMAKE_Fortran_FLAGS}")
-                              
-add_test(NAME capgen_${HOST} COMMAND ${HOST})
+
+add_test(NAME advection_${HOST} COMMAND ${HOST})
