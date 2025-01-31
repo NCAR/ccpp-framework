@@ -27,7 +27,7 @@ foreach(SCHEME_FILE ${SCHEME_FILES})
     file(REAL_PATH ${TEMP} ABS_PATH)
     list(APPEND LIBRARY_LIST ${ABS_PATH})
   endforeach()
-endforeach(FILE)
+endforeach()
 
 foreach(FILE ${HOST_FILES})
   LIST(APPEND HOST_METADATA "${FILE}.meta")

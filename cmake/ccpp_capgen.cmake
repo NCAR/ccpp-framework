@@ -5,7 +5,7 @@ function(ccpp_capgen)
 
   cmake_parse_arguments(arg "${optionalArgs}" "${oneValueArgs}" "${multi_value_keywords}" ${ARGN})
 
-  list(APPEND CCPP_CAPGEN_CMD_LIST "${CMAKE_SOURCE_DIR}/scripts/ccpp_capgen.py")
+  # list(APPEND CCPP_CAPGEN_CMD_LIST "${CMAKE_SOURCE_DIR}/scripts/ccpp_capgen.py")
 
   if(DEFINED arg_CAPGEN_DEBUG)
     list(APPEND CCPP_CAPGEN_CMD_LIST "--debug")
@@ -42,7 +42,8 @@ function(ccpp_capgen)
   list(JOIN CCPP_CAPGEN_CMD_LIST " " CCPP_CAPGEN_CMD)
   message(STATUS "Running ccpp_capgen: ${CCPP_CAPGEN_CMD}")
 
-  execute_process(COMMAND ${CCPP_CAPGEN_CMD}
+  list(JOIN CCPP_CAPGEN_CMD_LIST ";" CCPP_CAPGEN_CMAKE_CMD)
+  execute_process(COMMAND "${CMAKE_SOURCE_DIR}/scripts/ccpp_capgen.py" ${CCPP_CAPGEN_CMAKE_CMD}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                   OUTPUT_VARIABLE CAPGEN_OUT
                   ERROR_VARIABLE CAPGEN_OUT
@@ -103,7 +104,7 @@ function(ccpp_datafile)
   else()
     message(FATAL_ERROR "CCPP cap file retrieval FAILED: result = ${RES}")
   endif()
-  string(replace "," ";" CCPP_CAPS_LIST ${CCPP_CAPS})
+  string(REPLACE "," ";" CCPP_CAPS_LIST ${CCPP_CAPS})
   set(CCPP_CAPS_LIST "${CCPP_CAPS_LIST}" PARENT_SCOPE)
 endfunction()
 
