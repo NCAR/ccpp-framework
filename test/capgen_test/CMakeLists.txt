@@ -5,19 +5,19 @@
 # Paths should be relative to CMAKE_SOURCE_DIR (this file's directory)
 #
 #------------------------------------------------------------------------------
-LIST(APPEND SCHEME_FILES "temp_scheme_files.txt" "ddt_suite_files.txt")
-LIST(APPEND HOST_FILES  "test_host_data" "test_host_mod")
-LIST(APPEND SUITE_FILES "ddt_suite.xml" "temp_suite.xml")
+list(APPEND SCHEME_FILES "temp_scheme_files.txt" "ddt_suite_files.txt")
+list(APPEND HOST_FILES  "test_host_data" "test_host_mod")
+list(APPEND SUITE_FILES "ddt_suite.xml" "temp_suite.xml")
 
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
-SET(HOST "test_host")
+set(HOST "test_host")
 
 # By default, generated caps go in ccpp subdir
-SET(CCPP_CAP_FILES "${CMAKE_CURRENT_BINARY_DIR}/ccpp" CACHE
+set(CCPP_CAP_FILES "${CMAKE_CURRENT_BINARY_DIR}/ccpp" CACHE
   STRING "Location of CCPP-generated cap files")
 
-SET(CCPP_FRAMEWORK ${CMAKE_SOURCE_DIR}/scripts)
+set(CCPP_FRAMEWORK ${CMAKE_SOURCE_DIR}/scripts)
 
 # Create metadata and source file lists
 foreach(SCHEME_FILE ${SCHEME_FILES})
@@ -30,7 +30,7 @@ foreach(SCHEME_FILE ${SCHEME_FILES})
 endforeach()
 
 foreach(FILE ${HOST_FILES})
-  LIST(APPEND HOST_METADATA "${FILE}.meta")
+  list(APPEND HOST_METADATA "${FILE}.meta")
   # target_sources prefers absolute pathnames
   file(REAL_PATH "${FILE}.F90" ABS_PATH)
   list(APPEND LIBRARY_LIST "${ABS_PATH}")
