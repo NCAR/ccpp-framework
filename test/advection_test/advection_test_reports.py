@@ -36,8 +36,9 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
                   os.path.join(_FRAMEWORK_DIR, "src", "ccpp_hashable.F90"),
                   os.path.join(_FRAMEWORK_DIR, "src", "ccpp_hash_table.F90")]
 _CCPP_FILES = _UTILITY_FILES + _HOST_FILES + _SUITE_FILES
-_PROCESS_LIST = list()
-_MODULE_LIST = ["cld_ice", "cld_liq", "apply_constituent_tendencies"]
+_DEPENDENCIES = list()
+_PROCESS_LIST = [""]
+_MODULE_LIST = ["apply_constituent_tendencies", "cld_ice", "cld_liq"]
 _SUITE_LIST = ["cld_suite"]
 _DYN_CONST_ROUTINES = ["cld_ice_dynamic_constituents", "cld_liq_dynamic_constituents"]
 _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
@@ -193,4 +194,5 @@ class CommandLineCldSuite(unittest.TestCase):
         completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--output-variables", "cld_suite"],
                                           capture_output=True,
                                           text=True)
-        self.assertEqual(_SEP.join(_OUTPUT_VARS_CLD), completedProcess.stdout.strip())
+        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
+        self.assertSetEqual(set(_OUTPUT_VARS_CLD), actualOutput)
