@@ -23,8 +23,6 @@ set(HOST "test_host")
 # By default, generated caps go in ccpp subdir
 set(CCPP_CAP_FILES "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 
-set(CCPP_FRAMEWORK ${CMAKE_SOURCE_DIR}/scripts)
-
 # Create metadata and source file lists
 foreach(FILE ${SCHEME_FILES})
   file(STRINGS "${FILE}" FILENAMES)
