@@ -7,6 +7,7 @@ function(ccpp_capgen)
 
   # list(APPEND CCPP_CAPGEN_CMD_LIST "${CMAKE_SOURCE_DIR}/scripts/ccpp_capgen.py")
 
+  unset(CCPP_CAPGEN_CMD_LIST)
   if(DEFINED arg_CAPGEN_DEBUG)
     list(APPEND CCPP_CAPGEN_CMD_LIST "--debug")
   endif()
@@ -43,6 +44,7 @@ function(ccpp_capgen)
   message(STATUS "Running ccpp_capgen: ${CCPP_CAPGEN_CMD}")
 
   list(JOIN CCPP_CAPGEN_CMD_LIST ";" CCPP_CAPGEN_CMAKE_CMD)
+  unset(CAPGEN_OUT)
   execute_process(COMMAND "${CMAKE_SOURCE_DIR}/scripts/ccpp_capgen.py" ${CCPP_CAPGEN_CMAKE_CMD}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                   OUTPUT_VARIABLE CAPGEN_OUT
@@ -55,9 +57,9 @@ function(ccpp_capgen)
     string(FIND "${CAPGEN_OUT}" "Variables of type ccpp_constituent_properties_t only allowed in register phase" ERROR_INDEX)
 
     if (ERROR_INDEX GREATER -1)
-      MESSAGE(STATUS "Capgen build produces expected error message.")
+      message(STATUS "Capgen build produces expected error message.")
     else()
-      MESSAGE(FATAL_ERROR "CCPP cap generation did not generate expected error. Expected 'Variables of type ccpp_cosntituent_properties_t only allowed in register phase.")
+      message(FATAL_ERROR "CCPP cap generation did not generate expected error. Expected 'Variables of type ccpp_cosntituent_properties_t only allowed in register phase.")
     endif()
   else()
     if(RES EQUAL 0)
@@ -92,7 +94,9 @@ function(ccpp_datafile)
   string(REPLACE ";" " " CCPP_DATAFILE_CMD_SEPERATED "${CCPP_DATAFILE_CMD}")
   message(STATUS "Running ccpp_datafile.py command: ${CCPP_DATAFILE_CMD_SEPERATED}")
 
-  execute_process(COMMAND ${CCPP_DATAFILE_CMD}
+  unset(CCPP_CAPS)
+  list(JOIN CCPP_DATAFILE_CMD ";" CCPP_DATAFILE_CMAKE_CMD)
+  execute_process(COMMAND ${CCPP_DATAFILE_CMAKE_CMD}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                   OUTPUT_VARIABLE CCPP_CAPS
                   RESULT_VARIABLE RES
