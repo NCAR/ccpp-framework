@@ -105,6 +105,10 @@ class TestDdtHostDataTables(unittest.TestCase):
         test_str = datatable_report(_DATABASE, DatatableReport("module_list"), _SEP)
         self.assertSetEqual(set(_MODULE_LIST), set(test_str.split(_SEP)))
 
+    def test_dependencies_list(self):
+        test_str = datatable_report(_DATABASE, DatatableReport("dependencies"), _SEP)
+        self.assertSetEqual(set(_DEPENDENCIES), set(test_str.split(_SEP)))
+
     def test_suite_list(self):
         test_str = datatable_report(_DATABASE, DatatableReport("suite_list"), _SEP)
         self.assertSetEqual(set(_SUITE_LIST), set(test_str.split(_SEP)))
