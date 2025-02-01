@@ -43,4 +43,5 @@ jobs:
         pip install --user pytest
         BUILD_DIR=./build pytest \
                           test/capgen_test/capgen_test_reports.py \
-                          test/advection_test/advection_test_reports.py
+                          test/advection_test/advection_test_reports.py \
+                          test/ddthost_test/ddthost_test_reports.py
