@@ -199,7 +199,7 @@ class CommandLineCapgenDatafileRequiredFiles(unittest.TestCase):
         # actualOutput = {s.strip() for s in completedProcess.stdout.split(";")}
         self.assertEqual(";".join(_SUITE_LIST), completedProcess.stdout.strip())
 
-class CommandLineDddtSuite(unittest.TestCase):
+class CommandLineDdtSuite(unittest.TestCase):
     def test_required_variables(self):
         completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--required-variables", "ddt_suite"],
                                           capture_output=True,
