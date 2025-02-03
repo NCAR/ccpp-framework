@@ -17,6 +17,7 @@ module test_host_data
           fluxLW                                       ! Longwave radiation fluxes
      type(ty_rad_sw), dimension(:), allocatable ::   &
           fluxSW                                       ! Shortwave radiation fluxes
+     integer :: scheme_order
   end type physics_state
 
   public allocate_physics_state
@@ -66,6 +67,7 @@ contains
        allocate(state%nci(cols, levels))
     endif
 
+
     if (allocated(state%fluxLW)) then
        deallocate(state%fluxLW)
     end if
@@ -75,6 +77,9 @@ contains
        deallocate(state%fluxSW)
     end if
     allocate(state%fluxSW(cols))
+
+    ! Initialize scheme counter.
+    state%scheme_order = 1
 
   end subroutine allocate_physics_state
 

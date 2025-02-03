@@ -75,6 +75,7 @@ _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horiz
                           "effective_radius_of_stratiform_cloud_graupel",
                           "cloud_graupel_number_concentration",
                           "scalar_variable_for_testing",
+                          "scheme_order_in_suite",
                           "flag_indicating_cloud_microphysics_has_graupel",
                           "flag_indicating_cloud_microphysics_has_ice",
                           "shortwave_radiation_fluxes",
@@ -87,7 +88,8 @@ _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "effective_radius_of_stratiform_cloud_rain_particle",
                            "scalar_variable_for_testing",
                            "shortwave_radiation_fluxes",
-                           "longwave_radiation_fluxes"]
+                           "longwave_radiation_fluxes",
+                           "scheme_order_in_suite"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 
 def fields_string(field_type, field_list, sep):

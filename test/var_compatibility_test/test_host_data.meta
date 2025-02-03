@@ -72,6 +72,12 @@
   units = W m-2
   dimensions = (horizontal_dimension)
   type = ty_rad_lw
+[scheme_order]
+  standard_name = scheme_order_in_suite
+  long_name = scheme order in suite definition file
+  units = None
+  dimensions = ()
+  type = integer
 
 [ccpp-table-properties]
   name = test_host_data
