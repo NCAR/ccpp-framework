@@ -11,9 +11,9 @@ module test_prog
    integer, public, parameter :: cs = 16
    integer, public, parameter :: cm = 36
 
-    !> \section arg_table_suite_info  Argument Table
-    !! \htmlinclude arg_table_suite_info.html
-    !!
+   !> \section arg_table_suite_info  Argument Table
+   !! \htmlinclude arg_table_suite_info.html
+   !!
    type, public :: suite_info
       character(len=cs) :: suite_name = ''
       character(len=cs), pointer :: suite_parts(:) => NULL()
@@ -22,7 +22,7 @@ module test_prog
       character(len=cm), pointer :: suite_required_vars(:) => NULL()
    end type suite_info
 
-CONTAINS
+contains
 
    logical function check_list(test_list, chk_list, list_desc, suite_name)
       ! Check a list (<test_list>) against its expected value (<chk_list>)
@@ -84,7 +84,7 @@ CONTAINS
                 errmsg = ''
              end if
           end do
-          if (check_list .and. ANY(check_unique < 0)) then
+          if (check_list .and. any(check_unique < 0)) then
              check_list = .false.
              write(errmsg, '(3a)') 'ERROR: The following ', trim(list_desc),  &
                   ' items were not found'
@@ -186,8 +186,8 @@ CONTAINS
     !!
     subroutine test_host(retval, test_suites)
 
+       use host_ccpp_ddt,      only: ccpp_info_t
        use test_host_mod,      only: ncols, num_time_steps
-       use test_host_ccpp_cap, only: test_host_ccpp_physics_register
        use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
        use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_initial
        use test_host_ccpp_cap, only: test_host_ccpp_physics_run
@@ -200,13 +200,12 @@ CONTAINS
        logical,          intent(out) :: retval
 
        logical                         :: check
-       integer                         :: col_start, col_end
+       integer                         :: col_start
        integer                         :: index, sind
        integer                         :: time_step
        integer                         :: num_suites
        character(len=128), allocatable :: suite_names(:)
-       character(len=512)              :: errmsg
-       integer                         :: errflg
+       type(ccpp_info_t)               :: ccpp_info
 
        ! Initialize our 'data'
        call init_data()
@@ -238,69 +237,61 @@ CONTAINS
           return
        end if
 
-       ! Use the suite information to call the register phase
-       do sind = 1, num_suites
-          call test_host_ccpp_physics_register(test_suites(sind)%suite_name, &
-               errmsg, errflg)
-          if (errflg /= 0) then
-             write(6, '(4a)') 'ERROR in register of ',                       &
-                  trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
-          end if
-       end do
        ! Use the suite information to setup the run
        do sind = 1, num_suites
           call test_host_ccpp_physics_initialize(test_suites(sind)%suite_name, &
-               errmsg, errflg)
-          if (errflg /= 0) then
+               ccpp_info)
+          if (ccpp_info%errflg /= 0) then
              write(6, '(4a)') 'ERROR in initialize of ',                      &
-                  trim(test_suites(sind)%suite_name), ': ', trim(errmsg)
+                  trim(test_suites(sind)%suite_name), ': ', trim(ccpp_info%errmsg)
           end if
        end do
        ! Loop over time steps
        do time_step = 1, num_time_steps
           ! Initialize the timestep
           do sind = 1, num_suites
-             if (errflg /= 0) then
+             if (ccpp_info%errflg /= 0) then
                 exit
              end if
-             if (errflg == 0) then
+             if (ccpp_info%errflg == 0) then
                 call test_host_ccpp_physics_timestep_initial(                 &
-                     test_suites(sind)%suite_name, errmsg, errflg)
+                     test_suites(sind)%suite_name, ccpp_info)
              end if
-             if (errflg /= 0) then
+             if (ccpp_info%errflg /= 0) then
                 write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ', &
-                     trim(errmsg)
+                     trim(ccpp_info%errmsg)
                 exit
              end if
-             if (errflg /= 0) then
+             if (ccpp_info%errflg /= 0) then
                 exit
              end if
           end do
 
           do col_start = 1, ncols, 5
-             if (errflg /= 0) then
+             if (ccpp_info%errflg /= 0) then
                 exit
              end if
-             col_end = MIN(col_start + 4, ncols)
+             ccpp_info%col_start = col_start
+             ccpp_info%col_end = MIN(col_start + 4, ncols)
 
              do sind = 1, num_suites
-                if (errflg /= 0) then
+                if (ccpp_info%errflg /= 0) then
                    exit
                 end if
                 do index = 1, size(test_suites(sind)%suite_parts)
-                   if (errflg /= 0) then
+                   if (ccpp_info%errflg /= 0) then
                       exit
                    end if
-                   if (errflg == 0) then
+                   if (ccpp_info%errflg == 0) then
                       call test_host_ccpp_physics_run(                        &
                            test_suites(sind)%suite_name,                      &
                            test_suites(sind)%suite_parts(index),              &
-                           col_start, col_end, errmsg, errflg)
+                           ccpp_info)
                    end if
-                   if (errflg /= 0) then
+                   if (ccpp_info%errflg /= 0) then
                       write(6, '(5a)') trim(test_suites(sind)%suite_name),    &
                            '/', trim(test_suites(sind)%suite_parts(index)),   &
-                           ': ', trim(errmsg)
+                           ': ', trim(ccpp_info%errmsg)
                       exit
                    end if
                 end do
@@ -308,53 +299,53 @@ CONTAINS
           end do
 
           do sind = 1, num_suites
-             if (errflg /= 0) then
+             if (ccpp_info%errflg /= 0) then
                 exit
              end if
-             if (errflg == 0) then
+             if (ccpp_info%errflg == 0) then
                 call test_host_ccpp_physics_timestep_final(                   &
-                     test_suites(sind)%suite_name, errmsg, errflg)
+                     test_suites(sind)%suite_name, ccpp_info)
              end if
-             if (errflg /= 0) then
+             if (ccpp_info%errflg /= 0) then
                 write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ',    &
-                     trim(errmsg)
+                     trim(ccpp_info%errmsg)
                 exit
              end if
           end do
        end do ! End time step loop
 
        do sind = 1, num_suites
-          if (errflg /= 0) then
+          if (ccpp_info%errflg /= 0) then
              exit
           end if
-          if (errflg == 0) then
+          if (ccpp_info%errflg == 0) then
              call test_host_ccpp_physics_finalize(                            &
-                  test_suites(sind)%suite_name, errmsg, errflg)
+                  test_suites(sind)%suite_name,ccpp_info)
           end if
-          if (errflg /= 0) then
+          if (ccpp_info%errflg /= 0) then
              write(6, '(3a)') test_suites(sind)%suite_parts(index), ': ',     &
-                  trim(errmsg)
+                  trim(ccpp_info%errmsg)
              write(6,'(2a)') 'An error occurred in ccpp_timestep_final, ',    &
                   'Exiting...'
              exit
           end if
        end do
 
-       if (errflg == 0) then
+       if (ccpp_info%errflg == 0) then
           ! Run finished without error, check answers
           if (.not. check_model_times()) then
              write(6, *) 'Model times error!'
-             errflg = -1
+             ccpp_info%errflg = -1
           else if (compare_data()) then
              write(6, *) 'Answers are correct!'
-             errflg = 0
+             ccpp_info%errflg = 0
           else
              write(6, *) 'Answers are not correct!'
-             errflg = -1
+             ccpp_info%errflg = -1
           end if
        end if
 
-       retval = errflg == 0
+       retval = ccpp_info%errflg == 0
 
     end subroutine test_host
 
