@@ -1,6 +1,6 @@
 module rad_sw
   use ccpp_kinds, only: kind_phys
-  use module_rad_ddt, only: ty_rad_sw
+  use mod_rad_ddt, only: ty_rad_sw
 
   implicit none
   private

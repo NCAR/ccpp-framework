@@ -4,8 +4,8 @@ module mod_rad_ddt
 
   public ty_rad_lw, ty_rad_sw
 
-  !> \section arg_table_module_rad_ddt Argument Table
-  !! \htmlinclude arg_table_module_rad_ddt.html
+  !> \section arg_table_mod_rad_ddt Argument Table
+  !! \htmlinclude arg_table_mod_rad_ddt.html
   !!
   
   !> \section arg_table_ty_rad_lw  Argument Table

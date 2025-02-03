@@ -223,6 +223,51 @@ def parse_metadata_file(filename, known_ddts, run_env, skip_ddt_check=False):
 
 ########################################################################
 
+def find_module_name(filename):
+    """Find the module name from module header in <filename>"""
+    module_name = ''
+    if os.path.isfile(filename):
+        with open(filename, 'r') as infile:
+            fin_lines = infile.readlines()
+        # end with
+        num_lines = len(fin_lines)
+        context = ParseContext(linenum=1, filename=filename)
+        while context.line_num <= num_lines:
+            if MetadataTable.table_start(fin_lines[context.line_num - 1]):
+                found_start = False
+                while not found_start:
+                    line = fin_lines[context.line_num].strip()
+                    context.line_num += 1
+                    if line and (line[0] == '['):
+                        found_start = True
+                    elif line:
+                        props = _parse_config_line(line, context)
+                        for prop in props:
+                            # Look for name property
+                            key = prop[0].strip().lower()
+                            value = prop[1].strip()
+                            if key == 'name' :
+                                name = value
+                            if key == 'type' :
+                                if (value == 'module') or (value == 'scheme'):
+                                    module_name = name
+                                    break
+                            # end if
+                        # end for
+                    # end if
+                    if context.line_num > num_lines:
+                        break
+                    # end if
+                # end while
+            else:
+                context.line_num += 1
+            # end if
+        # end while
+    # end if
+    return module_name
+
+########################################################################
+
 def find_scheme_names(filename):
     """Find and return a list of all the physics scheme names in
     <filename>. A scheme is identified by its ccpp-table-properties name.
@@ -813,8 +858,11 @@ class MetadataSection(ParseSource):
         if self.header_type == "ddt":
             known_ddts.append(self.title)
         # end if
-        # We need a default module if none was listed
-        if self.module is None:
+        # We need a default module if none was listed.
+        # DJS2024: First, try to find module_name from the metadata. Otherwise,
+        # use file name as module_name (default).
+        self.__module_name = find_module_name(self.__pobj.filename)
+        if (self.__module_name == ''):
             self.__module_name = self._default_module()
         # end if
         #  Initialize our ParseSource parent
