@@ -1,6 +1,5 @@
 module rad_sw
   use ccpp_kinds, only: kind_phys
-  use mod_rad_ddt, only: ty_rad_sw
 
   implicit none
   private
@@ -12,10 +11,11 @@ contains
   !> \section arg_table_rad_sw_run  Argument Table
   !! \htmlinclude arg_table_rad_sw_run.html
   !!
-  subroutine rad_sw_run(ncol, fluxSW, errmsg, errflg)
+  subroutine rad_sw_run(ncol, sfc_up_sw, sfc_down_sw, errmsg, errflg)
 
     integer,            intent(in)    :: ncol
-    type(ty_rad_sw),    intent(inout) :: fluxSW(:)
+    real(kind_phys),    intent(inout) :: sfc_up_sw(:)
+    real(kind_phys),    intent(inout) :: sfc_down_sw(:)
     character(len=512), intent(out)   :: errmsg
     integer,            intent(out)   :: errflg
 
@@ -26,8 +26,8 @@ contains
     errflg = 0
 
     do icol=1,ncol
-       fluxSW(icol)%sfc_up_sw   = 100._kind_phys
-       fluxSW(icol)%sfc_down_sw = 400._kind_phys
+       sfc_up_sw(icol)   = 100._kind_phys
+       sfc_down_sw(icol) = 400._kind_phys
     enddo
 
   end subroutine rad_sw_run

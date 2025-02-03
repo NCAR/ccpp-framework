@@ -146,7 +146,8 @@ required_vars_var_compatibility="${required_vars_var_compatibility},horizontal_l
 required_vars_var_compatibility="${required_vars_var_compatibility},longwave_radiation_fluxes"
 required_vars_var_compatibility="${required_vars_var_compatibility},scalar_variable_for_testing"
 required_vars_var_compatibility="${required_vars_var_compatibility},scheme_order_in_suite" 
-required_vars_var_compatibility="${required_vars_var_compatibility},shortwave_radiation_fluxes"
+required_vars_var_compatibility="${required_vars_var_compatibility},surface_downwelling_shortwave_radiation_flux"
+required_vars_var_compatibility="${required_vars_var_compatibility},surface_upwelling_shortwave_radiation_flux"
 required_vars_var_compatibility="${required_vars_var_compatibility},vertical_layer_dimension"
 input_vars_var_compatibility="cloud_graupel_number_concentration"
 #input_vars_var_compatibility="${input_vars_var_compatibility},cloud_ice_number_concentration"
@@ -162,7 +163,8 @@ input_vars_var_compatibility="${input_vars_var_compatibility},horizontal_loop_en
 input_vars_var_compatibility="${input_vars_var_compatibility},longwave_radiation_fluxes"
 input_vars_var_compatibility="${input_vars_var_compatibility},scalar_variable_for_testing"
 input_vars_var_compatibility="${input_vars_var_compatibility},scheme_order_in_suite"
-input_vars_var_compatibility="${input_vars_var_compatibility},shortwave_radiation_fluxes"
+input_vars_var_compatibility="${input_vars_var_compatibility},surface_downwelling_shortwave_radiation_flux"
+input_vars_var_compatibility="${input_vars_var_compatibility},surface_upwelling_shortwave_radiation_flux"
 input_vars_var_compatibility="${input_vars_var_compatibility},vertical_layer_dimension"
 output_vars_var_compatibility="ccpp_error_code,ccpp_error_message"
 output_vars_var_compatibility="${output_vars_var_compatibility},cloud_ice_number_concentration"
@@ -173,7 +175,8 @@ output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius
 output_vars_var_compatibility="${output_vars_var_compatibility},longwave_radiation_fluxes"
 output_vars_var_compatibility="${output_vars_var_compatibility},scalar_variable_for_testing"
 output_vars_var_compatibility="${output_vars_var_compatibility},scheme_order_in_suite"
-output_vars_var_compatibility="${output_vars_var_compatibility},shortwave_radiation_fluxes"
+output_vars_var_compatibility="${output_vars_var_compatibility},surface_downwelling_shortwave_radiation_flux"
+output_vars_var_compatibility="${output_vars_var_compatibility},surface_upwelling_shortwave_radiation_flux"
 
 ##
 ## Run a database report and check the return string

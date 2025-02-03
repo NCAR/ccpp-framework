@@ -1,7 +1,6 @@
 [ccpp-table-properties]
   name = rad_sw
   type = scheme
-  dependencies = module_rad_ddt.F90
 [ccpp-arg-table]
   name = rad_sw_run
   type = scheme
@@ -11,12 +10,19 @@
   units = count
   dimensions = ()
   intent = in
-[fluxSW]
-  standard_name = shortwave_radiation_fluxes
-  long_name = shortwave radiation fluxes
-  units = W m-2
+[ sfc_up_sw ]
+  standard_name = surface_upwelling_shortwave_radiation_flux
+  units = W m2
   dimensions = (horizontal_loop_extent)
-  type = ty_rad_sw
+  type = real
+  kind = kind_phys
+  intent = inout
+[ sfc_down_sw ]
+  standard_name = surface_downwelling_shortwave_radiation_flux
+  units = W m2
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
   intent = inout
 [ errmsg ]
   standard_name = ccpp_error_message

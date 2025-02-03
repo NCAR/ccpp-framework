@@ -20,8 +20,8 @@ module mod_rad_ddt
   !! \htmlinclude arg_table_ty_rad_sw.html
   !!
   type ty_rad_sw
-     real(kind_phys) :: sfc_up_sw
-     real(kind_phys) :: sfc_down_sw
+     real(kind_phys), pointer :: sfc_up_sw(:)   => null()
+     real(kind_phys), pointer :: sfc_down_sw(:) => null()
   end type ty_rad_sw
 
 end module mod_rad_ddt
