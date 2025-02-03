@@ -490,9 +490,12 @@ def compare_metadata(metadata_define, metadata_request):
         if not metadata_define[var_name][0].active == 'T':
             for var in metadata_request[var_name]:
                 if var.optional == 'F':
-                    logging.error("Conditionally allocated host-model variable {0} is not optional in {1}".format(
+                    # DH 20241022 - change logging.error to logging.warn, because it is known
+                    # that this strict check is not correct and will be reverted soon
+                    #logging.error(
+                    logging.warn("Conditionally allocated host-model variable {0} is not optional in {1}".format(
                                   var_name, var.container))
-                    success = False
+                    #success = False
         # TEMPORARY CHECK - IF THE VARIABLE IS ALWAYS ALLOCATED, THE SCHEME VARIABLE SHOULDN'T BE OPTIONAL
         else:
             for var in metadata_request[var_name]:

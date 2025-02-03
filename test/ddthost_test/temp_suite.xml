@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="temp_suite" version="1.0">
+  <group name="physics1">
+    <scheme>setup_coeffs</scheme>
+    <scheme>temp_set</scheme>
+  </group>
+  <group name="physics2">
+    <scheme>temp_calc_adjust</scheme>
+    <scheme>temp_adjust</scheme>
+  </group>
+</suite>
