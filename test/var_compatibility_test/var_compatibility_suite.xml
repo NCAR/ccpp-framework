@@ -4,7 +4,9 @@
   <group name="radiation">
     <scheme>effr_pre</scheme>
     <scheme>effr_calc</scheme>
-    <scheme>effr_post</scheme> 
+    <scheme>effr_post</scheme>
     <scheme>effr_diag</scheme>
+    <scheme>rad_lw</scheme>
+    <scheme>rad_sw</scheme>
   </group>
 </suite>

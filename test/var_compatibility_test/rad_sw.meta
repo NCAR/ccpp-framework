@@ -1,0 +1,35 @@
+[ccpp-table-properties]
+  name = rad_sw
+  type = scheme
+  dependencies = module_rad_ddt.F90
+[ccpp-arg-table]
+  name = rad_sw_run
+  type = scheme
+[ ncol ]
+  standard_name = horizontal_loop_extent
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[fluxSW]
+  standard_name = shortwave_radiation_fluxes
+  long_name = shortwave radiation fluxes
+  units = W m-2
+  dimensions = (horizontal_loop_extent)
+  type = ty_rad_sw
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

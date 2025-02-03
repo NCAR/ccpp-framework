@@ -351,7 +351,7 @@ CONTAINS
 
    character(len=cs), target :: test_parts1(1) = (/ 'radiation       ' /)
 
-   character(len=cm), target :: test_invars1(8) = (/                          &
+   character(len=cm), target :: test_invars1(10) = (/                         &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
         'effective_radius_of_stratiform_cloud_snow_particle        ',         &
@@ -359,9 +359,11 @@ CONTAINS
         'cloud_graupel_number_concentration                        ',         &
         'scalar_variable_for_testing                               ',         &
         'flag_indicating_cloud_microphysics_has_graupel            ',         &
-        'flag_indicating_cloud_microphysics_has_ice                '/)
+        'flag_indicating_cloud_microphysics_has_ice                ',         &
+        'shortwave_radiation_fluxes                                ',         &
+        'longwave_radiation_fluxes                                 '/)
 
-   character(len=cm), target :: test_outvars1(8) = (/                         &
+   character(len=cm), target :: test_outvars1(10) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_ice_particle         ',         &
@@ -369,9 +371,11 @@ CONTAINS
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
         'effective_radius_of_stratiform_cloud_snow_particle        ',         &
         'cloud_ice_number_concentration                            ',         &
-        'scalar_variable_for_testing                               ' /)
+        'scalar_variable_for_testing                               ',         &
+        'shortwave_radiation_fluxes                                ',         &
+	'longwave_radiation_fluxes                                 '/)
 
-   character(len=cm), target :: test_reqvars1(12) = (/                        &
+   character(len=cm), target :: test_reqvars1(14) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
@@ -383,7 +387,9 @@ CONTAINS
         'cloud_ice_number_concentration                            ',         &
         'scalar_variable_for_testing                               ',         &
         'flag_indicating_cloud_microphysics_has_graupel            ',         &
-        'flag_indicating_cloud_microphysics_has_ice                '/)
+        'flag_indicating_cloud_microphysics_has_ice                ',         &
+        'shortwave_radiation_fluxes                                ',         &
+	'longwave_radiation_fluxes                                 '/)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
