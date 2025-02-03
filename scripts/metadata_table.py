@@ -859,11 +859,13 @@ class MetadataSection(ParseSource):
             known_ddts.append(self.title)
         # end if
         # We need a default module if none was listed.
-        # DJS2024: First, try to find module_name from the metadata. Otherwise,
-        # use file name as module_name (default).
-        self.__module_name = find_module_name(self.__pobj.filename)
-        if (self.__module_name == ''):
-            self.__module_name = self._default_module()
+        # DJS2024: If module_name not provided through initialization, try
+        # to find module_name from the metadata. Otherwise, use file name
+        # as module_name (default).
+        if (self.__module_name == None):
+            self.__module_name = find_module_name(self.__pobj.filename)
+            if (self.__module_name == ''):
+                self.__module_name = self._default_module()
         # end if
         #  Initialize our ParseSource parent
         super().__init__(self.title, self.header_type, self.__pobj)
