@@ -1,0 +1,87 @@
+[ccpp-table-properties]
+  name = temp_calc_adjust
+  type = scheme
+  dependencies = foo.F90, bar.F90
+[ccpp-arg-table]
+  name = temp_calc_adjust_run
+  type = scheme
+  process = adjusting
+[ nbox ]
+  standard_name = horizontal_loop_extent
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ timestep ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = in
+[ temp_level ]
+  standard_name = potential_temperature_at_interface
+  units = K
+  dimensions = (ccpp_constant_one:horizontal_loop_extent, vertical_interface_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+[ temp_calc ]
+  standard_name = potential_temperature_at_previous_timestep
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = temp_calc_adjust_init
+  type = scheme
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = temp_calc_adjust_finalize
+  type = scheme
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

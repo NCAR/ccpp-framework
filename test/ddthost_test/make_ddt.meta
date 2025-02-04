@@ -1,0 +1,127 @@
+[ccpp-table-properties]
+  name = vmr_type
+  type = ddt
+[ccpp-arg-table]
+  name = vmr_type
+  type = ddt
+[ nvmr ]
+  standard_name = number_of_chemical_species
+  units = count
+  dimensions = ()
+  type = integer
+[ vmr_array ]
+  standard_name = array_of_volume_mixing_ratios
+  units = ppmv
+  dimensions = (horizontal_loop_extent, number_of_chemical_species)
+  type = real
+  kind = kind_phys
+[ccpp-table-properties]
+  name = make_ddt
+  type = scheme
+[ccpp-arg-table]
+  name = make_ddt_run
+  type = scheme
+[ cols ]
+  standard_name = horizontal_loop_begin
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ cole ]
+  standard_name = horizontal_loop_end
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ O3 ]
+  standard_name = ozone
+  units = ppmv
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+[ HNO3 ]
+  standard_name = nitric_acid
+  units = ppmv
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+[ vmr ]
+  standard_name = volume_mixing_ratio_ddt
+  dimensions = ()
+  type = vmr_type
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = make_ddt_init
+  type = scheme
+[ nbox ]
+  standard_name = horizontal_dimension
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ vmr ]
+  standard_name = volume_mixing_ratio_ddt
+  dimensions = ()
+  type = vmr_type
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = make_ddt_timestep_final
+  type = scheme
+[ ncols ]
+  standard_name = horizontal_dimension
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ vmr ]
+  standard_name = volume_mixing_ratio_ddt
+  dimensions = ()
+  type = vmr_type
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
