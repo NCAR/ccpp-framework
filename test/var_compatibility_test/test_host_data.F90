@@ -15,7 +15,7 @@ module test_host_data
      real(kind_phys) :: scalar_var
      real(kind_phys) :: scalar_varA
      real(kind_phys) :: scalar_varB
-     real(kind_phys) :: scalar_varC
+     integer :: scalar_varC
      integer :: scheme_order
 
   end type physics_state

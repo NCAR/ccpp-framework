@@ -39,7 +39,7 @@ contains
    subroutine effr_diag_run( effrr_in,  scalar_var, errmsg, errflg)
 
       real(kind_phys),    intent(in)    :: effrr_in(:,:)
-      real(kind_phys),    intent(in)    :: scalar_var
+      integer,            intent(in)    :: scalar_var
       character(len=512), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
       !----------------------------------------------------------------

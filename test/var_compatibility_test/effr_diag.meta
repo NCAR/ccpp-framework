@@ -46,8 +46,7 @@
   long_name = unused scalar variable C
   units = m
   dimensions = ()
-  type = real
-  kind = kind_phys
+  type = integer
   intent = in
 [ errmsg ]
   standard_name = ccpp_error_message

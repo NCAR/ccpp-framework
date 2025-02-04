@@ -78,8 +78,7 @@
   long_name = unused scalar variable C
   units = m
   dimensions = ()
-  type = real
-  kind = kind_phys
+  type = integer
 [scheme_order]
   standard_name = scheme_order_in_suite
   long_name = scheme order in suite definition file
