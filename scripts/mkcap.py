@@ -356,12 +356,16 @@ class Var(object):
                         str = "type({s.type}), pointer :: p => null()"
             return str.format(s=self)
         else:
-            # If the host variable is potentially unallocated, the active attribute is
-            # also set accordingly for the local variable; add target to variable declaration
-            if self.optional == 'T':
-                target = ', target'
-            else:
-                target = ''
+            # DH* 20241022 WORKAROUND TO ACCOUNT FOR MISSING UPDATES TO CCPP PHYSICS
+            # W.R.T. DECLARING OPTIONAL VARIABLES IN METADATA AND CODE. ALWAYS USE TARGET
+            ## If the host variable is potentially unallocated, the active attribute is
+            ## also set accordingly for the local variable; add target to variable declaration
+            #if self.optional == 'T':
+            #    target = ', target'
+            #else:
+            #    target = ''
+            target = ', target'
+            # *DH
             if self.type in STANDARD_VARIABLE_TYPES:
                 if self.kind:
                     if self.rank:

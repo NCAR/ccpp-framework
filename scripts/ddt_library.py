@@ -112,16 +112,21 @@ class VarDDT(Var):
         # end if
         return call_str
 
-    def write_def(self, outfile, indent, ddict, allocatable=False, dummy=False):
+    def write_def(self, outfile, indent, ddict, allocatable=False, target=False,
+                  dummy=False, add_intent=None, extra_space=0, public=False):
         """Write the definition line for this DDT.
         The type of this declaration is the type of the Var at the
         end of the chain of references."""
         if self.field is None:
             super().write_def(outfile, indent, ddict,
-                              allocatable=allocatable, dummy=dummy)
+                              allocatable=allocatable, target=target, dummy=dummy,
+                              add_intent=add_intent, extra_space=extra_space,
+                              public=public)
         else:
             self.field.write_def(outfile, indent, ddict,
-                                 allocatable=allocatable, dummy=dummy)
+                                 allocatable=allocatable, target=target,
+                                 dummy=dummy, add_intent=add_intent,
+                                 extra_space=extra_space, public=public)
         # end if
 
     @staticmethod
@@ -214,8 +219,8 @@ class DDTLibrary(dict):
             # end if
             if ddt.title in self:
                 errmsg = "Duplicate DDT, {}, found{}, original{}"
-                ctx = context_string(ddt.source.context)
-                octx = context_string(self[ddt.title].source.context)
+                ctx = context_string(ddt.context)
+                octx = context_string(self[ddt.title].context)
                 raise CCPPError(errmsg.format(ddt.title, ctx, octx))
             # end if
             if run_env.verbose:
@@ -324,13 +329,18 @@ class DDTLibrary(dict):
 
     @property
     def name(self):
-        "Return the name of this DDT library"
+        """Return the name of this DDT library"""
         return self.__name
 
     @property
     def run_env(self):
         """Return the CCPPFrameworkEnv object for this DDT library"""
         return self.__run_env
+
+    @property
+    def max_mod_name_len(self):
+        """Return the maximum module name length of this DDT library's modules"""
+        return self.__max_mod_name_len
 
 ###############################################################################
 if __name__ == "__main__":
