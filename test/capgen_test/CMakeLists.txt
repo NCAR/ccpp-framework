@@ -51,8 +51,9 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 message(STATUS "Adding ${CCPP_CAPS_LIST} to library list")
 list(APPEND CAPGEN_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(CAPGEN_TESTLIB OBJECT ${CAPGEN_LIBRARY_LIST})
-add_executable(capgen_${HOST} ${HOST}.F90 $<TARGET_OBJECTS:CAPGEN_TESTLIB>)
 
-target_include_directories(capgen_${HOST} PRIVATE ${CCPP_CAP_FILES})
-
-add_test(NAME capgen_${HOST} COMMAND capgen_${HOST})
+add_pfunit_ctest (capgen_host_integration
+  TEST_SOURCES test_capgen_host.pf
+  LINK_LIBRARIES CAPGEN_TESTLIB
+  OTHER_SOURCES ${HOST}.F90
+  )
