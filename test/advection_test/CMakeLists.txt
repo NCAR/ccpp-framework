@@ -67,8 +67,9 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 
 list(APPEND ADVECTION_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(ADVECTION_TESTLIB OBJECT ${ADVECTION_LIBRARY_LIST})
-add_executable(advection_${HOST} ${HOST}.F90 $<TARGET_OBJECTS:ADVECTION_TESTLIB>)
 
-target_include_directories(advection_${HOST} PRIVATE ${CCPP_CAP_FILES})
-
-add_test(NAME advection_${HOST} COMMAND advection_${HOST})
+add_pfunit_ctest (advection_host_integration
+  TEST_SOURCES test_advection_host.pf
+  LINK_LIBRARIES ADVECTION_TESTLIB
+  OTHER_SOURCES ${HOST}.F90
+)

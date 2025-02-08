@@ -55,8 +55,9 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 
 list(APPEND VAR_COMPATIBILITY_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(VAR_COMPATIBILITY_TESTLIB OBJECT ${VAR_COMPATIBILITY_LIBRARY_LIST})
-add_executable(var_compatibility_${HOST} ${HOST}.F90 $<TARGET_OBJECTS:VAR_COMPATIBILITY_TESTLIB>)
 
-target_include_directories(var_compatibility_${HOST} PRIVATE ${CCPP_CAP_FILES})
-
-add_test(NAME var_compatibility_${HOST} COMMAND var_compatibility_${HOST})
+add_pfunit_ctest (var_compatibility_host_integration
+  TEST_SOURCES test_var_compatibility_integration.pf
+  LINK_LIBRARIES VAR_COMPATIBILITY_TESTLIB
+  OTHER_SOURCES ${HOST}.F90
+)
