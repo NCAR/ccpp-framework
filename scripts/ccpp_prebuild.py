@@ -13,7 +13,7 @@ import re
 import sys
 
 # CCPP framework imports
-from common import encode_container, decode_container, decode_container_as_dict, execute
+from common import encode_container, decode_container, decode_container_as_dict
 from common import CCPP_STAGES, CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
 from common import STANDARD_VARIABLE_TYPES, STANDARD_INTEGER_TYPE, CCPP_TYPE
 from common import SUITE_DEFINITION_FILENAME_PATTERN
@@ -157,9 +157,14 @@ def clean_files(config, namespace):
         os.path.join(config['static_api_dir'], static_api_file),
         config['static_api_sourcefile'],
         ]
-    # Not very pythonic, but the easiest way w/o importing another Python module
-    cmd = 'rm -vf {0}'.format(' '.join(files_to_remove))
-    execute(cmd)
+    for f in files_to_remove:
+        try:
+            os.remove(f)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            logging.error(f"Error removing {f}: {e}")
+            success = False
     return success
 
 def get_all_suites(suites_dir):

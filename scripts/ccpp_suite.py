@@ -426,15 +426,15 @@ character(len=16) :: {css_var_name} = '{state}'
         self.__ddt_library = ddt_library
         # Collect all relevant schemes
         # For all groups, find associated init and final methods
-        scheme_set = set()
+        scheme_list = list()
         for group in self.groups:
             for scheme in group.schemes():
-                scheme_set.add(scheme.name)
+                scheme_list.append(scheme.name)
             # end for
         # end for
         no_scheme_entries = {} # Skip schemes that are not in this suite
-        for module in scheme_library:
-            if module in scheme_set:
+        for module in scheme_list:
+            if scheme_library[module]:
                 scheme_entries = scheme_library[module]
             else:
                 scheme_entries = no_scheme_entries
