@@ -58,6 +58,7 @@ add_library(VAR_COMPATIBILITY_TESTLIB OBJECT ${VAR_COMPATIBILITY_LIBRARY_LIST})
 
 add_pfunit_ctest (var_compatibility_host_integration
   TEST_SOURCES test_var_compatibility_integration.pf
-  LINK_LIBRARIES VAR_COMPATIBILITY_TESTLIB
+  LINK_LIBRARIES VAR_COMPATIBILITY_TESTLIB test_utils
   OTHER_SOURCES ${HOST}.F90
 )
+target_include_directories(var_compatibility_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)

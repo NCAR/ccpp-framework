@@ -70,6 +70,7 @@ add_library(ADVECTION_TESTLIB OBJECT ${ADVECTION_LIBRARY_LIST})
 
 add_pfunit_ctest (advection_host_integration
   TEST_SOURCES test_advection_host.pf
-  LINK_LIBRARIES ADVECTION_TESTLIB
+  LINK_LIBRARIES ADVECTION_TESTLIB test_utils
   OTHER_SOURCES ${HOST}.F90
 )
+target_include_directories(advection_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)

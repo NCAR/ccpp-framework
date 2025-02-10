@@ -58,6 +58,7 @@ add_library(DDT_TESTLIB OBJECT ${DDT_LIBRARY_LIST})
 
 add_pfunit_ctest (ddt_host_integration
   TEST_SOURCES test_ddt_host.pf
-  LINK_LIBRARIES DDT_TESTLIB
+  LINK_LIBRARIES DDT_TESTLIB test_utils
   OTHER_SOURCES ${HOST}.F90
 )
+target_include_directories(ddt_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)

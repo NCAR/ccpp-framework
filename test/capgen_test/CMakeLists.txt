@@ -54,6 +54,7 @@ add_library(CAPGEN_TESTLIB OBJECT ${CAPGEN_LIBRARY_LIST})
 
 add_pfunit_ctest (capgen_host_integration
   TEST_SOURCES test_capgen_host.pf
-  LINK_LIBRARIES CAPGEN_TESTLIB
+  LINK_LIBRARIES CAPGEN_TESTLIB test_utils
   OTHER_SOURCES ${HOST}.F90
-  )
+)
+target_include_directories(capgen_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
