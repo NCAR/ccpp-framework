@@ -1,0 +1,45 @@
+[ccpp-table-properties]
+  name = mod_rad_ddt
+  type = module
+[ccpp-arg-table]
+  name = mod_rad_ddt
+  type = module
+
+[ccpp-table-properties]
+  name = ty_rad_lw
+  type = ddt
+  dependencies = 
+[ccpp-arg-table]
+  name = ty_rad_lw
+  type = ddt
+[ sfc_up_lw ]
+  standard_name = surface_upwelling_longwave_radiation_flux
+  units = W m2
+  dimensions = ()
+  type = real
+  kind = kind_phys
+[ sfc_down_lw ]
+  standard_name = surface_downwelling_longwave_radiation_flux
+  units = W m2
+  dimensions = ()
+  type = real
+  kind = kind_phys
+
+[ccpp-table-properties]
+  name = ty_rad_sw
+  type = ddt
+[ccpp-arg-table]
+  name = ty_rad_sw
+  type = ddt
+[ sfc_up_sw ]
+  standard_name = surface_upwelling_shortwave_radiation_flux
+  units = W m2
+  dimensions = ()
+  type = real
+  kind = kind_phys
+[ sfc_down_sw ]
+  standard_name = surface_downwelling_shortwave_radiation_flux
+  units = W m2
+  dimensions = ()
+  type = real
+  kind = kind_phys
