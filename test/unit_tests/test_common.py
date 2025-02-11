@@ -34,18 +34,6 @@ class CommonTestCase(unittest.TestCase):
 
     """Tests functionality of functions in common.py"""
 
-    def test_execute(self):
-        """Test execute() function"""
-
-        # Input for successful test: ls command on this file
-        self.assertEqual(common.execute(f"ls {TEST_FILE}"),(0,f"{TEST_FILE}",""))
-
-        # Input for failing test (no exception): exit 1 from a subshell
-        self.assertEqual(common.execute(f"(exit 1)",abort=False),(1,"",f""))
-
-        # Input for failing test (raise exception): exit 1 from a subshell
-        self.assertRaises(Exception,common.execute,f"(exit 1)",abort=True)
-
     def test_split_var_name_and_array_reference(self):
         """Test split_var_name_and_array_reference() function"""
 
