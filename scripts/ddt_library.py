@@ -252,9 +252,10 @@ class DDTLibrary(dict):
         # end if (no else needed)
 
     def collect_ddt_fields(self, var_dict, var, run_env,
-                           ddt=None, skip_duplicates=False):
+                           ddt=None, skip_duplicates=False, parent=None):
         """Add all the reachable fields from DDT variable <var> of type,
            <ddt> to <var_dict>. Each field is added as a VarDDT.
+           If <parent>, add VarDDT recursively using parent.
            Note: By default, it is an error to try to add a duplicate
                  field to <var_dict> (i.e., the field already exists in
                  <var_dict> or one of its parents). To simply skip duplicate
@@ -272,12 +273,16 @@ class DDTLibrary(dict):
             # end if
         # end if
         for dvar in ddt.variable_list():
-            subvar = VarDDT(dvar, var, self.run_env)
+            if parent is None:
+                subvar = VarDDT(dvar, var, self.run_env)
+            else:
+                subvar = VarDDT(VarDDT(dvar, var, self.run_env), parent, self.run_env)
+            # end if
             dvtype = dvar.get_prop_value('type')
             if (dvar.is_ddt()) and (dvtype in self):
                 # If DDT in our library, we need to add sub-fields recursively.
                 subddt = self[dvtype]
-                self.collect_ddt_fields(var_dict, subvar, run_env, ddt=subddt)
+                self.collect_ddt_fields(var_dict, dvar, run_env, parent=var, ddt=subddt)
             # end if
             # add_variable only checks the current dictionary. By default,
             # for a DDT, the variable also cannot be in our parent
