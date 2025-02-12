@@ -50,6 +50,10 @@ contains
 
       call cmp_effr_diag(effrr_in, effrr_min, effrr_max)
 
+      if (scalar_var .ne. 380) then
+         errmsg	= 'ERROR: effr_diag_run():  scalar_var should be 380'
+         errflg	= 1
+      endif
    end subroutine effr_diag_run
    
    subroutine cmp_effr_diag(effr, effr_min, effr_max)
