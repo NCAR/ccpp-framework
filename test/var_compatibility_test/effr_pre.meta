@@ -40,6 +40,14 @@
   type = real
   kind = kind_phys
   intent = inout
+[ scalar_var ]
+  standard_name = scalar_variable_for_testing_a
+  long_name = unused scalar variable A
+  units = m
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = in
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

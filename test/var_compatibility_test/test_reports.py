@@ -74,6 +74,9 @@ _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horiz
                           "effective_radius_of_stratiform_cloud_graupel",
                           "cloud_graupel_number_concentration",
                           "scalar_variable_for_testing",
+                          "scalar_variable_for_testing_a",
+                          "scalar_variable_for_testing_b",
+                          "scalar_variable_for_testing_c",
                           "scheme_order_in_suite",
                           "flag_indicating_cloud_microphysics_has_graupel",
                           "flag_indicating_cloud_microphysics_has_ice"]
