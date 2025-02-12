@@ -1677,6 +1677,7 @@ class VarDictionary(OrderedDict):
                                        context=newvar.context)
             # end if
         # end if
+
         # Check if local_name exists in Group. If applicable, create new 
         # variable with unique name. There are two instances when new names are
         # created:

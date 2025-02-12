@@ -51,6 +51,11 @@ contains
       ! Do some post-processing on effrr...
       effrr_inout(:,:) = effrr_inout(:,:)*1._kind_phys
 
+      if (scalar_var .ne. 1013.0) then
+         errmsg	= 'ERROR: effr_post_run():  scalar_var should be 1013.0'
+         errflg	= 1
+      endif
+
    end subroutine effr_post_run
   
  end module effr_post

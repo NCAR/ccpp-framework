@@ -50,6 +50,11 @@ contains
       ! Do some pre-processing on effrr...
       effrr_inout(:,:) = effrr_inout(:,:)*1._kind_phys
 
+      if (scalar_var .ne. 273.15) then
+         errmsg = 'ERROR: effr_pre_run():  scalar_var should be 273.15'
+         errflg = 1
+      endif
+
    end subroutine effr_pre_run
   
  end module effr_pre
