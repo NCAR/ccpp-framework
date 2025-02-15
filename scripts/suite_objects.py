@@ -2273,7 +2273,7 @@ class Group(SuiteObject):
                         ParseSource(_API_SOURCE_NAME,
                                     _API_LOCAL_VAR_NAME, newvar.context),
                         self.run_env)
-        self.add_variable(local_var, self.run_env, exists_ok=True)
+        self.add_variable(local_var, self.run_env, exists_ok=True, gen_unique=True)
         # Finally, make sure all dimensions are accounted for
         emsg = self.add_variable_dimensions(local_var, _API_LOCAL_VAR_TYPES,
                                             adjust_intent=True,

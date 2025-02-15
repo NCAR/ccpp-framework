@@ -59,6 +59,26 @@
   dimensions = ()
   type = real
   kind = kind_phys
+[scalar_varA]
+  standard_name = scalar_variable_for_testing_a
+  long_name = unused scalar variable A
+  units = m
+  dimensions = ()
+  type = real
+  kind = kind_phys
+[scalar_varB]
+  standard_name = scalar_variable_for_testing_b
+  long_name = unused scalar variable B
+  units = m
+  dimensions = ()
+  type = real
+  kind = kind_phys
+[scalar_varC]
+  standard_name = scalar_variable_for_testing_c
+  long_name = unused scalar variable C
+  units = m
+  dimensions = ()
+  type = integer
 [scheme_order]
   standard_name = scheme_order_in_suite
   long_name = scheme order in suite definition file

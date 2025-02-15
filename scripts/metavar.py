@@ -1677,12 +1677,37 @@ class VarDictionary(OrderedDict):
                                        context=newvar.context)
             # end if
         # end if
+        # Check if local_name exists in Group. If applicable, Create new 
+        # variable with unique name. There are two instances when new names are
+        # created:
+        # - Same <local_name> used in different DDTs.
+        # - Different <standard_name> using the same <local_name> in a Group.
+        #   During the Group analyze phase, <gen_unique> is True.
         lname = newvar.get_prop_value('local_name')
         lvar = self.find_local_name(lname)
         if lvar is not None:
+            # Check if <lvar> is part of a different DDT than <newvar>.
+            # The API uses the full variable references when calling the Group Caps,
+            # <lvar.call_string(self))> and <newvar.call_string(self)>.
+            # Within the context of a full reference, it is allowable for local_names
+            # to be the same in different data containers.
+            newvar_callstr = newvar.call_string(self)
+            lvar_callstr   = lvar.call_string(self)
+            if newvar_callstr and lvar_callstr:
+                if newvar_callstr != lvar_callstr:
+                    if not gen_unique:
+                        exists_ok = True
+                    # end if
+                # end if
+            # end if
             if gen_unique:
                 new_lname = self.new_internal_variable_name(prefix=lname)
                 newvar = newvar.clone(new_lname)
+                # Local_name needs to be the local_name for the new
+                # internal variable, otherwise multiple instances of the same
+                # local_name in the Group cap will all be overwritten with the
+                # same local_name
+                lname = new_lname
             elif not exists_ok:
                 errstr = 'Invalid local_name: {} already registered{}'
                 cstr = context_string(lvar.source.context, with_comma=True)
