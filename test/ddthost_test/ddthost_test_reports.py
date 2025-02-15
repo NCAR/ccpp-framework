@@ -15,6 +15,8 @@ import os
 import unittest
 import subprocess
 
+from test_stub import BaseTests
+
 _BUILD_DIR = os.path.join(os.path.abspath(os.environ['BUILD_DIR']), "test", "ddthost_test")
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +24,7 @@ _FRAMEWORK_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir, os.pardir))
 _SCRIPTS_DIR = os.path.join(_FRAMEWORK_DIR, "scripts")
 _SRC_DIR = os.path.join(_FRAMEWORK_DIR, "src")
 
-sys.path.append(_SCRIPTS_DIR)
+# sys.path.append(_SCRIPTS_DIR)
 # pylint: disable=wrong-import-position
 from ccpp_datafile import datatable_report, DatatableReport
 # pylint: enable=wrong-import-position
@@ -80,91 +82,29 @@ _OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "surface_air_pressure", "water_vapor_specific_humidity"]
 _SEP = ","
 
-class TestDdtHostDataTables(unittest.TestCase):
-    def test_host_files(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("host_files"), _SEP)
-        self.assertSetEqual(set(_HOST_FILES), set(test_str.split(_SEP)))
-
-    def test_suite_files(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("suite_files"), _SEP)
-        self.assertSetEqual(set(_SUITE_FILES), set(test_str.split(_SEP)))
-
-    def test_utility_files(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("utility_files"), _SEP)
-        self.assertSetEqual(set(_UTILITY_FILES), set(test_str.split(_SEP)))
-
-    def test_ccpp_files(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("ccpp_files"), _SEP)
-        self.assertSetEqual(set(_CCPP_FILES), set(test_str.split(_SEP)))
-    
-    def test_process_list(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("process_list"), _SEP)
-        self.assertSetEqual(set(_PROCESS_LIST), set(test_str.split(_SEP)))
-
-    def test_module_list(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("module_list"), _SEP)
-        self.assertSetEqual(set(_MODULE_LIST), set(test_str.split(_SEP)))
-
-    def test_dependencies_list(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("dependencies"), _SEP)
-        self.assertSetEqual(set(_DEPENDENCIES), set(test_str.split(_SEP)))
-
-    def test_suite_list(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("suite_list"), _SEP)
-        self.assertSetEqual(set(_SUITE_LIST), set(test_str.split(_SEP)))
+class TestDdtHostDataTables(unittest.TestCase, BaseTests.TestHostDataTables):
+    database = _DATABASE
+    host_files = _HOST_FILES
+    suite_files = _SUITE_FILES
+    utility_files = _UTILITY_FILES
+    ccpp_files = _CCPP_FILES
+    process_list = _PROCESS_LIST
+    module_list = _MODULE_LIST
+    dependencies = _DEPENDENCIES
+    suite_list = _SUITE_LIST
 
 
-class CommandLineDdtHostDatafileRequiredFiles(unittest.TestCase):
-    def test_host_files(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--host-files"],
-                                          capture_output=True,
-                                          text=True)
-        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
-        self.assertSetEqual(set(_HOST_FILES), actualOutput)
-
-    def test_suite_files(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--suite-files"],
-                                          capture_output=True,
-                                          text=True)
-        self.assertEqual(_SEP.join(_SUITE_FILES), completedProcess.stdout.strip())
-
-    def test_utility_files(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--utility-files"],
-                                          capture_output=True,
-                                          text=True)
-        self.assertEqual(_SEP.join(_UTILITY_FILES), completedProcess.stdout.strip())
-
-    def test_ccpp_files(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--ccpp-files"],
-                                          capture_output=True,
-                                          text=True)
-        self.assertEqual(_SEP.join(_CCPP_FILES), completedProcess.stdout.strip())
-
-    def test_process_list(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--process-list"],
-                                          capture_output=True,
-                                          text=True)
-        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
-        self.assertSetEqual(set(_PROCESS_LIST), actualOutput)
-
-    def test_module_list(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--module-list"],
-                                          capture_output=True,
-                                          text=True)
-        self.assertEqual(_SEP.join(_MODULE_LIST), completedProcess.stdout.strip())
-
-    def test_dependencies(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--dependencies"],
-                                          capture_output=True,
-                                          text=True)
-        self.assertEqual(_SEP.join(_DEPENDENCIES), completedProcess.stdout.strip())
-
-    def test_suite_list(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--suite-list", "--sep=;"],
-                                          capture_output=True,
-                                          text=True)
-        # actualOutput = {s.strip() for s in completedProcess.stdout.split(";")}
-        self.assertEqual(";".join(_SUITE_LIST), completedProcess.stdout.strip())
+class CommandLineDdtHostDatafileRequiredFiles(unittest.TestCase, BaseTests.TestHostCommandLineDataFiles):
+    database = _DATABASE
+    host_files = _HOST_FILES
+    suite_files = _SUITE_FILES
+    utility_files = _UTILITY_FILES
+    ccpp_files = _CCPP_FILES
+    process_list = _PROCESS_LIST
+    module_list = _MODULE_LIST
+    dependencies = _DEPENDENCIES
+    suite_list = _SUITE_LIST
+    datafile_script = f"{_SCRIPTS_DIR}/ccpp_datafile.py"
 
 
 class TestDdtSuite(unittest.TestCase):
@@ -246,33 +186,3 @@ class CommandLineTempSuite(unittest.TestCase):
                                           text=True)
         actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
         self.assertSetEqual(set(_OUTPUT_VARS_TEMP), actualOutput)
-
-
-# print("\nChecking variables for DDT suite from python")
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
-#                                                          value="ddt_suite"),
-#                               _REQUIRED_VARS_DDT)
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
-#                                                          value="ddt_suite"),
-#                               _INPUT_VARS_DDT)
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
-#                                                          value="ddt_suite"),
-#                               _OUTPUT_VARS_DDT)
-# print("\nChecking variables for temp suite from python")
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
-#                                                          value="temp_suite"),
-#                               _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP)
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
-#                                                          value="temp_suite"),
-#                               _REQUIRED_VARS_TEMP, exclude_protected=True)
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
-#                                                          value="temp_suite"),
-#                               _INPUT_VARS_TEMP + _PROT_VARS_TEMP)
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("input_variables",
-#                                                          value="temp_suite"),
-#                               _INPUT_VARS_TEMP, exclude_protected=True)
-# NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("output_variables",
-#                                                          value="temp_suite"),
-#                               _OUTPUT_VARS_TEMP)
-
-# sys.exit(NUM_ERRORS)
