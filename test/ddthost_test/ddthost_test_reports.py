@@ -107,82 +107,39 @@ class CommandLineDdtHostDatafileRequiredFiles(unittest.TestCase, BaseTests.TestH
     datafile_script = f"{_SCRIPTS_DIR}/ccpp_datafile.py"
 
 
-class TestDdtSuite(unittest.TestCase):
-    def test_required_variables(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("required_variables", value="ddt_suite"), _SEP)
-        self.assertSetEqual(set(_REQUIRED_VARS_DDT), set(test_str.split(_SEP)))
-
-    def test_input_variables(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("input_variables", value="ddt_suite"), _SEP)
-        self.assertSetEqual(set(_INPUT_VARS_DDT), set(test_str.split(_SEP)))
-
-    def test_output_variables(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("output_variables", value="ddt_suite"), _SEP)
-        self.assertSetEqual(set(_OUTPUT_VARS_DDT), set(test_str.split(_SEP)))
+class TestDdtSuite(unittest.TestCase, BaseTests.TestSuite):
+    database = _DATABASE
+    required_vars = _REQUIRED_VARS_DDT
+    input_vars = _INPUT_VARS_DDT
+    output_vars = _OUTPUT_VARS_DDT
+    suite_name = "ddt_suite"
 
 
-class CommandLineDddtSuite(unittest.TestCase):
-    def test_required_variables(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--required-variables", "ddt_suite"],
-                                          capture_output=True,
-                                          text=True)
-        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
-        self.assertSetEqual(set(_REQUIRED_VARS_DDT), actualOutput)
-
-    def test_input_variables(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--input-variables", "ddt_suite"],
-                                          capture_output=True,
-                                          text=True)
-        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
-        self.assertSetEqual(set(_INPUT_VARS_DDT), actualOutput)
-
-    def test_output_variables(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--output-variables", "ddt_suite"],
-                                          capture_output=True,
-                                          text=True)
-        self.assertEqual(_SEP.join(_OUTPUT_VARS_DDT), completedProcess.stdout.strip())
+class CommandLineDdtSuite(unittest.TestCase, BaseTests.TestSuiteCommandLine):
+    database = _DATABASE
+    required_vars = _REQUIRED_VARS_DDT
+    input_vars = _INPUT_VARS_DDT
+    output_vars = _OUTPUT_VARS_DDT
+    suite_name = "ddt_suite"
+    datafile_script = f"{_SCRIPTS_DIR}/ccpp_datafile.py"
 
 
-class TestTempSuite(unittest.TestCase):
-    def test_required_variables(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("required_variables", value="temp_suite"), _SEP)
-        self.assertSetEqual(set(_REQUIRED_VARS_TEMP + _PROT_VARS_TEMP), set(test_str.split(_SEP)))
-
-    def test_required_variables_excluding_protected(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("required_variables", value="temp_suite"), _SEP, exclude_protected=True)
-        self.assertSetEqual(set(_REQUIRED_VARS_TEMP), set(test_str.split(_SEP)))
-
-    def test_input_variables(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("input_variables", value="temp_suite"), _SEP)
-        self.assertSetEqual(set(_INPUT_VARS_TEMP + _PROT_VARS_TEMP), set(test_str.split(_SEP)))
-
-    def test_input_variables_excluding_protected(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("input_variables", value="temp_suite"), _SEP, exclude_protected=True)
-        self.assertSetEqual(set(_INPUT_VARS_TEMP), set(test_str.split(_SEP)))
-
-    def test_output_variables(self):
-        test_str = datatable_report(_DATABASE, DatatableReport("output_variables", value="temp_suite"), _SEP)
-        self.assertSetEqual(set(_OUTPUT_VARS_TEMP), set(test_str.split(_SEP)))
+class TestTempSuite(unittest.TestCase, BaseTests.TestSuiteExcludeProtected):
+    database = _DATABASE
+    required_vars = _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP
+    input_vars = _INPUT_VARS_TEMP + _PROT_VARS_TEMP
+    required_vars_excluding_protected = _REQUIRED_VARS_TEMP
+    input_vars_excluding_protected = _INPUT_VARS_TEMP
+    output_vars = _OUTPUT_VARS_TEMP
+    suite_name = "temp_suite"
 
 
-class CommandLineTempSuite(unittest.TestCase):
-    def test_required_variables(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--required-variables", "temp_suite"],
-                                          capture_output=True,
-                                          text=True)
-        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
-        self.assertSetEqual(set(_REQUIRED_VARS_TEMP + _PROT_VARS_TEMP), actualOutput)
-
-    def test_input_variables(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--input-variables", "temp_suite"],
-                                          capture_output=True,
-                                          text=True)
-        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
-        self.assertSetEqual(set(_INPUT_VARS_TEMP + _PROT_VARS_TEMP), actualOutput)
-
-    def test_output_variables(self):
-        completedProcess = subprocess.run([f"{_SCRIPTS_DIR}/ccpp_datafile.py", _DATABASE, "--output-variables", "temp_suite"],
-                                          capture_output=True,
-                                          text=True)
-        actualOutput = {s.strip() for s in completedProcess.stdout.split(_SEP)}
-        self.assertSetEqual(set(_OUTPUT_VARS_TEMP), actualOutput)
+class CommandLineTempSuite(unittest.TestCase, BaseTests.TestSuiteExcludeProtectedCommandLine):
+    database = _DATABASE
+    required_vars = _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP
+    input_vars = _INPUT_VARS_TEMP + _PROT_VARS_TEMP
+    required_vars_excluding_protected = _REQUIRED_VARS_TEMP
+    input_vars_excluding_protected = _INPUT_VARS_TEMP
+    output_vars = _OUTPUT_VARS_TEMP
+    suite_name = "temp_suite"
+    datafile_script = f"{_SCRIPTS_DIR}/ccpp_datafile.py"

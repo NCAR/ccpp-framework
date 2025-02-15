@@ -91,3 +91,65 @@ class BaseTests:
                                             text=True)
             # actualOutput = {s.strip() for s in completedProcess.stdout.split(";")}
             self.assertEqual(";".join(self.suite_list), completedProcess.stdout.strip())
+
+    class TestSuite:
+        _SEP = ","
+
+        def test_required_variables(self):
+            test_str = datatable_report(self.database, DatatableReport("required_variables", value=self.suite_name), self._SEP)
+            self.assertSetEqual(set(self.required_vars), set(test_str.split(self._SEP)))
+
+        def test_input_variables(self):
+            test_str = datatable_report(self.database, DatatableReport("input_variables", value=self.suite_name), self._SEP)
+            self.assertSetEqual(set(self.input_vars), set(test_str.split(self._SEP)))
+
+        def test_output_variables(self):
+            test_str = datatable_report(self.database, DatatableReport("output_variables", value=self.suite_name), self._SEP)
+            self.assertSetEqual(set(self.output_vars), set(test_str.split(self._SEP)))
+    
+    class TestSuiteCommandLine:
+        _SEP = ","
+    
+        def test_required_variables(self):
+            completedProcess = subprocess.run([self.datafile_script, self.database, "--required-variables", self.suite_name],
+                                            capture_output=True,
+                                            text=True)
+            actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
+            self.assertSetEqual(set(self.required_vars), actualOutput)
+
+        def test_input_variables(self):
+            completedProcess = subprocess.run([self.datafile_script, self.database, "--input-variables", self.suite_name],
+                                            capture_output=True,
+                                            text=True)
+            actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
+            self.assertSetEqual(set(self.input_vars), actualOutput)
+
+        def test_output_variables(self):
+            completedProcess = subprocess.run([self.datafile_script, self.database, "--output-variables", self.suite_name],
+                                            capture_output=True,
+                                            text=True)
+            self.assertEqual(self._SEP.join(self.output_vars), completedProcess.stdout.strip())
+
+    class TestSuiteExcludeProtected(TestSuite):
+        def test_required_variables_excluding_protected(self):
+            test_str = datatable_report(self.database, DatatableReport("required_variables", value="temp_suite"), self._SEP, exclude_protected=True)
+            self.assertSetEqual(set(self.required_vars_excluding_protected), set(test_str.split(self._SEP)))
+
+        def test_input_variables_excluding_protected(self):
+            test_str = datatable_report(self.database, DatatableReport("input_variables", value="temp_suite"), self._SEP, exclude_protected=True)
+            self.assertSetEqual(set(self.input_vars_excluding_protected), set(test_str.split(self._SEP)))
+
+    class TestSuiteExcludeProtectedCommandLine(TestSuiteCommandLine):
+        def test_required_variables_excluding_protected(self):
+            completedProcess = subprocess.run([self.datafile_script, self.database, "--exclude-protected", "--required-variables", self.suite_name],
+                                               capture_output=True,
+                                               text=True)
+            actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
+            self.assertSetEqual(set(self.required_vars_excluding_protected), actualOutput)
+
+        def test_input_variables_excluding_protected(self):
+            completedProcess = subprocess.run([self.datafile_script, self.database, "--exclude-protected", "--input-variables", self.suite_name],
+                                               capture_output=True,
+                                               text=True)
+            actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
+            self.assertSetEqual(set(self.input_vars_excluding_protected), actualOutput)
