@@ -119,15 +119,15 @@ class BaseTests:
 
         def test_input_variables(self):
             completedProcess = subprocess.run([self.datafile_script, self.database, "--input-variables", self.suite_name],
-                                            capture_output=True,
-                                            text=True)
+                                               capture_output=True,
+                                               text=True)
             actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
             self.assertSetEqual(set(self.input_vars), actualOutput)
 
         def test_output_variables(self):
             completedProcess = subprocess.run([self.datafile_script, self.database, "--output-variables", self.suite_name],
-                                            capture_output=True,
-                                            text=True)
+                                               capture_output=True,
+                                               text=True)
             self.assertEqual(self._SEP.join(self.output_vars), completedProcess.stdout.strip())
 
     class TestSuiteExcludeProtected(TestSuite):
