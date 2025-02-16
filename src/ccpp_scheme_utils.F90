@@ -82,7 +82,8 @@ contains
       if (initialized) then
          if (size(const_inds) < size(standard_names)) then
             errcode = 1
-            errmsg = subname//': const_inds too small'
+            write(errmsg, '(3a)') subname, ": const_inds array too small. ", &
+                 "Must be greater than or equal to the size of standard_names"
          else
             do indx = 1, size(standard_names)
                ! For each std name in <standard_names>, find the const. index
