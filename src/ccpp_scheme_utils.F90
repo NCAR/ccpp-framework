@@ -18,17 +18,25 @@ module ccpp_scheme_utils
    logical                                  :: initialized = .false.
    type(ccpp_model_constituents_t), pointer :: constituent_obj => NULL()
 
-   private :: uninitialized
+   private :: check_initialization
+   private :: status_ok
 
 contains
 
-   subroutine uninitialized(caller, errcode, errmsg)
+   subroutine check_initialization(caller, errcode, errmsg)
       ! Dummy arguments
       character(len=*),           intent(in)  :: caller
       integer,          optional, intent(out) :: errcode
       character(len=*), optional, intent(out) :: errmsg
 
-      if (.not. initialized) then
+      if (initialized) then
+         if (present(errcode)) then
+            errcode = 0
+         end if
+         if (present(errmsg)) then
+            errmsg = ''
+         end if
+      else
          if (present(errcode)) then
             errcode = 1
          end if
@@ -36,7 +44,19 @@ contains
             errmsg = trim(caller)//' FAILED, module not initialized'
          end if
       end if
-   end subroutine uninitialized
+   end subroutine check_initialization
+
+   logical function status_ok(errcode)
+      ! Dummy argument
+      integer, optional, intent(in) :: errcode
+
+      if (present(errcode)) then
+         status_ok = (errcode == 0) .and. initialized
+      else
+         status_ok = initialized
+      end if
+
+   end function status_ok
 
    subroutine ccpp_initialize_constituent_ptr(const_obj)
       ! Dummy arguments
@@ -58,12 +78,12 @@ contains
       ! Local variable
       character(len=*), parameter :: subname = 'ccpp_constituent_index'
 
-      if (initialized) then
+      call check_initialization(caller=subname, errcode=errcode, errmsg=errmsg)
+      if (status_ok(errcode)) then
          call constituent_obj%const_index(const_index, standard_name,         &
               errcode, errmsg)
       else
          const_index = int_unassigned
-         call uninitialized(subname)
       end if
    end subroutine ccpp_constituent_index
 
@@ -79,7 +99,8 @@ contains
       character(len=*), parameter :: subname = 'ccpp_constituent_indices'
 
       const_inds = int_unassigned
-      if (initialized) then
+      call check_initialization(caller=subname, errcode=errcode, errmsg=errmsg)
+      if (status_ok(errcode)) then
          if (size(const_inds) < size(standard_names)) then
             errcode = 1
             write(errmsg, '(3a)') subname, ": const_inds array too small. ", &
@@ -94,8 +115,6 @@ contains
                end if
             end do
          end if
-      else
-         call uninitialized(subname)
       end if
    end subroutine ccpp_constituent_indices
 
