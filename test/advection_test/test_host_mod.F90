@@ -10,7 +10,7 @@ module test_host_mod
    real(kind_phys), parameter   :: tolerance = 1.0e-13_kind_phys
 
    !> \section arg_table_test_host_mod  Argument Table
-   !! \htmlinclude arg_table_test_host_host.html
+   !! \htmlinclude arg_table_test_host_mod.html
    !!
    integer,         parameter   :: ncols = 10
    integer,         parameter   :: pver = 5

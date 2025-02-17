@@ -23,7 +23,7 @@ module ccpp_constituent_prop_mod
    integer,         parameter :: mass_mixing_ratio = -5
    integer,         parameter :: volume_mixing_ratio = -6
    integer,         parameter :: number_concentration = -7
-   integer,         parameter :: int_unassigned = -HUGE(1)
+   integer, public, parameter :: int_unassigned = -HUGE(1)
    real(kind_phys), parameter :: kphys_unassigned = HUGE(1.0_kind_phys)
 
 !! \section arg_table_ccpp_constituent_properties_t

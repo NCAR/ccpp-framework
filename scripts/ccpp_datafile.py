@@ -1067,6 +1067,8 @@ def _add_generated_files(parent, host_files, suite_files, ccpp_kinds, src_dir):
     entry = ET.SubElement(utilities, "file")
     entry.text = os.path.join(src_dir, "ccpp_constituent_prop_mod.F90")
     entry = ET.SubElement(utilities, "file")
+    entry.text = os.path.join(src_dir, "ccpp_scheme_utils.F90")
+    entry = ET.SubElement(utilities, "file")
     entry.text = os.path.join(src_dir, "ccpp_hashable.F90")
     entry = ET.SubElement(utilities, "file")
     entry.text = os.path.join(src_dir, "ccpp_hash_table.F90")
