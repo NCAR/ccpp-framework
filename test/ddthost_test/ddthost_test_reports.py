@@ -10,10 +10,8 @@
  Usage: python test_reports <build_dir> <database_filepath>
 -----------------------------------------------------------------------
 """
-import sys
 import os
 import unittest
-import subprocess
 
 from test_stub import BaseTests
 
@@ -80,7 +78,6 @@ _OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "potential_temperature_at_interface",
                      "coefficients_for_interpolation",
                      "surface_air_pressure", "water_vapor_specific_humidity"]
-_SEP = ","
 
 class TestDdtHostDataTables(unittest.TestCase, BaseTests.TestHostDataTables):
     database = _DATABASE

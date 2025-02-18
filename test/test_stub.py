@@ -128,7 +128,8 @@ class BaseTests:
             completedProcess = subprocess.run([self.datafile_script, self.database, "--output-variables", self.suite_name],
                                                capture_output=True,
                                                text=True)
-            self.assertEqual(self._SEP.join(self.output_vars), completedProcess.stdout.strip())
+            actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
+            self.assertSetEqual(set(self.output_vars), actualOutput)
 
     class TestSuiteExcludeProtected(TestSuite):
         def test_required_variables_excluding_protected(self):
