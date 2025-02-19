@@ -85,3 +85,9 @@
   units = None
   dimensions = ()
   type = integer
+[num_subcycles]
+  standard_name = num_subcycles_for_effr
+  long_name = Number of times to subcycle the effr calculation
+  units = None
+  dimensions = ()
+  type = integer
