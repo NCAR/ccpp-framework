@@ -39,6 +39,7 @@ from framework_env import CCPPFrameworkEnv
 from parse_tools import init_log, set_log_level
 from parse_tools import CCPPError, ParseInternalError
 from parse_tools import reset_standard_name_counter, unique_standard_name
+from parse_tools import register_fortran_ddt_name
 from fortran_tools import parse_fortran_file
 from file_utils import create_file_list
 from metadata_table import blank_metadata_line
@@ -66,6 +67,10 @@ filenames""")
     parser.add_argument("--preproc-directives",
                         metavar='VARDEF1[,VARDEF2 ...]', type=str, default='',
                         help="Proprocessor directives used to correctly parse source files")
+
+    parser.add_argument("--ddt-names",
+                        metavar='DDT_NAME1[,DDT_NAME2 ...]', type=str, default='',
+                        help="Comma-separated DDT names that may be used in the parsed Fortran files")
 
     parser.add_argument("--output-root", type=str,
                         metavar='<directory for generated files>',
@@ -197,6 +202,11 @@ def _main_func():
         set_log_level(_LOGGER, logging.DEBUG)
     elif verbosity > 0:
         set_log_level(_LOGGER, logging.INFO)
+    # end if
+    if args.ddt_names:
+        for dname in args.ddt_names.split(','):
+            register_fortran_ddt_name(dname)
+        # end for
     # end if
     # Make sure we know where output is going
     output_dir = os.path.abspath(args.output_root)

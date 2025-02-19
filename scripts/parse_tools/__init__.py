@@ -21,6 +21,7 @@ from parse_checkers import check_fortran_type, check_balanced_paren
 from parse_checkers import fortran_list_match
 from parse_checkers import registered_fortran_ddt_name
 from parse_checkers import register_fortran_ddt_name
+from parse_checkers import registered_fortran_ddt_names
 from parse_checkers import check_units, check_dimensions, check_cf_standard_name
 from parse_checkers import check_default_value, check_valid_values, check_molar_mass
 from parse_log import init_log, set_log_level, flush_log
@@ -65,9 +66,10 @@ __all__ = [
     'ParseObject',
     'PreprocStack',
     'PrettyElementTree',
-    'register_fortran_ddt_name',
     'read_xml_file',
+    'register_fortran_ddt_name',
     'registered_fortran_ddt_name',
+    'registered_fortran_ddt_names',
     'reset_standard_name_counter',
     'set_log_level',
     'set_log_to_file',
