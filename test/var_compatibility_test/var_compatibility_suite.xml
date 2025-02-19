@@ -2,9 +2,13 @@
 
 <suite name="var_compatibility_suite" version="1.0">
   <group name="radiation">
-    <scheme>effr_pre</scheme>
-    <scheme>effr_calc</scheme>
-    <scheme>effr_post</scheme> 
+    <subcycle loop="num_subcycles_for_effr">
+      <scheme>effr_pre</scheme>
+      <subcycle loop="2">
+        <scheme>effr_calc</scheme>
+      </subcycle>
+      <scheme>effr_post</scheme>
+    </subcycle>
     <scheme>effr_diag</scheme>
   </group>
 </suite>

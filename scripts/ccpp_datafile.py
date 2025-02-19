@@ -1096,7 +1096,7 @@ def _add_suite_object(parent, suite_object):
         obj_elem.set("dimension_name", suite_object.dimension_name)
     # end if
     if isinstance(suite_object, Subcycle):
-        obj_elem.set("loop", suite_object.loop)
+        obj_elem.set("loop", suite_object._loop)
     # end if
     for obj_part in suite_object.parts:
         _add_suite_object(obj_elem, obj_part)

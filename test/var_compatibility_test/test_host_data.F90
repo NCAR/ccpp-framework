@@ -17,6 +17,7 @@ module test_host_data
      real(kind_phys) :: scalar_varB
      integer :: scalar_varC
      integer :: scheme_order
+     integer :: num_subcycles
 
   end type physics_state
 
@@ -69,6 +70,8 @@ contains
 
     ! Initialize scheme counter.
     state%scheme_order = 1
+    ! Initialize subcycle counter.
+    state%num_subcycles = 3
 
   end subroutine allocate_physics_state
 
