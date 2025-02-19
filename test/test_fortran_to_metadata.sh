@@ -1,14 +1,14 @@
 #! /bin/bash
 
 ## Relevant directories and file paths
-test_dir="$(dirname ${0})"
+test_dir="$(cd $(dirname ${0}); pwd -P)"
 script_dir="$(dirname ${test_dir})/scripts"
+sample_files_dir="${test_dir}/unit_tests/sample_files"
 f2m_script="${script_dir}/ccpp_fortran_to_metadata.py"
 filename="test_fortran_to_metadata"
-test_input="${test_dir}/${filename}.F90"
+test_input="${sample_files_dir}/${filename}.F90"
 tmp_dir="${test_dir}/unit_tests/tmp"
-sample_files="${test_dir}/unit_tests/sample_files"
-sample_meta="${sample_files}/check_fortran_to_metadata.meta"
+sample_meta="${sample_files_dir}/check_fortran_to_metadata.meta"
 
 # Run the script
 opts="--ddt-names serling_t"
