@@ -24,92 +24,10 @@ module test_prog
 
 CONTAINS
 
-   logical function check_list(test_list, chk_list, list_desc, suite_name)
-      ! Check a list (<test_list>) against its expected value (<chk_list>)
-
-      ! Dummy arguments
-      character(len=*),           intent(in) :: test_list(:)
-      character(len=*),           intent(in) :: chk_list(:)
-      character(len=*),           intent(in) :: list_desc
-      character(len=*), optional, intent(in) :: suite_name
-
-      ! Local variables
-      logical                                :: found
-      integer                                :: num_items
-      integer                                :: lindex, tindex
-      integer,          allocatable          :: check_unique(:)
-      character(len=2)                       :: sep
-      character(len=256)                     :: errmsg
-
-      check_list = .true.
-      errmsg = ''
-
-      ! Check the list size
-      num_items = size(chk_list)
-      if (size(test_list) /= num_items) then
-         write(errmsg, '(a,i0,2a)') 'ERROR: Found ', size(test_list),         &
-              ' ', trim(list_desc)
-         if (present(suite_name)) then
-            write(errmsg(len_trim(errmsg)+1:), '(2a)') ' for suite, ',        &
-                 trim(suite_name)
-         end if
-         write(errmsg(len_trim(errmsg)+1:), '(a,i0)') ', should be ', num_items
-         write(6, *) trim(errmsg)
-         errmsg = ''
-         check_list = .false.
-       end if
-
-       ! Now, check the list contents for 1-1 correspondence
-       if (check_list) then
-          allocate(check_unique(num_items))
-          check_unique = -1
-          do lindex = 1, num_items
-             found = .false.
-             do tindex = 1, num_items
-                if (trim(test_list(lindex)) == trim(chk_list(tindex))) then
-                   check_unique(tindex) = lindex
-                   found = .true.
-                   exit
-                end if
-             end do
-             if (.not. found) then
-                check_list = .false.
-                write(errmsg, '(5a)') 'ERROR: ', trim(list_desc), ' item, ',  &
-                     trim(test_list(lindex)), ', was not found'
-                if (present(suite_name)) then
-                   write(errmsg(len_trim(errmsg)+1:), '(2a)') ' in suite, ',  &
-                        trim(suite_name)
-                end if
-                write(6, *) trim(errmsg)
-                errmsg = ''
-             end if
-          end do
-          if (check_list .and. ANY(check_unique < 0)) then
-             check_list = .false.
-             write(errmsg, '(3a)') 'ERROR: The following ', trim(list_desc),  &
-                  ' items were not found'
-             if (present(suite_name)) then
-                write(errmsg(len_trim(errmsg)+1:), '(2a)') ' in suite, ',     &
-                     trim(suite_name)
-             end if
-             sep = '; '
-             do lindex = 1, num_items
-                if (check_unique(lindex) < 0) then
-                   write(errmsg(len_trim(errmsg)+1:), '(2a)') sep,            &
-                        trim(chk_list(lindex))
-                   sep = ', '
-                end if
-             end do
-             write(6, *) trim(errmsg)
-             errmsg = ''
-          end if
-       end if
-
-    end function check_list
-
     logical function check_suite(test_suite)
        use test_host_ccpp_cap, only: ccpp_physics_suite_part_list
        use test_host_ccpp_cap, only: ccpp_physics_suite_variables
+       use test_utils,         only: check_list
 
        ! Dummy argument
        type(suite_info), intent(in)    :: test_suite
@@ -195,6 +113,7 @@ CONTAINS
        use test_host_ccpp_cap, only: test_host_ccpp_physics_finalize
        use test_host_ccpp_cap, only: ccpp_physics_suite_list
        use test_host_mod,      only: init_data, compare_data, check_model_times
+       use test_utils,         only: check_list
 
        type(suite_info), intent(in)  :: test_suites(:)
        logical,          intent(out) :: retval
@@ -359,81 +278,3 @@ CONTAINS
     end subroutine test_host
 
  end module test_prog
-
- program test
-    use test_prog, only: test_host, suite_info, cm, cs
-
-    implicit none
-
-   character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
-                                                    'physics2        ' /)
-   character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(7) = (/                          &
-        'potential_temperature               ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'coefficients_for_interpolation      ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'potential_temperature_increment     ',                               &
-        'time_step_for_physics               ' /)
-   character(len=cm), target :: test_outvars1(7) = (/                         &
-        'potential_temperature               ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'coefficients_for_interpolation      ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
-   character(len=cm), target :: test_reqvars1(9) = (/                         &
-        'potential_temperature               ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'coefficients_for_interpolation      ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'potential_temperature_increment     ',                               &
-        'time_step_for_physics               ',                               &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
-
-   character(len=cm), target :: test_invars2(3) = (/                          &
-        'model_times                         ',                               &
-        'number_of_model_times               ',                               &
-        'surface_air_pressure                ' /)
-
-   character(len=cm), target :: test_outvars2(5) = (/                         &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ',                               &
-        'model_times                         ',                               &
-        'surface_air_pressure                ',                               &
-        'number_of_model_times               ' /)
-
-   character(len=cm), target :: test_reqvars2(5) = (/                         &
-        'model_times                         ',                               &
-        'number_of_model_times               ',                               &
-        'surface_air_pressure                ',                               &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
-    type(suite_info) :: test_suites(2)
-    logical :: run_okay
-
-    ! Setup expected test suite info
-    test_suites(1)%suite_name = 'temp_suite'
-	test_suites(1)%suite_parts => test_parts1
-    test_suites(1)%suite_input_vars => test_invars1
-    test_suites(1)%suite_output_vars => test_outvars1
-    test_suites(1)%suite_required_vars => test_reqvars1
-    test_suites(2)%suite_name = 'ddt_suite'
-	test_suites(2)%suite_parts => test_parts2
-    test_suites(2)%suite_input_vars => test_invars2
-    test_suites(2)%suite_output_vars => test_outvars2
-    test_suites(2)%suite_required_vars => test_reqvars2
-
-    call test_host(run_okay, test_suites)
-
-    if (run_okay) then
-       STOP 0
-    else
-       STOP -1
-    end if
-
-end program test
