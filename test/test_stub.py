@@ -1,10 +1,12 @@
 from ccpp_datafile import datatable_report, DatatableReport
 import subprocess
 
+
 class BaseTests:
 
+
     class TestHostDataTables:
-        _SEP = ";"
+        _SEP = ","
 
         def test_host_files(self):
             test_str = datatable_report(self.database, DatatableReport("host_files"), self._SEP)
@@ -38,6 +40,7 @@ class BaseTests:
             test_str = datatable_report(self.database, DatatableReport("suite_list"), self._SEP)
             self.assertSetEqual(set(self.suite_list), set(test_str.split(self._SEP)))
 
+
     class TestHostCommandLineDataFiles:
         _SEP = ","
 
@@ -45,8 +48,7 @@ class BaseTests:
             completedProcess = subprocess.run([self.datafile_script, self.database, "--host-files"],
                                             capture_output=True,
                                             text=True)
-            actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
-            self.assertSetEqual(set(self.host_files), actualOutput)
+            self.assertEqual(self._SEP.join(self.host_files), completedProcess.stdout.strip())
 
         def test_suite_files(self):
             completedProcess = subprocess.run([self.datafile_script, self.database, "--suite-files"],
@@ -89,8 +91,8 @@ class BaseTests:
             completedProcess = subprocess.run([self.datafile_script, self.database, "--suite-list", "--sep=;"],
                                             capture_output=True,
                                             text=True)
-            # actualOutput = {s.strip() for s in completedProcess.stdout.split(";")}
             self.assertEqual(";".join(self.suite_list), completedProcess.stdout.strip())
+
 
     class TestSuite:
         _SEP = ","
@@ -106,7 +108,8 @@ class BaseTests:
         def test_output_variables(self):
             test_str = datatable_report(self.database, DatatableReport("output_variables", value=self.suite_name), self._SEP)
             self.assertSetEqual(set(self.output_vars), set(test_str.split(self._SEP)))
-    
+
+
     class TestSuiteCommandLine:
         _SEP = ","
     
@@ -131,6 +134,7 @@ class BaseTests:
             actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
             self.assertSetEqual(set(self.output_vars), actualOutput)
 
+
     class TestSuiteExcludeProtected(TestSuite):
         def test_required_variables_excluding_protected(self):
             test_str = datatable_report(self.database, DatatableReport("required_variables", value="temp_suite"), self._SEP, exclude_protected=True)
@@ -139,6 +143,7 @@ class BaseTests:
         def test_input_variables_excluding_protected(self):
             test_str = datatable_report(self.database, DatatableReport("input_variables", value="temp_suite"), self._SEP, exclude_protected=True)
             self.assertSetEqual(set(self.input_vars_excluding_protected), set(test_str.split(self._SEP)))
+
 
     class TestSuiteExcludeProtectedCommandLine(TestSuiteCommandLine):
         def test_required_variables_excluding_protected(self):

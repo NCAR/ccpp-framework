@@ -16,18 +16,13 @@ import unittest
 from test_stub import BaseTests
 
 _BUILD_DIR = os.path.join(os.path.abspath(os.environ['BUILD_DIR']), "test", "ddthost_test")
+_DATABASE = os.path.abspath(os.path.join(_BUILD_DIR, "ccpp", "datatable.xml"))
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _FRAMEWORK_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir, os.pardir))
 _SCRIPTS_DIR = os.path.join(_FRAMEWORK_DIR, "scripts")
 _SRC_DIR = os.path.join(_FRAMEWORK_DIR, "src")
 
-# sys.path.append(_SCRIPTS_DIR)
-# pylint: disable=wrong-import-position
-from ccpp_datafile import datatable_report, DatatableReport
-# pylint: enable=wrong-import-position
-
-_DATABASE = os.path.abspath(os.path.join(_BUILD_DIR, "ccpp", "datatable.xml"))
 
 # Check data
 _HOST_FILES = [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90")]
@@ -121,7 +116,7 @@ class CommandLineDdtSuite(unittest.TestCase, BaseTests.TestSuiteCommandLine):
     datafile_script = f"{_SCRIPTS_DIR}/ccpp_datafile.py"
 
 
-class TestTempSuite(unittest.TestCase, BaseTests.TestSuiteExcludeProtected):
+class TestDdtTempSuite(unittest.TestCase, BaseTests.TestSuiteExcludeProtected):
     database = _DATABASE
     required_vars = _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP
     input_vars = _INPUT_VARS_TEMP + _PROT_VARS_TEMP
@@ -131,7 +126,7 @@ class TestTempSuite(unittest.TestCase, BaseTests.TestSuiteExcludeProtected):
     suite_name = "temp_suite"
 
 
-class CommandLineTempSuite(unittest.TestCase, BaseTests.TestSuiteExcludeProtectedCommandLine):
+class CommandLineDdtTempSuite(unittest.TestCase, BaseTests.TestSuiteExcludeProtectedCommandLine):
     database = _DATABASE
     required_vars = _REQUIRED_VARS_TEMP + _PROT_VARS_TEMP
     input_vars = _INPUT_VARS_TEMP + _PROT_VARS_TEMP
