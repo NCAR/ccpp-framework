@@ -88,10 +88,10 @@ class BaseTests:
             self.assertEqual(self._SEP.join(self.dependencies), completedProcess.stdout.strip())
 
         def test_suite_list(self):
-            completedProcess = subprocess.run([self.datafile_script, self.database, "--suite-list", "--sep=;"],
+            completedProcess = subprocess.run([self.datafile_script, self.database, "--suite-list"],
                                             capture_output=True,
                                             text=True)
-            self.assertEqual(";".join(self.suite_list), completedProcess.stdout.strip())
+            self.assertEqual(self._SEP.join(self.suite_list), completedProcess.stdout.strip())
 
 
     class TestSuite:
