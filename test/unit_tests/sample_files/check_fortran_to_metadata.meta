@@ -1,0 +1,31 @@
+[ccpp-table-properties]
+  name = do_stuff
+  type = scheme
+
+[ccpp-arg-table]
+  name  = do_stuff_run
+  type  = scheme
+[ const_props ]
+  standard_name = enter_standard_name_1
+  units = enter_units
+  type = ccpp_constituent_prop_ptr_t
+  dimensions = (enter_standard_name_5:enter_standard_name_6)
+  intent = in
+[ twilight_zone ]
+  standard_name = enter_standard_name_2
+  units = enter_units
+  type = serling_t
+  dimensions = ()
+  intent = inout
+[ errmsg ]
+  standard_name = enter_standard_name_3
+  units = enter_units
+  type = character | kind = len=512
+  dimensions = ()
+  intent = out
+[ errflg ]
+  standard_name = enter_standard_name_4
+  units = enter_units
+  type = integer
+  dimensions = ()
+  intent = out
