@@ -773,7 +773,7 @@ class API(VarDictionary):
         if add_allocate:
             ofile.write(f"allocate({varlist_name}({len(var_list)}))", indent)
         # end if
-        for ind, var in enumerate(sorted(var_list)):
+        for ind, var in enumerate(var_list):
             if start_var:
                 ind_str = f"{start_var} + {ind + start_index}"
             else:

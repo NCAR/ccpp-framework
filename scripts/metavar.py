@@ -1677,7 +1677,7 @@ class VarDictionary(OrderedDict):
                                        context=newvar.context)
             # end if
         # end if
-        # Check if local_name exists in Group. If applicable, Create new 
+        # Check if local_name exists in Group. If applicable, Create new
         # variable with unique name. There are two instances when new names are
         # created:
         # - Same <local_name> used in different DDTs.
@@ -1709,10 +1709,8 @@ class VarDictionary(OrderedDict):
                 # same local_name
                 lname = new_lname
             elif not exists_ok:
-                errstr = 'Invalid local_name: {} already registered{}'
-                cstr = context_string(lvar.source.context, with_comma=True)
-                raise ParseSyntaxError(errstr.format(lname, cstr),
-                                       context=newvar.source.context)
+                errstr = f"Invalid local_name: {lname} already registered"
+                raise ParseSyntaxError(errstr, context=newvar.source.context)
             # end if (no else, things are okay)
         # end if (no else, things are okay)
         # Check if this variable has a parent (i.e., it is an array reference)
