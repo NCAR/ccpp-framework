@@ -1,6 +1,7 @@
 [ccpp-table-properties]
   name = physics_state
   type = ddt
+  dependencies = module_rad_ddt.F90
 [ccpp-arg-table]
   name = physics_state
   type = ddt
@@ -59,6 +60,18 @@
   dimensions = ()
   type = real
   kind = kind_phys
+[fluxSW]
+  standard_name = shortwave_radiation_fluxes
+  long_name = shortwave radiation fluxes
+  units = W m-2
+  dimensions = (horizontal_dimension)
+  type = ty_rad_sw
+[fluxLW]
+  standard_name = longwave_radiation_fluxes
+  long_name = longwave radiation fluxes
+  units = W m-2
+  dimensions = (horizontal_dimension)
+  type = ty_rad_lw
 [scalar_varA]
   standard_name = scalar_variable_for_testing_a
   long_name = unused scalar variable A
@@ -91,3 +104,11 @@
   units = None
   dimensions = ()
   type = integer
+
+[ccpp-table-properties]
+  name = test_host_data
+  type = module
+  dependencies = module_rad_ddt.F90
+[ccpp-arg-table]
+  name = test_host_data
+  type = module
