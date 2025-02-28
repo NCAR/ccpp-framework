@@ -529,87 +529,87 @@ class MetadataTable():
 class MetadataSection(ParseSource):
     """Class to hold all information from a metadata header
     >>> from framework_env import CCPPFrameworkEnv
-    >>> _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'', \
-                                                 'scheme_files':'', \
+    >>> _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, {'host_files':'',              \
+                                                 'scheme_files':'',            \
                                                  'suites':''})
-    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = footable", "type = scheme", "module = foo",    \
-                       "[ im ]", "standard_name = horizontal_loop_extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV, module="foo",    \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = footable", "type = scheme",                     \
+                       "[ im ]", "standard_name = horizontal_loop_extent",     \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
                        "dimensions = () |  intent = in"])) #doctest: +ELLIPSIS
     <metadata_table.MetadataSection foo / footable at 0x...>
-    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = footable", "type = scheme", "module = foobar", \
-                       "[ im ]", "standard_name = horizontal_loop_extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV, module="foobar", \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = footable", "type = scheme",                     \
+                       "[ im ]", "standard_name = horizontal_loop_extent",     \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
                        "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var horizontal_loop_extent: im at 0x...>
-    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = footable", "type = scheme", "module = foobar", \
-                       "process = microphysics", "[ im ]",                    \
-                       "standard_name = horizontal_loop_extent",              \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV, module="foobar", \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = footable", "type = scheme",                     \
+                       "process = microphysics", "[ im ]",                     \
+                       "standard_name = horizontal_loop_extent",               \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
                        "dimensions = () |  intent = in"])).find_variable('horizontal_loop_extent') #doctest: +ELLIPSIS
     <metavar.Var horizontal_loop_extent: im at 0x...>
-    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = footable", "type=scheme", "module = foo",      \
-                       "[ im ]", "standard_name = horizontal_loop_extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in",                      \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV, module="foo",    \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = footable", "type=scheme",                       \
+                       "[ im ]", "standard_name = horizontal_loop_extent",     \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
+                       "dimensions = () |  intent = in",                       \
                        "  subroutine foo()"])).find_variable('horizontal_loop_extent') #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     parse_source.ParseSyntaxError: Invalid variable property syntax, 'subroutine foo()', at foobar.txt:9
-    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = footable", "type = scheme", "module=foobar",   \
-                       "[ im ]", "standard_name = horizontal_loop_extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in",                      \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV, module="foobar", \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = footable", "type = scheme",                     \
+                       "[ im ]", "standard_name = horizontal_loop_extent",     \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
+                       "dimensions = () |  intent = in",                       \
                        ""], line_start=0)).find_variable('horizontal_loop_extent').get_prop_value('local_name')
     'im'
-    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = footable", "type = scheme"                     \
-                       "[ im ]", "standard_name = horizontalloop extent",     \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in",                      \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV, module="foo",    \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = footable", "type = scheme"                      \
+                       "[ im ]", "standard_name = horizontalloop extent",      \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
+                       "dimensions = () |  intent = in",                       \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV,                 \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["[ccpp-arg-table]", "name = foobar", "type = scheme"   \
-                       "[ im ]", "standard_name = horizontal loop extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in",                      \
+    >>> MetadataSection("footable", "scheme", _DUMMY_RUN_ENV, module="foo",    \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["[ccpp-arg-table]", "name = foobar", "type = scheme"    \
+                       "[ im ]", "standard_name = horizontal loop extent",     \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
+                       "dimensions = () |  intent = in",                       \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("foobar", "scheme", _DUMMY_RUN_ENV,                   \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "module = foo"                        \
-                       "[ im ]", "standard_name = horizontal loop extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in",                      \
+    >>> MetadataSection("foobar", "scheme", _DUMMY_RUN_ENV, module="foo",      \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = foobar"                                         \
+                       "[ im ]", "standard_name = horizontal loop extent",     \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
+                       "dimensions = () |  intent = in",                       \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
-    >>> MetadataSection("foobar", "scheme", _DUMMY_RUN_ENV,                   \
-                      parse_object=ParseObject("foobar.txt",                  \
-                      ["name = foobar", "foo = bar"                           \
-                       "[ im ]", "standard_name = horizontal loop extent",    \
-                       "long_name = horizontal loop extent, start at 1",      \
-                       "units = index | type = integer",                      \
-                       "dimensions = () |  intent = in",                      \
+    >>> MetadataSection("foobar", "scheme", _DUMMY_RUN_ENV, module="foo",      \
+                      parse_object=ParseObject("foobar.txt",                   \
+                      ["name = foobar", "foo = bar"                            \
+                       "[ im ]", "standard_name = horizontal loop extent",     \
+                       "long_name = horizontal loop extent, start at 1",       \
+                       "units = index | type = integer",                       \
+                       "dimensions = () |  intent = in",                       \
                        ""], line_start=0)).find_variable('horizontal_loop_extent')
 
     >>> MetadataSection.header_start('[ ccpp-arg-table ]')
@@ -693,9 +693,7 @@ class MetadataSection(ParseSource):
             if mismatch:
                 raise CCPPError(mismatch)
             # end if
-            if module is not None:
-                self.__module_name = module
-            else:
+            if module is None:
                 perr = "MetadataSection requires a module name"
                 self.__pobj.add_syntax_err(perr)
                 self.__section_valid = False
@@ -766,7 +764,7 @@ class MetadataSection(ParseSource):
                     self.__process_type = value
                 else:
                     self.__pobj.add_syntax_err("metadata table start property",
-                                               token=value)
+                                               token=key)
                     self.__process_type = 'INVALID' # Allow error continue
                     self.__section_valid = False
                 # end if
