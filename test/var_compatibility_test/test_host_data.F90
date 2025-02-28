@@ -1,7 +1,7 @@
 module test_host_data
 
   use ccpp_kinds, only: kind_phys
-
+  use mod_rad_ddt, only: ty_rad_lw, ty_rad_sw
   !> \section arg_table_physics_state  Argument Table
   !! \htmlinclude arg_table_physics_state.html
   type physics_state
@@ -13,6 +13,10 @@ module test_host_data
           ncg,                                       & ! number concentration of cloud graupel
           nci                                          ! number concentration of cloud ice
      real(kind_phys) :: scalar_var
+     type(ty_rad_lw), dimension(:), allocatable ::   &
+          fluxLW                                       ! Longwave radiation fluxes
+     type(ty_rad_sw), dimension(:), allocatable ::   &
+          fluxSW                                       ! Shortwave radiation fluxes
      real(kind_phys) :: scalar_varA
      real(kind_phys) :: scalar_varB
      integer :: scalar_varC
@@ -67,6 +71,17 @@ contains
        end if
        allocate(state%nci(cols, levels))
     endif
+
+
+    if (allocated(state%fluxLW)) then
+       deallocate(state%fluxLW)
+    end if
+    allocate(state%fluxLW(cols))
+
+    if (allocated(state%fluxSW)) then
+       deallocate(state%fluxSW)
+    end if
+    allocate(state%fluxSW(cols))
 
     ! Initialize scheme counter.
     state%scheme_order = 1

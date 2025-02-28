@@ -208,7 +208,7 @@ class MetadataTableTestCase(unittest.TestCase):
             _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
         #print("The exception is", context.exception)
-        emsg = "Invalid metadata table start property, 'something', at "
+        emsg = "Invalid metadata table start property, 'banana', at "
         self.assertTrue(emsg in str(context.exception))
 
     def test_bad_line_split(self):

@@ -1,7 +1,7 @@
 !Test unit conversions for intent in, inout, out variables
 !
 
-module effr_pre
+module mod_effr_pre
 
    use ccpp_kinds, only: kind_phys
 
@@ -56,5 +56,5 @@ contains
       endif
 
    end subroutine effr_pre_run
-  
- end module effr_pre
+
+end module mod_effr_pre

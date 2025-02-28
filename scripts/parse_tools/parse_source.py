@@ -244,6 +244,10 @@ class ParseContext():
         self.__linenum = linenum
         self.__filename = filename
 
+    def default_module_name(self):
+        """Return a default module for this file"""
+        return os.path.splitext(os.path.basename(self.filename))[0]
+
     @property
     def line_num(self):
         """Return the current line"""

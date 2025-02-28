@@ -10,5 +10,7 @@
       <scheme>effr_post</scheme>
     </subcycle>
     <scheme>effr_diag</scheme>
+    <scheme>rad_lw</scheme>
+    <scheme>rad_sw</scheme>
   </group>
 </suite>

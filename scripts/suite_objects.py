@@ -2482,12 +2482,11 @@ class Group(SuiteObject):
         # end for
         # Look for any DDT types
         call_vars = self.call_list.variable_list()
-        self._ddt_library.write_ddt_use_statements(call_vars, outfile,
-                                                   indent+1, pad=modmax)
-        decl_vars = ([x[0] for x in subpart_allocate_vars.values()] +
+        all_vars = ([x[0] for x in subpart_allocate_vars.values()] +
                      [x[0] for x in subpart_scalar_vars.values()] +
                      [x[0] for x in subpart_optional_vars.values()])
-        self._ddt_library.write_ddt_use_statements(decl_vars, outfile,
+        all_vars.extend(call_vars)
+        self._ddt_library.write_ddt_use_statements(all_vars, outfile,
                                                    indent+1, pad=modmax)
         outfile.write('', 0)
         # Write out dummy arguments
