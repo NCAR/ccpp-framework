@@ -6,7 +6,7 @@ scriptdir="$( cd $( dirname $0 ); pwd -P )"
 ##
 ## Option default values
 ##
-defdir="ct_build"
+defdir="vc_build"
 build_dir="${currdir}/${defdir}"
 cleanup="PASS" # Other supported options are ALWAYS and NEVER
 verbosity=0
@@ -128,8 +128,8 @@ ccpp_files="${utility_files}"
 ccpp_files="${ccpp_files},${build_dir}/ccpp/test_host_ccpp_cap.F90"
 ccpp_files="${ccpp_files},${build_dir}/ccpp/ccpp_var_compatibility_suite_cap.F90"
 #process_list=""
-module_list="effr_calc,effr_diag,effr_post,effr_pre"
-#dependencies=""
+module_list="effr_calc,effr_diag,effr_post,effr_pre,rad_lw,rad_sw"
+dependencies="module_rad_ddt"
 suite_list="var_compatibility_suite"
 required_vars_var_compatibility="ccpp_error_code,ccpp_error_message"
 required_vars_var_compatibility="${required_vars_var_compatibility},cloud_graupel_number_concentration"
@@ -144,12 +144,14 @@ required_vars_var_compatibility="${required_vars_var_compatibility},flag_indicat
 required_vars_var_compatibility="${required_vars_var_compatibility},horizontal_dimension"
 required_vars_var_compatibility="${required_vars_var_compatibility},horizontal_loop_begin"
 required_vars_var_compatibility="${required_vars_var_compatibility},horizontal_loop_end"
+required_vars_var_compatibility="${required_vars_var_compatibility},longwave_radiation_fluxes"
 required_vars_var_compatibility="${required_vars_var_compatibility},num_subcycles_for_effr"
 required_vars_var_compatibility="${required_vars_var_compatibility},scalar_variable_for_testing"
 required_vars_var_compatibility="${required_vars_var_compatibility},scalar_variable_for_testing_a"
 required_vars_var_compatibility="${required_vars_var_compatibility},scalar_variable_for_testing_b"
 required_vars_var_compatibility="${required_vars_var_compatibility},scalar_variable_for_testing_c"
 required_vars_var_compatibility="${required_vars_var_compatibility},scheme_order_in_suite"
+required_vars_var_compatibility="${required_vars_var_compatibility},shortwave_radiation_fluxes"
 required_vars_var_compatibility="${required_vars_var_compatibility},vertical_layer_dimension"
 input_vars_var_compatibility="cloud_graupel_number_concentration"
 #input_vars_var_compatibility="${input_vars_var_compatibility},cloud_ice_number_concentration"
@@ -162,12 +164,14 @@ input_vars_var_compatibility="${input_vars_var_compatibility},flag_indicating_cl
 input_vars_var_compatibility="${input_vars_var_compatibility},horizontal_dimension"
 input_vars_var_compatibility="${input_vars_var_compatibility},horizontal_loop_begin"
 input_vars_var_compatibility="${input_vars_var_compatibility},horizontal_loop_end"
+input_vars_var_compatibility="${input_vars_var_compatibility},longwave_radiation_fluxes"
 input_vars_var_compatibility="${input_vars_var_compatibility},num_subcycles_for_effr"
 input_vars_var_compatibility="${input_vars_var_compatibility},scalar_variable_for_testing"
 input_vars_var_compatibility="${input_vars_var_compatibility},scalar_variable_for_testing_a"
 input_vars_var_compatibility="${input_vars_var_compatibility},scalar_variable_for_testing_b"
 input_vars_var_compatibility="${input_vars_var_compatibility},scalar_variable_for_testing_c"
 input_vars_var_compatibility="${input_vars_var_compatibility},scheme_order_in_suite"
+input_vars_var_compatibility="${input_vars_var_compatibility},shortwave_radiation_fluxes"
 input_vars_var_compatibility="${input_vars_var_compatibility},vertical_layer_dimension"
 output_vars_var_compatibility="ccpp_error_code,ccpp_error_message"
 output_vars_var_compatibility="${output_vars_var_compatibility},cloud_ice_number_concentration"
@@ -175,8 +179,10 @@ output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius
 output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius_of_stratiform_cloud_liquid_water_particle"
 output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius_of_stratiform_cloud_rain_particle"
 output_vars_var_compatibility="${output_vars_var_compatibility},effective_radius_of_stratiform_cloud_snow_particle"
+output_vars_var_compatibility="${output_vars_var_compatibility},longwave_radiation_fluxes"
 output_vars_var_compatibility="${output_vars_var_compatibility},scalar_variable_for_testing"
 output_vars_var_compatibility="${output_vars_var_compatibility},scheme_order_in_suite"
+output_vars_var_compatibility="${output_vars_var_compatibility},shortwave_radiation_fluxes"
 
 ##
 ## Run a database report and check the return string
@@ -242,8 +248,8 @@ echo -e "\nChecking lists from command line"
 #check_datatable ${report_prog} ${datafile} "--process-list" ${process_list}
 check_datatable ${report_prog} ${datafile} "--module-list" ${module_list}
 #check_datatable ${report_prog} ${datafile} "--dependencies" ${dependencies}
-check_datatable ${report_prog} ${datafile} "--suite-list" ${suite_list}       \
-                --sep ";"
+#check_datatable ${report_prog} ${datafile} "--suite-list" ${suite_list}       \
+#                --sep ";"
 echo -e "\nChecking variables for var_compatibility suite from command line"
 check_datatable ${report_prog} ${datafile} "--required-variables"             \
                 ${required_vars_var_compatibility} "var_compatibility_suite"

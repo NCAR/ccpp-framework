@@ -63,6 +63,7 @@ An example argument table is shown below.
   type = scheme
   relative_path = <relative path>
   dependencies = <dependencies>
+  module = <module name> # only needed if module name differs from filename
   dynamic_constituent_routine = <routine name>
 
 [ccpp-arg-table]
@@ -285,6 +286,7 @@ class MetadataTable():
         """
         self.__pobj = parse_object
         self.__dependencies = dependencies
+        self.__module_name = module
         self.__relative_path = relative_path
         self.__sections = []
         self.__run_env = run_env
@@ -364,6 +366,7 @@ class MetadataTable():
         in_properties_header = True
         skip_rest_of_section = False
         self.__dependencies = [] # Default is no dependencies
+        self.__module_name = self.__pobj.default_module_name()
         # Process lines until the end of the file or start of the next table.
         while ((curr_line is not None) and
                (not MetadataTable.table_start(curr_line))):
@@ -405,6 +408,8 @@ class MetadataTable():
                                        if x.strip()]
                             self.__dependencies.extend(depends)
                         # end if
+                    elif key == 'module_name':
+                        self.__module_name = value
                     elif key == 'relative_path':
                         self.__relative_path = value
                     else:
@@ -419,6 +424,7 @@ class MetadataTable():
                     skip_rest_of_section = False
                     section = MetadataSection(self.table_name, self.table_type,
                                               run_env, parse_object=self.__pobj,
+                                              module=self.__module_name,
                                               known_ddts=known_ddts,
                                               skip_ddt_check=skip_ddt_check)
                     # Some table types only allow for one associated section
@@ -482,6 +488,11 @@ class MetadataTable():
     def dependencies(self):
         """Return the dependencies for this table"""
         return self.__dependencies
+
+    @property
+    def module_name(self):
+        """Return the module name for this metadata table"""
+        return self.__module
 
     @property
     def relative_path(self):
@@ -652,7 +663,7 @@ class MetadataSection(ParseSource):
         self.__variables = None # In case __init__ crashes
         self.__section_title = None
         self.__header_type = None
-        self.__module_name = None
+        self.__module_name = module
         self.__process_type = UNKNOWN_PROCESS_TYPE
         self.__section_valid = True
         self.__run_env = run_env
@@ -706,8 +717,8 @@ class MetadataSection(ParseSource):
                 known_ddts = []
             # end if
             self.__start_context = ParseContext(context=self.__pobj)
-            self.__init_from_file(table_name, table_type, known_ddts, run_env,
-                                  skip_ddt_check=skip_ddt_check)
+            self.__init_from_file(table_name, table_type, known_ddts, self.module,
+                                  run_env, skip_ddt_check=skip_ddt_check)
         # end if
         # Register this header if it is a DDT
         if self.header_type == 'ddt':
@@ -722,27 +733,13 @@ class MetadataSection(ParseSource):
             # end if
         # end for
 
-    def _default_module(self):
-        """Set a default module for this header"""
-        mfile = self.__pobj.filename
-        if mfile[-5:] == '.meta':
-            # Default value is a Fortran module that matches the filename
-            def_mod = os.path.basename(mfile)[:-5]
-        else:
-            def_mod = os.path.basename(mfile)
-            last_dot = def_mod.rfind('.')
-            if last_dot >= 0:
-                ldef = len(def_mod)
-                def_mod = def_mod[:last_dot-ldef]
-            # end if
-        # end if
-        return def_mod
-
-    def __init_from_file(self, table_name, table_type, known_ddts, run_env, skip_ddt_check=False):
+    def __init_from_file(self, table_name, table_type, known_ddts, module_name,
+                         run_env, skip_ddt_check=False):
         """ Read the section preamble, assume the caller already figured out
         the first line of the header using the header_start method."""
         start_ctx = context_string(self.__pobj)
         curr_line, _ = self.__pobj.next_line() # Skip past [ccpp-arg-table]
+        self.__module_name = module_name
         while ((curr_line is not None) and
                (not MetadataSection.variable_start(curr_line, self.__pobj)) and
                (not MetadataSection.header_start(curr_line)) and
@@ -765,14 +762,6 @@ class MetadataSection(ParseSource):
                     # end if
                     # Set value even if error so future error msgs make sense
                     self.__header_type = value
-                elif key == 'module':
-                    if value != "None":
-                        self.__module_name = value
-                    else:
-                        self.__pobj.add_syntax_err("metadata table, no module")
-                        self.__module_name = 'INVALID' # Allow error continue
-                        self.__section_valid = False
-                    # end if
                 elif key == 'process':
                     self.__process_type = value
                 else:
@@ -812,10 +801,6 @@ class MetadataSection(ParseSource):
         # end if
         if self.header_type == "ddt":
             known_ddts.append(self.title)
-        # end if
-        # We need a default module if none was listed
-        if self.module is None:
-            self.__module_name = self._default_module()
         # end if
         #  Initialize our ParseSource parent
         super().__init__(self.title, self.header_type, self.__pobj)
