@@ -66,7 +66,7 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
 _CCPP_FILES = _UTILITY_FILES + \
               [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
-_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "effr_pre", "rad_lw", "rad_sw"]
+_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "mod_effr_pre", "rad_lw", "rad_sw"]
 _SUITE_LIST = ["var_compatibility_suite"]
 _DEPENDENCIES = [ os.path.join(_TEST_DIR, "module_rad_ddt.F90")]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",

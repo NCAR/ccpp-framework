@@ -414,7 +414,7 @@ class MetadataTable():
                         self.__relative_path = value
                     else:
                         tok_type = "metadata table start property"
-                        self.__pobj.add_syntax_err(tok_type, token=value)
+                        self.__pobj.add_syntax_err(tok_type, token=key)
                     # end if
                 # end for
                 curr_line, _ = self.__pobj.next_line()
