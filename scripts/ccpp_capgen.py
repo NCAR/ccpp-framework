@@ -25,7 +25,7 @@ from fortran_tools import parse_fortran_file, FortranWriter
 from framework_env import parse_command_line
 from host_cap import write_host_cap
 from host_model import HostModel
-from metadata_table import parse_metadata_file, SCHEME_HEADER_TYPE
+from metadata_table import parse_metadata_file, register_ddts, SCHEME_HEADER_TYPE
 from parse_tools import init_log, set_log_level, context_string
 from parse_tools import register_fortran_ddt_name
 from parse_tools import CCPPError, ParseInternalError
@@ -524,7 +524,8 @@ def parse_host_model_files(host_filenames, host_name, run_env):
     return host_model
 
 ###############################################################################
-def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False):
+def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False,
+                       known_ddts=list()):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -532,7 +533,6 @@ def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False):
     """
     table_dict = {} # Duplicate check and for dependencies processing
     header_dict = {} # To check for duplicates
-    known_ddts = list()
     logger = run_env.logger
     for filename in scheme_filenames:
         logger.info('Reading CCPP schemes from {}'.format(filename))
@@ -643,9 +643,11 @@ def capgen(run_env, return_db=False):
     # We always need to parse the constituent DDTs
     const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")
     if const_prop_mod not in scheme_files:
-        scheme_files= [const_prop_mod] + scheme_files
+        scheme_files = [const_prop_mod] + scheme_files
     # end if
-    scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env)
+    host_ddts = register_ddts(host_files)
+    scheme_headers, scheme_tdict = parse_scheme_files(scheme_files, run_env,
+                                                      known_ddts=host_ddts)
     if run_env.verbose:
         ddts = host_model.ddt_lib.keys()
         if ddts:
