@@ -18,17 +18,19 @@ CONTAINS
 !> \section arg_table_temp_set_run  Argument Table
 !! \htmlinclude arg_table_temp_set_run.html
 !!
-  SUBROUTINE temp_set_run(ncol, lev, timestep, temp_level, temp, ps,         &
-       to_promote, promote_pcnst, errmsg, errflg)
+  SUBROUTINE temp_set_run(ncol, lev, timestep, temp_level, temp_diag, temp, ps, &
+       to_promote, promote_pcnst, slev_lbound, soil_levs, errmsg, errflg)
 !----------------------------------------------------------------
    IMPLICIT NONE
 !----------------------------------------------------------------
 
-   integer,            intent(in)    :: ncol, lev
+   integer,            intent(in)    :: ncol, lev, slev_lbound
    REAL(kind_phys),    intent(out)   :: temp(:,:)
    real(kind_phys),    intent(in)    :: timestep
    real(kind_phys),    intent(in)    :: ps(:)
    REAL(kind_phys),    INTENT(inout) :: temp_level(:, :)
+   real(kind_phys),    intent(inout) :: temp_diag(:,:)
+   real(kind_phys),    intent(inout) :: soil_levs(slev_lbound:)
    real(kind_phys),    intent(out)   :: to_promote(:, :)
    real(kind_phys),    intent(out)   :: promote_pcnst(:)
    character(len=512), intent(out)   :: errmsg

@@ -210,7 +210,9 @@ class Var:
                     VariableProperty('optional', bool, optional_in=True,
                                      default_in=False),
                     VariableProperty('target', bool, optional_in=True,
-                                     default_in=False)]
+                                     default_in=False),
+                    VariableProperty('lower_bound', bool, optional_in=True,
+                                      default_in=False)]
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,
@@ -708,7 +710,7 @@ class Var:
                     lname = ""
                     for item in dim.split(':'):
                         if item:
-                            dvar = var_dict.find_variable(standard_name=item,
+                            dvar = var_dict.find_variable(standard_name=item.lower(),
                                                           any_scope=False)
                             if dvar is None:
                                 try:

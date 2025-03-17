@@ -318,7 +318,7 @@ CONTAINS
              if (errflg /= 0) then
                 write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ',    &
                      trim(errmsg)
-                exit
+1                exit
              end if
           end do
        end do ! End time step loop
@@ -368,23 +368,27 @@ CONTAINS
    character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
                                                     'physics2        ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(7) = (/                          &
+   character(len=cm), target :: test_invars1(9) = (/                          &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
         'surface_air_pressure                ',                               &
         'water_vapor_specific_humidity       ',                               &
         'potential_temperature_increment     ',                               &
+        'soil_levels                         ',                               &
+        'temperature_at_diagnostic_levels    ',                               &
         'time_step_for_physics               ' /)
-   character(len=cm), target :: test_outvars1(7) = (/                         &
+   character(len=cm), target :: test_outvars1(9) = (/                         &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
         'surface_air_pressure                ',                               &
         'water_vapor_specific_humidity       ',                               &
+        'soil_levels                         ',                               &
+        'temperature_at_diagnostic_levels    ',                               &
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ' /)
-   character(len=cm), target :: test_reqvars1(9) = (/                         &
+   character(len=cm), target :: test_reqvars1(11) = (/                        &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -392,6 +396,8 @@ CONTAINS
         'water_vapor_specific_humidity       ',                               &
         'potential_temperature_increment     ',                               &
         'time_step_for_physics               ',                               &
+        'soil_levels                         ',                               &
+        'temperature_at_diagnostic_levels    ',	      	      	              &
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ' /)
 

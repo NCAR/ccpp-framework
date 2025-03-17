@@ -13,11 +13,15 @@ module test_host_mod
    integer,         parameter   :: pver = 5
    integer,         parameter   :: pverP = 6
    integer,         parameter   :: pcnst = 2
+   integer,         parameter   :: slevs = 4
+   integer,         parameter   :: slev_lbound = -3
+   integer,         parameter   :: slev_ubound = 0
    integer,         parameter   :: DiagDimStart = 2
    integer,         parameter   :: index_qv = 1
    logical,         parameter   :: config_var = .true.
    real(kind_phys), allocatable :: temp_midpoints(:,:)
    real(kind_phys)              :: temp_interfaces(ncols, pverP)
+   real(kind_phys)              :: temp_diag(ncols,6)
    real(kind_phys)              :: coeffs(ncols)
    real(kind_phys), dimension(DiagDimStart:ncols, DiagDimStart:pver) ::       &
         diag1,                                                                &
@@ -56,7 +60,7 @@ contains
        end do
     end do
     ! Allocate and initialize state
-    call allocate_physics_state(ncols, pver, pcnst, phys_state)
+    call allocate_physics_state(ncols, pver, pcnst, slev_lbound, slev_ubound, phys_state)
     do cind = 1, pcnst
        do lev = 1, pver
           offsize = ((cind - 1) * (ncols * pver)) + ((lev - 1) * ncols)

@@ -1360,18 +1360,32 @@ class Scheme(SuiteObject):
                 if not ':' in dim:
                     dim_var = self.find_variable(standard_name=dim)
                     if not dim_var:
-                        raise Exception(f"No dimension with standard name '{dim}'")
-                    self.update_group_call_list_variable(dim_var)
+                        # DJS2025: To allow for numerical dimensions in metadata.
+                        if not dim.isnumeric():
+                            raise Exception(f"No dimension with standard name '{dim}'")
+                        # end if
+                    else:
+                        self.update_group_call_list_variable(dim_var)
+                    # end if
                 else:
                     (ldim, udim) = dim.split(":")
                     ldim_var = self.find_variable(standard_name=ldim)
                     if not ldim_var:
-                        raise Exception(f"No dimension with standard name '{ldim}'")
+                        # DJS2025: To allow for numerical dimensions in metadata.
+                        if not ldim.isnumeric():
+                            raise Exception(f"No dimension with standard name '{ldim}'")
+                        # end if
+                    # end if
                     self.update_group_call_list_variable(ldim_var)
                     udim_var = self.find_variable(standard_name=udim)
                     if not udim_var:
-                        raise Exception(f"No dimension with standard name '{udim}'")
-                    self.update_group_call_list_variable(udim_var)
+                        # DJS2025: To allow for numerical dimensions in metadata.
+                        if not udim.isnumeric():
+                            raise Exception(f"No dimension with standard name '{udim}'")
+                        # end if
+                    else:
+                        self.update_group_call_list_variable(udim_var)
+                    # end if
 
         # Add the variable to the list of variables to check. Record which internal_var to use.
         self.__var_debug_checks.append([var, internal_var])
@@ -1436,6 +1450,7 @@ class Scheme(SuiteObject):
         dimensions = var.get_dimensions()
         active = var.get_prop_value('active')
         allocatable = var.get_prop_value('allocatable')
+        vtype = var.get_prop_value('type')
 
         # Need the local name from the group call list,
         # from the locally-defined variables of the group,
@@ -1524,18 +1539,30 @@ class Scheme(SuiteObject):
                         for var_dict in cldicts:
                             dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
                             if dvar is not None:
+                                ldim_lname = dvar.get_prop_value('local_name')
                                 break
                         if not dvar:
-                            raise Exception(f"No variable with standard name '{ldim}' in cldicts")
-                        ldim_lname = dvar.get_prop_value('local_name')
+                            # DJS2025: To allow for numerical dimensions in metadata.
+                            if ldim.isnumeric():
+                                ldim_lname = ldim
+                            else:
+                                raise Exception(f"No variable with standard name '{ldim}' in cldicts")
+                            # endif
+                        # endif
                         # Get dimension for upper bound
                         for var_dict in cldicts:
                             dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
                             if dvar is not None:
+                                udim_lname = dvar.get_prop_value('local_name')
                                 break
                         if not dvar:
-                            raise Exception(f"No variable with standard name '{udim}' in cldicts")
-                        udim_lname = dvar.get_prop_value('local_name')
+                            # DJS2025: To allow for numerical dimensions in metadata.
+                            if udim.isnumeric():
+                                udim_lname = udim
+                            else:
+                                raise Exception(f"No variable with standard name '{udim}' in cldicts")
+                            # end if
+                        # end if
                         # Assemble dimensions and bounds for size checking
                         dim_length = f'{udim_lname}-{ldim_lname}+1'
                         dim_string = ":"
@@ -1554,38 +1581,52 @@ class Scheme(SuiteObject):
             ubound_string = '(' + ','.join(ubound_strings) + ')'
 
             # Write size check
-            tmp_indent = indent
-            if conditional != '.true.':
-                tmp_indent = indent + 1
-                outfile.write(f"if {conditional} then", indent)
-            # end if
-            outfile.write(f"! Check size of array {local_name}", tmp_indent)
-            outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", tmp_indent)
-            outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", tmp_indent+1)
-            outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", tmp_indent+1)
-            outfile.write(f"{errcode} = 1", tmp_indent+1)
-            outfile.write(f"return", tmp_indent+1)
-            outfile.write(f"end if", tmp_indent)
-            if conditional != '.true.':
-                outfile.write(f"end if", indent)
-            # end if
-            outfile.write('',indent)
-
-            # Assign lower/upper bounds to internal_var (scalar) if intent is not out
-            if not intent == 'out':
-                internal_var_lname = internal_var.get_prop_value('local_name')
+            # - Only for types int and real.
+            if (vtype == "integer") or (vtype == "real"):
                 tmp_indent = indent
                 if conditional != '.true.':
                     tmp_indent = indent + 1
                     outfile.write(f"if {conditional} then", indent)
                 # end if
-                outfile.write(f"! Assign lower/upper bounds of {local_name} to {internal_var_lname}", tmp_indent)
-                outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", tmp_indent)
-                outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", tmp_indent)
+                outfile.write(f"! Check size of array {local_name}", tmp_indent)
+                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", tmp_indent)
+                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", tmp_indent+1)
+                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", tmp_indent+1)
+                outfile.write(f"{errcode} = 1", tmp_indent+1)
+                outfile.write(f"return", tmp_indent+1)
+                outfile.write(f"end if", tmp_indent)
                 if conditional != '.true.':
                     outfile.write(f"end if", indent)
                 # end if
                 outfile.write('',indent)
+            # end if
+
+            # Write array bounds check.
+            # Assign lower/upper bounds to internal_var (scalar)
+            #  - If intent is not out.
+            #  - Only for types int and real.
+            #  - Skip test for assumed-shape arrays with a lower bounds other than one.
+            lower_bound = svar.get_prop_value('lower_bound')
+            if lower_bound == True:
+                lmsg = "Skipping error check for {}. Cant perfrom this check when lower-bounds is not 1."
+                self.run_env.logger.info(lmsg.format(local_name))
+            elif (vtype == "integer") or (vtype == "real"):
+                if not intent == 'out':
+                    internal_var_lname = internal_var.get_prop_value('local_name')
+                    tmp_indent = indent
+                    if conditional != '.true.':
+                        tmp_indent = indent + 1
+                        outfile.write(f"if {conditional} then", indent)
+                    # end if
+                    outfile.write(f"! Assign lower/upper bounds of {local_name} to {internal_var_lname}", tmp_indent)
+                    outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", tmp_indent)
+                    outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", tmp_indent)
+                    if conditional != '.true.':
+                        outfile.write(f"end if", indent)
+                    # end if
+                    outfile.write('',indent)
+                # endif
+            # end if
 
     def associate_optional_var(self, dict_var, var, var_ptr, has_transform, cldicts, indent, outfile):
         """Write local pointer association for optional variables."""
