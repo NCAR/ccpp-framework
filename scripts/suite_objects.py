@@ -1608,7 +1608,7 @@ class Scheme(SuiteObject):
             #  - Skip test for assumed-shape arrays with a lower bounds other than one.
             lower_bound = svar.get_prop_value('lower_bound')
             if lower_bound == True:
-                lmsg = "Skipping error check for {}. Cant perfrom this check when lower-bounds is not 1."
+                lmsg = "Skipping error check for {}. Can't perfrom this check when lower-bounds is not 1."
                 self.run_env.logger.info(lmsg.format(local_name))
             elif (vtype == "integer") or (vtype == "real"):
                 if not intent == 'out':

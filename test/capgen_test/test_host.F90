@@ -318,7 +318,7 @@ CONTAINS
              if (errflg /= 0) then
                 write(6, '(3a)') trim(test_suites(sind)%suite_name), ': ',    &
                      trim(errmsg)
-1                exit
+                exit
              end if
           end do
        end do ! End time step loop
