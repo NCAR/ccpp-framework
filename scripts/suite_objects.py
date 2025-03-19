@@ -1212,7 +1212,8 @@ class Scheme(SuiteObject):
                 if self.__group.run_env.debug:
                     # Add variable allocation checks for group, suite and host variables
                     if dict_var:
-                        self.add_var_debug_check(dict_var)
+                        is_opt = var.get_prop_value('optional')
+                        self.add_var_debug_check(dict_var, optional=is_opt)
                 # end if
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
@@ -1295,7 +1296,7 @@ class Scheme(SuiteObject):
         # end if
         return scheme_mods
 
-    def add_var_debug_check(self, var):
+    def add_var_debug_check(self, var, optional=False):
         """Add a debug check for a given variable var (host model variable,
         suite variable or group module variable) for this scheme.
         Return the variable and an associated dummy variable that is
@@ -1342,13 +1343,17 @@ class Scheme(SuiteObject):
         else:
             internal_var_lname = f'internal_var_{vtype.replace("=","_")}'
         if var.is_ddt():
-            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
-                         'ddt_type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
-                         _API_LOCAL, self.run_env)
+            internal_var = Var({'local_name':internal_var_lname,
+                                'standard_name':f'{internal_var_lname}_local',
+                                'ddt_type':vtype, 'kind':vkind, 'units':units,
+                                'dimensions':'()', 'optional':optional},
+                               _API_LOCAL, self.run_env)
         else:
-            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
-                         'type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
-                         _API_LOCAL, self.run_env)
+            internal_var = Var({'local_name':internal_var_lname,
+                                'standard_name':f'{internal_var_lname}_local',
+                                'type':vtype, 'kind':vkind, 'units':units,
+                                'dimensions':'()', 'optional':optional},
+                               _API_LOCAL, self.run_env)
         found = self.__group.find_variable(source_var=internal_var, any_scope=False)
         if not found:
             self.__group.manage_variable(internal_var)
@@ -1436,6 +1441,8 @@ class Scheme(SuiteObject):
         dimensions = var.get_dimensions()
         active = var.get_prop_value('active')
         allocatable = var.get_prop_value('allocatable')
+        is_ptr = internal_var.get_prop_value('optional')
+        internal_var_lname = internal_var.get_prop_value('local_name')
 
         # Need the local name from the group call list,
         # from the locally-defined variables of the group,
@@ -1477,7 +1484,6 @@ class Scheme(SuiteObject):
         # For scalars, assign to internal_var variable if the variable intent is in/inout
         if not dimensions:
             if not intent == 'out':
-                internal_var_lname = internal_var.get_prop_value('local_name')
                 tmp_indent = indent
                 if conditional != '.true.':
                     tmp_indent = indent + 1
@@ -1496,7 +1502,7 @@ class Scheme(SuiteObject):
             dim_strings = []
             lbound_strings = []
             ubound_strings = []
-            for dim in dimensions:
+            for dind, dim in enumerate(dimensions):
                 if not ':' in dim:
                     # In capgen, any true dimension (that is not a single index) does
                     # have a colon (:) in the dimension, therefore this is an index
@@ -1512,10 +1518,17 @@ class Scheme(SuiteObject):
                     lbound_strings.append(dim_lname)
                     ubound_strings.append(dim_lname)
                 else:
-                    # Horizontal dimension needs to be dealt with separately, because it
-                    # depends on the CCPP phase, whether the variable is a host/suite
-                    # variable or locally defined on the group level.
-                    if is_horizontal_dimension(dim):
+                    if is_ptr:
+                        # Pointer assignment has to use actual variable bounds
+                        lbound_string = f"LBOUND({local_name}, {dind+1})"
+                        ubound_string = f"UBOUND({local_name}, {dind+1})"
+                        dim_string = ":"
+                        dim_length = f"{ubound_string}-{lbound_string}+1"
+                    elif is_horizontal_dimension(dim):
+                        # Horizontal dimension needs to be dealt with separately,
+                        # because it depends on the CCPP phase, whether the
+                        # variable is a host/suite variable or locally defined
+                        # on the group level.
                         (dim_length, dim_string, lbound_string, ubound_string) = \
                             self.replace_horiz_dim_debug_check(dim, cldicts, var_in_call_list)
                     else:
@@ -1573,7 +1586,6 @@ class Scheme(SuiteObject):
 
             # Assign lower/upper bounds to internal_var (scalar) if intent is not out
             if not intent == 'out':
-                internal_var_lname = internal_var.get_prop_value('local_name')
                 tmp_indent = indent
                 if conditional != '.true.':
                     tmp_indent = indent + 1
