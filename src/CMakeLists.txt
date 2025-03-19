@@ -1,3 +1,5 @@
+include(GNUInstallDirs)
+
 #------------------------------------------------------------------------------
 # Set the sources
 set(SOURCES_F90
