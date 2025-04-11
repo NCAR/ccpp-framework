@@ -4,8 +4,7 @@ project(ccpp_framework
         VERSION 5.0.0
         LANGUAGES Fortran)
 
-enable_language(C CXX)
-include(FetchContent)
+enable_language(C CXX Fortran)
 include(cmake/ccpp_capgen.cmake)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
 
@@ -62,7 +61,7 @@ set(CMAKE_MACOSX_RPATH 1)
 
 #------------------------------------------------------------------------------
 # Set MPI flags for Fortran with MPI F08 interface
-find_package(MPI REQUIRED COMPONENTS Fortran)
+find_package(MPI COMPONENTS Fortran REQUIRED)
 if(NOT MPI_Fortran_HAVE_F08_MODULE)
   message(FATAL_ERROR "MPI implementation does not support the Fortran 2008 mpi_f08 interface")
 endif()
