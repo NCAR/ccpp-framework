@@ -48,3 +48,6 @@ jobs:
               test/advection_test/advection_test_reports.py \
               test/ddthost_test/ddthost_test_reports.py \
               test/var_compatibility_test/var_compatibility_test_reports.py
+
+    - name: Run Fortran to metadata test
+      run: cd test && ./test_fortran_to_metadata.sh

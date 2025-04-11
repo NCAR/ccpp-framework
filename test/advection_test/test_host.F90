@@ -141,6 +141,8 @@ CONTAINS
        use test_host_mod,      only: num_time_steps
        use test_host_mod,      only: init_data, compare_data
        use test_host_mod,      only: ncols, pver
+       use test_host_data,     only: num_consts, std_name_array, const_std_name
+       use test_host_data,     only: check_constituent_indices
        use test_host_ccpp_cap, only: test_host_ccpp_deallocate_dynamic_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_register_constituents
        use test_host_ccpp_cap, only: test_host_ccpp_is_scheme_constituent
@@ -172,6 +174,8 @@ CONTAINS
        logical                         :: const_log
        logical                         :: is_constituent
        logical                         :: has_default
+       integer                         :: test_scalar_const_index
+       integer                         :: test_const_indices(num_consts)
        character(len=128), allocatable :: suite_names(:)
        character(len=256)              :: const_str
        character(len=512)              :: errmsg
@@ -276,7 +280,7 @@ CONTAINS
          call test_host_ccpp_register_constituents(host_constituents,         &
                  errmsg=errmsg, errflg=errflg)
       end if
-      ! Check the error 
+      ! Check the error
       if (errflg == 0) then
          write(6, '(2a)') 'ERROR register_constituents: expected this error: ', &
                  trim(expected_error)
@@ -377,6 +381,16 @@ CONTAINS
       call check_errflg(subname//".index_dyn_const3", errflg, errmsg,         &
            errflg_final)
 
+      ! Load up the test array indices
+      call test_host_const_get_index(const_std_name, test_scalar_const_index, errflg, errmsg)
+      call check_errflg(subname//"."//const_std_name, errflg, errmsg,         &
+           errflg_final)
+      do sind = 1, num_consts
+         call test_host_const_get_index(std_name_array(sind),                   &
+              test_const_indices(sind), errflg, errmsg)
+         call check_errflg(subname//"."//std_name_array(sind), errflg, errmsg,  &
+              errflg_final)
+      end do
 
       ! Stop tests here if the index checks failed, as all other tests will
       ! likely fail as well:
@@ -934,6 +948,12 @@ CONTAINS
          end if
        end do
 
+       ! Check indices
+       call check_constituent_indices(test_scalar_const_index, test_const_indices, &
+            errmsg, errflg)
+       call check_errflg(subname//" check suite indices", errflg, errmsg,          &
+            errflg_final)
+
        ! Loop over time steps
        do time_step = 1, num_time_steps
           ! Initialize the timestep
@@ -971,6 +991,11 @@ CONTAINS
                 end do
              end do
           end do
+       ! Check indices
+       call check_constituent_indices(test_scalar_const_index, test_const_indices, &
+            errmsg, errflg)
+       call check_errflg(subname//" check suite indices", errflg, errmsg,          &
+            errflg_final)
 
           do sind = 1, num_suites
              if (errflg == 0) then
@@ -1026,5 +1051,3 @@ CONTAINS
     end subroutine test_host
 
  end module test_prog
-
- 

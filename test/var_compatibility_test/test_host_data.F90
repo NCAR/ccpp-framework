@@ -2,6 +2,9 @@ module test_host_data
 
   use ccpp_kinds, only: kind_phys
 
+   implicit none
+   private
+
   !> \section arg_table_physics_state  Argument Table
   !! \htmlinclude arg_table_physics_state.html
   type physics_state
@@ -17,10 +20,12 @@ module test_host_data
      real(kind_phys) :: scalar_varB
      integer :: scalar_varC
      integer :: scheme_order
+     integer :: num_subcycles
 
   end type physics_state
 
-  public allocate_physics_state
+  public :: physics_state
+  public :: allocate_physics_state
 
 contains
 
@@ -69,6 +74,8 @@ contains
 
     ! Initialize scheme counter.
     state%scheme_order = 1
+    ! Initialize subcycle counter.
+    state%num_subcycles = 3
 
   end subroutine allocate_physics_state
 

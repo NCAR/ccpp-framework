@@ -102,28 +102,12 @@ def constituent_initialize_subname(host_model):
     return f"{host_model.name}_ccpp_initialize_constituents"
 
 ###############################################################################
-def constituent_initialize_subname(host_model):
-###############################################################################
-    """Return the name of the subroutine used to initialize the
-    constituents for this run.
-    Because this is a user interface API function, the name is fixed."""
-    return f"{host_model.name}_ccpp_initialize_constituents"
-
-###############################################################################
 def constituent_num_consts_funcname(host_model):
 ###############################################################################
     """Return the name of the function to return the number of
     constituents for this run.
     Because this is a user interface API function, the name is fixed."""
     return f"{host_model.name}_ccpp_number_constituents"
-
-###############################################################################
-def query_scheme_constituents_funcname(host_model):
-###############################################################################
-    """Return the name of the function to return True if the standard name
-    passed in matches an existing constituent
-    Because this is a user interface API function, the name is fixed."""
-    return f"{host_model.name}_ccpp_is_scheme_constituent"
 
 ###############################################################################
 def query_scheme_constituents_funcname(host_model):

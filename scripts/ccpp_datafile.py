@@ -1061,6 +1061,8 @@ def _add_generated_files(parent, host_files, suite_files, ccpp_kinds, src_dir):
     entry = ET.SubElement(utilities, "file")
     entry.text = os.path.join(src_dir, "ccpp_constituent_prop_mod.F90")
     entry = ET.SubElement(utilities, "file")
+    entry.text = os.path.join(src_dir, "ccpp_scheme_utils.F90")
+    entry = ET.SubElement(utilities, "file")
     entry.text = os.path.join(src_dir, "ccpp_hashable.F90")
     entry = ET.SubElement(utilities, "file")
     entry.text = os.path.join(src_dir, "ccpp_hash_table.F90")
@@ -1090,7 +1092,7 @@ def _add_suite_object(parent, suite_object):
         obj_elem.set("dimension_name", suite_object.dimension_name)
     # end if
     if isinstance(suite_object, Subcycle):
-        obj_elem.set("loop", suite_object.loop)
+        obj_elem.set("loop", suite_object._loop)
     # end if
     for obj_part in suite_object.parts:
         _add_suite_object(obj_elem, obj_part)
