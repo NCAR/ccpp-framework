@@ -29,6 +29,7 @@ _SUITE_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_ddt_suite_cap.F90"),
                 os.path.join(_BUILD_DIR, "ccpp", "ccpp_temp_suite_cap.F90")]
 _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
                   os.path.join(_SRC_DIR, "ccpp_constituent_prop_mod.F90"),
+                  os.path.join(_SRC_DIR, "ccpp_scheme_utils.F90"),
                   os.path.join(_SRC_DIR, "ccpp_hashable.F90"),
                   os.path.join(_SRC_DIR, "ccpp_hash_table.F90")]
 _CCPP_FILES = _UTILITY_FILES + \

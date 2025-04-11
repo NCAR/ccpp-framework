@@ -28,12 +28,14 @@ _SUITE_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_cld_suite_cap.F90")]
 _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
                   os.path.join(_FRAMEWORK_DIR, "src",
                                "ccpp_constituent_prop_mod.F90"),
+                  os.path.join(_FRAMEWORK_DIR, "src",
+                               "ccpp_scheme_utils.F90"),
                   os.path.join(_FRAMEWORK_DIR, "src", "ccpp_hashable.F90"),
                   os.path.join(_FRAMEWORK_DIR, "src", "ccpp_hash_table.F90")]
 _CCPP_FILES = _UTILITY_FILES + _HOST_FILES + _SUITE_FILES
 _DEPENDENCIES = [""]
 _PROCESS_LIST = [""]
-_MODULE_LIST = ["apply_constituent_tendencies", "cld_ice", "cld_liq"]
+_MODULE_LIST = ["cld_ice", "cld_liq", "const_indices", "apply_constituent_tendencies"]
 _SUITE_LIST = ["cld_suite"]
 _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "horizontal_loop_begin", "horizontal_loop_end",
@@ -48,6 +50,10 @@ _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "number_of_ccpp_constituents",
                       "dynamic_constituents_for_cld_ice",
                       "dynamic_constituents_for_cld_liq",
+                      "test_banana_constituent_indices", "test_banana_name",
+                      "banana_array_dim",
+                      "test_banana_name_array",
+                      "test_banana_constituent_index",
                       # Added by --debug option
                       "horizontal_dimension",
                       "vertical_layer_dimension"]
@@ -61,6 +67,8 @@ _INPUT_VARS_CLD = ["surface_air_pressure", "temperature",
                    "ccpp_constituents",
                    "ccpp_constituent_tendencies",
                    "number_of_ccpp_constituents",
+                   "banana_array_dim",
+                   "test_banana_name_array", "test_banana_name",
                    # Added by --debug option
                    "horizontal_dimension",
                    "vertical_layer_dimension"]
@@ -72,7 +80,10 @@ _OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "ccpp_constituent_tendencies",
                     "cloud_liquid_dry_mixing_ratio",
                     "dynamic_constituents_for_cld_ice",
-                    "dynamic_constituents_for_cld_liq"]
+                    "dynamic_constituents_for_cld_liq",
+                    "dynamic_constituents_for_cld_liq",
+                    "test_banana_constituent_indices",
+                    "test_banana_constituent_index"]
 
 
 class TestAdvectionHostDataTables(unittest.TestCase, BaseTests.TestHostDataTables):

@@ -6,15 +6,16 @@ subroutine test_advection_host_integration()
     implicit none
 
    character(len=cs), target :: test_parts1(1)
-   character(len=cm), target :: test_invars1(11)
-   character(len=cm), target :: test_outvars1(11)
-   character(len=cm), target :: test_reqvars1(15)
+   character(len=cm), target :: test_invars1(12)
+   character(len=cm), target :: test_outvars1(13)
+   character(len=cm), target :: test_reqvars1(18)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
 
     test_parts1 = (/ 'physics         '/)
     test_invars1 = (/                          &
+        'banana_array_dim                         ',                          &
         'cloud_ice_dry_mixing_ratio               ',                          &
         'cloud_liquid_dry_mixing_ratio            ',                          &
         'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
@@ -37,8 +38,11 @@ subroutine test_advection_host_integration()
         'dynamic_constituents_for_cld_liq         ',                          &
         'dynamic_constituents_for_cld_ice         ',                          &
         'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'test_banana_constituent_index            ',                          &
+        'test_banana_constituent_indices          ',                          &
         'cloud_ice_dry_mixing_ratio               ' /)
     test_reqvars1 = (/                         &
+        'banana_array_dim                         ',                          &
         'surface_air_pressure                     ',                          &
         'temperature                              ',                          &
         'time_step_for_physics                    ',                          &
@@ -51,6 +55,8 @@ subroutine test_advection_host_integration()
         'ccpp_constituent_tendencies              ',                          &
         'ccpp_constituents                        ',                          &
         'number_of_ccpp_constituents              ',                          &
+        'test_banana_constituent_index            ',                          &
+        'test_banana_constituent_indices          ',                          &
         'water_vapor_specific_humidity            ',                          &
         'ccpp_error_message                       ',                          &
         'ccpp_error_code                          ' /)

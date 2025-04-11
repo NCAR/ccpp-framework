@@ -79,7 +79,8 @@ class BaseTests:
             completedProcess = subprocess.run([self.datafile_script, self.database, "--module-list"],
                                             capture_output=True,
                                             text=True)
-            self.assertEqual(self._SEP.join(self.module_list), completedProcess.stdout.strip())
+            actualOutput = {s.strip() for s in completedProcess.stdout.split(self._SEP)}
+            self.assertSetEqual(set(self.module_list), actualOutput)
 
         def test_dependencies(self):
             completedProcess = subprocess.run([self.datafile_script, self.database, "--dependencies"],
