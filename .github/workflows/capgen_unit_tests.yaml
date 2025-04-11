@@ -29,7 +29,7 @@ jobs:
       run: |
         cmake -S. -B./build                \
           -DCCPP_FRAMEWORK_ENABLE_TESTS=ON \
-          -DCMAKE_PREFIX_PATH=/home/runner/work/ccpp-framework/ccpp-framework/pFUnit/build/installed
+          -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/pFUnit/build/installed
         cd build
         make
 
