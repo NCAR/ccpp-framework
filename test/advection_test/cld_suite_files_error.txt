@@ -1,3 +1,0 @@
-cld_liq.meta
-cld_ice.meta
-dlc_liq.meta
