@@ -17,7 +17,7 @@ string(TIMESTAMP YEAR "%Y")
 
 option(CCPP_FRAMEWORK_BUILD_DOCUMENTATION
        "Create and install the HTML documentation (requires Doxygen)" OFF)
-option(CCPP_FRAMEWORK_ENABLE_OPENMP "Enable OpenMP support for the framework" OFF)
+option(OPENMP "Enable OpenMP support for the framework" OFF)
 option(CCPP_FRAMEWORK_ENABLE_TESTS "Enable building/running tests" OFF)
 option(BUILD_SHARED_LIBS "Build a static library" OFF)
 set(CCPP_VERBOSITY "0" CACHE STRING "Verbosity level of output (default: 0)")
@@ -68,7 +68,7 @@ endif()
 
 #------------------------------------------------------------------------------
 # Set OpenMP flags for C/C++/Fortran
-if(CCPP_FRAMEWORK_ENABLE_OPENMP)
+if(OPENMP)
   find_package(OpenMP REQUIRED)
   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
