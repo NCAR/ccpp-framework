@@ -37,7 +37,7 @@ ccpp_capgen(CAPGEN_DEBUG ON
             HOST_NAME "test_host"
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
 
-# Retrieve the list of files from datatable.xml and set to CCPP_CAPS
+# Retrieve the list of files from datatable.xml and set to CCPP_CAPS_LIST
 ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
               REPORT_NAME "--ccpp-files")
 
