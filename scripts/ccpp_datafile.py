@@ -28,27 +28,6 @@ from metavar import Var
 from parse_tools import read_xml_file, PrettyElementTree
 from parse_tools import ParseContext, ParseSource
 from suite_objects import VerticalLoop, Subcycle
-from dataclasses import dataclass
-
-@dataclass(frozen=True)
-class ReportItem:
-    """Class for keeping track of an item in inventory."""
-    report_name: str
-    val_type: None
-    help: str
-    metavar: str = None
-
-    def __post_init__(self):
-        if not self.report_name:
-            raise ValueError("Report option cannot be 'None' or empty string.")
-        if not self.val_type is str and not self.val_type is bool:
-            raise ValueError(f"Invalid type provided.  Expected 'bool' or 'str', found: {self.val_type}")
-        if self.val_type is str and not self.metavar:
-            raise ValueError(f"{self.report_name} is declared to require a string argument but an invalid 'metavar' was provided.")
-
-    def __hash__(self):
-        return hash(self.report_name)
-
 
 # Global data
 _INDENT_STR = "  "
@@ -59,21 +38,46 @@ _MVAR_DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'',
                                                     'suites':''})
 
 ## datatable_report must have an action for each report type
-_VALID_REPORTS = {
-    ReportItem("host_files", bool, "Return a list of host CAP files created by capgen"),
-    ReportItem("suite_files", bool, "Return a list of suite CAP files created by capgen"),
-    ReportItem("utility_files", bool, "Return a list of utility files created by capgen (e.g., ccpp_kinds.F90)"),
-    ReportItem("ccpp_files", bool, "Return a list of all files created by capgen"),
-    ReportItem("process_list", bool, "Return a list of process types and implementing scheme name"),
-    ReportItem("module_list", bool, "Return a list of module names used in this set of suites"),
-    ReportItem("dependencies", bool, "Return a list of scheme and host dependency module names"),
-    ReportItem("suite_list", bool, "Return a list of configured suite names"),
-    ReportItem("required_variables", str, "Return a list of required variable standard names for suite, <SUITE_NAME>", "SUITE_NAME"),
-    ReportItem("input_variables", str, "Return a list of required input variable standard names for suite, <SUITE_NAME>", "SUITE_NAME"),
-    ReportItem("output_variables", str, "Return a list of required output variable standard names for suite, <SUITE_NAME>", "SUITE_NAME"),
-    ReportItem("host_variables", bool, "Return a list of required host model variable standard names"),
-    ReportItem("show", bool, "Pretty print the database contents to the screen"),
-}
+_VALID_REPORTS = [{"report" : "host_files", "type" : bool,
+                   "help" :
+                   "Return a list of host CAP files created by capgen"},
+                  {"report" : "suite_files", "type" : bool,
+                   "help" :
+                   "Return a list of suite CAP files created by capgen"},
+                  {"report" : "utility_files", "type" : bool,
+                   "help" : ("Return a list of utility files created by "
+                             "capgen (e.g., ccpp_kinds.F90)")},
+                  {"report" : "ccpp_files", "type" : bool,
+                   "help" : "Return a list of all files created by capgen"},
+                  {"report" : "process_list", "type" : bool,
+                   "help" : ("Return a list of process types and implementing "
+                             "scheme name")},
+                  {"report" : "module_list", "type" : bool,
+                   "help" :
+                   "Return a list of module names used in this set of suites"},
+                  {"report" : "dependencies", "type" : bool,
+                   "help" : ("Return a list of scheme and host "
+                             "dependency module names")},
+                  {"report" : "suite_list", "type" : bool,
+                   "help" : "Return a list of configured suite names"},
+                  {"report" : "required_variables", "type" : str,
+                   "help" : ("Return a list of required variable "
+                             "standard names for suite, <SUITE_NAME>"),
+                   "metavar" : "SUITE_NAME"},
+                  {"report" : "input_variables", "type" : str,
+                   "help" : ("Return a list of required input variable "
+                             "standard names for suite, <SUITE_NAME>"),
+                   "metavar" : "SUITE_NAME"},
+                  {"report" : "output_variables", "type" : str,
+                   "help" : ("Return a list of required output variable "
+                             "standard names for suite, <SUITE_NAME>"),
+                   "metavar" : "SUITE_NAME"},
+                  {"report" : "host_variables", "type" : bool,
+                   "help" : ("Return a list of required host model variable "
+                             "standard names")},
+                  {"report" : "show", "type" : bool,
+                   "help" :
+                   "Pretty print the database contents to the screen"}]
 
 ###
 ### Utilities
@@ -93,7 +97,7 @@ class DatatableInternalError(ValueError):
 class DatatableReport(object):
     """A class to hold a database report type and inquiry function"""
 
-    __valid_actions = [x.report_name for x in _VALID_REPORTS]
+    __valid_actions = [x["report"] for x in _VALID_REPORTS]
 
     def __init__(self, action, value=True):
         """Initialize this report as report-type, <action>
@@ -155,49 +159,51 @@ def _command_line_parser():
     the list of optional arguments below.
     Note that exactly one action is required.
     """
-    parser = argparse.ArgumentParser(description=description,
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument("datatable", type=str,
                         help="Path to a data table XML file created by capgen")
     ### Only one action per call
     group = parser.add_mutually_exclusive_group(required=True)
     for report in _VALID_REPORTS:
-        report_name = report.report_name.replace("_", "-")
-        report_name_option = f"--{report_name}"
-        if report.val_type is bool:
-            group.add_argument(report_name_option, action='store_true', default=False,
-                               help=report.help)
-        elif report.val_type is str:
-            if report.metavar:
-                report_help = report.help
-                default_str = ''
-                group.add_argument(report_name_option, required=False, type=str,
-                                   default=default_str, help=report_help,
-                                   metavar=report.metavar)
+        rep_type = "--{}".format(report["report"].replace("_", "-"))
+        if report["type"] is bool:
+            group.add_argument(rep_type, action='store_true', default=False,
+                               help=report["help"])
+        elif report["type"] is str:
+            if "metavar" in report:
+                group.add_argument(rep_type, required=False, type=str,
+                                   metavar=report["metavar"], default='',
+                                   help=report["help"])
             else:
-                group.add_argument(report_name_option, required=False, type=str,
-                                   default=default_str, help=report_help)
+                group.add_argument(rep_type, required=False, type=str,
+                                   default='', help=report["help"])
             # end if
         else:
-            raise ValueError(f"Unknown report type, '{report['type']}'")
+            raise ValueError("Unknown report type, '{}'".format(report["type"]))
         # end if
     # end for
     ###
-
-    parser.add_argument("--separator", type=str, required=False, default=",",
-                        metavar="SEP", dest="sep",
-                        help="String to separate items in a list")
-
+    defval = ","
+    help_str = "String to separate items in a list (default: '{}')"
+    parser.add_argument("--separator", type=str, required=False, default=defval,
+                        metavar="SEP", dest="sep", help=help_str.format(defval))
+    defval = False
     help_str = ("Exclude protected variables (only has an effect if the "
-                "requested report is returning a list of variables).")
+                "requested report is returning a list of variables)."
+                " (default: {})")
     parser.add_argument("--exclude-protected", action='store_true',
-                        required=False, default=False, help=help_str)
+                        required=False,
+                        default=defval, help=help_str.format(defval))
+    defval = -1
+    help_str = ("Screen width for '--show' line wrapping. -1 means do not "
+                "wrap. (default: {})")
     parser.add_argument("--line-wrap", type=int, required=False,
                         metavar="LINE_WIDTH", dest="line_wrap",
-                        default=-1,
-                        help="Screen width for '--show' line wrapping. -1 means do not wrap.")
+                        default=defval, help=help_str.format(defval))
+    defval = 2
+    help_str = "Indent depth for '--show' output (default: {})"
     parser.add_argument("--indent", type=int, required=False, default=2,
-                        help="Indent depth for '--show' output")
+                        help=help_str.format(defval))
     return parser
 
 ###############################################################################
@@ -1191,10 +1197,12 @@ if __name__ == "__main__":
         ARG_VARS = vars(PARGS)
         _ACTION = None
         _ERRMSG = ''
+        _ESEP = ''
         for opt in ARG_VARS:
             if (opt in DatatableReport.valid_actions()) and ARG_VARS[opt]:
                 if _ACTION:
-                    _ERRMSG += f"Duplicate action, '{opt}'\n"
+                    _ERRMSG += _ESEP + "Duplicate action, '{}'".format(opt)
+                    _ESEP = '\n'
                 else:
                     _ACTION = DatatableReport(opt, ARG_VARS[opt])
                 # end if
@@ -1206,5 +1214,5 @@ if __name__ == "__main__":
         REPORT = datatable_report(PARGS.datatable, _ACTION,
                                   PARGS.sep, PARGS.exclude_protected)
     # end if
-    print(f"{REPORT.rstrip()}")
+    print("{}".format(REPORT.rstrip()))
     sys.exit(0)
