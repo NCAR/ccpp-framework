@@ -52,7 +52,7 @@ if(CCPP_FRAMEWORK_ENABLE_TESTS)
     ADD_COMPILE_OPTIONS(-Ktrap=fp)
     ADD_COMPILE_OPTIONS(-Mpreprocess)
   else()
-    message (WARNING "This program has only been compiled with gfortran and ifx.")
+    message (WARNING "This program may not be able to be compiled with compiler :${CMAKE_Fortran_COMPILER_ID}")
   endif()
 endif()
 
