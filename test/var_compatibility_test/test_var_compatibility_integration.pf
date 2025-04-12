@@ -33,7 +33,7 @@ subroutine test_var_compatibility_integration()
         'scalar_variable_for_testing                               ',         &
         'scheme_order_in_suite                                     '/)
 
-   character(len=cm), target :: test_reqvars1(16) = (/                        &
+   character(len=cm), target :: test_reqvars1(17) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
