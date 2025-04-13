@@ -20,7 +20,7 @@ get_filename_component(CCPP_ROOT "${TEST_ROOT}" DIRECTORY)
 #
 #------------------------------------------------------------------------------
 LIST(APPEND SCHEME_FILES "var_compatibility_files.txt")
-LIST(APPEND HOST_FILES "module_rad_ddt" "test_host_data" "test_host_mod")
+LIST(APPEND HOST_FILES "test_host_data" "test_host_mod")
 LIST(APPEND SUITE_FILES "var_compatibility_suite.xml")
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR

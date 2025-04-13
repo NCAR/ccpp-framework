@@ -468,7 +468,8 @@ def duplicate_item_error(title, filename, itype, orig_item):
     raise CCPPError(errmsg.format(**edict))
 
 ###############################################################################
-def parse_host_model_files(host_filenames, host_name, run_env):
+def parse_host_model_files(host_filenames, host_name, run_env,
+                           known_ddts=list()):
 ###############################################################################
     """
     Gather information from host files (e.g., DDTs, registry) and
@@ -476,7 +477,6 @@ def parse_host_model_files(host_filenames, host_name, run_env):
     """
     header_dict = {}
     table_dict = {}
-    known_ddts = list()
     logger = run_env.logger
     for filename in host_filenames:
         logger.info('Reading host model data from {}'.format(filename))
@@ -637,8 +637,11 @@ def capgen(run_env, return_db=False):
     if run_env.generate_docfiles:
         raise CCPPError("--generate-docfiles not yet supported")
     # end if
-    # First up, handle the host files
-    host_model = parse_host_model_files(host_files, host_name, run_env)
+    # The host model may depend on suite DDTs
+    scheme_ddts = register_ddts(scheme_files)
+    # Handle the host files
+    host_model = parse_host_model_files(host_files, host_name, run_env,
+                                        known_ddts=scheme_ddts)
     # Next, parse the scheme files
     # We always need to parse the constituent DDTs
     const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")

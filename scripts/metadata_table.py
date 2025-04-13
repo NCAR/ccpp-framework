@@ -283,7 +283,7 @@ def register_ddts(file_list):
             table_is_ddt = False
             # Search the file for ccpp-table-properties sections
             curr_line, line_num = pobj.next_line()
-            while(curr_line):
+            while(curr_line is not None):
                 if in_table:
                     # We are in a table properties sec, look for name and type
                     if MetadataSection.header_start(curr_line) or       \
@@ -297,7 +297,11 @@ def register_ddts(file_list):
                                 pobj.add_syntax_err(emsg)
                             # end if
                         # end if
-                        in_table = False
+                        if MetadataTable.table_start(curr_line):
+                            in_table = line_num + 1
+                        else:
+                            in_table = False
+                        # end if
                         ddt_name = ""
                         table_is_ddt = False
                     else:
