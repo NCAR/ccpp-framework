@@ -1,6 +1,6 @@
 #! /bin/bash
 
-currdir="`pwd -P`"
+currdir="$(pwd -P)"
 scriptdir="$( cd $( dirname $0 ); pwd -P )"
 
 ##
@@ -129,7 +129,7 @@ ccpp_files="${ccpp_files},${build_dir}/ccpp/test_host_ccpp_cap.F90"
 ccpp_files="${ccpp_files},${build_dir}/ccpp/ccpp_var_compatibility_suite_cap.F90"
 #process_list=""
 module_list="effr_calc,effr_diag,effr_post,mod_effr_pre,rad_lw,rad_sw"
-dependencies="module_rad_ddt"
+dependencies="${scriptdir}/module_rad_ddt.F90"
 suite_list="var_compatibility_suite"
 required_vars_var_compatibility="ccpp_error_code,ccpp_error_message"
 required_vars_var_compatibility="${required_vars_var_compatibility},cloud_graupel_number_concentration"
@@ -245,11 +245,11 @@ check_datatable ${report_prog} ${datafile} "--suite-files" ${suite_files}
 check_datatable ${report_prog} ${datafile} "--utility-files" ${utility_files}
 check_datatable ${report_prog} ${datafile} "--ccpp-files" ${ccpp_files}
 echo -e "\nChecking lists from command line"
-#check_datatable ${report_prog} ${datafile} "--process-list" ${process_list}
+check_datatable ${report_prog} ${datafile} "--process-list" ${process_list}
 check_datatable ${report_prog} ${datafile} "--module-list" ${module_list}
-#check_datatable ${report_prog} ${datafile} "--dependencies" ${dependencies}
-#check_datatable ${report_prog} ${datafile} "--suite-list" ${suite_list}       \
-#                --sep ";"
+check_datatable ${report_prog} ${datafile} "--dependencies" ${dependencies}
+check_datatable ${report_prog} ${datafile} "--suite-list" ${suite_list}       \
+                --sep ";"
 echo -e "\nChecking variables for var_compatibility suite from command line"
 check_datatable ${report_prog} ${datafile} "--required-variables"             \
                 ${required_vars_var_compatibility} "var_compatibility_suite"
