@@ -142,7 +142,7 @@ class CallList(VarDictionary):
                         raise CCPPError(errmsg.format(stdname, clnames))
                     # end if
                     lname = dvar.get_prop_value('local_name')
-                    # Optional variables in the caps are associated with 
+                    # Optional variables in the caps are associated with
                     # local pointers of <lname>_ptr
                     if dvar.get_prop_value('optional'):
                         lname = dummy+'_ptr'
@@ -1161,7 +1161,7 @@ class Scheme(SuiteObject):
                     gvar = None
                 # end if
             if gvar is None:
-                my_group.add_call_list_variable(var)
+                my_group.add_call_list_variable(var, gen_unique=True)
             # end if
         # end if
 
@@ -1219,7 +1219,7 @@ class Scheme(SuiteObject):
                 # end if
                 # We have a match, make sure var is in call list
                 if new_dims == vdims:
-                    self.add_call_list_variable(var, exists_ok=True)
+                    self.add_call_list_variable(var, exists_ok=True, gen_unique=True)
                     self.update_group_call_list_variable(var)
                 else:
                     subst_dict = {'dimensions':new_dims}
@@ -1461,7 +1461,7 @@ class Scheme(SuiteObject):
         local_name = dvar.get_prop_value('local_name')
 
         # If the variable is allocatable and the intent for the scheme is 'out',
-        # then we can't test anything because the scheme is going to allocate 
+        # then we can't test anything because the scheme is going to allocate
         # the variable. We don't have this information earlier in
         # add_var_debug_check, therefore need to back out here,
         # using the information from the scheme variable (call list).
@@ -1794,11 +1794,11 @@ class Scheme(SuiteObject):
         #
         if self.__optional_vars:
             outfile.write('! Associate conditional variables', indent+1)
-        # end if 
+        # end if
         for (dict_var, var, var_ptr, has_transform) in self.__optional_vars:
             tstmt = self.associate_optional_var(dict_var, var, var_ptr, has_transform, cldicts, indent+1, outfile)
         # end for
-        # 
+        #
         # Write the scheme call.
         #
         if self._has_run_phase:
@@ -1813,7 +1813,7 @@ class Scheme(SuiteObject):
         #
         first_ptr_declaration=True
         for (dict_var, var, var_ptr, has_transform) in self.__optional_vars:
-            if first_ptr_declaration: 
+            if first_ptr_declaration:
                 outfile.write('! Copy any local pointers to dummy/local variables', indent+1)
                 first_ptr_declaration=False
             # end if
@@ -1977,23 +1977,29 @@ class Subcycle(SuiteObject):
     """Class to represent a subcycled group of schemes or scheme collections"""
 
     def __init__(self, sub_xml, context, parent, run_env):
-        name = sub_xml.get('name', None) # Iteration count
-        loop_extent = sub_xml.get('loop', "1") # Number of iterations
+        self._loop_extent = sub_xml.get('loop', "1") # Number of iterations
+        self._loop = None
         # See if our loop variable is an interger or a variable
         try:
-            loop_int = int(loop_extent) # pylint: disable=unused-variable
-            self._loop = loop_extent
+            _ = int(self._loop_extent)
+            self._loop = self._loop_extent
             self._loop_var_int = True
+            name = f"loop{self._loop}"
+            super().__init__(name, context, parent, run_env, active_call_list=False)
         except ValueError:
             self._loop_var_int = False
-            lvar = parent.find_variable(standard_name=self.loop, any_scope=True)
+            lvar = parent.find_variable(standard_name=self._loop_extent, any_scope=True)
             if lvar is None:
-                emsg = "Subcycle, {}, specifies {} iterations but {} not found"
-                raise CCPPError(emsg.format(name, self.loop, self.loop))
+                emsg = "Subcycle, {}, specifies {} iterations, variable not found"
+                raise CCPPError(emsg.format(name, self._loop_extent))
+            else:
+                self._loop_var_int = False
+                self._loop = lvar.get_prop_value('local_name')
             # end if
+            name = f"loop_{self._loop_extent}"[0:63]
+            super().__init__(name, context, parent, run_env, active_call_list=True)
             parent.add_call_list_variable(lvar)
         # end try
-        super().__init__(name, context, parent, run_env)
         for item in sub_xml:
             new_item = new_suite_object(item, context, self, run_env)
             self.add_part(new_item)
@@ -2004,12 +2010,11 @@ class Subcycle(SuiteObject):
         if self.name is None:
             self.name = "subcycle_index{}".format(level)
         # end if
-        # Create a variable for the loop index
-        self.add_variable(Var({'local_name':self.name,
-                               'standard_name':'loop_variable',
-                               'type':'integer', 'units':'count',
-                               'dimensions':'()'}, _API_SOURCE, self.run_env),
-                          self.run_env)
+        # Create a Group variable for the subcycle index.
+        newvar = Var({'local_name':self.name, 'standard_name':self.name,
+                      'type':'integer', 'units':'count', 'dimensions':'()'},
+                     _API_LOCAL, self.run_env)
+        group.manage_variable(newvar)
         # Handle all the suite objects inside of this subcycle
         scheme_mods = set()
         for item in self.parts:
@@ -2023,7 +2028,7 @@ class Subcycle(SuiteObject):
 
     def write(self, outfile, errcode, errmsg, indent):
         """Write code for the subcycle loop, including contents, to <outfile>"""
-        outfile.write('do {} = 1, {}'.format(self.name, self.loop), indent)
+        outfile.write('do {} = 1, {}'.format(self.name, self._loop), indent)
         # Note that 'scheme' may be a sybcycle or other construct
         for item in self.parts:
             item.write(outfile, errcode, errmsg, indent+1)
@@ -2033,13 +2038,7 @@ class Subcycle(SuiteObject):
     @property
     def loop(self):
         """Return the loop value or variable local_name"""
-        lvar = self.find_variable(standard_name=self.loop, any_scope=True)
-        if lvar is None:
-            emsg = "Subcycle, {}, specifies {} iterations but {} not found"
-            raise CCPPError(emsg.format(self.name, self.loop, self.loop))
-        # end if
-        lname = lvar.get_prop_value('local_name')
-        return lname
+        return self._loop
 
 ###############################################################################
 
@@ -2273,7 +2272,7 @@ class Group(SuiteObject):
                         ParseSource(_API_SOURCE_NAME,
                                     _API_LOCAL_VAR_NAME, newvar.context),
                         self.run_env)
-        self.add_variable(local_var, self.run_env, exists_ok=True)
+        self.add_variable(local_var, self.run_env, exists_ok=True, gen_unique=True)
         # Finally, make sure all dimensions are accounted for
         emsg = self.add_variable_dimensions(local_var, _API_LOCAL_VAR_TYPES,
                                             adjust_intent=True,
@@ -2408,8 +2407,8 @@ class Group(SuiteObject):
                     # end if
                 # end if
             # end for
-            # All optional dummy variables within group need to have 
-            # an associated pointer array declared. 
+            # All optional dummy variables within group need to have
+            # an associated pointer array declared.
             for cvar in self.call_list.variable_list():
                 opt_var = cvar.get_prop_value('optional')
                 if opt_var:
@@ -2485,7 +2484,9 @@ class Group(SuiteObject):
         call_vars = self.call_list.variable_list()
         self._ddt_library.write_ddt_use_statements(call_vars, outfile,
                                                    indent+1, pad=modmax)
-        decl_vars = [x[0] for x in subpart_allocate_vars.values()]
+        decl_vars = ([x[0] for x in subpart_allocate_vars.values()] +
+                     [x[0] for x in subpart_scalar_vars.values()] +
+                     [x[0] for x in subpart_optional_vars.values()])
         self._ddt_library.write_ddt_use_statements(decl_vars, outfile,
                                                    indent+1, pad=modmax)
         outfile.write('', 0)

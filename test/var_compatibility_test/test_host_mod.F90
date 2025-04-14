@@ -27,7 +27,10 @@ contains
     call allocate_physics_state(ncols, pver, phys_state, has_graupel, has_ice)
     phys_state%effrr = 1.0E-3 ! 1000 microns, in meter
     phys_state%effrl = 1.0E-4 ! 100 microns, in meter
-    phys_state%scalar_var = 1.0 ! in m
+    phys_state%scalar_var  = 1.0 ! in m
+    phys_state%scalar_varA = 273.15 ! in K
+    phys_state%scalar_varB = 1013.0 ! in mb
+    phys_state%scalar_varC = 380    ! in ppmv
     effrs            = 5.0E-4 ! 500 microns, in meter
     if (has_graupel) then
        phys_state%effrg = 2.5E-4 ! 250 microns, in meter

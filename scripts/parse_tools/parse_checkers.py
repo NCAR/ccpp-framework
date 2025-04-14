@@ -234,7 +234,7 @@ FORTRAN_INTRINSIC_TYPES = ["integer", "real", "logical", "complex",
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
 FORTRAN_TYPE_RE = re.compile(r"(?i)type\s*\(\s*("+FORTRAN_ID+r")\s*\)")
 
-_REGISTERED_FORTRAN_DDT_NAMES = []
+_REGISTERED_FORTRAN_DDT_NAMES = ["ccpp_constituent_prop_ptr_t"]
 
 ########################################################################
 

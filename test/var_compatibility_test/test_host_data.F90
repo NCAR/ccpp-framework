@@ -2,6 +2,9 @@ module test_host_data
 
   use ccpp_kinds, only: kind_phys
 
+   implicit none
+   private
+
   !> \section arg_table_physics_state  Argument Table
   !! \htmlinclude arg_table_physics_state.html
   type physics_state
@@ -12,10 +15,17 @@ module test_host_data
           effrg,                                     & ! effective radius of cloud graupel
           ncg,                                       & ! number concentration of cloud graupel
           nci                                          ! number concentration of cloud ice
-     real(kind_phys) :: scalar_var, tke, tke2
+     real(kind_phys) :: scalar_var
+     real(kind_phys) :: scalar_varA
+     real(kind_phys) :: scalar_varB
+     real(kind_phys) :: tke, tke2
+     integer :: scalar_varC
+     integer :: scheme_order
+     integer :: num_subcycles
   end type physics_state
 
-  public allocate_physics_state
+  public :: physics_state
+  public :: allocate_physics_state
 
 contains
 
@@ -61,6 +71,11 @@ contains
        end if
        allocate(state%nci(cols, levels))
     endif
+
+    ! Initialize scheme counter.
+    state%scheme_order = 1
+    ! Initialize subcycle counter.
+    state%num_subcycles = 3
 
   end subroutine allocate_physics_state
 

@@ -78,35 +78,6 @@ SUITE_DEFINITION_FILENAME_PATTERN = re.compile('^(.*)\.xml$')
 # Maximum number of concurrent CCPP instances per MPI task
 CCPP_NUM_INSTANCES = 200
 
-def execute(cmd, abort = True):
-    """Runs a local command in a shell. Waits for completion and
-    returns status, stdout and stderr. If abort = True, abort in
-    case an error occurs during the execution of the command."""
-
-    # Set debug to true if logging level is debug
-    debug = logging.getLogger().getEffectiveLevel() == logging.DEBUG
-
-    logging.debug('Executing "{0}"'.format(cmd))
-    p = subprocess.Popen(cmd, stdout = subprocess.PIPE,
-                         stderr = subprocess.PIPE, shell = True)
-    (stdout, stderr) = p.communicate()
-    status = p.returncode
-    if debug:
-        message = 'Execution of "{0}" returned with exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.decode(encoding='ascii', errors='ignore').rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.decode(encoding='ascii', errors='ignore').rstrip('\n'))
-        logging.debug(message)
-    if not status == 0:
-        message = 'Execution of command {0} failed, exit code {1}\n'.format(cmd, status)
-        message += '    stdout: "{0}"\n'.format(stdout.decode(encoding='ascii', errors='ignore').rstrip('\n'))
-        message += '    stderr: "{0}"'.format(stderr.decode(encoding='ascii', errors='ignore').rstrip('\n'))
-        if abort:
-            raise Exception(message)
-        else:
-            logging.error(message)
-    return (status, stdout.decode(encoding='ascii', errors='ignore').rstrip('\n'),
-                    stderr.decode(encoding='ascii', errors='ignore').rstrip('\n'))
-
 def split_var_name_and_array_reference(var_name):
     """Split an expression like foo(:,a,1:ddt%ngas)
     into components foo and (:,a,1:ddt%ngas)."""

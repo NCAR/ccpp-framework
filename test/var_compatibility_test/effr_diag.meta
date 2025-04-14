@@ -2,6 +2,33 @@
   name = effr_diag
   type = scheme
   dependencies =
+########################################################################
+[ccpp-arg-table]
+  name = effr_diag_init
+  type = scheme
+[ scheme_order ]
+  standard_name = scheme_order_in_suite
+  long_name = scheme order in suite definition file
+  units = None
+  dimensions = ()
+  type = integer
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+########################################################################
 [ccpp-arg-table]
   name = effr_diag_run
   type = scheme
@@ -14,6 +41,13 @@
   kind = kind_phys
   intent = in
   top_at_one = True
+[ scalar_var ]
+  standard_name = scalar_variable_for_testing_c
+  long_name = unused scalar variable C
+  units = m
+  dimensions = ()
+  type = integer
+  intent = in
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

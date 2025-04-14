@@ -8,9 +8,29 @@ module effr_calc
    implicit none
    private
 
-   public :: effr_calc_run
+   public :: effr_calc_run, effr_calc_init
 
-contains
+ contains
+   !> \section arg_table_effr_calc_init Argument Table
+   !! \htmlinclude arg_table_effr_calc_init.html
+   !!
+   subroutine effr_calc_init(scheme_order, errmsg, errflg)
+     character(len=512), intent(out)   :: errmsg
+     integer,            intent(out)   :: errflg
+     integer,            intent(inout) :: scheme_order
+
+     errmsg = ''
+     errflg = 0
+
+     if (scheme_order .ne. 2) then
+        errflg = 1
+        errmsg = 'ERROR: effr_calc_init() needs to be called second'
+        return
+     else
+        scheme_order = scheme_order + 1
+     endif
+
+   end subroutine effr_calc_init
 
    !> \section arg_table_effr_calc_run  Argument Table
    !! \htmlinclude arg_table_effr_calc_run.html
@@ -56,7 +76,7 @@ contains
       if (present(nci_out)) nci_out_local = nci_out
       effrl_inout = min(max(effrl_inout,re_qc_min),re_qc_max)
       if (present(effri_out)) effri_out   = re_qi_avg
-      effrs_inout = effrs_inout + 10.0 ! in micrometer
+      effrs_inout = effrs_inout + (10.0 / 6.0) ! in micrometer
       scalar_var = 2.0 ! in km
 
    end subroutine effr_calc_run

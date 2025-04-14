@@ -2,6 +2,7 @@
 
 <suite name="cld_suite" version="1.0">
   <group name="physics">
+    <scheme>const_indices</scheme>
     <scheme>cld_liq</scheme>
     <scheme>apply_constituent_tendencies</scheme>
     <scheme>cld_ice</scheme>
