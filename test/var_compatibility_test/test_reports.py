@@ -75,6 +75,7 @@ _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horiz
                           "cloud_graupel_number_concentration",
                           "scalar_variable_for_testing",
                           "turbulent_kinetic_energy",
+                          "turbulent_kinetic_energy2",
                           "flag_indicating_cloud_microphysics_has_graupel",
                           "flag_indicating_cloud_microphysics_has_ice"]
 _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
@@ -84,6 +85,7 @@ _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "cloud_ice_number_concentration",
                            "effective_radius_of_stratiform_cloud_rain_particle",
                            "turbulent_kinetic_energy",
+                           "turbulent_kinetic_energy2",
                            "scalar_variable_for_testing"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 

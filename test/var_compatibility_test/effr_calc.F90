@@ -17,7 +17,8 @@ contains
    !!
    subroutine effr_calc_run(ncol, nlev, effrr_in, effrg_in, ncg_in, nci_out, &
                             effrl_inout, effri_out, effrs_inout, ncl_out,    &
-                            has_graupel, scalar_var, tke_inout, errmsg, errflg)
+                            has_graupel, scalar_var, tke_inout, tke2_inout,  &
+                            errmsg, errflg)
 
       integer,            intent(in)    :: ncol
       integer,            intent(in)    :: nlev
@@ -34,7 +35,8 @@ contains
       integer,            intent(out)   :: errflg
       real(kind_phys),    intent(out),optional   :: ncl_out(:,:)
       real(kind_phys),    intent(inout) :: tke_inout
-      
+      real(kind_phys),    intent(inout) :: tke2_inout
+
       !----------------------------------------------------------------
 
       real(kind_phys), parameter :: re_qc_min = 2.5 ! microns

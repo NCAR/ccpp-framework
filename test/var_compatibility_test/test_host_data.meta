@@ -66,3 +66,10 @@
   dimensions = ()
   type = real
   kind = kind_phys
+[ tke2 ]
+  standard_name = turbulent_kinetic_energy2
+  long_name = turbulent_kinetic_energy2
+  units = m2 s-2
+  dimensions = ()
+  type = real
+  kind = kind_phys
