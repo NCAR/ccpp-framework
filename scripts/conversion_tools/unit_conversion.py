@@ -177,13 +177,22 @@ def erg_cm_minus_2_s_minus_1__to__W_m_minus_2():
     """Convert erg per square centimeter and second to Watt per square meter"""
     return '1.0E-3{kind}*{var}'
 
-##################
+####################
 # Equivalent units #
-##################
-def m2_s_minus_2__to__J_kg_minus_1():
+####################
+
+def m_plus_2_s_minus_2__to__J_kg_minus_1():
     """Equivalent units"""
     return '{var}'
 
-def J_kg_minus_1__to__m2_s_minus_2():
+def J_kg_minus_1__to__m_plus_2_s_minus_2():
+    """Equivalent units"""
+    return '{var}'
+
+def V_A__to__W():
+    """Equivalent units"""
+    return '{var}'
+
+def W__to__V_A():
     """Equivalent units"""
     return '{var}'

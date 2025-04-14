@@ -852,6 +852,20 @@ class VarCompatObj:
                      "var_stdname", "real", "kind_phys", "km",['horizontal_dimension', 'vertical_layer_dimension'], "var2_lname", True, \
                      _DOCTEST_RUNENV).reverse_transform("var1_lname", "var2_lname", ('i','k'), ('i','nk-k+1'))
     'var1_lname(i,nk-k+1) = 1.0E+3_kind_phys*var2_lname(i,k)'
+
+    # Test that a 2-D var with equivalent units works and that it
+    # produces the correct forward transformation
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m2 s-2",  ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "J kg-1", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV).forward_transform("var1_lname", "var2_lname", 'i', 'i')
+    'var1_lname(i) = var2_lname(i)'
+
+    # Test that a 2-D var with identical units works and that it
+    # skips any unit transformations
+    >>> VarCompatObj("var_stdname", "real", "kind_phys", "m2 s-2",  ['horizontal_dimension'], "var1_lname", False, \
+                     "var_stdname", "real", "kind_phys", "m+2 s-2", ['horizontal_dimension'], "var2_lname", False, \
+                     _DOCTEST_RUNENV).forward_transform("var1_lname", "var2_lname", 'i', 'i')
+    'var1_lname(i) = var2_lname(i)'
     """
 
     def __init__(self, var1_stdname, var1_type, var1_kind, var1_units,
@@ -960,20 +974,27 @@ class VarCompatObj:
                 # A tendency variable's units should be "<var2_units> s-1"
                 tendency_split_units = var1_units.split('s-1')[0].strip()
                 if tendency_split_units != var2_units:
-                    # We don't currently support unit conversions for tendency variables
-                    emsg = f"\nMismatch tendency variable units '{var1_units}'"
-                    emsg += f" for variable '{var1_stdname}'."
-                    emsg += " No variable transforms supported for tendencies."
-                    emsg += f" Tendency units should be '{var2_units} s-1' to match state variable."
-                    self.__equiv = False
-                    self.__compat = False
-                    incompat_reason.append(emsg)
+                    # We don't currently support unit conversions for tendency variables,
+                    # but we can check if the units are identical or equivalent
+                    unit_transforms = self._get_unit_convstrs(tendency_split_units,
+                                                              var2_units)
+                    if not unit_transforms == (None, None):
+                        emsg = f"\nMismatch tendency variable units '{var1_units}'"
+                        emsg += f" for variable '{var1_stdname}'."
+                        emsg += " No variable transforms supported for tendencies."
+                        emsg += f" Tendency units should be '{var2_units} s-1' to match state variable."
+                        self.__equiv = False
+                        self.__compat = False
+                        incompat_reason.append(emsg)
                 # end if
             elif var1_units != var2_units:
                 # Try to find a set of unit conversions
-                self.__equiv = False
-                self.__unit_transforms = self._get_unit_convstrs(var1_units,
-                                                                 var2_units)
+                unit_transforms = self._get_unit_convstrs(var1_units,
+                                                          var2_units)
+                # Handle equivalent or identical units = (None, None)
+                if not unit_transforms == (None, None):
+                    self.__equiv = False
+                    self.__unit_transforms = unit_transforms
             # end if
         # end if
         if self.__compat:
@@ -1148,7 +1169,8 @@ class VarCompatObj:
     def _get_unit_convstrs(self, var1_units, var2_units):
         """Attempt to retrieve the forward and reverse unit transformations
         for transforming a variable in <var1_units> to / from a variable in
-        <var2_units>.
+        <var2_units>. Return (None, None) if units are equivalent or identical
+        after parsing (this can happen when comparing m2 and m+2).
 
         # Initial setup
         >>> from parse_tools import init_log, set_log_to_null
@@ -1177,6 +1199,14 @@ class VarCompatObj:
         ('1.0E+3{kind}*{var}', '1.0E-3{kind}*{var}')
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('C', 'K')
         ('{var}+273.15{kind}', '{var}-273.15{kind}')
+        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('V A', 'W')
+        (None, None)
+        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('m2 s-2', 'J kg-1')
+        (None, None)
+        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('m+2 s-2', 'J kg-1')
+        (None, None)
+        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('m+2 s-2', 'm2 s-2')
+        (None, None)
 
         # Try an invalid conversion
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('1', 'none') #doctest: +ELLIPSIS
@@ -1192,6 +1222,11 @@ class VarCompatObj:
         """
         u1_str = self.units_to_string(var1_units, self.__v1_context)
         u2_str = self.units_to_string(var2_units, self.__v2_context)
+        # If u1_str and u2_str are identical, for example after parsing
+        # "m2 s-2" and "m+2 s-2", return (None, None) to signal that
+        # the units are in fact identical
+        if u1_str == u2_str:
+            return (None, None)
         unit_conv_str = "{0}__to__{1}".format(u1_str, u2_str)
         try:
             forward_transform = getattr(unit_conversion, unit_conv_str)()
@@ -1210,7 +1245,11 @@ class VarCompatObj:
                                                self.__stdname,
                                                context=self.__v1_context))
         # end if
-        return (forward_transform, reverse_transform)
+        # For equivalent units, return (None, None)
+        if forward_transform == '{var}' and reverse_transform == '{var}':
+            return (None, None)
+        else:
+            return (forward_transform, reverse_transform)
 
     def _get_dim_transforms(self, var1_dims, var2_dims):
         """Attempt to find forward and reverse permutations for transforming a
@@ -1355,8 +1394,17 @@ class VarCompatObj:
         """Replace variable unit description with string that is a legal
         Python identifier.
         If the resulting string is a Python keyword, raise an exception."""
-        # Replace each whitespace with an underscore
-        string = units.replace(" ","_")
+        # Start with breaking up the string by spaces
+        items = units.split()
+        # Identify units with positive exponents
+        # without a plus sign (m2 instead of m+2).
+        pattern = re.compile(r"([a-zA-Z]+)([0-9]+)")
+        for index, item in enumerate(items):
+            match = pattern.match(item)
+            if match:
+                items[index] = "+".join(match.groups())
+        # Combine list into string using underscores
+        string = "_".join(items)
         # Replace each minus sign with '_minus_'
         string = string.replace("-","_minus_")
         # Replace each plus sign with '_plus_'
