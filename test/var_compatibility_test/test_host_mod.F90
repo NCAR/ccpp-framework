@@ -41,6 +41,7 @@ contains
        phys_state%nci = 80
     endif
     phys_state%tke = 10.0 !J kg-1
+    phys_state%tke2 = 42.0 !J kg-1
 
   end subroutine init_data
 
