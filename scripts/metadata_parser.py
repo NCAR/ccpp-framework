@@ -10,6 +10,7 @@ from xml.etree import ElementTree as ET
 
 from common import encode_container, CCPP_STAGES
 from common import CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE
+from common import insert_plus_sign_for_positive_exponents
 from mkcap import Var
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], 'fortran_tools'))
@@ -230,9 +231,16 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 #kind = new_var.get_prop_value('kind')
                 # *DH 20210812
 
+                # DH* 20250414
+                # Workaround to support units with positive exponents with
+                # and without a plus (+) sign. Internally, we convert all
+                # units from capgen to the "+"-format (i.e. "m2 s-2" --> "m+2 s-2")
+                units = insert_plus_sign_for_positive_exponents(new_var.get_prop_value('units'))
+                # *DH 20250414
+
                 var = Var(standard_name = standard_name,
                           long_name     = new_var.get_prop_value('long_name') + legacy_note,
-                          units         = new_var.get_prop_value('units'),
+                          units         = units,
                           local_name    = new_var.get_prop_value('local_name'),
                           type          = new_var.get_prop_value('type').lower(),
                           dimensions    = dimensions,

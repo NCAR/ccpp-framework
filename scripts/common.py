@@ -177,6 +177,21 @@ def isstring(s):
     """Return true if a variable is a string"""
     return isinstance(s, str)
 
+def insert_plus_sign_for_positive_exponents(string):
+    """Parse a string (a unit string) and instert plus (+) signs
+    for positive exponents where needed"""
+    # Break up the string by spaces
+    items = string.split()
+    # Identify units with positive exponents
+    # without a plus sign (m2 instead of m+2).
+    pattern = re.compile(r"([a-zA-Z]+)([0-9]+)")
+    for index, item in enumerate(items):
+        match = pattern.match(item)
+        if match:
+            items[index] = "+".join(match.groups())
+    # Recombine items to string
+    return " ".join(items)
+
 def string_to_python_identifier(string):
     """Replaces forbidden characters in strings with standard substitutions
     so that the result is a valid Python object (variable, function) name.
