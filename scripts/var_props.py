@@ -854,7 +854,7 @@ class VarCompatObj:
     'var1_lname(i,nk-k+1) = 1.0E+3_kind_phys*var2_lname(i,k)'
 
     # Test that a 2-D var with equivalent units works and that it
-    # produces the correct forward transformation
+    # skips any unit transformations
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m2 s-2",  ['horizontal_dimension'], "var1_lname", False, \
                      "var_stdname", "real", "kind_phys", "J kg-1", ['horizontal_dimension'], "var2_lname", False, \
                      _DOCTEST_RUNENV).forward_transform("var1_lname", "var2_lname", 'i', 'i')
