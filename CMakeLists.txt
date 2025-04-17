@@ -4,7 +4,6 @@ project(ccpp_framework
         VERSION 5.0.0
         LANGUAGES Fortran)
 
-enable_language(C CXX Fortran)
 include(cmake/ccpp_capgen.cmake)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
 
