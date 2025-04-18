@@ -40,7 +40,7 @@ ccpp_capgen(CAPGEN_EXPECT_THROW_ERROR ON
             HOSTFILES ${ADVECTION_HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_ERROR_META_FILES}
             SUITES ${SUITE_FILES_ERROR}
-            HOST_NAME "test_host"
+            HOST_NAME ${HOST}
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
 
 # Run ccpp_capgen
@@ -49,7 +49,7 @@ ccpp_capgen(CAPGEN_DEBUG ON
             HOSTFILES ${ADVECTION_HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_META_FILES}
             SUITES ${SUITE_FILES}
-            HOST_NAME "test_host"
+            HOST_NAME ${HOST}
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
 
 # Retrieve the list of files from datatable.xml and set to CCPP_CAPS_LIST
