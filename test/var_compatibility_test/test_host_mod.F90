@@ -52,6 +52,7 @@ contains
     real(kind_phys), parameter :: effri_expected = 7.5E-5 ! 75 microns, in meter
     real(kind_phys), parameter :: effrs_expected = 5.1E-4 ! 510 microns, in meter
     real(kind_phys), parameter :: scalar_expected = 2.0E3 ! 2 km, in meter
+    real(kind_phys), parameter :: tke_expected = 10.0     ! 10 J kg-1
     real(kind_phys), parameter :: tolerance = 1.0E-6      ! used as scaling factor for expected value
 
     compare_data = .true.
@@ -86,6 +87,11 @@ contains
         compare_data = .false.
     end if
 
+    if (abs(  phys_state%tke - tke_expected) > tolerance*tke_expected) then
+        write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            tke from expected value exceeds tolerance: ', &
+                                      abs(  phys_state%tke - tke_expected), ' > ', tolerance*tke_expected
+        compare_data = .false.
+    end if
   end function compare_data
 
 end module test_host_mod
