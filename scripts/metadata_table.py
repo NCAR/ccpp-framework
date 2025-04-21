@@ -576,7 +576,7 @@ class MetadataTable():
     @property
     def module_name(self):
         """Return the module name for this metadata table"""
-        return self.__module
+        return self.__module_name
 
     @property
     def relative_path(self):
