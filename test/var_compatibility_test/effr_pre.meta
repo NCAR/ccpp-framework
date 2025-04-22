@@ -1,6 +1,7 @@
 [ccpp-table-properties]
   name = effr_pre
   type = scheme
+  module_name = mod_effr_pre
   dependencies =
 ########################################################################
 [ccpp-arg-table]

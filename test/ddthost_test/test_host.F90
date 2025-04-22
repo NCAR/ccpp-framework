@@ -386,10 +386,11 @@ contains
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ' /)
 
-   character(len=cm), target :: test_invars2(3) = (/                          &
+   character(len=cm), target :: test_invars2(4) = (/                          &
         'model_times                         ',                               &
         'number_of_model_times               ',                               &
-        'surface_air_pressure                ' /)
+        'surface_air_pressure                ',                               &
+        'host_standard_ccpp_type             ' /)
 
    character(len=cm), target :: test_outvars2(5) = (/                         &
         'ccpp_error_code                     ',                               &
@@ -398,12 +399,13 @@ contains
         'surface_air_pressure                ',                               &
         'number_of_model_times               ' /)
 
-   character(len=cm), target :: test_reqvars2(5) = (/                         &
+   character(len=cm), target :: test_reqvars2(6) = (/                         &
         'model_times                         ',                               &
         'number_of_model_times               ',                               &
         'surface_air_pressure                ',                               &
         'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
+        'ccpp_error_message                  ',                               &
+        'host_standard_ccpp_type             ' /)
     type(suite_info) :: test_suites(2)
     logical :: run_okay
 

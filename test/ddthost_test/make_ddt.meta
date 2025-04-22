@@ -76,6 +76,11 @@
   units = count
   dimensions = ()
   intent = in
+[ ccpp_info ]
+  standard_name = host_standard_ccpp_type
+  type = ccpp_info_t
+  dimensions = ()
+  intent = in
 [ vmr ]
   standard_name = volume_mixing_ratio_ddt
   dimensions = ()
