@@ -1795,8 +1795,8 @@ class Scheme(SuiteObject):
         if self.__optional_vars:
             outfile.write('! Associate conditional variables', indent+1)
         # end if
-        for (dict_var, var, var_ptr, has_transform) in self.__optional_vars:
-            tstmt = self.associate_optional_var(dict_var, var, var_ptr, has_transform, cldicts, indent+1, outfile)
+        for (dict_var, var, has_transform) in self.__optional_vars:
+            tstmt = self.associate_optional_var(dict_var, var, has_transform, cldicts, indent+1, outfile)
         # end for
         #
         # Write the scheme call.
@@ -1812,7 +1812,7 @@ class Scheme(SuiteObject):
         # Copy any local pointers.
         #
         first_ptr_declaration=True
-        for (dict_var, var, var_ptr, has_transform) in self.__optional_vars:
+        for (dict_var, var, has_transform) in self.__optional_vars:
             if first_ptr_declaration:
                 outfile.write('! Copy any local pointers to dummy/local variables', indent+1)
                 first_ptr_declaration=False

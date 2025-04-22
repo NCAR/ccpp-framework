@@ -657,8 +657,7 @@ class API(VarDictionary):
         self.__ddt_lib = DDTLibrary('{}_api'.format(self.host_model.name),
                                     run_env, ddts=all_ddts)
         for header in [d for d in scheme_headers if d.header_type != 'ddt']:
-            # DJS2024: Schemes and modules with DDTs?
-            if header.header_type != 'scheme' and header.header_type != 'module':
+            if header.header_type != 'scheme':
                 errmsg = "{} is an unknown CCPP API metadata header type, {}"
                 raise CCPPError(errmsg.format(header.title, header.header_type))
             # end if
