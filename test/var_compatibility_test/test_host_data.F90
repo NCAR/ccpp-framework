@@ -16,10 +16,6 @@ module test_host_data
           effrg,                                     & ! effective radius of cloud graupel
           ncg,                                       & ! number concentration of cloud graupel
           nci                                          ! number concentration of cloud ice
-     type(ty_rad_lw), dimension(:), allocatable ::   &
-          fluxLW                                       ! Longwave radiation fluxes
-     type(ty_rad_sw), dimension(:), allocatable ::   &
-          fluxSW                                       ! Shortwave radiation fluxes
      real(kind_phys) :: scalar_var
      type(ty_rad_lw), dimension(:), allocatable ::   &
           fluxLW                                       ! Longwave radiation fluxes
