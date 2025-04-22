@@ -82,7 +82,14 @@
   type = real
   kind = kind_phys
   intent = inout
-  lower_bound = True
+[ var_array ]
+  standard_name = array_variable_for_testing
+  long_name = array variable for testing
+  units = none
+  dimensions = (horizontal_dimension,2,4,6)
+  type = real
+  kind = kind_phys
+  intent = inout
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

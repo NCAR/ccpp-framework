@@ -95,7 +95,8 @@ _REQUIRED_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                        "surface_air_pressure", "time_step_for_physics",
                        "water_vapor_specific_humidity",
                        "soil_levels",
-                       "temperature_at_diagnostic_levels"]
+                       "temperature_at_diagnostic_levels",
+                       "array_variable_for_testing"]
 _INPUT_VARS_TEMP = ["potential_temperature",
                     "potential_temperature_at_interface",
                     "coefficients_for_interpolation",
@@ -103,14 +104,16 @@ _INPUT_VARS_TEMP = ["potential_temperature",
                     "surface_air_pressure", "time_step_for_physics",
                     "water_vapor_specific_humidity",
                     "soil_levels",
-                    "temperature_at_diagnostic_levels"]
+                    "temperature_at_diagnostic_levels",
+                    "array_variable_for_testing"]
 _OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "potential_temperature",
                      "potential_temperature_at_interface",
                      "coefficients_for_interpolation",
                      "surface_air_pressure", "water_vapor_specific_humidity",
                      "soil_levels",
-                     "temperature_at_diagnostic_levels"]
+                     "temperature_at_diagnostic_levels",
+                     "array_variable_for_testing"]
 
 def fields_string(field_type, field_list, sep):
     """Create an error string for <field_type> field(s), <field_list>.

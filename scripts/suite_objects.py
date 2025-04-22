@@ -1511,6 +1511,8 @@ class Scheme(SuiteObject):
             dim_strings = []
             lbound_strings = []
             ubound_strings = []
+            dim_lengths = []
+            local_names = []
             for dim in dimensions:
                 if not ':' in dim:
                     # In capgen, any true dimension (that is not a single index) does
@@ -1573,7 +1575,9 @@ class Scheme(SuiteObject):
                     lbound_strings.append(lbound_string)
                     ubound_strings.append(ubound_string)
                 array_size = f'{array_size}*({dim_length})'
-
+                dim_lengths.append(dim_length)
+                local_names.append(local_name)
+            # end for
             # Various strings needed to get the right size
             # and lower/upper bound of the array
             dim_string = '(' + ','.join(dim_strings) + ')'
@@ -1601,26 +1605,37 @@ class Scheme(SuiteObject):
                 outfile.write('',indent)
             # end if
 
-            # Write array bounds check.
-            # Assign lower/upper bounds to internal_var (scalar)
+            # Write size check for each dimension in array.
             #  - If intent is not out.
             #  - Only for types int and real.
-            #  - Skip test for assumed-shape arrays with a lower bounds other than one.
-            lower_bound = svar.get_prop_value('lower_bound')
-            if lower_bound == True:
-                lmsg = "Skipping error check for {}. Can't perfrom this check when lower-bounds is not 1."
-                self.run_env.logger.info(lmsg.format(local_name))
-            elif (vtype == "integer") or (vtype == "real"):
+            if (vtype == "integer") or (vtype == "real"):
                 if not intent == 'out':
-                    internal_var_lname = internal_var.get_prop_value('local_name')
                     tmp_indent = indent
                     if conditional != '.true.':
                         tmp_indent = indent + 1
                         outfile.write(f"if {conditional} then", indent)
                     # end if
-                    outfile.write(f"! Assign lower/upper bounds of {local_name} to {internal_var_lname}", tmp_indent)
-                    outfile.write(f"{internal_var_lname} = {local_name}{lbound_string}", tmp_indent)
-                    outfile.write(f"{internal_var_lname} = {local_name}{ubound_string}", tmp_indent)
+                    ndims = len(dim_lengths)
+                    # Loop through all dimensions in var and check if length of each dimension
+                    # is the correct size.
+                    for index, dim_length in enumerate(dim_lengths):
+                        array_ref = '('
+                        # Dimension(s) before current rank to be checked.
+                        array_ref += '1,'*(index)
+                        # Dimension to check.
+                        array_ref += dim_strings[index]
+                        # Dimension(s) after current rank to be checked.
+                        array_ref += ',1'*(ndims-(index+1))
+                        array_ref += ')'
+                        #
+                        outfile.write(f"! Check length of {local_names[index]}{array_ref}", tmp_indent)
+                        outfile.write(f"if (size({local_names[index]}{array_ref}) /= {dim_length}) then ", tmp_indent)
+                        outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", tmp_indent+1)
+                        outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_names[index]}{array_ref}, expected size ', {dim_length}, ' but got ', size({local_names[index]}{array_ref})", tmp_indent+1)
+                        outfile.write(f"{errcode} = 1", tmp_indent+1)
+                        outfile.write(f"return", tmp_indent+1)
+                        outfile.write(f"end if", tmp_indent)
+                    # end for
                     if conditional != '.true.':
                         outfile.write(f"end if", indent)
                     # end if

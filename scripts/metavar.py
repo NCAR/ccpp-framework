@@ -210,9 +210,7 @@ class Var:
                     VariableProperty('optional', bool, optional_in=True,
                                      default_in=False),
                     VariableProperty('target', bool, optional_in=True,
-                                     default_in=False),
-                    VariableProperty('lower_bound', bool, optional_in=True,
-                                      default_in=False)]
+                                     default_in=False)]
 
 # XXgoldyXX: v debug only
     __to_add = VariableProperty('valid_values', str,

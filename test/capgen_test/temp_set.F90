@@ -19,7 +19,7 @@ CONTAINS
 !! \htmlinclude arg_table_temp_set_run.html
 !!
   SUBROUTINE temp_set_run(ncol, lev, timestep, temp_level, temp_diag, temp, ps, &
-       to_promote, promote_pcnst, slev_lbound, soil_levs, errmsg, errflg)
+       to_promote, promote_pcnst, slev_lbound, soil_levs, var_array, errmsg, errflg)
 !----------------------------------------------------------------
    IMPLICIT NONE
 !----------------------------------------------------------------
@@ -31,6 +31,7 @@ CONTAINS
    REAL(kind_phys),    INTENT(inout) :: temp_level(:, :)
    real(kind_phys),    intent(inout) :: temp_diag(:,:)
    real(kind_phys),    intent(inout) :: soil_levs(slev_lbound:)
+   real(kind_phys),    intent(inout) :: var_array(:,:,:,:)
    real(kind_phys),    intent(out)   :: to_promote(:, :)
    real(kind_phys),    intent(out)   :: promote_pcnst(:)
    character(len=512), intent(out)   :: errmsg
@@ -57,6 +58,8 @@ CONTAINS
                + temp_level(col_index, lev_index + 1)) / 2.0_kind_phys
        end do
     end do
+
+    var_array(:,:,:,:) = 1._kind_phys
 
   END SUBROUTINE temp_set_run
 

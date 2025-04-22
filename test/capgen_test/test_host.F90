@@ -368,7 +368,7 @@ CONTAINS
    character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
                                                     'physics2        ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(9) = (/                          &
+   character(len=cm), target :: test_invars1(10) = (/                         &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -377,8 +377,9 @@ CONTAINS
         'potential_temperature_increment     ',                               &
         'soil_levels                         ',                               &
         'temperature_at_diagnostic_levels    ',                               &
-        'time_step_for_physics               ' /)
-   character(len=cm), target :: test_outvars1(9) = (/                         &
+        'time_step_for_physics               ',                               &
+        'array_variable_for_testing          ' /)
+   character(len=cm), target :: test_outvars1(10) = (/                        &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -387,8 +388,9 @@ CONTAINS
         'soil_levels                         ',                               &
         'temperature_at_diagnostic_levels    ',                               &
         'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
-   character(len=cm), target :: test_reqvars1(11) = (/                        &
+        'ccpp_error_message                  ',                               &
+        'array_variable_for_testing          ' /)
+   character(len=cm), target :: test_reqvars1(12) = (/                        &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -399,7 +401,8 @@ CONTAINS
         'soil_levels                         ',                               &
         'temperature_at_diagnostic_levels    ',	      	      	              &
         'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
+        'ccpp_error_message                  ',                               &
+        'array_variable_for_testing          ' /)
 
    character(len=cm), target :: test_invars2(3) = (/                          &
         'model_times                         ',                               &

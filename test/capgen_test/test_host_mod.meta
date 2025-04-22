@@ -125,3 +125,9 @@
   units = none
   dimensions = (horizontal_dimension)
   type = real | kind = kind_phys
+[ var_array ]
+  standard_name = array_variable_for_testing
+  long_name = array variable for testing
+  units = none
+  dimensions = (horizontal_dimension,2,4,6)
+  type = real | kind = kind_phys

@@ -23,6 +23,7 @@ module test_host_mod
    real(kind_phys)              :: temp_interfaces(ncols, pverP)
    real(kind_phys)              :: temp_diag(ncols,6)
    real(kind_phys)              :: coeffs(ncols)
+   real(kind_phys)              :: var_array(ncols,2,4,6)
    real(kind_phys), dimension(DiagDimStart:ncols, DiagDimStart:pver) ::       &
         diag1,                                                                &
         diag2
