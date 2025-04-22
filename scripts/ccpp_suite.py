@@ -658,8 +658,13 @@ class API(VarDictionary):
                                     run_env, ddts=all_ddts)
         for header in [d for d in scheme_headers if d.header_type != 'ddt']:
             if header.header_type != 'scheme':
-                errmsg = "{} is an unknown CCPP API metadata header type, {}"
-                raise CCPPError(errmsg.format(header.title, header.header_type))
+                if header.header_type == 'module':
+                    errmsg = f"{header.title} is a module metadata header type."
+                    errmsg+=" This is not an allowed CCPP scheme header type."
+                else:
+                    errmsg = f"{header.title} is an unknown CCPP API metadata header type, {header.header_type}"
+                # end if
+                raise CCPPError(errmsg)
             # end if
             func_id, _, match_trans =                                         \
                 CCPP_STATE_MACH.function_match(header.title)

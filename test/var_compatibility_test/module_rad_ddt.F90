@@ -21,4 +21,3 @@ module mod_rad_ddt
   end type ty_rad_sw
 
 end module mod_rad_ddt
- 

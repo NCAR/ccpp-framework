@@ -51,6 +51,7 @@ _SUITE_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_ddt_suite_cap.F90"),
                 os.path.join(_BUILD_DIR, "ccpp", "ccpp_temp_suite_cap.F90")]
 _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
                   os.path.join(_SRC_DIR, "ccpp_constituent_prop_mod.F90"),
+                  os.path.join(_SRC_DIR, "ccpp_scheme_utils.F90"),
                   os.path.join(_SRC_DIR, "ccpp_hashable.F90"),
                   os.path.join(_SRC_DIR, "ccpp_hash_table.F90")]
 _CCPP_FILES = _UTILITY_FILES + \
@@ -63,7 +64,8 @@ _MODULE_LIST = ["environ_conditions", "make_ddt", "setup_coeffs", "temp_adjust",
 _SUITE_LIST = ["ddt_suite", "temp_suite"]
 _INPUT_VARS_DDT = ["model_times", "number_of_model_times",
                    "horizontal_loop_begin", "horizontal_loop_end",
-                   "surface_air_pressure", "horizontal_dimension"]
+                   "surface_air_pressure", "horizontal_dimension",
+                   "host_standard_ccpp_type"]
 _OUTPUT_VARS_DDT = ["ccpp_error_code", "ccpp_error_message", "model_times",
                     "number_of_model_times", "surface_air_pressure"]
 _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT

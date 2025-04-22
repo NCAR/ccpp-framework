@@ -608,6 +608,8 @@ class ConstituentVarDict(VarDictionary):
         cap.write(f"{substmt}(ncols, num_layers, {err_dummy_str})", 1)
         cap.comment("Initialize constituent data", 2)
         cap.blank_line()
+        cap.write("use ccpp_scheme_utils, only: ccpp_initialize_constituent_ptr", 2)
+        cap.blank_line()
         cap.comment("Dummy arguments", 2)
         cap.write("integer,            intent(in)    :: ncols", 2)
         cap.write("integer,            intent(in)    :: num_layers", 2)
@@ -617,6 +619,7 @@ class ConstituentVarDict(VarDictionary):
         cap.blank_line()
         call_str = f"call {const_obj_name}%lock_data(ncols, num_layers, {obj_err_callstr})"
         cap.write(call_str, 2)
+        cap.write(f"call ccpp_initialize_constituent_ptr({const_obj_name})", 2)
         cap.write(f"end {substmt}", 1)
         # Write num_consts routine
         substmt = f"subroutine {num_const_funcname}"
