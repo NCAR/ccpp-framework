@@ -64,7 +64,7 @@
   standard_name = shortwave_radiation_fluxes
   long_name = shortwave radiation fluxes
   units = W m-2
-  dimensions = (horizontal_dimension)
+  dimensions = ()
   type = ty_rad_sw
 [fluxLW]
   standard_name = longwave_radiation_fluxes
