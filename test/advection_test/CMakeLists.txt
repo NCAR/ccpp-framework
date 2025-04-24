@@ -5,11 +5,11 @@
 # Paths should be relative to CMAKE_SOURCE_DIR (this file's directory)
 #
 #------------------------------------------------------------------------------
-set(SCHEME_FILES "cld_liq" "cld_ice" "apply_constituent_tendencies" "const_indices")
+set(SCHEME_FILES       "cld_liq" "cld_ice" "apply_constituent_tendencies" "const_indices")
 set(SCHEME_FILES_ERROR "cld_liq" "cld_ice" "dlc_liq")
-set(HOST_FILES  "test_host_data" "test_host_mod")
-set(SUITE_FILES "cld_suite.xml")
-set(SUITE_FILES_ERROR "cld_suite_error.xml")
+set(HOST_FILES         "test_host_data" "test_host_mod")
+set(SUITE_FILES        "cld_suite.xml")
+set(SUITE_FILES_ERROR  "cld_suite_error.xml")
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
 set(HOST "test_host")

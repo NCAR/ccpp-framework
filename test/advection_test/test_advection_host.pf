@@ -62,10 +62,10 @@ subroutine test_advection_host_integration()
         'ccpp_error_code                          ' /)
 
     ! Setup expected test suite info
-    test_suites(1)%suite_name = 'cld_suite'
-    test_suites(1)%suite_parts => test_parts1
-    test_suites(1)%suite_input_vars => test_invars1
-    test_suites(1)%suite_output_vars => test_outvars1
+    test_suites(1)%suite_name          = 'cld_suite'
+    test_suites(1)%suite_parts         => test_parts1
+    test_suites(1)%suite_input_vars    => test_invars1
+    test_suites(1)%suite_output_vars   => test_outvars1
     test_suites(1)%suite_required_vars => test_reqvars1
 
     call test_host(run_okay, test_suites)

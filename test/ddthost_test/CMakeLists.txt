@@ -5,10 +5,10 @@
 # Paths should be relative to CMAKE_SOURCE_DIR (this file's directory)
 #
 #------------------------------------------------------------------------------
-set(SCHEME_FILES "setup_coeffs" "temp_set" "temp_adjust" "temp_calc_adjust")
+set(SCHEME_FILES       "setup_coeffs" "temp_set" "temp_adjust" "temp_calc_adjust")
 set(SUITE_SCHEME_FILES "make_ddt" "environ_conditions")
-set(HOST_FILES  "test_host_data" "test_host_mod" "host_ccpp_ddt")
-set(SUITE_FILES "ddt_suite.xml" "temp_suite.xml")
+set(HOST_FILES         "test_host_data" "test_host_mod" "host_ccpp_ddt")
+set(SUITE_FILES        "ddt_suite.xml" "temp_suite.xml")
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
 set(HOST "test_host")
