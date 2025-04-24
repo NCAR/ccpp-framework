@@ -41,6 +41,7 @@ CONTAINS
 
    integer :: col_index
    integer :: lev_index
+   real(kind_phys) :: internal_scalar_var
 
     errmsg = ''
     errflg = 0
@@ -60,6 +61,10 @@ CONTAINS
     end do
 
     var_array(:,:,:,:) = 1._kind_phys
+
+    ! 
+    internal_scalar_var = soil_levs(slev_lbound)
+    internal_scalar_var = soil_levs(0)
 
   END SUBROUTINE temp_set_run
 
