@@ -36,8 +36,9 @@ _CCPP_FILES = _UTILITY_FILES + \
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
 _DEPENDENCIES = [""]
 _PROCESS_LIST = [""]
-_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "effr_pre"]
+_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "mod_effr_pre", "rad_lw", "rad_sw"]
 _SUITE_LIST = ["var_compatibility_suite"]
+_DEPENDENCIES = [ os.path.join(_TEST_DIR, "module_rad_ddt.F90")]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
                           "effective_radius_of_stratiform_cloud_rain_particle",
@@ -51,6 +52,8 @@ _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horiz
                           "scheme_order_in_suite",
                           "flag_indicating_cloud_microphysics_has_graupel",
                           "flag_indicating_cloud_microphysics_has_ice",
+                          "shortwave_radiation_fluxes",
+                          "longwave_radiation_fluxes",
                           "num_subcycles_for_effr"]
 _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "effective_radius_of_stratiform_cloud_ice_particle",
@@ -59,6 +62,8 @@ _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "cloud_ice_number_concentration",
                            "effective_radius_of_stratiform_cloud_rain_particle",
                            "scalar_variable_for_testing",
+                           "shortwave_radiation_fluxes",
+                           "longwave_radiation_fluxes",
                            "scheme_order_in_suite"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 

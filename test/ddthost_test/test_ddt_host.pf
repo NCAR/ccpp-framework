@@ -5,10 +5,10 @@ subroutine test_ddt_host_integration()
 
     implicit none
 
-   character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
-                                                    'physics2        ' /)
-   character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(7) = (/                          &
+    character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',      &
+                                                     'physics2        ' /)
+    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
+    character(len=cm), target :: test_invars1(7) = (/                         &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -16,7 +16,7 @@ subroutine test_ddt_host_integration()
         'water_vapor_specific_humidity       ',                               &
         'potential_temperature_increment     ',                               &
         'time_step_for_physics               ' /)
-   character(len=cm), target :: test_outvars1(7) = (/                         &
+     character(len=cm), target :: test_outvars1(7) = (/                       &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -24,7 +24,7 @@ subroutine test_ddt_host_integration()
         'water_vapor_specific_humidity       ',                               &
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ' /)
-   character(len=cm), target :: test_reqvars1(9) = (/                         &
+    character(len=cm), target :: test_reqvars1(9) = (/                        &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -35,35 +35,37 @@ subroutine test_ddt_host_integration()
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ' /)
 
-   character(len=cm), target :: test_invars2(3) = (/                          &
+    character(len=cm), target :: test_invars2(4) = (/                         &
         'model_times                         ',                               &
         'number_of_model_times               ',                               &
-        'surface_air_pressure                ' /)
+        'surface_air_pressure                ',                               &
+        'host_standard_ccpp_type             ' /)
 
-   character(len=cm), target :: test_outvars2(5) = (/                         &
+    character(len=cm), target :: test_outvars2(5) = (/                        &
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ',                               &
         'model_times                         ',                               &
         'surface_air_pressure                ',                               &
         'number_of_model_times               ' /)
 
-   character(len=cm), target :: test_reqvars2(5) = (/                         &
+    character(len=cm), target :: test_reqvars2(6) = (/                        &
         'model_times                         ',                               &
         'number_of_model_times               ',                               &
         'surface_air_pressure                ',                               &
         'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
+        'ccpp_error_message                  ',                               &
+        'host_standard_ccpp_type             ' /)
     type(suite_info) :: test_suites(2)
     logical :: run_okay
 
     ! Setup expected test suite info
     test_suites(1)%suite_name = 'temp_suite'
-	test_suites(1)%suite_parts => test_parts1
+    test_suites(1)%suite_parts => test_parts1
     test_suites(1)%suite_input_vars => test_invars1
     test_suites(1)%suite_output_vars => test_outvars1
     test_suites(1)%suite_required_vars => test_reqvars1
     test_suites(2)%suite_name = 'ddt_suite'
-	test_suites(2)%suite_parts => test_parts2
+    test_suites(2)%suite_parts => test_parts2
     test_suites(2)%suite_input_vars => test_invars2
     test_suites(2)%suite_output_vars => test_outvars2
     test_suites(2)%suite_required_vars => test_reqvars2

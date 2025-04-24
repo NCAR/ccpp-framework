@@ -5,7 +5,7 @@
 # Paths should be relative to CMAKE_SOURCE_DIR (this file's directory)
 #
 #------------------------------------------------------------------------------
-set(SCHEME_FILES "effr_calc" "effr_diag" "effr_pre" "effr_post")
+set(SCHEME_FILES "module_rad_ddt" "effr_calc" "effr_diag" "effr_pre" "effr_post" "rad_lw" "rad_sw")
 set(HOST_FILES  "test_host_data" "test_host_mod")
 set(SUITE_FILES "var_compatibility_suite.xml")
 # HOST is the name of the executable we will build.
