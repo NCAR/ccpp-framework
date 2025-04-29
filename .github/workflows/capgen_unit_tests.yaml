@@ -15,8 +15,48 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: update repos and install dependencies
-      run: sudo apt-get update && sudo apt-get install -y build-essential ${{matrix.fortran-compiler}} cmake python3 git libxml2-utils
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libopenmpi-dev \
+          ${{matrix.fortran-compiler}} \
+          cmake \
+          python3 \
+          git \
+          libxml2-utils
+        pip install --user pytest
+
+    - name: Build pFUnit
+      run: |
+        git clone --depth 1 --branch v4.10.0 https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
+        cd pFUnit
+        cmake -B./build -S.
+        cd build
+        make install
+
+    - name: Build the framework
+      run: |
+        cmake -S. -B./build                \
+          -DCCPP_FRAMEWORK_ENABLE_TESTS=ON \
+          -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/pFUnit/build/installed
+        cd build
+        make
+
     - name: Run unit tests
-      run: cd test && ./run_fortran_tests.sh
+      run: |
+        cd build
+        ctest --rerun-failed --output-on-failure . --verbose
+
+    - name: Run python tests
+      run: |
+        BUILD_DIR=./build \
+        PYTHONPATH=test/:scripts/ \
+            pytest \
+              test/capgen_test/capgen_test_reports.py \
+              test/advection_test/advection_test_reports.py \
+              test/ddthost_test/ddthost_test_reports.py \
+              test/var_compatibility_test/var_compatibility_test_reports.py
+
     - name: Run Fortran to metadata test
       run: cd test && ./test_fortran_to_metadata.sh

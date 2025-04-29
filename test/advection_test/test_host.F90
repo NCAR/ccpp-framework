@@ -25,8 +25,6 @@ module test_prog
 
    type(ccpp_constituent_properties_t), private, target, allocatable :: host_constituents(:)
 
-
-   private :: check_list
    private :: check_suite
    private :: advect_constituents ! Move data around
    private :: check_errflg
@@ -50,92 +48,10 @@ CONTAINS
 
    end subroutine check_errflg
 
-   logical function check_list(test_list, chk_list, list_desc, suite_name)
-      ! Check a list (<test_list>) against its expected value (<chk_list>)
-
-      ! Dummy arguments
-      character(len=*),           intent(in) :: test_list(:)
-      character(len=*),           intent(in) :: chk_list(:)
-      character(len=*),           intent(in) :: list_desc
-      character(len=*), optional, intent(in) :: suite_name
-
-      ! Local variables
-      logical                                :: found
-      integer                                :: num_items
-      integer                                :: lindex, tindex
-      integer,          allocatable          :: check_unique(:)
-      character(len=2)                       :: sep
-      character(len=256)                     :: errmsg
-
-      check_list = .true.
-      errmsg = ''
-
-      ! Check the list size
-      num_items = size(chk_list)
-      if (size(test_list) /= num_items) then
-         write(errmsg, '(a,i0,2a)') 'ERROR: Found ', size(test_list),         &
-              ' ', trim(list_desc)
-         if (present(suite_name)) then
-            write(errmsg(len_trim(errmsg)+1:), '(2a)') ' for suite, ',        &
-                 trim(suite_name)
-         end if
-         write(errmsg(len_trim(errmsg)+1:), '(a,i0)') ', should be ', num_items
-         write(6, *) trim(errmsg)
-         errmsg = ''
-         check_list = .false.
-       end if
-
-       ! Now, check the list contents for 1-1 correspondence
-       if (check_list) then
-          allocate(check_unique(num_items))
-          check_unique = -1
-          do lindex = 1, num_items
-             found = .false.
-             do tindex = 1, num_items
-                if (trim(test_list(lindex)) == trim(chk_list(tindex))) then
-                   check_unique(tindex) = lindex
-                   found = .true.
-                   exit
-                end if
-             end do
-             if (.not. found) then
-                check_list = .false.
-                write(errmsg, '(5a)') 'ERROR: ', trim(list_desc), ' item, ',  &
-                     trim(test_list(lindex)), ', was not found'
-                if (present(suite_name)) then
-                   write(errmsg(len_trim(errmsg)+1:), '(2a)') ' in suite, ',  &
-                        trim(suite_name)
-                end if
-                write(6, *) trim(errmsg)
-                errmsg = ''
-             end if
-          end do
-          if (check_list .and. ANY(check_unique < 0)) then
-             check_list = .false.
-             write(errmsg, '(3a)') 'ERROR: The following ', trim(list_desc),  &
-                  ' items were not found'
-             if (present(suite_name)) then
-                write(errmsg(len_trim(errmsg)+1:), '(2a)') ' in suite, ',     &
-                     trim(suite_name)
-             end if
-             sep = '; '
-             do lindex = 1, num_items
-                if (check_unique(lindex) < 0) then
-                   write(errmsg(len_trim(errmsg)+1:), '(2a)') sep,            &
-                        trim(chk_list(lindex))
-                   sep = ', '
-                end if
-             end do
-             write(6, *) trim(errmsg)
-             errmsg = ''
-          end if
-       end if
-
-    end function check_list
-
     logical function check_suite(test_suite)
        use test_host_ccpp_cap, only: ccpp_physics_suite_part_list
        use test_host_ccpp_cap, only: ccpp_physics_suite_variables
+       use test_utils,         only: check_list
 
        ! Dummy argument
        type(suite_info), intent(in)    :: test_suite
@@ -242,6 +158,7 @@ CONTAINS
        use test_host_ccpp_cap, only: ccpp_physics_suite_list
        use test_host_ccpp_cap, only: test_host_const_get_index
        use test_host_ccpp_cap, only: test_host_model_const_properties
+       use test_utils,         only: check_list
 
        type(suite_info), intent(in)  :: test_suites(:)
        logical,          intent(out) :: retval
@@ -1134,81 +1051,3 @@ CONTAINS
     end subroutine test_host
 
  end module test_prog
-
- program test
-    use test_prog, only: test_host, suite_info, cm, cs
-
-    implicit none
-
-   character(len=cs), target :: test_parts1(1)
-   character(len=cm), target :: test_invars1(12)
-   character(len=cm), target :: test_outvars1(13)
-   character(len=cm), target :: test_reqvars1(18)
-
-    type(suite_info) :: test_suites(1)
-    logical :: run_okay
-
-    test_parts1 = (/ 'physics         '/)
-    test_invars1 = (/                          &
-        'banana_array_dim                         ',                          &
-        'cloud_ice_dry_mixing_ratio               ',                          &
-        'cloud_liquid_dry_mixing_ratio            ',                          &
-        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
-        'surface_air_pressure                     ',                          &
-        'temperature                              ',                          &
-        'time_step_for_physics                    ',                          &
-        'water_temperature_at_freezing            ',                          &
-        'ccpp_constituent_tendencies              ',                          &
-        'ccpp_constituents                        ',                          &
-        'number_of_ccpp_constituents              ',                          &
-        'water_vapor_specific_humidity            ' /)
-    test_outvars1 = (/                         &
-        'ccpp_error_message                       ',                          &
-        'ccpp_error_code                          ',                          &
-        'temperature                              ',                          &
-        'water_vapor_specific_humidity            ',                          &
-        'cloud_liquid_dry_mixing_ratio            ',                          &
-        'ccpp_constituent_tendencies              ',                          &
-        'ccpp_constituents                        ',                          &
-        'dynamic_constituents_for_cld_liq         ',                          &
-        'dynamic_constituents_for_cld_ice         ',                          &
-        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
-        'test_banana_constituent_index            ',                          &
-        'test_banana_constituent_indices          ',                          &
-        'cloud_ice_dry_mixing_ratio               ' /)
-    test_reqvars1 = (/                         &
-        'banana_array_dim                         ',                          &
-        'surface_air_pressure                     ',                          &
-        'temperature                              ',                          &
-        'time_step_for_physics                    ',                          &
-        'cloud_liquid_dry_mixing_ratio            ',                          &
-        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
-        'cloud_ice_dry_mixing_ratio               ',                          &
-        'dynamic_constituents_for_cld_liq         ',                          &
-        'dynamic_constituents_for_cld_ice         ',                          &
-        'water_temperature_at_freezing            ',                          &
-        'ccpp_constituent_tendencies              ',                          &
-        'ccpp_constituents                        ',                          &
-        'number_of_ccpp_constituents              ',                          &
-        'test_banana_constituent_index            ',                          &
-        'test_banana_constituent_indices          ',                          &
-        'water_vapor_specific_humidity            ',                          &
-        'ccpp_error_message                       ',                          &
-        'ccpp_error_code                          ' /)
-
-    ! Setup expected test suite info
-    test_suites(1)%suite_name = 'cld_suite'
-    test_suites(1)%suite_parts => test_parts1
-    test_suites(1)%suite_input_vars => test_invars1
-    test_suites(1)%suite_output_vars => test_outvars1
-    test_suites(1)%suite_required_vars => test_reqvars1
-
-    call test_host(run_okay, test_suites)
-
-    if (run_okay) then
-       STOP 0
-    else
-       STOP -1
-    end if
-
-end program test

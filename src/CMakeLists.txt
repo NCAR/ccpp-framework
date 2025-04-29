@@ -12,9 +12,10 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_I
 # Define the executable and what to link
 add_library(ccpp_framework STATIC ${SOURCES_F90})
 target_link_libraries(ccpp_framework PUBLIC MPI::MPI_Fortran)
-set_target_properties(ccpp_framework PROPERTIES VERSION ${PROJECT_VERSION}
+set_target_properties(ccpp_framework PROPERTIES
+                                      VERSION ${PROJECT_VERSION}
                                       SOVERSION ${PROJECT_VERSION_MAJOR}
-                                      LINK_FLAGS ${CMAKE_Fortran_FLAGS})
+                                      LINK_FLAGS "${CMAKE_Fortran_FLAGS}")
 
 #------------------------------------------------------------------------------
 # Installation

@@ -1,0 +1,74 @@
+@test
+subroutine test_advection_host_integration()
+    use funit
+    use test_prog, only: test_host, suite_info, cm, cs
+
+    implicit none
+
+   character(len=cs), target :: test_parts1(1)
+   character(len=cm), target :: test_invars1(12)
+   character(len=cm), target :: test_outvars1(13)
+   character(len=cm), target :: test_reqvars1(18)
+
+    type(suite_info) :: test_suites(1)
+    logical :: run_okay
+
+    test_parts1 = (/ 'physics         '/)
+    test_invars1 = (/                          &
+        'banana_array_dim                         ',                          &
+        'cloud_ice_dry_mixing_ratio               ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'surface_air_pressure                     ',                          &
+        'temperature                              ',                          &
+        'time_step_for_physics                    ',                          &
+        'water_temperature_at_freezing            ',                          &
+        'ccpp_constituent_tendencies              ',                          &
+        'ccpp_constituents                        ',                          &
+        'number_of_ccpp_constituents              ',                          &
+        'water_vapor_specific_humidity            ' /)
+    test_outvars1 = (/                         &
+        'ccpp_error_message                       ',                          &
+        'ccpp_error_code                          ',                          &
+        'temperature                              ',                          &
+        'water_vapor_specific_humidity            ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'ccpp_constituent_tendencies              ',                          &
+        'ccpp_constituents                        ',                          &
+        'dynamic_constituents_for_cld_liq         ',                          &
+        'dynamic_constituents_for_cld_ice         ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'test_banana_constituent_index            ',                          &
+        'test_banana_constituent_indices          ',                          &
+        'cloud_ice_dry_mixing_ratio               ' /)
+    test_reqvars1 = (/                         &
+        'banana_array_dim                         ',                          &
+        'surface_air_pressure                     ',                          &
+        'temperature                              ',                          &
+        'time_step_for_physics                    ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'cloud_ice_dry_mixing_ratio               ',                          &
+        'dynamic_constituents_for_cld_liq         ',                          &
+        'dynamic_constituents_for_cld_ice         ',                          &
+        'water_temperature_at_freezing            ',                          &
+        'ccpp_constituent_tendencies              ',                          &
+        'ccpp_constituents                        ',                          &
+        'number_of_ccpp_constituents              ',                          &
+        'test_banana_constituent_index            ',                          &
+        'test_banana_constituent_indices          ',                          &
+        'water_vapor_specific_humidity            ',                          &
+        'ccpp_error_message                       ',                          &
+        'ccpp_error_code                          ' /)
+
+    ! Setup expected test suite info
+    test_suites(1)%suite_name          = 'cld_suite'
+    test_suites(1)%suite_parts         => test_parts1
+    test_suites(1)%suite_input_vars    => test_invars1
+    test_suites(1)%suite_output_vars   => test_outvars1
+    test_suites(1)%suite_required_vars => test_reqvars1
+
+    call test_host(run_okay, test_suites)
+    
+    @assertTrue(run_okay)
+end subroutine test_advection_host_integration
