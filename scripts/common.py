@@ -149,7 +149,7 @@ def isstring(s):
     return isinstance(s, str)
 
 def insert_plus_sign_for_positive_exponents(string):
-    """Parse a string (a unit string) and instert plus (+) signs
+    """Parse a string (a unit string) and insert plus (+) signs
     for positive exponents where needed"""
     # Break up the string by spaces
     items = string.split()
