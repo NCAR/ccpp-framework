@@ -231,12 +231,10 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 #kind = new_var.get_prop_value('kind')
                 # *DH 20210812
 
-                # DH* 20250414
                 # Workaround to support units with positive exponents with
                 # and without a plus (+) sign. Internally, we convert all
                 # units from capgen to the "+"-format (i.e. "m2 s-2" --> "m+2 s-2")
                 units = insert_plus_sign_for_positive_exponents(new_var.get_prop_value('units'))
-                # *DH 20250414
 
                 var = Var(standard_name = standard_name,
                           long_name     = new_var.get_prop_value('long_name') + legacy_note,
