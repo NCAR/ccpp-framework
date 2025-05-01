@@ -351,13 +351,15 @@ CONTAINS
 
    character(len=cs), target :: test_parts1(1) = (/ 'radiation       ' /)
 
-   character(len=cm), target :: test_invars1(15) = (/                         &
+   character(len=cm), target :: test_invars1(17) = (/                         &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
         'effective_radius_of_stratiform_cloud_liquid_water_particle',         &
         'effective_radius_of_stratiform_cloud_snow_particle        ',         &
         'effective_radius_of_stratiform_cloud_graupel              ',         &
         'cloud_graupel_number_concentration                        ',         &
         'scalar_variable_for_testing                               ',         &
+        'turbulent_kinetic_energy                                  ',         &
+        'turbulent_kinetic_energy2                                 ',         &
         'scalar_variable_for_testing_a                             ',         &
         'scalar_variable_for_testing_b                             ',         &
         'scalar_variable_for_testing_c                             ',         &
@@ -368,7 +370,7 @@ CONTAINS
         'shortwave_radiation_fluxes                                ',         &
         'longwave_radiation_fluxes                                 '/)
 
-   character(len=cm), target :: test_outvars1(11) = (/                        &
+   character(len=cm), target :: test_outvars1(13) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_ice_particle         ',         &
@@ -378,10 +380,12 @@ CONTAINS
         'cloud_ice_number_concentration                            ',         &
         'scalar_variable_for_testing                               ',         &
         'scheme_order_in_suite                                     ',         &
+        'turbulent_kinetic_energy                                  ',         &
+        'turbulent_kinetic_energy2                                 ',         &
         'shortwave_radiation_fluxes                                ',         &
-	'longwave_radiation_fluxes                                 '/)
+	    'longwave_radiation_fluxes                                 '/)
 
-   character(len=cm), target :: test_reqvars1(19) = (/                        &
+   character(len=cm), target :: test_reqvars1(21) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
         'effective_radius_of_stratiform_cloud_rain_particle        ',         &
@@ -392,6 +396,8 @@ CONTAINS
         'cloud_graupel_number_concentration                        ',         &
         'cloud_ice_number_concentration                            ',         &
         'scalar_variable_for_testing                               ',         &
+        'turbulent_kinetic_energy                                  ',         &
+        'turbulent_kinetic_energy2                                 ',         &
         'scalar_variable_for_testing_a                             ',         &
         'scalar_variable_for_testing_b                             ',         &
         'scalar_variable_for_testing_c                             ',         &
@@ -400,7 +406,7 @@ CONTAINS
         'flag_indicating_cloud_microphysics_has_graupel            ',         &
         'flag_indicating_cloud_microphysics_has_ice                ',         &
         'shortwave_radiation_fluxes                                ',         &
-	'longwave_radiation_fluxes                                 '/)
+        'longwave_radiation_fluxes                                 '/)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay

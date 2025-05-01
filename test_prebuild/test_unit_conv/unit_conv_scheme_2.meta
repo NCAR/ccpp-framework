@@ -30,6 +30,14 @@
   type = real
   kind = kind_phys
   intent = inout
+[data_array2]
+  standard_name = data_array2
+  long_name = data array in m+2 s-2
+  units = m+2 s-2
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
 [data_array_opt]
   standard_name = data_array_opt
   long_name = optional data array in km

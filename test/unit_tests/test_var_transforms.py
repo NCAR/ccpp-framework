@@ -428,27 +428,47 @@ class VarCompatTestCase(unittest.TestCase):
         self.assertFalse(compat.has_dim_transforms)
         self.assertFalse(compat.has_unit_transforms)
 
-    def test_incompatible_tendency_variable(self):
-        """Test that the correct error is returned when a given tendency
-        variable has inconsistent units vs the state variable"""
-        real_array1 = self._new_var('real_stdname1', 'C',
+    def test_compatible_tendency_variable_equivalent_units(self):
+        """Test that a given tendency variable is compatible with
+        its corresponding state variable"""
+        real_array1 = self._new_var('real_stdname1', 'V A',
                                     ['horizontal_dimension',
                                      'vertical_layer_dimension'],
                                      'real', vkind='kind_phys')
-        real_array2 = self._new_var('tendency_of_real_stdname1', 'C kg s-1',
+        real_array2 = self._new_var('tendency_of_real_stdname1', 'W s-1',
                                     ['horizontal_dimension',
                                      'vertical_layer_dimension'],
                                      'real', vkind='kind_phys')
         compat = real_array2.compatible(real_array1, self.__run_env, is_tend=True)
         self.assertIsInstance(compat, VarCompatObj,
                               msg=self.__inst_emsg.format(type(compat)))
-        #Verify correct error message returned
-        emsg = "\nMismatch tendency variable units 'C kg s-1' for variable 'tendency_of_real_stdname1'. No variable transforms supported for tendencies. Tendency units should be 'C s-1' to match state variable."
+        self.assertTrue(compat)
+        self.assertTrue(compat.compat)
+        self.assertEqual(compat.incompat_reason, '')
+        self.assertFalse(compat.has_kind_transforms)
+        self.assertFalse(compat.has_dim_transforms)
+        self.assertFalse(compat.has_unit_transforms)
+
+    def test_incompatible_tendency_variable(self):
+        """Test that the correct error is returned when a given tendency
+        variable has inconsistent units vs the state variable"""
+        real_array1 = self._new_var('real_stdname1', 'm',
+                                    ['horizontal_dimension',
+                                     'vertical_layer_dimension'],
+                                     'real', vkind='kind_phys')
+        real_array2 = self._new_var('tendency_of_real_stdname1', 'cm s-1',
+                                    ['horizontal_dimension',
+                                     'vertical_layer_dimension'],
+                                     'real', vkind='kind_phys')
+        compat = real_array2.compatible(real_array1, self.__run_env, is_tend=True)
+        self.assertIsInstance(compat, VarCompatObj,
+                              msg=self.__inst_emsg.format(type(compat)))
+        # Verify correct error message returned
+        emsg = "\nMismatch tendency variable units 'cm s-1' for variable 'tendency_of_real_stdname1'. No variable transforms supported for tendencies. Tendency units should be 'm s-1' to match state variable."
         self.assertEqual(compat.incompat_reason, emsg)
         self.assertFalse(compat.has_kind_transforms)
         self.assertFalse(compat.has_dim_transforms)
         self.assertFalse(compat.has_unit_transforms)
-        #Verify correct error message returned
 
 
 if __name__ == "__main__":
