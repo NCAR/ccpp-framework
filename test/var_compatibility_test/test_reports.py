@@ -66,8 +66,9 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
 _CCPP_FILES = _UTILITY_FILES + \
               [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
-_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "effr_pre"]
+_MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "mod_effr_pre", "rad_lw", "rad_sw"]
 _SUITE_LIST = ["var_compatibility_suite"]
+_DEPENDENCIES = [ os.path.join(_TEST_DIR, "module_rad_ddt.F90")]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
                           "effective_radius_of_stratiform_cloud_rain_particle",
@@ -83,6 +84,8 @@ _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horiz
                           "scheme_order_in_suite",
                           "flag_indicating_cloud_microphysics_has_graupel",
                           "flag_indicating_cloud_microphysics_has_ice",
+                          "shortwave_radiation_fluxes",
+                          "longwave_radiation_fluxes",
                           "num_subcycles_for_effr"]
 _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "effective_radius_of_stratiform_cloud_ice_particle",
@@ -94,6 +97,8 @@ _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "turbulent_kinetic_energy2",
                            "scalar_variable_for_testing",
                            "scalar_variable_for_testing",
+                           "shortwave_radiation_fluxes",
+                           "longwave_radiation_fluxes",
                            "scheme_order_in_suite"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 
@@ -160,6 +165,8 @@ NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("module_list"),
                               _MODULE_LIST)
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("suite_list"),
                               _SUITE_LIST)
+NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("dependencies"),
+                              _DEPENDENCIES)
 print("\nChecking variables for var_compatibility suite from python")
 NUM_ERRORS += check_datatable(_DATABASE, DatatableReport("required_variables",
                                                          value="var_compatibility_suite"),
