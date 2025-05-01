@@ -708,7 +708,7 @@ class Var:
                     lname = ""
                     for item in dim.split(':'):
                         if item:
-                            dvar = var_dict.find_variable(standard_name=item,
+                            dvar = var_dict.find_variable(standard_name=item.lower(),
                                                           any_scope=False)
                             if dvar is None:
                                 try:

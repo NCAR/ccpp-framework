@@ -35,6 +35,13 @@
   kind = kind_phys
   units = Pa
   dimensions = (horizontal_dimension, vertical_layer_dimension)
+[ soil_levs ]
+  standard_name = soil_levels
+  long_name = soil levels
+  units = cm
+  dimensions = (lower_bound_of_vertical_dimension_of_soil:upper_bound_of_vertical_dimension_of_soil)
+  type = real
+  kind = kind_phys
 [ q ]
   standard_name = constituent_mixing_ratio
   state_variable = true
@@ -42,7 +49,7 @@
   kind = kind_phys
   units = kg kg-1 moist or dry air depending on type
   dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_tracers)
-[ q(:,:,index_of_water_vapor_specific_humidity) ]
+[ q(:,:,index_of_water_vapor_specific_HUMidity) ]
   standard_name = water_vapor_specific_humidity
   state_variable = true
   type = real

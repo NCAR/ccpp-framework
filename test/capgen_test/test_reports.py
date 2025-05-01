@@ -81,6 +81,8 @@ _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT
 _PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
                    "horizontal_dimension", "vertical_layer_dimension",
                    "number_of_tracers",
+                   "lower_bound_of_vertical_dimension_of_soil",
+                   "upper_bound_of_vertical_dimension_of_soil",
                    "configuration_variable",
                    # Added for --debug
                    "index_of_water_vapor_specific_humidity",
@@ -91,18 +93,27 @@ _REQUIRED_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                        "coefficients_for_interpolation",
                        "potential_temperature_increment",
                        "surface_air_pressure", "time_step_for_physics",
-                       "water_vapor_specific_humidity"]
+                       "water_vapor_specific_humidity",
+                       "soil_levels",
+                       "temperature_at_diagnostic_levels",
+                       "array_variable_for_testing"]
 _INPUT_VARS_TEMP = ["potential_temperature",
                     "potential_temperature_at_interface",
                     "coefficients_for_interpolation",
                     "potential_temperature_increment",
                     "surface_air_pressure", "time_step_for_physics",
-                    "water_vapor_specific_humidity"]
+                    "water_vapor_specific_humidity",
+                    "soil_levels",
+                    "temperature_at_diagnostic_levels",
+                    "array_variable_for_testing"]
 _OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "potential_temperature",
                      "potential_temperature_at_interface",
                      "coefficients_for_interpolation",
-                     "surface_air_pressure", "water_vapor_specific_humidity"]
+                     "surface_air_pressure", "water_vapor_specific_humidity",
+                     "soil_levels",
+                     "temperature_at_diagnostic_levels",
+                     "array_variable_for_testing"]
 
 def fields_string(field_type, field_list, sep):
     """Create an error string for <field_type> field(s), <field_list>.
