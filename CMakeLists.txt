@@ -100,9 +100,6 @@ endif()
 
 if (CCPP_FRAMEWORK_BUILD_DOCUMENTATION)
   find_package(Doxygen REQUIRED)
-  if(NOT DOXYGEN_FOUND)
-      message(FATAL_ERROR "Doxygen is needed to build the documentation.")
-  endif()
   add_subdirectory(doc)
 endif()
 
