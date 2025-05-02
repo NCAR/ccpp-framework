@@ -4,9 +4,7 @@ function(ccpp_capgen)
   set(multi_value_keywords HOSTFILES SCHEMEFILES SUITES)
 
   cmake_parse_arguments(arg "${optionalArgs}" "${oneValueArgs}" "${multi_value_keywords}" ${ARGN})
-
-  # list(APPEND CCPP_CAPGEN_CMD_LIST "${CMAKE_SOURCE_DIR}/scripts/ccpp_capgen.py")
-
+  
   unset(CCPP_CAPGEN_CMD_LIST)
   if(DEFINED arg_CAPGEN_DEBUG)
     list(APPEND CCPP_CAPGEN_CMD_LIST "--debug")
