@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 """
 -----------------------------------------------------------------------
- Description:  Test capgen database report python interface
+ Description:  Test DDT host database report python interface
 
  Assumptions:
 
