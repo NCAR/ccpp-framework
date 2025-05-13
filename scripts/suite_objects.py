@@ -1360,7 +1360,7 @@ class Scheme(SuiteObject):
                 if not ':' in dim:
                     dim_var = self.find_variable(standard_name=dim)
                     if not dim_var:
-                        # DJS2025: To allow for numerical dimensions in metadata.
+                        # To allow for numerical dimensions in metadata.
                         if not dim.isnumeric():
                             raise Exception(f"No dimension with standard name '{dim}'")
                         # end if
@@ -1371,7 +1371,7 @@ class Scheme(SuiteObject):
                     (ldim, udim) = dim.split(":")
                     ldim_var = self.find_variable(standard_name=ldim)
                     if not ldim_var:
-                        # DJS2025: To allow for numerical dimensions in metadata.
+                        # To allow for numerical dimensions in metadata.
                         if not ldim.isnumeric():
                             raise Exception(f"No dimension with standard name '{ldim}'")
                         # end if
@@ -1379,7 +1379,7 @@ class Scheme(SuiteObject):
                     self.update_group_call_list_variable(ldim_var)
                     udim_var = self.find_variable(standard_name=udim)
                     if not udim_var:
-                        # DJS2025: To allow for numerical dimensions in metadata.
+                        # To allow for numerical dimensions in metadata.
                         if not udim.isnumeric():
                             raise Exception(f"No dimension with standard name '{udim}'")
                         # end if
@@ -1544,7 +1544,7 @@ class Scheme(SuiteObject):
                                 ldim_lname = dvar.get_prop_value('local_name')
                                 break
                         if not dvar:
-                            # DJS2025: To allow for numerical dimensions in metadata.
+                            # To allow for numerical dimensions in metadata.
                             if ldim.isnumeric():
                                 ldim_lname = ldim
                             else:
@@ -1558,7 +1558,7 @@ class Scheme(SuiteObject):
                                 udim_lname = dvar.get_prop_value('local_name')
                                 break
                         if not dvar:
-                            # DJS2025: To allow for numerical dimensions in metadata.
+                            # To allow for numerical dimensions in metadata.
                             if udim.isnumeric():
                                 udim_lname = udim
                             else:
