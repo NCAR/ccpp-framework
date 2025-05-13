@@ -1594,8 +1594,9 @@ class Scheme(SuiteObject):
                 # end if
                 outfile.write(f"! Check size of array {local_name}", tmp_indent)
                 outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", tmp_indent)
-                outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", tmp_indent+1)
-                outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_name}, expected size ', {array_size}, ' but got ', size({local_name})", tmp_indent+1)
+                outfile.write(f"write({errmsg}, '(2(a,i8))') 'In group {self.__group.name} before  "\
+                              f"{self.__subroutine_name}: for array {local_name}, expected size ', "\
+                              f"{array_size}, ' but got ', size({local_name})", tmp_indent+1)
                 outfile.write(f"{errcode} = 1", tmp_indent+1)
                 outfile.write(f"return", tmp_indent+1)
                 outfile.write(f"end if", tmp_indent)
@@ -1616,26 +1617,32 @@ class Scheme(SuiteObject):
                         outfile.write(f"if {conditional} then", indent)
                     # end if
                     ndims = len(dim_lengths)
-                    # Loop through all dimensions in var and check if length of each dimension
-                    # is the correct size.
-                    for index, dim_length in enumerate(dim_lengths):
-                        array_ref = '('
-                        # Dimension(s) before current rank to be checked.
-                        array_ref += '1,'*(index)
-                        # Dimension to check.
-                        array_ref += dim_strings[index]
-                        # Dimension(s) after current rank to be checked.
-                        array_ref += ',1'*(ndims-(index+1))
-                        array_ref += ')'
-                        #
-                        outfile.write(f"! Check length of {local_names[index]}{array_ref}", tmp_indent)
-                        outfile.write(f"if (size({local_names[index]}{array_ref}) /= {dim_length}) then ", tmp_indent)
-                        outfile.write(f"write({errmsg}, '(a)') 'In group {self.__group.name} before {self.__subroutine_name}:'", tmp_indent+1)
-                        outfile.write(f"write({errmsg}, '(2(a,i8))') 'for array {local_names[index]}{array_ref}, expected size ', {dim_length}, ' but got ', size({local_names[index]}{array_ref})", tmp_indent+1)
-                        outfile.write(f"{errcode} = 1", tmp_indent+1)
-                        outfile.write(f"return", tmp_indent+1)
-                        outfile.write(f"end if", tmp_indent)
-                    # end for
+
+                    # Loop through dimensions in var and check if length of each dimension
+                    # is the correct size. Skip for 1D variables.
+                    if (ndims > 1):
+                        for index, dim_length in enumerate(dim_lengths):
+                            array_ref = '('
+                            # Dimension(s) before current rank to be checked.
+                            array_ref += '1,'*(index)
+                            # Dimension to check.
+                            array_ref += dim_strings[index]
+                            # Dimension(s) after current rank to be checked.
+                            array_ref += ',1'*(ndims-(index+1))
+                            array_ref += ')'
+                            #
+                            outfile.write(f"! Check length of {local_names[index]}{array_ref}", tmp_indent)
+                            outfile.write(f"if (size({local_names[index]}{array_ref}) /= {dim_length}) then ",    \
+                                          tmp_indent)
+                            outfile.write(f"write({errmsg}, '(2(a,i8))') 'In group {self.__group.name} before "   \
+                                          f"{self.__subroutine_name}: for array {local_names[index]}{array_ref}, "\
+                                          f"expected size ', {dim_length}, ' but got ', "                         \
+                                          f"size({local_names[index]}{array_ref})", tmp_indent+1)
+                            outfile.write(f"{errcode} = 1", tmp_indent+1)
+                            outfile.write(f"return", tmp_indent+1)
+                            outfile.write(f"end if", tmp_indent)
+                        # end for
+                    #end if
                     if conditional != '.true.':
                         outfile.write(f"end if", indent)
                     # end if
