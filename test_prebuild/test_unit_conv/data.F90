@@ -11,12 +11,13 @@ module data
     private
 
     public ncols, nspecies
-    public cdata, data_array, opt_array_flag
+    public cdata, data_array, data_array2, opt_array_flag
 
     integer, parameter :: ncols = 4
     integer, parameter :: nspecies = 2
     type(ccpp_t), target :: cdata
     real(kind_phys), dimension(1:ncols,1:nspecies) :: data_array
+    real(kind_phys), dimension(1:ncols) :: data_array2
     logical :: opt_array_flag
 
 end module data

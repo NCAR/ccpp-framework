@@ -60,6 +60,20 @@
   dimensions = ()
   type = real
   kind = kind_phys
+[ tke ]
+  standard_name = turbulent_kinetic_energy
+  long_name = turbulent_kinetic_energy
+  units = J kg-1
+  dimensions = ()
+  type = real
+  kind = kind_phys
+[ tke2 ]
+  standard_name = turbulent_kinetic_energy2
+  long_name = turbulent_kinetic_energy2
+  units = m2 s-2
+  dimensions = ()
+  type = real
+  kind = kind_phys
 [fluxSW]
   standard_name = shortwave_radiation_fluxes
   long_name = shortwave radiation fluxes
