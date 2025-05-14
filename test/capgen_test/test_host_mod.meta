@@ -5,7 +5,7 @@
   name = test_host_mod
   type = module
 [ index_qv ]
-  standard_name = index_of_water_vapor_specific_humidity
+  standard_name = index_of_water_vapor_specific_HUMidity
   units = index
   type = integer
   protected = True
@@ -40,6 +40,24 @@
   units = count
   protected = True
   dimensions = ()
+[ slevs ]
+  standard_name = vertical_dimension_of_soil
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ slev_lbound]
+  standard_name = lower_bound_of_vertical_dimension_of_soil
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
+[ slev_ubound]
+  standard_name = upper_bound_of_vertical_dimension_of_soil
+  type = integer
+  units = count
+  protected = True
+  dimensions = ()
 [ DiagDimStart ]
   standard_name = first_index_of_diag_fields
   type = integer
@@ -55,6 +73,11 @@
   standard_name = potential_temperature_at_interface
   units = K
   dimensions = (horizontal_dimension, vertical_interface_dimension)
+  type = real | kind = kind_phys
+[ temp_diag ]
+  standard_name = temperature_at_diagnostic_levels
+  units = K
+  dimensions = (horizontal_dimension, 6)
   type = real | kind = kind_phys
 [ diag1 ]
   standard_name = diagnostic_stuff_type_1
@@ -101,4 +124,10 @@
   long_name = coefficients for interpolation
   units = none
   dimensions = (horizontal_dimension)
+  type = real | kind = kind_phys
+[ var_array ]
+  standard_name = array_variable_for_testing
+  long_name = array variable for testing
+  units = none
+  dimensions = (horizontal_dimension,2,4,6)
   type = real | kind = kind_phys
