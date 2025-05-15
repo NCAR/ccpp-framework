@@ -35,6 +35,9 @@
                   - Correctly interpret Fortran with preprocessor logic
                     which affects the subroutine statement and/or the dummy
                     argument statements resulting in incorrect Fortran
+                  - Test correct use of loop variables (horizontal dimensions)
+                    in scheme metadata. The allowed values depend on the phase
+                    (run phase or not)
 
  Assumptions:
 
@@ -47,6 +50,8 @@ import sys
 import os
 import logging
 import unittest
+
+logging.basicConfig(level=logging.DEBUG)
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _SCRIPTS_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir,
@@ -70,6 +75,7 @@ class MetadataHeaderTestCase(unittest.TestCase):
         self._sample_files_dir = os.path.join(_TEST_DIR, "sample_scheme_files")
         self._host_files_dir = os.path.join(_TEST_DIR, "sample_host_files")
         logger = logging.getLogger(self.__class__.__name__)
+        logger.setLevel(logging.DEBUG)
         self._run_env = CCPPFrameworkEnv(logger, ndict={'host_files':'',
                                                         'scheme_files':'',
                                                         'suites':''})
@@ -342,6 +348,21 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Exercise
         scheme_headers, table_dict = parse_scheme_files(scheme_files,
                                                         self._run_env_ccpp)
+
+    def test_mismatch_hdim(self):
+        """Test correct use of loop variables (horizontal dimensions)
+           in scheme metadata. The allowed values depend on the phase
+           (run phase or not)"""
+        # Setup
+        scheme_files = [os.path.join(self._sample_files_dir, "mismatch_hdim.meta")]
+        # Exercise
+        with self.assertRaises(CCPPError) as context:
+             _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
+        # Verify 2 correct error messages returned
+        emsg = "Invalid horizontal dimension, 'horizontal_dimension'"
+        self.assertTrue(emsg in str(context.exception))
+        emsg = "Invalid horizontal dimension, 'horizontal_loop_extent'"
+        self.assertTrue(emsg in str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()
