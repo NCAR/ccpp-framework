@@ -993,8 +993,26 @@ class MetadataSection(ParseSource):
                             pval = []
                             for dim in porig:
                                 if ':' in dim:
+                                    for dim2 in dim.split(':'):
+                                        dim_ok = VarDictionary.loop_var_okay(standard_name=dim2,
+                                            is_run_phase=self.__section_title.endswith("_run"))
+                                        if not dim_ok:
+                                            emsg = "horizontal dimension"
+                                            self.__pobj.add_syntax_err(emsg, token=dim2)
+                                            self.__section_valid = False
+                                            var_ok = False
+                                        # end if
+                                    # end for
                                     pval.append(dim)
                                 else:
+                                    dim_ok = VarDictionary.loop_var_okay(standard_name=dim,
+                                        is_run_phase=self.__section_title.endswith("_run"))
+                                    if not dim_ok:
+                                        emsg = "horizontal dimension"
+                                        self.__pobj.add_syntax_err(emsg, token=dim)
+                                        self.__section_valid = False
+                                        var_ok = False
+                                    # end if
                                     cone_str = 'ccpp_constant_one:{}'
                                     pval.append(cone_str.format(dim))
                                 # end if
