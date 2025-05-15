@@ -51,8 +51,6 @@ import os
 import logging
 import unittest
 
-logging.basicConfig(level=logging.DEBUG)
-
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _SCRIPTS_DIR = os.path.abspath(os.path.join(_TEST_DIR, os.pardir,
                                             os.pardir, "scripts"))
@@ -75,7 +73,6 @@ class MetadataHeaderTestCase(unittest.TestCase):
         self._sample_files_dir = os.path.join(_TEST_DIR, "sample_scheme_files")
         self._host_files_dir = os.path.join(_TEST_DIR, "sample_host_files")
         logger = logging.getLogger(self.__class__.__name__)
-        logger.setLevel(logging.DEBUG)
         self._run_env = CCPPFrameworkEnv(logger, ndict={'host_files':'',
                                                         'scheme_files':'',
                                                         'suites':''})
