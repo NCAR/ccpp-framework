@@ -25,6 +25,8 @@
                        two DDT definitions
                   - Correctly parse and match a simple module file with
                        two DDT definitions and a data block
+                  - "Test correct use of loop variables (horizontal
+                       dimensions) in host metadata
 
  Assumptions:
 
@@ -249,9 +251,26 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Check error messages
         except_str = str(context.exception)
         emsgs = ["Variable mismatch in ddt2_t, variables missing from Fortran ddt.",
-
                  "No Fortran variable for bogus in ddt2_t",
                  "2 errors found comparing"]
+        for emsg in emsgs:
+            self.assertTrue(emsg in except_str)
+        # end for
+
+    def test_mismatch_hdim(self):
+        """Test correct use of loop variables (horizontal dimensions)
+           in host metadata."""
+        # Setup
+        module_files = [os.path.join(self._sample_files_dir, "mismatch_hdim_mod.meta")]
+        # Exercise
+        hname = 'host_name_mismatch_hdim'
+        with self.assertRaises(CCPPError) as context:
+            _ = parse_host_model_files(module_files, hname, self._run_env)
+        # end with
+        # Check error messages
+        except_str = str(context.exception)
+        emsgs = ["Invalid horizontal dimension, 'horizontal_loop_extent'",
+                 "Invalid horizontal dimension, 'horizontal_loop_end'"]
         for emsg in emsgs:
             self.assertTrue(emsg in except_str)
         # end for

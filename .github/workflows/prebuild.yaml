@@ -47,14 +47,15 @@ jobs:
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
         cd test_prebuild
         pytest
-    - name: ccpp-prebuild blocked data tests
-      run: |
-        cd test_prebuild/test_blocked_data
-        python3 ../../scripts/ccpp_prebuild.py --config=ccpp_prebuild_config.py --builddir=build
-        cd build
-        cmake ..
-        make
-        ./test_blocked_data.x
+    # No longer possible because of https://github.com/NCAR/ccpp-framework/pull/659
+    #- name: ccpp-prebuild blocked data tests
+    #  run: |
+    #    cd test_prebuild/test_blocked_data
+    #    python3 ../../scripts/ccpp_prebuild.py --config=ccpp_prebuild_config.py --builddir=build
+    #    cd build
+    #    cmake ..
+    #    make
+    #    ./test_blocked_data.x
     - name: ccpp-prebuild chunked data tests
       run: |
         cd test_prebuild/test_chunked_data
