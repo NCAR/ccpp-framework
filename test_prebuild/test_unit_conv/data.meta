@@ -12,6 +12,12 @@
   dimensions = ()
   type = ccpp_t
 [ncols]
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ncolsrun]
   standard_name = horizontal_loop_extent
   long_name = horizontal loop extent
   units = count
@@ -27,21 +33,21 @@
   standard_name = data_array_all_species
   long_name = data array in module
   units = m
-  dimensions = (horizontal_loop_extent, number_of_species)
+  dimensions = (horizontal_dimension, number_of_species)
   type = real
   kind = kind_phys
 [data_array(:,2)]
   standard_name = data_array
   long_name = data array in module
   units = m
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
 [data_array2]
   standard_name = data_array2
   long_name = data array 2 in module
   units = m2 s-2
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
 [opt_array_flag]
@@ -54,7 +60,7 @@
   standard_name = data_array_opt
   long_name = optional data array in km
   units = m
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
   active = (flag_for_opt_array)

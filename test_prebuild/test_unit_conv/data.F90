@@ -10,10 +10,11 @@ module data
 
     private
 
-    public ncols, nspecies
+    public ncols, ncolsrun, nspecies
     public cdata, data_array, data_array2, opt_array_flag
 
     integer, parameter :: ncols = 4
+    integer, parameter :: ncolsrun = ncols
     integer, parameter :: nspecies = 2
     type(ccpp_t), target :: cdata
     real(kind_phys), dimension(1:ncols,1:nspecies) :: data_array
