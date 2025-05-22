@@ -23,10 +23,10 @@ module test_host_data
           fluxSW                                       ! Shortwave radiation fluxes
      real(kind_phys) :: scalar_varA
      real(kind_phys) :: scalar_varB
+     real(kind_phys) :: tke, tke2
      integer :: scalar_varC
      integer :: scheme_order
      integer :: num_subcycles
-
   end type physics_state
 
   public :: physics_state

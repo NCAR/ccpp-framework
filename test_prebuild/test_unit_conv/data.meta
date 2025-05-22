@@ -37,6 +37,13 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
+[data_array2]
+  standard_name = data_array2
+  long_name = data array 2 in module
+  units = m2 s-2
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
 [opt_array_flag]
   standard_name = flag_for_opt_array
   long_name = flag for passing optional data array

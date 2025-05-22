@@ -153,9 +153,10 @@ required_vars_var_compatibility="${required_vars_var_compatibility},scalar_varia
 required_vars_var_compatibility="${required_vars_var_compatibility},scheme_order_in_suite"
 required_vars_var_compatibility="${required_vars_var_compatibility},surface_downwelling_shortwave_radiation_flux"
 required_vars_var_compatibility="${required_vars_var_compatibility},surface_upwelling_shortwave_radiation_flux"
+required_vars_var_compatibility="${required_vars_var_compatibility},turbulent_kinetic_energy"
+required_vars_var_compatibility="${required_vars_var_compatibility},turbulent_kinetic_energy2"
 required_vars_var_compatibility="${required_vars_var_compatibility},vertical_layer_dimension"
 input_vars_var_compatibility="cloud_graupel_number_concentration"
-#input_vars_var_compatibility="${input_vars_var_compatibility},cloud_ice_number_concentration"
 input_vars_var_compatibility="${input_vars_var_compatibility},effective_radius_of_stratiform_cloud_graupel"
 input_vars_var_compatibility="${input_vars_var_compatibility},effective_radius_of_stratiform_cloud_liquid_water_particle"
 input_vars_var_compatibility="${input_vars_var_compatibility},effective_radius_of_stratiform_cloud_rain_particle"
@@ -174,6 +175,8 @@ input_vars_var_compatibility="${input_vars_var_compatibility},scalar_variable_fo
 input_vars_var_compatibility="${input_vars_var_compatibility},scheme_order_in_suite"
 input_vars_var_compatibility="${input_vars_var_compatibility},surface_downwelling_shortwave_radiation_flux"
 input_vars_var_compatibility="${input_vars_var_compatibility},surface_upwelling_shortwave_radiation_flux"
+input_vars_var_compatibility="${input_vars_var_compatibility},turbulent_kinetic_energy"
+input_vars_var_compatibility="${input_vars_var_compatibility},turbulent_kinetic_energy2"
 input_vars_var_compatibility="${input_vars_var_compatibility},vertical_layer_dimension"
 output_vars_var_compatibility="ccpp_error_code,ccpp_error_message"
 output_vars_var_compatibility="${output_vars_var_compatibility},cloud_ice_number_concentration"
@@ -186,6 +189,8 @@ output_vars_var_compatibility="${output_vars_var_compatibility},scalar_variable_
 output_vars_var_compatibility="${output_vars_var_compatibility},scheme_order_in_suite"
 output_vars_var_compatibility="${output_vars_var_compatibility},surface_downwelling_shortwave_radiation_flux"
 output_vars_var_compatibility="${output_vars_var_compatibility},surface_upwelling_shortwave_radiation_flux"
+output_vars_var_compatibility="${output_vars_var_compatibility},turbulent_kinetic_energy"
+output_vars_var_compatibility="${output_vars_var_compatibility},turbulent_kinetic_energy2"
 
 ##
 ## Run a database report and check the return string
