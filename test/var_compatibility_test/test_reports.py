@@ -84,7 +84,8 @@ _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horiz
                           "scheme_order_in_suite",
                           "flag_indicating_cloud_microphysics_has_graupel",
                           "flag_indicating_cloud_microphysics_has_ice",
-                          "shortwave_radiation_fluxes",
+                          "surface_downwelling_shortwave_radiation_flux",
+                          "surface_upwelling_shortwave_radiation_flux",
                           "longwave_radiation_fluxes",
                           "num_subcycles_for_effr"]
 _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
@@ -97,7 +98,8 @@ _OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
                            "turbulent_kinetic_energy2",
                            "scalar_variable_for_testing",
                            "scalar_variable_for_testing",
-                           "shortwave_radiation_fluxes",
+                           "surface_downwelling_shortwave_radiation_flux",
+                           "surface_upwelling_shortwave_radiation_flux",
                            "longwave_radiation_fluxes",
                            "scheme_order_in_suite"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION

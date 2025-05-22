@@ -54,6 +54,10 @@ contains
     real(kind_phys), parameter :: scalar_expected = 2.0E3 ! 2 km, in meter
     real(kind_phys), parameter :: tke_expected = 10.0     ! 10 J kg-1
     real(kind_phys), parameter :: tolerance = 1.0E-6      ! used as scaling factor for expected value
+    real(kind_phys), parameter :: sfc_up_sw_expected = 100.   ! W/m2
+    real(kind_phys), parameter :: sfc_down_sw_expected = 400. ! W/m2
+    real(kind_phys), parameter :: sfc_up_lw_expected = 300.   ! W/m2
+    real(kind_phys), parameter :: sfc_down_lw_expected = 50.  ! W/m2
 
     compare_data = .true.
 
@@ -92,6 +96,31 @@ contains
                                       abs(  phys_state%tke - tke_expected), ' > ', tolerance*tke_expected
         compare_data = .false.
     end if
+
+    if (maxval(abs(  phys_state%fluxSW%sfc_up_sw - sfc_up_sw_expected)) > tolerance*sfc_up_sw_expected) then
+        write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            sfc_up_sw from expected value exceeds tolerance: ', &
+                                      abs(  phys_state%fluxSW%sfc_up_sw - sfc_up_sw_expected), ' > ', tolerance*sfc_up_sw_expected
+        compare_data = .false.
+     end if
+     
+    if (maxval(abs(  phys_state%fluxSW%sfc_down_sw - sfc_down_sw_expected)) > tolerance*sfc_down_sw_expected) then
+	write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            sfc_down_sw from expected value exceeds tolerance: ', &
+                                      abs(  phys_state%fluxSW%sfc_down_sw - sfc_down_sw_expected), ' > ', tolerance*sfc_down_sw_expected
+        compare_data = .false.
+     end if
+
+    if (maxval(abs(  phys_state%fluxLW%sfc_up_lw - sfc_up_lw_expected)) > tolerance*sfc_up_lw_expected) then
+        write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            sfc_up_lw from expected value exceeds tolerance: ', &
+                                      abs(  phys_state%fluxLW%sfc_up_lw - sfc_up_lw_expected), ' > ', tolerance*sfc_up_lw_expected
+        compare_data = .false.
+     end if
+
+    if (maxval(abs(  phys_state%fluxLW%sfc_down_lw - sfc_down_lw_expected)) > tolerance*sfc_down_lw_expected) then
+        write(6, '(a,e16.7,a,e16.7)') 'Error: max diff of            sfc_down_lw from expected value exceeds tolerance: ', &
+                                      abs(  phys_state%fluxLW%sfc_down_lw - sfc_down_lw_expected), ' > ', tolerance*sfc_down_lw_expected
+        compare_data = .false.
+     end if     
+     
   end function compare_data
 
 end module test_host_mod

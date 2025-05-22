@@ -16,11 +16,11 @@ module test_host_data
           effrg,                                     & ! effective radius of cloud graupel
           ncg,                                       & ! number concentration of cloud graupel
           nci                                          ! number concentration of cloud ice
+     real(kind_phys) :: scalar_var
      type(ty_rad_lw), dimension(:), allocatable ::   &
           fluxLW                                       ! Longwave radiation fluxes
-     type(ty_rad_sw), dimension(:), allocatable ::   &
+     type(ty_rad_sw) ::   &
           fluxSW                                       ! Shortwave radiation fluxes
-     real(kind_phys) :: scalar_var
      real(kind_phys) :: scalar_varA
      real(kind_phys) :: scalar_varB
      real(kind_phys) :: tke, tke2
@@ -82,10 +82,15 @@ contains
     end if
     allocate(state%fluxLW(cols))
 
-    if (allocated(state%fluxSW)) then
-       deallocate(state%fluxSW)
+    if (associated(state%fluxSW%sfc_up_sw)) then
+       nullify(state%fluxSW%sfc_up_sw)
     end if
-    allocate(state%fluxSW(cols))
+    allocate(state%fluxSW%sfc_up_sw(cols))
+
+    if (associated(state%fluxSW%sfc_down_sw)) then
+       nullify(state%fluxSW%sfc_down_sw)
+    end if
+    allocate(state%fluxSW%sfc_down_sw(cols))
 
     ! Initialize scheme counter.
     state%scheme_order = 1
