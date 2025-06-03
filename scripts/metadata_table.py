@@ -1003,7 +1003,7 @@ class MetadataSection(ParseSource):
                                             var_ok = False
                                         # end if
                                     # end for
-                                    pval.append(dim)
+                                    pval.append(dim.lower())
                                 else:
                                     dim_ok = VarDictionary.loop_var_okay(standard_name=dim,
                                         is_run_phase=self.__section_title.endswith("_run"))
@@ -1014,9 +1014,13 @@ class MetadataSection(ParseSource):
                                         var_ok = False
                                     # end if
                                     cone_str = 'ccpp_constant_one:{}'
-                                    pval.append(cone_str.format(dim))
+                                    pval.append(cone_str.format(dim.lower()))
                                 # end if
                             # end for
+                        # end if
+                        # Special handling for standard_names (convert to lowercase)
+                        if pname == 'standard_name':
+                            pval = pval.lower()
                         # end if
                         # Add the property to our Var dictionary
                         var_props[pname] = pval

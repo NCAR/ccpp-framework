@@ -948,7 +948,7 @@ class Var:
                 except ValueError:
                     # Not an integer, maybe add it
                     if include_constants or (not name in CCPP_CONSTANT_VARS):
-                        dimset.add(name.lower())
+                        dimset.add(name)
                     # end if
                 # end try
             # end for
