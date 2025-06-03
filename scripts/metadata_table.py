@@ -921,7 +921,7 @@ class MetadataSection(ParseSource):
                       (not MetadataTable.table_start(curr_line)))
         if valid_line:
              # variable_start handles exception
-            local_name = MetadataSection.variable_start(curr_line, self.__pobj)
+            local_name = MetadataSection.variable_start(curr_line, self.__pobj).lower()
         else:
             local_name = None
         # end if
