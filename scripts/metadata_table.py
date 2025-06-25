@@ -205,7 +205,7 @@ def parse_metadata_file(filename, known_ddts, run_env, skip_ddt_check=False):
                 meta_tables.append(new_table)
                 table_titles.append(ntitle)
                 if new_table.table_type == 'ddt':
-                    known_ddts.append(ntitle)
+                    known_ddts.append(ntitle.lower())
                 # end if
             else:
                 errmsg = 'Duplicate metadata table, {}, at {}:{}'
@@ -540,7 +540,7 @@ class MetadataTable():
             raise CCPPError(self.__pobj.error_message)
         # end if
         if self.table_type == "ddt":
-            known_ddts.append(self.table_name)
+            known_ddts.append(self.table_name.lower())
         # end if
         if self.__dependencies is None:
             self.__dependencies = []
@@ -882,7 +882,7 @@ class MetadataSection(ParseSource):
                                                          self.title, start_ctx))
         # end if
         if self.header_type == "ddt":
-            known_ddts.append(self.title)
+            known_ddts.append(self.title.lower())
         # end if
         #  Initialize our ParseSource parent
         super().__init__(self.title, self.header_type, self.__pobj)
@@ -954,11 +954,11 @@ class MetadataSection(ParseSource):
                     pval_str = prop[1]
                     if ((pname == 'type') and
                         (not check_fortran_intrinsic(pval_str, error=False))):
-                        if skip_ddt_check or pval_str in known_ddts:
+                        if skip_ddt_check or pval_str.lower() in known_ddts:
                             if skip_ddt_check:
                                 register_fortran_ddt_name(pval_str)
                             # end if
-                            pval = pval_str
+                            pval = pval_str.lower()
                             pname = 'ddt_type'
                         else:
                             errmsg = "Unknown DDT type, {}".format(pval_str)
