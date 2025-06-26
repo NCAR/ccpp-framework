@@ -210,7 +210,7 @@ end module {module}'''
                     # This is probably a bad situation so we have to break
                     #   in an ugly spot
                     best = self.__line_max - 1
-                    if len(outstr) > best + 1:
+                    if len(outstr) > best:
                         line_continue = '&'
                     # end if
                 # end if

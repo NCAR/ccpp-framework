@@ -168,7 +168,7 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                 if not valid:
                     if error:
                         if info_msg:
-                            errmsg = f"'{item} is an invalid dimension name; {info_msg}"
+                            errmsg = f"'{item}' is an invalid dimension name; {info_msg}"
                         else:
                             errmsg = f"'{item}' is an invalid dimension name"
                         # end if
