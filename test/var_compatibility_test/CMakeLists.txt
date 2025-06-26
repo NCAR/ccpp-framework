@@ -6,7 +6,7 @@
 #
 #------------------------------------------------------------------------------
 set(SCHEME_FILES "module_rad_ddt" "effr_calc" "effr_diag" "effr_pre" "effr_post" "rad_lw" "rad_sw")
-set(HOST_FILES  "test_host_data" "test_host_mod")
+set(HOST_FILES "module_rad_ddt" "test_host_data" "test_host_mod")
 set(SUITE_FILES "var_compatibility_suite.xml")
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR

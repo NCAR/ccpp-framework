@@ -34,7 +34,6 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
 _CCPP_FILES = _UTILITY_FILES + \
               [os.path.join(_BUILD_DIR, "ccpp", "test_host_ccpp_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_var_compatibility_suite_cap.F90")]
-_DEPENDENCIES = [""]
 _PROCESS_LIST = [""]
 _MODULE_LIST = ["effr_calc", "effr_diag", "effr_post", "mod_effr_pre", "rad_lw", "rad_sw"]
 _SUITE_LIST = ["var_compatibility_suite"]
