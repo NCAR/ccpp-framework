@@ -13,16 +13,18 @@ module unit_conv_scheme_2
 
    !! This is for unit testing only
    real(kind_phys), parameter :: target_value = 1.0E-3_kind_phys
+   real(kind_phys), parameter :: target_value2 = 42.0_kind_phys
 
    contains
 
 !! \section arg_table_unit_conv_scheme_2_run Argument Table
 !! \htmlinclude unit_conv_scheme_2_run.html
 !!
-   subroutine unit_conv_scheme_2_run(data_array, data_array_opt, errmsg, errflg)
+   subroutine unit_conv_scheme_2_run(data_array, data_array2, data_array_opt, errmsg, errflg)
       character(len=*), intent(out)   :: errmsg
       integer,          intent(out)   :: errflg
       real(kind_phys),  intent(inout) :: data_array(:)
+      real(kind_phys),  intent(inout) :: data_array2(:)
       real(kind_phys),  intent(inout), optional :: data_array_opt(:)
 
       ! Initialize CCPP error handling variables
@@ -33,6 +35,14 @@ module unit_conv_scheme_2
       if (minval(data_array)<0.99*target_value .or. maxval(data_array)>1.01*target_value) then
          write(errmsg,'(3(a,e12.4),a)') 'Error in unit_conv_scheme_2_run, expected values of approximately ', &
                                         target_value, '  but got [ ', minval(data_array), ' : ', maxval(data_array), ' ]'
+         errflg = 1
+         return
+      end if
+      ! Check values in data array2
+      write(error_unit,'(a,e12.4)') 'In unit_conv_scheme_2_run: checking min/max values of data array 2 to be approximately ', target_value2
+      if (minval(data_array2)<0.99*target_value2 .or. maxval(data_array2)>1.01*target_value2) then
+         write(errmsg,'(3(a,e12.4),a)') "Error in unit_conv_scheme_2_run, expected values for data array 2 of approximately ", &
+                                        target_value2, "  but got [ ", minval(data_array2), " : ", maxval(data_array2), " ]"
          errflg = 1
          return
       end if

@@ -921,7 +921,7 @@ class MetadataSection(ParseSource):
                       (not MetadataTable.table_start(curr_line)))
         if valid_line:
              # variable_start handles exception
-            local_name = MetadataSection.variable_start(curr_line, self.__pobj)
+            local_name = MetadataSection.variable_start(curr_line, self.__pobj).lower()
         else:
             local_name = None
         # end if
@@ -993,12 +993,34 @@ class MetadataSection(ParseSource):
                             pval = []
                             for dim in porig:
                                 if ':' in dim:
-                                    pval.append(dim)
+                                    for dim2 in dim.split(':'):
+                                        dim_ok = VarDictionary.loop_var_okay(standard_name=dim2,
+                                            is_run_phase=self.__section_title.endswith("_run"))
+                                        if not dim_ok:
+                                            emsg = "horizontal dimension"
+                                            self.__pobj.add_syntax_err(emsg, token=dim2)
+                                            self.__section_valid = False
+                                            var_ok = False
+                                        # end if
+                                    # end for
+                                    pval.append(dim.lower())
                                 else:
+                                    dim_ok = VarDictionary.loop_var_okay(standard_name=dim,
+                                        is_run_phase=self.__section_title.endswith("_run"))
+                                    if not dim_ok:
+                                        emsg = "horizontal dimension"
+                                        self.__pobj.add_syntax_err(emsg, token=dim)
+                                        self.__section_valid = False
+                                        var_ok = False
+                                    # end if
                                     cone_str = 'ccpp_constant_one:{}'
-                                    pval.append(cone_str.format(dim))
+                                    pval.append(cone_str.format(dim.lower()))
                                 # end if
                             # end for
+                        # end if
+                        # Special handling for standard_names (convert to lowercase)
+                        if pname == 'standard_name':
+                            pval = pval.lower()
                         # end if
                         # Add the property to our Var dictionary
                         var_props[pname] = pval

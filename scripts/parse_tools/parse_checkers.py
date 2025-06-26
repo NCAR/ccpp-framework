@@ -16,7 +16,8 @@ _UNITLESS_REGEX                = "1"
 _NON_LEADING_ZERO_NUM          = "[1-9]\d*"
 _CHAR_WITH_UNDERSCORE          = "([a-zA-Z]+_[a-zA-Z]+)+"
 _NEGATIVE_NON_LEADING_ZERO_NUM = f"[-]{_NON_LEADING_ZERO_NUM}"
-_UNIT_EXPONENT                 = f"({_NEGATIVE_NON_LEADING_ZERO_NUM}|{_NON_LEADING_ZERO_NUM})"
+_POSITIVE_NON_LEADING_ZERO_NUM = f"[+]{_NON_LEADING_ZERO_NUM}"
+_UNIT_EXPONENT                 = f"({_NEGATIVE_NON_LEADING_ZERO_NUM}|{_POSITIVE_NON_LEADING_ZERO_NUM}|{_NON_LEADING_ZERO_NUM})"
 _UNIT_REGEX                    = f"[a-zA-Z]+{_UNIT_EXPONENT}?"
 _UNITS_REGEX                   = f"^({_CHAR_WITH_UNDERSCORE}|{_UNIT_REGEX}(\s{_UNIT_REGEX})*|{_UNITLESS_REGEX})$"
 _UNITS_RE                      = re.compile(_UNITS_REGEX)
@@ -29,6 +30,10 @@ def check_units(test_val, prop_dict, error):
     'm s-1'
     >>> check_units('kg m-3', None, True)
     'kg m-3'
+    >>> check_units('m2 s-2', None, True)
+    'm2 s-2'
+    >>> check_units('m+2 s-2', None, True)
+    'm+2 s-2'
     >>> check_units('1', None, True)
     '1'
     >>> check_units('', None, False)

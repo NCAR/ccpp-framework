@@ -29,12 +29,12 @@
 [ sfc_up_sw ]
   standard_name = surface_upwelling_shortwave_radiation_flux
   units = W m2
-  dimensions = ()
+  dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
 [ sfc_down_sw ]
   standard_name = surface_downwelling_shortwave_radiation_flux
   units = W m2
-  dimensions = ()
+  dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys

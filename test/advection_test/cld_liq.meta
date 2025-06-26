@@ -52,7 +52,7 @@
 [ temp ]
   standard_name = temperature
   units = K
-  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  dimensions = (horizontal_loop_extent, vertical_LAYER_dimension)
   type = real
   kind = kind_phys
   intent = inout

@@ -14,7 +14,7 @@
 [ vmr_array ]
   standard_name = array_of_volume_mixing_ratios
   units = ppmv
-  dimensions = (horizontal_loop_extent, number_of_chemical_species)
+  dimensions = (horizontal_dimension, number_of_chemical_species)
   type = real
   kind = kind_phys
 

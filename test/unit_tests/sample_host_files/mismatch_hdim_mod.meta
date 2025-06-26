@@ -1,0 +1,25 @@
+[ccpp-table-properties]
+  name = mismatch_hdim_mod
+  type = module
+[ccpp-arg-table]
+  name = mismatch_hdim_mod
+  type = module
+[ ps1 ]
+  standard_name = play_station
+  state_variable = true
+  type = real | kind = kind_phys
+  units = Pa
+  dimensions = ()
+[ xbox ]
+  standard_name = xbox
+  state_variable = true
+  type = real | kind = kind_phys
+  units = m s-1
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+[ switch ]
+  standard_name = nintendo_switch
+  long_name = Incompatible junk
+  state_variable = true
+  type = real | kind = kind_phys
+  units = m s-1
+  dimensions = (horizontal_loop_being:horizontal_loop_end, vertical_layer_dimension)

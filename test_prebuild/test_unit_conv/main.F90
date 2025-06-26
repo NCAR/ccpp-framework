@@ -4,7 +4,7 @@ program test_unit_conv
 
    use ccpp_types, only: ccpp_t
    use data, only: ncols, nspecies
-   use data, only: cdata, data_array, opt_array_flag
+   use data, only: cdata, data_array, data_array2, opt_array_flag
 
    use ccpp_static_api, only: ccpp_physics_init, &
                               ccpp_physics_timestep_init, &
@@ -30,6 +30,7 @@ program test_unit_conv
    cdata%thrd_cnt = 1
 
    data_array = 1.0_8
+   data_array2 = 42.0_8
    opt_array_flag = .true.
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
