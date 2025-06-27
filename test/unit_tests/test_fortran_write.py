@@ -122,6 +122,32 @@ class MetadataTableTestCase(unittest.TestCase):
         amsg = f"{generate} does not match {compare}"
         self.assertTrue(filecmp.cmp(generate, compare, shallow=False), msg=amsg)
 
+    def test_long_strings(self):
+        """Test breaking of long strings"""
+        # Setup
+        testname = "long_string_test"
+        compare = os.path.join(_SAMPLE_FILES_DIR, f"{testname}.F90")
+        generate = os.path.join(_TMP_DIR, f"{testname}.F90")
+        # Exercise
+        header = "Test of long string breaking for FortranWriter"
+        foostr = ''.join(['0123456789']*10)
+        nxtchr = ord('0')
+        with FortranWriter(generate, 'w', header, f"{testname}") as gen:
+            while len(foostr) < 130:
+                gen.write(f"foo{len(foostr)} = '{foostr}'", 1)
+                foostr += chr(nxtchr)
+                nxtchr += 1
+                if nxtchr > ord('9'):
+                    nxtchr = ord('0')
+                # end if
+            # end while
+        # end with
+
+        # Check that file was generated
+        amsg = f"{generate} does not exist"
+        self.assertTrue(os.path.exists(generate), msg=amsg)
+        amsg = f"{generate} does not match {compare}"
+        self.assertTrue(filecmp.cmp(generate, compare, shallow=False), msg=amsg)
+
 if __name__ == "__main__":
     unittest.main()
-
