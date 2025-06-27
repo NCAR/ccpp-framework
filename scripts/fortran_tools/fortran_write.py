@@ -217,6 +217,12 @@ end module {module}'''
                 if len(outstr) > best:
                     if self._in_quote(outstr[0:best+1]):
                         line_continue = '&'
+                    elif not outstr[best+1:].lstrip():
+                        # If the next line is empty, the current line is done 
+                        #  and is equal to the max line length. Do not use 
+                        #  continue and set best to line_max (best+1)
+                        line_continue = False
+                        best = best+1
                     else:
                         # If next line is just comment, do not use continue
                         line_continue = outstr[best+1:].lstrip()[0] != '!'
