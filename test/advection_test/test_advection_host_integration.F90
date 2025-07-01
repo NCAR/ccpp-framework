@@ -1,6 +1,4 @@
-@test
-subroutine test_advection_host_integration()
-    use funit
+program test
     use test_prog, only: test_host, suite_info, cm, cs
 
     implicit none
@@ -62,13 +60,18 @@ subroutine test_advection_host_integration()
         'ccpp_error_code                          ' /)
 
     ! Setup expected test suite info
-    test_suites(1)%suite_name          = 'cld_suite'
-    test_suites(1)%suite_parts         => test_parts1
-    test_suites(1)%suite_input_vars    => test_invars1
-    test_suites(1)%suite_output_vars   => test_outvars1
+    test_suites(1)%suite_name = 'cld_suite'
+    test_suites(1)%suite_parts => test_parts1
+    test_suites(1)%suite_input_vars => test_invars1
+    test_suites(1)%suite_output_vars => test_outvars1
     test_suites(1)%suite_required_vars => test_reqvars1
 
     call test_host(run_okay, test_suites)
-    
-    @assertTrue(run_okay)
-end subroutine test_advection_host_integration
+
+    if (run_okay) then
+       STOP 0
+    else
+       STOP -1
+    end if
+
+end program test

@@ -1,6 +1,4 @@
-@test
-subroutine test_var_compatibility_integration()
-    use funit
+program test_var_compatibility_integration
     use test_prog, only: test_host, suite_info, cm, cs
 
     implicit none
@@ -26,7 +24,7 @@ subroutine test_var_compatibility_integration()
         'surface_downwelling_shortwave_radiation_flux              ',         &
         'surface_upwelling_shortwave_radiation_flux                ',         &
         'longwave_radiation_fluxes                                 '/)
- 
+
     character(len=cm), target :: test_outvars1(14) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
@@ -42,7 +40,7 @@ subroutine test_var_compatibility_integration()
         'turbulent_kinetic_energy                                  ',         &
         'turbulent_kinetic_energy2                                 ',         &
         'longwave_radiation_fluxes                                 '/)
- 
+
     character(len=cm), target :: test_reqvars1(22) = (/                        &
         'ccpp_error_code                                           ',         &
         'ccpp_error_message                                        ',         &
@@ -71,14 +69,17 @@ subroutine test_var_compatibility_integration()
     logical :: run_okay
 
     ! Setup expected test suite info
-    test_suites(1)%suite_name          = 'var_compatibility_suite'
-	test_suites(1)%suite_parts         => test_parts1
-    test_suites(1)%suite_input_vars    => test_invars1
-    test_suites(1)%suite_output_vars   => test_outvars1
+    test_suites(1)%suite_name = 'var_compatibility_suite'
+	test_suites(1)%suite_parts => test_parts1
+    test_suites(1)%suite_input_vars => test_invars1
+    test_suites(1)%suite_output_vars => test_outvars1
     test_suites(1)%suite_required_vars => test_reqvars1
 
     call test_host(run_okay, test_suites)
 
-    @assertTrue(run_okay)
-
-end subroutine test_var_compatibility_integration
+    if (run_okay) then
+       STOP 0
+    else
+       STOP -1
+    end if
+end program test_var_compatibility_integration

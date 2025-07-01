@@ -93,7 +93,6 @@ endif()
 add_subdirectory(src)
 
 if(CCPP_FRAMEWORK_ENABLE_TESTS)
-  find_package(PFUNIT REQUIRED)
   enable_testing()
   add_subdirectory(test)
 endif()

@@ -5,9 +5,9 @@
 # Paths should be relative to CMAKE_SOURCE_DIR (this file's directory)
 #
 #------------------------------------------------------------------------------
-set(SCHEME_FILES "module_rad_ddt" "effr_calc" "effr_diag" "effr_pre" "effr_post" "rad_lw" "rad_sw")
-set(HOST_FILES "module_rad_ddt" "test_host_data" "test_host_mod")
-set(SUITE_FILES "var_compatibility_suite.xml")
+set(SCHEME_FILES "effr_calc" "effr_diag" "effr_pre" "effr_post" "rad_lw" "rad_sw")
+set(HOST_FILES   "module_rad_ddt" "test_host_data" "test_host_mod")
+set(SUITE_FILES  "var_compatibility_suite.xml")
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
 set(HOST "test_host")
@@ -44,9 +44,8 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 list(APPEND VAR_COMPATIBILITY_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(VAR_COMPATIBILITY_TESTLIB OBJECT ${VAR_COMPATIBILITY_LIBRARY_LIST})
 
-add_pfunit_ctest (var_compatibility_host_integration
-  TEST_SOURCES test_var_compatibility_integration.pf
-  LINK_LIBRARIES VAR_COMPATIBILITY_TESTLIB test_utils
-  OTHER_SOURCES ${HOST}.F90
-)
+add_executable(var_compatibility_host_integration test_var_compatibility_integration.F90 ${HOST}.F90)
+target_link_libraries(var_compatibility_host_integration PRIVATE VAR_COMPATIBILITY_TESTLIB test_utils)
 target_include_directories(var_compatibility_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
+
+add_test(NAME ctest_var_compatibility_host_integration COMMAND var_compatibility_host_integration)

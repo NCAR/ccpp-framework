@@ -27,19 +27,9 @@ jobs:
           libxml2-utils
         pip install --user pytest
 
-    - name: Build pFUnit
-      run: |
-        git clone --depth 1 --branch v4.10.0 https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git
-        cd pFUnit
-        cmake -B./build -S.
-        cd build
-        make install
-
     - name: Build the framework
       run: |
-        cmake -S. -B./build                \
-          -DCCPP_FRAMEWORK_ENABLE_TESTS=ON \
-          -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/pFUnit/build/installed
+        cmake -S. -B./build -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
         cd build
         make
 
