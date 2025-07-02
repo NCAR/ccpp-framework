@@ -39,7 +39,7 @@ function(ccpp_capgen)
   message(STATUS "Running ccpp_capgen from ${CMAKE_CURRENT_SOURCE_DIR}")
 
   list(JOIN CCPP_CAPGEN_CMD_LIST " " CCPP_CAPGEN_CMD)
-  message(STATUS "Running ccpp_capgen: ${CCPP_CAPGEN_CMD}")
+  message(STATUS "Running ccpp_capgen with arguments: ${CCPP_CAPGEN_CMD}")
 
   list(JOIN CCPP_CAPGEN_CMD_LIST ";" CCPP_CAPGEN_CMAKE_CMD)
   unset(CAPGEN_OUT)
