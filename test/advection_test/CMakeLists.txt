@@ -59,8 +59,10 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 list(APPEND ADVECTION_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(ADVECTION_TESTLIB OBJECT ${ADVECTION_LIBRARY_LIST})
 
+# Setup test executable with needed dependencies
 add_executable(advection_host_integration test_advection_host_integration.F90 ${HOST}.F90)
 target_link_libraries(advection_host_integration PRIVATE ADVECTION_TESTLIB test_utils)
 target_include_directories(advection_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
 
+# Add executable to be called with ctest
 add_test(NAME ctest_advection_host_integration COMMAND advection_host_integration)

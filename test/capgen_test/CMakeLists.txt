@@ -48,8 +48,10 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 list(APPEND CAPGEN_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(CAPGEN_TESTLIB OBJECT ${CAPGEN_LIBRARY_LIST})
 
+# Setup test executable with needed dependencies
 add_executable(capgen_host_integration test_capgen_host_integration.F90 ${HOST}.F90)
 target_link_libraries(capgen_host_integration PRIVATE CAPGEN_TESTLIB test_utils)
 target_include_directories(capgen_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
 
+# Add executable to be called with ctest
 add_test(NAME ctest_capgen_host_integration COMMAND capgen_host_integration)

@@ -44,8 +44,10 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 list(APPEND VAR_COMPATIBILITY_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(VAR_COMPATIBILITY_TESTLIB OBJECT ${VAR_COMPATIBILITY_LIBRARY_LIST})
 
+# Setup test executable with needed dependencies
 add_executable(var_compatibility_host_integration test_var_compatibility_integration.F90 ${HOST}.F90)
 target_link_libraries(var_compatibility_host_integration PRIVATE VAR_COMPATIBILITY_TESTLIB test_utils)
 target_include_directories(var_compatibility_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
 
+# Add executable to be called with ctest
 add_test(NAME ctest_var_compatibility_host_integration COMMAND var_compatibility_host_integration)

@@ -47,8 +47,10 @@ ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
 list(APPEND DDT_LIBRARY_LIST ${CCPP_CAPS_LIST})
 add_library(DDT_TESTLIB OBJECT ${DDT_LIBRARY_LIST})
 
+# Setup test executable with needed dependencies
 add_executable(ddt_host_integration test_ddt_host_integration.F90 ${HOST}.F90)
 target_link_libraries(ddt_host_integration PRIVATE DDT_TESTLIB test_utils)
 target_include_directories(ddt_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
 
+# Add executable to be called with ctest
 add_test(NAME ctest_ddt_host_integration COMMAND ddt_host_integration)
