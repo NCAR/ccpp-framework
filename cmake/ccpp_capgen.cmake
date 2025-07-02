@@ -75,7 +75,9 @@ function(ccpp_datafile)
   cmake_parse_arguments(arg "" "${oneValueArgs}" "" ${ARGN})
 
   set(CCPP_DATAFILE_CMD "${CMAKE_SOURCE_DIR}/scripts/ccpp_datafile.py")
-
+  if(NOT EXISTS ${CCPP_DATAFILE_CMD})
+    message(FATAL_ERROR "function(ccpp_datafile): Could not find ccpp_datafile.py.  Looked for ${CCPP_DATAFILE_CMD}.")
+  endif()
   if(NOT DEFINED arg_DATATABLE)
     message(FATAL_ERROR "function(ccpp_datafile): DATATABLE not set.  A datatable file must be configured to call ccpp_datafile.")
   endif()
