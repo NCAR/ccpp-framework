@@ -35,8 +35,8 @@ endif()
 if(CCPP_MANUALLY_DECLARED_TEST AND CCPP_FRAMEWORK_ENABLE_TESTS)
   message(WARNING "Detected a manual test flag and the flag to run all tests.  If only expected to run a single test, please unset CCPP_FRAMEWORK_ENABLE_TESTS option.")
 endif()
-
 set(CCPP_RUNNING_TESTS CCPP_FRAMEWORK_ENABLE_TESTS OR CCPP_MANUALLY_DECLARED_TEST)
+
 if(CCPP_RUNNING_TESTS)
   if(${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
     ADD_COMPILE_OPTIONS(-fcheck=all)
