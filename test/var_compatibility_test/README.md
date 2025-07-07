@@ -1,6 +1,12 @@
-var_compatibility test
-================
+# Variable Compatibility Test
 
-To build and run the var_compatibility test, run ./run_test
-This script will build and run the test.
-The exit code is zero (0) on PASS and non-zero on FAIL.
+## Building/Running
+
+To explicitly build/run the variable compatibility test host, run:
+
+```bash
+$ cmake -S<path_to_project_root> -B<path_to_build> -DCCPP_RUN_VAR_COMPATIBILITY_TEST=ON
+$ cd <path_to_build>
+$ make
+$ ctest
+```
