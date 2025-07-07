@@ -35,6 +35,7 @@ if(CCPP_MANUALLY_DECLARED_TEST AND CCPP_FRAMEWORK_ENABLE_TESTS)
 endif()
 set(CCPP_RUNNING_TESTS CCPP_FRAMEWORK_ENABLE_TESTS OR CCPP_MANUALLY_DECLARED_TEST)
 
+# If running tests, set appropriate flags to help with debugging test issues.
 if(CCPP_RUNNING_TESTS)
   if(${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
     ADD_COMPILE_OPTIONS(-fcheck=all)
