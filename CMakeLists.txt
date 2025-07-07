@@ -5,8 +5,6 @@ project(ccpp_framework
         LANGUAGES Fortran)
 
 include(cmake/ccpp_capgen.cmake)
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
-
 
 #------------------------------------------------------------------------------
 # Set package definitions
