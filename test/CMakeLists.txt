@@ -1,4 +1,4 @@
-add_library(test_utils STATIC test_utils.F90)
+add_subdirectory(utils)
 
 if(CCPP_FRAMEWORK_ENABLE_TESTS OR CCPP_RUN_ADVECTION_TEST)
   add_subdirectory(advection_test)

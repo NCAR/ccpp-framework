@@ -27,12 +27,6 @@ list(TRANSFORM HOST_FILES         APPEND ".meta" OUTPUT_VARIABLE CAPGEN_HOST_MET
 
 list(APPEND CAPGEN_HOST_METADATA_FILES "${HOST}.meta")
 
-# Add Fortran files to library list
-foreach(FILE IN LISTS SCHEME_FORTRAN_FILES SUITE_SCHEME_FORTRAN_FILES CAPGEN_HOST_FORTRAN_FILES)
-    file(REAL_PATH "${FILE}" ABS_PATH)
-    list(APPEND CAPGEN_LIBRARY_LIST "${ABS_PATH}")
-endforeach()
-
 ccpp_capgen(CAPGEN_DEBUG ON
             VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${CAPGEN_HOST_METADATA_FILES}
@@ -41,17 +35,20 @@ ccpp_capgen(CAPGEN_DEBUG ON
             HOST_NAME ${HOST}
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
 
-# Retrieve the list of files from datatable.xml and set to CCPP_CAPS_LIST
+# Retrieve the list of Fortran files required for test host from datatable.xml and set to CCPP_CAPS_LIST
 ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
               REPORT_NAME "--ccpp-files")
 
-list(APPEND CAPGEN_LIBRARY_LIST ${CCPP_CAPS_LIST})
-add_library(CAPGEN_TESTLIB OBJECT ${CAPGEN_LIBRARY_LIST})
+# Create test host library
+add_library(CAPGEN_TESTLIB OBJECT ${SCHEME_FORTRAN_FILES}
+                                  ${SUITE_SCHEME_FORTRAN_FILES}
+                                  ${CAPGEN_HOST_FORTRAN_FILES}
+                                  ${CCPP_CAPS_LIST})
 
 # Setup test executable with needed dependencies
 add_executable(capgen_host_integration test_capgen_host_integration.F90 ${HOST}.F90)
 target_link_libraries(capgen_host_integration PRIVATE CAPGEN_TESTLIB test_utils)
-target_include_directories(capgen_host_integration PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
+target_include_directories(capgen_host_integration PRIVATE "$<TARGET_PROPERTY:test_utils,BINARY_DIR>")
 
 # Add executable to be called with ctest
 add_test(NAME ctest_capgen_host_integration COMMAND capgen_host_integration)
