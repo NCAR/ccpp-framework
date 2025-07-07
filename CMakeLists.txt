@@ -25,7 +25,13 @@ option(CCPP_RUN_VAR_COMPATIBILITY_TEST  "Enable variable compatibility regressio
 option(BUILD_SHARED_LIBS "Build a static library" OFF)
 set(CCPP_VERBOSITY "0" CACHE STRING "Verbosity level of output (default: 0)")
 
-set(CCPP_MANUALLY_DECLARED_TEST CCPP_RUN_ADVECTION_TEST OR CCPP_RUN_CAPGEN_TEST OR CCPP_RUN_DDT_HOST_TEST OR CCPP_RUN_VAR_COMPATIBILITY_TEST)
+# Warn user on conflicting test options
+if(CCPP_RUN_ADVECTION_TEST OR
+   CCPP_RUN_CAPGEN_TEST    OR
+   CCPP_RUN_DDT_HOST_TEST  OR
+   CCPP_RUN_VAR_COMPATIBILITY_TEST)
+   set(CCPP_MANUALLY_DECLARED_TEST ON BOOL)
+endif()
 if(CCPP_MANUALLY_DECLARED_TEST AND CCPP_FRAMEWORK_ENABLE_TESTS)
   message(WARNING "Detected a manual test flag and the flag to run all tests.  If only expected to run a single test, please unset CCPP_FRAMEWORK_ENABLE_TESTS option.")
 endif()
