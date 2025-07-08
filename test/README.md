@@ -3,6 +3,13 @@
 ## Unit tests
 To run the Python based unit tests, see the associated documentation in the `unit_tests` directory.
 
+## Doc tests
+The Python source code has a wide range of doctests that can be used to verify implementation details quickly.  To run the Python based doc tests, run:
+```bash
+$ export PYTHONPATH=<project_source_root_dir>/scripts:<project_source_root_dir>/scripts/parse_tools
+$ pytest -v <project_source_root_dir>/scripts/ --doctest-modules
+```
+
 ## Regression tests
 The run the regression tests with mock host models, build the main project with your test option:
 
