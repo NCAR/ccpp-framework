@@ -6,23 +6,22 @@ To run the Python based unit tests, see the associated documentation in the `uni
 ## Doc tests
 The Python source code has a wide range of doctests that can be used to verify implementation details quickly.  To run the Python based doc tests, run:
 ```bash
-$ export PYTHONPATH=<project_source_root_dir>/scripts:<project_source_root_dir>/scripts/parse_tools
-$ pytest -v <project_source_root_dir>/scripts/ --doctest-modules
+$ export PYTHONPATH=<root_project_source_directory>/scripts:<root_project_source_directory>/scripts/parse_tools
+$ pytest -v <root_project_source_directory>/scripts/ --doctest-modules
 ```
 
 ## Regression tests
 The run the regression tests with mock host models, build the main project with your test option:
 
 ```bash
-$ cmake -S<root_project_source_directory> -B<your_build_directory> <options>...
-cd <your_build_directory>
-make
-ctest
+$ cmake -S<root_project_source_directory> -B<build_directory> <options>...
+$ cd <build_directory>
+$ make
+$ ctest
 ```
 
 Currently, if everything works as expected, you should see something like:
-```bash
-$ ctest
+```
 Test project <your_build_directory>
     Start 1: ctest_advection_host_integration
 1/4 Test #1: ctest_advection_host_integration ...........   Passed    0.01 sec
@@ -50,19 +49,19 @@ By default, the tests will build in release mode.  To enable debug mode, you wil
 
 To enable more verbose output for `ccpp_capgen.py`, add `-DCCPP_VERBOSITY=<n>` to the `cmake` command line arguments where `n={1,2,3}` (`n=0` or no verbosity by default).
 
-If needed, the generated caps will be in `<your_build_directory>/test/<regression_test>/ccpp`.
+If needed, the generated caps will be in `<build_directory>/test/<regression_test>/ccpp`.
 
 ### Python regression test interface
 
 There is a matching Python based API for each regression test.  To run the corresponding python tests, build the framework using the build process from above and then you can run:
 
 ```bash
-BUILD_DIR=<your_build_directory> \
+BUILD_DIR=<build_directory> \
 PYTHONPATH=<root_project_source_directory>/test/:<root_project_source_directory>/scripts/ \
-    pytest \
-        <root_project_source_directory>/test/capgen_test/capgen_test_reports.py \
-        <root_project_source_directory>/test/advection_test/advection_test_reports.py \
-        <root_project_source_directory>/test/ddthost_test/ddthost_test_reports.py \
+    pytest                                                                                \
+        <root_project_source_directory>/test/capgen_test/capgen_test_reports.py           \
+        <root_project_source_directory>/test/advection_test/advection_test_reports.py     \
+        <root_project_source_directory>/test/ddthost_test/ddthost_test_reports.py         \
         <root_project_source_directory>/test/var_compatibility_test/var_compatibility_test_reports.py
 ```
 
