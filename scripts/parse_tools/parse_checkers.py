@@ -101,7 +101,13 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
     >>> check_dimensions("hi_mom", None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: 'hi_mom' is invalid; not a list
+    >>> check_dimensions(["1:dim1", "dim2name"], None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: '1:dim1 is an invalid dimension name; integer dimension indices not supported
+    >>> check_dimensions(["ccpp_constant_one:1", "dim2name"], None, True)
+    ['ccpp_constant_one:1', 'dim2name']
     """
+    info_msg = None
     if not isinstance(test_val, list):
         if error:
             raise CCPPError("'{}' is invalid; not a list".format(test_val))
@@ -123,10 +129,24 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
             # end if
             # Check possible dim styles (a, a:b, a:, :b, :, ::, a:b:c, a::c)
             tdims = [x.strip() for x in isplit if len(x) > 0]
+            starts_at_one = False
+            if len(tdims) > 0 and tdims[0] == 'ccpp_constant_one':
+                starts_at_one = True
+            # end if
+            is_int = False
             for tdim in tdims:
                 # Check numeric value first
                 try:
-                    valid = isinstance(int(tdim), int)
+                    is_int = isinstance(int(tdim), int)
+                    # Allow integer dimensions, but not indices
+                    if is_int:
+                        valid = starts_at_one or len(tdims) == 1
+                        if not valid:
+                            info_msg = 'integer dimension indices not supported'
+                        # end if
+                    else:
+                        valid = False
+                    # end if
                 except ValueError as ve:
                     # Not an integer, try a Fortran ID
                     valid = check_fortran_id(tdim, None,
@@ -147,8 +167,12 @@ def check_dimensions(test_val, prop_dict, error, max_len=0):
                 # End try
                 if not valid:
                     if error:
-                        errmsg = "'{}' is an invalid dimension name"
-                        raise CCPPError(errmsg.format(item))
+                        if info_msg:
+                            errmsg = f"'{item}' is an invalid dimension name; {info_msg}"
+                        else:
+                            errmsg = f"'{item}' is an invalid dimension name"
+                        # end if
+                        raise CCPPError(errmsg)
                     else:
                         test_val = None
                     # end if
