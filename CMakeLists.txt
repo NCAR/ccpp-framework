@@ -9,18 +9,17 @@ include(cmake/ccpp_capgen.cmake)
 #------------------------------------------------------------------------------
 # Set package definitions
 set(PACKAGE "ccpp-framework")
-set(AUTHORS "Dom Heinzeller" "Grant Firl" "Mike Kavulich" "Dustin Swales" "Courtney Peverley")
 string(TIMESTAMP YEAR "%Y")
 
 option(CCPP_FRAMEWORK_BUILD_DOCUMENTATION
        "Create and install the HTML documentation (requires Doxygen)" OFF)
-option(OPENMP "Enable OpenMP support for the framework" OFF)
+option(OPENMP                      "Enable OpenMP support for the framework" OFF)
 option(CCPP_FRAMEWORK_ENABLE_TESTS "Enable building/running CCPP regression tests" OFF)
 option(CCPP_RUN_ADVECTION_TEST          "Enable advection regression test" OFF)
 option(CCPP_RUN_CAPGEN_TEST             "Enable capgen regression test" OFF)
 option(CCPP_RUN_DDT_HOST_TEST           "Enable ddt host regression test" OFF)
 option(CCPP_RUN_VAR_COMPATIBILITY_TEST  "Enable variable compatibility regression test" OFF)
-option(BUILD_SHARED_LIBS "Build a static library" OFF)
+option(BUILD_SHARED_LIBS                "Build using shared libraries" ON)
 set(CCPP_VERBOSITY "0" CACHE STRING "Verbosity level of output (default: 0)")
 
 # Warn user on conflicting test options
