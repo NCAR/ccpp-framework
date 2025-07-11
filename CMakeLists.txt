@@ -11,15 +11,28 @@ include(cmake/ccpp_capgen.cmake)
 set(PACKAGE "ccpp-framework")
 string(TIMESTAMP YEAR "%Y")
 
+option(OPENMP                           "Enable OpenMP support for the framework" OFF)
+option(BUILD_SHARED_LIBS                "Build using shared libraries" ON)
 option(CCPP_FRAMEWORK_BUILD_DOCUMENTATION
        "Create and install the HTML documentation (requires Doxygen)" OFF)
-option(OPENMP                      "Enable OpenMP support for the framework" OFF)
-option(CCPP_FRAMEWORK_ENABLE_TESTS "Enable building/running CCPP regression tests" OFF)
+option(CCPP_FRAMEWORK_ENABLE_TESTS      "Enable building/running CCPP regression tests" OFF)
 option(CCPP_RUN_ADVECTION_TEST          "Enable advection regression test" OFF)
 option(CCPP_RUN_CAPGEN_TEST             "Enable capgen regression test" OFF)
 option(CCPP_RUN_DDT_HOST_TEST           "Enable ddt host regression test" OFF)
 option(CCPP_RUN_VAR_COMPATIBILITY_TEST  "Enable variable compatibility regression test" OFF)
-option(BUILD_SHARED_LIBS                "Build using shared libraries" ON)
+
+message("")
+message("OPENMP .............................. ${OPENMP}")
+message("BUILD_SHARED_LIBS ................... ${BUILD_SHARED_LIBS}")
+message("")
+message("CCPP_FRAMEWORK_BUILD_DOCUMENTATION ...${CCPP_FRAMEWORK_BUILD_DOCUMENTATION}")
+message("CCPP_FRAMEWORK_ENABLE_TESTS ......... ${CCPP_FRAMEWORK_ENABLE_TESTS}")
+message("CCPP_RUN_ADVECTION_TEST ............. ${CCPP_RUN_ADVECTION_TEST}")
+message("CCPP_RUN_CAPGEN_TEST ................ ${CCPP_RUN_CAPGEN_TEST}")
+message("CCPP_RUN_DDT_HOST_TEST .............. ${CCPP_RUN_DDT_HOST_TEST}")
+message("CCPP_RUN_VAR_COMPATIBILITY_TEST ..... ${CCPP_RUN_VAR_COMPATIBILITY_TEST}")
+message("")
+
 set(CCPP_VERBOSITY "0" CACHE STRING "Verbosity level of output (default: 0)")
 
 # Warn user on conflicting test options
