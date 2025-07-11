@@ -1,3 +1,5 @@
 # All compiled Python modules
 *.pyc
 
+# CMake build directory
+build/
