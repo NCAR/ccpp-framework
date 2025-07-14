@@ -20,7 +20,12 @@ $ make
 $ ctest
 ```
 
-Currently, if everything works as expected, you should see something like:
+For example, to run all of the regression tests from the root of the project, you can use:
+```bash
+cmake -B./build -S./ -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
+```
+
+Currently (as of July 2025), if everything works as expected, you should see something like:
 ```
 Test project <your_build_directory>
     Start 1: ctest_advection_host_integration
