@@ -1,5 +1,9 @@
 # DDT Host Test
 
+Contains tests to exercise more DDT functionality:
+- Passing around and modifying a DDT
+- Making DDT in host model & using it in CCPP-ized physics code
+
 ## Building/Running
 
 To explicitly build/run the ddt test host, run:
