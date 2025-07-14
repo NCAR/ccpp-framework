@@ -54,7 +54,7 @@ function(ccpp_capgen)
 
   message(STATUS "Running ccpp_capgen.py from ${CMAKE_CURRENT_SOURCE_DIR}")
 
-  unset(CAPGEN_OUT) # Unset CAPGEN_OUT to prevent incorrect output on subsequent calls.
+  unset(CAPGEN_OUT) # Unset CAPGEN_OUT to prevent incorrect output on subsequent ccpp_capgen(...) calls.
   execute_process(COMMAND ${CCPP_CAPGEN_CMD_LIST}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                   OUTPUT_VARIABLE CAPGEN_OUT
@@ -109,7 +109,7 @@ function(ccpp_datafile)
 
   message(STATUS "Running ccpp_datafile from ${CMAKE_CURRENT_SOURCE_DIR}")
 
-  unset(CCPP_CAPS)
+  unset(CCPP_CAPS) # Unset CCPP_CAPS to prevent incorrect output on subsequent ccpp_datafile(...) calls.
   execute_process(COMMAND ${CCPP_DATAFILE_CMD}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                   OUTPUT_VARIABLE CCPP_CAPS
