@@ -215,15 +215,13 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Exercise
         with self.assertRaises(CCPPError) as context:
             parse_scheme_files(scheme_files, self._run_env)
-        # Verify 3 correct error messages returned
+        # Verify 2 correct error messages returned
         emsg = "Variable mismatch in CCPPnotset_var_missing_in_meta_run, " +  \
             "variables missing from metadata header."
         self.assertTrue(emsg in str(context.exception))
-        emsg = "Out of order argument, errmsg in CCPPnotset_var_missing_in_meta_run"
+        emsg = "Fortran variable, bar, not in metadata"
         self.assertTrue(emsg in str(context.exception))
-        emsg = "Out of order argument, errflg in CCPPnotset_var_missing_in_meta_run"
-        self.assertTrue(emsg in str(context.exception))
-        self.assertTrue("3 errors found comparing" in str(context.exception))
+        self.assertTrue("2 errors found comparing" in str(context.exception))
 
     def test_ccpp_eq1_var_missing_in_fort(self):
         """Test for correct detection of a variable that IS REMOVED the
@@ -236,16 +234,14 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Exercise
         with self.assertRaises(CCPPError) as context:
             parse_scheme_files(scheme_files, self._run_env_ccpp)
-        # Verify 3 correct error messages returned
+        # Verify 2 correct error messages returned
         emsg = "Variable mismatch in CCPPeq1_var_missing_in_fort_run, " +     \
             "variables missing from Fortran scheme."
         self.assertTrue(emsg in str(context.exception))
         emsg = "Variable mismatch in CCPPeq1_var_missing_in_fort_run, " +     \
             "no Fortran variable bar."
         self.assertTrue(emsg in str(context.exception))
-        emsg = "Out of order argument, errmsg in CCPPeq1_var_missing_in_fort_run"
-        self.assertTrue(emsg in str(context.exception))
-        self.assertTrue("3 errors found comparing" in str(context.exception))
+        self.assertTrue("2 errors found comparing" in str(context.exception))
 
     def test_ccpp_eq1_var_in_fort_meta(self):
         """Test positive case of a variable that IS PRESENT the
@@ -305,16 +301,14 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Exercise
         with self.assertRaises(CCPPError) as context:
             _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
-        # Verify 3 correct error messages returned
+        # Verify 2 correct error messages returned
         emsg = "Variable mismatch in CCPPgt1_var_in_fort_meta_init, " +       \
             "variables missing from Fortran scheme."
         self.assertTrue(emsg in str(context.exception))
         emsg = "Variable mismatch in CCPPgt1_var_in_fort_meta_init, " +       \
             "no Fortran variable bar."
         self.assertTrue(emsg in str(context.exception))
-        emsg = "Out of order argument, errmsg in CCPPgt1_var_in_fort_meta_init"
-        self.assertTrue(emsg in str(context.exception))
-        self.assertTrue("3 errors found comparing" in str(context.exception))
+        self.assertTrue("2 errors found comparing" in str(context.exception))
 
     def test_ccpp_eq1_var_missing_in_meta(self):
         """Test correct detection of a variable that
@@ -327,15 +321,13 @@ class MetadataHeaderTestCase(unittest.TestCase):
         # Exercise
         with self.assertRaises(CCPPError) as context:
              _, _ = parse_scheme_files(scheme_files, self._run_env_ccpp)
-        # Verify 3 correct error messages returned
+        # Verify 2 correct error messages returned
         emsg = "Variable mismatch in CCPPeq1_var_missing_in_meta_finalize, "+ \
             "variables missing from metadata header."
         self.assertTrue(emsg in str(context.exception))
-        emsg = "Out of order argument, errmsg in CCPPeq1_var_missing_in_meta_finalize"
+        emsg = "Fortran variable, bar, not in metadata"
         self.assertTrue(emsg in str(context.exception))
-        emsg = "Out of order argument, errflg in CCPPeq1_var_missing_in_meta_finalize"
-        self.assertTrue(emsg in str(context.exception))
-        self.assertTrue("3 errors found comparing" in str(context.exception))
+        self.assertTrue("2 errors found comparing" in str(context.exception))
 
     def test_scheme_ddt_only(self):
         """Test correct detection of a "scheme" file which contains only
@@ -363,4 +355,3 @@ class MetadataHeaderTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

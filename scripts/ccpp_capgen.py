@@ -44,7 +44,7 @@ _FORTRAN_FILENAME_EXTENSIONS = ['F90', 'f90', 'F', 'f']
 _EXTRA_VARIABLE_TABLE_TYPES = ['module', 'host', 'ddt']
 
 ## Metadata table types where order is significant
-_ORDERED_TABLE_TYPES = [SCHEME_HEADER_TYPE]
+_ORDERED_TABLE_TYPES = []
 
 ## CCPP Framework supported DDT types
 _CCPP_FRAMEWORK_DDT_TYPES = ["ccpp_hash_table_t",
@@ -309,6 +309,17 @@ def compare_fheader_to_mheader(meta_header, fort_header, logger):
         if not list_match:
             errmsg = 'Variable mismatch in {}, variables missing from {}.'
             errors_found = add_error(errors_found, errmsg.format(title, etype))
+            if etype == "metadata header":
+                # Look for missing metadata variables
+                for fvar in flist:
+                    lname = fvar.get_prop_value('local_name')
+                    _, find = find_var_in_list(lname, mlist)
+                    if (find < 0) and (not fvar.get_prop_value('optional')):
+                        errmsg = f"Fortran variable, {lname}, not in metadata"
+                        errors_found = add_error(errors_found, errmsg)
+                    # end if
+                # end for
+            # end if
         # end if
         for mind, mvar in enumerate(mlist):
             lname = mvar.get_prop_value('local_name')

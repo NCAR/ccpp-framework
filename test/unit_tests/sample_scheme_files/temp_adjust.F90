@@ -17,7 +17,7 @@ CONTAINS
   !> \section arg_table_temp_adjust_register  Argument Table
   !! \htmlinclude arg_table_temp_adjust_register.html
   !!
-  subroutine temp_adjust_register(config_var, dyn_const, errmsg, errflg)
+  subroutine temp_adjust_register(config_var, dyn_const, errflg, errmsg)
      logical,          intent(in)     :: config_var
      type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const
      character(len=512), intent(out)   :: errmsg
