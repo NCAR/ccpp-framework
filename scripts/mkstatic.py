@@ -1138,7 +1138,13 @@ end module {module}
                     # variables. This is mostly for handling horizontal dimensions
                     # correctly for the different CCPP phases and for chunked arrays
                     additional_variables_required = []
-                    if ccpp_stage == 'run' and \
+                    if CCPP_HORIZONTAL_LOOP_EXTENT in metadata_define.keys():
+                        for add_var in [ CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_LOOP_EXTENT]:
+                            if not add_var in local_vars.keys() \
+                                    and not add_var in additional_variables_required + arguments[scheme_name][subroutine_name]:
+                                logging.debug("Adding variable {} for handling blocked data structures".format(add_var))
+                                additional_variables_required.append(add_var)
+                    elif ccpp_stage == 'run' and \
                             CCPP_HORIZONTAL_LOOP_BEGIN in metadata_define.keys() and \
                             CCPP_HORIZONTAL_LOOP_END in metadata_define.keys() and \
                             CCPP_CHUNK_EXTENT in metadata_define.keys():
