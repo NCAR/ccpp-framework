@@ -47,18 +47,18 @@ class CommonTestCase(unittest.TestCase):
         typename = "COMPLEX"
         schemename = "testscheme"
         subroutinename = "testsubroutine"
-        self.assertEqual(common.encode_container(modulename),f"MODULE_{modulename}")
-        self.assertEqual(common.encode_container(modulename,typename),f"MODULE_{modulename} TYPE_{typename}")
+        self.assertEqual(common.encode_container(modulename),f"MODULE_{modulename.lower()}")
+        self.assertEqual(common.encode_container(modulename,typename),f"MODULE_{modulename.lower()} TYPE_{typename.lower()}")
         self.assertEqual(common.encode_container(modulename,schemename,subroutinename),
-                         f"MODULE_{modulename} SCHEME_{schemename} SUBROUTINE_{subroutinename}")
+                         f"MODULE_{modulename.lower()} SCHEME_{schemename.lower()} SUBROUTINE_{subroutinename.lower()}")
         self.assertRaises(Exception,common.encode_container,modulename,typename,schemename,subroutinename)
         self.assertRaises(Exception,common.encode_container)
 
     def test_decode_container(self):
         """Test decode_container() function"""
 
-        modulename = "ABCD1234"
-        typename = "COMPLEX"
+        modulename = "abcd1234"
+        typename = "complex"
         schemename = "testscheme"
         subroutinename = "testsubroutine"
         self.assertEqual(common.decode_container(f"MODULE_{modulename}"),f"MODULE {modulename}")
