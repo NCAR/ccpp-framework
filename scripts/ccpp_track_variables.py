@@ -10,6 +10,7 @@ import glob
 from metadata_table import find_scheme_names, parse_metadata_file
 from ccpp_prebuild import import_config, gather_variable_definitions
 from mkstatic import Suite
+from common import lowercase_keys
 from parse_checkers import registered_fortran_ddt_names
 from parse_tools import init_log, set_log_level
 from framework_env import CCPPFrameworkEnv
@@ -78,7 +79,7 @@ def create_metadata_filename_dict(metapath):
         # The above returns a list of schemes in each filename, but
         # we want a dictionary of schemes associated with filenames:
         for scheme in schemes:
-            metadata_dict[scheme] = scheme_fn
+            metadata_dict[scheme.lower()] = scheme_fn
 
     return metadata_dict
 
