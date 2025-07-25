@@ -236,12 +236,12 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 # units from capgen to the "+"-format (i.e. "m2 s-2" --> "m+2 s-2")
                 units = insert_plus_sign_for_positive_exponents(new_var.get_prop_value('units'))
 
-                var = Var(standard_name = standard_name,
+                var = Var(standard_name = standard_name.lower(),
                           long_name     = new_var.get_prop_value('long_name') + legacy_note,
                           units         = units,
-                          local_name    = new_var.get_prop_value('local_name'),
+                          local_name    = new_var.get_prop_value('local_name').lower(),
                           type          = new_var.get_prop_value('type').lower(),
-                          dimensions    = dimensions,
+                          dimensions    = [dim.lower() for dim in dimensions],
                           container     = container,
                           kind          = kind,
                           intent        = new_var.get_prop_value('intent'),

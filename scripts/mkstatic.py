@@ -13,6 +13,7 @@ import types
 import xml.etree.ElementTree as ET
 
 from common import encode_container
+from common import lowercase_keys, lowercase_xml
 from common import CCPP_STAGES
 from common import CCPP_T_INSTANCE_VARIABLE, CCPP_ERROR_CODE_VARIABLE, CCPP_ERROR_MSG_VARIABLE, CCPP_LOOP_COUNTER, CCPP_LOOP_EXTENT
 from common import CCPP_BLOCK_NUMBER, CCPP_BLOCK_COUNT, CCPP_BLOCK_SIZES, CCPP_THREAD_NUMBER, CCPP_THREAD_COUNT, CCPP_INTERNAL_VARIABLES
@@ -291,6 +292,23 @@ module {module}
    public :: {subroutines}
 
    contains
+
+   ! Necessary to convert incoming suite and group names to lowercase
+   function to_lower(str) result(lower)
+      implicit none
+      character(len=*), intent(in) :: str
+      character(len=len(str)) :: lower
+      integer :: i, ichar_val
+
+      do i = 1, len(str)
+         ichar_val = ichar(str(i:i))
+         if (ichar_val >= ichar('A') .and. ichar_val <= ichar('Z')) then
+            lower(i:i) = char(ichar_val + 32)
+         else
+            lower(i:i) = str(i:i)
+         end if
+      end do
+   end function to_lower
 '''
 
     sub = '''
@@ -310,7 +328,7 @@ module {module}
 {suite_switch}
       else
 
-         write({ccpp_var_name}%errmsg,'(*(a))') 'Invalid suite ' // trim(suite_name)
+         write({ccpp_var_name}%errmsg,'(*(a))') 'Invalid suite ' // to_lower(trim(suite_name))
          ierr = 1
 
       end if
@@ -436,7 +454,7 @@ end module {module}
                         clause = 'else if'
                     argument_list_group = create_argument_list_wrapped_explicit(group.arguments[ccpp_stage])
                     group_calls += '''
-            {clause} (trim(group_name)=="{group_name}") then
+            {clause} (to_lower(trim(group_name))=="{group_name}") then
                ierr = {suite_name}_{group_name}_{stage}_cap({arguments})'''.format(clause=clause,
                                                                                    suite_name=group.suite,
                                                                                    group_name=group.name,
@@ -444,7 +462,7 @@ end module {module}
                                                                                    arguments=argument_list_group)
                 group_calls += '''
             else
-               write({ccpp_var_name}%errmsg, '(*(a))') 'Group ' // trim(group_name) // ' not found'
+               write({ccpp_var_name}%errmsg, '(*(a))') 'Group ' // to_lower(trim(group_name)) // ' not found'
                ierr = 1
             end if
 '''.format(ccpp_var_name=ccpp_var.local_name, group_name=group.name)
@@ -463,7 +481,7 @@ end module {module}
                 else:
                     clause = 'else if'
                 suite_switch += '''
-      {clause} (trim(suite_name)=="{suite_name}") then
+      {clause} (to_lower(trim(suite_name))=="{suite_name}") then
 
          if (present(group_name)) then
 {group_calls}
@@ -690,19 +708,8 @@ end module {module}
             return success
 
         tree = ET.parse(self._sdf_name)
-        suite_xml = tree.getroot()
+        suite_xml = lowercase_xml(tree.getroot())
         self._name = suite_xml.get('name')
-        # Validate name of suite in XML tag against filename; could be moved to common.py
-        if not (os.path.basename(self._sdf_name) == '{}.xml'.format(self._name)):
-            if (os.path.basename(self._sdf_name) == 'suite_{}.xml'.format(self._name)):
-                logging.debug("Parsing suite using legacy naming convention")
-                logging.debug(f"Filename {os.path.basename(self._sdf_name)}")
-                logging.debug(f"Suite name {format(self._name)}")
-            else:
-                logging.critical("Invalid suite name {0} in suite definition file {1}.".format(
-                                                                   self._name, self._sdf_name))
-                success = False
-                return success
 
         # Check if suite name is too long
         if len(self._name) > SUITE_NAME_MAX_CHARS:
@@ -726,15 +733,15 @@ end module {module}
 
             self._call_tree[group_xml.attrib['name']] = []
             # Add suite-wide init scheme to group 'init', similar for finalize
-            if group_xml.tag.lower() == 'init' or group_xml.tag.lower() == 'finalize':
+            if group_xml.tag == 'init' or group_xml.tag == 'finalize':
                 self._all_schemes_called.append(group_xml.text)
-                self._all_subroutines_called.append(group_xml.text + '_' + group_xml.tag.lower())
+                self._all_subroutines_called.append(group_xml.text + '_' + group_xml.tag)
                 schemes = [group_xml.text]
                 subcycles.append(Subcycle(loop=1, schemes=schemes))
-                if group_xml.tag.lower() == 'init':
-                    self._groups.append(Group(name=group_xml.tag.lower(), subcycles=subcycles, suite=self._name, init=True))
-                elif group_xml.tag.lower() == 'finalize':
-                    self._groups.append(Group(name=group_xml.tag.lower(), subcycles=subcycles, suite=self._name, finalize=True))
+                if group_xml.tag == 'init':
+                    self._groups.append(Group(name=group_xml.tag, subcycles=subcycles, suite=self._name, init=True))
+                elif group_xml.tag == 'finalize':
+                    self._groups.append(Group(name=group_xml.tag, subcycles=subcycles, suite=self._name, finalize=True))
                 continue
 
             # Parse subcycles of all regular groups
@@ -760,7 +767,6 @@ end module {module}
         # Remove duplicates from list of all subroutines an schemes
         self._all_schemes_called = list(set(self._all_schemes_called))
         self._all_subroutines_called = list(set(self._all_subroutines_called))
-
 
         return success
 
@@ -1058,9 +1064,12 @@ end module {module}
         for key, value in kwargs.items():
             setattr(self, "_"+key, value)
 
-    def write(self, metadata_request, metadata_define, arguments, debug):
+    def write(self, metadata_request, metadata_define, arguments_in, debug):
         """Create caps for all stages of this group. Add additional code for
         debugging if debug flag is True."""
+
+        # First, convert all keys in arguments_in to lowercase (recursively)
+        arguments = lowercase_keys(arguments_in)
 
         # Create an inverse lookup table of local variable names defined (by the host model) and standard names
         standard_name_by_local_name_define = collections.OrderedDict()
@@ -1127,16 +1136,9 @@ end module {module}
 
                     # First, add a few mandatory variables to the list of required
                     # variables. This is mostly for handling horizontal dimensions
-                    # correctly for the different CCPP phases and for cases when
-                    # blocked data structures or chunked arrays are used.
+                    # correctly for the different CCPP phases and for chunked arrays
                     additional_variables_required = []
-                    if CCPP_HORIZONTAL_LOOP_EXTENT in metadata_define.keys():
-                        for add_var in [ CCPP_CONSTANT_ONE, CCPP_HORIZONTAL_LOOP_EXTENT]:
-                            if not add_var in local_vars.keys() \
-                                    and not add_var in additional_variables_required + arguments[scheme_name][subroutine_name]:
-                                logging.debug("Adding variable {} for handling blocked data structures".format(add_var))
-                                additional_variables_required.append(add_var)
-                    elif ccpp_stage == 'run' and \
+                    if ccpp_stage == 'run' and \
                             CCPP_HORIZONTAL_LOOP_BEGIN in metadata_define.keys() and \
                             CCPP_HORIZONTAL_LOOP_END in metadata_define.keys() and \
                             CCPP_CHUNK_EXTENT in metadata_define.keys():

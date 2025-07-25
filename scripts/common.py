@@ -101,13 +101,14 @@ def split_var_name_and_array_reference(var_name):
 def encode_container(*args):
     """Encodes a container, i.e. the location of a metadata table for CCPP.
     Currently, there are three possibilities with different numbers of input
-    arguments: module, module+typedef, module+scheme+subroutine."""
+    arguments: module, module+typedef, module+scheme+subroutine. Convert all
+    names to lowercase to support the new case-insensitive capgen parser."""
     if len(args)==3:
-        container = 'MODULE_{0} SCHEME_{1} SUBROUTINE_{2}'.format(*args)
+        container = 'MODULE_{0} SCHEME_{1} SUBROUTINE_{2}'.format(*[arg.lower() for arg in args])
     elif len(args)==2:
-        container = 'MODULE_{0} TYPE_{1}'.format(*args)
+        container = 'MODULE_{0} TYPE_{1}'.format(*[arg.lower() for arg in args])
     elif len(args)==1:
-        container = 'MODULE_{0}'.format(*args)
+        container = 'MODULE_{0}'.format(*[arg.lower() for arg in args])
     else:
         raise Exception("encode_container not implemented for {0} arguments".format(len(args)))
     return container
@@ -184,3 +185,49 @@ def string_to_python_identifier(string):
         return string
     else:
         raise Exception("Resulting string '{0}' is not a valid Python identifier".format(string))
+
+# New utilities added 2025/07/25 for dealing with case-insensitivity changes from capgen
+
+def lowercase_keys_and_values(d):
+    """Recursively convert all keys and values in a regular dictionary to lowercase"""
+    if isinstance(d, dict):
+        return {
+            (k.lower() if isinstance(k, str) else k):
+                lowercase_keys_and_values(v)
+            for k, v in d.items()
+        }
+    elif isinstance(d, list):
+        return [lowercase_keys_and_values(item) for item in d]
+    elif isinstance(d, str):
+        return d.lower()
+    else:
+        return d
+
+def lowercase_keys(d):
+    """Recursively convert all keys in an OrderedDict to lowercase"""
+    if isinstance(d, OrderedDict):
+        new_dict = OrderedDict()
+        for k, v in d.items():
+            new_key = k.lower() if isinstance(k, str) else k
+            new_dict[new_key] = lowercase_keys(v)
+        return new_dict
+    elif isinstance(d, list):
+        return [lowercase_keys(item) for item in d]
+    else:
+        return d
+
+def lowercase_xml(element):
+    """Recursively convert XML elements to lowercase"""
+    # Lowercase the tag name
+    element.tag = element.tag.lower()
+    # Lowercase the text content, if it exists
+    if element.text:
+        element.text = element.text.lower()
+    if element.tail:
+        element.tail = element.tail.lower()
+    # Lowercase attribute keys and values
+    element.attrib = {k.lower(): v.lower() for k, v in element.attrib.items()}
+    # Recurse into child elements
+    for i in range(len(element)):
+        element[i] = lowercase_xml(element[i])
+    return element

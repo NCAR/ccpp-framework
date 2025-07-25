@@ -13,6 +13,7 @@ import re
 import sys
 
 # CCPP framework imports
+from common import lowercase_keys_and_values
 from common import encode_container, decode_container, decode_container_as_dict
 from common import CCPP_STAGES, CCPP_INTERNAL_VARIABLES, CCPP_STATIC_API_MODULE, CCPP_INTERNAL_VARIABLE_DEFINITON_FILE
 from common import STANDARD_VARIABLE_TYPES, STANDARD_INTEGER_TYPE, CCPP_TYPE
@@ -361,11 +362,12 @@ def check_schemes_in_suites(arguments, suites):
     """Check that all schemes that are requested in the suites exist"""
     success = True
     logging.info("Checking for existence of schemes in suites ...")
+    argument_keys = [x.lower() for x in arguments.keys()]
     for suite in suites:
         for group in suite.groups:
             for subcycle in group.subcycles:
                 for scheme_name in subcycle.schemes:
-                    if not scheme_name in arguments.keys():
+                    if not scheme_name in argument_keys:
                         success = False
                         logging.critical("Scheme {} in suite {} cannot be found".format(scheme_name, suite.name))
     return success
@@ -401,19 +403,19 @@ def filter_metadata(metadata, arguments, dependencies, schemes_in_files, suites)
     # Filter argument lists
     for scheme in arguments.keys():
         for suite in suites:
-            if scheme in suite.all_schemes_called:
+            if scheme.lower() in suite.all_schemes_called:
                 arguments_filtered[scheme] = arguments[scheme]
                 break
     # Filter dependencies
     for scheme in dependencies.keys():
         for suite in suites:
-            if scheme in suite.all_schemes_called:
+            if scheme.lower() in suite.all_schemes_called:
                 dependencies_filtered[scheme] = dependencies[scheme]
                 break
     # Filter schemes_in_files
     for scheme in schemes_in_files.keys():
         for suite in suites:
-            if scheme in suite.all_schemes_called:
+            if scheme.lower() in suite.all_schemes_called:
                 schemes_in_files_filtered[scheme] = schemes_in_files[scheme]
     return (success, metadata_filtered, arguments_filtered, dependencies_filtered, schemes_in_files_filtered)
 
@@ -748,6 +750,9 @@ def main():
         success = clean_files(config, namespace)
         logging.info('CCPP prebuild clean completed successfully, exiting.')
         sys.exit(0)
+
+    # Convert TYPEDEFS_NEW_METATA config to lowercase
+    config['typedefs_new_metadata'] = lowercase_keys_and_values(config['typedefs_new_metadata'])
 
     # If no suite definition files were given, get all of them
     if not sdfs:
