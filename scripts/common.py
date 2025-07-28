@@ -186,7 +186,7 @@ def string_to_python_identifier(string):
     else:
         raise Exception("Resulting string '{0}' is not a valid Python identifier".format(string))
 
-# New utilities added 2025/07/25 for dealing with case-insensitivity changes from capgen
+# New utilities added 2025/07/25 for dealing with case-insensitivity changes from capgen. Used to convert XML data read with the xml library and other ccpp_prebuild dictionaries
 
 def lowercase_keys_and_values(d):
     """Recursively convert all keys and values in a regular dictionary to lowercase"""
