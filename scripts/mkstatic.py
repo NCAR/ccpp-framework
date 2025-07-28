@@ -298,12 +298,13 @@ module {module}
       implicit none
       character(len=*), intent(in) :: str
       character(len=len(str)) :: lower
+      integer, parameter :: upper_to_lower = ichar('a') - ichar('A')
       integer :: i, ichar_val
 
       do i = 1, len(str)
          ichar_val = ichar(str(i:i))
          if (ichar_val >= ichar('A') .and. ichar_val <= ichar('Z')) then
-            lower(i:i) = char(ichar_val + 32)
+            lower(i:i) = char(ichar_val + upper_to_lower)
          else
             lower(i:i) = str(i:i)
          end if
