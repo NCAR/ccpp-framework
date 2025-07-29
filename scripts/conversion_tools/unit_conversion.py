@@ -196,3 +196,11 @@ def V_A__to__W():
 def W__to__V_A():
     """Equivalent units"""
     return '{var}'
+
+def N_m_minus_2__to__Pa():
+    """Equivalent units"""
+    return '{var}'
+
+def Pa__to__N_m_minus_2():
+    """Equivalent units"""
+    return '{var}'
