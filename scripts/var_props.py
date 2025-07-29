@@ -1201,6 +1201,8 @@ class VarCompatObj:
         ('{var}+273.15{kind}', '{var}-273.15{kind}')
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('V A', 'W')
         (None, None)
+        >>> _DOCTEST_VCOMPAT._get_unit_convstrs('N m-2', 'Pa')
+        (None, None)
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('m2 s-2', 'J kg-1')
         (None, None)
         >>> _DOCTEST_VCOMPAT._get_unit_convstrs('m+2 s-2', 'J kg-1')
