@@ -31,7 +31,7 @@ def parse_standard_names(xml_text):
             std_names[std_id] = description
     return std_names
 
-def main(branch,metafiles,debug):
+def main(branch,xml,metafiles,debug):
 
     files = []
     if os.path.isfile(metafiles):
@@ -41,8 +41,15 @@ def main(branch,metafiles,debug):
     if not files:
         raise FileNotFoundError(f"Could not find any metadata files in {metafiles}")
     logger = setup_logging(debug)
-    print(f"Fetching XML from branch: {branch}")
-    xml_text = fetch_xml(branch)
+
+    if xml:
+        print(f"Using local XML: {xml}")
+        with open(xml, "r", encoding="utf-8") as f:
+            xml_text = f.read()
+    else:
+        print(f"Fetching XML from branch: {branch}")
+        xml_text = fetch_xml(branch)
+
     std_dict = parse_standard_names(xml_text)
 
     print(f"Retrieved {len(std_dict)} standard names from XML")
@@ -81,12 +88,20 @@ def main(branch,metafiles,debug):
         print(f"All standard names in {metafile} are valid!")
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch and parse standard_names.xml from ESMStandardNames GitHub, and output any metadata entries with standard_names not found in that dictionary.")
-    parser.add_argument("--branch", "-b", type=str, default="main",
+    parser.add_argument("--branch", "-b", type=str,
                         help="GitHub branch, tag, or hash to fetch from (default: main)")
+    parser.add_argument("--xml", "-x", type=str,
+                        help="Full path to xml file containing standard names (alternative to fetching from internet)")
     parser.add_argument("--metafiles", "-m", type=str, required=True,
                         help="Metadata file or directory containing metadata files to check for valid standard names")
     parser.add_argument('--debug', action='store_true', help='enable debugging output')
 
     args = parser.parse_args()
 
-    main(args.branch,args.metafiles,args.debug)
+    if args.branch and args.xml:
+        raise argparse.ArgumentError("Can not specify both --branch and --xml arguments")
+    if not (args.branch or args.xml):
+        #If neither specified, fall back to retrieving from main branch
+        args.branch="main"
+
+    main(args.branch,args.xml,args.metafiles,args.debug)
