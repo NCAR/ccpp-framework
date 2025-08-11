@@ -262,7 +262,7 @@ class Var:
     # All constituent props are optional so no check
 
     def __init__(self, prop_dict, source, run_env, context=None,
-                 clone_source=None):
+                 clone_source=None, skip_checks=False):
         """Initialize a new Var object.
         If <prop_dict> is really a Var object, use that object's prop_dict.
         If this Var object is a clone, record the original Var object
@@ -360,19 +360,21 @@ class Var:
 #            # end if
 #        # end for
 # XXgoldyXX: ^ don't fill in default properties?
-        # Make sure all the variable values are valid
-        try:
-            for prop_name, prop_val in self.var_properties():
-                prop = Var.get_prop(prop_name)
-                _ = prop.valid_value(prop_val,
-                                     prop_dict=self._prop_dict, error=True)
-            # end for
-        except CCPPError as cperr:
-            lname = self._prop_dict['local_name']
-            emsg = "{}: {}"
-            raise ParseSyntaxError(emsg.format(lname, cperr),
-                                   context=self.context) from cperr
-        # end try
+        # Make sure all the variable values are validi
+        if not skip_checks:
+            try:
+                for prop_name, prop_val in self.var_properties():
+                    prop = Var.get_prop(prop_name)
+                    _ = prop.valid_value(prop_val,
+                                         prop_dict=self._prop_dict, error=True)
+                # end for
+            except CCPPError as cperr:
+                lname = self._prop_dict['local_name']
+                emsg = "{}: {}"
+                raise ParseSyntaxError(emsg.format(lname, cperr),
+                                        context=self.context) from cperr
+            # end try
+        # end if
 
     def compatible(self, other, run_env, is_tend=False):
         """Return a VarCompatObj object which describes the equivalence,
@@ -1209,9 +1211,10 @@ class FortranVar(Var):
                 del prop_dict[prop.name]
             # end if
         # end for
-        # Initialize Var
+        # Initialize Var; skip the parse checkers on the Fortran side since the
+        #  checks are already done during metadata parsing
         super().__init__(prop_dict, source, run_env, context=context,
-                         clone_source=clone_source)
+                         clone_source=clone_source, skip_checks=True)
         # Now, restore the saved properties
         for prop in save_dict:
             self._prop_dict[prop] = save_dict[prop]
