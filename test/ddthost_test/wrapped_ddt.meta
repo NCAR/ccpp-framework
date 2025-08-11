@@ -1,0 +1,7 @@
+[ccpp-table-properties]
+  name = wrapped_ddt_t
+  type = ddt
+
+[ccpp-arg-table]
+  name  = wrapped_ddt_t
+  type  = ddt

@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 set(SCHEME_FILES       "setup_coeffs" "temp_set" "temp_adjust" "temp_calc_adjust")
 set(SUITE_SCHEME_FILES "make_ddt" "environ_conditions")
-set(HOST_FILES         "test_host_data" "test_host_mod" "host_ccpp_ddt")
+set(HOST_FILES         "test_host_data" "test_host_mod" "host_ccpp_ddt" "wrapped_ddt")
 set(SUITE_FILES        "ddt_suite.xml" "temp_suite.xml")
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
@@ -46,8 +46,18 @@ add_library(DDT_TESTLIB OBJECT ${SCHEME_FORTRAN_FILES}
                                ${CCPP_CAPS_LIST})
 
 # Setup test executable with needed dependencies
+#  Dependencies for this test are the test_utils directory and the external_module.F90 file
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules)
 add_executable(ddt_host_integration test_ddt_host_integration.F90 ${HOST}.F90)
-target_link_libraries(ddt_host_integration PRIVATE DDT_TESTLIB test_utils)
+add_library(external_module STATIC external_module.F90)
+set_target_properties(external_module PROPERTIES
+    Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules)
+target_compile_options(external_module PRIVATE "-J${CMAKE_BINARY_DIR}/fortran_modules")
+target_include_directories(external_module PRIVATE ${CMAKE_BINARY_DIR}/fortran_modules)
+target_link_libraries(ddt_host_integration PRIVATE DDT_TESTLIB test_utils external_module)
+target_include_directories(ddt_host_integration PRIVATE ${CMAKE_BINARY_DIR}/fortran_modules)
+target_link_libraries(DDT_TESTLIB PRIVATE external_module)
+target_include_directories(DDT_TESTLIB PRIVATE ${CMAKE_BINARY_DIR}/fortran_modules)
 target_include_directories(ddt_host_integration PRIVATE "$<TARGET_PROPERTY:test_utils,BINARY_DIR>")
 
 # Add executable to be called with ctest

@@ -360,7 +360,7 @@ class Var:
 #            # end if
 #        # end for
 # XXgoldyXX: ^ don't fill in default properties?
-        # Make sure all the variable values are validi
+        # Make sure all the variable values are valid
         if not skip_checks:
             try:
                 for prop_name, prop_val in self.var_properties():
@@ -1212,7 +1212,7 @@ class FortranVar(Var):
             # end if
         # end for
         # Initialize Var; skip the parse checkers on the Fortran side since the
-        #  checks are already done during metadata parsing
+        # checks are already done during metadata parsing
         super().__init__(prop_dict, source, run_env, context=context,
                          clone_source=clone_source, skip_checks=True)
         # Now, restore the saved properties

@@ -20,6 +20,12 @@
   type = real
   kind = kind_phys
   intent = in
+[ wrapped_ext_ddt ]
+  standard_name = wrapped_ddt_for_physics
+  units = none
+  dimensions = ()
+  type = wrapped_ddt_t
+  intent = out
 [ temp_prev ]
   standard_name = potential_temperature_at_previous_timestep
   units = K

@@ -17,11 +17,13 @@ contains
   !> \section arg_table_temp_adjust_run  Argument Table
   !! \htmlinclude arg_table_temp_adjust_run.html
   !!
-  subroutine temp_adjust_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
+  subroutine temp_adjust_run(foo, timestep, wrapped_ext_ddt, temp_prev, temp_layer, qv, ps,    &
        to_promote, promote_pcnst, errmsg, errflg, innie, outie, optsie)
+    use wrapped_ddt, only: wrapped_ddt_t
 
     integer,                   intent(in)    :: foo
     real(kind_phys),           intent(in)    :: timestep
+    type(wrapped_ddt_t),       intent(out)   :: wrapped_ext_ddt
     real(kind_phys),           intent(inout),optional :: qv(:)
     real(kind_phys),           intent(inout) :: ps(:)
     real(kind_phys),           intent(in)    :: temp_prev(:)
@@ -39,6 +41,8 @@ contains
 
     errmsg = ''
     errflg = 0
+
+    wrapped_ext_ddt%ext_ddt%var = 1
 
     do col_index = 1, foo
        temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)

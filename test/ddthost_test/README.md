@@ -3,6 +3,8 @@
 Contains tests to exercise more DDT functionality:
 - Passing around and modifying a DDT
 - Making DDT in host model & using it in CCPP-ized physics code
+- Providiing metadata for only the top-level DDT
+  - Ensures framework allows unknown DDT in Fortran as long as there's no metadata for it
 
 ## Building/Running
 
