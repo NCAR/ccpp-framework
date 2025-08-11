@@ -52,7 +52,6 @@ add_executable(ddt_host_integration test_ddt_host_integration.F90 ${HOST}.F90)
 add_library(external_module STATIC external_module.F90)
 set_target_properties(external_module PROPERTIES
     Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules)
-target_compile_options(external_module PRIVATE "-J${CMAKE_BINARY_DIR}/fortran_modules")
 target_include_directories(external_module PRIVATE ${CMAKE_BINARY_DIR}/fortran_modules)
 target_link_libraries(ddt_host_integration PRIVATE DDT_TESTLIB test_utils external_module)
 target_include_directories(ddt_host_integration PRIVATE ${CMAKE_BINARY_DIR}/fortran_modules)
