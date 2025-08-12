@@ -39,7 +39,7 @@ ccpp_capgen(CAPGEN_DEBUG ON
 ccpp_datafile(DATATABLE "${CCPP_CAP_FILES}/datatable.xml"
               REPORT_NAME "--ccpp-files")
 
-# Create dependenct libraries to mimic possibly pre-built external dependencies
+# Create dependent library to mimic possibly pre-built external dependencies
 add_library(external_module STATIC external_module.F90)
 
 # Create test host library
