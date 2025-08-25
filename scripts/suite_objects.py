@@ -2061,7 +2061,7 @@ class Subcycle(SuiteObject):
             # end if
             name = f"loop_{self._loop_extent}"[0:63]
             super().__init__(name, context, parent, run_env, active_call_list=True)
-            parent.add_call_list_variable(lvar)
+            parent.add_call_list_variable(lvar, exists_ok=True)
         # end try
         for item in sub_xml:
             new_item = new_suite_object(item, context, self, run_env)
