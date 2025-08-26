@@ -12,6 +12,7 @@
       <scheme>effr_post</scheme>
     </subcycle>
     <subcycle loop="num_subcycles_for_effr">
+      <scheme>effrs_calc</scheme>
     </subcycle>
     <scheme>effr_diag</scheme>
     <scheme>rad_lw</scheme>
