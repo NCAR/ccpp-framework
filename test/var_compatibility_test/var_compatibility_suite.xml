@@ -5,7 +5,9 @@
     <subcycle loop="num_subcycles_for_effr">
       <scheme>effr_pre</scheme>
       <subcycle loop="2">
-        <scheme>effr_calc</scheme>
+	<subcycle loop="2">
+           <scheme>effr_calc</scheme>
+	</subcycle>
       </subcycle>
       <scheme>effr_post</scheme>
     </subcycle>

@@ -8,7 +8,8 @@ Tests the variable compatibility object (`VarCompatObj`):
 - Also tests subcycles:
   - Nested subcycles
   - A subcycle with dynamic iteration length (defined by a standard name) and a subcycle with fixed/integer iteration length
-  - Subcycles with same standard name defining the iteration length
+  - Multiple ubcycles with same standard name defining the iteration length
+  - Nested subcycles with the same iteration length
 
 ## Building/Running
 

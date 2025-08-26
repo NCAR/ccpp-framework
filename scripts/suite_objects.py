@@ -52,12 +52,12 @@ _API_DUMMY_RUN_ENV = CCPPFrameworkEnv(_API_LOGGING,
                                              'suites':''})
 
 ###############################################################################
-def new_suite_object(item, context, parent, run_env):
+def new_suite_object(item, context, parent, run_env, loop_count=0):
 ###############################################################################
     "'Factory' method to create the appropriate suite object from XML"
     new_item = None
     if item.tag == 'subcycle':
-        new_item = Subcycle(item, context, parent, run_env)
+        new_item = Subcycle(item, context, parent, run_env, loop_count=loop_count)
     elif item.tag == 'scheme':
         new_item = Scheme(item, context, parent, run_env)
     elif item.tag == _API_TIMESPLIT_TAG:
@@ -2039,16 +2039,17 @@ class VerticalLoop(SuiteObject):
 class Subcycle(SuiteObject):
     """Class to represent a subcycled group of schemes or scheme collections"""
 
-    def __init__(self, sub_xml, context, parent, run_env):
+    def __init__(self, sub_xml, context, parent, run_env, loop_count=0):
         self._loop_extent = sub_xml.get('loop', "1") # Number of iterations
         self._loop = None
-        # See if our loop variable is an interger or a variable
+        # See if our loop variable is an integer or a variable
         try:
             _ = int(self._loop_extent)
             self._loop = self._loop_extent
             self._loop_var_int = True
-            name = f"loop{self._loop}"
+            name = f"loop{loop_count}"
             super().__init__(name, context, parent, run_env, active_call_list=False)
+            loop_count = loop_count + 1
         except ValueError:
             self._loop_var_int = False
             lvar = parent.find_variable(standard_name=self._loop_extent, any_scope=True)
@@ -2059,12 +2060,13 @@ class Subcycle(SuiteObject):
                 self._loop_var_int = False
                 self._loop = lvar.get_prop_value('local_name')
             # end if
-            name = f"loop_{self._loop_extent}"[0:63]
+            name = f"loop{loop_count}_{self._loop_extent}"[0:63]
             super().__init__(name, context, parent, run_env, active_call_list=True)
             parent.add_call_list_variable(lvar, exists_ok=True)
+            loop_count = loop_count + 1
         # end try
         for item in sub_xml:
-            new_item = new_suite_object(item, context, self, run_env)
+            new_item = new_suite_object(item, context, self, run_env, loop_count=loop_count)
             self.add_part(new_item)
         # end for
 
