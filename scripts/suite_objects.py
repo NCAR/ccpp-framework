@@ -1753,7 +1753,7 @@ class Scheme(SuiteObject):
             self.run_env.logger.info(lmsg.format(compat_obj.v2_units,
                                                  compat_obj.v1_units,
                                                  compat_obj.v2_stdname,
-                                                 compat_obj.v1_stdname))
+                                                 self.__subroutine_name))
             self.__reverse_transforms.append([local_trans_var.get_prop_value('local_name'),
                                               var.get_prop_value('local_name'),
                                               var.get_prop_value('standard_name'),
@@ -1765,7 +1765,7 @@ class Scheme(SuiteObject):
             self.run_env.logger.info(lmsg.format(compat_obj.v1_units,
                                                  compat_obj.v2_units,
                                                  compat_obj.v1_stdname,
-                                                 compat_obj.v2_stdname))
+                                                 self.__subroutine_name))
             self.__forward_transforms.append([var.get_prop_value('local_name'),
                                               var.get_prop_value('standard_name'),
                                               local_trans_var.get_prop_value('local_name'),
