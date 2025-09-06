@@ -319,6 +319,7 @@ character(len=16) :: {css_var_name} = '{state}'
                     # at the init stage (for allocation)
                     for group in self.groups:
                         # only add dimension variables to init phase calling list
+                        #  if they're not module-level "suite" variables
                         if group.name == self.__suite_init_group.name:
                             dims = var.get_dimensions()
                             # replace horizontal loop dimension if necessary
@@ -337,6 +338,7 @@ character(len=16) :: {css_var_name} = '{state}'
                                            self.__run_env)
                             # Add dimensions if they're not already there
                             group.add_variable_dimensions(temp_var, [],
+                                                          _API_SUITE_VAR_NAME,
                                                           adjust_intent=True,
                                                           to_dict=group.call_list)
                         # end if

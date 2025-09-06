@@ -1739,8 +1739,8 @@ class VarDictionary(OrderedDict):
             del self[standard_name]
         # end if
 
-    def add_variable_dimensions(self, var, ignore_sources, to_dict=None,
-                                adjust_intent=False):
+    def add_variable_dimensions(self, var, ignore_sources, suite_type,
+                                to_dict=None, adjust_intent=False):
         """Attempt to find a source for each dimension in <var> and add that
         Variable to this dictionary or to <to_dict>, if passed.
         Dimension variables which are found but whose Source is in
@@ -1763,6 +1763,11 @@ class VarDictionary(OrderedDict):
             # end if
             if not present:
                 dvar = self.find_variable(standard_name=dimname, any_scope=True)
+                if dvar and dvar.source.ptype == suite_type:
+                    # Do nothing - this is a module-level variable so we don't
+                    # need to add it to any dictionaries
+                    return
+                # end if
                 if dvar and (dvar.source.ptype not in ignore_sources):
                     if to_dict:
                         to_dict.add_variable(dvar, self.__run_env,
