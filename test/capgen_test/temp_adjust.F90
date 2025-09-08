@@ -22,12 +22,10 @@ CONTAINS
   !!
   subroutine temp_adjust_register(config_var, errmsg, errflg)
       logical, intent(in) :: config_var
-      !integer, intent(out) :: dim_inter
       character(len=512),        intent(out)   :: errmsg
       integer,                   intent(out)   :: errflg
 
       module_level_config = config_var
-      !dim_inter = 3
       errflg = 0
       errmsg = ''
 
