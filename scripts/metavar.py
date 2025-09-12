@@ -1745,6 +1745,9 @@ class VarDictionary(OrderedDict):
         Variable to this dictionary or to <to_dict>, if passed.
         Dimension variables which are found but whose Source is in
         <ignore_sources> are not added to this dictionary.
+        Dimension variabes which are found at the suite level (determined
+        by <suite_type>) are also not added to this dictionary because
+        module-level suite variables are accessible by any phase.
         Return an error string on failure."""
 
         err_ret = ''
