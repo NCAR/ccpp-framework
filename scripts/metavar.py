@@ -262,7 +262,7 @@ class Var:
     # All constituent props are optional so no check
 
     def __init__(self, prop_dict, source, run_env, context=None,
-                 clone_source=None):
+                 clone_source=None, fortran_imports=None):
         """Initialize a new Var object.
         If <prop_dict> is really a Var object, use that object's prop_dict.
         If this Var object is a clone, record the original Var object
@@ -349,17 +349,6 @@ class Var:
         # end for
         # Steal dict from caller
         self._prop_dict = prop_dict
-# XXgoldyXX: v don't fill in default properties?
-#        # Fill in default values for missing properties
-#        for propname in mstr_propdict:
-#            if (propname not in prop_dict) and mstr_propdict[propname].optional:
-#                mval = mstr_propdict[propname]
-#                def_val = mval.get_default_val(self._prop_dict,
-#                                               context=self.context)
-#                self._prop_dict[propname] = def_val
-#            # end if
-#        # end for
-# XXgoldyXX: ^ don't fill in default properties?
         # Make sure all the variable values are valid
         try:
             for prop_name, prop_val in self.var_properties():
@@ -368,10 +357,14 @@ class Var:
                                      prop_dict=self._prop_dict, error=True)
             # end for
         except CCPPError as cperr:
-            lname = self._prop_dict['local_name']
-            emsg = "{}: {}"
-            raise ParseSyntaxError(emsg.format(lname, cperr),
-                                   context=self.context) from cperr
+            # Raise this error unless it represents an imported DDT type
+            if ((not fortran_imports) or (prop_name != 'type') or
+                (prop_val not in fortran_imports)):
+                lname = self._prop_dict['local_name']
+                emsg = "{}: {}"
+                raise ParseSyntaxError(emsg.format(lname, cperr),
+                                       context=self.context) from cperr
+            # end if
         # end try
 
     def compatible(self, other, run_env, is_tend=False):
@@ -1197,7 +1190,7 @@ class FortranVar(Var):
                                         optional_in=True, default_in=False)]
 
     def __init__(self, prop_dict, source, run_env, context=None,
-                 clone_source=None):
+                 clone_source=None, fortran_imports=None):
         """Initialize a FortranVar object.
         """
 
@@ -1211,7 +1204,8 @@ class FortranVar(Var):
         # end for
         # Initialize Var
         super().__init__(prop_dict, source, run_env, context=context,
-                         clone_source=clone_source)
+                         clone_source=clone_source,
+                         fortran_imports=fortran_imports)
         # Now, restore the saved properties
         for prop in save_dict:
             self._prop_dict[prop] = save_dict[prop]
