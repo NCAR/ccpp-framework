@@ -37,6 +37,7 @@ _CCPP_FILES = _UTILITY_FILES + \
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_ddt_suite_cap.F90"),
                os.path.join(_BUILD_DIR, "ccpp", "ccpp_temp_suite_cap.F90")]
 _DEPENDENCIES = [os.path.join(_TEST_DIR, "adjust", "qux.F90"),
+                 os.path.join(_TEST_DIR, "ddt2"),
                  os.path.join(_TEST_DIR, "bar.F90"),
                  os.path.join(_TEST_DIR, "foo.F90")]
 _PROCESS_LIST = ["setter=temp_set", "adjusting=temp_calc_adjust"]
