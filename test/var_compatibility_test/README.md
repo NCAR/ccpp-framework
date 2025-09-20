@@ -5,6 +5,11 @@ Tests the variable compatibility object (`VarCompatObj`):
 - Vertical array flipping (`top_at_one=true`)
 - Kind conversions (`kind_phys <-> 8`)
 - And various combinations thereof of the above cases
+- Also tests subcycles:
+  - Nested subcycles
+  - A subcycle with dynamic iteration length (defined by a standard name) and a subcycle with fixed/integer iteration length
+  - Multiple subcycles with same standard name defining the iteration length
+  - Nested subcycles with the same iteration length
 
 ## Building/Running
 
