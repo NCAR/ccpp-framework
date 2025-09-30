@@ -47,8 +47,8 @@ function(ccpp_capgen)
     list(APPEND CCPP_CAPGEN_CMD_LIST "--output-root" "${arg_OUTPUT_ROOT}")
   endif()
   if(DEFINED arg_VERBOSITY)
-    string(REPEAT "--verbose" ${arg_VERBOSITY} VERBOSE_PARAMS_SEPERATED)
-    separate_arguments(VERBOSE_PARAMS UNIX_COMMAND "${VERBOSE_PARAMS_SEPERATED}")
+    string(REPEAT "--verbose " ${arg_VERBOSITY} VERBOSE_PARAMS_SEPARATED)
+    separate_arguments(VERBOSE_PARAMS UNIX_COMMAND "${VERBOSE_PARAMS_SEPARATED}")
     list(APPEND CCPP_CAPGEN_CMD_LIST ${VERBOSE_PARAMS})
   endif()
 
@@ -126,4 +126,3 @@ function(ccpp_datafile)
   string(REPLACE "," ";" CCPP_CAPS_LIST ${CCPP_CAPS}) # Convert "," separated list from python back to ";" separated list for CMake.
   set(CCPP_CAPS_LIST "${CCPP_CAPS_LIST}" PARENT_SCOPE)
 endfunction()
-

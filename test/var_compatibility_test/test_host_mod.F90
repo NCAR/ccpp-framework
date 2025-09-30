@@ -50,7 +50,7 @@ contains
     real(kind_phys), parameter :: effrr_expected = 1.0E-3 ! 1000 microns, in meter
     real(kind_phys), parameter :: effrl_expected = 5.0E-5 ! 50 microns, in meter
     real(kind_phys), parameter :: effri_expected = 7.5E-5 ! 75 microns, in meter
-    real(kind_phys), parameter :: effrs_expected = 5.1E-4 ! 510 microns, in meter
+    real(kind_phys), parameter :: effrs_expected = 5.3E-4 ! 530 microns, in meter
     real(kind_phys), parameter :: scalar_expected = 2.0E3 ! 2 km, in meter
     real(kind_phys), parameter :: tke_expected = 10.0     ! 10 J kg-1
     real(kind_phys), parameter :: tolerance = 1.0E-6      ! used as scaling factor for expected value

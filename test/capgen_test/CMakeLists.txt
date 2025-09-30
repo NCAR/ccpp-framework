@@ -18,9 +18,26 @@ set(HOST "test_host")
 set(CCPP_CAP_FILES "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 
 # Create lists for Fortran and meta data files from file names
-list(TRANSFORM SCHEME_FILES       APPEND ".F90"  OUTPUT_VARIABLE SCHEME_FORTRAN_FILES)
+# Fortran files are not all in one directory
+set(SCHEME_FORTRAN_FILES "")
+foreach(sfile ${SCHEME_FILES})
+  find_file(fort_file "${sfile}.F90" NO_CACHE
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}/source_dir1
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}/source_dir2)
+  list(APPEND SCHEME_FORTRAN_FILES ${fort_file})
+  unset(fort_file)
+endforeach()
 list(TRANSFORM SCHEME_FILES       APPEND ".meta" OUTPUT_VARIABLE SCHEME_META_FILES)
-list(TRANSFORM SUITE_SCHEME_FILES APPEND ".F90"  OUTPUT_VARIABLE SUITE_SCHEME_FORTRAN_FILES)
+set(SUITE_SCHEME_FORTRAN_FILES "")
+foreach(sfile ${SUITE_SCHEME_FILES})
+  find_file(fort_file "${sfile}.F90" NO_CACHE
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}/source_dir1
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}/source_dir2)
+  list(APPEND SUITE_SCHEME_FORTRAN_FILES ${fort_file})
+  unset(fort_file)
+endforeach()
 list(TRANSFORM SUITE_SCHEME_FILES APPEND ".meta" OUTPUT_VARIABLE SUITE_SCHEME_META_FILES)
 list(TRANSFORM HOST_FILES         APPEND ".F90"  OUTPUT_VARIABLE CAPGEN_HOST_FORTRAN_FILES)
 list(TRANSFORM HOST_FILES         APPEND ".meta" OUTPUT_VARIABLE CAPGEN_HOST_METADATA_FILES)
