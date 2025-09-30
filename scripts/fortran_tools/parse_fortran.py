@@ -842,8 +842,6 @@ class UseStatement(object):
     'foo'
     >>> UseStatement("use foo!, only: bar, baz").imports
 
-    >>> UseStatement("use foo!, only: bar, baz").valid
-    False
     """
 
     __modmatch = r"use\s*("+_FORTRAN_ID+r")\s*"
