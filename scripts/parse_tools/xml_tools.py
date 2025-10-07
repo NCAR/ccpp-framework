@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+import xml.dom.minidom
 sys.path.insert(0, os.path.dirname(__file__))
 # CCPP framework imports
 from parse_source import CCPPError
@@ -212,6 +213,7 @@ def validate_xml_file(filename, schema_root, version, logger,
         logger.debug("Checking file {} against schema {}".format(filename,
                                                                  schema_file))
         cmd = [_XMLLINT, '--noout', '--schema', schema_file, filename]
+        logger.debug(f"Executing command '{cmd}'")
         result = call_command(cmd, logger)
         return result
     # end if
@@ -247,96 +249,161 @@ def read_xml_file(filename, logger=None):
     return tree, root
 
 ###############################################################################
+def load_suite_by_name(suite_name, group_name, main_root, file=None, logger=None):
+###############################################################################
+    """Load a suite by its name, or a group of a suite by the suite
+    and group names. If the optional file argument is provided, look
+    for the object in that file, otherwise search the current main_root.""" 
+    if file:
+        _, root = read_xml_file(file, logger)
+        schema_version = find_schema_version(root)
+        if schema_version[0] < 2:
+            raise CCPPError(f"XML schema version {schema_version} " + \
+                            f"invalid for nested suite {suite_name}")
+        res = validate_xml_file(file, 'suite', schema_version, logger)
+        if not res:
+            raise CCPPError(f"Invalid suite definition file, '{sdf}'")
+    else:
+        root = main_root
+    for suite in root.findall("suite"):
+        print("ABC: {suite.attrib.get('name')}")
+        if suite.attrib.get("name") == suite_name:
+            if group_name:
+                for group in suite.findall("group"):
+                    if group.attrib.get("name") == group_name:
+                        return group
+            else:
+                return suite
+    emsg = f"Nested suite {suite_name}" + (f", group {group_name}," if group_name else "") \
+         + " not found" + (f" in file {file}" if file else "")
+    raise CCPPError(emsg)
 
-class PrettyElementTree(ET.ElementTree):
-    """An ElementTree subclass with nice formatting when writing to a file"""
+###############################################################################
+def expand_nested_suites(root, logger=None):
+###############################################################################
+    """Iterate over the root element until all nested suites (single, double,
+    triple, ...) are replaced with the actual content of the nested suite."""
+    # Keep track of any nested suites defined under the same root
+    # that need to be removed at the end of this function.
+    # This happens all in memory, it does not alter files on disk.
+    expanded_suites_to_remove = list()
+    # Iteratively expand nested suites until they are all gone
+    keep_expanding = True
+    while keep_expanding:
+        keep_expanding = False
+        for suite in root.findall("suite"):
+            # First, search all groups for nested_suite elements
+            groups = suite.findall("group")
+            for group in groups:
+                nested_suites = group.findall("nested_suite")
+                for nested in nested_suites:
+                    suite_name = nested.attrib.get("name")
+                    group_name = nested.attrib.get("group")
+                    file = nested.attrib.get("file")
+                    # This check is redundant, because the XML schema ensures
+                    # that nested_suite elements inside a group have a group name
+                    if not group_name:
+                        CCPPError(f"Required attribute group not found for nested suite {suite_name}")
+                    referenced_suite = load_suite_by_name(suite_name, group_name, root,
+                                                          file=file, logger=logger)
+                    # Deep copy to avoid modifying the original
+                    imported_content = [ET.fromstring(ET.tostring(child)) for child in referenced_suite]
+                    # Swap nested suite with imported content
+                    for item in imported_content:
+                        # If the imported content comes from a separate file and has
+                        # nested suites that are within that separate file, then we
+                        # need to inject the file attribute here.
+                        if item.tag == "nested_suite":
+                            if file and not item.attrib.get("file"):
+                                item.set("file", file)
+                        group.insert(list(group).index(nested), item)
+                    group.remove(nested)
+                    # Need another pass over the root element
+                    keep_expanding = True
+                    # If the nested suite resides in the same file, remove it
+                    if not file:
+                        expanded_suites_to_remove.append(suite_name)
+                    if logger:
+                        msg = f"Expanded nested suite '{suite_name}', group '{group_name}'"
+                        if file:
+                            msg += f", in file '{file}'"
+                        logger.debug(msg)
+            # Second, search all suites for nested_suite elements
+            nested_suites = suite.findall("nested_suite")
+            for nested in nested_suites:
+                suite_name = nested.attrib.get("name")
+                group_name = nested.attrib.get("group")
+                # This check is redundant, because the XML schema ensures
+                # that nested_suite elements at the suite level have no group name
+                if group_name:
+                    CCPPError("Nested suite {suite_name} cannot have attribute group")
+                file = nested.attrib.get("file")
+                referenced_suite = load_suite_by_name(suite_name, group_name, root,
+                                                      file=file, logger=logger)
+                # Deep copy to avoid modifying the original
+                imported_content = [ET.fromstring(ET.tostring(child)) for child in referenced_suite]
+                # Swap nested suite with imported content
+                for item in imported_content:
+                    # If the imported content comes from a separate file and has
+                    # nested suites that are within that separate file, then we
+                    # need to inject the file attribute here.
+                    if item.tag == "nested_suite":
+                        if file and not item.attrib.get("file"):
+                            item.set("file", file)
+                    suite.insert(list(suite).index(nested), item)
+                suite.remove(nested)
+                # Need another pass over the root element
+                keep_expanding = True
+                # If the nested suite resides in the same file, remove it
+                if not file:
+                    expanded_suites_to_remove.append(suite_name)
+                if logger:
+                    msg = f"Expanded nested suite '{suite_name}'"
+                    if file:
+                        msg += f" in file '{file}'"
+                    logger.debug(msg)
 
-    def __init__(self, element=None, file=None):
-        """Initialize a PrettyElementTree object"""
-        super().__init__(element, file)
+    # Remove expanded suites
+    for suite in root.findall("suite"):
+        suite_name = suite.attrib["name"]
+        if suite_name in expanded_suites_to_remove:
+            root.remove(suite)
+            if logger:
+                msg = f"Removed nested suite '{suite_name}' from root element"
+                logger.debug(msg)
 
-    def _write(self, outfile, line, indent, eol=os.linesep):
-        """Write <line> as an ASCII string to <outfile>"""
-        outfile.write('{}{}{}'.format(_INDENT_STR*indent, line, eol))
+###############################################################################
+def write_xml_file(root, file_path, logger=None):
+###############################################################################
+    """Pretty-prints an ElementTree to an ASCII file using xml.dom.minidom"""
 
-    @staticmethod
-    def _inc_pos(outstr, text, txt_beg):
-        """Return a position increment based on the length of <outstr>
-        or raise an exception if <outstr> is empty.
-        <text> and <txt_beg> are used to provide some context for the error."""
-        if outstr:
-            return len(outstr)
-        # end if
-        txt_end = text[txt_beg].find(">") + txt_beg + 1
-        if txt_end <= txt_beg:
-            txt_end = txt_beg + 256
-        # end if
-        emsg = "No output at {} of {}\n{}".format(txt_beg, len(text),
-                                                  text[txt_beg:txt_end])
-        raise XMLToolsInternalError(emsg)
+    def remove_whitespace_nodes(node):
+        """Helper function to recursively remove all text nodes that contain
+        only whitespace, which eliminates blank lines in the output."""
+        for child in list(node.childNodes):
+            if child.nodeType == child.TEXT_NODE and not child.data.strip():
+                node.removeChild(child)
+            elif child.hasChildNodes():
+                remove_whitespace_nodes(child)
 
-    def write(self, file, encoding="us-ascii", xml_declaration=None,
-              default_namespace=None, method="xml",
-              short_empty_elements=True):
-        """Subclassed write method to format output."""
-        et_str = ET.tostring(self.getroot(),
-                             encoding=encoding, method=method,
-                             xml_declaration=xml_declaration,
-                             default_namespace=default_namespace,
-                             short_empty_elements=short_empty_elements)
-        # end if
-        fmode = 'wt'
-        root = str(et_str, encoding="utf-8")
-        indent = 0
-        last_write_text = False
-        with open(file, fmode) as outfile:
-            inline = root.strip()
-            istart = 0 # Current start pos
-            iend = len(inline)
-            while istart < iend:
-                bmatch = beg_tag_re.match(inline[istart:])
-                ematch = end_tag_re.match(inline[istart:])
-                smatch = simple_tag_re.match(inline[istart:])
-                if bmatch is not None:
-                    outstr = bmatch.group(1)
-                    if inline[istart + len(bmatch.group(1))] != '<':
-                        # Print text on same line
-                        self._write(outfile, outstr, indent, eol='')
-                    else:
-                        self._write(outfile, outstr, indent)
-                    # end if
-                    indent += 1
-                    istart += self._inc_pos(outstr, inline, istart)
-                    last_write_text = False
-                elif ematch is not None:
-                    outstr = ematch.group(1)
-                    indent -= 1
-                    if last_write_text:
-                        self._write(outfile, outstr, 0)
-                        last_write_text = False
-                    else:
-                        self._write(outfile, outstr, indent)
-                    # end if
-                    istart += self._inc_pos(outstr, inline, istart)
-                elif smatch is not None:
-                    outstr = smatch.group(1)
-                    self._write(outfile, outstr, indent)
-                    istart += self._inc_pos(outstr, inline, istart)
-                    last_write_text = False
-                else:
-                    # No tag, just output text
-                    end_index = inline[istart:].find('<')
-                    if end_index < 0:
-                        end_index = iend
-                    else:
-                        end_index += istart
-                    # end if
-                    outstr = inline[istart:end_index]
-                    self._write(outfile, outstr.strip(), 0, eol='')
-                    last_write_text = True
-                    istart += self._inc_pos(outstr, inline, istart)
-                # end if
-            # end while
-        # end with
+    # Convert ElementTree to a byte string
+    byte_string = ET.tostring(root, 'us-ascii')
+    
+    # Parse string using minidom for pretty printing
+    reparsed = xml.dom.minidom.parseString(byte_string)
+
+    # Clean whitespace-only text nodes
+    remove_whitespace_nodes(reparsed)
+
+    # Generate pretty-printed XML string
+    pretty_xml = reparsed.toprettyxml(indent="  ")
+
+    # Write to file
+    with open(file_path, 'w', errors='xmlcharrefreplace') as f:
+        f.write(pretty_xml)
+
+    # Tell everyone!
+    if logger:
+        logger.debug(f"Wrote {root} to {file_path}")
 
 ##############################################################################

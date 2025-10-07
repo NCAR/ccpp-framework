@@ -19,7 +19,8 @@ from framework_env import CCPPFrameworkEnv
 from metavar import Var, VarDictionary, ccpp_standard_var
 from parse_tools import ParseContext, ParseSource
 from parse_tools import ParseInternalError, CCPPError
-from parse_tools import read_xml_file, validate_xml_file, find_schema_version
+from parse_tools import read_xml_file, validate_xml_file, write_xml_file
+from parse_tools import find_schema_version, expand_nested_suites
 from parse_tools import init_log, set_log_to_null
 from suite_objects import CallList, Group, Scheme
 from metavar import CCPP_LOOP_VAR_STDNAMES
@@ -82,7 +83,7 @@ character(len=16) :: {css_var_name} = '{state}'
 
     __scheme_template = '<scheme>{}</scheme>'
 
-    def __init__(self, filename, api, run_env):
+    def __init__(self, filename, suite_xml, api, run_env):
         """Initialize this Suite object from the SDF, <filename>.
         <api> serves as the Suite's parent."""
         self.__run_env = run_env
@@ -114,7 +115,7 @@ character(len=16) :: {css_var_name} = '{state}'
             raise CCPPError(emsg.format(self.__sdf_name))
         # end if
         # Parse the SDF
-        self.parse(run_env)
+        self.parse(suite_xml, run_env)
 
     @property
     def name(self):
@@ -186,21 +187,11 @@ character(len=16) :: {css_var_name} = '{state}'
         group_xml = '<group name="{}"></group>'.format(group_name)
         return self.new_group(group_xml, group_name, run_env)
 
-    def parse(self, run_env):
+    def parse(self, suite_xml, run_env):
         """Parse the suite definition file."""
         success = True
-
-        _, suite_xml = read_xml_file(self.__sdf_name, run_env.logger)
         # We do not have line number information for the XML file
         self.__context = ParseContext(filename=self.__sdf_name)
-        # Validate the XML file
-        version = find_schema_version(suite_xml)
-        res = validate_xml_file(self.__sdf_name, 'suite', version,
-                                run_env.logger)
-        if not res:
-            emsg = "Invalid suite definition file, '{}'"
-            raise CCPPError(emsg.format(self.__sdf_name))
-        # end if
         self.__name = suite_xml.get('name')
         self.__module = 'ccpp_{}_cap'.format(self.name)
         lmsg = "Reading suite definition file for '{}'"
@@ -679,13 +670,47 @@ class API(VarDictionary):
                 raise CCPPError(errmsg.format(header.title))
             # end if
         # end for
+
         # Turn the SDF files into Suites
         for sdf in sdfs:
-            suite = Suite(sdf, self, run_env)
-            suite.analyze(self.host_model, scheme_library,
-                          self.__ddt_lib, run_env)
-            self.__suites.append(suite)
+            # Load the suite definition file to determine the schema version,
+            # validate the file, and expand nested suites if applicable
+            _, xml_root = read_xml_file(sdf, run_env.logger)
+            # We do not have line number information for the XML file
+            self.__context = ParseContext(filename=sdf)
+            # Validate the XML file
+            schema_version = find_schema_version(xml_root)
+            res = validate_xml_file(sdf, 'suite', schema_version, run_env.logger)
+            if not res:
+                raise CCPPError(f"Invalid suite definition file, '{sdf}'")
+
+            # Processing the sdf depends on the schema version
+            if xml_root.tag.lower() == "suite" and schema_version[0] == 1:
+                suite = Suite(sdf, xml_root, self, run_env)
+                suite.analyze(self.host_model, scheme_library,
+                              self.__ddt_lib, run_env)
+                self.__suites.append(suite)
+            elif xml_root.tag.lower() == "suites" and schema_version[0] == 2:
+                # Preprocess the sdf to expand nested suites
+                expand_nested_suites(xml_root, logger=run_env.logger)
+                # Write the expanded sdf to the capgen output directory;
+                # this file isn't used by capgen (everything is in memory
+                # from here onwards), but it is useful for developers/users
+                sdf_expanded = os.path.join(run_env.output_dir,
+                    os.path.split(sdf)[1].replace(".xml", "_expanded.xml"))
+                write_xml_file(xml_root, sdf_expanded, run_env.logger)
+                for suite_item in xml_root:
+                    suite = Suite(sdf, suite_item, self, run_env)
+                    suite.analyze(self.host_model, scheme_library,
+                                  self.__ddt_lib, run_env)
+                    self.__suites.append(suite)
+            else:
+                errmsg = f"Suite XML schema not supported: " + \
+                    "root={xml_root.tag}, version={schema_version}"
+                raise CCPPError(errmsg)
+            # end if
         # end for
+
         # We will need the correct names for errmsg and errcode
         evar = self.host_model.find_variable(standard_name='ccpp_error_message')
         if evar is not None:
