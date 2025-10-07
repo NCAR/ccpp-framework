@@ -406,7 +406,6 @@ def replace_nested_suite(element, nested_suite, root, logger):
     file = nested_suite.attrib.get("file")
     referenced_suite = load_suite_by_name(suite_name, group_name, root,
                                           file=file, logger=logger)
-    # Deep copy to avoid modifying the original
     imported_content = [ET.fromstring(ET.tostring(child)) 
                         for child in referenced_suite]
     # Swap nested suite with imported content
@@ -435,9 +434,8 @@ def expand_nested_suites(root, logger=None):
     Recursively expand all <nested_suite> elements within the XML <suite> elements.
 
     This function finds <nested_suite> elements within <group> or <suite> elements,
-    and replaces them with the corresponding content from another suite. The replacement
-    is done in memory using the `replace_nested_suite` function (defined elsewhere).
-    Nested suites from the same XML root are removed after expansion.
+    and replaces them with the corresponding content from another suite. Nested
+    suites from the same XML root are removed after expansion.
 
     This operation is recursive and will continue expanding until no <nested_suite>
     elements remain.
@@ -531,7 +529,7 @@ def expand_nested_suites(root, logger=None):
 ###############################################################################
 def write_xml_file(root, file_path, logger=None):
 ###############################################################################
-    """Pretty-prints an ElementTree to an ASCII file using xml.dom.minidom"""
+    """Pretty-prints element root to an ASCII file using xml.dom.minidom"""
 
     def remove_whitespace_nodes(node):
         """Helper function to recursively remove all text nodes that contain

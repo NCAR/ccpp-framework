@@ -680,7 +680,7 @@ class API(VarDictionary):
             if not res:
                 raise CCPPError(f"Invalid suite definition file, '{sdf}'")
 
-            # Processing the sdf depends on the schema version
+            # Processing of the sdf depends on the schema version
             if xml_root.tag.lower() == "suite" and schema_version[0] == 1:
                 suite = Suite(sdf, xml_root, self, run_env)
                 suite.analyze(self.host_model, scheme_library,
@@ -692,6 +692,7 @@ class API(VarDictionary):
                 # Write the expanded sdf to the capgen output directory;
                 # this file isn't used by capgen (everything is in memory
                 # from here onwards), but it is useful for developers/users
+                # (although the output can also be found in the datatable).
                 sdf_expanded = os.path.join(run_env.output_dir,
                     os.path.split(sdf)[1].replace(".xml", "_expanded.xml"))
                 write_xml_file(xml_root, sdf_expanded, run_env.logger)
