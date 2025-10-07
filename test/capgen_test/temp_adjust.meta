@@ -44,6 +44,12 @@
   type = real
   kind = kind_phys
   intent = in
+[ interstitial_var ]
+  standard_name = output_only_interstitial_variable
+  units = 1
+  dimensions = (dimension_for_interstitial_variable)
+  type = integer
+  intent = out
 [ temp_prev ]
   standard_name = potential_temperature_at_previous_timestep
   units = K
@@ -126,6 +132,12 @@
 [ccpp-arg-table]
   name = temp_adjust_finalize
   type = scheme
+[ interstitial_var ]
+  standard_name = output_only_interstitial_variable
+  units = 1
+  dimensions = (dimension_for_interstitial_variable)
+  type = integer
+  intent = in
 [ errmsg ]
   standard_name = ccpp_error_message
   long_name = Error message for error handling in CCPP

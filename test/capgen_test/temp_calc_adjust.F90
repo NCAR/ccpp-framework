@@ -8,12 +8,25 @@ MODULE temp_calc_adjust
    IMPLICIT NONE
    PRIVATE
 
+   PUBLIC :: temp_calc_adjust_register
    PUBLIC :: temp_calc_adjust_init
    PUBLIC :: temp_calc_adjust_run
    PUBLIC :: temp_calc_adjust_finalize
 
 CONTAINS
 
+   !> \section arg_table_temp_calc_adjust_register  Argument Table
+   !! \htmlinclude arg_table_temp_calc_adjust_register.html
+   !!
+   SUBROUTINE temp_calc_adjust_register(dim_inter, errmsg, errflg)
+       integer, intent(out) :: dim_inter
+       character(len=512), intent(out) :: errmsg
+       integer, intent(out) :: errflg
+
+       errflg = 0
+       errmsg = ''
+       dim_inter = 3
+   END SUBROUTINE temp_calc_adjust_register
    !> \section arg_table_temp_calc_adjust_run  Argument Table
    !! \htmlinclude arg_table_temp_calc_adjust_run.html
    !!
