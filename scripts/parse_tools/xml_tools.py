@@ -213,7 +213,6 @@ def validate_xml_file(filename, schema_root, version, logger,
         logger.debug("Checking file {} against schema {}".format(filename,
                                                                  schema_file))
         cmd = [_XMLLINT, '--noout', '--schema', schema_file, filename]
-        logger.debug(f"Executing command '{cmd}'")
         result = call_command(cmd, logger)
         return result
     # end if
@@ -244,16 +243,62 @@ def read_xml_file(filename, logger=None):
         raise CCPPError(emsg.format(filename))
     # end if
     if logger:
-        logger.debug("Read XML file, '{}'".format(filename))
+        logger.debug(f"Reading XML file {filename}")
     # end if
     return tree, root
 
 ###############################################################################
 def load_suite_by_name(suite_name, group_name, main_root, file=None, logger=None):
 ###############################################################################
-    """Load a suite by its name, or a group of a suite by the suite
-    and group names. If the optional file argument is provided, look
-    for the object in that file, otherwise search the current main_root.""" 
+    """
+    Load a suite by its name, or a group of a suite by the suite and group names.
+    If the optional file argument is provided, look for the object in that file,
+    otherwise search the current main_root.
+
+    Parameters:
+        suite_name (str): The name of the suite to find.
+        group_name (str or None): The name of the group to find within the suite.
+        main_root (xml.etree.ElementTree.Element): The XML root to search if no file is given.
+        file (str, optional): The path to an XML file to read and search instead of main_root.
+        logger (logging.Logger, optional): Logger for warnings/errors.
+
+    Returns:
+        xml.etree.ElementTree.Element: The matching suite or group element.
+
+    Raises:
+        CCPPError: If the suite or group is not found, or if the schema is invalid.
+
+    Examples:
+        >>> import xml.etree.ElementTree as ET
+        >>> from types import SimpleNamespace
+        >>> def read_xml_file(file, logger=None):
+        ...     return None, ET.fromstring(file)
+        >>> def find_schema_version(root):
+        ...     return (2, 0)
+        >>> def validate_xml_file(file, kind, schema_version, logger=None):
+        ...     return True
+        >>> xml_content = '''
+        ... <ccpp>
+        ...   <suite name="physics_suite">
+        ...     <group name="dynamics"/>
+        ...     <group name="physics"/>
+        ...   </suite>
+        ... </ccpp>
+        ... '''
+        >>> root = ET.fromstring(xml_content)
+        >>> load_suite_by_name("physics_suite", None, root).tag
+        'suite'
+        >>> load_suite_by_name("physics_suite", "dynamics", root).attrib['name']
+        'dynamics'
+        >>> load_suite_by_name("physics_suite", "missing_group", root) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ...
+        CCPPError: Nested suite physics_suite, group missing_group, not found
+        >>> load_suite_by_name("missing_suite", None, root) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ...
+        CCPPError: Nested suite missing_suite not found
+    """
     if file:
         _, root = read_xml_file(file, logger)
         schema_version = find_schema_version(root)
@@ -266,7 +311,6 @@ def load_suite_by_name(suite_name, group_name, main_root, file=None, logger=None
     else:
         root = main_root
     for suite in root.findall("suite"):
-        print("ABC: {suite.attrib.get('name')}")
         if suite.attrib.get("name") == suite_name:
             if group_name:
                 for group in suite.findall("group"):
@@ -274,15 +318,179 @@ def load_suite_by_name(suite_name, group_name, main_root, file=None, logger=None
                         return group
             else:
                 return suite
-    emsg = f"Nested suite {suite_name}" + (f", group {group_name}," if group_name else "") \
+    emsg = f"Nested suite {suite_name}" \
+         + (f", group {group_name}," if group_name else "") \
          + " not found" + (f" in file {file}" if file else "")
     raise CCPPError(emsg)
 
 ###############################################################################
+def replace_nested_suite(element, nested_suite, root, logger):
+###############################################################################
+    """
+    Replace a <nested_suite> tag with the actual suite or group it references.
+
+    This function looks up a referenced suite or suite group from the main XML tree
+    or an external file (if specified), deep copies its children, and replaces the
+    <nested_suite> element in the parent `element` with the copied contents.
+
+    If the nested suite being inserted contains its own <nested_suite> elements and 
+    within the same  external file, the `file` attribute is propagated into those.
+
+    Parameters:
+        element (xml.etree.ElementTree.Element): The parent element containing the nested suite.
+        nested_suite (xml.etree.ElementTree.Element): The <nested_suite> element to be replaced.
+        root (xml.etree.ElementTree.Element): The root XML element (used when no file is specified).
+        logger (logging.Logger or None): Logger to record debug information.
+
+    Returns:
+        str or None: The name of the suite if the nested suite came from the root XML element
+                     (to delete it later), or None if it came from a separate file.
+
+    Example:
+        >>> import xml.etree.ElementTree as ET
+        >>> from types import SimpleNamespace
+        >>> logger = SimpleNamespace()
+        >>> logger.debug = print
+        >>> xml = '''
+        ... <suites>
+        ...   <suite name="my_suite">
+        ...     <group name="my_group">
+        ...       <scheme>my_scheme</scheme>
+        ...     </group>
+        ...   </suite>
+        ...   <suite name="top">
+        ...     <nested_suite name="my_suite"/>
+        ...   </suite>
+        ... </suites>
+        ... '''
+        >>> tree = ET.ElementTree(ET.fromstring(xml))
+        >>> root = tree.getroot()
+        >>> top_suite = root.find("suite[@name='top']")
+        >>> nested = top_suite.find("nested_suite")
+        >>> replace_nested_suite(top_suite, nested, root, logger)
+        Expanded nested suite 'my_suite'
+        'my_suite'
+        >>> [child.tag for child in top_suite]
+        ['group']
+        >>> top_suite.find("group").find("scheme").text
+        'my_scheme'
+        >>> xml = '''
+        ... <suites>
+        ...   <suite name="my_suite">
+        ...     <group name="my_group">
+        ...       <scheme>my_scheme</scheme>
+        ...     </group>
+        ...   </suite>
+        ...   <suite name="top">
+        ...     <group name="top_group">
+        ...       <nested_suite name="my_suite" group="my_group"/>
+        ...     </group>
+        ...   </suite>
+        ... </suites>
+        ... '''
+        >>> tree = ET.ElementTree(ET.fromstring(xml))
+        >>> root = tree.getroot()
+        >>> top_suite = root.find("suite[@name='top']")
+        >>> top_group = top_suite.find("group")
+        >>> nested = top_group.find("nested_suite")
+        >>> replace_nested_suite(top_group, nested, root, logger)
+        Expanded nested suite 'my_suite', group 'my_group'
+        'my_suite'
+        >>> [child.tag for child in top_suite]
+        ['group']
+        >>> top_suite.find("group").find("scheme").text
+        'my_scheme'
+    """
+    suite_name = nested_suite.attrib.get("name")
+    group_name = nested_suite.attrib.get("group")
+    file = nested_suite.attrib.get("file")
+    referenced_suite = load_suite_by_name(suite_name, group_name, root,
+                                          file=file, logger=logger)
+    # Deep copy to avoid modifying the original
+    imported_content = [ET.fromstring(ET.tostring(child)) 
+                        for child in referenced_suite]
+    # Swap nested suite with imported content
+    for item in imported_content:
+        # If the imported content comes from a separate file and has
+        # nested suites that are within that separate file, then we
+        # need to inject the file attribute here.
+        if item.tag == "nested_suite":
+            if file and not item.attrib.get("file"):
+                item.set("file", file)
+        element.insert(list(element).index(nested_suite), item)
+    element.remove(nested_suite)
+    if logger:
+        msg = f"Expanded nested suite '{suite_name}'" \
+            + (f", group '{group_name}'," if group_name else "") \
+            + (f" in file '{file}'" if file else "")
+        logger.debug(msg.rstrip(','))
+    # If the nested suite resides in the same file as the root
+    # element then we need to remove it
+    return suite_name if not file else None
+
+###############################################################################
 def expand_nested_suites(root, logger=None):
 ###############################################################################
-    """Iterate over the root element until all nested suites (single, double,
-    triple, ...) are replaced with the actual content of the nested suite."""
+    """
+    Recursively expand all <nested_suite> elements within the XML <suite> elements.
+
+    This function finds <nested_suite> elements within <group> or <suite> elements,
+    and replaces them with the corresponding content from another suite. The replacement
+    is done in memory using the `replace_nested_suite` function (defined elsewhere).
+    Nested suites from the same XML root are removed after expansion.
+
+    This operation is recursive and will continue expanding until no <nested_suite>
+    elements remain.
+
+    Parameters:
+        root (xml.etree.ElementTree.Element): The root <ccpp> element containing <suite> elements.
+        logger (logging.Logger, optional): Logger for debug messages.
+
+    Returns:
+        None. The XML tree is modified in place.
+
+    Example:
+        >>> import xml.etree.ElementTree as ET
+        >>> from types import SimpleNamespace
+        >>> logger = SimpleNamespace()
+        >>> logger.debug = print
+        >>> xml = '''
+        ... <suites>
+        ...   <suite name="physics_suite">
+        ...     <group name="main">
+        ...       <nested_suite name="microphysics_suite" group="micro"/>
+        ...     </group>
+        ...     <nested_suite name="pbl_suite"/>
+        ...   </suite>
+        ...   <suite name="microphysics_suite">
+        ...     <group name="micro">
+        ...       <scheme>cloud_scheme</scheme>
+        ...     </group>
+        ...   </suite>
+        ...   <suite name="pbl_suite">
+        ...     <group name="pbl">
+        ...       <scheme>pbl_scheme</scheme>
+        ...     </group>
+        ...   </suite>
+        ... </suites>
+        ... '''
+        >>> root = ET.fromstring(xml)
+        >>> expand_nested_suites(root, logger)
+        Expanded nested suite 'microphysics_suite', group 'micro'
+        Expanded nested suite 'pbl_suite'
+        Removed nested suite 'microphysics_suite' from root element
+        Removed nested suite 'pbl_suite' from root element
+        >>> len(root.findall("suite"))  # Only one suite left
+        1
+        >>> suite = root.find("suite")
+        >>> suite.attrib.get("name")
+        'physics_suite'
+        >>> group = suite.find("group")
+        >>> group.attrib.get("name")
+        'main'
+        >>> group.find("scheme").text
+        'cloud_scheme'
+    """
     # Keep track of any nested suites defined under the same root
     # that need to be removed at the end of this function.
     # This happens all in memory, it does not alter files on disk.
@@ -297,75 +505,23 @@ def expand_nested_suites(root, logger=None):
             for group in groups:
                 nested_suites = group.findall("nested_suite")
                 for nested in nested_suites:
-                    suite_name = nested.attrib.get("name")
-                    group_name = nested.attrib.get("group")
-                    file = nested.attrib.get("file")
-                    # This check is redundant, because the XML schema ensures
-                    # that nested_suite elements inside a group have a group name
-                    if not group_name:
-                        CCPPError(f"Required attribute group not found for nested suite {suite_name}")
-                    referenced_suite = load_suite_by_name(suite_name, group_name, root,
-                                                          file=file, logger=logger)
-                    # Deep copy to avoid modifying the original
-                    imported_content = [ET.fromstring(ET.tostring(child)) for child in referenced_suite]
-                    # Swap nested suite with imported content
-                    for item in imported_content:
-                        # If the imported content comes from a separate file and has
-                        # nested suites that are within that separate file, then we
-                        # need to inject the file attribute here.
-                        if item.tag == "nested_suite":
-                            if file and not item.attrib.get("file"):
-                                item.set("file", file)
-                        group.insert(list(group).index(nested), item)
-                    group.remove(nested)
-                    # Need another pass over the root element
-                    keep_expanding = True
-                    # If the nested suite resides in the same file, remove it
-                    if not file:
+                    suite_name = replace_nested_suite(group, nested, root, logger)
+                    if suite_name:
                         expanded_suites_to_remove.append(suite_name)
-                    if logger:
-                        msg = f"Expanded nested suite '{suite_name}', group '{group_name}'"
-                        if file:
-                            msg += f", in file '{file}'"
-                        logger.debug(msg)
+                    # Trigger another pass over the root element
+                    keep_expanding = True
             # Second, search all suites for nested_suite elements
             nested_suites = suite.findall("nested_suite")
             for nested in nested_suites:
-                suite_name = nested.attrib.get("name")
-                group_name = nested.attrib.get("group")
-                # This check is redundant, because the XML schema ensures
-                # that nested_suite elements at the suite level have no group name
-                if group_name:
-                    CCPPError("Nested suite {suite_name} cannot have attribute group")
-                file = nested.attrib.get("file")
-                referenced_suite = load_suite_by_name(suite_name, group_name, root,
-                                                      file=file, logger=logger)
-                # Deep copy to avoid modifying the original
-                imported_content = [ET.fromstring(ET.tostring(child)) for child in referenced_suite]
-                # Swap nested suite with imported content
-                for item in imported_content:
-                    # If the imported content comes from a separate file and has
-                    # nested suites that are within that separate file, then we
-                    # need to inject the file attribute here.
-                    if item.tag == "nested_suite":
-                        if file and not item.attrib.get("file"):
-                            item.set("file", file)
-                    suite.insert(list(suite).index(nested), item)
-                suite.remove(nested)
-                # Need another pass over the root element
-                keep_expanding = True
-                # If the nested suite resides in the same file, remove it
-                if not file:
+                suite_name = replace_nested_suite(suite, nested, root, logger)
+                if suite_name:
                     expanded_suites_to_remove.append(suite_name)
-                if logger:
-                    msg = f"Expanded nested suite '{suite_name}'"
-                    if file:
-                        msg += f" in file '{file}'"
-                    logger.debug(msg)
-
+                # Trigger another pass over the root element
+                keep_expanding = True
     # Remove expanded suites
+    expanded_suites_to_remove = list(set(expanded_suites_to_remove))
     for suite in root.findall("suite"):
-        suite_name = suite.attrib["name"]
+        suite_name = suite.attrib.get("name")
         if suite_name in expanded_suites_to_remove:
             root.remove(suite)
             if logger:
@@ -404,6 +560,6 @@ def write_xml_file(root, file_path, logger=None):
 
     # Tell everyone!
     if logger:
-        logger.debug(f"Wrote {root} to {file_path}")
+        logger.debug(f"Writing XML file {file_path}")
 
 ##############################################################################

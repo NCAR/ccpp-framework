@@ -43,8 +43,6 @@ CONTAINS
        ! First, check the suite parts
        call ccpp_physics_suite_part_list(test_suite%suite_name, test_list,    &
             errmsg, errflg)
-       print *, "DH DEBUG test_list:"
-       print *, test_list
        if (errflg == 0) then
           check = check_list(test_list, test_suite%suite_parts, 'part names', &
                suite_name=test_suite%suite_name)

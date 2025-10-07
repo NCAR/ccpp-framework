@@ -194,10 +194,6 @@ character(len=16) :: {css_var_name} = '{state}'
         self.__context = ParseContext(filename=self.__sdf_name)
         self.__name = suite_xml.get('name')
         self.__module = 'ccpp_{}_cap'.format(self.name)
-        lmsg = "Reading suite definition file for '{}'"
-        if run_env.logger and run_env.logger.isEnabledFor(logging.INFO):
-            run_env.logger.info(lmsg.format(self.name))
-        # end if
         gname = Suite.__register_group_name
         self.__suite_reg_group = self.new_group_from_name(gname, run_env)
         gname = Suite.__initial_group_name
