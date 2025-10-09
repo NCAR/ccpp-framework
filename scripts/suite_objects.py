@@ -2339,7 +2339,8 @@ class Group(SuiteObject):
                         self.run_env)
         self.add_variable(local_var, self.run_env, exists_ok=True, gen_unique=True)
         # Finally, make sure all dimensions are accounted for
-        emsg = self.add_variable_dimensions(local_var, _API_LOCAL_VAR_TYPES,
+        emsg = self.add_variable_dimensions(local_var, [_API_LOCAL_VAR_NAME],
+                                            _API_SUITE_VAR_NAME,
                                             adjust_intent=True,
                                             to_dict=self.call_list)
         if emsg:
@@ -2383,6 +2384,11 @@ class Group(SuiteObject):
                 if dvar is None:
                     dvar = self.call_list.find_variable(standard_name=dpart,
                                                         any_scope=False)
+                # end if
+                if dvar is None:
+                    # Check if it's a module-level variable
+                    dvar = self.find_variable(standard_name=dpart, any_scope=True)
+                # end if
                 if dvar is None:
                     emsg = "Dimension variable, '{}', not found{}"
                     lvar = self.find_local_name(dpart, any_scope=True)
