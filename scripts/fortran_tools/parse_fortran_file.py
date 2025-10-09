@@ -547,6 +547,8 @@ def parse_type_def(statements, type_def, mod_name, pobj, run_env):
 def parse_preamble_data(statements, pobj, spec_name, endmatch, run_env):
     """Parse module variables or DDT definitions from a module preamble
     or parse program variables from the beginning of a program.
+    Returns remaining statements, parsed metadata headers, and
+    any accumulated errors
     """
     inspec = True
     mheaders = []
@@ -736,7 +738,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
                             # end if
                         else:
                             ctx = context_string(pobj)
-                            emsg = f"{etyp}: Invalid dummy argument, {lname}{ctx}"
+                            emsg = f"{etyp}: Invalid dummy argument, '{lname}'{ctx}"
                             errors.append(emsg)
                         # end if
                     # end for
@@ -818,7 +820,8 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
     # End if
 
     inspec = True
-    mtables = list()
+    mtables = []
+    errors = []
     while inspec and (statements is not None):
         while len(statements) > 0:
             statement = statements.pop(0)
@@ -833,22 +836,24 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
             elif asmatch is not None:
                 # Put table statement back to re-read
                 statements.insert(0, statement)
-                statements, new_tbls = parse_preamble_data(statements,
-                                                           pobj, spec_name,
-                                                           endmatch, run_env)
+                statements, new_tbls, errors = parse_preamble_data(statements,
+                                                                   pobj,
+                                                                   spec_name,
+                                                                   endmatch,
+                                                                   run_env)
                 for tbl in new_tbls:
                     title = tbl.table_name
                     if title in mtables:
-                        errmsg = duplicate_header(mtables[title], tbl)
-                        raise CCPPError(errmsg)
+                        errors.append(duplicate_header(mtables[title], tbl))
+                    else:
+                        if run_env.verbose:
+                            ctx = tbl.start_context()
+                            mtype = tbl.table_type
+                            msg = "Adding metadata from {}, {}{}"
+                            run_env.logger.debug(msg.format(mtype, title, ctx))
+                        # End if
+                        mtables.append(tbl)
                     # end if
-                    if run_env.verbose:
-                        ctx = tbl.start_context()
-                        mtype = tbl.table_type
-                        msg = "Adding metadata from {}, {}{}"
-                        run_env.logger.debug(msg.format(mtype, title, ctx))
-                    # End if
-                    mtables.append(tbl)
                 # End if
                 inspec = pobj.in_region('MODULE', region_name=mod_name)
                 break
@@ -868,7 +873,7 @@ def parse_specification(pobj, statements, run_env, mod_name=None,
             statements = read_statements(pobj)
         # End if
     # End while
-    return statements, mtables
+    return statements, mtables, errors
 
 ########################################################################
 
@@ -888,8 +893,12 @@ def parse_program(pobj, statements, run_env):
         run_env.logger.debug(msg.format(prog_name, ctx))
     # End if
     # After the program name is the specification part
-    statements, mtables = parse_specification(pobj, statements[1:], run_env,
-                                              prog_name=prog_name)
+    statements, mtables, errors = parse_specification(pobj, statements[1:],
+                                                      run_env,
+                                                      prog_name=prog_name)
+    if errors:
+        raise CCPPError('\n'.join(errors))
+    # end if
     # We really cannot have tables inside a program's executable section
     # Just read until end
     statements = read_statements(pobj, statements)
@@ -916,6 +925,7 @@ def parse_program(pobj, statements, run_env):
 def parse_module(pobj, statements, run_env):
     """Parse a Fortran MODULE and return any leftover statements
     and metadata tables encountered in the MODULE."""
+    errors = []
     # The first statement should be a module statement, grab the name
     pmatch = _MODULE_RE.match(statements[0])
     if pmatch is None:
@@ -929,8 +939,12 @@ def parse_module(pobj, statements, run_env):
         run_env.logger.debug(msg.format(mod_name, ctx))
     # End if
     # After the module name is the specification part
-    statements, mtables = parse_specification(pobj, statements[1:], run_env,
-                                              mod_name=mod_name)
+    statements, mtables, errs = parse_specification(pobj, statements[1:],
+                                                    run_env,
+                                                    mod_name=mod_name)
+    if errs:
+        errors.extend(errs)
+    # end if
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inmodule = pobj.in_region('MODULE', region_name=mod_name)
@@ -938,7 +952,6 @@ def parse_module(pobj, statements, run_env):
     additional_subroutines = []
     seen_contains = False
     insub = False
-    errors = []
     while inmodule and (statements is not None):
         while statements:
             statement = statements.pop(0)
