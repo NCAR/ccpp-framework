@@ -847,7 +847,7 @@ def parse_specification(pobj, statements, imports, run_env, mod_name=None,
                                                                    pobj,
                                                                    spec_name,
                                                                    endmatch,
-                                                                   imports
+                                                                   imports,
                                                                    run_env)
                 for tbl in new_tbls:
                     title = tbl.table_name
