@@ -862,13 +862,6 @@ def parse_specification(pobj, statements, imports, run_env, mod_name=None,
                         # End if
                         mtables.append(tbl)
                     # end if
-                    if run_env.verbose:
-                        ctx = tbl.start_context()
-                        mtype = tbl.table_type
-                        msg = "Adding metadata from {}, {}{}"
-                        run_env.logger.debug(msg.format(mtype, title, ctx))
-                    # end if
-                    mtables.append(tbl)
                 # end for
                 inspec = pobj.in_region('MODULE', region_name=mod_name)
                 break
