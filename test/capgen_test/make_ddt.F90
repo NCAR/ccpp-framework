@@ -4,6 +4,7 @@
 MODULE make_ddt
 
    USE ccpp_kinds, ONLY: kind_phys
+   USE ddt2, only: ty_ddt2
 
    IMPLICIT NONE
    PRIVATE
@@ -13,12 +14,22 @@ MODULE make_ddt
    PUBLIC :: make_ddt_timestep_final
    PUBLIC :: vmr_type
 
+   type ty_ddt3
+      integer :: dont_lose
+      integer :: your_head
+      integer :: to_gain_a_minute
+      integer :: you_need_your_head
+      integer :: your_brains_are_in_it
+   end type ty_ddt3
+
    !> \section arg_table_vmr_type  Argument Table
    !! \htmlinclude arg_table_vmr_type.html
    !!
    type vmr_type
       integer :: nvmr
       real(kind_phys), allocatable :: vmr_array(:,:)
+      type(ty_ddt2) :: error_maybe
+      type(ty_ddt3) :: burma_shave
    end type vmr_type
 
 

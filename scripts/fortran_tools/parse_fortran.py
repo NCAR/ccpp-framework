@@ -635,7 +635,7 @@ def fortran_type_definition(line):
     return FtypeTypeDecl.type_def_line(line)
 
 ########################################################################
-def parse_fortran_var_decl(line, source, run_env):
+def parse_fortran_var_decl(line, source, run_env, imports=None):
 ########################################################################
     """Parse a Fortran variable declaration line and return a list of
     Var objects representing the variables declared on <line>.
@@ -813,12 +813,85 @@ def parse_fortran_var_decl(line, source, run_env):
             # XXgoldyXX: I am nervous about allowing invalid Var objects here
             # Also, this tends to cause an exception that ends up back here
             # which is not a good idea.
-            var = FortranVar(prop_dict, source, run_env)
+            var = FortranVar(prop_dict, source, run_env, fortran_imports=imports)
             newvars.append(var)
         # end for
     # No else (not a variable declaration)
     # end if
     return newvars
+
+########################################################################
+
+class UseStatement(object):
+    """Class to parse and capture information from a Fortran use statement
+    >>> UseStatement("use foo, only: bar").valid
+    True
+    >>> UseStatement("use foo, only: bar").module
+    'foo'
+    >>> UseStatement("use foo, only: bar").imports
+    ['bar']
+    >>> UseStatement("USE foo, only: bar, baz, qux").imports
+    ['bar', 'baz', 'qux']
+    >>> UseStatement("use foo, only: bar, baz").imports
+    ['bar', 'baz']
+    >>> UseStatement("use foo, only: bar, baz !, qux").imports
+    ['bar', 'baz']
+    >>> UseStatement("use foo!, only: bar, baz").valid
+    False
+    >>> UseStatement("use foo!, only: bar, baz").module
+    'foo'
+    >>> UseStatement("use foo!, only: bar, baz").imports
+
+    """
+
+    __modmatch = r"use\s*("+_FORTRAN_ID+r")\s*"
+    __imports = r"("+_FORTRAN_ID+r"(\s*,\s*"+_FORTRAN_ID+")*)"
+
+    __use_stmt_re = re.compile(r"(?i)"+__modmatch+r",\s*only:\s*"+__imports)
+    __naked_use_re = re.compile(r"(?i)use\s*("+_FORTRAN_ID+")")
+
+    def __init__(self, line):
+        """Initialize a UseStatement object from <line>."""
+        match = UseStatement.__use_stmt_re.match(line.strip())
+        self.__valid = match is not None
+        self.__module_name = None
+        self.__imports = None
+        if self.valid:
+            self.__module_name = match.group(1)
+            self.__imports = [x.strip() for x in match.group(2).split(',')]
+        else:
+            match = UseStatement.__naked_use_re.match(line.strip())
+            if match:
+                self.__module_name = match.group(1)
+            # end if
+        # end if
+
+    @property
+    def valid(self):
+        """Return True if this object represents a valid Fortran use statment"""
+        return self.__valid
+
+    @property
+    def module(self):
+        """Return the module name if valid, otherwise, None"""
+        return self.__module_name
+
+    @property
+    def imports(self):
+        """Return a list of the module's imports if valid, otherwise, None"""
+        return self.__imports
+
+    @classmethod
+    def use_stmt_line(cls, line):
+        """Return True if <line> is a Fortran use statement.
+        >>> UseStatement.use_stmt_line("use foo, only: bar")
+        True
+        >>> UseStatement.use_stmt_line("USE foo, only: bar, baz, qux")
+        True
+        >>> UseStatement.use_stmt_line("! use foo, only: bar")
+        False
+        """
+        return UseStatement.__use_stmt_re.match(line.strip()) is not None
 
 ########################################################################
 # Future classes
