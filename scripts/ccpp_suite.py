@@ -682,21 +682,23 @@ class API(VarDictionary):
             if not res:
                 raise CCPPError(f"Invalid suite definition file, '{sdf}'")
 
+            # Write the expanded sdf to the capgen output directory.
+            # This file isn't used by capgen (everything is in memory
+            # from here onwards), but it is useful for developers/users
+            # (although the output can also be found in the datatable).
+            (sdf_path, sdf_name) = os.path.split(sdf)
+            sdf_expanded = os.path.join(run_env.output_dir,
+                sdf_name.replace(".xml", "_expanded.xml"))
             # Processing of the sdf depends on the schema version
             if xml_root.tag.lower() == "suite" and schema_version[0] == 1:
                 suite = Suite(sdf, xml_root, self, run_env)
                 suite.analyze(self.host_model, scheme_library,
                               self.__ddt_lib, run_env)
                 self.__suites.append(suite)
+                write_xml_file(xml_root, sdf_expanded, run_env.logger)
             elif xml_root.tag.lower() == "suites" and schema_version[0] == 2:
                 # Preprocess the sdf to expand nested suites
-                expand_nested_suites(xml_root, logger=run_env.logger)
-                # Write the expanded sdf to the capgen output directory;
-                # this file isn't used by capgen (everything is in memory
-                # from here onwards), but it is useful for developers/users
-                # (although the output can also be found in the datatable).
-                sdf_expanded = os.path.join(run_env.output_dir,
-                    os.path.split(sdf)[1].replace(".xml", "_expanded.xml"))
+                expand_nested_suites(xml_root, sdf_path, logger=run_env.logger)
                 write_xml_file(xml_root, sdf_expanded, run_env.logger)
                 for suite_item in xml_root:
                     suite = Suite(sdf, suite_item, self, run_env)

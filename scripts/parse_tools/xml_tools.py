@@ -324,7 +324,7 @@ def load_suite_by_name(suite_name, group_name, main_root, file=None, logger=None
     raise CCPPError(emsg)
 
 ###############################################################################
-def replace_nested_suite(element, nested_suite, root, logger):
+def replace_nested_suite(element, nested_suite, root, default_path, logger):
 ###############################################################################
     """
     Replace a <nested_suite> tag with the actual suite or group it references.
@@ -340,6 +340,7 @@ def replace_nested_suite(element, nested_suite, root, logger):
         element (xml.etree.ElementTree.Element): The parent element containing the nested suite.
         nested_suite (xml.etree.ElementTree.Element): The <nested_suite> element to be replaced.
         root (xml.etree.ElementTree.Element): The root XML element (used when no file is specified).
+        default_path (str): The default path to look for nested SDFs if file is not a absolute path.
         logger (logging.Logger or None): Logger to record debug information.
 
     Returns:
@@ -367,7 +368,7 @@ def replace_nested_suite(element, nested_suite, root, logger):
         >>> root = tree.getroot()
         >>> top_suite = root.find("suite[@name='top']")
         >>> nested = top_suite.find("nested_suite")
-        >>> replace_nested_suite(top_suite, nested, root, logger)
+        >>> replace_nested_suite(top_suite, nested, root, '/no/valid/path', logger)
         Expanded nested suite 'my_suite'
         'my_suite'
         >>> [child.tag for child in top_suite]
@@ -393,7 +394,7 @@ def replace_nested_suite(element, nested_suite, root, logger):
         >>> top_suite = root.find("suite[@name='top']")
         >>> top_group = top_suite.find("group")
         >>> nested = top_group.find("nested_suite")
-        >>> replace_nested_suite(top_group, nested, root, logger)
+        >>> replace_nested_suite(top_group, nested, root, '/no/valid/path', logger)
         Expanded nested suite 'my_suite', group 'my_group'
         'my_suite'
         >>> [child.tag for child in top_suite]
@@ -404,6 +405,8 @@ def replace_nested_suite(element, nested_suite, root, logger):
     suite_name = nested_suite.attrib.get("name")
     group_name = nested_suite.attrib.get("group")
     file = nested_suite.attrib.get("file")
+    if file and not os.path.isabs(file):
+        file = os.path.join(default_path, file)
     referenced_suite = load_suite_by_name(suite_name, group_name, root,
                                           file=file, logger=logger)
     imported_content = [ET.fromstring(ET.tostring(child)) 
@@ -428,7 +431,7 @@ def replace_nested_suite(element, nested_suite, root, logger):
     return suite_name if not file else None
 
 ###############################################################################
-def expand_nested_suites(root, logger=None):
+def expand_nested_suites(root, default_path, logger=None):
 ###############################################################################
     """
     Recursively expand all <nested_suite> elements within the XML <suite> elements.
@@ -473,7 +476,7 @@ def expand_nested_suites(root, logger=None):
         ... </suites>
         ... '''
         >>> root = ET.fromstring(xml)
-        >>> expand_nested_suites(root, logger)
+        >>> expand_nested_suites(root, '/no/valid/path', logger)
         Expanded nested suite 'microphysics_suite', group 'micro'
         Expanded nested suite 'pbl_suite'
         Removed nested suite 'microphysics_suite' from root element
@@ -488,6 +491,29 @@ def expand_nested_suites(root, logger=None):
         'main'
         >>> group.find("scheme").text
         'cloud_scheme'
+        >>> xml2 = '''
+        ... <suites>
+        ...   <suite name="physics_suite">
+        ...     <group name="main">
+        ...       <nested_suite name="microphysics_suite" group="micro"/>
+        ...     </group>
+        ...     <nested_suite name="pbl_suite"/>
+        ...   </suite>
+        ...   <suite name="microphysics_suite">
+        ...     <group name="micro">
+        ...       <scheme>cloud_scheme</scheme>
+        ...     </group>
+        ...   </suite>
+        ...   <suite name="pbl_suite">
+        ...     <nested_suite name="physics_suite"/>
+        ...   </suite>
+        ... </suites>
+        ... '''
+        >>> root2 = ET.fromstring(xml2)
+        >>> expand_nested_suites(root2, logger) #doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ...
+        CCPPError: Infinite recursion while expanding nested suites: ['physics_suite', 'physics_suite']
     """
     # Keep track of any nested suites defined under the same root
     # that need to be removed at the end of this function.
@@ -497,23 +523,31 @@ def expand_nested_suites(root, logger=None):
     keep_expanding = True
     while keep_expanding:
         keep_expanding = False
+        ## To avoid infinite recursion, keep track of suite names
+        #suite_names = []
         for suite in root.findall("suite"):
+            # To avoid infinite recursion, keep track of suite names
+            suite_names = [suite.attrib.get("name")]
             # First, search all groups for nested_suite elements
             groups = suite.findall("group")
             for group in groups:
                 nested_suites = group.findall("nested_suite")
                 for nested in nested_suites:
-                    suite_name = replace_nested_suite(group, nested, root, logger)
-                    if suite_name:
-                        expanded_suites_to_remove.append(suite_name)
+                    suite_name = replace_nested_suite(group, nested, root, default_path, logger)
+                    suite_names.append(suite_name)
+                    if not len(suite_names) == len(set(suite_names)):
+                        raise CCPPError(f"Infinite recursion while expanding nested suites: {suite_names}")
+                    expanded_suites_to_remove.append(suite_name)
                     # Trigger another pass over the root element
                     keep_expanding = True
             # Second, search all suites for nested_suite elements
             nested_suites = suite.findall("nested_suite")
             for nested in nested_suites:
-                suite_name = replace_nested_suite(suite, nested, root, logger)
-                if suite_name:
-                    expanded_suites_to_remove.append(suite_name)
+                suite_name = replace_nested_suite(suite, nested, root, default_path, logger)
+                suite_names.append(suite_name)
+                if not len(suite_names) == len(set(suite_names)):
+                    raise CCPPError(f"Infinite recursion while expanding nested suites: {suite_names}")
+                expanded_suites_to_remove.append(suite_name)
                 # Trigger another pass over the root element
                 keep_expanding = True
     # Remove expanded suites
