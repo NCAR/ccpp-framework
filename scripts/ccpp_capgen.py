@@ -440,17 +440,17 @@ def check_fortran_against_metadata(meta_headers, fort_headers,
         # end if
     # end while
     if fort_headers:
-        errmsg = ""
-        sep = ""
+        errmsgs = []
+        estr = "No matching metadata header found for {} in {}"
         for fheader in fort_headers:
             if fheader.has_variables:
-                errmsg += sep + "No matching metadata header found for {} in {}"
-                errmsg = errmsg.format(fheader.title, mfilename)
-                sep = "\n"
+                errmsgs.append(estr.format(fheader.title, mfilename))
             # end if
         # end for
-        if errmsg:
-            raise CCPPError(errmsg)
+        if errmsgs:
+            mheads = ', '.join([x.name for x in meta_headers])
+            errmsgs.append(f'Metadata headers in file: {mheads}')
+            raise CCPPError('\n'.join(errmsgs))
         # end if
     # end if
     # We have a one-to-one set, compare headers

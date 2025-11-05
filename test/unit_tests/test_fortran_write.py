@@ -47,7 +47,7 @@ def remove_files(file_list):
         # End if
     # End for
 
-class MetadataTableTestCase(unittest.TestCase):
+class FortranWriterTestCase(unittest.TestCase):
 
     """Tests for `FortranWriter`."""
 

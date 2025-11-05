@@ -73,6 +73,14 @@ def line_statements(line):
     [" ! This is a comment statement; y'all;"]
     >>> line_statements("!! ")
     ['!! ']
+    >>> line_statements("real(kind_phys), intent(in) :: good_arr2(:,:)")
+    ['real(kind_phys), intent(in) :: good_arr2(:,:)']
+    >>> line_statements("real(kind_phys), intent(in) :: bad_arr1(:,;)")
+    ['real(kind_phys), intent(in) :: bad_arr1(:,;)']
+    >>> line_statements("real(kind_phys), intent(in), dimension(;,:) :: bad_arr2")
+    ['real(kind_phys), intent(in), dimension(;,:) :: bad_arr2']
+    >>> line_statements("real(kind_phys), intent(in), dimension(:,;) :: bad_arr3")
+    ['real(kind_phys), intent(in), dimension(:,;) :: bad_arr3']
     """
     statements = list()
     ind_start = 0
@@ -80,6 +88,7 @@ def line_statements(line):
     line_len = len(line)
     in_single_char = False
     in_double_char = False
+    in_paren = 0
     while ind_end < line_len:
         if in_single_char:
             if line[ind_end] == "'":
@@ -94,9 +103,13 @@ def line_statements(line):
         elif line[ind_end] == '"':
             in_double_char = True
         elif line[ind_end] == '!':
-            # Commend in non-character context, suck in rest of line
+            # Comment in non-character context, suck in rest of line
             ind_end = line_len - 1
-        elif line[ind_end] == ';':
+        elif line[ind_end] == '(':
+            in_paren += 1
+        elif line[ind_end] == ')':
+            in_paren = max(in_paren - 1, 0)
+        elif (line[ind_end] == ';') and (in_paren < 1):
             # The whole reason for this routine, the statement separator
             if ind_end > ind_start:
                 statements.append(line[ind_start:ind_end])
@@ -495,6 +508,7 @@ def parse_type_def(statements, type_def, mod_name, pobj, run_env, imports=None):
     mheader = None
     var_dict = VarDictionary(type_def[0], run_env)
     inspec = True
+    errors = []
     while inspec and (statements is not None):
         while len(statements) > 0:
             statement = statements.pop(0)
@@ -512,8 +526,10 @@ def parse_type_def(statements, type_def, mod_name, pobj, run_env, imports=None):
                 # Comment of variable
                 if ((not is_comment_statement(statement)) and
                     (not parse_use_statement(statement, run_env.logger))):
-                    dvars = parse_fortran_var_decl(statement, psrc, run_env,
-                                                   imports=imports)
+                    dvars, errs = parse_fortran_var_decl(statement, psrc,
+                                                         run_env,
+                                                         imports=imports)
+                    errors.extend(errs)
                     for var in dvars:
                         var_dict.add_variable(var, run_env)
                     # end for
@@ -527,16 +543,19 @@ def parse_type_def(statements, type_def, mod_name, pobj, run_env, imports=None):
             statements = read_statements(pobj)
         # end if
     # end while
-    return statements, mheader
+    return statements, mheader, errors
 
 ########################################################################
 
 def parse_preamble_data(statements, pobj, spec_name, endmatch, imports, run_env):
     """Parse module variables or DDT definitions from a module preamble
     or parse program variables from the beginning of a program.
+    Returns remaining statements, parsed metadata headers, and
+    any accumulated errors
     """
     inspec = True
-    mheaders = list()
+    mheaders = []
+    errors = []
     var_dict = VarDictionary(spec_name, run_env)
     psrc = ParseSource(spec_name, 'MODULE', pobj)
     active_table = None
@@ -577,9 +596,10 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, imports, run_env)
                 statements.insert(0, statement)
                 if ((active_table is not None) and
                     (type_def[0].lower() == active_table.lower())):
-                    statements, ddt = parse_type_def(statements, type_def,
-                                                     spec_name, pobj, run_env,
-                                                     imports=imports)
+                    statements, ddt, errors = parse_type_def(statements,
+                                                             type_def, spec_name,
+                                                             pobj, run_env,
+                                                             imports=imports)
                     if ddt is None:
                         ctx = context_string(pobj, nodir=True)
                         msg = "No DDT found at '{}'{}"
@@ -603,7 +623,9 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, imports, run_env)
                 if ((not is_comment_statement(statement)) and
                     (not parse_use_statement(statement, run_env.logger)) and
                     (active_table.lower() == spec_name.lower())):
-                    dvars = parse_fortran_var_decl(statement, psrc, run_env)
+                    dvars, errs = parse_fortran_var_decl(statement,
+                                                         psrc, run_env)
+                    errors.extend(errs)
                     for var in dvars:
                         var_dict.add_variable(var, run_env)
                     # end for
@@ -614,7 +636,7 @@ def parse_preamble_data(statements, pobj, spec_name, endmatch, imports, run_env)
             statements = read_statements(pobj)
         # end if
     # end while
-    return statements, mheaders
+    return statements, mheaders, errors
 
 ########################################################################
 
@@ -624,6 +646,8 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
     mheader = None
     var_dict = None
     scheme_name = None
+    errors = []
+    etyp = "Syntax error"
     # Find the subroutine line, should be first executable statement
     inpreamble = False
     insub = True
@@ -683,9 +707,10 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
                             raise ParseInternalError(errmsg.format(pobj))
                         # end if
                         if arg in vdict:
-                            errmsg = 'Duplicate dummy argument, {}'
-                            raise ParseSyntaxError(errmsg.format(arg),
-                                                   context=pobj)
+                            ctx = context_string(pobj)
+                            errors.append(f"Duplicate dummy argument, {arg}{ctx}")
+                        else:
+                            vdict[arg] = None
                         # end if
                         vdict[arg] = None
                     # end for
@@ -701,19 +726,25 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
                       ((not is_comment_statement(statement)) and
                        (not parse_use_statement(statement, run_env)) and
                        is_dummy_argument_statement(statement))):
-                    dvars = parse_fortran_var_decl(statement, psrc, run_env)
+                    dvars, errs = parse_fortran_var_decl(statement,
+                                                         psrc, run_env)
+                    for err in errs:
+                        # err might be an Exception instead of a string
+                        errors.append(str(err))
+                    # end for
                     for var in dvars:
                         lname = var.get_prop_value('local_name').lower()
                         if lname in vdict:
                             if vdict[lname] is not None:
-                                emsg = "Error: duplicate dummy argument, {}"
-                                raise ParseSyntaxError(emsg.format(lname),
-                                                       context=pobj)
+                                ctx = context_string(pobj)
+                                errors.append(f"ERROR: Duplicate dummy argument, {lname}{ctx}")
+                            else:
+                                vdict[lname] = var
                             # end if
-                            vdict[lname] = var
                         else:
-                            raise ParseSyntaxError('dummy argument',
-                                                   token=lname, context=pobj)
+                            ctx = context_string(pobj)
+                            emsg = f"{etyp}: Invalid dummy argument, '{lname}'{ctx}"
+                            errors.append(emsg)
                         # end if
                     # end for
                 # end if
@@ -724,7 +755,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
         # end if
     # end while
     # Check for missing declarations
-    missing = list()
+    missing = []
     if vdict is None:
         errmsg = 'Subroutine, {}, not found{}'
         raise CCPPError(errmsg.format(scheme_name, ctx))
@@ -734,9 +765,12 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
             missing.append(lname)
         # end if
     # end for
+    for lname in missing:
+        del vdict[lname]
+    # end for
     if len(missing) > 0:
-        errmsg = 'Missing local_variables, {} in {}'
-        raise CCPPError(errmsg.format(missing, scheme_name))
+        errmsg = f"Missing local_variables, {missing} in {scheme_name}"
+        errors.append(errmsg)
     # end if
     var_dict = VarDictionary(scheme_name, run_env, variables=vdict)
     if (scheme_name is not None) and (var_dict is not None):
@@ -744,7 +778,7 @@ def parse_scheme_metadata(statements, pobj, spec_name, table_name, run_env):
                                 table_type_in='scheme', module=spec_name,
                                 var_dict=var_dict)
     # end if
-    return statements, mheader
+    return statements, mheader, errors
 
 ########################################################################
 
@@ -792,7 +826,8 @@ def parse_specification(pobj, statements, imports, run_env, mod_name=None,
     # end if
 
     inspec = True
-    mtables = list()
+    mtables = []
+    errors = []
     while inspec and (statements is not None):
         while len(statements) > 0:
             statement = statements.pop(0)
@@ -808,24 +843,26 @@ def parse_specification(pobj, statements, imports, run_env, mod_name=None,
             elif asmatch is not None:
                 # Put table statement back to re-read
                 statements.insert(0, statement)
-                statements, new_tbls = parse_preamble_data(statements,
-                                                           pobj, spec_name,
-                                                           endmatch, imports,
-                                                           run_env)
+                statements, new_tbls, errors = parse_preamble_data(statements,
+                                                                   pobj,
+                                                                   spec_name,
+                                                                   endmatch,
+                                                                   imports,
+                                                                   run_env)
                 for tbl in new_tbls:
                     title = tbl.table_name
                     if title in mtables:
-                        errmsg = duplicate_header(mtables[title], tbl)
-                        raise CCPPError(errmsg)
+                        errors.append(duplicate_header(mtables[title], tbl))
+                    else:
+                        if run_env.verbose:
+                            ctx = tbl.start_context()
+                            mtype = tbl.table_type
+                            msg = "Adding metadata from {}, {}{}"
+                            run_env.logger.debug(msg.format(mtype, title, ctx))
+                        # End if
+                        mtables.append(tbl)
                     # end if
-                    if run_env.verbose:
-                        ctx = tbl.start_context()
-                        mtype = tbl.table_type
-                        msg = "Adding metadata from {}, {}{}"
-                        run_env.logger.debug(msg.format(mtype, title, ctx))
-                    # end if
-                    mtables.append(tbl)
-                # end if
+                # end for
                 inspec = pobj.in_region('MODULE', region_name=mod_name)
                 break
             elif type_def:
@@ -851,7 +888,7 @@ def parse_specification(pobj, statements, imports, run_env, mod_name=None,
             statements = read_statements(pobj)
         # end if
     # end while
-    return statements, mtables
+    return statements, mtables, errors
 
 ########################################################################
 
@@ -872,8 +909,12 @@ def parse_program(pobj, statements, run_env):
     # end if
     # After the program name is the specification part
     imports = set()
-    statements, mtables = parse_specification(pobj, statements[1:], imports,
-                                              run_env, prog_name=prog_name)
+    statements, mtables, errors = parse_specification(pobj, statements[1:],
+                                                      imports, run_env,
+                                                      prog_name=prog_name)
+    if errors:
+        raise CCPPError('\n'.join(errors))
+    # end if
     # We really cannot have tables inside a program's executable section
     # Just read until end
     statements = read_statements(pobj, statements)
@@ -900,6 +941,8 @@ def parse_program(pobj, statements, run_env):
 def parse_module(pobj, statements, run_env):
     """Parse a Fortran MODULE and return any leftover statements
     and metadata tables encountered in the MODULE."""
+    # Collect errors for more efficient error reporting
+    errors = []
     # Collect any imported typedef (and other) names
     imports = set()
     # The first statement should be a module statement, grab the name
@@ -915,8 +958,12 @@ def parse_module(pobj, statements, run_env):
         run_env.logger.debug(msg.format(mod_name, ctx))
     # end if
     # After the module name is the specification part
-    statements, mtables = parse_specification(pobj, statements[1:], imports,
-                                              run_env, mod_name=mod_name)
+    statements, mtables, errs = parse_specification(pobj, statements[1:],
+                                                    imports, run_env,
+                                                    mod_name=mod_name)
+    if errs:
+        errors.extend(errs)
+    # end if
     # Look for metadata tables
     statements = read_statements(pobj, statements)
     inmodule = pobj.in_region('MODULE', region_name=mod_name)
@@ -942,10 +989,12 @@ def parse_module(pobj, statements, run_env):
                 inmodule = False
                 break
             elif active_table is not None:
-                statements, mheader = parse_scheme_metadata(statements, pobj,
-                                                            mod_name,
-                                                            active_table,
-                                                            run_env)
+                statements, mheader, errs = parse_scheme_metadata(statements,
+                                                                  pobj,
+                                                                  mod_name,
+                                                                  active_table,
+                                                                  run_env)
+                errors.extend(errs)
                 if mheader is not None:
                     title = mheader.table_name
                     if title in mtables:
@@ -983,6 +1032,9 @@ def parse_module(pobj, statements, run_env):
             statements = read_statements(pobj)
         # end if
     # end while
+    if errors:
+        raise CCPPError('\n'.join(errors))
+    # end if
     return statements, mtables, additional_subroutines
 
 ########################################################################
