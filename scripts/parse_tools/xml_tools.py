@@ -401,6 +401,29 @@ def replace_nested_suite(element, nested_suite, root, default_path, logger):
         ['group']
         >>> top_suite.find("group").find("scheme").text
         'my_scheme'
+        >>> xml = '''
+        ... <suites>
+        ...   <suite name="my_suite">
+        ...     <group name="my_group">
+        ...       <scheme>my_scheme</scheme>
+        ...     </group>
+        ...   </suite>
+        ...   <suite name="top">
+        ...     <nested_suite name="my_suite" group="my_group"/>
+        ...   </suite>
+        ... </suites>
+        ... '''
+        >>> tree = ET.ElementTree(ET.fromstring(xml))
+        >>> root = tree.getroot()
+        >>> top_suite = root.find("suite[@name='top']")
+        >>> nested = top_suite.find("nested_suite")
+        >>> replace_nested_suite(top_suite, nested, root, '/no/valid/path', logger)
+        Expanded nested suite 'my_suite', group 'my_group'
+        'my_suite'
+        >>> [child.tag for child in top_suite]
+        ['group']
+        >>> top_suite.find("group").find("scheme").text
+        'my_scheme'
     """
     suite_name = nested_suite.attrib.get("name")
     group_name = nested_suite.attrib.get("group")
@@ -419,7 +442,17 @@ def replace_nested_suite(element, nested_suite, root, default_path, logger):
         if item.tag == "nested_suite":
             if file and not item.attrib.get("file"):
                 item.set("file", file)
-        element.insert(list(element).index(nested_suite), item)
+        # If we are inserting a nested suite at the suite level (element.tag is suite),
+        # but we only want one group (group_name is not none), then we need to wrap
+        # the item in a group element. If on the other hand we insert an entire suite
+        # (all groups) at the suite level, or a specific group at the group level,
+        # then we can insert the item as is.
+        if element.tag == 'suite' and group_name:
+            item_to_insert = ET.Element("group", attrib={"name": group_name})
+            item_to_insert.append(item)
+        else:
+            item_to_insert = item
+        element.insert(list(element).index(nested_suite), item_to_insert)
     element.remove(nested_suite)
     if logger:
         msg = f"Expanded nested suite '{suite_name}'" \

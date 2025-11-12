@@ -3,11 +3,14 @@
 <suites version="2.0">
 
   <suite name="radiation3_suite">
-    <group name="rad_lw_group">
-      <scheme>rad_lw</scheme>
-    </group>
     <group name="rad_sw_group">
       <nested_suite name="radiation3_subsuite" group="rad_sw_group" file="radiation3_subsuite.xml"/>
+    </group>
+  </suite>
+
+  <suite name="radiation4_suite">
+    <group name="rad_lw_group">
+      <scheme>rad_lw</scheme>
     </group>
   </suite>
 
@@ -24,6 +27,7 @@
       </subcycle>
       <nested_suite name="radiation2_suite" group="effrs_calc" file="radiation2_suite.xml"/>
     </group>
+    <nested_suite name="radiation4_suite" group="rad_lw_group"/>
     <nested_suite name="radiation3_suite"/>
   </suite>
 
