@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<suites version="2.0">
-  <suite name="radiation3_subsuite">
-    <group name="rad_sw_group">
-      <scheme>rad_sw</scheme>
-    </group>
-  </suite>
-</suites>
+<suite name="radiation3_subsuite" version="2.0">
+  <group name="rad_sw_group">
+    <scheme>rad_sw</scheme>
+  </group>
+</suite>

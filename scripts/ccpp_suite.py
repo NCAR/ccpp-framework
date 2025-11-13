@@ -689,22 +689,15 @@ class API(VarDictionary):
             (sdf_path, sdf_name) = os.path.split(sdf)
             sdf_expanded = os.path.join(run_env.output_dir,
                 sdf_name.replace(".xml", "_expanded.xml"))
-            # Processing of the sdf depends on the schema version
-            if xml_root.tag.lower() == "suite" and schema_version[0] == 1:
+            if schema_version[0] in [1, 2]:
+                # Preprocess the sdf to expand nested suites
+                if schema_version[0] == 2:
+                    expand_nested_suites(xml_root, sdf_path, logger=run_env.logger)
+                write_xml_file(xml_root, sdf_expanded, run_env.logger)
                 suite = Suite(sdf, xml_root, self, run_env)
                 suite.analyze(self.host_model, scheme_library,
                               self.__ddt_lib, run_env)
                 self.__suites.append(suite)
-                write_xml_file(xml_root, sdf_expanded, run_env.logger)
-            elif xml_root.tag.lower() == "suites" and schema_version[0] == 2:
-                # Preprocess the sdf to expand nested suites
-                expand_nested_suites(xml_root, sdf_path, logger=run_env.logger)
-                write_xml_file(xml_root, sdf_expanded, run_env.logger)
-                for suite_item in xml_root:
-                    suite = Suite(sdf, suite_item, self, run_env)
-                    suite.analyze(self.host_model, scheme_library,
-                                  self.__ddt_lib, run_env)
-                    self.__suites.append(suite)
             else:
                 errmsg = f"Suite XML schema not supported: " + \
                     "root={xml_root.tag}, version={schema_version}"
