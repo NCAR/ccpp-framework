@@ -890,7 +890,7 @@ def _new_var_entry(parent, var, full_entry=True):
     >>> var = Var({'local_name' : 'foo', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(horizontal_loop_extent)', 'type' : 'real', 'intent' : 'in'}, ParseSource('vname', 'DDT', ParseContext()), _MVAR_DUMMY_RUN_ENV)
     >>> _new_var_entry(parent, var)
     >>> table_entry_pretty_print(parent, 0)
-    '<variables>\\n  <var name=hi_mom intent=in local_name=foo active=.true. kind=kind_phys persistence=timestep type=real units=m s-1>\\n    <dimensions>\\n      horizontal_loop_extent\\n    </dimensions>\\n    <source_type>\\n      ddt\\n    </source_type>\\n    <source_name>\\n      vname\\n    </source_name>\\n  </var>\\n</variables>\\n'
+    '<variables>\\n  <var name=hi_mom intent=in local_name=foo active=.true. diagnostic_name=foo kind=kind_phys persistence=timestep type=real units=m s-1>\\n    <dimensions>\\n      horizontal_loop_extent\\n    </dimensions>\\n    <source_type>\\n      ddt\\n    </source_type>\\n    <source_name>\\n      vname\\n    </source_name>\\n  </var>\\n</variables>\\n'
 
     >>> parent = ET.fromstring('<variables></variables>')
     >>> _new_var_entry(parent, var, full_entry=False)
