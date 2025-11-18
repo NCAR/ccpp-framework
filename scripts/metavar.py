@@ -26,7 +26,7 @@ from parse_tools import ParseInternalError, ParseSyntaxError, CCPPError
 from parse_tools import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 from var_props import CCPP_LOOP_DIM_SUBSTS, VariableProperty, VarCompatObj
 from var_props import find_horizontal_dimension, find_vertical_dimension
-from var_props import standard_name_to_long_name, default_kind_val
+from var_props import standard_name_to_long_name, local_name_to_diag_name, default_kind_val
 
 ##############################################################################
 
@@ -174,6 +174,9 @@ class Var:
                                      check_fn_in=check_cf_standard_name),
                     VariableProperty('long_name', str, optional_in=True,
                                      default_fn_in=standard_name_to_long_name),
+                    VariableProperty('diagnostic_name', str, optional_in=True,
+                                     default_fn_in=local_name_to_diag_name,
+                                     check_fn_in=check_diagnostic_id),
                     VariableProperty('units', str,
                                      check_fn_in=check_units),
                     VariableProperty('dimensions', list,
@@ -189,9 +192,6 @@ class Var:
                                      optional_in=True, default_in=False),
                     VariableProperty('allocatable', bool,
                                      optional_in=True, default_in=False),
-                    VariableProperty('diagnostic_name', str,
-                                     optional_in=True, default_in='',
-                                     check_fn_in=check_diagnostic_id),
                     VariableProperty('diagnostic_name_fixed', str,
                                      optional_in=True, default_in='',
                                      check_fn_in=check_diagnostic_fixed),

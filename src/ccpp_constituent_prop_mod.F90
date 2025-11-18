@@ -34,6 +34,7 @@ module ccpp_constituent_prop_mod
       !   for a constituent species and provides interfaces to access that data.
       character(len=:), private, allocatable :: var_std_name
       character(len=:), private, allocatable :: var_long_name
+      character(len=:), private, allocatable :: var_diag_name
       character(len=:), private, allocatable :: var_units
       character(len=:), private, allocatable :: vert_dim
       integer,          private              :: const_ind = int_unassigned
@@ -60,6 +61,7 @@ module ccpp_constituent_prop_mod
       procedure :: is_instantiated           => ccp_is_instantiated
       procedure :: standard_name             => ccp_get_standard_name
       procedure :: long_name                 => ccp_get_long_name
+      procedure :: diagnostic_name           => ccp_get_diagnostic_name
       procedure :: units                     => ccp_get_units
       procedure :: is_layer_var              => ccp_is_layer_var
       procedure :: is_interface_var          => ccp_is_interface_var
@@ -103,6 +105,7 @@ module ccpp_constituent_prop_mod
       ! Informational methods
       procedure :: standard_name             => ccpt_get_standard_name
       procedure :: long_name                 => ccpt_get_long_name
+      procedure :: diagnostic_name           => ccpt_get_diagnostic_name
       procedure :: units                     => ccpt_get_units
       procedure :: is_layer_var              => ccpt_is_layer_var
       procedure :: is_interface_var          => ccpt_is_interface_var
@@ -219,6 +222,7 @@ CONTAINS
 
       outConst%var_std_name        = inConst%var_std_name
       outConst%var_long_name       = inConst%var_long_name
+      outConst%var_diag_name       = inConst%var_diag_name
       outConst%vert_dim            = inConst%vert_dim
       outConst%const_ind           = inConst%const_ind
       outConst%advected            = inConst%advected
@@ -373,8 +377,8 @@ CONTAINS
 
    !#######################################################################
 
-   subroutine ccp_instantiate(this, std_name, long_name, units, vertical_dim,  &
-        advected, default_value, min_value, molar_mass, water_species,         &
+   subroutine ccp_instantiate(this, std_name, long_name, diag_name, units,            &
+        vertical_dim, advected, default_value, min_value, molar_mass, water_species,  &
         mixing_ratio_type, errcode, errmsg)
       ! Initialize all fields in <this>
 
@@ -382,6 +386,7 @@ CONTAINS
       class(ccpp_constituent_properties_t), intent(inout) :: this
       character(len=*),                     intent(in)    :: std_name
       character(len=*),                     intent(in)    :: long_name
+      character(len=*),                     intent(in)    :: diag_name
       character(len=*),                     intent(in)    :: units
       character(len=*),                     intent(in)    :: vertical_dim
       logical, optional,                    intent(in)    :: advected
@@ -404,6 +409,7 @@ CONTAINS
       end if
       if (errcode == 0) then
          this%var_long_name = trim(long_name)
+         this%var_diag_name = trim(diag_name)
          this%var_units = trim(units)
          this%vert_dim = trim(vertical_dim)
          if (present(advected)) then
@@ -479,6 +485,9 @@ CONTAINS
       if (allocated(this%var_long_name)) then
          deallocate(this%var_long_name)
       end if
+      if (allocated(this%var_diag_name)) then
+         deallocate(this%var_diag_name)
+      end if
       if (allocated(this%vert_dim)) then
          deallocate(this%vert_dim)
       end if
@@ -527,6 +536,25 @@ CONTAINS
       end if
 
    end subroutine ccp_get_long_name
+
+   !#######################################################################
+
+   subroutine ccp_get_diagnostic_name(this, diag_name, errcode, errmsg)
+      ! Return this constituent's diagnostic name
+
+      ! Dummy arguments
+      class(ccpp_constituent_properties_t), intent(in)  :: this
+      character(len=*),                     intent(out) :: diag_name
+      integer,          optional,           intent(out) :: errcode
+      character(len=*), optional,           intent(out) :: errmsg
+
+      if (this%is_instantiated(errcode, errmsg)) then
+         diag_name = this%var_diag_name
+      else
+         diag_name = ''
+      end if
+
+   end subroutine ccp_get_diagnostic_name
 
    !#######################################################################
 
@@ -763,6 +791,7 @@ CONTAINS
            oconst%is_instantiated(errcode, errmsg)) then
          equiv = (trim(this%var_std_name) == trim(oconst%var_std_name)) .and. &
               (trim(this%var_long_name) == trim(oconst%var_long_name))  .and. &
+              (trim(this%var_diag_name) == trim(oconst%var_diag_name))  .and. &
               (trim(this%vert_dim) == trim(oconst%vert_dim))            .and. &
               (trim(this%var_units) == trim(oconst%var_units))          .and. &
               (this%advected .eqv. oconst%advected)                     .and. &
@@ -1007,7 +1036,6 @@ CONTAINS
       ! Local variable
       logical :: val, comp_val
       character(len=stdname_len) :: char_val, char_comp_val
-      logical :: check
 
       ! By default, every constituent is a match
       is_match = .true.
@@ -1986,6 +2014,29 @@ CONTAINS
       end if
 
    end subroutine ccpt_get_long_name
+
+   !#######################################################################
+
+   subroutine ccpt_get_diagnostic_name(this, diag_name, errcode, errmsg)
+      ! Return this constituent's diagnostic name
+
+      ! Dummy arguments
+      class(ccpp_constituent_prop_ptr_t), intent(in)  :: this
+      character(len=*),                   intent(out) :: diag_name
+      integer,          optional,         intent(out) :: errcode
+      character(len=*), optional,         intent(out) :: errmsg
+      ! Local variable
+      character(len=*), parameter :: subname = 'ccpt_get_diagnostic_name'
+
+      if (associated(this%prop)) then
+         call this%prop%diagnostic_name(diag_name, errcode, errmsg)
+      else
+         diag_name = ''
+         call append_errvars(1, ": invalid constituent pointer",        &
+              subname, errcode=errcode, errmsg=errmsg)
+      end if
+
+   end subroutine ccpt_get_diagnostic_name
 
    !#######################################################################
 
