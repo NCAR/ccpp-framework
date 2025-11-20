@@ -559,6 +559,8 @@ def expand_nested_suites(suite, default_path, logger=None):
     # require more iterations, than he/she should be able to
     # track down this variable and adjust it!
     max_iterations = 10
+    # Collect the names of the expanded suites
+    suite_names = []
     # Iteratively expand nested suites until they are all gone
     keep_expanding = True
     for num_iterations in range(max_iterations):
@@ -568,19 +570,20 @@ def expand_nested_suites(suite, default_path, logger=None):
         for group in groups:
             nested_suites = group.findall("nested_suite")
             for nested in nested_suites:
-                _ = replace_nested_suite(group, nested, default_path, logger)
+                suite_names.append(replace_nested_suite(group, nested, default_path, logger))
                 # Trigger another pass over the root element
                 keep_expanding = True
         # Second, search all suites for nested_suite elements
         nested_suites = suite.findall("nested_suite")
         for nested in nested_suites:
-            _ = replace_nested_suite(suite, nested, default_path, logger)
+            suite_names.append(replace_nested_suite(suite, nested, default_path, logger))
             # Trigger another pass over the root element
             keep_expanding = True
         if not keep_expanding:
             return
     raise CCPPError("Exceeded number of iterations while expanding nested suites:" + \
-                    "check for inifite recursion or adjust limit max_iterations")
+                    "check for inifite recursion or adjust limit max_iterations." + \
+                    f"Suites expanded so far: {suite_names}")
                     
 ###############################################################################
 def write_xml_file(root, file_path, logger=None):
