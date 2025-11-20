@@ -33,7 +33,6 @@
   <xs:complexType name="scheme_type">
     <xs:simpleContent>
       <xs:extension base="xs:string">
-        <xs:attribute name="lib" type="xs:string" use="optional"/>
         <xs:attribute name="version" type="xs:string" use="optional"/>
       </xs:extension>
     </xs:simpleContent>
@@ -145,7 +144,6 @@
       </xs:sequence>
       <xs:attribute name="name"    type="xs:ID"        use="required"/>
       <xs:attribute name="version" type="version_type" use="required"/>
-      <xs:attribute name="lib"     type="xs:string"    use="optional"/>
     </xs:complexType>
   </xs:element>
 
