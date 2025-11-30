@@ -678,9 +678,7 @@ class API(VarDictionary):
             self.__context = ParseContext(filename=sdf)
             # Validate the XML file
             schema_version = find_schema_version(xml_root)
-            res = validate_xml_file(sdf, 'suite', schema_version, run_env.logger)
-            if not res:
-                raise CCPPError(f"Invalid suite definition file, '{sdf}'")
+            _ = validate_xml_file(sdf, 'suite', schema_version, run_env.logger)
 
             # Write the expanded sdf to the capgen output directory.
             # This file isn't used by capgen (everything is in memory
@@ -693,7 +691,12 @@ class API(VarDictionary):
                 # Preprocess the sdf to expand nested suites
                 if schema_version[0] == 2:
                     expand_nested_suites(xml_root, sdf_path, logger=run_env.logger)
+                # For both versions 1 and 2, write the SDF (expanded for
+                # version 2, original for version 1) to the current directory
                 write_xml_file(xml_root, sdf_expanded, run_env.logger)
+                # Validate the expanded SDF for version 2
+                if schema_version[0] == 2:
+                    _ = validate_xml_file(sdf, 'suite', schema_version, run_env.logger)
                 suite = Suite(sdf, xml_root, self, run_env)
                 suite.analyze(self.host_model, scheme_library,
                               self.__ddt_lib, run_env)

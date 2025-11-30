@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="ver_test_suite">
+  <group name="group1">
+    <scheme>scheme1</scheme>
+    <scheme>scheme2</scheme>
+  </group>
+</suite>

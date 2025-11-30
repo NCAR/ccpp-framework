@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="main_suite" version="2.0">
+  <group name="groupp">
+    <subcycle loop="num_subcycles_for_scheme9">
+      <scheme>scheme23</scheme>
+      <subcycle loop="2">
+        <subcycle loop="2">
+          <scheme>scheme9</scheme>
+        </subcycle>
+      </subcycle>
+      <scheme>scheme3</scheme>
+    </subcycle>
+    <nested_suite name="v12_suite" group="main_group" file="suite_good_v2_test02.xml"/>
+  </group>
+</suite>

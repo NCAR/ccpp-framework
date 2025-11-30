@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="subsuite_inline" version="1.0">
+  <group name="group2">
+    <scheme>scheme1i</scheme>
+    <scheme>scheme2i</scheme>
+    <scheme>scheme1i</scheme>
+  </group>
+</suite>

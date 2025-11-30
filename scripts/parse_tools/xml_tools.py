@@ -233,7 +233,7 @@ def read_xml_file(filename, logger=None):
         logger (logging.Logger, optional): Logger for warnings/errors.
 
     Returns:
-        tree (xml.etree.ElementTreet): The element tree from the input file.
+        tree (xml.etree.ElementTree): The element tree from the input file.
         root (xml.etree.ElementTree.Element): The root element of tree.
 
     Raises:
@@ -308,9 +308,6 @@ def load_suite_by_name(suite_name, group_name, file, logger=None):
     """
     _, root = read_xml_file(file, logger)
     schema_version = find_schema_version(root)
-    if schema_version[0] < 2:
-        raise CCPPError(f"XML schema version {schema_version} " + \
-                        f"invalid for nested suite {suite_name}")
     res = validate_xml_file(file, 'suite', schema_version, logger)
     if not res:
         raise CCPPError(f"Invalid suite definition file, '{sdf}'")
@@ -415,7 +412,7 @@ def replace_nested_suite(element, nested_suite, default_path, logger):
         file = os.path.join(default_path, file)
     referenced_suite = load_suite_by_name(suite_name, group_name, file,
                                           logger=logger)
-    imported_content = [ET.fromstring(ET.tostring(child)) 
+    imported_content = [ET.fromstring(ET.tostring(child))
                         for child in referenced_suite]
     # Swap nested suite with imported content
     for item in imported_content:
@@ -581,8 +578,8 @@ def expand_nested_suites(suite, default_path, logger=None):
             keep_expanding = True
         if not keep_expanding:
             return
-    raise CCPPError("Exceeded number of iterations while expanding nested suites:" + \
-                    "check for inifite recursion or adjust limit max_iterations." + \
+    raise CCPPError("Exceeded number of iterations while expanding nested suites. " + \
+                    "Check for infinite recursion or adjust limit max_iterations. " + \
                     f"Suites expanded so far: {suite_names}")
                     
 ###############################################################################
@@ -601,7 +598,7 @@ def write_xml_file(root, file_path, logger=None):
 
     # Convert ElementTree to a byte string
     byte_string = ET.tostring(root, 'us-ascii')
-    
+
     # Parse string using minidom for pretty printing
     reparsed = xml.dom.minidom.parseString(byte_string)
 

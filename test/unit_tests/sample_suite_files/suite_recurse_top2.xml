@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="main_suite" version="2.0">
+  <group name="groupp">
+    <scheme>scheme13</scheme>
+    <subcycle loop="num_subcycles_for_scheme9">
+      <scheme>scheme23</scheme>
+      <subcycle loop="2">
+        <subcycle loop="2">
+          <scheme>scheme9</scheme>
+        </subcycle>
+      </subcycle>
+      <scheme>scheme3</scheme>
+    </subcycle>
+    <scheme>scheme43</scheme>
+  </group>
+  <nested_suite name="l2_suite" file="suite_recurse_level2a.xml"/>
+</suite>
