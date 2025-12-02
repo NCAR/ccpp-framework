@@ -416,12 +416,6 @@ def replace_nested_suite(element, nested_suite, default_path, logger):
                         for child in referenced_suite]
     # Swap nested suite with imported content
     for item in imported_content:
-        # If the imported content comes from a separate file and has
-        # nested suites that are within that separate file, then we
-        # need to inject the file attribute here.
-        if item.tag == "nested_suite":
-            if file and not item.attrib.get("file"):
-                item.set("file", file)
         # If we are inserting a nested suite at the suite level (element.tag is suite),
         # but we only want one group (group_name is not none), then we need to wrap
         # the item in a group element. If on the other hand we insert an entire suite
