@@ -25,7 +25,7 @@ import xml.etree.ElementTree as ET
 from framework_env import CCPPFrameworkEnv
 from metadata_table import UNKNOWN_PROCESS_TYPE
 from metavar import Var
-from parse_tools import read_xml_file, PrettyElementTree
+from parse_tools import read_xml_file, write_xml_file
 from parse_tools import ParseContext, ParseSource
 from suite_objects import VerticalLoop, Subcycle
 
@@ -1182,8 +1182,7 @@ def generate_ccpp_datatable(run_env, host_model, api, scheme_headers,
     # end for
     _add_dependencies(datatable, scheme_depends, host_depends)
     # Write tree
-    datatable_tree = PrettyElementTree(datatable)
-    datatable_tree.write(run_env.datatable_file)
+    write_xml_file(datatable, run_env.datatable_file)
 
 ###############################################################################
 

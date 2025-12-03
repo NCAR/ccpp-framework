@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="radiation2_suite" version="2.0">
+  <group name="effrs_calc">
+    <subcycle loop="num_subcycles_for_effr">
+      <scheme>effrs_calc</scheme>
+    </subcycle>
+    <scheme>effr_diag</scheme>
+  </group>
+</suite>

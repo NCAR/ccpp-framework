@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="radiation3_suite" version="2.0">
+  <group name="rad_sw_group">
+    <nested_suite name="radiation3_subsuite" group="rad_sw_group" file="radiation3_subsuite.xml"/>
+  </group>
+</suite>

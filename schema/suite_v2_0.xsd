@@ -33,8 +33,27 @@
   <xs:complexType name="scheme_type">
     <xs:simpleContent>
       <xs:extension base="xs:string">
-        <xs:attribute name="lib" type="xs:string" use="optional"/>
         <xs:attribute name="version" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="nested_suite_group_type">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="group" type="xs:string" use="required"/>
+        <xs:attribute name="file" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="nested_suite_type">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="group" type="xs:string" use="optional"/>
+        <xs:attribute name="file" type="xs:string" use="required"/>
       </xs:extension>
     </xs:simpleContent>
   </xs:complexType>
@@ -101,8 +120,9 @@
         <xs:element ref="subcycle"/>
         <xs:element ref="subcol"/>
         <xs:element name="scheme" type="scheme_type"/>
+        <xs:element name="nested_suite" type="nested_suite_group_type"/>
       </xs:choice>
-      <xs:attribute name="name" type="xs:string" use="required"/>
+      <xs:attribute name="name" type="xs:ID" use="required"/>
     </xs:complexType>
   </xs:element>
 
@@ -113,15 +133,17 @@
           <xs:element name="init"      type="scheme_type"/>
           <xs:element name="initalize" type="scheme_type"/>
         </xs:choice>
-        <xs:element ref="group" minOccurs="1" maxOccurs="unbounded"/>
+        <xs:element ref="group" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="nested_suite" type="nested_suite_type"/>
+        </xs:choice>
         <xs:choice  minOccurs="0" maxOccurs="1">
           <xs:element name="final"    type="scheme_type"/>
           <xs:element name="finalize" type="scheme_type"/>
         </xs:choice>
       </xs:sequence>
-      <xs:attribute name="name"    type="xs:string"    use="required"/>
+      <xs:attribute name="name"    type="xs:ID"        use="required"/>
       <xs:attribute name="version" type="version_type" use="required"/>
-      <xs:attribute name="lib"     type="xs:string"    use="optional"/>
     </xs:complexType>
   </xs:element>
 

@@ -1,0 +1,42 @@
+[ccpp-table-properties]
+  name = test_host_mod
+  type = module
+[ccpp-arg-table]
+  name = test_host_mod
+  type = module
+[ ncols]
+  standard_name = horizontal_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[ pver ]
+  standard_name = vertical_layer_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[ phys_state ]
+  standard_name = physics_state_derived_type
+  long_name = Physics State DDT
+  type = physics_state
+  dimensions = ()
+[effrs]
+  standard_name = effective_radius_of_stratiform_cloud_snow_particle
+  long_name = effective radius of cloud snow particle in meter
+  units = m
+  dimensions = (horizontal_dimension,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+[has_ice]
+  standard_name = flag_indicating_cloud_microphysics_has_ice
+  long_name = flag indicating that the cloud microphysics produces ice
+  units = flag
+  dimensions = ()
+  type = logical
+[has_graupel]
+  standard_name = flag_indicating_cloud_microphysics_has_graupel
+  long_name = flag indicating that the cloud microphysics produces graupel
+  units = flag
+  dimensions = ()
+  type = logical

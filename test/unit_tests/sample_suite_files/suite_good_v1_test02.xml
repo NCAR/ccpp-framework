@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="good_suite" version="1.0">
+  <group name="physics">
+    <scheme>scheme1</scheme>
+    <scheme>scheme2</scheme>
+    <scheme>scheme3</scheme>
+    <scheme>scheme2</scheme>
+    <scheme>scheme1</scheme>
+  </group>
+</suite>
