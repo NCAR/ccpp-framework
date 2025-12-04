@@ -20,8 +20,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libxml2-utils
         python -m pip install --upgrade pip
         pip install pytest
+        which xmllint
+        xmllint --version
+        which pytest
+
     - name: Test with pytest
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools

@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+
+<suite name="ver_test_suite" version="2.0">
+  <group name="group1">
+    <scheme>scheme5</scheme>
+    <scheme>scheme1i</scheme>
+    <scheme>scheme2i</scheme>
+    <scheme>scheme1i</scheme>
+    <scheme>scheme9</scheme>
+  </group>
+</suite>

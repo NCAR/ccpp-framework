@@ -1,0 +1,25 @@
+[ccpp-table-properties]
+  name = effrs_calc
+  type = scheme
+
+[ccpp-arg-table]
+  name  = effrs_calc_run
+  type  = scheme
+[ effrs_inout ]
+  standard_name = effective_radius_of_stratiform_cloud_snow_particle
+  units = m
+  type = real | kind = kind_phys
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  type = character | kind = len=512
+  dimensions = ()
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  type = integer
+  dimensions = ()
+  intent = out
