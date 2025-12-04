@@ -137,8 +137,8 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                     container = encode_container(module_name, metadata_section.title)
 
                 # Add to dependencies
-                if new_metadata_header.relative_path:
-                    dependencies += [ os.path.join(new_metadata_header.relative_path, x) for x in new_metadata_header.dependencies]
+                if new_metadata_header.dependencies_path:
+                    dependencies += [ os.path.join(new_metadata_header.dependencies_path, x) for x in new_metadata_header.dependencies]
                 else:
                     dependencies += new_metadata_header.dependencies
             else:
@@ -150,8 +150,8 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                 container = encode_container(module_name, scheme_name, table_name)
 
                 # Add to dependencies
-                if new_metadata_header.relative_path:
-                    dependencies += [ os.path.join(new_metadata_header.relative_path, x) for x in new_metadata_header.dependencies]
+                if new_metadata_header.dependencies_path:
+                    dependencies += [ os.path.join(new_metadata_header.dependencies_path, x) for x in new_metadata_header.dependencies]
                 else:
                     dependencies += new_metadata_header.dependencies
 
