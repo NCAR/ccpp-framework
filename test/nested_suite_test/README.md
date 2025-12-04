@@ -11,7 +11,7 @@ Tests the capability to process nested suites:
 To explicitly build/run the nested suite test host, run:
 
 ```bash
-$ cmake -S<path_to_project_root> -B<path_to_build> -DCCPP_RUN_NESTED_SUITE_TEST=ON
+$ cmake --fresh -S<path_to_project_root> -B<path_to_build> -DCCPP_RUN_NESTED_SUITE_TEST=ON
 $ cd <path_to_build>
 $ make
 $ ctest
