@@ -27,7 +27,7 @@ IndentSize:      2
 # requested 2025/12/08 using the Codee Online Form
 IndentExceptions:
   ModuleContains:  IndentBeforeAndAfter
-  Comments:        ! IndentIfAlreadyIndented # Indent
+  Comments:        IndentIfAlreadyIndented # Indent
 FixedFormLabelAlignment: Right
 ContinuationIndentSize: DoubleIndentSize
 DoubleColonSeparator: AddAlways
