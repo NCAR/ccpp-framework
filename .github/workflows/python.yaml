@@ -25,13 +25,23 @@ jobs:
           libxml2-utils
         python -m pip install --upgrade pip
         pip install pytest
-        which xmllint
-        xmllint --version
         which pytest
 
     - name: Test with pytest
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
+        which xmllint
+        xmllint --version
+        pytest -v test/
+
+    - name: Test with pytest using bad xmllint (xmllint wrapper)
+      run: |
+        export XMLLINT_REAL=$(which xmllint)
+        export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
+        export PATH=$(pwd)/test/unit_tests/xmllint_wrapper:${PATH}
+        export | grep PATH
+        which xmllint
+        xmllint --version
         pytest -v test/
 
   doctest:
