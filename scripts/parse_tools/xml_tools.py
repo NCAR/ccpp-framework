@@ -151,7 +151,7 @@ def validate_xml_file(filename, schema_root, version, logger, schema_path=None):
     xmllint = shutil.which('xmllint') # Blank if not installed
     if not xmllint:
         msg = "xmllint not found, could not validate file {}"
-        raise CCPPError("validate_xml_file: " + lmsg.format(filename))
+        raise CCPPError("validate_xml_file: " + msg.format(filename))
     # end if
 
     # Validate XML file against schema
