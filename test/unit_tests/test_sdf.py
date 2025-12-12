@@ -194,8 +194,7 @@ class SDFParseTestCase(unittest.TestCase):
             schema_version = find_schema_version(xml_root)
             self.assertEqual(schema_version[0], 1)
             self.assertEqual(schema_version[1], 0)
-            res = validate_xml_file(source, 'suite', schema_version, logger,
-                                    error_on_noxmllint=True)
+            res = validate_xml_file(source, 'suite', schema_version, logger)
             self.assertTrue(res)
             write_xml_file(xml_root, compare, logger)
             amsg = f"{compare} does not exist"
@@ -226,8 +225,7 @@ class SDFParseTestCase(unittest.TestCase):
         self.assertEqual(schema_version[1], 0)
         expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
         write_xml_file(xml_root, compare, logger)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res)
         amsg = f"{compare} does not exist"
         self.assertTrue(os.path.exists(compare), msg=amsg)
@@ -257,8 +255,7 @@ class SDFParseTestCase(unittest.TestCase):
         self.assertEqual(schema_version[1], 0)
         expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
         write_xml_file(xml_root, compare, logger)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res)
         amsg = f"{compare} does not exist"
         self.assertTrue(os.path.exists(compare), msg=amsg)
@@ -289,8 +286,7 @@ class SDFParseTestCase(unittest.TestCase):
         self.assertEqual(schema_version[1], 0)
         expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
         write_xml_file(xml_root, compare, logger)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res)
         amsg = f"{compare} does not exist"
         self.assertTrue(os.path.exists(compare), msg=amsg)
@@ -321,8 +317,7 @@ class SDFParseTestCase(unittest.TestCase):
         self.assertEqual(schema_version[1], 0)
         expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
         write_xml_file(xml_root, compare, logger)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res)
         amsg = f"{compare} does not exist"
         self.assertTrue(os.path.exists(compare), msg=amsg)
@@ -349,8 +344,7 @@ class SDFParseTestCase(unittest.TestCase):
         # logic handles the correct behavior (validation fails ==>
         # exit code /= 0 ==> CCPPError).
         try:
-            res = validate_xml_file(source, 'suite', schema_version, logger,
-                                    error_on_noxmllint=True)
+            res = validate_xml_file(source, 'suite', schema_version, logger)
         except Exception as e:
             emsg = "Schemas validity error : Element 'suite': This element is not expected."
             msg = str(e)
@@ -369,8 +363,7 @@ class SDFParseTestCase(unittest.TestCase):
         schema_version = find_schema_version(xml_root)
         self.assertEqual(schema_version[0], 2)
         self.assertEqual(schema_version[1], 0)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res, msg="Initial suite file should be valid")
         with self.assertRaises(Exception) as context:
             expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
@@ -397,8 +390,7 @@ class SDFParseTestCase(unittest.TestCase):
         schema_version = find_schema_version(xml_root)
         self.assertEqual(schema_version[0], 2)
         self.assertEqual(schema_version[1], 0)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res, msg="Initial suite file should be valid")
         with self.assertRaises(Exception) as context:
             expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
@@ -424,8 +416,7 @@ class SDFParseTestCase(unittest.TestCase):
         # See note about different behavior of xmllint versions
         # in test test_bad_v2_suite_tag_sdf above.
         try:
-            res = validate_xml_file(source, 'suite', schema_version, logger,
-                                    error_on_noxmllint=True)
+            res = validate_xml_file(source, 'suite', schema_version, logger)
         except Exception as e:
             emsg = "Schemas validity error : Element 'nested_suite': " + \
                 "The attribute 'file' is required but missing."
@@ -446,8 +437,7 @@ class SDFParseTestCase(unittest.TestCase):
         schema_version = find_schema_version(xml_root)
         self.assertEqual(schema_version[0], 2)
         self.assertEqual(schema_version[1], 0)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res, msg="Initial suite file should be valid")
         with self.assertRaises(Exception) as context:
             expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
@@ -471,8 +461,7 @@ class SDFParseTestCase(unittest.TestCase):
         schema_version = find_schema_version(xml_root)
         self.assertEqual(schema_version[0], 2)
         self.assertEqual(schema_version[1], 0)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res, msg="Initial suite file should be valid")
         with self.assertRaises(Exception) as context:
             expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
@@ -496,8 +485,7 @@ class SDFParseTestCase(unittest.TestCase):
         schema_version = find_schema_version(xml_root)
         self.assertEqual(schema_version[0], 2)
         self.assertEqual(schema_version[1], 0)
-        res = validate_xml_file(source, 'suite', schema_version, logger,
-                                error_on_noxmllint=True)
+        res = validate_xml_file(source, 'suite', schema_version, logger)
         self.assertTrue(res, msg="Initial suite file should be valid")
         with self.assertRaises(Exception) as context:
             expand_nested_suites(xml_root, _SAMPLE_FILES_DIR, logger=logger)
