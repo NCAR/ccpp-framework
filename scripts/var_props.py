@@ -155,7 +155,7 @@ def local_name_to_diag_name(prop_dict, context=None):
         stdname = prop_dict['standard_name']
         if stdname:
             maxlen = 256
-            diag_name = stdname[:maxlen] if len(stdname) > maxlen else stdname
+            diag_name = stdname[:maxlen]
         # end if
     # end if
 
