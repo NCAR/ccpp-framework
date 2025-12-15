@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="l2_suite" version="2.0">
+  <group name="group1">
+    <scheme>scheme13</scheme>
+    <scheme>scheme3</scheme>
+    <scheme>scheme43</scheme>
+  </group>
+  <nested_suite name="l3_suite" file="suite_recurse_level3a.xml"/>
+</suite>

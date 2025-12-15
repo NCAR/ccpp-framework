@@ -51,7 +51,7 @@ class MetadataTableTestCase(unittest.TestCase):
         #       size of returned list equals number of headers in the test file
         #       ccpp-table-properties name is 'test_host'
         dependencies = result[0].dependencies
-        rel_path = result[0].relative_path
+        rel_path = result[0].dependencies_path
         self.assertFalse('' in dependencies)
         self.assertEqual(len(dependencies), 0)
         self.assertIsNone(rel_path)
@@ -261,7 +261,7 @@ class MetadataTableTestCase(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             MetadataTable(self._DUMMY_RUN_ENV, table_name_in="something",
                           table_type_in=None, dependencies=None,
-                          relative_path=None, known_ddts=None, var_dict=None,
+                          dependencies_path=None, known_ddts=None, var_dict=None,
                           module=None, parse_object=None)
 
         #print("The exception is", context.exception)
@@ -273,7 +273,7 @@ class MetadataTableTestCase(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             MetadataTable(self._DUMMY_RUN_ENV, table_name_in="something",
                           table_type_in="banana", dependencies=None,
-                          relative_path=None, known_ddts=None, var_dict=None,
+                          dependencies_path=None, known_ddts=None, var_dict=None,
                           module=None, parse_object=None)
 
         #print("The exception is", context.exception)
@@ -285,7 +285,7 @@ class MetadataTableTestCase(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             MetadataTable(self._DUMMY_RUN_ENV, table_name_in=None,
                           table_type_in=None, dependencies=None,
-                          relative_path=None, known_ddts=None, var_dict=None,
+                          dependencies_path=None, known_ddts=None, var_dict=None,
                           module=None, parse_object=None)
 
         #print("The exception is", context.exception)
@@ -358,17 +358,17 @@ class MetadataTableTestCase(unittest.TestCase):
         emsg = "Invalid CCPP metadata line, '[ccpp-arg-table]', at "
         self.assertTrue(emsg in str(context.exception))
 
-    def test_dependencies_rel_path(self):
-        """Test that relative_path and dependencies from ccpp-table-properties are read in correctly"""
+    def test_dependencies_path(self):
+        """Test that dependencies_path and dependencies from ccpp-table-properties are read in correctly"""
         known_ddts = list()
         filename = os.path.join(SAMPLE_FILES_DIR,
-                                "test_dependencies_rel_path.meta")
+                                "test_dependencies_path.meta")
 
         result = parse_metadata_file(filename, known_ddts,
                                      self._DUMMY_RUN_ENV)
 
         dependencies = result[0].dependencies
-        rel_path = result[0].relative_path
+        rel_path = result[0].dependencies_path
         titles = [elem.table_name for elem in result]
 
         self.assertEqual(len(dependencies), 4)

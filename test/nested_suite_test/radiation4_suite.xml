@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="radiation4_suite" version="2.0">
+  <group name="rad_lw_group">
+    <scheme>rad_lw</scheme>
+  </group>
+</suite>

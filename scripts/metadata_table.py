@@ -61,7 +61,7 @@ An example argument table is shown below.
 [ccpp-table-properties]
   name = <name>
   type = scheme
-  relative_path = <relative path>
+  dependencies_path = <relative path>
   dependencies = <dependencies>
   module = <module name> # only needed if module name differs from filename
   source_path = <relative source directory of Fortran source (if different)>
@@ -358,12 +358,12 @@ class MetadataTable():
     __table_start = re.compile(r"(?i)\s*\[\s*ccpp-table-properties\s*\]")
 
     def __init__(self, run_env, table_name_in=None, table_type_in=None,
-                 dependencies=None, relative_path=None, source_path=None,
+                 dependencies=None, dependencies_path=None, source_path=None,
                  known_ddts=None, var_dict=None, module=None, parse_object=None,
                  skip_ddt_check=False):
         """Initialize a MetadataTable, either with a name, <table_name_in>, and
         type, <table_type_in>, or with information from a file (<parse_object>).
-        if <parse_object> is None, <dependencies>, <relative_path>, and
+        if <parse_object> is None, <dependencies>, <dependencies_path>, and
           are <source_path> are also stored.
         If <var_dict> and / or module are passed (not allowed with
           <parse_object), then a single MetadataSection is added with
@@ -373,7 +373,7 @@ class MetadataTable():
         self.__dependencies = dependencies
         self.__fortran_src_path = source_path
         self.__module_name = module
-        self.__relative_path = relative_path
+        self.__dependencies_path = dependencies_path
         self.__sections = []
         self.__run_env = run_env
         if parse_object is None:
@@ -419,8 +419,8 @@ class MetadataTable():
                 perr = "dependencies not allowed as argument when reading file"
                 raise ParseInternalError(perr)
             # end if
-            if relative_path:
-                perr = "relative_path not allowed as argument when reading file"
+            if dependencies_path:
+                perr = "dependencies_path not allowed as argument when reading file"
                 raise ParseInternalError(perr)
             # end if
             if var_dict is not None: # i.e., not even an empty dict
@@ -441,8 +441,8 @@ class MetadataTable():
             self.__init_from_file(known_ddts, self.__run_env, skip_ddt_check=skip_ddt_check)
             # Set absolute path for all dependencies
             path = os.path.dirname(self.__pobj.filename)
-            if self.relative_path:
-                path = os.path.join(path, self.relative_path)
+            if self.dependencies_path:
+                path = os.path.join(path, self.dependencies_path)
             # end if
             for ind, dep in enumerate(self.__dependencies):
                 self.__dependencies[ind] = os.path.abspath(os.path.join(path, dep))
@@ -505,8 +505,8 @@ class MetadataTable():
                         # end if
                     elif key == 'module_name':
                         self.__module_name = value
-                    elif key == 'relative_path':
-                        self.__relative_path = value
+                    elif key == 'dependencies_path':
+                        self.__dependencies_path = value
                     elif key == 'source_path':
                         self.__fortran_src_path = os.path.join(my_dirname, value)
                     else:
@@ -592,9 +592,9 @@ class MetadataTable():
         return self.__module_name
 
     @property
-    def relative_path(self):
+    def dependencies_path(self):
         """Return the relative path for the table's dependencies"""
-        return self.__relative_path
+        return self.__dependencies_path
 
     @property
     def fortran_source_path(self):

@@ -14,7 +14,7 @@ $ pytest -v <root_project_source_directory>/scripts/ --doctest-modules
 The run the regression tests with mock host models, build the main project with your test option:
 
 ```bash
-$ cmake -S<root_project_source_directory> -B<build_directory> <options>...
+$ cmake --fresh -S<root_project_source_directory> -B<build_directory> <options>...
 $ cd <build_directory>
 $ make
 $ ctest
@@ -22,7 +22,7 @@ $ ctest
 
 For example, to run all of the regression tests from the root of the project, you can use:
 ```bash
-cmake -B./build -S./ -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
+cmake --fresh -B./build -S./ -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
 ```
 
 Currently (as of July 2025), if everything works as expected, you should see something like:
