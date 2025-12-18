@@ -3,7 +3,6 @@
 ## Relevant directories and file paths
 root_dir="$(cd $(dirname ${0}); pwd -P)"
 script_dir="$(dirname ${root_dir})/scripts/fortran_tools"
-test_root_dir="$(dirname ${root_dir})/test"
 test_dir="$(dirname ${root_dir})/test/advection_test"
 offline_script="${script_dir}/offline_check_fortran_vs_metadata.py"
 relative_path="capgen_test"
@@ -22,7 +21,7 @@ else
 fi
 
 # Run the script again with a relative path
-cd ${test_root_dir}
+cd ${root_dir}
 ${offline_script} --directory ${relative_path}
 res=$?
 
