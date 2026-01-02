@@ -42,7 +42,7 @@ def compare_fortran_and_metadata(scheme_directory, run_env):
     ## Check for files
     metadata_files = find_files_to_compare(scheme_directory)
     # Perform checks
-    parse_scheme_files(metadata_files, run_env, skip_ddt_check=True)
+    parse_scheme_files(metadata_files, run_env, skip_ddt_check=True, relative_source_path=True)
 
 def parse_command_line(arguments, description):
     """Parse command-line arguments"""
