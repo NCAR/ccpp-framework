@@ -136,11 +136,19 @@ def local_name_to_diag_name(prop_dict, context=None):
     Currently, this is just equal to the local name. If no local name
     exists in the property dictionary, a truncation of the standard
     name is used. (256 characters = max length of NetCDF variable name)
-    >>> local_name_to_diag_name({'local_name':'foo', 'standard_nam':'cloud_optical_depth'})
+    >>> local_name_to_diag_name({'local_name':'foo', 'standard_name':'cloud_optical_depth'})
     'foo'
     >>> local_name_to_diag_name({'standard_name':'cloud_optical_depth_layers_from_0p55mu_to_0p99mu'})
     'cloud_optical_depth_layers_from_0p55mu_to_0p99mu'
     >>> local_name_to_diag_name({'units':'km'}) #doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    parse_source.CCPPError: No standard name or local name to convert to diagnostic name
+    >>> local_name_to_diag_name({'local_name':'', 'standard_name':'cloud_optical_depth'}) #doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    parse_source.CCPPError: No standard name or local name to convert to diagnostic name
+    >>> local_name_to_diag_name({'standard_name':''}) #doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
     parse_source.CCPPError: No standard name or local name to convert to diagnostic name
