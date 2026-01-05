@@ -94,7 +94,7 @@ SpacesAroundOperators:
   UnaryPlusMinus:  NoTrailing
   Comma:           OnlyTrailing
   Concat:          Both
-  DoubleColon:     Preserve
+  DoubleColon:     Both
 RemoveConsecutiveWhitespace: true
 RemoveSemicolons: true
 RemoveTrailingWhitespace: true
