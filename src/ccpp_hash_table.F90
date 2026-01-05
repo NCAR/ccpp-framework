@@ -23,7 +23,7 @@ module ccpp_hash_table
     ! Any table entry contains a key and a value
     class(ccpp_hashable_t), pointer :: entry_value => null()
     type(table_entry_t), pointer :: next => null()
-    contains
+  contains
     final :: finalize_table_entry
   end type table_entry_t
 
@@ -37,7 +37,7 @@ module ccpp_hash_table
     integer, private :: num_keys = 0
     integer, private :: num_key_collisions = 0
     integer, private :: max_collision = 0
-    contains
+  contains
     procedure :: is_initialized => hash_table_is_initialized
     procedure :: initialize => hash_table_initialize_table
     procedure :: key_hash => hash_table_key_hash
@@ -53,7 +53,7 @@ module ccpp_hash_table
     integer, private :: index = 0
     type(table_entry_t), private, pointer :: table_entry => null()
     type(ccpp_hash_table_t), private, pointer :: hash_table => null()
-    contains
+  contains
     procedure :: initialize => hash_iterator_initialize
     procedure :: key => hash_iterator_key
     procedure :: next => hash_iterator_next_entry

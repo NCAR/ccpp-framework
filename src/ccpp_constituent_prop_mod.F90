@@ -53,7 +53,7 @@ module ccpp_constituent_prop_mod
     ! default_value is the default value that the constituent array will be
     ! initialized to
     real(kind=kind_phys), private :: const_default_value = kphys_unassigned
-    contains
+  contains
     ! Required hashable method
     procedure :: key => ccp_properties_get_key
     ! Informational methods
@@ -99,7 +99,7 @@ module ccpp_constituent_prop_mod
 !!
   type, public :: ccpp_constituent_prop_ptr_t
     type(ccpp_constituent_properties_t), private, pointer :: prop => null()
-    contains
+  contains
     ! Informational methods
     procedure :: standard_name => ccpt_get_standard_name
     procedure :: long_name => ccpt_get_long_name
@@ -156,7 +156,7 @@ module ccpp_constituent_prop_mod
     ! An array containing all the constituent metadata
     ! Each element contains a pointer to a constituent from the hash table
     type(ccpp_constituent_prop_ptr_t), allocatable :: const_metadata(:)
-    contains
+  contains
     ! Return .true. if a constituent matches pattern
     procedure, private :: is_match => ccp_model_const_is_match
     ! Return a constituent from the hash table

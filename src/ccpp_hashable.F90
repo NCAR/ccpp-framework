@@ -9,19 +9,19 @@ module ccpp_hashable
 
   type, abstract, public :: ccpp_hashable_t
     ! The hashable type is a base type that contains a hash key.
-    contains
+  contains
     procedure(ccpp_hashable_get_key), deferred :: key
   end type ccpp_hashable_t
 
   type, public, extends(ccpp_hashable_t) :: ccpp_hashable_char_t
     character(len=:), private, allocatable :: name
-    contains
+  contains
     procedure :: key => ccpp_hashable_char_get_key
   end type ccpp_hashable_char_t
 
   type, public, extends(ccpp_hashable_t) :: ccpp_hashable_int_t
     integer, private :: value
-    contains
+  contains
     procedure :: key => ccpp_hashable_int_get_key
     procedure :: val => ccpp_hashable_int_get_val
   end type ccpp_hashable_int_t

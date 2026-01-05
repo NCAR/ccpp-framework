@@ -70,7 +70,7 @@ module ccpp_types
     integer :: thrd_cnt = ccpp_default_thread_count
     integer :: ccpp_instance = 1
 
-    contains
+  contains
 
     procedure :: initialized => ccpp_t_initialized
 
