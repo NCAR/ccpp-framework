@@ -54,3 +54,6 @@ jobs:
 
     - name: Run Fortran to metadata test
       run: cd test && ./test_fortran_to_metadata.sh
+
+    - name: Run offline metadata parser test
+      run: cd test && ./test_offline_metadata_checker.sh

@@ -182,7 +182,7 @@ def _parse_config_line(line, context):
 
 ########################################################################
 
-def parse_metadata_file(filename, known_ddts, run_env, skip_ddt_check=False):
+def parse_metadata_file(filename, known_ddts, run_env, skip_ddt_check=False, relative_source_path=False):
     """Parse <filename> and return list of parsed metadata tables"""
     # Read all lines of the file at once
     meta_tables = []
@@ -200,7 +200,8 @@ def parse_metadata_file(filename, known_ddts, run_env, skip_ddt_check=False):
         if MetadataTable.table_start(curr_line):
             new_table = MetadataTable(run_env, parse_object=parse_obj,
                                       known_ddts=known_ddts,
-                                      skip_ddt_check=skip_ddt_check)
+                                      skip_ddt_check=skip_ddt_check,
+                                      relative_source_path=relative_source_path)
             ntitle = new_table.table_name
             if ntitle not in table_titles:
                 meta_tables.append(new_table)
@@ -360,7 +361,7 @@ class MetadataTable():
     def __init__(self, run_env, table_name_in=None, table_type_in=None,
                  dependencies=None, dependencies_path=None, source_path=None,
                  known_ddts=None, var_dict=None, module=None, parse_object=None,
-                 skip_ddt_check=False):
+                 skip_ddt_check=False, relative_source_path=False):
         """Initialize a MetadataTable, either with a name, <table_name_in>, and
         type, <table_type_in>, or with information from a file (<parse_object>).
         if <parse_object> is None, <dependencies>, <dependencies_path>, and
@@ -448,7 +449,9 @@ class MetadataTable():
                 self.__dependencies[ind] = os.path.abspath(os.path.join(path, dep))
             # end for
             if self.__fortran_src_path:
-                self.__fortran_src_path = os.path.join(path, self.__fortran_src_path)
+                if not relative_source_path:
+                    self.__fortran_src_path = os.path.join(path, self.__fortran_src_path)
+                # end if
             # end if
         # end if
 

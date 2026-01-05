@@ -20,7 +20,6 @@ from parse_log import init_log, set_log_to_null
 
 # Global data
 _INDENT_STR = "  "
-_XMLLINT = shutil.which('xmllint') # Blank if not installed
 beg_tag_re = re.compile(r"([<][^/][^<>]*[^/][>])")
 end_tag_re = re.compile(r"([<][/][^<>/]+[>])")
 simple_tag_re = re.compile(r"([<][^/][^<>/]+[/][>])")
@@ -36,67 +35,6 @@ class XMLToolsInternalError(ValueError):
     def __init__(self, message):
         """Initialize this exception"""
         super().__init__(message)
-
-###############################################################################
-def call_command(commands, logger, silent=False):
-###############################################################################
-    """
-    Try a command line and return the output on success (None on failure)
-    >>> _LOGGER = init_log('xml_tools')
-    >>> set_log_to_null(_LOGGER)
-    >>> call_command(['ls', 'really__improbable_fffilename.foo'], _LOGGER) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    CCPPError: Execution of 'ls really__improbable_fffilename.foo' failed:
-    [Errno 2] No such file or directory
-    >>> call_command(['ls', 'really__improbable_fffilename.foo'], _LOGGER, silent=True)
-    False
-    >>> call_command(['ls'], _LOGGER)
-    True
-    >>> try:
-    ...    call_command(['ls','--invalid-option'], _LOGGER)
-    ... except CCPPError as e:
-    ...    print(str(e))
-    Execution of 'ls --invalid-option' failed with code: 2
-    Error output: ls: unrecognized option '--invalid-option'
-    Try 'ls --help' for more information.
-    >>> try:
-    ...    os.chdir(os.path.dirname(__file__))
-    ...    call_command(['ls', os.path.basename(__file__), 'foo.bar.baz'], _LOGGER)
-    ... except CCPPError as e:
-    ...    print(str(e))
-    Execution of 'ls xml_tools.py foo.bar.baz' failed with code: 2
-    xml_tools.py
-    Error output: ls: cannot access 'foo.bar.baz': No such file or directory
-    """
-    result = False
-    outstr = ''
-    try:
-        cproc = subprocess.run(commands, check=True,
-                                capture_output=True)
-        if not silent:
-            logger.debug(cproc.stdout)
-        # end if
-        result = cproc.returncode == 0
-    except (OSError, CCPPError, subprocess.CalledProcessError) as err:
-        if silent:
-            result = False
-        else:
-            cmd = ' '.join(commands)
-            outstr = f"Execution of '{cmd}' failed with code: {err.returncode}\n"
-            outstr += f"{err.output.decode('utf-8', errors='replace').strip()}"
-            if hasattr(err, 'stderr') and err.stderr:
-                stderr_str = err.stderr.decode('utf-8', errors='replace').strip()
-                if stderr_str:
-                    if err.output:
-                        outstr += os.linesep
-                    # end if
-                    outstr += f"Error output: {stderr_str}"
-                # end if
-            # end if
-            raise CCPPError(outstr) from err
-        # end if
-    # end of try
-    return result
 
 ###############################################################################
 def find_schema_version(root):
@@ -173,8 +111,7 @@ def find_schema_file(schema_root, version, schema_path=None):
     return None
 
 ###############################################################################
-def validate_xml_file(filename, schema_root, version, logger,
-                      schema_path=None, error_on_noxmllint=False):
+def validate_xml_file(filename, schema_root, version, logger, schema_path=None):
 ###############################################################################
     """
     Find the appropriate schema and validate the XML file, <filename>,
@@ -209,19 +146,39 @@ def validate_xml_file(filename, schema_root, version, logger,
         emsg = "validate_xml_file: Cannot open schema, '{}'"
         raise CCPPError(emsg.format(schema_file))
     # end if
-    if _XMLLINT:
-        logger.debug("Checking file {} against schema {}".format(filename,
-                                                                 schema_file))
-        cmd = [_XMLLINT, '--noout', '--schema', schema_file, filename]
-        result = call_command(cmd, logger)
+    
+    # Find xmllint
+    xmllint = shutil.which('xmllint') # Blank if not installed
+    if not xmllint:
+        msg = "xmllint not found, could not validate file {}"
+        raise CCPPError("validate_xml_file: " + msg.format(filename))
+    # end if
+
+    # Validate XML file against schema
+    logger.debug("Checking file {} against schema {}".format(filename,
+                                                             schema_file))
+    cmd = [xmllint, '--noout', '--schema', schema_file, filename]    
+    cproc = subprocess.run(cmd, check=False, capture_output=True)
+    if cproc.returncode == 0:
+        # We got a pass return code but some versions of xmllint do not
+        # correctly return an error code on non-validation so double check
+        # the result
+        result = b'validates' in cproc.stdout or b'validates' in cproc.stderr
+    else:
+        result = False
+    # end if
+    if result:
+        logger.debug(cproc.stdout)
+        logger.debug(cproc.stderr)
         return result
-    # end if
-    lmsg = "xmllint not found, could not validate file {}"
-    if error_on_noxmllint:
-        raise CCPPError("validate_xml_file: " + lmsg.format(filename))
-    # end if
-    logger.warning(lmsg.format(filename))
-    return True # We could not check but still need to proceed
+    else:
+        cmd = ' '.join(cmd)
+        outstr = f"Execution of '{cmd}' failed with code: {cproc.returncode}\n"
+        if cproc.stdout:
+            outstr += f"{cproc.stdout.decode('utf-8', errors='replace').strip()}\n"
+        if cproc.stderr:
+            outstr += f"{cproc.stderr.decode('utf-8', errors='replace').strip()}\n"
+        raise CCPPError(outstr)
 
 ###############################################################################
 def read_xml_file(filename, logger=None):
@@ -281,6 +238,7 @@ def load_suite_by_name(suite_name, group_name, file, logger=None):
         >>> import tempfile
         >>> import xml.etree.ElementTree as ET
         >>> logger = init_log('xml_tools')
+        >>> set_log_to_null(logger)
         >>> # Create temporary files for the nested suites
         >>> tmpdir = tempfile.TemporaryDirectory()
         >>> file1_path = os.path.join(tmpdir.name, "file1.xml")
@@ -310,7 +268,7 @@ def load_suite_by_name(suite_name, group_name, file, logger=None):
     schema_version = find_schema_version(root)
     res = validate_xml_file(file, 'suite', schema_version, logger)
     if not res:
-        raise CCPPError(f"Invalid suite definition file, '{sdf}'")
+        raise CCPPError(f"Invalid suite definition file, '{file}'")
     suite = root
     if suite.attrib.get("name") == suite_name:
         if group_name:
@@ -348,6 +306,7 @@ def replace_nested_suite(element, nested_suite, default_path, logger):
         >>> import xml.etree.ElementTree as ET
         >>> from types import SimpleNamespace
         >>> logger = init_log('xml_tools')
+        >>> set_log_to_null(logger)
         >>> tmpdir = tempfile.TemporaryDirectory()
         >>> file1_path = os.path.join(tmpdir.name, "file1.xml")
         >>> with open(file1_path, "w") as f:
@@ -459,6 +418,7 @@ def expand_nested_suites(suite, default_path, logger=None):
         >>> import tempfile
         >>> import xml.etree.ElementTree as ET
         >>> logger = init_log('xml_tools')
+        >>> set_log_to_null(logger)
         >>> tmpdir = tempfile.TemporaryDirectory()
         >>> file1_path = os.path.join(tmpdir.name, "file1.xml")
         >>> file2_path = os.path.join(tmpdir.name, "file2.xml")

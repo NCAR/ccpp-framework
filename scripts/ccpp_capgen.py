@@ -540,7 +540,7 @@ def parse_host_model_files(host_filenames, host_name, run_env,
 
 ###############################################################################
 def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False,
-                       known_ddts=list()):
+                       known_ddts=list(), relative_source_path=False):
 ###############################################################################
     """
     Gather information from scheme files (e.g., init, run, and finalize
@@ -553,7 +553,8 @@ def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False,
         logger.info('Reading CCPP schemes from {}'.format(filename))
         # parse metadata file
         mtables = parse_metadata_file(filename, known_ddts, run_env,
-                                      skip_ddt_check=skip_ddt_check)
+                                      skip_ddt_check=skip_ddt_check,
+                                      relative_source_path=relative_source_path)
         fortran_source_path = mtables[0].fortran_source_path
         fort_file = find_associated_fortran_file(filename, fortran_source_path)
         ftables, additional_routines = parse_fortran_file(fort_file, run_env)
