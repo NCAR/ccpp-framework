@@ -23,11 +23,9 @@ ColumnLimit:     120
 CommentDirectivePrefixes: []
 DisabledDirectivePrefixes: []
 IndentSize:      2
-# Since Codee 2025.4.4, ModuleContains also covers
-# TypeContains, FunctionContains, etc.
 IndentExceptions:
-  ModuleContains:  IndentBeforeAndAfter
-  Comments:        Indent
+  Contains: IndentBeforeAndAfter
+  Comments: Indent
 FixedFormLabelAlignment: Right
 ContinuationIndentSize: DoubleIndentSize
 DoubleColonSeparator: AddAlways
