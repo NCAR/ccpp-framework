@@ -21,9 +21,9 @@ module ccpp_types
 
   use mpi_f08, only: mpi_comm
 
-!! \section arg_table_ccpp_types
-!! \htmlinclude ccpp_types.html
-!!
+  !! \section arg_table_ccpp_types
+  !! \htmlinclude ccpp_types.html
+  !!
 
   implicit none
 
@@ -46,9 +46,9 @@ module ccpp_types
   !> @var The default maximum number of threads for CCPP
   integer, parameter :: ccpp_default_thread_count = -999
 
-!! \section arg_table_ccpp_t
-!! \htmlinclude ccpp_t.html
-!!
+  !! \section arg_table_ccpp_t
+  !! \htmlinclude ccpp_t.html
+  !!
   !>
   !! @brief CCPP physics type.
   !!

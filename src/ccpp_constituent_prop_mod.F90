@@ -26,9 +26,9 @@ module ccpp_constituent_prop_mod
   integer, public, parameter :: int_unassigned = -huge(1)
   real(kind=kind_phys), parameter :: kphys_unassigned = huge(1.0_kind_phys)
 
-!! \section arg_table_ccpp_constituent_properties_t
-!! \htmlinclude ccpp_constituent_properties_t.html
-!!
+  !! \section arg_table_ccpp_constituent_properties_t
+  !! \htmlinclude ccpp_constituent_properties_t.html
+  !!
   type, public, extends(ccpp_hashable_char_t) :: ccpp_constituent_properties_t
     ! A ccpp_constituent_properties_t object holds relevant metadata
     !   for a constituent species and provides interfaces to access that data.
@@ -94,9 +94,9 @@ module ccpp_constituent_prop_mod
     procedure :: set_molar_mass => ccp_set_molar_mass
   end type ccpp_constituent_properties_t
 
-!! \section arg_table_ccpp_constituent_prop_ptr_t
-!! \htmlinclude ccpp_constituent_prop_ptr_t.html
-!!
+  !! \section arg_table_ccpp_constituent_prop_ptr_t
+  !! \htmlinclude ccpp_constituent_prop_ptr_t.html
+  !!
   type, public :: ccpp_constituent_prop_ptr_t
     type(ccpp_constituent_properties_t), private, pointer :: prop => null()
   contains
@@ -133,9 +133,9 @@ module ccpp_constituent_prop_mod
     procedure :: set_molar_mass => ccpt_set_molar_mass
   end type ccpp_constituent_prop_ptr_t
 
-!! \section arg_table_ccpp_model_constituents_t
-!! \htmlinclude ccpp_model_constituents_t.html
-!!
+  !! \section arg_table_ccpp_model_constituents_t
+  !! \htmlinclude ccpp_model_constituents_t.html
+  !!
   type, public :: ccpp_model_constituents_t
     ! A ccpp_model_constituents_t object holds all the metadata and field
     !   data for a model run's constituents along with data and methods

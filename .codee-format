@@ -23,11 +23,11 @@ ColumnLimit:     120
 CommentDirectivePrefixes: []
 DisabledDirectivePrefixes: []
 IndentSize:      2
-# DH* No exception for TypeContains, FunctionContains etc
-# requested 2025/12/08 using the Codee Online Form
+# Since Codee 2025.4.4, ModuleContains also covers
+# TypeContains, FunctionContains, etc.
 IndentExceptions:
   ModuleContains:  IndentBeforeAndAfter
-  Comments:        IndentIfAlreadyIndented # Indent
+  Comments:        Indent
 FixedFormLabelAlignment: Right
 ContinuationIndentSize: DoubleIndentSize
 DoubleColonSeparator: AddAlways
@@ -94,7 +94,7 @@ SpacesAroundOperators:
   UnaryPlusMinus:  NoTrailing
   Comma:           OnlyTrailing
   Concat:          Both
-  DoubleColon:     Both
+  DoubleColon:     Preserve
 RemoveConsecutiveWhitespace: true
 RemoveSemicolons: true
 RemoveTrailingWhitespace: true
