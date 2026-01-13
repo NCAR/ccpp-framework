@@ -18,6 +18,7 @@ from metavar import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
 from parse_tools import ParseContext, ParseSource, context_string
 from parse_tools import ParseInternalError, CCPPError
 from parse_tools import init_log, set_log_to_null
+from ddt_library import VarDDT
 from var_props import is_horizontal_dimension, find_horizontal_dimension
 from var_props import find_vertical_dimension
 from var_props import VarCompatObj
@@ -839,7 +840,7 @@ class SuiteObject(VarDictionary):
         # end if
         return found_var
 
-    def match_variable(self, var, run_env):
+    def match_variable(self, var, run_env, host_dict):
         """Try to find a source for <var> in this SuiteObject's dictionary
         tree. Several items are returned:
         found_var: True if a match was found
@@ -875,6 +876,14 @@ class SuiteObject(VarDictionary):
             # end if
         # end if
 
+        # Is this variable a member of a DDT? If so, look for the parent DDT
+        host_var = host_dict.find_variable(source_var=var, any_scope=True)
+        if host_var:
+            if host_var.is_ddt():
+                var = host_var.var
+                vdims = []
+            # end if
+        # end if
         # Does this variable exist in the calling tree?
         dict_var = self.find_variable(source_var=var, any_scope=True)
         if dict_var is None:
@@ -1171,7 +1180,7 @@ class Scheme(SuiteObject):
         This is an override of the SuiteObject version"""
         return None
 
-    def analyze(self, phase, group, scheme_library, suite_vars, level):
+    def analyze(self, phase, group, scheme_library, suite_vars, level, host_dict):
         """Analyze the scheme's interface to prepare for writing"""
         self.__group = group
         my_header = None
@@ -1206,13 +1215,21 @@ class Scheme(SuiteObject):
             def_val = var.get_prop_value('default_value')
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
-            args = self.match_variable(var, self.run_env)
+            args = self.match_variable(var, self.run_env, host_dict)
             found, dict_var, vert_dim, new_dims, missing_vert, compat_obj = args
+            if dict_var:
+                if dict_var.is_ddt():
+                    subst_dict = {'intent':'inout'}
+                    clone = dict_var.clone(subst_dict)
+                    dict_var = clone
+                # end if
+            # end if
             if found:
                 if self.__group.run_env.debug:
                     # Add variable allocation checks for group, suite and host variables
                     if dict_var:
                         self.add_var_debug_check(dict_var)
+                    # end if
                 # end if
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
@@ -1220,12 +1237,20 @@ class Scheme(SuiteObject):
                 # We have a match, make sure var is in call list
                 if new_dims == vdims:
                     self.add_call_list_variable(var, exists_ok=True, gen_unique=True)
-                    self.update_group_call_list_variable(var)
+                    if dict_var:
+                        self.update_group_call_list_variable(dict_var)
+                    else:
+                        self.update_group_call_list_variable(var)
+                    # end if
                 else:
                     subst_dict = {'dimensions':new_dims}
                     clone = var.clone(subst_dict)
                     self.add_call_list_variable(clone, exists_ok=True)
-                    self.update_group_call_list_variable(clone)
+                    if dict_var:
+                        clone = dict_var.clone(subst_dict)
+                        self.update_group_call_list_variable(clone)
+                    else:
+                        self.update_group_call_list_variable(clone)
                 # end if
             else:
                 if missing_vert is not None:
@@ -1239,7 +1264,11 @@ class Scheme(SuiteObject):
                         raise ParseInternalError(errmsg)
                     # end if
                     # The Group will manage this variable
-                    self.__group.manage_variable(var)
+                    if dict_var:
+                        self.__group.manage_variable(dict_var)
+                    else:
+                        self.__group.manage_variable(var)
+                    # end if
                     self.add_call_list_variable(var)
                 elif def_val and (vintent != 'out'):
                     if self.__group is None:
@@ -1247,7 +1276,11 @@ class Scheme(SuiteObject):
                         raise ParseInternalError(errmsg)
                     # end if
                     # The Group will manage this variable
-                    self.__group.manage_variable(var)
+                    if dict_var:
+                        self.__group.manage_variable(dict_var)
+                    else:
+                        self.__group.manage_variable(var)
+                    # end if
                     # We still need it in our call list (the group uses a clone)
                     self.add_call_list_variable(var)
                 else:
@@ -1290,7 +1323,7 @@ class Scheme(SuiteObject):
             if isinstance(self.parent, VerticalLoop):
                 # Restart the loop analysis
                 scheme_mods = self.parent.analyze(phase, group, scheme_library,
-                                                  suite_vars, level)
+                                                  suite_vars, level, host_dict)
             # end if
         # end if
         return scheme_mods
@@ -1978,7 +2011,7 @@ class VerticalLoop(SuiteObject):
             self.add_part(item)
         # end for
 
-    def analyze(self, phase, group, scheme_library, suite_vars, level):
+    def analyze(self, phase, group, scheme_library, suite_vars, level, host_dict):
         """Analyze the VerticalLoop's interface to prepare for writing"""
         # Handle all the suite objects inside of this subcycle
         scheme_mods = set()
@@ -2012,7 +2045,7 @@ class VerticalLoop(SuiteObject):
         # Analyze our internal items
         for item in self.parts:
             smods = item.analyze(phase, group, scheme_library,
-                                 suite_vars, level+1)
+                                 suite_vars, level+1, host_dict)
             for smod in smods:
                 scheme_mods.add(smod)
             # end for
@@ -2070,7 +2103,7 @@ class Subcycle(SuiteObject):
             self.add_part(new_item)
         # end for
 
-    def analyze(self, phase, group, scheme_library, suite_vars, level):
+    def analyze(self, phase, group, scheme_library, suite_vars, level, host_dict):
         """Analyze the Subcycle's interface to prepare for writing"""
         if self.name is None:
             self.name = "subcycle_index{}".format(level)
@@ -2084,7 +2117,7 @@ class Subcycle(SuiteObject):
         scheme_mods = set()
         for item in self.parts:
             smods = item.analyze(phase, group, scheme_library,
-                                 suite_vars, level+1)
+                                 suite_vars, level+1, host_dict)
             for smod in smods:
                 scheme_mods.add(smod)
             # end for
@@ -2120,7 +2153,7 @@ class TimeSplit(SuiteObject):
             self.add_part(new_item)
         # end for
 
-    def analyze(self, phase, group, scheme_library, suite_vars, level):
+    def analyze(self, phase, group, scheme_library, suite_vars, level, host_dict):
         # Unused arguments are for consistent analyze interface
         # pylint: disable=unused-argument
         """Analyze the TimeSplit's interface to prepare for writing"""
@@ -2128,7 +2161,7 @@ class TimeSplit(SuiteObject):
         scheme_mods = set()
         for item in self.parts:
             smods = item.analyze(phase, group, scheme_library,
-                                 suite_vars, level+1)
+                                 suite_vars, level+1, host_dict)
             for smod in smods:
                 scheme_mods.add(smod)
             # end for
@@ -2157,7 +2190,7 @@ class ProcessSplit(SuiteObject):
         super().__init__('ProcessSplit', context, parent, run_env)
         raise CCPPError('ProcessSplit not yet implemented')
 
-    def analyze(self, phase, group, scheme_library, suite_vars, level):
+    def analyze(self, phase, group, scheme_library, suite_vars, level, host_dict):
         # Unused arguments are for consistent analyze interface
         # pylint: disable=unused-argument
         """Analyze the ProcessSplit's interface to prepare for writing"""
@@ -2348,7 +2381,7 @@ class Group(SuiteObject):
         # end if
 
     def analyze(self, phase, suite_vars, scheme_library, ddt_library,
-                check_suite_state, set_suite_state):
+                check_suite_state, set_suite_state, host_dict):
         """Analyze the Group's interface to prepare for writing"""
         self._ddt_library = ddt_library
         # Sanity check for Group
@@ -2361,7 +2394,7 @@ class Group(SuiteObject):
             # Items can be schemes, subcycles or other objects
             # All have the same interface and return a set of module use
             # statements (lschemes)
-            lschemes = item.analyze(phase, self, scheme_library, suite_vars, 1)
+            lschemes = item.analyze(phase, self, scheme_library, suite_vars, 1, host_dict)
             for lscheme in lschemes:
                 self._local_schemes.add(lscheme)
             # end for

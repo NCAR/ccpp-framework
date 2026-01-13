@@ -459,7 +459,7 @@ character(len=16) :: {css_var_name} = '{state}'
                                                   for x in item.schemes()]))
             item.analyze(phase, self, scheme_library, ddt_library,
                          self.check_suite_state(phase),
-                         self.set_suite_state(phase))
+                         self.set_suite_state(phase), host_model)
             # Look for group variables that need to be promoted to the suite
             # We need to promote any variable used later to the suite, however,
             # we do not yet know if it will be used.

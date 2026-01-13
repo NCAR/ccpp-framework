@@ -1825,16 +1825,35 @@ class VarDictionary(OrderedDict):
             var = CCPP_CONSTANT_VARS[standard_name]
         elif standard_name in self:
             var = self[standard_name]
-        elif any_scope and (self.__parent_dict is not None):
-            src_clist = search_call_list
-            var = self.__parent_dict.find_variable(standard_name=standard_name,
+        else:
+            # Look in the DDTs
+            var = None
+            for var_check in self:
+                var_in_object = self.find_variable(var_check)
+                if var_in_object.is_ddt():
+                    children = var_in_object.children()
+                    if children:
+                        for child in children:
+                            if child.get_prop_value('standard_name') == standard_name:
+                                var = child
+                            # end if
+                        # end for
+                    # end if
+                # end if
+            # end for
+            if not var:
+                if any_scope and (self.__parent_dict is not None):
+                    src_clist = search_call_list
+                    var = self.__parent_dict.find_variable(standard_name=standard_name,
                                                    source_var=source_var,
                                                    any_scope=any_scope,
                                                    clone=clone,
                                                    search_call_list=src_clist,
                                                    loop_subst=loop_subst)
-        else:
-            var = None
+                else:
+                    var = None
+                # end if
+            # end if
         # end if
         if (var is None) and (clone is not None):
             lname = clone.get_prop_value['local_name']
