@@ -24,7 +24,7 @@ class CCPPFrameworkEnv:
     def __init__(self, logger, ndict=None, verbose=0, clean=False,
                  host_files=None, scheme_files=None, suites=None,
                  preproc_directives=[], generate_docfiles=False, host_name='',
-                 kind_types=[], use_error_obj=False, force_overwrite=False,
+                 kind_types={}, use_error_obj=False, force_overwrite=False,
                  output_root=os.getcwd(), ccpp_datafile="datatable.xml",
                  debug=False):
         """Initialize a new CCPPFrameworkEnv object from the input arguments.
@@ -143,30 +143,18 @@ class CCPPFrameworkEnv:
         # end if
         self.__generate_host_cap = self.host_name != ''
         self.__kind_dict = {}
-        if ndict and ("kind_type" in ndict):
-            kind_list = ndict["kind_type"]
-            del ndict["kind_type"]
+        if ndict and ('kind_type' in ndict):
+            self.__kind_dict = ndict['kind_type']
+            del ndict['kind_type']
         else:
-            kind_list = kind_types
+            self.__kind_dict = kind_types
         # end if
-        # Note that the command line uses repeated calls to 'kind_type'
-        for kind in kind_list:
-            kargs = [x.strip() for x in kind.strip().split('=')]
-            if len(kargs) != 2:
-                emsg += esep
-                emsg += "Error: '{}' is not a valid kind specification "
-                emsg += "(should be of the form <kind_name>=<kind_spec>)"
-                emsg = emsg.format(kind)
-                esep = '\n'
-            else:
-                kind_name, kind_spec = kargs
-                # Do not worry about duplicates, just use last value
-                self.__kind_dict[kind_name] = kind_spec
-            # end if
-        # end for
+
         # We always need a kind_phys so add a default if necessary
         if "kind_phys" not in self.__kind_dict:
-            self.__kind_dict["kind_phys"] = "REAL64"
+            # Use ISO-Fortran double-precision real
+            # definition for default physics kind:
+            self.__kind_dict['kind_phys'] = ['ISO_FORTRAN_ENV', 'REAL64']
         # end if
         if ndict and ('use_error_obj' in ndict):
             self.__use_error_obj = ndict['use_error_obj']
@@ -269,13 +257,30 @@ class CCPPFrameworkEnv:
         CCPPFrameworkEnv object."""
         return self.__generate_host_cap
 
+    def kind_module(self, kind_type):
+        """Return the Fortran module that
+        contains the kind specification
+        for kind type, <kind_type>,
+        for this CCPPFrameworkEnv object.
+        If there is no entry for <kind_type>,
+        return None."""
+        kind_mod = None
+        if kind_type in self.__kind_dict:
+            # The kind module should always be
+            # the first element in the list:
+            kind_mod = self.__kind_dict[kind_type][0]
+        # end if
+        return kind_mod
+
     def kind_spec(self, kind_type):
         """Return the kind specification for kind type, <kind_type>
         for this CCPPFrameworkEnv object.
         If there is no entry for <kind_type>, return None."""
         kind_spec = None
         if kind_type in self.__kind_dict:
-            kind_spec = self.__kind_dict[kind_type]
+            # The kind specification should always be
+            # the second element in the list:
+            kind_spec = self.__kind_dict[kind_type][1]
         # end if
         return kind_spec
 
@@ -380,13 +385,21 @@ If this option is passed, a host model cap is generated''')
     parser.add_argument("--clean", action='store_true', default=False,
                         help='Remove files created by this script, then exit')
 
-    parser.add_argument("--kind-type", type=str, action='append',
-                        metavar="kind_type", default=list(),
+    # Define parser for kind dictionary input
+    def parse_dict(arg_str):
+        """Parse a 'key=value' string
+           into a dictionary"""
+        result = {}
+        key, value = arg_str.split('=')
+        result[key.strip()] = value.split(',')
+        return result
+
+    parser.add_argument("--kind-type", type=parse_dict, action='update',
+                        metavar="kind_type", default=dict(),
                         help="""Data size for real(<kind_type>) data.
-Entry in the form of <kind_type>=<kind_val>
-e.g., --kind-type "kind_phys=REAL64"
-Enter more than one --kind-type entry to define multiple CCPP kinds.
-<kind_val> SHOULD be a valid ISO_FORTRAN_ENV type""")
+Entry in the form of <kind_type>=<kind_module>,<kind_val>
+e.g., --kind-type "kind_phys=ISO_FORTRAN_ENV,REAL64"
+Enter more than one --kind-type entry to define multiple CCPP kinds.""")
 
     parser.add_argument("--generate-docfiles",
                         metavar='HTML | Latex | HTML,Latex', type=str,
