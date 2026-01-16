@@ -52,9 +52,9 @@ class VarCompatTestCase(unittest.TestCase):
         self.__run_env = CCPPFrameworkEnv(None, ndict={'host_files':'',
                                                        'scheme_files':'foo.meta',
                                                        'suites':''},
-                                          kind_types=["kind_phys=REAL64",
-                                                      "kind_dyn=REAL32",
-                                                      "kind_host=REAL64"])
+                                          kind_types={"kind_phys": ["ISO_FORTRAN_ENV", "REAL64"],
+                                                      "kind_dyn": ["ISO_FORTRAN_ENV", "REAL32"],
+                                                      "kind_host": ["ISO_FORTRAN_ENV", "REAL64"]})
         # For making variables unique
         self.__linenum = 2
         # For assert messages
