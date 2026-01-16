@@ -1,8 +1,5 @@
-!Define Fortran kinds for use specifically
-!within PUMAS.  This allows PUMAS to control
-!the precision in its internal routines without
-!having to depend on a specific host model
-!implemention.
+! Define a new Fortran kind for use within
+! various temp_* test files.
 
 module temp_kinds
 
