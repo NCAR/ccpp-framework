@@ -31,6 +31,13 @@ class CCPPFrameworkEnv:
         <ndict> is a dict with the parsed command-line arguments (or a
            dictionary created with the necessary arguments).
         <logger> is a logger to be used by users of this object.
+        <kind_types> is a dictionary defining the Fortran kind types.
+           It has entries of the form:
+           kind_type : [kind_module, kind_specification]
+           where <kind_type> is a string defining the kind type name,
+           <kind_module> is the Fortran module that contains the kind
+           specification, and <kind_specification> is the Fortran kind
+           parameter name (e.g., 'REAL64').    
         """
         emsg = ''
         esep = ''
@@ -143,9 +150,9 @@ class CCPPFrameworkEnv:
         # end if
         self.__generate_host_cap = self.host_name != ''
         self.__kind_dict = {}
-        if ndict and ('kind_type' in ndict):
-            self.__kind_dict = ndict['kind_type']
-            del ndict['kind_type']
+        if ndict and ('kind_types' in ndict):
+            self.__kind_dict = ndict['kind_types']
+            del ndict['kind_types']
         else:
             self.__kind_dict = kind_types
         # end if
@@ -386,20 +393,24 @@ If this option is passed, a host model cap is generated''')
                         help='Remove files created by this script, then exit')
 
     # Define parser for kind dictionary input
-    def parse_dict(arg_str):
-        """Parse a 'key=value' string
-           into a dictionary"""
+    def parse_kind_dict(arg_str):
+        """Parse a 'key1=value1:key2=value2' string
+           into a dictionary, where each value is a
+           list of comma-separated entries."""
         result = {}
-        key, value = arg_str.split('=')
-        result[key.strip()] = value.split(',')
+        dict_entries = arg_str.split(':')
+        for entry in dict_entries:
+            key, value = entry.split('=')
+            result[key.strip()] = value.split(',')
         return result
 
-    parser.add_argument("--kind-type", type=parse_dict, action='update',
-                        metavar="kind_type", default=dict(),
-                        help="""Data size for real(<kind_type>) data.
+    parser.add_argument("--kind-types", type=parse_kind_dict,
+                        metavar="kind_types", default=dict(),
+                        help="""Data size for real(<kind_types>) data.
 Entry in the form of <kind_type>=<kind_module>,<kind_val>
 e.g., --kind-type "kind_phys=ISO_FORTRAN_ENV,REAL64"
-Enter more than one --kind-type entry to define multiple CCPP kinds.""")
+Additional entries are separated by colons to define multiple CCPP kinds,
+e.g., --kind-type "kind_phys=ISO_FORTRAN_ENV,REAL64:kind_host=host_kinds,coupler_kind""")
 
     parser.add_argument("--generate-docfiles",
                         metavar='HTML | Latex | HTML,Latex', type=str,

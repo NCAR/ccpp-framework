@@ -11,7 +11,7 @@
 # SUITES                    - CMake list of suite xml files
 function(ccpp_capgen)
   set(optionalArgs CAPGEN_DEBUG CAPGEN_EXPECT_THROW_ERROR)
-  set(oneValueArgs HOST_NAME OUTPUT_ROOT VERBOSITY)
+  set(oneValueArgs HOST_NAME KIND_TYPES OUTPUT_ROOT VERBOSITY)
   set(multi_value_keywords HOSTFILES SCHEMEFILES SUITES)
 
   cmake_parse_arguments(arg "${optionalArgs}" "${oneValueArgs}" "${multi_value_keywords}" ${ARGN})
@@ -45,6 +45,9 @@ function(ccpp_capgen)
     message(STATUS "Creating output directory: ${arg_OUTPUT_ROOT}")
     file(MAKE_DIRECTORY "${arg_OUTPUT_ROOT}")
     list(APPEND CCPP_CAPGEN_CMD_LIST "--output-root" "${arg_OUTPUT_ROOT}")
+  endif()
+  if(DEFINED arg_KIND_TYPES)
+    list(APPEND CCPP_CAPGEN_CMD_LIST "--kind-types" "${arg_KIND_TYPES}")
   endif()
   if(DEFINED arg_VERBOSITY)
     string(REPEAT "--verbose " ${arg_VERBOSITY} VERBOSE_PARAMS_SEPARATED)

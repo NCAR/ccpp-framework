@@ -60,7 +60,7 @@
   units = K
   dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
-  kind = kind_phys
+  kind = kind_temp
   intent = out
 [ promote_pcnst ]
   standard_name = promote_this_variable_with_no_horizontal_dimension
