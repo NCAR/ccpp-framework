@@ -834,9 +834,9 @@ class VarCompatObj:
                                        ndict={'host_files':'', \
                                               'scheme_files':'', \
                                               'suites':''}, \
-                                       kind_types=["kind_phys=REAL64", \
-                                                   "kind_dyn=REAL32", \
-                                                   "kind_host=REAL64"])
+                                       kind_types={"kind_phys": ["ISO_FORTRAN_ENV", "REAL64"], \
+                                                   "kind_dyn": ["ISO_FORTRAN_ENV", "REAL32"], \
+                                                   "kind_host": ["ISO_FORTRAN_ENV", "REAL64"]})
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", [], "var1_lname", False,\
                      "var_stdname", "real", "kind_phys", "m", [], "var2_lname", False,\
                      _DOCTEST_RUNENV) #doctest: +ELLIPSIS
@@ -1171,9 +1171,9 @@ class VarCompatObj:
                                                ndict={'host_files':'', \
                                                       'scheme_files':'', \
                                                       'suites':''}, \
-                                               kind_types=["kind_phys=REAL64", \
-                                                           "kind_dyn=REAL32", \
-                                                           "kind_host=REAL64"])
+                                               kind_types={"kind_phys": ["ISO_FORTRAN_ENV", "REAL64"], \
+                                                           "kind_dyn": ["ISO_FORTRAN_ENV", "REAL32"], \
+                                                           "kind_host": ["ISO_FORTRAN_ENV", "REAL64"]})
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
@@ -1226,9 +1226,9 @@ class VarCompatObj:
                                                ndict={'host_files':'', \
                                                       'scheme_files':'', \
                                                       'suites':''}, \
-                                               kind_types=["kind_phys=REAL64", \
-                                                           "kind_dyn=REAL32", \
-                                                           "kind_host=REAL64"])
+                                               kind_types={"kind_phys": ["ISO_FORTRAN_ENV", "REAL64"], \
+                                                           "kind_dyn": ["ISO_FORTRAN_ENV", "REAL32"], \
+                                                           "kind_host": ["ISO_FORTRAN_ENV", "REAL64"]})
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
@@ -1317,9 +1317,9 @@ class VarCompatObj:
                                        ndict={'host_files':'', \
                                               'scheme_files':'', \
                                               'suites':''}, \
-                                       kind_types=["kind_phys=REAL64", \
-                                                   "kind_dyn=REAL32", \
-                                                   "kind_host=REAL64"])
+                                       kind_types={"kind_phys": ["ISO_FORTRAN_ENV", "REAL64"], \
+                                                   "kind_dyn": ["ISO_FORTRAN_ENV", "REAL32"], \
+                                                   "kind_host": ["ISO_FORTRAN_ENV", "REAL64"]})
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
         >>> _DOCTEST_VCOMPAT = VarCompatObj("var_stdname", "real", "kind_phys", \
