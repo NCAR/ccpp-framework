@@ -300,6 +300,7 @@ class ConstituentVarDict(VarDictionary):
             # end if
             outfile.write("index = index + 1", indent+1)
             long_name = var.get_prop_value('long_name')
+            diag_name = var.get_prop_value('diagnostic_name')
             units = var.get_prop_value('units')
             dims = var.get_dim_stdnames()
             default_value = var.get_prop_value('default_value')
@@ -311,7 +312,7 @@ class ConstituentVarDict(VarDictionary):
                 vertical_dim = ''
             # end if
             advect_str = self.TF_string(var.get_prop_value('advected'))
-            init_args = [f'{std_name=}', f'{long_name=}',
+            init_args = [f'{std_name=}', f'{long_name=}', f'{diag_name=}',
                          f'{units=}', f'{vertical_dim=}',
                          f'advected={advect_str}',
                          f'errcode={errvar_names["ccpp_error_code"]}',

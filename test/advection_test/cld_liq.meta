@@ -105,6 +105,7 @@
   intent = in
 [ cld_liq_array ]
   standard_name = cloud_liquid_dry_mixing_ratio
+  diagnostic_name = CLDLIQ
   advected = .true.
   units = kg kg-1
   dimensions = (horizontal_dimension, vertical_layer_dimension)
