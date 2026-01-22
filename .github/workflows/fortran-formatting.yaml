@@ -1,0 +1,62 @@
+name: Codee format Fortran
+
+on:
+  pull_request:
+
+env:
+  CODEE_VERSION: 2025.4.5
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  format:
+    name: Check and fix Fortran formatting
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Get modified Fortran files
+        #id: modified-files
+        run: |
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=d origin/${{ github.base_ref }}...HEAD -- '*.f90' '*.F90' '*.f' '*.F')
+          echo "MODIFIED_FILES=$MODIFIED_FILES" >> $GITHUB_ENV
+
+      - name: Install Codee
+        if: env.MODIFIED_FILES != ''
+        run: |
+          echo "Installing Codee ${CODEE_VERSION} ..."
+          wget https://codee.com/release/codee-${CODEE_VERSION}-linux-x86_64.tar.gz
+          tar -xf codee-${CODEE_VERSION}-linux-x86_64.tar.gz
+
+      - name: Run `codee format` on modified files
+        if: env.MODIFIED_FILES != ''
+        run: |
+          export PATH="${PWD}/codee-${CODEE_VERSION}-linux-x86_64/bin:${PATH}"
+          codee format --accept-eula --verbose $MODIFIED_FILES
+
+#      - name: Run `codee format` on modified files
+#        if: env.MODIFIED_FILES != ''
+#        run: |
+#          export PATH="${PWD}/codee-${CODEE_VERSION}-linux-x86_64/bin:${PATH}"
+#          git codee-format --diff ${{ github.base_ref }} HEAD
+#          git diff
+
+#      - name: Commit changes
+#        if: env.MODIFIED_FILES != ''
+#        run: |
+#          if ! git diff --quiet; then
+#            # Push with the github-actions user. More information at:
+#            # https://github.com/actions/checkout?tab=readme-ov-file#push-a-commit-using-the-built-in-token
+#            git commit -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" -am "Apply codee format formatting fixes"
+#            git push --set-upstream origin ${{ github.head_ref }}
+#          else
+#            echo "No changes detected."
+#            exit 0
+#          fi
