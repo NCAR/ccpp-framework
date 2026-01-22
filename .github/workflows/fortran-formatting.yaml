@@ -1,0 +1,73 @@
+name: Codee format Fortran
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [opened, synchronize, labeled, unlabeled]
+
+env:
+  CODEE_VERSION: 2025.4.5
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  format:
+    name: Check and fix Fortran formatting
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get modified Fortran files
+        #id: modified-files
+        run: |
+          git remote -v show
+          git fetch origin ${{ github.base_ref }}
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=d origin/${{ github.base_ref }}...HEAD -- '*.f90' '*.F90' '*.f' '*.F')
+          echo "MODIFIED_FILES=${MODIFIED_FILES}" >> ${GITHUB_ENV}
+
+      - name: Install Codee
+        if: env.MODIFIED_FILES != ''
+        run: |
+          echo "Installing Codee ${CODEE_VERSION} ..."
+          wget https://codee.com/release/codee-${CODEE_VERSION}-linux-x86_64.tar.gz
+          tar -xf codee-${CODEE_VERSION}-linux-x86_64.tar.gz
+
+      - name: Run `codee format` on modified files
+        if: env.MODIFIED_FILES != ''
+        run: |
+          export PATH="${PWD}/codee-${CODEE_VERSION}-linux-x86_64/bin:${PATH}"
+          codee format --accept-eula --verbose ${MODIFIED_FILES}
+          REFORMATTED_FILES=$(git diff --name-only --diff-filter=d)
+          echo "REFORMATTED_FILES=${REFORMATTED_FILES}" >> ${GITHUB_ENV}
+
+      - name: Fail if there are uncommitted changes and the `fix-fortran-format` label is not present
+        if: ${{ env.REFORMATTED_FILES != '' && !contains(github.event.pull_request.labels.*.name, 'fix-fortran-format') }}
+        run: |
+          echo "Formatting issues detected. Run 'codee format' locally or attach label 'fix-fortran-format' to this PR."
+          exit 1
+
+#      - name: Fix formatting if label 'fix-fortran-format; is present
+#        if: ${{ env.MODIFIED_FILES != '' && contains(github.event.pull_request.labels.*.name, 'fix-fortran-format') }}
+#        run: |
+#          export PATH="${PWD}/codee-${CODEE_VERSION}-linux-x86_64/bin:${PATH}"
+#          git codee-format --diff origin/${{ github.base_ref }} HEAD
+#          git diff
+
+      - name: Commit changes if the `fix-fortran-format` label is not present
+        if: ${{ env.REFORMATTED_FILES != '' && contains(github.event.pull_request.labels.*.name, 'fix-fortran-format') }}
+        run: |
+          # Push with the github-actions user. More information at:
+          # https://github.com/actions/checkout?tab=readme-ov-file#push-a-commit-using-the-built-in-token
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ github.head_ref }}
+          git add ${REFORMATTED_FILES}
+          git commit -m "Apply codee format formatting fixes"
+          echo "DH DEBUG: 'git push --set-upstream origin ${{ github.head_ref }}'"
+          git push --set-upstream origin ${{ github.head_ref }}
