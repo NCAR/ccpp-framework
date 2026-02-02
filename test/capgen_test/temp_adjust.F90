@@ -34,7 +34,7 @@ CONTAINS
   !> \section arg_table_temp_adjust_run  Argument Table
   !! \htmlinclude arg_table_temp_adjust_run.html
   !!
-  subroutine temp_adjust_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
+  subroutine temp_adjust_run(foo, timestep, interstitial_var, temp_prev, temp_layer, qv, ps,    &
        to_promote, promote_pcnst, errmsg, errflg, innie, outie, optsie)
 
     integer,                   intent(in)    :: foo
@@ -45,6 +45,7 @@ CONTAINS
     REAL(kind_phys),           intent(inout) :: temp_layer(foo)
     real(kind_phys),           intent(in)    :: to_promote(:)
     real(kind_phys),           intent(in)    :: promote_pcnst(:)
+    integer,                   intent(out)   :: interstitial_var(:)
     character(len=512),        intent(out)   :: errmsg
     integer,                   intent(out)   :: errflg
     real(kind_phys), optional, intent(in)    :: innie
@@ -56,6 +57,13 @@ CONTAINS
 
     errmsg = ''
     errflg = 0
+
+    interstitial_var = 6
+    if (size(interstitial_var) /= 3) then
+       errflg = 1
+       errmsg = 'interstitial variable not allocated properly!'
+       return
+    end if
 
     if (.not. module_level_config) then
        ! do nothing
@@ -91,8 +99,9 @@ CONTAINS
   !> \section arg_table_temp_adjust_finalize  Argument Table
   !! \htmlinclude arg_table_temp_adjust_finalize.html
   !!
-  subroutine temp_adjust_finalize (errmsg, errflg)
+  subroutine temp_adjust_finalize (interstitial_var, errmsg, errflg)
 
+    integer,                 intent(in)    :: interstitial_var(:)
     character(len=512),      intent(out)   :: errmsg
     integer,                 intent(out)   :: errflg
 
@@ -100,6 +109,15 @@ CONTAINS
 
     errmsg = ''
     errflg = 0
+    if (size(interstitial_var) /= 3) then
+       errflg = 1
+       errmsg = 'interstitial variable not allocated properly!'
+       return
+    end if
+    if (interstitial_var(1) /= 6) then
+       errflg = 1
+       errmsg = 'interstitial variable not set properly!'
+    end if
 
   end subroutine temp_adjust_finalize
 

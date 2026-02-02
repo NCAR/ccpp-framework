@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="main_suite" version="2.0">
+  <group name="group1">
+    <subcycle loop="num_subcycles_for_scheme9">
+      <scheme>effr_pre</scheme>
+      <subcycle loop="2">
+        <subcycle loop="2">
+          <scheme>scheme9</scheme>
+        </subcycle>
+      </subcycle>
+      <scheme>scheme3</scheme>
+    </subcycle>
+  </group>
+  <nested_suite name="subsuite_1" file="subsuite1.xml"/>
+</suite>

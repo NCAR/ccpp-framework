@@ -1,7 +1,7 @@
 [ccpp-table-properties]
   name = scheme_2
   type = scheme
-  relative_path = ../../
+  dependencies_path = ../../
   dependencies = hooks/machine.F
 
 ########################################################################

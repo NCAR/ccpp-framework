@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="ver_test_suite" version="2.0">
+  <group name="main11">
+    <subcycle loop="num_subcycles_for_main1">
+      <scheme>effr_pre</scheme>
+      <subcycle loop="2">
+        <subcycle loop="2">
+          <scheme>main_calc</scheme>
+        </subcycle>
+      </subcycle>
+      <scheme>main_post</scheme>
+    </subcycle>
+    <nested_suite name="another_suite2" group="another_group3" file="another_suite2.xml"/>
+    <nested_suite name="another_suite" group="another_group" file="another_suite.xml"/>
+  </group>
+  <nested_suite name="nested_suite" group="nested_group2" file="nested_full_suite.xml"/>
+</suite>

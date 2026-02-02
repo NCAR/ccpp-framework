@@ -635,7 +635,7 @@ def fortran_type_definition(line):
     return FtypeTypeDecl.type_def_line(line)
 
 ########################################################################
-def parse_fortran_var_decl(line, source, run_env):
+def parse_fortran_var_decl(line, source, run_env, imports=None):
 ########################################################################
     """Parse a Fortran variable declaration line and return a list of
     Var objects representing the variables declared on <line>.
@@ -671,37 +671,36 @@ def parse_fortran_var_decl(line, source, run_env):
     >>> _DUMMY_RUN_ENV = CCPPFrameworkEnv(None, ndict={'host_files':'', \
                                                        'scheme_files':'', \
                                                        'suites':''})
-    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('local_name')
+    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('local_name')
     'foo'
-    >>> parse_fortran_var_decl("integer :: foo = 0", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('local_name')
+    >>> parse_fortran_var_decl("integer :: foo = 0", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('local_name')
     'foo'
-    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('optional')
+    >>> parse_fortran_var_decl("integer :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('optional')
     False
-    >>> parse_fortran_var_decl("integer, optional :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('optional')
+    >>> parse_fortran_var_decl("integer, optional :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('optional')
     'True'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('dimensions')
     '(:)'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(bar)", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(bar)", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('dimensions')
     '(bar)'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('dimensions')
     '(:,:)'
-    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[1].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("integer, dimension(:) :: foo(:,:), baz", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][1].get_prop_value('dimensions')
     '(:)'
-    >>> parse_fortran_var_decl("real (kind=kind_phys), pointer :: phii  (:,:) => null()   !< interface geopotential height", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("real (kind=kind_phys), pointer :: phii  (:,:) => null()   !< interface geopotential height", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('dimensions')
     '(:,:)'
-    >>> parse_fortran_var_decl("real(kind=kind_phys), dimension(im, levs, ntrac), intent(in) :: qgrs", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("real(kind=kind_phys), dimension(im, levs, ntrac), intent(in) :: qgrs", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('dimensions')
     '(im, levs, ntrac)'
-    >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('local_name')
+    >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('local_name')
     'errmsg'
-    >>> parse_fortran_var_decl("character(len=512), intent(out) :: errmsg", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('kind')
+    >>> parse_fortran_var_decl("character(len=512), intent(out) :: errmsg", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('kind')
     'len=512'
-    >>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(8)", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
+    >>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(8)", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_prop_value('dimensions')
     '(8)'
-    >>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(8)", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0].get_dimensions()
+    >>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(8)", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0][0].get_dimensions()
     ['8']
-    >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('local_name') #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ParseSyntaxError: Invalid variable declaration, character(len=*), intent(out) :: errmsg, intent not allowed in module variable, in <standard input>
+    >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[1][0]
+    'Syntax error: Invalid variable declaration, character(len=*), intent(out) :: errmsg, intent not allowed in module variable, in <standard input>'
 
     ## NB: Expressions (including function calls) not currently supported here
     #>>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(size(bar))", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
@@ -714,7 +713,9 @@ def parse_fortran_var_decl(line, source, run_env):
         sline = sline[0:sline.index('!')].rstrip()
     # end if
     tobject = ftype_factory(sline, context)
-    newvars = list()
+    newvars = []
+    errors = []
+    errtyp = "Syntax error"
     if tobject is not None:
         varprops = sline[tobject.type_len:].strip()
         def_dims = None # Default dimensions
@@ -728,17 +729,14 @@ def parse_fortran_var_decl(line, source, run_env):
                 if prop[0:6] == 'intent':
                     if source.ptype != 'scheme':
                         typ = source.ptype
-                        errmsg = 'Invalid variable declaration, {}, intent'
-                        errmsg = errmsg + ' not allowed in {} variable'
+                        ctx = context_string(context)
+                        emsg1 = f"Invalid variable declaration, {sline}, "
+                        emsg2 = f"intent not allowed in {typ} variable"
+                        errmsg = f"{errtyp}: {emsg1}{emsg2}{ctx}"
                         if run_env.logger is not None:
-                            ctx = context_string(context)
-                            errmsg = "WARNING: " + errmsg + "{}"
-                            run_env.logger.warning(errmsg.format(sline,
-                                                                 typ, ctx))
-                        else:
-                            raise ParseSyntaxError(errmsg.format(sline, typ),
-                                                   context=context)
+                            run_env.logger.warning(errmsg)
                         # end if
+                        errors.append(errmsg)
                     else:
                         intent = prop[6:].strip()[1:-1].strip()
                     # end if
@@ -771,14 +769,12 @@ def parse_fortran_var_decl(line, source, run_env):
                 varname = var[0:ploc].strip()
                 begin, end = check_balanced_paren(var)
                 if (begin < 0) or (end < 0):
+                    ctx = context_string(context)
+                    errmsg = f"{errtyp}: Invalid variable declaration, {var}{ctx}"
                     if run_env.logger is not None:
-                        ctx = context_string(context)
-                        errmsg = "WARNING: Invalid variable declaration, {}{}"
-                        run_env.logger.warning(errmsg.format(var, ctx))
-                    else:
-                        raise ParseSyntaxError('variable declaration',
-                                               token=var, context=context)
+                        run_env.logger.warning(errmsg)
                     # end if
+                    errors.append(errmsg)
                 else:
                     dimspec = var[begin:end+1]
                 # end if
@@ -813,12 +809,90 @@ def parse_fortran_var_decl(line, source, run_env):
             # XXgoldyXX: I am nervous about allowing invalid Var objects here
             # Also, this tends to cause an exception that ends up back here
             # which is not a good idea.
-            var = FortranVar(prop_dict, source, run_env)
-            newvars.append(var)
+            try:
+                var = FortranVar(prop_dict, source, run_env,
+                                 fortran_imports=imports)
+                newvars.append(var)
+            except ParseSyntaxError as perr:
+                errors.append(perr)
+            # end try
         # end for
     # No else (not a variable declaration)
     # end if
-    return newvars
+    return newvars, errors
+
+########################################################################
+
+class UseStatement(object):
+    """Class to parse and capture information from a Fortran use statement
+    >>> UseStatement("use foo, only: bar").valid
+    True
+    >>> UseStatement("use foo, only: bar").module
+    'foo'
+    >>> UseStatement("use foo, only: bar").imports
+    ['bar']
+    >>> UseStatement("USE foo, only: bar, baz, qux").imports
+    ['bar', 'baz', 'qux']
+    >>> UseStatement("use foo, only: bar, baz").imports
+    ['bar', 'baz']
+    >>> UseStatement("use foo, only: bar, baz !, qux").imports
+    ['bar', 'baz']
+    >>> UseStatement("use foo!, only: bar, baz").valid
+    False
+    >>> UseStatement("use foo!, only: bar, baz").module
+    'foo'
+    >>> UseStatement("use foo!, only: bar, baz").imports
+
+    """
+
+    __modmatch = r"use\s*("+_FORTRAN_ID+r")\s*"
+    __imports = r"("+_FORTRAN_ID+r"(\s*,\s*"+_FORTRAN_ID+")*)"
+
+    __use_stmt_re = re.compile(r"(?i)"+__modmatch+r",\s*only:\s*"+__imports)
+    __naked_use_re = re.compile(r"(?i)use\s*("+_FORTRAN_ID+")")
+
+    def __init__(self, line):
+        """Initialize a UseStatement object from <line>."""
+        match = UseStatement.__use_stmt_re.match(line.strip())
+        self.__valid = match is not None
+        self.__module_name = None
+        self.__imports = None
+        if self.valid:
+            self.__module_name = match.group(1)
+            self.__imports = [x.strip() for x in match.group(2).split(',')]
+        else:
+            match = UseStatement.__naked_use_re.match(line.strip())
+            if match:
+                self.__module_name = match.group(1)
+            # end if
+        # end if
+
+    @property
+    def valid(self):
+        """Return True if this object represents a valid Fortran use statment"""
+        return self.__valid
+
+    @property
+    def module(self):
+        """Return the module name if valid, otherwise, None"""
+        return self.__module_name
+
+    @property
+    def imports(self):
+        """Return a list of the module's imports if valid, otherwise, None"""
+        return self.__imports
+
+    @classmethod
+    def use_stmt_line(cls, line):
+        """Return True if <line> is a Fortran use statement.
+        >>> UseStatement.use_stmt_line("use foo, only: bar")
+        True
+        >>> UseStatement.use_stmt_line("USE foo, only: bar, baz, qux")
+        True
+        >>> UseStatement.use_stmt_line("! use foo, only: bar")
+        False
+        """
+        return UseStatement.__use_stmt_re.match(line.strip()) is not None
 
 ########################################################################
 # Future classes

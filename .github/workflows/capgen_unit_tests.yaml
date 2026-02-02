@@ -25,11 +25,15 @@ jobs:
           python3 \
           git \
           libxml2-utils
-        pip install --user pytest
+        python -m pip install --upgrade pip
+        pip install pytest
+        which xmllint
+        xmllint --version
+        which pytest
 
     - name: Build the framework
       run: |
-        cmake -S. -B./build -DOPENMP=ON -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
+        cmake --fresh -S. -B./build -DOPENMP=ON -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
         cd build
         make
 
@@ -42,11 +46,14 @@ jobs:
       run: |
         BUILD_DIR=./build \
         PYTHONPATH=test/:scripts/ \
-            pytest \
-              test/capgen_test/capgen_test_reports.py \
-              test/advection_test/advection_test_reports.py \
-              test/ddthost_test/ddthost_test_reports.py \
-              test/var_compatibility_test/var_compatibility_test_reports.py
+          pytest \
+            test/capgen_test/capgen_test_reports.py \
+            test/advection_test/advection_test_reports.py \
+            test/ddthost_test/ddthost_test_reports.py \
+            test/var_compatibility_test/var_compatibility_test_reports.py
 
     - name: Run Fortran to metadata test
       run: cd test && ./test_fortran_to_metadata.sh
+
+    - name: Run offline metadata parser test
+      run: cd test && ./test_offline_metadata_checker.sh

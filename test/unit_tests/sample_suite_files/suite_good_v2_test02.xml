@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="v2_suite" version="2.0">
+  <group name="main_group">
+    <subcycle loop="num_subcycles_for_scheme6">
+      <scheme>scheme6</scheme>
+    </subcycle>
+    <nested_suite name="another_suite2" group="another_group3" file="another_suite2.xml"/>
+  </group>
+</suite>

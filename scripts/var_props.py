@@ -129,6 +129,52 @@ def find_vertical_dimension(dims):
     return (var_vdim, vindex)
 
 ########################################################################
+def local_name_to_diag_name(prop_dict, context=None):
+########################################################################
+    """
+    Translate a local_name to its default diagnostic name.
+    Currently, this is just equal to the local name. If no local name
+    exists in the property dictionary, a truncation of the standard
+    name is used. (256 characters = max length of NetCDF variable name)
+    >>> local_name_to_diag_name({'local_name':'foo', 'standard_name':'cloud_optical_depth'})
+    'foo'
+    >>> local_name_to_diag_name({'standard_name':'cloud_optical_depth_layers_from_0p55mu_to_0p99mu'})
+    'cloud_optical_depth_layers_from_0p55mu_to_0p99mu'
+    >>> local_name_to_diag_name({'units':'km'}) #doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    parse_source.CCPPError: No standard name or local name to convert to diagnostic name
+    >>> local_name_to_diag_name({'local_name':'', 'standard_name':'cloud_optical_depth'}) #doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    parse_source.CCPPError: No standard name or local name to convert to diagnostic name
+    >>> local_name_to_diag_name({'standard_name':''}) #doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    parse_source.CCPPError: No standard name or local name to convert to diagnostic name
+    """
+    diag_name = None
+    if 'local_name' in prop_dict:
+        locname = prop_dict['local_name']
+        if locname:
+            diag_name = prop_dict['local_name']
+        # end if
+    elif 'standard_name' in prop_dict:
+        stdname = prop_dict['standard_name']
+        if stdname:
+            maxlen = 256
+            diag_name = stdname[:maxlen]
+        # end if
+    # end if
+
+    if not diag_name:
+        emsg = 'No standard name or local name to convert to diagnostic name'
+        raise CCPPError(emsg)
+    # end if
+
+    return diag_name
+
+########################################################################
 def standard_name_to_long_name(prop_dict, context=None):
 ########################################################################
     """Translate a standard_name to its default long_name

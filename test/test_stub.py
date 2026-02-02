@@ -23,7 +23,7 @@ class BaseTests:
         def test_ccpp_files(self):
             test_str = datatable_report(self.database, DatatableReport("ccpp_files"), self._SEP)
             self.assertSetEqual(set(self.ccpp_files), set(test_str.split(self._SEP)))
-        
+
         def test_process_list(self):
             test_str = datatable_report(self.database, DatatableReport("process_list"), self._SEP)
             self.assertSetEqual(set(self.process_list), set(test_str.split(self._SEP)))
@@ -86,7 +86,7 @@ class BaseTests:
             completedProcess = subprocess.run([self.datafile_script, self.database, "--dependencies"],
                                             capture_output=True,
                                             text=True)
-            self.assertEqual(self._SEP.join(self.dependencies), completedProcess.stdout.strip())
+            self.assertEqual(set(self.dependencies), set(completedProcess.stdout.strip().split(self._SEP)))
 
         def test_suite_list(self):
             completedProcess = subprocess.run([self.datafile_script, self.database, "--suite-list"],
@@ -113,7 +113,7 @@ class BaseTests:
 
     class TestSuiteCommandLine:
         _SEP = ","
-    
+
         def test_required_variables(self):
             completedProcess = subprocess.run([self.datafile_script, self.database, "--required-variables", self.suite_name],
                                             capture_output=True,

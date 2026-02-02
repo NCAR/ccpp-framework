@@ -29,7 +29,7 @@ CONTAINS
 
      allocate(dyn_const(1))
      call dyn_const(1)%instantiate(std_name="dyn_const", long_name='dyn const', &
-          units='kg kg-1', default_value=1._kind_phys,                          &
+          diag_name='DYNCONST', units='kg kg-1', default_value=1._kind_phys,    &
           vertical_dim='vertical_layer_dimension', advected=.true.,             &
           errcode=errflg, errmsg=errmsg)
 

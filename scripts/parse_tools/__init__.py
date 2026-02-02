@@ -30,7 +30,7 @@ from parse_log import set_log_to_file, verbose
 from preprocess import PreprocStack
 from xml_tools import find_schema_file, find_schema_version
 from xml_tools import read_xml_file, validate_xml_file
-from xml_tools import PrettyElementTree
+from xml_tools import expand_nested_suites, write_xml_file
 from fortran_conditional import FORTRAN_CONDITIONAL_REGEX_WORDS, FORTRAN_CONDITIONAL_REGEX
 # pylint: enable=wrong-import-position
 
@@ -51,6 +51,7 @@ __all__ = [
     'check_valid_values',
     'check_molar_mass',
     'context_string',
+    'expand_nested_suites',
     'find_schema_file',
     'find_schema_version',
     'flush_log',
@@ -65,7 +66,6 @@ __all__ = [
     'ParseSyntaxError',
     'ParseObject',
     'PreprocStack',
-    'PrettyElementTree',
     'read_xml_file',
     'register_fortran_ddt_name',
     'registered_fortran_ddt_name',
@@ -78,6 +78,7 @@ __all__ = [
     'type_name',
     'unique_standard_name',
     'validate_xml_file',
+    'write_xml_file',
     'FORTRAN_CONDITIONAL_REGEX_WORDS',
     'FORTRAN_CONDITIONAL_REGEX'
 ]

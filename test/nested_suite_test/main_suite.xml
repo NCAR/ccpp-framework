@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="main_suite" version="2.0">
+  <group name="radiation1">
+    <subcycle loop="num_subcycles_for_effr">
+      <scheme>effr_pre</scheme>
+      <subcycle loop="2">
+        <subcycle loop="2">
+          <scheme>effr_calc</scheme>
+        </subcycle>
+      </subcycle>
+      <scheme>effr_post</scheme>
+    </subcycle>
+    <nested_suite name="radiation2_suite" group="effrs_calc" file="radiation2_suite.xml"/>
+  </group>
+  <nested_suite name="radiation4_suite" group="rad_lw_group" file="radiation4_suite.xml"/>
+  <nested_suite name="radiation3_suite" file="radiation3_suite.xml"/>
+</suite>

@@ -1,6 +1,7 @@
 [ccpp-table-properties]
   name = environ_conditions
   type = scheme
+  source_path = source_dir1
 [ccpp-arg-table]
   name = environ_conditions_run
   type = scheme

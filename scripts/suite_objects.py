@@ -53,12 +53,12 @@ _API_DUMMY_RUN_ENV = CCPPFrameworkEnv(_API_LOGGING,
                                              'suites':''})
 
 ###############################################################################
-def new_suite_object(item, context, parent, run_env):
+def new_suite_object(item, context, parent, run_env, loop_count=0):
 ###############################################################################
     "'Factory' method to create the appropriate suite object from XML"
     new_item = None
     if item.tag == 'subcycle':
-        new_item = Subcycle(item, context, parent, run_env)
+        new_item = Subcycle(item, context, parent, run_env, loop_count=loop_count)
     elif item.tag == 'scheme':
         new_item = Scheme(item, context, parent, run_env)
     elif item.tag == _API_TIMESPLIT_TAG:
@@ -1841,7 +1841,7 @@ class Scheme(SuiteObject):
             self.run_env.logger.info(lmsg.format(compat_obj.v2_units,
                                                  compat_obj.v1_units,
                                                  compat_obj.v2_stdname,
-                                                 compat_obj.v1_stdname))
+                                                 self.__subroutine_name))
             self.__reverse_transforms.append([local_trans_var.get_prop_value('local_name'),
                                               var.get_prop_value('local_name'),
                                               var.get_prop_value('standard_name'),
@@ -1853,7 +1853,7 @@ class Scheme(SuiteObject):
             self.run_env.logger.info(lmsg.format(compat_obj.v1_units,
                                                  compat_obj.v2_units,
                                                  compat_obj.v1_stdname,
-                                                 compat_obj.v2_stdname))
+                                                 self.__subroutine_name))
             self.__forward_transforms.append([var.get_prop_value('local_name'),
                                               var.get_prop_value('standard_name'),
                                               local_trans_var.get_prop_value('local_name'),
@@ -2129,16 +2129,17 @@ class VerticalLoop(SuiteObject):
 class Subcycle(SuiteObject):
     """Class to represent a subcycled group of schemes or scheme collections"""
 
-    def __init__(self, sub_xml, context, parent, run_env):
+    def __init__(self, sub_xml, context, parent, run_env, loop_count=0):
         self._loop_extent = sub_xml.get('loop', "1") # Number of iterations
         self._loop = None
-        # See if our loop variable is an interger or a variable
+        # See if our loop variable is an integer or a variable
         try:
             _ = int(self._loop_extent)
             self._loop = self._loop_extent
             self._loop_var_int = True
-            name = f"loop{self._loop}"
+            name = f"loop{loop_count}"
             super().__init__(name, context, parent, run_env, active_call_list=False)
+            loop_count = loop_count + 1
         except ValueError:
             self._loop_var_int = False
             lvar = parent.find_variable(standard_name=self._loop_extent, any_scope=True)
@@ -2149,12 +2150,13 @@ class Subcycle(SuiteObject):
                 self._loop_var_int = False
                 self._loop = lvar.get_prop_value('local_name')
             # end if
-            name = f"loop_{self._loop_extent}"[0:63]
+            name = f"loop{loop_count}_{self._loop_extent}"[0:63]
             super().__init__(name, context, parent, run_env, active_call_list=True)
-            parent.add_call_list_variable(lvar)
+            parent.add_call_list_variable(lvar, exists_ok=True)
+            loop_count = loop_count + 1
         # end try
         for item in sub_xml:
-            new_item = new_suite_object(item, context, self, run_env)
+            new_item = new_suite_object(item, context, self, run_env, loop_count=loop_count)
             self.add_part(new_item)
         # end for
 
@@ -2427,7 +2429,8 @@ class Group(SuiteObject):
                         self.run_env)
         self.add_variable(local_var, self.run_env, exists_ok=True, gen_unique=True)
         # Finally, make sure all dimensions are accounted for
-        emsg = self.add_variable_dimensions(local_var, _API_LOCAL_VAR_TYPES,
+        emsg = self.add_variable_dimensions(local_var, [_API_LOCAL_VAR_NAME],
+                                            _API_SUITE_VAR_NAME,
                                             adjust_intent=True,
                                             to_dict=self.call_list)
         if emsg:
@@ -2471,6 +2474,11 @@ class Group(SuiteObject):
                 if dvar is None:
                     dvar = self.call_list.find_variable(standard_name=dpart,
                                                         any_scope=False)
+                # end if
+                if dvar is None:
+                    # Check if it's a module-level variable
+                    dvar = self.find_variable(standard_name=dpart, any_scope=True)
+                # end if
                 if dvar is None:
                     emsg = "Dimension variable, '{}', not found{}"
                     lvar = self.find_local_name(dpart, any_scope=True)

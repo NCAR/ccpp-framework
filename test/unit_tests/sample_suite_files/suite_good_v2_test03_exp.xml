@@ -1,0 +1,30 @@
+<?xml version="1.0" ?>
+
+<suite name="main_suite" version="2.0">
+  <group name="groupp">
+    <scheme>scheme13</scheme>
+    <subcycle loop="num_subcycles_for_main1">
+      <scheme>effr_pre</scheme>
+      <subcycle loop="2">
+        <subcycle loop="2">
+          <scheme>main_calc</scheme>
+        </subcycle>
+      </subcycle>
+      <scheme>main_post</scheme>
+    </subcycle>
+    <subcycle loop="num_subcycles_for_ag3">
+      <scheme>another_scheme</scheme>
+    </subcycle>
+    <scheme>more_scheme</scheme>
+    <subcycle loop="num_subcycles_for_ag">
+      <scheme>another_scheme</scheme>
+    </subcycle>
+    <scheme>more_scheme</scheme>
+  </group>
+  <group name="nested_group1">
+    <scheme>g1_scheme1</scheme>
+  </group>
+  <group name="nested_group2">
+    <scheme>scheme_subsuite1</scheme>
+  </group>
+</suite>

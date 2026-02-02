@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="ver_test_suite" version="2.0">
+  <group name="group1">
+    <scheme>scheme5</scheme>
+    <nested_suite name="subsuite_inline" group="group2" file="subsuite_inline.xml"/>
+    <scheme>scheme9</scheme>
+  </group>
+</suite>

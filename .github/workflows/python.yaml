@@ -20,30 +20,33 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libxml2-utils
         python -m pip install --upgrade pip
         pip install pytest
+        which pytest
+
     - name: Test with pytest
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
+        which xmllint
+        xmllint --version
         pytest -v test/
 
-  doctest:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Test with pytest using bad xmllint (xmllint wrapper)
       run: |
-        python -m pip install --upgrade pip
-        pip install pytest
-    - name: Doctest
+        export XMLLINT_REAL=$(which xmllint)
+        export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
+        export PATH=$(pwd)/test/unit_tests/xmllint_wrapper:${PATH}
+        export | grep PATH
+        which xmllint
+        xmllint --version
+        pytest -v test/
+
+    - name: Test with doctest
       run: |
         export PYTHONPATH=$(pwd)/scripts:$(pwd)/scripts/parse_tools
+        which xmllint
+        xmllint --version
         pytest -v scripts/ --doctest-modules

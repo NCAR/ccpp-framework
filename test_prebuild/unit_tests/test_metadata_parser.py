@@ -10,7 +10,7 @@ example_table = """
 [ccpp-table-properties]
   name = <name>
   type = scheme
-  relative_path = path
+  dependencies_path = path
   dependencies = a.f,b.f
 
 [ccpp-arg-table]
@@ -44,8 +44,8 @@ def test_MetadataTable_parse_table(tmpdir):
     metadata_header = metadata_headers[0]
     assert metadata_header.table_name == "<name>"
     assert metadata_header.table_type == "scheme"
-    assert metadata_header.relative_path == "path"
-    assert metadata_header.dependencies == [os.path.join(tmpdir, metadata_header.relative_path,"a.f"), os.path.join(tmpdir, metadata_header.relative_path,"b.f")]
+    assert metadata_header.dependencies_path == "path"
+    assert metadata_header.dependencies == [os.path.join(tmpdir, metadata_header.dependencies_path,"a.f"), os.path.join(tmpdir, metadata_header.dependencies_path,"b.f")]
 
     # check metadata section
     assert len(metadata_header.sections()) == 1

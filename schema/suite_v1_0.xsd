@@ -26,7 +26,7 @@
 
   <!-- attributes -->
 
-  <xs:attribute name="version"        type="version_type"/>
+  <xs:attribute name="version" type="version_type"/>
 
   <!-- definition of complex types -->
 
