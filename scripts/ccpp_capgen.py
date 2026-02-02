@@ -96,20 +96,30 @@ def delete_pathnames_from_file(capfile, logger):
     # end if
 
 ###############################################################################
-def find_associated_fortran_file(filename, fortran_source_path):
+def find_associated_fortran_file(filename, fortran_source_path=None):
 ###############################################################################
     """Find the Fortran file associated with metadata file, <filename>.
        Fortran files should be in <fortran_source_path>.
     """
     fort_filename = None
     lastdot = filename.rfind('.')
-    if lastdot < 0:
-        base = os.path.basename(filename + '.')
+    if (fortran_source_path is not None):
+        source_path = fortran_source_path
+        if lastdot < 0:
+            base = os.path.basename(filename + '.')
+        else:
+            base = os.path.basename(filename[0:lastdot+1])
+        # end if
     else:
-        base = os.path.basename(filename[0:lastdot+1])
+        source_path = ''
+        if lastdot < 0:
+            base = filename + '.'
+        else:
+            base = filename[0:lastdot+1]
+            # end if
     # end if
     for extension in _FORTRAN_FILENAME_EXTENSIONS:
-        test_name = os.path.join(fortran_source_path, base + extension)
+        test_name = os.path.join(source_path, base + extension)
         if os.path.exists(test_name):
             fort_filename = test_name
             break
@@ -117,21 +127,22 @@ def find_associated_fortran_file(filename, fortran_source_path):
     # end for
     if fort_filename is None:
         emsg = f"Cannot find Fortran file associated with '{filename}'."
-        emsg += f"\nfortran_src_path = '{fortran_source_path}'"
+        emsg += f"\nfortran_src_path = '{source_path}'"
         raise CCPPError(emsg)
     # end if
     return fort_filename
 
 ###############################################################################
-def find_dependency_files(filename,mtables):
+def find_dependency_files(filename, mtables, fortran_source_path):
 ###############################################################################
     "Find the Fortran dependency files required by <filename>"
     depends = list()
     for mtable in mtables:
         for dependency in mtable.dependencies:
             file_root = find_file_root(filename)
-            if mtable.relative_path:
-                file_root = os.path.join(file_root, mtable.relative_path)
+            if mtable.dependencies_path:
+                file_root = os.path.join(file_root, mtable.dependencies_path)
+            # end if
             depend = find_associated_fortran_file(os.path.join(file_root, dependency))
             if (depend not in depends):
                 depends.append(depend)
@@ -558,7 +569,7 @@ def parse_host_model_files(host_filenames, host_name, run_env,
         # parse metadata file
         mtables,mtitles = parse_metadata_file(filename, known_ddts, run_env)
         fortran_source_path = mtables[0].fortran_source_path
-        fort_file = find_associated_fortran_file(filename, fortran_source_path)
+        fort_file = find_associated_fortran_file(filename, fortran_source_path = fortran_source_path)
         ftables, mod_file, additional_routines = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
@@ -577,7 +588,7 @@ def parse_host_model_files(host_filenames, host_name, run_env,
         # end if
         # Check for host dependencies (will raise error if reqired
         #                              dependency file not found)
-        depends = find_dependency_files(filename, mtables)
+        depends = find_dependency_files(filename, mtables, fortran_source_path)
         for depend in depends:
             if (depend not in depend_files):
                 depend_files.append(depend)
@@ -639,7 +650,7 @@ def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False,
                                                skip_ddt_check=skip_ddt_check,
                                                relative_source_path=relative_source_path)
         fortran_source_path = mtables[0].fortran_source_path
-        fort_file = find_associated_fortran_file(filename, fortran_source_path)
+        fort_file = find_associated_fortran_file(filename, fortran_source_path = fortran_source_path)
         ftables, mod_file, additional_routines = parse_fortran_file(fort_file, run_env)
         # Check Fortran against metadata (will raise an exception on error)
         mheaders = list()
@@ -659,7 +670,7 @@ def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False,
         # end if
         # Check for scheme dependencies (will raise error if reqired 
         #                                dependency file not found)
-        depends = find_dependency_files(filename, mtables)
+        depends = find_dependency_files(filename, mtables, fortran_source_path)
         for depend in depends:
             if not (depend in depend_files):
                 depend_files.append(depend)
