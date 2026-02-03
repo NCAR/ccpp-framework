@@ -588,12 +588,14 @@ def parse_host_model_files(host_filenames, host_name, run_env,
         # end if
         # Check for host dependencies (will raise error if reqired
         #                              dependency file not found)
-        depends = find_dependency_files(filename, mtables, fortran_source_path)
-        for depend in depends:
-            if (depend not in depend_files):
-                depend_files.append(depend)
-            # end if
-        # end for
+        if run_env.ccpp_cfgfile:
+            depends = find_dependency_files(filename, mtables, fortran_source_path)
+            for depend in depends:
+                if (depend not in depend_files):
+                    depend_files.append(depend)
+                # end if
+            # end for
+        # end if
         # Check for duplicate tables, then add to dict
         for table in mtables:
             if table.table_name in table_dict:
@@ -670,12 +672,14 @@ def parse_scheme_files(scheme_filenames, run_env, skip_ddt_check=False,
         # end if
         # Check for scheme dependencies (will raise error if reqired 
         #                                dependency file not found)
-        depends = find_dependency_files(filename, mtables, fortran_source_path)
-        for depend in depends:
-            if not (depend in depend_files):
-                depend_files.append(depend)
-            # end if
-        # end for
+        if run_env.ccpp_cfgfile:
+            depends = find_dependency_files(filename, mtables, fortran_source_path)
+            for depend in depends:
+                if not (depend in depend_files):
+                    depend_files.append(depend)
+                # end if
+            # end for
+        # end if
         # Check for duplicate tables, then add to dict
         for table in mtables:
             if table.table_name in table_dict:
