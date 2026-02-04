@@ -835,7 +835,7 @@ class VarCompatObj:
                                               'scheme_files':'', \
                                               'suites':''}, \
                                        kind_types=["kind_phys=REAL64", \
-                                                   "kind_dyn=REAL32", \
+                                                   "kind_dyn=REAL32",  \
                                                    "kind_host=REAL64"])
     >>> VarCompatObj("var_stdname", "real", "kind_phys", "m", [], "var1_lname", False,\
                      "var_stdname", "real", "kind_phys", "m", [], "var2_lname", False,\
@@ -1172,7 +1172,7 @@ class VarCompatObj:
                                                       'scheme_files':'', \
                                                       'suites':''}, \
                                                kind_types=["kind_phys=REAL64", \
-                                                           "kind_dyn=REAL32", \
+                                                           "kind_dyn=REAL32",  \
                                                            "kind_host=REAL64"])
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
@@ -1227,7 +1227,7 @@ class VarCompatObj:
                                                       'scheme_files':'', \
                                                       'suites':''}, \
                                                kind_types=["kind_phys=REAL64", \
-                                                           "kind_dyn=REAL32", \
+                                                           "kind_dyn=REAL32",  \
                                                            "kind_host=REAL64"])
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')
@@ -1318,7 +1318,7 @@ class VarCompatObj:
                                               'scheme_files':'', \
                                               'suites':''}, \
                                        kind_types=["kind_phys=REAL64", \
-                                                   "kind_dyn=REAL32", \
+                                                   "kind_dyn=REAL32",  \
                                                    "kind_host=REAL64"])
         >>> _DOCTEST_CONTEXT1 = ParseContext(linenum=3, filename='foo.F90')
         >>> _DOCTEST_CONTEXT2 = ParseContext(linenum=5, filename='bar.F90')

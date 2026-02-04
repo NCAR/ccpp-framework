@@ -125,16 +125,21 @@ def create_kinds_file(run_env, output_dir):
     "Create the kinds.F90 file to be used by CCPP schemes and suites"
     kinds_filepath = os.path.join(output_dir, KINDS_FILENAME)
     if run_env.logger is not None:
-        msg = 'Writing {} to {}'
-        run_env.logger.info(msg.format(KINDS_FILENAME, output_dir))
+        msg = f'Writing {KINDS_FILENAME} to {output_dir}'
+        run_env.logger.info(msg)
     # end if
     kind_types = run_env.kind_types()
     with FortranWriter(kinds_filepath, "w",
                        "kinds for CCPP", KINDS_MODULE) as kindf:
         for kind_type in kind_types:
-            use_stmt = "use ISO_FORTRAN_ENV, only: {} => {}"
-            kindf.write(use_stmt.format(kind_type,
-                                        run_env.kind_spec(kind_type)), 1)
+            kind_spec = run_env.kind_spec(kind_type)
+            use_stmt = f"use {run_env.kind_module(kind_type)},"
+            if kind_spec == kind_type:
+                use_stmt += f" only: {kind_type}"
+            else:
+                use_stmt += f" only: {kind_type} => {kind_spec}"
+            # end if
+            kindf.write(use_stmt, 1)
         # end for
         kindf.write_preamble()
         for kind_type in kind_types:

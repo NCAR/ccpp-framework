@@ -6,9 +6,10 @@
 #
 #------------------------------------------------------------------------------
 set(SCHEME_FILES       "setup_coeffs" "temp_set" "temp_adjust" "temp_calc_adjust")
-set(SUITE_SCHEME_FILES "make_ddt" "environ_conditions")
+set(SUITE_SCHEME_FILES "make_ddt" "environ_conditions" "temp_kinds")
 set(HOST_FILES         "test_host_data" "test_host_mod")
 set(SUITE_FILES        "ddt_suite.xml" "temp_suite.xml")
+set(KIND_TYPE          "kind_phys=REAL64")
 
 # HOST is the name of the executable we will build.
 # We assume there are files ${HOST}.meta and ${HOST}.F90 in CMAKE_SOURCE_DIR
@@ -38,10 +39,12 @@ foreach(sfile ${SUITE_SCHEME_FILES})
   find_file(fort_file "${sfile}.F90" NO_CACHE
             HINTS ${CMAKE_CURRENT_SOURCE_DIR}
             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/source_dir1
-            HINTS ${CMAKE_CURRENT_SOURCE_DIR}/source_dir2)
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}/source_dir2
+            HINTS ${CMAKE_CURRENT_SOURCE_DIR}/adjust)
   list(APPEND SUITE_SCHEME_FORTRAN_FILES ${fort_file})
   unset(fort_file)
 endforeach()
+
 list(TRANSFORM SUITE_SCHEME_FILES APPEND ".meta" OUTPUT_VARIABLE SUITE_SCHEME_META_FILES)
 list(TRANSFORM HOST_FILES         APPEND ".F90"  OUTPUT_VARIABLE CAPGEN_HOST_FORTRAN_FILES)
 list(TRANSFORM HOST_FILES         APPEND ".meta" OUTPUT_VARIABLE CAPGEN_HOST_METADATA_FILES)
@@ -54,6 +57,7 @@ ccpp_capgen(CAPGEN_DEBUG ON
             SCHEMEFILES ${SCHEME_META_FILES} ${SUITE_SCHEME_META_FILES}
             SUITES ${SUITE_FILES}
             HOST_NAME ${HOST}
+            KIND_TYPES ${KIND_TYPES}
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
 
 # Retrieve the list of Fortran files required for test host from datatable.xml and set to CCPP_CAPS_LIST
