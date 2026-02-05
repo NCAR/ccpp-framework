@@ -1,8 +1,6 @@
 !!XXgoldyXX: To do, statistics output
 module ccpp_hash_table
 
-! Modify this file ...
-
   use ccpp_hashable, only: ccpp_hashable_t
 
   implicit none
