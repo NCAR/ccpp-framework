@@ -54,26 +54,3 @@ jobs:
           git diff
           exit 1
 
-      #- name: Fail if there are uncommitted changes and the `fix-fortran-format` label is not present
-      #  if: ${{ env.REFORMATTED_FILES != '' && !contains(github.event.pull_request.labels.*.name, 'fix-fortran-format') }}
-      #  run: |
-      #    echo "Formatting issues detected. Run 'codee format' locally or attach label 'fix-fortran-format' to this PR."
-      #    exit 1
-      #
-      # This doesn't work if the pull request comes from a fork ...
-      #- name: Commit changes if the `fix-fortran-format` label is not present
-      #  if: ${{ env.REFORMATTED_FILES != '' && contains(github.event.pull_request.labels.*.name, 'fix-fortran-format') }}
-      #  run: |
-      #    # Push with the github-actions user. More information at:
-      #    # https://github.com/actions/checkout?tab=readme-ov-file#push-a-commit-using-the-built-in-token
-      #    git config user.name "github-actions[bot]"
-      #    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git checkout -b ${{ github.head_ref }}
-      #    git add ${REFORMATTED_FILES}
-      #    git commit -m "Apply codee format formatting fixes"
-      #
-      #    git remote add realsource ${{ github.event.pull_request.head.repo.clone_url }}
-      #    git remote -v show
-      #    git push --set-upstream source ${{ github.head_ref }}
-      #    # If PR comes from the target repository (origin), can do:
-      #    #  git push --set-upstream origin ${{ github.head_ref }}
