@@ -425,7 +425,7 @@ class MetadataTableTestCase(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
 
-        emsg = "A fortran module name is required for 'temp_r8'"
+        emsg = "A Fortran kind name is required for 'temp_r8'"
         self.assertTrue(emsg in str(context.exception), msg=str(context.exception))
 
     def test_duplicate_kind_spec(self):

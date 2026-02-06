@@ -125,8 +125,8 @@ def create_kinds_file(run_env, output_dir):
     "Create the kinds.F90 file to be used by CCPP schemes and suites"
     kinds_filepath = os.path.join(output_dir, KINDS_FILENAME)
     if run_env.logger is not None:
-        msg = f'Writing {KINDS_FILENAME} to {output_dir}'
-        run_env.logger.info(msg)
+        msg = 'Writing {} to {}'
+        run_env.logger.info(msg.format(KINDS_FILENAME, output_dir))
     # end if
     kind_types = run_env.kind_types()
     with FortranWriter(kinds_filepath, "w",

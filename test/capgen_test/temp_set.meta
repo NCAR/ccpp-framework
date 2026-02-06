@@ -2,7 +2,7 @@
   name = temp_set
   type = scheme
   source_path = source_dir2
-  kind_spec = temp_r8:temp_kinds:kind_temp
+  kind_spec = temp_kinds:kind_temp=>temp_r8
   dependencies = temp_kinds.F90
   dependencies_path = adjust
 [ccpp-arg-table]

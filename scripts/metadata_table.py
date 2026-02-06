@@ -40,11 +40,12 @@ source_path = <relative source directory of Fortran source (if different)>
 dynamic_constituent_routine = ??? : @peverwhee?
 kind_spec = <kind_spec> : One or more optional Fortran kinds defined
           in the corresponding Fortran file.
-          The format is <kind_name>:<fortran_module>[:<ccpp_kind_name>]
-          - <kind_name> is defined in the corresponding Fortran module
+          The format is fortran_module:ccpp_kind_name=>kind_name or
+            fortran_module:kind_name
           - <fortran_module> is the module name of the corresponding Fortran module
-          - <ccpp_kind_name> is optional and describes the kind name
-          used in CCPP metadata tables and Fortran files.
+          - <kind_name> is defined in the corresponding Fortran module
+          - <ccpp_kind_name> is optional and describes the kind name used in CCPP
+            metadata tables and Fortran files.
           These entries are added to the framework_env object and
           thus to ccpp_kinds.F90
           The entries in ccpp_kinds.F90 are:
@@ -536,17 +537,19 @@ class MetadataTable():
                     elif key == 'kind_spec':
                         # Add spec to the runtime environment's kinds dict
                         spec_list = [x.strip() for x in value.split(':', maxsplit=2)]
-                        new_kind = spec_list[0]
+                        fort_module = spec_list[0]
                         if len(spec_list) < 2:
-                            emsg = f"A fortran module name is required for '{new_kind}'"
+                            emsg = f"A Fortran kind name is required for '{value}'"
                             self.__pobj.add_syntax_err(emsg)
                             continue
                         # end if
-                        fort_module = spec_list[1]
-                        if len(spec_list) > 2:
-                            new_ccpp_kind = spec_list[2]
+                        new_ccpp_kind = spec_list[1]
+                        spec_list = [x.strip() for x in new_ccpp_kind.split('=>', maxsplit=1)]
+                        if len(spec_list) > 1:
+                            new_kind = spec_list[1]
+                            new_ccpp_kind = spec_list[0]
                         else:
-                            new_ccpp_kind = new_kind
+                            new_kind = new_ccpp_kind
                         # end if
                         try:
                             check_fortran_id(new_kind, {}, True)
