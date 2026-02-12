@@ -207,6 +207,13 @@ class CCPPFrameworkEnv:
             self.__debug = debug
         # end if
         self.__logger = logger
+        # Set the ddt library to None
+        if ndict and ('ddt_library' in ndict):
+            self.__ddt_library = ndict['ddt_library']
+            del ndict['ddt_library']
+        else:
+            self.__ddt_library = None
+        # end if
         ## Check to see if anything is left in dictionary
         if ndict:
             for key in ndict:
@@ -262,6 +269,15 @@ class CCPPFrameworkEnv:
     def host_name(self):
         """Return the <host_name> property for this CCPPFrameworkEnv object."""
         return self.__host_name
+
+    @property
+    def ddt_library(self):
+        """Return the dictionary of DDT definitions for the host model"""
+        return self.__ddt_library
+
+    def set_ddt_library(self, ddt_lib):
+        """Set the ddt_library for the runtime environment"""
+        self.__ddt_library = ddt_lib
 
     @property
     def generate_host_cap(self):

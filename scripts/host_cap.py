@@ -445,6 +445,7 @@ def add_constituent_vars(cap, host_model, suite_list, run_env):
         ind_var = Var(prop_dict, _API_SOURCE, run_env)
         const_dict.add_variable(ind_var, run_env)
     # end for
+    print(const_dict)
     # Add vertical dimensions for DDT call strings
     pver = host_model.find_variable(standard_name=vert_layer_dim,
                                     any_scope=False)

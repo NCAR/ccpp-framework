@@ -83,15 +83,16 @@ class CallList(VarDictionary):
         self.__routine = routine
         super().__init__(name, run_env)
 
-    def add_vars(self, call_list, run_env, gen_unique=False):
+    def add_vars(self, call_list, run_env, gen_unique=False, add_children=False):
         """Add new variables from another CallList (<call_list>)"""
         for var in call_list.variable_list():
             stdname = var.get_prop_value('standard_name')
-            self.add_variable(var, run_env, gen_unique=gen_unique, adjust_intent=True, exists_ok=True)
+            self.add_variable(var, run_env, gen_unique=gen_unique, adjust_intent=True,
+                              exists_ok=True, add_children=add_children)
         # end for
 
     def add_variable(self, newvar, run_env, exists_ok=False, gen_unique=False,
-                     adjust_intent=False):
+                     adjust_intent=False, add_children=False):
         """Add <newvar> as for VarDictionary but make sure that the variable
            has an intent with the default being intent(in).
         """
@@ -104,7 +105,8 @@ class CallList(VarDictionary):
                                   context=oldvar.context)
         # end if
         super().add_variable(newvar, run_env, exists_ok=exists_ok,
-                             gen_unique=gen_unique, adjust_intent=adjust_intent)
+                             gen_unique=gen_unique, adjust_intent=adjust_intent,
+                             add_children=add_children)
 
     def call_string(self, cldicts=None, is_func_call=False, subname=None, sub_lname_list=None):
         """Return a dummy argument string for this call list.
@@ -458,7 +460,8 @@ class SuiteObject(VarDictionary):
             self.call_list.add_variable(newvar, self.run_env,
                                         exists_ok=exists_ok,
                                         gen_unique=gen_unique,
-                                        adjust_intent=True)
+                                        adjust_intent=True,
+                                        add_children=True)
             # We need to make sure that this variable's dimensions are available
             for vardim in newvar.get_dim_stdnames(include_constants=False):
                 # Unnamed dimensions are ok for allocatable variables
@@ -784,7 +787,8 @@ class SuiteObject(VarDictionary):
 
     def find_variable(self, standard_name=None, source_var=None,
                       any_scope=True, clone=None,
-                      search_call_list=False, loop_subst=False):
+                      search_call_list=False, loop_subst=False,
+                      check_components=True):
         """Find a matching variable to <var>, create a local clone (if
         <clone> is True), or return None.
         First search the SuiteObject's internal dictionary, then its
@@ -815,7 +819,8 @@ class SuiteObject(VarDictionary):
                                           source_var=source_var,
                                           any_scope=False, clone=None,
                                           search_call_list=scl,
-                                          loop_subst=loop_subst)
+                                          loop_subst=loop_subst,
+                                          check_components=check_components)
         if (not found_var) and (self.call_list is not None) and scl:
             # Don't clone yet, might find the variable further down
             found_var = self.call_list.find_variable(standard_name=stdname,
@@ -823,7 +828,8 @@ class SuiteObject(VarDictionary):
                                                      any_scope=False,
                                                      clone=None,
                                                      search_call_list=scl,
-                                                     loop_subst=loop_subst)
+                                                     loop_subst=loop_subst,
+                                                     check_components=check_components)
         # end if
         loop_okay = VarDictionary.loop_var_okay(stdname, self.run_phase())
         if not loop_okay:
@@ -836,7 +842,8 @@ class SuiteObject(VarDictionary):
                                                   any_scope=True,
                                                   clone=clone,
                                                   search_call_list=scl,
-                                                  loop_subst=loop_subst)
+                                                  loop_subst=loop_subst,
+                                                  check_components=check_components)
         # end if
         return found_var
 
@@ -851,6 +858,7 @@ class SuiteObject(VarDictionary):
         """
         vstdname = var.get_prop_value('standard_name')
         vdims    = var.get_dimensions()
+        local_var = None
         if (not vdims) and self.run_phase():
             vmatch = VarDictionary.loop_var_match(vstdname)
         else:
@@ -867,7 +875,7 @@ class SuiteObject(VarDictionary):
             if self.phase() == 'register':
                 found_var = True
                 new_vdims = [':']
-                return found_var, dict_var, var_vdim, new_vdims, missing_vert, compat_obj
+                return found_var, local_var, dict_var, var_vdim, new_vdims, missing_vert, compat_obj
             else:
                 errmsg = "Variables of type ccpp_constituent_properties_t only allowed in register phase: "
                 sname  = var.get_prop_value('standard_name')
@@ -877,9 +885,11 @@ class SuiteObject(VarDictionary):
         # end if
 
         # Is this variable a member of a DDT? If so, look for the parent DDT
+        # and add that instead
         host_var = host_dict.find_variable(source_var=var, any_scope=True)
         if host_var:
-            if host_var.is_ddt():
+            if isinstance(host_var, VarDDT):
+                local_var = host_var
                 var = host_var.var
                 vdims = []
             # end if
@@ -934,6 +944,10 @@ class SuiteObject(VarDictionary):
             else:
                 sdict = {'dimensions':new_dict_dims}
             # end if
+            # Add any DDT components from the host dictionary version of the variable
+            for dict_var_component in dict_var.components:
+                var.add_component(dict_var_component)
+            # end if
             found_var = self.parent.add_variable_to_call_tree(var,
                                                               subst_dict=sdict)
             if not match:
@@ -957,7 +971,7 @@ class SuiteObject(VarDictionary):
             dict_var = self.parent.find_variable(source_var=var, any_scope=True)
             compat_obj = var.compatible(dict_var, run_env)
         # end if
-        return found_var, dict_var, var_vdim, new_vdims, missing_vert, compat_obj
+        return found_var, dict_var, local_var, var_vdim, new_vdims, missing_vert, compat_obj
 
     def in_process_split(self):
         """Find out if we are in a process-split region"""
@@ -1216,7 +1230,7 @@ class Scheme(SuiteObject):
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
             args = self.match_variable(var, self.run_env, host_dict)
-            found, dict_var, vert_dim, new_dims, missing_vert, compat_obj = args
+            found, dict_var, local_var, vert_dim, new_dims, missing_vert, compat_obj = args
             if dict_var:
                 if dict_var.is_ddt():
                     subst_dict = {'intent':'inout'}
@@ -1228,7 +1242,11 @@ class Scheme(SuiteObject):
                 if self.__group.run_env.debug:
                     # Add variable allocation checks for group, suite and host variables
                     if dict_var:
-                        self.add_var_debug_check(dict_var)
+                        if local_var:
+                            self.add_var_debug_check(local_var)
+                        else:
+                            self.add_var_debug_check(dict_var)
+                        # end if
                     # end if
                 # end if
                 if not self.has_vertical_dim:
@@ -1251,6 +1269,7 @@ class Scheme(SuiteObject):
                         self.update_group_call_list_variable(clone)
                     else:
                         self.update_group_call_list_variable(clone)
+                    # end if
                 # end if
             else:
                 if missing_vert is not None:
@@ -1490,6 +1509,7 @@ class Scheme(SuiteObject):
         # or from the suite, not how it is called in the scheme (var)
         # First, check if the variable is in the call list.
         dvar = self.__group.call_list.find_variable(standard_name=standard_name, any_scope=False)
+        search_dict = self.__group.call_list
         if dvar:
             var_in_call_list = True
         else:
@@ -1503,10 +1523,15 @@ class Scheme(SuiteObject):
                 for var_dict in self.__group.suite_dicts():
                     dvar = var_dict.find_variable(standard_name=standard_name, any_scope=False)
                     if dvar:
+                        search_dict = var_dict
                         break
         if not dvar:
             raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
-        local_name = dvar.get_prop_value('local_name')
+        if dvar and isinstance(dvar, VarDDT):
+            local_name = dvar.call_string(search_dict)
+        else:
+            local_name = dvar.get_prop_value('local_name')
+        # end if
 
         # If the variable is allocatable and the intent for the scheme is 'out',
         # then we can't test anything because the scheme is going to allocate
@@ -2440,7 +2465,8 @@ class Group(SuiteObject):
 
     def find_variable(self, standard_name=None, source_var=None,
                       any_scope=True, clone=None,
-                      search_call_list=False, loop_subst=False):
+                      search_call_list=False, loop_subst=False,
+                      check_components=True):
         """Find a matching variable to <var>, create a local clone (if
         <clone> is True), or return None.
         This purpose of this special Group version is to record any constituent
@@ -2450,7 +2476,8 @@ class Group(SuiteObject):
                                      source_var=source_var,
                                      any_scope=any_scope, clone=clone,
                                      search_call_list=search_call_list,
-                                     loop_subst=loop_subst)
+                                     loop_subst=loop_subst,
+                                     check_components=check_components)
         if fvar and fvar.is_constituent():
             if fvar.source.ptype == ConstituentVarDict.constitutent_source_type():
                 # We found this variable in the constituent dictionary,

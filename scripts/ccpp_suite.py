@@ -258,7 +258,8 @@ character(len=16) :: {css_var_name} = '{state}'
 
     def find_variable(self, standard_name=None, source_var=None,
                       any_scope=True, clone=None,
-                      search_call_list=False, loop_subst=False):
+                      search_call_list=False, loop_subst=False,
+                      check_components=True):
         """Attempt to return the variable matching <standard_name>.
         if <standard_name> is None, the standard name from <source_var> is used.
         It is an error to pass both <standard_name> and <source_var> if
@@ -278,7 +279,8 @@ character(len=16) :: {css_var_name} = '{state}'
                                     any_scope=any_scope,
                                     clone=None,
                                     search_call_list=srch_clist,
-                                    loop_subst=loop_subst)
+                                    loop_subst=loop_subst,
+                                    check_components=check_components)
         if var is None:
             # No dice? Check for a group variable which can be promoted
             # Don't promote loop standard names
@@ -289,7 +291,8 @@ character(len=16) :: {css_var_name} = '{state}'
                                           source_var=source_var,
                                           any_scope=False,
                                           search_call_list=srch_clist,
-                                          loop_subst=loop_subst)
+                                          loop_subst=loop_subst,
+                                          check_components=check_components)
 
                 if var is not None:
                     # Promote variable to suite level
@@ -341,7 +344,8 @@ character(len=16) :: {css_var_name} = '{state}'
             # Guess it is time to clone a different variable
             var = super().find_variable(standard_name=standard_name,
                                         source_var=source_var,
-                                        any_scope=any_scope, clone=clone)
+                                        any_scope=any_scope, clone=clone,
+                                        check_components=check_components)
         # end if
         return var
 
@@ -735,7 +739,8 @@ class API(VarDictionary):
                     if group.phase() == phase:
                         self.__call_lists[phase].add_vars(group.call_list,
                                                           run_env,
-                                                          gen_unique=True)
+                                                          gen_unique=True,
+                                                          add_children=True)
                     # end if
                 # end for
              # end for

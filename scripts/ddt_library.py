@@ -80,8 +80,8 @@ class VarDDT(Var):
         # end if
         return pvalue
 
-    def clone(self, subst_dict, source_name=None, source_type=None,
-              context=None):
+    def clone(self, subst_dict=None, remove_intent=False,
+              source_name=None, source_type=None, context=None):
         """Create a clone of this VarDDT object's leaf Var with properties
         from <subst_dict> overriding this variable's properties.
         <subst_dict> may also be a string in which case only the local_name
@@ -288,7 +288,7 @@ class DDTLibrary(dict):
             # for a DDT, the variable also cannot be in our parent
             # dictionaries.
             stdname = dvar.get_prop_value('standard_name')
-            pvar = var_dict.find_variable(standard_name=stdname, any_scope=True)
+            pvar = var_dict.find_variable(standard_name=stdname, any_scope=True, check_components=False)
             if pvar and (not skip_duplicates):
                 ntx = context_string(dvar.context)
                 ctx = context_string(pvar.context)
@@ -300,6 +300,8 @@ class DDTLibrary(dict):
             if not pvar:
                 var_dict.add_variable(subvar, run_env)
             # end if
+            # Add this ddt variable to the parent DDT
+            var.add_component(subvar)
         # end for
 
     def ddt_modules(self, variable_list, ddt_mods=None):

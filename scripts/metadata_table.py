@@ -1141,13 +1141,15 @@ class MetadataSection(ParseSource):
                                               loop_vars=loop_vars,
                                               consts=consts)
 
-    def find_variable(self, std_name, use_local_name=False):
+    def find_variable(self, std_name, use_local_name=False, check_components=True):
         """Find a variable in this header's dictionary"""
         var = None
         if use_local_name:
             var = self.__variables.find_local_name(std_name)
         else:
-            var = self.__variables.find_variable(std_name, any_scope=False)
+            var = self.__variables.find_variable(std_name, 
+                                                 any_scope=False,
+                                                 check_components=check_components)
         # end if
         return var
 

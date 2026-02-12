@@ -203,7 +203,8 @@ class HostModel(VarDictionary):
 
     def find_variable(self, standard_name=None, source_var=None,
                       any_scope=False, clone=None,
-                      search_call_list=False, loop_subst=False):
+                      search_call_list=False, loop_subst=False,
+                      check_components=True):
         """Return the host model variable matching <standard_name> or None
         If <loop_subst> is True, substitute a begin:end range for an extent.
         """
@@ -211,7 +212,8 @@ class HostModel(VarDictionary):
                                        source_var=source_var,
                                        any_scope=any_scope, clone=clone,
                                        search_call_list=search_call_list,
-                                       loop_subst=loop_subst)
+                                       loop_subst=loop_subst,
+                                       check_components=check_components)
         if my_var is None:
             # Check our DDT library
             if standard_name is None:
@@ -224,7 +226,8 @@ class HostModel(VarDictionary):
             # end if
             # Since we are the parent of the DDT library, only check that dict
             my_var = self.__ddt_dict.find_variable(standard_name=standard_name,
-                                                   any_scope=False)
+                                                   any_scope=False,
+                                                   check_components=check_components)
         # End if
         if loop_subst:
             if my_var is None:
@@ -257,7 +260,7 @@ class HostModel(VarDictionary):
                 vdims = [x.strip() for x in imatch.group(2).split(',')
                          if ':' not in x]
                 for vname in vdims:
-                    _ = self.find_variable(standard_name=vname)
+                    _ = self.find_variable(standard_name=vname, check_components=check_components)
                 # End for
             # End if
             if isinstance(my_var, VarDDT):

@@ -261,7 +261,7 @@ class Var:
     __var_propdict.update({p.name : p for p in __constituent_props})
     # All constituent props are optional so no check
 
-    def __init__(self, prop_dict, source, run_env, context=None,
+    def __init__(self, prop_dict, source, run_env, is_ddt=False, components=None, context=None,
                  clone_source=None, fortran_imports=None):
         """Initialize a new Var object.
         If <prop_dict> is really a Var object, use that object's prop_dict.
@@ -275,6 +275,11 @@ class Var:
         """
         self.__parent_var = None # for array references
         self.__children = list() # This Var's array references
+        if components:
+            self.__components = components
+        else:
+            self.__components = list() # This Var's DDT components
+        # end if
         self.__clone_source = clone_source
         self.__run_env = run_env
         if isinstance(prop_dict, Var):
@@ -314,6 +319,9 @@ class Var:
             self.__intrinsic = False
         else:
             self.__intrinsic = True
+        # end if
+        if is_ddt:
+            self.__intrinsic = False
         # end if
         for key in prop_dict:
             if Var.get_prop(key) is None:
@@ -499,7 +507,7 @@ class Var:
         # end if
         psource = ParseSource(source_name, source_type, context)
 
-        return Var(cprop_dict, psource, self.run_env, clone_source=self)
+        return Var(cprop_dict, psource, self.run_env, is_ddt=self.is_ddt(), components=self.components, clone_source=self)
 
     def get_prop_value(self, name):
         """Return the value of key, <name> if <name> is in this variable's
@@ -703,6 +711,8 @@ class Var:
                         if item:
                             dvar = var_dict.find_variable(standard_name=item,
                                                           any_scope=False)
+                            print(dvar)
+                            print(item)
                             if dvar is None:
                                 try:
                                     dval = int(item)
@@ -772,7 +782,7 @@ class Var:
         match = FORTRAN_SCALAR_REF_RE.match(local_name)
         return match
 
-    def intrinsic_elements(self, check_dict=None, ddt_lib=None):
+    def intrinsic_elements(self, check_dict=None, ddt_lib=None, run_env=None):
         """Return a list of the standard names of this Var object's 'leaf'
         intrinsic elements or this Var object's standard name if it is an
         intrinsic 'leaf' variable.
@@ -790,7 +800,14 @@ class Var:
         element_names = None
         if self.is_ddt():
             dtitle = self.get_prop_value('type')
-            if ddt_lib and (dtitle in ddt_lib):
+            if not ddt_lib:
+                if not run_env:
+                    errmsg = f'If ddt_lib is not supplied, run_env must be'
+                    raise CCPPError(errmsg)
+                # end if
+                ddt_lib = run_env.ddt_library
+            # end if
+            if dtitle in ddt_lib:
                 element_names = []
                 ddt_def = ddt_lib[dtitle]
                 for dvar in ddt_def.variable_list():
@@ -882,6 +899,14 @@ class Var:
             # end while
         # end if
         return iter(children) if children else None
+
+    @property
+    def components(self):
+        """Return the list of this object's components"""
+        return self.__components
+
+    def add_component(self, new_component):
+        self.__components.append(new_component)
 
     @property
     def var(self):
@@ -1604,7 +1629,7 @@ class VarDictionary(OrderedDict):
         return vlist
 
     def add_variable(self, newvar, run_env, exists_ok=False, gen_unique=False,
-                     adjust_intent=False):
+                     adjust_intent=False, add_children=False):
         """Add <newvar> if it does not conflict with existing entries
         If <exists_ok> is True, attempting to add an identical copy is okay.
         If <gen_unique> is True, a new local_name will be created if a
@@ -1712,9 +1737,16 @@ class VarDictionary(OrderedDict):
         if aref is not None:
             pname = aref.group(1).strip()
             pvar = self.find_local_name(pname)
+            array_pieces = aref.group(2).split(',')
             if pvar is not None:
                 newvar.parent = pvar
             # end if
+            for array_piece in array_pieces:
+                if array_piece.strip() != ':':
+                    pvar = self.find_variable(standard_name=array_piece.strip())
+                    if pvar:
+                        newvar.add_child(pvar)
+                    # end if
         # end if
         # If we make it to here without an exception, add the variable
         if standard_name not in self:
@@ -1723,6 +1755,12 @@ class VarDictionary(OrderedDict):
         lname = lname.lower()
         if lname not in self.__local_names:
             self.__local_names[lname] = standard_name
+        # end if
+        if newvar.children() and add_children:
+            for child in newvar.children():
+                self.add_variable(child, run_env, exists_ok=exists_ok, gen_unique=gen_unique,
+                     adjust_intent=adjust_intent)
+            # end for
         # end if
 
     def remove_variable(self, standard_name):
@@ -1795,7 +1833,8 @@ class VarDictionary(OrderedDict):
 
     def find_variable(self, standard_name=None, source_var=None,
                       any_scope=True, clone=None,
-                      search_call_list=False, loop_subst=False):
+                      search_call_list=False, loop_subst=False,
+                      check_components=True):
         """Attempt to return the variable matching <standard_name>.
         if <standard_name> is None, the standard name from <source_var> is used.
         It is an error to pass both <standard_name> and <source_var> if
@@ -1828,19 +1867,29 @@ class VarDictionary(OrderedDict):
         else:
             # Look in the DDTs
             var = None
-            for var_check in self:
-                var_in_object = self.find_variable(var_check)
-                if var_in_object.is_ddt():
-                    children = var_in_object.children()
-                    if children:
-                        for child in children:
-                            if child.get_prop_value('standard_name') == standard_name:
-                                var = child
+            if check_components:
+                for var_check in self:
+                    var_in_object = self[var_check]
+                    ddt_components = var_in_object.components
+                    for component in ddt_components:
+                        if component.get_prop_value('standard_name') == standard_name:
+                            var = component
+                        else:
+                            if component.children():
+                                for child in component.children():
+                                    if child.get_prop_value('standard_name') == standard_name:
+                                        var = child
+                                    # end if
+                                # end for
                             # end if
-                        # end for
+                        # end if
+                    # end for
+#                    if not var and var_in_object.children():
+#                        for child in var_in_object.children():
+#                            print(child)
                     # end if
-                # end if
-            # end for
+                # end for
+            # end if
             if not var:
                 if any_scope and (self.__parent_dict is not None):
                     src_clist = search_call_list
@@ -1849,7 +1898,8 @@ class VarDictionary(OrderedDict):
                                                    any_scope=any_scope,
                                                    clone=clone,
                                                    search_call_list=src_clist,
-                                                   loop_subst=loop_subst)
+                                                   loop_subst=loop_subst,
+                                                   check_components=check_components)
                 else:
                     var = None
                 # end if
