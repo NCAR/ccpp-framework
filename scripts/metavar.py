@@ -711,8 +711,6 @@ class Var:
                         if item:
                             dvar = var_dict.find_variable(standard_name=item,
                                                           any_scope=False)
-                            print(dvar)
-                            print(item)
                             if dvar is None:
                                 try:
                                     dval = int(item)
@@ -1877,10 +1875,6 @@ class VarDictionary(OrderedDict):
                             # end if
                         # end if
                     # end for
-#                    if not var and var_in_object.children():
-#                        for child in var_in_object.children():
-#                            print(child)
-                    # end if
                 # end for
             # end if
             if not var:

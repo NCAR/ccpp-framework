@@ -500,7 +500,7 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars,
         var_dicts = [host_model, const_dict]
         # Figure out which dictionary has the variable
         for vdict in var_dicts:
-            hvar = vdict.find_variable(standard_name=stdname, any_scope=False)
+            hvar = vdict.find_variable(standard_name=stdname, any_scope=False, check_components=False)
             if hvar is not None:
                 var_dict = vdict
                 break
