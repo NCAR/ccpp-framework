@@ -782,7 +782,7 @@ class Var:
         match = FORTRAN_SCALAR_REF_RE.match(local_name)
         return match
 
-    def intrinsic_elements(self, check_dict=None, ddt_lib=None, run_env=None):
+    def intrinsic_elements(self, check_dict=None, ddt_lib=None):
         """Return a list of the standard names of this Var object's 'leaf'
         intrinsic elements or this Var object's standard name if it is an
         intrinsic 'leaf' variable.
@@ -800,14 +800,7 @@ class Var:
         element_names = None
         if self.is_ddt():
             dtitle = self.get_prop_value('type')
-            if not ddt_lib:
-                if not run_env:
-                    errmsg = f'If ddt_lib is not supplied, run_env must be'
-                    raise CCPPError(errmsg)
-                # end if
-                ddt_lib = run_env.ddt_library
-            # end if
-            if dtitle in ddt_lib:
+            if ddt_lib and (dtitle in ddt_lib):
                 element_names = []
                 ddt_def = ddt_lib[dtitle]
                 for dvar in ddt_def.variable_list():

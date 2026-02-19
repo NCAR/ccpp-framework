@@ -659,7 +659,6 @@ def capgen(run_env, return_db=False):
     # Handle the host files
     host_model = parse_host_model_files(host_files, host_name, run_env,
                                         known_ddts=scheme_ddts)
-    run_env.set_ddt_library(host_model.ddt_lib)
     # Next, parse the scheme files
     # We always need to parse the constituent DDTs
     const_prop_mod = os.path.join(src_dir, "ccpp_constituent_prop_mod.meta")

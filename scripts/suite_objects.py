@@ -890,7 +890,9 @@ class SuiteObject(VarDictionary):
         if host_var:
             if isinstance(host_var, VarDDT):
                 local_var = host_var
-                var = host_var.var
+                if host_var.get_prop_value('standard_name') not in ['ccpp_constituents', 'ccpp_constituent_tendencies']:
+                    var = host_var.var
+                # end if
                 vdims = []
             # end if
         # end if
