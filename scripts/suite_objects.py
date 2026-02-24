@@ -886,6 +886,7 @@ class SuiteObject(VarDictionary):
 
         # Is this variable a member of a DDT? If so, look for the parent DDT
         # and add that instead
+        # PEVERWHEE - note - currently not doing this for constituents
         constituent = var.is_constituent()
         if not constituent:
             host_var = host_dict.find_variable(source_var=var, any_scope=False)
@@ -1535,7 +1536,6 @@ class Scheme(SuiteObject):
         if not dvar:
             raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
         # end if
-
         local_name = dvar.call_string(search_dict)
 
         # If the variable is allocatable and the intent for the scheme is 'out',
