@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 # CCPP framework imports
 from ccpp_state_machine import CCPP_STATE_MACH, RUN_PHASE_NAME
 from code_block import CodeBlock
-from constituents import ConstituentVarDict
+from constituents import ConstituentVarDict, CONST_OBJ_STDNAME
 from framework_env import CCPPFrameworkEnv
 from metavar import Var, VarDictionary, VarLoopSubst
 from metavar import CCPP_CONSTANT_VARS, CCPP_LOOP_VAR_STDNAMES
@@ -839,7 +839,7 @@ class SuiteObject(VarDictionary):
             # We do not have the variable, look to parents.
             found_var = self.parent.find_variable(standard_name=stdname,
                                                   source_var=source_var,
-                                                  any_scope=True,
+                                                  any_scope=any_scope,
                                                   clone=clone,
                                                   search_call_list=scl,
                                                   loop_subst=loop_subst,
@@ -886,14 +886,30 @@ class SuiteObject(VarDictionary):
 
         # Is this variable a member of a DDT? If so, look for the parent DDT
         # and add that instead
-        host_var = host_dict.find_variable(source_var=var, any_scope=True)
-        if host_var:
-            if isinstance(host_var, VarDDT):
-                local_var = host_var
-#                if host_var.get_prop_value('standard_name') not in ['ccpp_constituents', 'ccpp_constituent_tendencies']:
-                var = host_var.var
+        if var.is_constituent():
+            # If the variable is a constituent, add the constituent object instead
+            host_var = host_dict.find_variable(standard_name='hi', any_scope=False)
+#            host_var = host_dict.find_variable(standard_name=CONST_OBJ_STDNAME, any_scope=False)
+            if host_var:
+                var = host_var
+#                dict_var = var
+            # end if
+        else:
+            host_var = host_dict.find_variable(source_var=var, any_scope=False)
+            if host_var:
+                if isinstance(host_var, VarDDT):
+                    local_var = host_var
+                    var = host_var.var
+                    vdims = []
                 # end if
-                vdims = []
+            # end if
+        # end if
+        #host_var = host_dict.find_variable(source_var=var, any_scope=True)
+        #if host_var:
+        #    if isinstance(host_var, VarDDT):
+        #        local_var = host_var
+        #        var = host_var.var
+        #        vdims = []
             # end if
         # end if
         # Does this variable exist in the calling tree?

@@ -1878,9 +1878,13 @@ class VarDictionary(OrderedDict):
                 # end for
             # end if
             if not var:
-                if any_scope and (self.__parent_dict is not None):
-                    src_clist = search_call_list
-                    var = self.__parent_dict.find_variable(standard_name=standard_name,
+                if any_scope:
+                    if self.__parent_dict is not None:
+                        src_clist = search_call_list
+               #     if standard_name:
+                        # PEVERWHEE - fix this upstream - using the parent dict for the const object creates
+                        # an infinite loop
+                        var = self.__parent_dict.find_variable(standard_name=standard_name,
                                                    source_var=source_var,
                                                    any_scope=any_scope,
                                                    clone=clone,

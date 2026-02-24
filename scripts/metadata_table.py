@@ -274,6 +274,7 @@ def register_ddts(file_list):
     """
     errors = ""
     ddt_names = set()
+    in_table = False
     for mfile in file_list:
         if os.path.exists(mfile):
             with open(mfile, 'r') as infile:
