@@ -886,15 +886,8 @@ class SuiteObject(VarDictionary):
 
         # Is this variable a member of a DDT? If so, look for the parent DDT
         # and add that instead
-        if var.is_constituent():
-            # If the variable is a constituent, add the constituent object instead
-            host_var = host_dict.find_variable(standard_name='hi', any_scope=False)
-#            host_var = host_dict.find_variable(standard_name=CONST_OBJ_STDNAME, any_scope=False)
-            if host_var:
-                var = host_var
-#                dict_var = var
-            # end if
-        else:
+        constituent = var.is_constituent()
+        if not constituent:
             host_var = host_dict.find_variable(source_var=var, any_scope=False)
             if host_var:
                 if isinstance(host_var, VarDDT):
@@ -902,14 +895,6 @@ class SuiteObject(VarDictionary):
                     var = host_var.var
                     vdims = []
                 # end if
-            # end if
-        # end if
-        #host_var = host_dict.find_variable(source_var=var, any_scope=True)
-        #if host_var:
-        #    if isinstance(host_var, VarDDT):
-        #        local_var = host_var
-        #        var = host_var.var
-        #        vdims = []
             # end if
         # end if
         # Does this variable exist in the calling tree?
@@ -929,7 +914,7 @@ class SuiteObject(VarDictionary):
         else:
             # Check dimensions
             dict_dims = dict_var.get_dimensions()
-            if vdims:
+            if vdims and not constituent:
                 args = self.parent.match_dimensions(vdims, dict_dims)
                 match, new_vdims, new_dict_dims, missing_vert, perm, err = args
                 if perm is not None:
@@ -963,8 +948,10 @@ class SuiteObject(VarDictionary):
                 sdict = {'dimensions':new_dict_dims}
             # end if
             # Add any DDT components from the host dictionary version of the variable
-            for dict_var_component in dict_var.components:
-                var.add_component(dict_var_component)
+            if not constituent:
+                for dict_var_component in dict_var.components:
+                    var.add_component(dict_var_component)
+                # end for
             # end if
             found_var = self.parent.add_variable_to_call_tree(var,
                                                               subst_dict=sdict)
@@ -1252,9 +1239,11 @@ class Scheme(SuiteObject):
             if dict_var:
                 if dict_var.is_ddt():
                     subst_dict = {'intent':'inout'}
-                    clone = dict_var.clone(subst_dict)
-                    dict_var = clone
+                else:
+                    subst_dict = {'intent': var.get_prop_value('intent')}
                 # end if
+                clone = dict_var.clone(subst_dict)
+                dict_var = clone
             # end if
             if found:
                 if self.__group.run_env.debug:
@@ -1545,11 +1534,9 @@ class Scheme(SuiteObject):
                         break
         if not dvar:
             raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
-        if dvar and isinstance(dvar, VarDDT):
-            local_name = dvar.call_string(search_dict)
-        else:
-            local_name = dvar.get_prop_value('local_name')
         # end if
+
+        local_name = dvar.call_string(search_dict)
 
         # If the variable is allocatable and the intent for the scheme is 'out',
         # then we can't test anything because the scheme is going to allocate
@@ -1597,8 +1584,11 @@ class Scheme(SuiteObject):
                         dvar = var_dict.find_variable(standard_name=dim, any_scope=False)
                         if dvar is not None:
                             break
+                        # end if
+                    # end for
                     if not dvar:
                         raise Exception(f"No variable with standard name '{dim}' in cldicts")
+                    # end if
                     dim_lname = dvar.get_prop_value('local_name')
                     dim_length = 1
                     dim_strings.append(dim_lname)
