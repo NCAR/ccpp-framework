@@ -98,15 +98,19 @@ contains
     logical            :: need_header
     real(kind_phys)    :: avg
     integer, parameter :: cincrements(pcnst) = (/ 1, 0 /)
+    real(kind_phys)    :: total_test
+    real(kind_phys), parameter :: total_ref = 4230.0_kind_phys
 
     compare_data = .true.
 
+    total_test = 0.0_kind_phys
     need_header = .true.
     do lev = 1, pver
        do col = 1, ncols
           avg = (tint_save(col,lev) + tint_save(col,lev+1))
           avg = 1.0_kind_phys + (avg / 2.0_kind_phys)
           avg = avg + (temp_inc * num_time_steps)
+          total_test = total_test + avg
           if (abs((temp_midpoints(col, lev) - avg) / avg) > tolerance) then
              if (need_header) then
                 write(6, '("  COL  LEV      T MIDPOINTS        EXPECTED")')
@@ -126,6 +130,7 @@ contains
           do col = 1, ncols
              avg = real(offsize + col + (cincrements(cind) * num_time_steps), &
                   kind=kind_phys)
+             total_test =  total_test + avg
              if (abs((phys_state%q(col, lev, cind) - avg) / avg) >            &
                   tolerance) then
                 if (need_header) then
@@ -140,7 +145,18 @@ contains
           end do
        end do
     end do
-
+    if (abs((total_test - total_ref) / total_ref) > tolerance) then
+      write(6, '(a,e12.4)') 'TOTAL REFERENCE:     ', total_ref
+      write(6, '(a,e12.4)') 'TOTAL TEST:          ', total_test
+      write(6, '(2(a,e12.4))') 'REL.DIFF > TOLERANCE:', &
+          abs((total_test - total_ref) / total_ref), ' >', tolerance
+      compare_data = .false.
+    else
+      write(0, '(a,e12.4)') 'TOTAL REFERENCE:     ', total_ref
+      write(0, '(a,e12.4)') 'TOTAL TEST:          ', total_test
+      write(0, '(2(a,e12.4))') 'REL.DIFF < TOLERANCE:', &
+          abs((total_test - total_ref) / total_ref), ' <', tolerance
+    end if
   end function compare_data
 
 end module test_host_mod

@@ -104,6 +104,9 @@ CONTAINS
     !!
     subroutine test_host(retval, test_suites)
 
+#ifdef _OPENMP
+       use omp_lib
+#endif
        use test_host_mod,      only: ncols, num_time_steps
        use test_host_ccpp_cap, only: test_host_ccpp_physics_register
        use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
@@ -120,6 +123,7 @@ CONTAINS
 
        logical                         :: check
        integer                         :: col_start, col_end
+       integer                         :: thread_num, num_threads
        integer                         :: index, sind
        integer                         :: time_step
        integer                         :: num_suites
@@ -196,35 +200,55 @@ CONTAINS
              end if
           end do
 
-          do col_start = 1, ncols, 5
-             if (errflg /= 0) then
-                exit
-             end if
-             col_end = MIN(col_start + 4, ncols)
-
-             do sind = 1, num_suites
+          run_phase_if_no_error: if (errflg == 0) then
+#ifdef _OPENMP
+             num_threads = omp_get_max_threads()
+#else
+             num_threads = 1
+#endif
+!$OMP parallel num_threads (num_threads) &
+!$OMP default (none) &
+!$OMP shared (num_threads, num_suites, test_suites) &
+!$OMP private (thread_num, col_start, col_end, errmsg) &
+!$OMP reduction (+:errflg)
+#ifdef _OPENMP
+             thread_num = omp_get_thread_num()
+#else
+             thread_num = 0
+#endif
+!$OMP do
+             do col_start = 1, ncols, 5
                 if (errflg /= 0) then
-                   exit
+                   continue
                 end if
-                do index = 1, size(test_suites(sind)%suite_parts)
+                col_end = MIN(col_start + 4, ncols)
+                do sind = 1, num_suites
                    if (errflg /= 0) then
-                      exit
+                      continue
                    end if
-                   if (errflg == 0) then
+                   do index = 1, size(test_suites(sind)%suite_parts)
+                      if (errflg /= 0) then
+                         continue
+                      end if
+                      write(0,'(a,i0,a,i0,5a,i0,a,i0)') 'Thread ', thread_num, '/', num_threads, &
+                        ': calling run phase for suite ', trim(test_suites(sind)%suite_name), &
+                        ' part ', trim(test_suites(sind)%suite_parts(index)), &
+                        ' columns ', col_start, ':', col_end
                       call test_host_ccpp_physics_run(                        &
                            test_suites(sind)%suite_name,                      &
                            test_suites(sind)%suite_parts(index),              &
                            col_start, col_end, errmsg, errflg)
-                   end if
-                   if (errflg /= 0) then
-                      write(6, '(5a)') trim(test_suites(sind)%suite_name),    &
-                           '/', trim(test_suites(sind)%suite_parts(index)),   &
-                           ': ', trim(errmsg)
-                      exit
-                   end if
+                      if (errflg /= 0) then
+                         write(6, '(5a)') trim(test_suites(sind)%suite_name),    &
+                              '/', trim(test_suites(sind)%suite_parts(index)),   &
+                              ': ', trim(errmsg)
+                      end if
+                   end do
                 end do
              end do
-          end do
+!$OMP end do
+!$OMP end parallel
+          end if run_phase_if_no_error
 
           do sind = 1, num_suites
              if (errflg /= 0) then
