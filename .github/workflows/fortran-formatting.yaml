@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize, labeled, unlabeled]
 
 env:
-  CODEE_VERSION: 2025.4.5
+  CODEE_VERSION: 2025.4.8
 
 # Only needed when fixing formatting automatically, but this only
 # works for pull requests from the same repo, not from a fork
@@ -16,7 +16,7 @@ env:
 
 jobs:
   format:
-    name: Check and fix Fortran formatting
+    name: Check Fortran formatting
     runs-on: ubuntu-22.04
 
     steps:
@@ -25,32 +25,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get modified Fortran files
+      - name: Check formatting of modified Fortran files
         run: |
           git remote -v show
           git fetch origin ${{ github.base_ref }}
           MODIFIED_FILES=$(git diff --name-only --diff-filter=d origin/${{ github.base_ref }}...HEAD -- '*.f90' '*.F90' '*.f' '*.F')
-          echo "MODIFIED_FILES=${MODIFIED_FILES}" >> ${GITHUB_ENV}
-
-      - name: Install Codee
-        if: env.MODIFIED_FILES != ''
-        run: |
+          if [[ "${MODIFIED_FILES}" == "" ]]; then
+            exit 0
+          fi
+          #
           echo "Installing Codee ${CODEE_VERSION} ..."
           wget https://codee.com/release/codee-${CODEE_VERSION}-linux-x86_64.tar.gz
           tar -xf codee-${CODEE_VERSION}-linux-x86_64.tar.gz
-
-      - name: Run `codee format` on modified files
-        if: env.MODIFIED_FILES != ''
-        run: |
           export PATH="${PWD}/codee-${CODEE_VERSION}-linux-x86_64/bin:${PATH}"
+          #
           codee format --accept-eula --verbose ${MODIFIED_FILES}
           REFORMATTED_FILES=$(git diff --name-only --diff-filter=d)
-          echo "REFORMATTED_FILES=${REFORMATTED_FILES}" >> ${GITHUB_ENV}
-
-      - name: Fail if there are uncommitted changes
-        if: ${{ env.REFORMATTED_FILES != '' }}
-        run: |
+          if [[ "${REFORMATTED_FILES}" == "" ]]; then
+            exit 0
+          fi
           echo "Formatting issues detected. Run 'codee format' locally or apply the following diff manually:"
           git diff
           exit 1
-
