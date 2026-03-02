@@ -1,12 +1,12 @@
 module ddt2
 
-   USE ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
 
-   implicit none
+  implicit none
 
-   type ty_ddt2
-      integer :: foo
-      real(kind_phys) :: bar
-   end type ty_ddt2
+  type ty_ddt2
+    integer :: foo
+    real(kind=kind_phys) :: bar
+  end type ty_ddt2
 
 end module ddt2
