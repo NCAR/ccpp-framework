@@ -1659,7 +1659,7 @@ class Scheme(SuiteObject):
                     outfile.write(f"if {conditional} then", indent)
                 # end if
                 outfile.write(f"! Check size of array {local_name}", tmp_indent)
-                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", tmp_indent)
+                outfile.write(f"if (size({local_name}) /= {array_size}) then", tmp_indent)
                 outfile.write(f"write({errmsg}, '(2(a,i8))') 'In group {self.__group.name} before  "\
                               f"{self.__subroutine_name}: for array {local_name}, expected size ', "\
                               f"{array_size}, ' but got ', size({local_name})", tmp_indent+1)
@@ -1688,14 +1688,7 @@ class Scheme(SuiteObject):
                     # is the correct size. Skip for 1D variables.
                     if (ndims > 1):
                         for index, dim_length in enumerate(dim_lengths):
-                            array_ref = '('
-                            # Dimension(s) before current rank to be checked.
-                            array_ref += '1,'*(index)
-                            # Dimension to check.
-                            array_ref += dim_strings[index]
-                            # Dimension(s) after current rank to be checked.
-                            array_ref += ',1'*(ndims-(index+1))
-                            array_ref += ')'
+                            array_ref = ','+str(index+1)
                             #
                             outfile.write(f"! Check length of {local_names[index]}{array_ref}", tmp_indent)
                             outfile.write(f"if (size({local_names[index]}{array_ref}) /= {dim_length}) then ",    \
