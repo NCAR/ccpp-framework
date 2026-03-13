@@ -15,10 +15,12 @@ module temp_calc_adjust
 
 contains
 
-  !> \section arg_table_temp_calc_adjust_register  Argument Table
-  !! \htmlinclude arg_table_temp_calc_adjust_register.html
-  !!
-  subroutine temp_calc_adjust_register(dim_inter, errmsg, errflg)
+! codee format off
+!> \section arg_table_temp_calc_adjust_register  Argument Table
+!! \htmlinclude arg_table_temp_calc_adjust_register.html
+!!
+  SUBROUTINE temp_calc_adjust_register(dim_inter, errmsg, errflg)
+! codee format on
     integer, intent(out) :: dim_inter
     character(len=512), intent(out) :: errmsg
     integer, intent(out) :: errflg

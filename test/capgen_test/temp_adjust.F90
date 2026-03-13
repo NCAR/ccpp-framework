@@ -41,8 +41,10 @@ contains
     real(kind=kind_phys), intent(in) :: timestep
     real(kind=kind_phys), intent(inout), optional :: qv(:)
     real(kind=kind_phys), intent(inout) :: ps(:)
-    real(kind=kind_phys), intent(in) :: temp_prev(:)
-    real(kind=kind_phys), intent(inout) :: temp_layer(foo)
+    ! codee format off
+    REAL(kind_phys), intent(in) :: temp_prev(:)
+    REAL(kind_phys), intent(inout) :: temp_layer(foo)
+    ! codee format on
     real(kind=kind_temp), intent(in) :: to_promote(:)
     real(kind=kind_phys), intent(in) :: promote_pcnst(:)
     integer, intent(out) :: interstitial_var(:)
