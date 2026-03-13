@@ -53,6 +53,7 @@ contains
     ! Allocate and initialize temperature
     allocate(temp_midpoints(ncols, pver))
     temp_midpoints = 0.0_kind_phys
+    cind = 1
     do lev = 1, pverp
       offsize = ((cind - 1) * (ncols * pver)) + ((lev - 1) * ncols)
       do col = 1, ncols
@@ -99,7 +100,7 @@ contains
     real(kind=kind_phys) :: avg
     integer, parameter :: cincrements(pcnst) = (/ 1, 0 /)
     real(kind=kind_phys) :: total_test
-    real(kind=kind_phys), parameter :: total_ref = 4230.0_kind_phys
+    real(kind=kind_phys), parameter :: total_ref = 6730.0_kind_phys
 
     compare_data = .true.
 
