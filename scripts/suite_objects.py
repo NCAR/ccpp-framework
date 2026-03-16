@@ -145,6 +145,7 @@ class CallList(VarDictionary):
                         raise CCPPError(errmsg.format(stdname, clnames))
                     # end if
                     lname = dvar.get_prop_value('local_name')
+                    lname = dvar.call_string(cldict)
                     # Optional variables in the caps are associated with
                     # local pointers of <lname>_ptr
                     if dvar.get_prop_value('optional'):
