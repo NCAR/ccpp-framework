@@ -6,7 +6,7 @@ program test
    character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
                                                     'physics2        ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(10) = (/                         &
+   character(len=cm), target :: test_invars1(12) = (/                         &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -16,7 +16,9 @@ program test
         'soil_levels                         ',                               &
         'temperature_at_diagnostic_levels    ',                               &
         'time_step_for_physics               ',                               &
-        'array_variable_for_testing          ' /)
+        'array_variable_for_testing          ',                               &
+        'cloud_fraction                      ',                               &
+        'do_cloud_fraction_adjustment        '/)
    character(len=cm), target :: test_outvars1(10) = (/                        &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
@@ -28,7 +30,7 @@ program test
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ',                               &
         'array_variable_for_testing          ' /)
-   character(len=cm), target :: test_reqvars1(12) = (/                        &
+   character(len=cm), target :: test_reqvars1(14) = (/                        &
         'potential_temperature               ',                               &
         'potential_temperature_at_interface  ',                               &
         'coefficients_for_interpolation      ',                               &
@@ -40,7 +42,9 @@ program test
         'temperature_at_diagnostic_levels    ',	      	      	              &
         'ccpp_error_code                     ',                               &
         'ccpp_error_message                  ',                               &
-        'array_variable_for_testing          ' /)
+        'array_variable_for_testing          ',                               &
+        'cloud_fraction                      ',                               &
+        'do_cloud_fraction_adjustment        '/)
 
    character(len=cm), target :: test_invars2(3) = (/                          &
         'model_times                         ',                               &

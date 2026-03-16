@@ -36,7 +36,8 @@ module test_host_mod
    integer,         parameter   :: num_time_steps = 2
    real(kind_phys), parameter   :: tolerance = 1.0e-13_kind_phys
    real(kind_phys)              :: tint_save(ncols, pverP)
-
+   logical,         parameter   :: cfrac_adj = .false.
+   
    public :: init_data
    public :: compare_data
    public :: check_model_times

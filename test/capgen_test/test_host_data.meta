@@ -35,6 +35,14 @@
   kind = kind_phys
   units = Pa
   dimensions = (horizontal_dimension, vertical_layer_dimension)
+[ cld_frac ]
+  standard_name = cloud_fraction
+  long_name = cloud fraction
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  active = (do_cloud_fraction_adjustment)
 [ soil_levs ]
   standard_name = soil_levels
   long_name = soil levels

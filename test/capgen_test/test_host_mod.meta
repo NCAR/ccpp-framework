@@ -131,3 +131,9 @@
   units = none
   dimensions = (horizontal_dimension,2,4,6)
   type = real | kind = kind_phys
+[ cfrac_adj ]
+  standard_name = do_cloud_fraction_adjustment
+  long_name = control for cloud fraction adjustment
+  units = none
+  dimensions = ()
+  type = logical

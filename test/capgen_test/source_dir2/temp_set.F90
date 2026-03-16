@@ -19,7 +19,7 @@ CONTAINS
 !! \htmlinclude arg_table_temp_set_run.html
 !!
   SUBROUTINE temp_set_run(ncol, lev, timestep, temp_level, temp_diag, temp, ps, &
-       to_promote, promote_pcnst, slev_lbound, soil_levs, var_array, errmsg, errflg)
+       to_promote, promote_pcnst, slev_lbound, soil_levs, var_array, cld_frac, errmsg, errflg)
 !----------------------------------------------------------------
    IMPLICIT NONE
 !----------------------------------------------------------------
@@ -36,6 +36,7 @@ CONTAINS
    real(kind_phys),    intent(out)   :: promote_pcnst(:)
    character(len=512), intent(out)   :: errmsg
    integer,            intent(out)   :: errflg
+   real(kind_phys),    intent(in), optional :: cld_frac(:,:)
 !----------------------------------------------------------------
    integer                           :: ilev
 

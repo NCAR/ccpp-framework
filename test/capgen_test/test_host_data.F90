@@ -14,7 +14,8 @@ module test_host_data
      real(kind_phys), dimension(:,:), allocatable :: &
           u,                                         & ! zonal wind (m/s)
           v,                                         & ! meridional wind (m/s)
-          pmid                                         ! midpoint pressure (Pa)
+          pmid,                                      & ! midpoint pressure (Pa)
+          cld_frac                                     ! cloud fraction (1)
      real(kind_phys), dimension(:,:,:),allocatable :: &
           q         ! constituent mixing ratio (kg/kg moist or dry air depending on type)
   end type physics_state
