@@ -12,7 +12,6 @@
 """
 import os
 import unittest
-
 from test_stub import BaseTests
 
 _BUILD_DIR = os.path.join(os.path.abspath(os.environ['BUILD_DIR']), "test", "var_compatibility_test")
@@ -39,38 +38,13 @@ _MODULE_LIST = ["effr_calc", "effrs_calc", "effr_diag", "effr_post", "mod_effr_p
 _SUITE_LIST = ["var_compatibility_suite"]
 _DEPENDENCIES = [ os.path.join(_TEST_DIR, "module_rad_ddt.F90")]
 _INPUT_VARS_VAR_ACTION = ["horizontal_loop_begin", "horizontal_loop_end", "horizontal_dimension", "vertical_layer_dimension",
-                          "effective_radius_of_stratiform_cloud_liquid_water_particle",
-                          "effective_radius_of_stratiform_cloud_rain_particle",
-                          "effective_radius_of_stratiform_cloud_snow_particle",
-                          "effective_radius_of_stratiform_cloud_graupel",
-                          "cloud_graupel_number_concentration",
-                          "scalar_variable_for_testing",
-                          "turbulent_kinetic_energy",
-                          "turbulent_kinetic_energy2",
-                          "scalar_variable_for_testing_a",
-                          "scalar_variable_for_testing_b",
-                          "scalar_variable_for_testing_c",
-                          "scheme_order_in_suite",
                           "flag_indicating_cloud_microphysics_has_graupel",
                           "flag_indicating_cloud_microphysics_has_ice",
-                          "surface_downwelling_shortwave_radiation_flux",
-                          "surface_upwelling_shortwave_radiation_flux",
-                          "longwave_radiation_fluxes",
-                          "num_subcycles_for_effr"]
-_OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message",
-                           "effective_radius_of_stratiform_cloud_ice_particle",
-                           "effective_radius_of_stratiform_cloud_liquid_water_particle",
-                           "effective_radius_of_stratiform_cloud_snow_particle",
-                           "cloud_ice_number_concentration",
-                           "effective_radius_of_stratiform_cloud_rain_particle",
-                           "turbulent_kinetic_energy",
-                           "turbulent_kinetic_energy2",
-                           "scalar_variable_for_testing",
-                           "scalar_variable_for_testing",
-                           "surface_downwelling_shortwave_radiation_flux",
-                           "surface_upwelling_shortwave_radiation_flux",
-                           "longwave_radiation_fluxes",
-                           "scheme_order_in_suite"]
+                          "num_subcycles_for_effr",
+                          "physics_state_derived_type",
+                          "effective_radius_of_stratiform_cloud_snow_particle"]
+_OUTPUT_VARS_VAR_ACTION = ["ccpp_error_code", "ccpp_error_message","physics_state_derived_type",
+                           "effective_radius_of_stratiform_cloud_snow_particle"]
 _REQUIRED_VARS_VAR_ACTION = _INPUT_VARS_VAR_ACTION + _OUTPUT_VARS_VAR_ACTION
 
 

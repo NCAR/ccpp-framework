@@ -1150,21 +1150,6 @@ class Var:
                                   name=name, dims=dimstr, cspace=cspace,
                                   sname=stdname), indent)
 
-    def write_ptr_def(self, outfile, indent, name, kind, dimstr, vtype, extra_space=0):
-        """Write the definition line for local null pointer declaration to <outfile>."""
-        comma = ', '
-        if kind:
-            dstr = "{type}({kind}){cspace}pointer          :: {name}{dims}{cspace2} => null()"
-            cspace = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
-            cspace2 = ' '*(20 -len(name) - len(dimstr))
-        else:
-            dstr = "{type}{cspace}pointer          :: {name}{dims}{cspace2} => null()"
-            cspace = comma + ' '*(extra_space + 22 - len(vtype))
-            cspace2 = ' '*(20 -len(name) - len(dimstr))
-        # end if
-        outfile.write(dstr.format(type=vtype, kind=kind, name=name, dims=dimstr,
-                                  cspace=cspace, cspace2=cspace2), indent)
-
     def is_ddt(self):
         """Return True iff <self> is a DDT type."""
         return not self.__intrinsic
@@ -2185,6 +2170,20 @@ class VarDictionary(OrderedDict):
         # end while
         return newvar
 
+def write_ptr_def(outfile, indent, name, kind, dimstr, vtype, extra_space=0):
+    """Write the definition line for local null pointer declaration to <outfile>."""
+    comma = ', '
+    if kind:
+        dstr = "{type}({kind}){cspace}pointer          :: {name}{dims}{cspace2} => null()"
+        cspace = comma + ' '*(extra_space + 20 - len(vtype) - len(kind))
+        cspace2 = ' '*(20 -len(name) - len(dimstr))
+    else:
+        dstr = "{type}{cspace}pointer          :: {name}{dims}{cspace2} => null()"
+        cspace = comma + ' '*(extra_space + 22 - len(vtype))
+        cspace2 = ' '*(20 -len(name) - len(dimstr))
+    # end if
+    outfile.write(dstr.format(type=vtype, kind=kind, name=name, dims=dimstr,
+                              cspace=cspace, cspace2=cspace2), indent)
 ###############################################################################
 
 # List of constant variables which are universally available
