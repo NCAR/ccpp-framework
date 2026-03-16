@@ -2,6 +2,9 @@
   name = temp_set
   type = scheme
   source_path = source_dir2
+  kind_spec = temp_kinds:kind_temp=>temp_r8
+  dependencies = temp_kinds.F90
+  dependencies_path = adjust
 [ccpp-arg-table]
   name = temp_set_run
   type = scheme
@@ -60,7 +63,7 @@
   units = K
   dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
-  kind = kind_phys
+  kind = kind_temp
   intent = out
 [ promote_pcnst ]
   standard_name = promote_this_variable_with_no_horizontal_dimension

@@ -19,74 +19,74 @@
 !
 module ccpp_types
 
-    use mpi_f08, only: MPI_Comm
+  use mpi_f08, only: mpi_comm
 
-!! \section arg_table_ccpp_types
-!! \htmlinclude ccpp_types.html
-!!
+  !! \section arg_table_ccpp_types
+  !! \htmlinclude ccpp_types.html
+  !!
 
-    implicit none
+  implicit none
 
-    private
-    public :: ccpp_t, one
-    public :: MPI_Comm
+  private
+  public :: ccpp_t, one
+  public :: mpi_comm
 
-    !> @var Definition of constant one
-    integer, parameter :: one = 1
+  !> @var Definition of constant one
+  integer, parameter :: one = 1
 
-    !> @var The default loop counter indicating outside of a subcycle loop
-    integer, parameter :: CCPP_DEFAULT_LOOP_CNT = -999
-    integer, parameter :: CCPP_DEFAULT_LOOP_MAX = -999
+  !> @var The default loop counter indicating outside of a subcycle loop
+  integer, parameter :: ccpp_default_loop_cnt = -999
+  integer, parameter :: ccpp_default_loop_max = -999
 
-    !> @var The default values for block, chunk and thread numbers indicating invalid data
-    integer, parameter :: CCPP_DEFAULT_BLOCK_NUMBER = -999
-    integer, parameter :: CCPP_DEFAULT_CHUNK_NUMBER = -999
-    integer, parameter :: CCPP_DEFAULT_THREAD_NUMBER = -999
+  !> @var The default values for block, chunk and thread numbers indicating invalid data
+  integer, parameter :: ccpp_default_block_number = -999
+  integer, parameter :: ccpp_default_chunk_number = -999
+  integer, parameter :: ccpp_default_thread_number = -999
 
-    !> @var The default maximum number of threads for CCPP
-    integer, parameter :: CCPP_DEFAULT_THREAD_COUNT = -999
+  !> @var The default maximum number of threads for CCPP
+  integer, parameter :: ccpp_default_thread_count = -999
 
-!! \section arg_table_ccpp_t
-!! \htmlinclude ccpp_t.html
-!!
-    !>
-    !! @brief CCPP physics type.
-    !!
-    !! Generic type that contains all components to run the CCPP.
-    !!
-    !! - Array of fields to all the data needing to go
-    !!   the physics drivers.
-    !! - The suite definitions in a ccpp_suite_t type.
-    !
-    type :: ccpp_t
-       ! CCPP-internal variables for physics schemes
-       integer                                             :: errflg = 0
-       character(len=512)                                  :: errmsg = ''
-       integer                                             :: loop_cnt = CCPP_DEFAULT_LOOP_CNT
-       integer                                             :: loop_max = CCPP_DEFAULT_LOOP_MAX
-       integer                                             :: blk_no = CCPP_DEFAULT_BLOCK_NUMBER
-       integer                                             :: chunk_no = CCPP_DEFAULT_CHUNK_NUMBER
-       integer                                             :: thrd_no = CCPP_DEFAULT_THREAD_NUMBER
-       integer                                             :: thrd_cnt = CCPP_DEFAULT_THREAD_COUNT
-       integer                                             :: ccpp_instance = 1
+  !! \section arg_table_ccpp_t
+  !! \htmlinclude ccpp_t.html
+  !!
+  !>
+  !! @brief CCPP physics type.
+  !!
+  !! Generic type that contains all components to run the CCPP.
+  !!
+  !! - Array of fields to all the data needing to go
+  !!   the physics drivers.
+  !! - The suite definitions in a ccpp_suite_t type.
+  !
+  type :: ccpp_t
+    ! CCPP-internal variables for physics schemes
+    integer :: errflg = 0
+    character(len=512) :: errmsg = ''
+    integer :: loop_cnt = ccpp_default_loop_cnt
+    integer :: loop_max = ccpp_default_loop_max
+    integer :: blk_no = ccpp_default_block_number
+    integer :: chunk_no = ccpp_default_chunk_number
+    integer :: thrd_no = ccpp_default_thread_number
+    integer :: thrd_cnt = ccpp_default_thread_count
+    integer :: ccpp_instance = 1
 
-    contains
+  contains
 
-       procedure :: initialized  => ccpp_t_initialized
+    procedure :: initialized => ccpp_t_initialized
 
-    end type ccpp_t
+  end type ccpp_t
 
 contains
 
-    function ccpp_t_initialized(ccpp_d) result(initialized)
-       implicit none
-       !
-       class(ccpp_t) :: ccpp_d
-       logical :: initialized
-       !
-       initialized = ccpp_d%thrd_no /= CCPP_DEFAULT_THREAD_NUMBER .or. &
-                     ccpp_d%blk_no /= CCPP_DEFAULT_BLOCK_NUMBER .or. &
-                     ccpp_d%chunk_no /= CCPP_DEFAULT_CHUNK_NUMBER
-    end function ccpp_t_initialized
+  function ccpp_t_initialized(ccpp_d) result(initialized)
+    implicit none
+    !
+    class(ccpp_t) :: ccpp_d
+    logical :: initialized
+    !
+    initialized = ccpp_d%thrd_no /= ccpp_default_thread_number .or. &
+        ccpp_d%blk_no /= ccpp_default_block_number .or. &
+        ccpp_d%chunk_no /= ccpp_default_chunk_number
+  end function ccpp_t_initialized
 
 end module ccpp_types

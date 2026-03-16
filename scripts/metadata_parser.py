@@ -123,18 +123,19 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
     metadata = collections.OrderedDict()
     for new_metadata_header in new_metadata_headers:
         for metadata_section in new_metadata_header.sections():
+            metadata_section_title = metadata_section.title.lower()
             # Module or DDT tables
             if not scheme_name:
                 # Module property tables
-                if not metadata_section.title == table_name:
+                if not metadata_section_title == table_name:
                     # Skip this table, since it is not requested right now
                     continue
 
                 # Distinguish between module argument tables and DDT argument tables
-                if metadata_section.title == module_name:
+                if metadata_section_title == module_name:
                     container = encode_container(module_name)
                 else:
-                    container = encode_container(module_name, metadata_section.title)
+                    container = encode_container(module_name, metadata_section_title)
 
                 # Add to dependencies
                 if new_metadata_header.dependencies_path:
@@ -143,7 +144,7 @@ def read_new_metadata(filename, module_name, table_name, scheme_name = None, sub
                     dependencies += new_metadata_header.dependencies
             else:
                 # Scheme property tables
-                if not metadata_section.title == table_name:
+                if not metadata_section_title == table_name:
                     # Skip this table, since it is not requested right now
                     continue
 
@@ -284,6 +285,7 @@ def parse_variable_tables(filepath, filename):
     lines = []
     buffer = ''
     for i in range(len(file_lines)):
+        file_lines[i] = file_lines[i].lower()
         line = file_lines[i].rstrip('\n').strip()
         # Skip empty lines
         if line == '' or line == '&':
@@ -557,6 +559,7 @@ def parse_scheme_tables(filepath, filename):
     original_line_numbers = []
     buffer = ''
     for i in range(len(file_lines)):
+        file_lines[i] = file_lines[i].lower()
         line = file_lines[i].rstrip('\n').strip()
         # Skip empty lines
         if line == '' or line == '&':

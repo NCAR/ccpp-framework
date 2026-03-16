@@ -266,12 +266,12 @@ CONTAINS
               'constituent with this name already exists'
       allocate(host_constituents(2))
       call host_constituents(1)%instantiate(std_name="specific_humidity",     &
-           long_name="Specific humidity", units="kg kg-1",                    &
+           long_name="Specific humidity", diag_name='H2O', units="kg kg-1",   &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
            min_value=1000._kind_phys, molar_mass=2000._kind_phys,             &
            errcode=errflg, errmsg=errmsg)
       call host_constituents(2)%instantiate(std_name="specific_humidity",     &
-           long_name="Specific humidity", units="kg kg",                      &
+           long_name="Specific humidity", diag_name='H2O', units="kg kg",     &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
            min_value=1000._kind_phys, molar_mass=2000._kind_phys,             &
            errcode=errflg, errmsg=errmsg)
@@ -309,12 +309,12 @@ CONTAINS
       end do
       allocate(host_constituents(2))
       call host_constituents(1)%instantiate(std_name="specific_humidity",     &
-           long_name="Specific humidity", units="kg kg-1",                    &
+           long_name="Specific humidity", diag_name='H2O', units="kg kg-1",   &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
-           min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
+           min_value=1000._kind_phys, molar_mass=2000._kind_phys,             &
            errcode=errflg, errmsg=errmsg)
       call host_constituents(2)%instantiate(std_name="specific_humidity",     &
-           long_name="Specific humidity", units="kg kg-1",                    &
+           long_name="Specific humidity", diag_name='H2O', units="kg kg-1",   &
            vertical_dim="vertical_layer_dimension", advected=.true.,          &
            min_value=1000._kind_phys, molar_mass=2000._kind_phys,           &
            errcode=errflg, errmsg=errmsg)
@@ -480,6 +480,63 @@ CONTAINS
          ! Reset error flag to continue testing other properties:
          errflg = 0
       end if
+
+      ! Diagnostic name:
+      call const_props(index_liq)%diagnostic_name(const_str, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",    &
+               "to get diagnostic name for cld_liq index = ",                       &
+               index_liq, trim(errmsg)
+         errflg_final = -1 ! Notify test script that a failure occured
+      end if
+      if (errflg == 0) then
+         if (trim(const_str) /= 'CLDLIQ') then
+            write(6, *) "ERROR: diagnostic name, '", trim(const_str),               &
+                 "' should be 'CLDLIQ'"
+            errflg_final = -1 ! Notify test script that a failure occured
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      ! Check default diagnostic name is set correctly
+      call const_props(index_ice)%diagnostic_name(const_str, errflg, errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",    &
+               "to get diagnostic name for cld_ice index = ",                       &
+               index_ice, trim(errmsg)
+         errflg_final = -1 ! Notify test script that a failure occured
+      end if
+      if (errflg == 0) then
+         if (trim(const_str) /= 'cld_ice_array') then
+            write(6, *) "ERROR: diagnostic name, '", trim(const_str),               &
+                 "' should be 'cld_ice_array'"
+            errflg_final = -1 ! Notify test script that a failure occured
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+      ! Check diagnostic name of a dynamic constituent
+      call const_props(index_dyn2)%diagnostic_name(const_str, errflg,     &
+           errmsg)
+      if (errflg /= 0) then
+         write(6, '(a,i0,a,a,i0,/,a)') "ERROR: Error, ", errflg, " trying ",  &
+              "to get diagnostic name for dyn_const2 index = ",           &
+              index_dyn2, trim(errmsg)
+         errflg_final = -1 ! Notify test script that a failure occured
+      end if
+      if (errflg == 0) then
+         if (trim(const_str) /= 'DYNCONST2') then
+            write(6, *) "ERROR: diagnostic name, '", trim(const_str),               &
+                 "' should be 'DYNCONST2'"
+            errflg_final = -1 ! Notify test script that a failure occured
+         end if
+      else
+         ! Reset error flag to continue testing other properties:
+         errflg = 0
+      end if
+
       ! Mass mixing ratio:
       call const_props(index_ice)%is_mass_mixing_ratio(const_log, errflg,     &
            errmsg)

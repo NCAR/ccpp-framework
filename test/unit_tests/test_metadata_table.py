@@ -399,5 +399,47 @@ class MetadataTableTestCase(unittest.TestCase):
         emsg = "Invalid metadata table type, 'banana', at "
         self.assertTrue(emsg in str(context.exception))
 
+    def test_added_kind_spec(self):
+        """Test that adding a kind_spec to a Metadata table works as expected"""
+        known_ddts = list()
+        filename = os.path.join(SAMPLE_FILES_DIR,
+                                "good_kind_spec_table_properties.meta")
+
+        # Test that we can parse the table with no error
+        _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
+        # Test that the expected names are in the table
+        kind_types = self._DUMMY_RUN_ENV.kind_types()
+        self.assertEqual(len(kind_types), 3)
+        self.assertIn("kind_temp", kind_types)
+        self.assertEqual(self._DUMMY_RUN_ENV.kind_module("kind_temp"), "fmodule")
+        self.assertEqual(self._DUMMY_RUN_ENV.kind_spec("kind_temp"), "temp_r8")
+        self.assertIn("temp_i8", kind_types)
+        self.assertIn("kind_phys", kind_types)
+
+    def test_bad_kind_spec(self):
+        """Test that adding a bad kind_spec to a Metadata table returns expected error"""
+        known_ddts = list()
+        filename = os.path.join(SAMPLE_FILES_DIR,
+                                "bad_kind_spec_table_properties.meta")
+
+        with self.assertRaises(Exception) as context:
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
+
+        emsg = "A Fortran kind name is required for 'temp_r8'"
+        self.assertTrue(emsg in str(context.exception), msg=str(context.exception))
+
+    def test_duplicate_kind_spec(self):
+        """Test that adding a duplicate kind_spec to a Metadata table returns expected error"""
+        known_ddts = list()
+        filename = os.path.join(SAMPLE_FILES_DIR,
+                                "duplicate_kind_spec_table_properties.meta")
+
+        with self.assertRaises(Exception) as context:
+            _ = parse_metadata_file(filename, known_ddts, self._DUMMY_RUN_ENV)
+
+        emsg = ("'kind_temp = [kind_temp, fmodule]'is an invalid duplicate. "
+                "kind_temp is already '['temp_r8', 'fmodule'],")
+        self.assertTrue(emsg in str(context.exception), msg=str(context.exception))
+
 if __name__ == "__main__":
     unittest.main()

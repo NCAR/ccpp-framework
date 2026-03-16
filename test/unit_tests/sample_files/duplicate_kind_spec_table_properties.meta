@@ -1,0 +1,6 @@
+[ccpp-table-properties]
+  name = scheme_scheme
+  type = scheme
+  dependencies = fmodule.F90
+  kind_spec = fmodule:kind_temp=>temp_r8
+  kind_spec = fmodule:kind_temp

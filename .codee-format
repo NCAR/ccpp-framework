@@ -1,0 +1,99 @@
+# DH* 20251208 - this initial .codee-format is
+# identical to the NEPTUNE version except for
+# Comments:        ! IndentIfAlreadyIndented # Indent
+# (in NEPTUNE, we use "Indent")
+
+# For a detailed description of all options, see:
+# https://docs.codee.com/formatter/style-options
+
+AlignAmpersandToColumnLimit: false
+AlignAssignmentOperators: true
+AlignUseItems:
+  Kind:            OneItemPerLine
+  FirstLineFit:    FitIfPossible
+BreakBeforeBinaryOperators: true
+Casing:
+  Identifiers:     Lowercase # Preserve
+  Keywords:        Lowercase
+  LogicalConstants: Lowercase
+  LogicalOperators: Lowercase
+  RelationalOperators: Lowercase
+  UserDefinedOperators: Lowercase
+ColumnLimit:     120
+CommentDirectivePrefixes: []
+DisabledDirectivePrefixes: []
+IndentSize:      2
+IndentExceptions:
+  Contains: IndentBeforeAndAfter
+  Comments: Indent
+FixedFormLabelAlignment: Right
+ContinuationIndentSize: DoubleIndentSize
+DoubleColonSeparator: AddAlways
+EndOfLineNormalization: Unix # Autodetect
+EndStatementFormat: EndStructureAndName
+EndStatementSeparation:
+  EndAssociate:    Separated
+  EndBlockConstruct: Separated
+  EndBlockData:    Separated
+  EndCritical:     Separated
+  EndTeam:         Separated
+  EndDoLoop:       Separated
+  EndEnum:         Separated
+  EndEnumerationType: Separated
+  EndForall:       Separated
+  EndFunction:     Separated
+  EndIf:           Separated
+  EndInterface:    Separated
+  EndModule:       Separated
+  EndModuleProcedure: Separated
+  EndProgram:      Separated
+  EndSelect:       Separated
+  EndSubmodule:    Separated
+  EndSubroutine:   Separated
+  EndType:         Separated
+  EndWhere:        Separated
+EnsureNewlineAtEOF: true
+ConsecutiveEmptyLines:
+  MaxToKeep:       1
+  BetweenProcedures: 1
+  RemoveAtStartOfFile: true
+  RemoveAtEndOfFile: true
+KindKeywordPrefix: AddAlways
+# DH* TODO FILL THIS LIST
+MacroIdentifiers: [
+    "__FILE__",
+    "__LINE__",
+    "_OPENMP",
+    ]
+RelationalOperators: UseSymbols
+# DH* Note. Filed ticket 276 with Codee to prevent
+# spaces between dimensions in dimension specifications
+# like 'real, dimension(:,:,:), allocatable :: x'
+SpacesAroundOperators:
+  LeftParenthesisExpression: NoTrailing
+  LeftParenthesisGeneric: NoSpaces
+  LeftParenthesisKeyword: OnlyLeading
+  RightParenthesisExpression: NoLeading
+  RightParenthesisGeneric: NoLeading
+  RightParenthesisKeyword: OnlyTrailing # NoLeading
+  Assignment:      Both
+  Association:     Both
+  ControlFlowAssignment: Both
+  KeywordAssignment: NoSpaces
+  ParameterAssignment: NoSpaces
+  BinaryArithmetic: Both
+  Exponentiation:  NoSpaces
+  DefinedBinary:   Both
+  DefinedUnary:    NoTrailing
+  Relational:      Both
+  RelationalLegacy: Both
+  LogicalBinary:   Both
+  LogicalNot:      NoTrailing
+  UnaryPlusMinus:  NoTrailing
+  Comma:           OnlyTrailing
+  Concat:          Both
+  DoubleColon:     Both
+RemoveConsecutiveWhitespace: true
+RemoveSemicolons: true
+RemoveTrailingWhitespace: true
+SeparateMultipleInlineStatements: true

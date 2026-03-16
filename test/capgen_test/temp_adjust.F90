@@ -3,7 +3,7 @@
 
 MODULE temp_adjust
 
-  USE ccpp_kinds, ONLY: kind_phys
+  USE ccpp_kinds, ONLY: kind_phys, kind_temp
 
   IMPLICIT NONE
   PRIVATE
@@ -43,7 +43,7 @@ CONTAINS
     real(kind_phys),           intent(inout) :: ps(:)
     REAL(kind_phys),           intent(in)    :: temp_prev(:)
     REAL(kind_phys),           intent(inout) :: temp_layer(foo)
-    real(kind_phys),           intent(in)    :: to_promote(:)
+    real(kind_temp),           intent(in)    :: to_promote(:)
     real(kind_phys),           intent(in)    :: promote_pcnst(:)
     integer,                   intent(out)   :: interstitial_var(:)
     character(len=512),        intent(out)   :: errmsg

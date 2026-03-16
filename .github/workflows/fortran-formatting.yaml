@@ -1,0 +1,56 @@
+name: Codee format Fortran
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [opened, synchronize, labeled, unlabeled]
+
+env:
+  CODEE_VERSION: 2025.4.5
+
+# Only needed when fixing formatting automatically, but this only
+# works for pull requests from the same repo, not from a fork
+#permissions:
+#  contents: write
+#  pull-requests: write
+
+jobs:
+  format:
+    name: Check and fix Fortran formatting
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get modified Fortran files
+        run: |
+          git remote -v show
+          git fetch origin ${{ github.base_ref }}
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=d origin/${{ github.base_ref }}...HEAD -- '*.f90' '*.F90' '*.f' '*.F')
+          echo "MODIFIED_FILES=${MODIFIED_FILES}" >> ${GITHUB_ENV}
+
+      - name: Install Codee
+        if: env.MODIFIED_FILES != ''
+        run: |
+          echo "Installing Codee ${CODEE_VERSION} ..."
+          wget https://codee.com/release/codee-${CODEE_VERSION}-linux-x86_64.tar.gz
+          tar -xf codee-${CODEE_VERSION}-linux-x86_64.tar.gz
+
+      - name: Run `codee format` on modified files
+        if: env.MODIFIED_FILES != ''
+        run: |
+          export PATH="${PWD}/codee-${CODEE_VERSION}-linux-x86_64/bin:${PATH}"
+          codee format --accept-eula --verbose ${MODIFIED_FILES}
+          REFORMATTED_FILES=$(git diff --name-only --diff-filter=d)
+          echo "REFORMATTED_FILES=${REFORMATTED_FILES}" >> ${GITHUB_ENV}
+
+      - name: Fail if there are uncommitted changes
+        if: ${{ env.REFORMATTED_FILES != '' }}
+        run: |
+          echo "Formatting issues detected. Run 'codee format' locally or apply the following diff manually:"
+          git diff
+          exit 1
+

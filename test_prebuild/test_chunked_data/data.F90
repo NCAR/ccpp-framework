@@ -1,7 +1,7 @@
 module data
 
-!! \section arg_table_data Argument Table
-!! \htmlinclude data.html
+!! \section arg_table_dATa Argument Table
+!! \htmlinclude datA.Html
 !!
     use ccpp_types,    only: ccpp_t
 
@@ -21,8 +21,8 @@ module data
     integer, parameter, dimension(nchunks) :: chunk_end = (/6,12,18,21/)
     integer, parameter :: ncols = sum(chunksize)
 
-!! \section arg_table_chunked_data_type
-!! \htmlinclude chunked_data_type.html
+!! \section arg_table_cHuNkEd_dATa_TYPe
+!! \htmlinclude CHuNKed_Data_tYpe.hTMl
 !!
    type chunked_data_type
       integer, dimension(:), allocatable :: array_data

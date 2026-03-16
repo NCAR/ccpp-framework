@@ -132,9 +132,14 @@ def create_kinds_file(run_env, output_dir):
     with FortranWriter(kinds_filepath, "w",
                        "kinds for CCPP", KINDS_MODULE) as kindf:
         for kind_type in kind_types:
-            use_stmt = "use ISO_FORTRAN_ENV, only: {} => {}"
-            kindf.write(use_stmt.format(kind_type,
-                                        run_env.kind_spec(kind_type)), 1)
+            kind_spec = run_env.kind_spec(kind_type)
+            use_stmt = f"use {run_env.kind_module(kind_type)},"
+            if kind_spec == kind_type:
+                use_stmt += f" only: {kind_type}"
+            else:
+                use_stmt += f" only: {kind_type} => {kind_spec}"
+            # end if
+            kindf.write(use_stmt, 1)
         # end for
         kindf.write_preamble()
         for kind_type in kind_types:

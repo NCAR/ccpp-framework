@@ -3,7 +3,7 @@
 
 MODULE temp_set
 
-  USE ccpp_kinds, ONLY: kind_phys
+  USE ccpp_kinds, ONLY: kind_phys, kind_temp
 
   IMPLICIT NONE
   PRIVATE
@@ -32,7 +32,7 @@ CONTAINS
    real(kind_phys),    intent(inout) :: temp_diag(:,:)
    real(kind_phys),    intent(inout) :: soil_levs(slev_lbound:)
    real(kind_phys),    intent(inout) :: var_array(:,:,:,:)
-   real(kind_phys),    intent(out)   :: to_promote(:, :)
+   real(kind_temp),    intent(out)   :: to_promote(:, :)
    real(kind_phys),    intent(out)   :: promote_pcnst(:)
    character(len=512), intent(out)   :: errmsg
    integer,            intent(out)   :: errflg
@@ -62,7 +62,7 @@ CONTAINS
 
     var_array(:,:,:,:) = 1._kind_phys
 
-    ! 
+    !
     internal_scalar_var = soil_levs(slev_lbound)
     internal_scalar_var = soil_levs(0)
 

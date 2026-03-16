@@ -15,21 +15,43 @@ Metadata headers are in config file format.
 
 A 'ccpp-table-properties' section entries are:
 name = <name> : the name of the following ccpp-arg-table entries (required).
-                It is one of the following possibilities:
+          It is one of the following possibilities:
    - SchemeName: the name of a scheme (i.e., the name of
-                  a scheme interface (related to SubroutineName below).
+          a scheme interface (related to SubroutineName below).
    - DerivedTypeName: a derived type name for a type which will be used
-                      somewhere in the CCPP interface.
+          somewhere in the CCPP interface.
    - ModuleName: the name of the module whose module variables will be
-                 used somewhere in the CCPP interface
+          used somewhere in the CCPP interface
    - HostName: the name of the host model. Variables in this section become
-                 part of the CCPP UI, the CCPP routines called by the
-                 host model (e.g., <HostName>_ccpp_physics_run).
+          part of the CCPP UI, the CCPP routines called by the
+          host model (e.g., <HostName>_ccpp_physics_run).
 type = <type> : The type of header (required), one of:
     - scheme: A CCPP subroutine
     - ddt: A header for a derived data type
     - module: A header on some module data
     - host: A header on data which will be part of the CCPP UI
+dependencies = <dependencies> : Comma-separated list of module dependencies
+          Each item should appear in one or more use statements in the
+          corresponding Fortran module
+dependencies_path = <relative path> : A path, relative to the location of
+          metadata table file, where dependencies can be found.
+module_name = <module name> : only needed if module name differs from filename
+source_path = <relative source directory of Fortran source (if different)>
+dynamic_constituent_routine = ??? : @peverwhee?
+kind_spec = <kind_spec> : One or more optional Fortran kinds defined
+          in the corresponding Fortran file.
+          The format is fortran_module:ccpp_kind_name=>kind_name or
+            fortran_module:kind_name
+          - <fortran_module> is the module name of the corresponding Fortran module
+          - <kind_name> is defined in the corresponding Fortran module
+          - <ccpp_kind_name> is optional and describes the kind name used in CCPP
+            metadata tables and Fortran files.
+          These entries are added to the framework_env object and
+          thus to ccpp_kinds.F90
+          The entries in ccpp_kinds.F90 are:
+          use <module name>, only <kind_name>
+          use <module name>, only <ccpp_kind_name> => <kind_name>
+          where the first form is used if <ccpp_kind_name> is omitted.
 
 The ccpp-arg-table section entries in this section are:
 name = <name> : the name of the file object which immediately follows the
@@ -63,7 +85,7 @@ An example argument table is shown below.
   type = scheme
   dependencies_path = <relative path>
   dependencies = <dependencies>
-  module = <module name> # only needed if module name differs from filename
+  module_name = <module name> # only needed if module name differs from filename
   source_path = <relative source directory of Fortran source (if different)>
   dynamic_constituent_routine = <routine name>
 
@@ -513,6 +535,44 @@ class MetadataTable():
                         self.__dependencies_path = value
                     elif key == 'source_path':
                         self.__fortran_src_path = os.path.join(my_dirname, value)
+                    elif key == 'kind_spec':
+                        # Add spec to the runtime environment's kinds dict
+                        spec_list = [x.strip() for x in value.split(':', maxsplit=2)]
+                        fort_module = spec_list[0]
+                        if len(spec_list) < 2:
+                            emsg = f"A Fortran kind name is required for '{value}'"
+                            self.__pobj.add_syntax_err(emsg)
+                            continue
+                        # end if
+                        new_ccpp_kind = spec_list[1]
+                        spec_list = [x.strip() for x in new_ccpp_kind.split('=>', maxsplit=1)]
+                        if len(spec_list) > 1:
+                            new_kind = spec_list[1]
+                            new_ccpp_kind = spec_list[0]
+                        else:
+                            new_kind = new_ccpp_kind
+                        # end if
+                        try:
+                            check_fortran_id(new_kind, {}, True)
+                        except CCPPError as err:
+                            self.__pobj.add_syntax_err(f"{err}")
+                            new_kind = None
+                        # end try
+                        if new_kind and (new_ccpp_kind != new_kind):
+                            try:
+                                check_fortran_id(new_ccpp_kind, {}, True)
+                            except CCPPError as err:
+                                self.__pobj.add_syntax_err(f"{err}")
+                                new_ccpp_kind = None
+                            # end try
+                        # end if
+                        if new_kind:
+                            emsg = run_env.add_kind_type(new_ccpp_kind,
+                                                         new_kind, fort_module)
+                            if emsg:
+                                self.__pobj.add_syntax_err(emsg)
+                            # end if
+                        # end if
                     else:
                         tok_type = "metadata table start property"
                         self.__pobj.add_syntax_err(tok_type, token=key)

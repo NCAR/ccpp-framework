@@ -1,0 +1,5 @@
+[ccpp-table-properties]
+  name = bad_scheme
+  type = scheme
+  dependencies =
+  kind_spec = temp_r8
