@@ -30,6 +30,9 @@ module linebreak_test
         name088, name089, name090, name091, name092, name093, name094, name095, name096,          &
         name097, name098, name099 /)
 
+      allocate(tracer_data_test_dynamic_constituents(0+size(ozone_constituents)+size(             &
+           aerosol_constituents)+size(volcaero_constituents)+size(other_constituents)))
+
 CONTAINS
       call                                                                                        &
            endrun('Cannot read columns_on_task from file'//                                       &

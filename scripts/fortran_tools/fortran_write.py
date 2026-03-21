@@ -27,6 +27,8 @@ class FortranWriter:
 
     __LINE_MAX = 130      # Max line length
 
+    __BREAK_CHARS = [',', '+', '*', '/', '(', ')']
+
     # CCPP copyright statement to be included in all generated Fortran files
     __COPYRIGHT = '''!
 ! This work (Common Community Physics Package Framework), identified by
@@ -150,8 +152,8 @@ end module {module}'''
             line_len = len(outstr)
             if line_len > self.__line_fill:
                 # Collect pretty break points
-                spaces = list()
-                commas = list()
+                spaces = []
+                break_chars = []
                 sptr = len(istr)
                 in_single_char = False
                 in_double_char = False
@@ -180,12 +182,12 @@ end module {module}'''
                     elif outstr[sptr] == ' ':
                         # Non-quote spaces are where we can break
                         spaces.append(sptr)
-                    elif outstr[sptr] == ',':
-                        # Non-quote commas are where we can break
-                        commas.append(sptr)
+                    elif outstr[sptr] in FortranWriter.__BREAK_CHARS:
+                        # Non-quote syntax are where we can break
+                        break_chars.append(sptr)
                     elif outstr[sptr:sptr+2] == '//':
-                        # Non-quote commas are where we can break
-                        commas.append(sptr + 1)
+                        # Non-quote syntax are where we can break
+                        break_chars.append(sptr + 1)
                     # End if (no else, other characters will be ignored)
                     sptr = sptr + 1
                 # End while
@@ -203,7 +205,7 @@ end module {module}'''
                     # end if
                 best = self.find_best_break(spaces)
                 if best >= self.__line_fill:
-                    best = min(best, self.find_best_break(commas))
+                    best = min(best, self.find_best_break(break_chars))
                 # End if
                 line_continue = False
                 if best >= self.__line_max:
@@ -218,8 +220,8 @@ end module {module}'''
                     if self._in_quote(outstr[0:best+1]):
                         line_continue = '&'
                     elif not outstr[best+1:].lstrip():
-                        # If the next line is empty, the current line is done 
-                        #  and is equal to the max line length. Do not use 
+                        # If the next line is empty, the current line is done
+                        #  and is equal to the max line length. Do not use
                         #  continue and set best to line_max (best+1)
                         line_continue = False
                         best = best+1
