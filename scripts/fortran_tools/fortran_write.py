@@ -252,7 +252,7 @@ end module {module}'''
                 # end if
                 self.write(statement, indent_level, continue_line=line_continue)
             else:
-                self.__file.write("{}\n".format(outstr))
+                self.__file.write(f"{outstr}\n")
             # End if
         # End if
 

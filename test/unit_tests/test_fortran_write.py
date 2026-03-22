@@ -80,12 +80,13 @@ class FortranWriterTestCase(unittest.TestCase):
             # Test long declaration
             data_items = ', '.join([f"name{x:03}" for x in range(100)])
             gen.write(f"character(len=7) :: data = (/ {data_items} /)", 1)
+            gen.end_module_header()
+            # Test long code lines
             gen.blank_line()
             gen.write("allocate(tracer_data_test_dynamic_constituents(0+"
                       "size(ozone_constituents)+size(aerosol_constituents)"
                       "+size(volcaero_constituents)+size(other_constituents)))", 2)
-            gen.end_module_header()
-            # Test long code lines
+            gen.blank_line()
             line_items = ["call endrun('Cannot read columns_on_task from ",
                           "file'//', columns_on_task has no horizontal ",
                           "dimension; columns_on_task is a ",
