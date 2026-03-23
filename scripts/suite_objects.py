@@ -124,6 +124,7 @@ class CallList(VarDictionary):
             # Do not include constants
             stdname = var.get_prop_value('standard_name')
             if stdname not in CCPP_CONSTANT_VARS:
+                dimensions = var.get_dimensions()
                 # Find the dummy argument name
                 dummy = var.get_prop_value('local_name')
                 # Now, find the local variable name
@@ -131,7 +132,19 @@ class CallList(VarDictionary):
                     for cldict in cldicts:
                         dvar = cldict.find_variable(standard_name=stdname,
                                                     any_scope=True)
+                        host_var = False
                         if dvar is not None:
+                            var_in_call_list = True
+                            if dvar.is_ddt():
+                                if dvar.components:
+                                    var_in_call_list = False
+                                # end if
+                            else:
+                                # If we get here, the variable is explicitly in the Group call_list,
+                                # not a DDT component. No need to modify the dimensions in the Scheme
+                                # call list, as these were handled in the Suite Cap call_list.
+                                host_var = True
+                            # end if
                             break
                         # end if
                     # end for
@@ -145,11 +158,52 @@ class CallList(VarDictionary):
                         clnames = [x.name for x in cldicts]
                         raise CCPPError(errmsg.format(stdname, clnames))
                     # end if
+                    dimensions = dvar.get_dimensions()
                     lname = dvar.call_string(cldict)
                     # Optional variables in the caps are associated with
                     # local pointers of <lname>_ptr
                     if var.get_prop_value('optional'):
                         lname = dummy+'_ptr'
+                    # Finally, handle the dimensions.
+                    else:
+                        if dimensions and not host_var:
+                            dimstr = '('
+                            for cnt,dim in enumerate(dimensions):
+                                if is_horizontal_dimension(dim):
+                                    if self.routine.run_phase():
+                                        if var_in_call_list and \
+                                           self.find_variable(standard_name="horizontal_loop_extent"):
+                                            ldim = "ccpp_constant_one"
+                                            udim = "horizontal_loop_extent"
+                                        else:
+                                            ldim = "horizontal_loop_begin"
+                                            udim = "horizontal_loop_end"
+                                        # endif
+                                    else:
+                                        ldim = "ccpp_constant_one"
+                                        udim = "horizontal_dimension"
+                                    # endif
+                                    # Get dimension for lower bound
+                                    lvar = cldict.find_variable(standard_name=ldim, any_scope=True)
+                                    if not lvar:
+                                        raise Exception(f"No variable with standard name '{ldim}' in cldict")
+                                    # end if
+                                    ldim_lname = lvar.get_prop_value('local_name')
+                                    # Get dimension for upper bound
+                                    uvar = cldict.find_variable(standard_name=udim, any_scope=True)
+                                    if not uvar:
+                                        raise Exception(f"No variable with standard name '{udim}' in cldict")
+                                    # end if
+                                    udim_lname = uvar.get_prop_value('local_name')
+                                    dimstr = dimstr + ldim_lname + ':' + udim_lname
+                                else:
+                                    dimstr = dimstr + ':'
+                                # endif
+                                if cnt < len(dimensions)-1: dimstr = dimstr+','
+                            # end for
+                            dimstr = dimstr+')'
+                            lname = lname + dimstr
+                        # end if
                     # end if
                 else:
                     cldict = None
@@ -1522,14 +1576,18 @@ class Scheme(SuiteObject):
         allocatable = var.get_prop_value('allocatable')
         vtype = var.get_prop_value('type')
 
-        # Need the local name from the group call list,
-        # from the locally-defined variables of the group,
-        # or from the suite, not how it is called in the scheme (var)
-        # First, check if the variable is in the call list.
-        dvar = self.__group.call_list.find_variable(standard_name=standard_name, any_scope=False)
+        # Need the local_name from the Scheme call list (i.e. dvar.call_string(var_dict))
+        dvar = self.__group.call_list.find_variable(standard_name=standard_name, any_scope=True)
         search_dict = self.__group.call_list
         if dvar:
             var_in_call_list = True
+            # If we find a call_list variable that is a DDT, check to see if it has components.
+            # Variables that are components of a DDT are NOT part of the call_list.
+            if dvar.is_ddt():
+                if dvar.components:
+                    var_in_call_list = False
+                # end if
+            # end if
         else:
             var_in_call_list = False
             # If it is not in the call list, try to find it
@@ -1668,11 +1726,11 @@ class Scheme(SuiteObject):
                     tmp_indent = indent + 1
                     outfile.write(f"if {conditional} then", indent)
                 # end if
-                outfile.write(f"! Check size of array {local_name}", tmp_indent)
-                outfile.write(f"if (size({local_name}) /= {array_size}) then", tmp_indent)
+                outfile.write(f"! Check size of array {local_name+dim_string}", tmp_indent)
+                outfile.write(f"if (size({local_name+dim_string}) /= {array_size}) then", tmp_indent)
                 outfile.write(f"write({errmsg}, '(2(a,i8))') 'In group {self.__group.name} before  "\
-                              f"{self.__subroutine_name}: for array {local_name}, expected size ', "\
-                              f"{array_size}, ' but got ', size({local_name})", tmp_indent+1)
+                              f"{self.__subroutine_name}: for array {local_name+dim_string}, expected size ', "\
+                              f"{array_size}, ' but got ', size({local_name+dim_string})", tmp_indent+1)
                 outfile.write(f"{errcode} = 1", tmp_indent+1)
                 outfile.write(f"return", tmp_indent+1)
                 outfile.write(f"end if", tmp_indent)
@@ -1700,13 +1758,13 @@ class Scheme(SuiteObject):
                         for index, dim_length in enumerate(dim_lengths):
                             array_ref = ','+str(index+1)
                             #
-                            outfile.write(f"! Check length of {local_names[index]}{array_ref}", tmp_indent)
-                            outfile.write(f"if (size({local_names[index]}{array_ref}) /= {dim_length}) then ",    \
+                            outfile.write(f"! Check length of {local_names[index]+dim_string}{array_ref}", tmp_indent)
+                            outfile.write(f"if (size({local_names[index]+dim_string}{array_ref}) /= {dim_length}) then ",    \
                                           tmp_indent)
                             outfile.write(f"write({errmsg}, '(2(a,i8))') 'In group {self.__group.name} before "   \
-                                          f"{self.__subroutine_name}: for array {local_names[index]}{array_ref}, "\
+                                          f"{self.__subroutine_name}: for array {local_names[index]+dim_string}{array_ref}, "\
                                           f"expected size ', {dim_length}, ' but got ', "                         \
-                                          f"size({local_names[index]}{array_ref})", tmp_indent+1)
+                                          f"size({local_names[index]+dim_string}{array_ref})", tmp_indent+1)
                             outfile.write(f"{errcode} = 1", tmp_indent+1)
                             outfile.write(f"return", tmp_indent+1)
                             outfile.write(f"end if", tmp_indent)
@@ -1727,6 +1785,13 @@ class Scheme(SuiteObject):
         search_dict = self.__group.call_list
         if dvar:
             var_in_call_list = True
+            # If we find a call_list variable that is a DDT, check to see if it has components.
+            # Variables that are components of a DDT are NOT part of the call_list.
+            if dvar.is_ddt():
+                if dvar.components:
+                    var_in_call_list = False
+                # end if
+            # end if
         else:
             var_in_call_list = False
             # If it is not in the call list, try to find it
@@ -1744,6 +1809,60 @@ class Scheme(SuiteObject):
                 # end for
             # end if
         # end if
+        if not dvar:
+            raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
+        # end if
+        # Handle the dimensions...
+        dimensions = dvar.get_dimensions()
+        dimstr = ''
+        if dimensions:
+            dimstr = dimstr + '('
+            for cnt,dim in enumerate(dimensions):
+                if is_horizontal_dimension(dim):
+                    if self.run_phase():
+                        if var_in_call_list and \
+                           self.find_variable(standard_name="horizontal_loop_extent"):
+                            ldim = "ccpp_constant_one"
+                            udim = "horizontal_loop_extent"
+                        else:
+                            ldim = "horizontal_loop_begin"
+                            udim = "horizontal_loop_end"
+                        # endif
+                    else:
+                        ldim = "ccpp_constant_one"
+                        udim = "horizontal_dimension"
+                    # endif
+                    # Get dimension for lower bound
+                    #lvar = self.__group.call_list.find_variable(standard_name=ldim, any_scope=True)
+                    for var_dict in cldicts:
+                        lvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
+                        if lvar is not None:
+                            break
+                        # end if
+                    # end for
+                    if not lvar:
+                        raise Exception(f"No variable with standard name '{ldim}' in cldicts")
+                    # end if
+                    ldim_lname = lvar.get_prop_value('local_name')
+                    # Get dimension for upper bound
+                    for var_dict in cldicts:
+                        uvar = var_dict.find_variable(standard_name=udim, any_scope=False)
+                        if uvar is not None:
+                            break
+                        # end if
+                    # end for
+                    if not uvar:
+                        raise Exception(f"No variable with standard name '{udim}' in cldicts")
+                    # end if
+                    udim_lname = uvar.get_prop_value('local_name')
+                    dimstr = dimstr + ldim_lname + ':' + udim_lname
+                else:
+                    dimstr = dimstr + ':'
+                # end if
+                if cnt < len(dimensions)-1: dimstr = dimstr+','
+            # end for
+            dimstr = dimstr+')'
+        # end if
         
         # Need to use local_name in Group's call list (self.__group.call_list), not
         # the local_name in var.
@@ -1758,11 +1877,11 @@ class Scheme(SuiteObject):
             # Scheme has optional varaible, host has varaible defined as Conditional (Active).
             if conditional != '.true.':
                 outfile.write(f"if {conditional} then", indent)
-                outfile.write(f"{lname_ptr} => {lname}", indent+1)
+                outfile.write(f"{lname_ptr} => {lname+dimstr}", indent+1)
                 outfile.write(f"end if", indent)
              # Scheme has optional varaible, host has varaible defined as Mandatory.
             else:
-                outfile.write(f"{lname_ptr} => {lname}", indent)
+                outfile.write(f"{lname_ptr} => {lname+dimstr}", indent)
             # end if
         # end if
     # end def
@@ -1823,6 +1942,13 @@ class Scheme(SuiteObject):
         search_dict = self.__group.call_list
         if dvar:
             var_in_call_list = True
+            # If we find a call_list variable that is a DDT, check to see if it has components.
+            # Variables that are components of a DDT are NOT part of the call_list.
+            if dvar.is_ddt():
+                if dvar.components:
+                    var_in_call_list = False
+                # end if
+            # end if
         else:
             var_in_call_list = False
             # If it is not in the call list, try to find it
@@ -1840,7 +1966,59 @@ class Scheme(SuiteObject):
                 # end for
             # end if
         # end if
-
+        if not dvar:
+            raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
+        # end if  
+        # Handle the dimensions...
+        dimensions = dvar.get_dimensions()
+        dimstr = ''
+        if dimensions:
+            dimstr = dimstr + '('
+            for cnt,dim in enumerate(dimensions):
+                if is_horizontal_dimension(dim):
+                    if self.run_phase():
+                        if var_in_call_list and \
+                           self.find_variable(standard_name="horizontal_loop_extent"):
+                            ldim = "ccpp_constant_one"
+                            udim = "horizontal_loop_extent"
+                        else:
+                            ldim = "horizontal_loop_begin"
+                            udim = "horizontal_loop_end"
+                        # endif
+                    else:
+                        ldim = "ccpp_constant_one"
+                        udim = "horizontal_dimension"
+                    # endif
+                    # Get dimension for lower bound
+                    for var_dict in cldicts:
+                        lvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
+                        if lvar is not None:
+                            break
+                        # end if
+                    # end for
+                    if not lvar:
+                        raise Exception(f"No variable with standard name '{ldim}' in cldicts")
+                    # end if
+                    ldim_lname = lvar.get_prop_value('local_name')
+                    # Get dimension for upper bound
+                    for var_dict in cldicts:
+                        uvar = var_dict.find_variable(standard_name=udim, any_scope=False)
+                        if uvar is not None:
+                            break
+                        # end if
+                    # end for
+                    if not uvar:
+                        raise Exception(f"No variable with standard name '{udim}' in cldicts")
+                    # end if
+                    udim_lname = uvar.get_prop_value('local_name')
+                    dimstr = dimstr + ldim_lname + ':' + udim_lname
+                else:
+                    dimstr = dimstr + ':'
+                # end if
+                if cnt < len(dimensions)-1: dimstr = dimstr+','
+            # end for
+            dimstr = dimstr+')'
+        # end if
         if (dict_var):
             intent = var.get_prop_value('intent')
             if (intent == 'out' or intent == 'inout'):
@@ -1853,10 +2031,10 @@ class Scheme(SuiteObject):
                 lname_ptr = var.get_prop_value('local_name') + '_ptr'
                 if conditional != '.true.':
                     outfile.write(f"if {conditional} then", indent)
-                    outfile.write(f"{lname} = {lname_ptr}", indent+1)
+                    outfile.write(f"{lname+dimstr} = {lname_ptr}", indent+1)
                     outfile.write(f"end if", indent)
                 else:
-                    outfile.write(f"{lname} = {lname_ptr}", indent)
+                    outfile.write(f"{lname+dimstr} = {lname_ptr}", indent)
                 # end if
             # end if
         # end if
