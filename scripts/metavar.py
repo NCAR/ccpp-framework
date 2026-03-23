@@ -1122,7 +1122,7 @@ class Var:
         else:
             comma = ' '
         # end if
-        if self.get_prop_value('target'):
+        if self.components:
             targ = ", target"
         else:
             targ = ""
