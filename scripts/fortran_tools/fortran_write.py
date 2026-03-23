@@ -19,9 +19,9 @@ class FortranWriter:
     ###########################################################################
     # Class variables
     ###########################################################################
-    __INDENT = 3          # Spaces per indent level
+    __INDENT = 2          # Spaces per indent level
 
-    __CONTINUE_INDENT = 5 # Extra spaces on continuation line
+    __CONTINUE_INDENT = 4 # Extra spaces on continuation line
 
     __LINE_FILL = 97      # Target line length
 
@@ -54,7 +54,7 @@ module {module}
     __MOD_PREAMBLE = ["implicit none", "private"]
 
     __CONTAINS = '''
-CONTAINS'''
+contains'''
 
     __MOD_FOOTER = '''
 end module {module}'''
@@ -182,12 +182,12 @@ end module {module}'''
                     elif outstr[sptr] == ' ':
                         # Non-quote spaces are where we can break
                         spaces.append(sptr)
-                    elif outstr[sptr] in FortranWriter.__BREAK_CHARS:
-                        # Non-quote syntax are where we can break
-                        break_chars.append(sptr)
                     elif outstr[sptr:sptr+2] == '//':
                         # Non-quote syntax are where we can break
                         break_chars.append(sptr + 1)
+                    elif outstr[sptr] in FortranWriter.__BREAK_CHARS:
+                        # Non-quote syntax are where we can break
+                        break_chars.append(sptr)
                     # End if (no else, other characters will be ignored)
                     sptr = sptr + 1
                 # End while
@@ -235,12 +235,14 @@ end module {module}'''
                 if in_comment or is_comment_stmt:
                     line_continue = False
                 # end if
-                if line_continue:
-                    fill = "{}&".format((self.__line_fill - best)*' ')
+                if line_continue == '&':
+                    fill = '&'
+                elif line_continue:
+                    fill = ' &'
                 else:
                     fill = ""
                 # End if
-                outline = f"{outstr[0:best+1]}{fill}".rstrip()
+                outline = f"{outstr[0:best+1].rstrip()}{fill}"
                 self.__file.write(f"{outline}\n")
                 if best <= 0:
                     imsg = "Internal ERROR: Unable to break line"

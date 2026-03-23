@@ -92,15 +92,17 @@ class FortranWriterTestCase(unittest.TestCase):
             gen.write("integer, intent(in) :: volcaero_constituents(:)", 2)
             gen.write("integer, intent(in) :: other_constituents(:)", 2)
             gen.write("real, allocatable :: tracer_data_test_dynamic_constituents(:)", 2)
+            gen.comment("codee format off", 0)
             gen.write("allocate(tracer_data_test_dynamic_constituents(0+"
                       "size(ozone_constituents)+size(aerosol_constituents)"
                       "+size(volcaero_constituents)+size(other_constituents)))", 2)
             gen.blank_line()
-            line_items = ["write (6, '(a)') 'Cannot read columns_on_task from ",
+            line_items = ["write(6, '(a)') 'Cannot read columns_on_task from ",
                           "file'//', columns_on_task has no horizontal ",
                           "dimension; columns_on_task is a ",
                           "protected variable'"]
             gen.write(f"{''.join(line_items)}", 2)
+            gen.comment("codee format on", 0)
             gen.write("end subroutine foo", 1)
         # end with
 

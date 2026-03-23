@@ -18,16 +18,16 @@
 module comments_test
 
 ! We can write comments in the module header
-   ! We can write indented comments in the header
-   integer :: foo ! Comment at end of line works
-   integer :: bar !
-   ! xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   !
-   integer :: baz !
-   ! yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
-   ! yyyyy
+  ! We can write indented comments in the header
+  integer :: foo ! Comment at end of line works
+  integer :: bar !
+  ! xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  !
+  integer :: baz !
+  ! yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+  ! yyyy
 
-CONTAINS
-   ! We can write comments in the module body
+contains
+  ! We can write comments in the module body
 
 end module comments_test
