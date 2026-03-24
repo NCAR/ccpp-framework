@@ -926,6 +926,7 @@ class SuiteObject(VarDictionary):
         var_vdim = var.has_vertical_dimension(dims=vdims)
         compat_obj = None
         dict_var = None
+        scheme_var = None
         if var.get_prop_value('type') == 'ccpp_constituent_properties_t':
             if self.phase() == 'register':
                 found_var = True
@@ -948,6 +949,7 @@ class SuiteObject(VarDictionary):
             if host_var:
                 if isinstance(host_var, VarDDT):
                     local_var = host_var
+                    scheme_var = var # Save Scheme <var> for transform 
                     var = host_var.var
                     vdims = []
                 # end if
@@ -1022,9 +1024,13 @@ class SuiteObject(VarDictionary):
         # forward/reverse transforms to/from <var> and <dict_var>.
         if dict_var is not None:
             dict_var = self.parent.find_variable(source_var=var, any_scope=True)
-            compat_obj = var.compatible(dict_var, run_env)
+            if scheme_var is not None:
+                compat_obj = var.compatible(scheme_var, run_env)
+            else:
+                compat_obj = var.compatible(dict_var, run_env)
+            # end if
         # end if
-        return found_var, dict_var, local_var, var_vdim, new_vdims, missing_vert, compat_obj
+        return found_var, dict_var, local_var, var_vdim, new_vdims, missing_vert, compat_obj, scheme_var
 
     def in_process_split(self):
         """Find out if we are in a process-split region"""
@@ -1283,7 +1289,7 @@ class Scheme(SuiteObject):
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
             args = self.match_variable(var, self.run_env, host_dict)
-            found, dict_var, local_var, vert_dim, new_dims, missing_vert, compat_obj = args
+            found, dict_var, local_var, vert_dim, new_dims, missing_vert, compat_obj, scheme_var = args
             if dict_var:
                 if dict_var.is_ddt():
                     subst_dict = {'intent':'inout'}
@@ -1379,7 +1385,12 @@ class Scheme(SuiteObject):
             if compat_obj is not None and (compat_obj.has_vert_transforms or
                                            compat_obj.has_unit_transforms or
                                            compat_obj.has_kind_transforms):
-                self.add_var_transform(var, compat_obj, vert_dim)
+                if scheme_var is not None:
+                    print("SWALES scheme_var for transform",scheme_var.get_prop_value('local_name'))
+                    self.add_var_transform(scheme_var, compat_obj, vert_dim)
+                else:
+                    self.add_var_transform(var, compat_obj, vert_dim)
+                # end if
                 has_transform = True
             # end if
 
@@ -1869,7 +1880,7 @@ class Scheme(SuiteObject):
         if (dict_var):
             (conditional, vars_needed) = dvar.conditional(cldicts)
             if (has_transform):
-                lname = dvar.get_prop_value('local_name')+'_local'
+                lname = var.get_prop_value('local_name')+'_local'
             else:
                 lname = dvar.call_string(search_dict)
             # end if
@@ -2205,7 +2216,7 @@ class Scheme(SuiteObject):
             # from <var> and replace its local_name with the local_name from the
             # Group's call_list.
             lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
-            lvar_lname = lvar.get_prop_value('local_name')
+            lvar_lname = lvar.call_string(self.__group.call_list)
             tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
         # end for
         outfile.write('',indent+1)
@@ -2261,7 +2272,7 @@ class Scheme(SuiteObject):
             # from <var> and replace its local_name with the local_name from the
             # Group's call_list.
             lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
-            lvar_lname = lvar.get_prop_value('local_name')
+            lvar_lname = lvar.call_string(self.__group.call_list)
             tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
         # end for
         outfile.write('', indent)
