@@ -22,11 +22,11 @@ contains
 
     integer,                   intent(in)    :: foo
     real(kind_phys),           intent(in)    :: timestep
-    real(kind_phys),           intent(inout),optional :: qv(:)
+    real(kind_phys),           intent(inout),optional :: qv(:,:)
     real(kind_phys),           intent(inout) :: ps(:)
-    real(kind_phys),           intent(in)    :: temp_prev(:)
-    real(kind_phys),           intent(inout) :: temp_layer(foo)
-    real(kind_phys),           intent(in)    :: to_promote(:)
+    real(kind_phys),           intent(in)    :: temp_prev(:,:)
+    real(kind_phys),           intent(inout) :: temp_layer(:,:)
+    real(kind_phys),           intent(in)    :: to_promote(:,:)
     real(kind_phys),           intent(in)    :: promote_pcnst(:)
     character(len=512),        intent(out)   :: errmsg
     integer,                   intent(out)   :: errflg
@@ -41,8 +41,8 @@ contains
     errflg = 0
 
     do col_index = 1, foo
-       temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)
-       if (present(qv)) qv(col_index) = qv(col_index) + 1.0_kind_phys
+       temp_layer(col_index,:) = temp_layer(col_index,:) + temp_prev(col_index,:)
+       if (present(qv)) qv(col_index,:) = qv(col_index,:) + 1.0_kind_phys
     end do
     if (present(innie) .and. present(outie) .and. present(optsie)) then
        outie = innie * optsie

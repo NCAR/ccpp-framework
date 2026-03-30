@@ -239,11 +239,7 @@ class SuiteObject(VarDictionary):
 
     def add_part(self, item, replace=False):
         """Add an object (e.g., Scheme, Subcycle) to this SuiteObject.
-        If <item> needs to be in a VerticalLoop, look for an appropriate
-        VerticalLoop object or create one.
         if <replace> is True, replace <item> in its current position in self.
-        Note that if <item> is not to be inserted in a VerticalLoop,
-        <replace> has no effect.
         """
         if replace:
             if item in self.__parts:
@@ -259,52 +255,9 @@ class SuiteObject(VarDictionary):
             # end if
             index = len(self.__parts)
         # end if
-        # Does this item need to be in a VerticalLoop?
-        if item.needs_vertical is not None:
-            iparent = item.parent
-            if isinstance(self, VerticalLoop):
-                # It is being added to a VerticalLoop, call it good
-                pass
-            elif isinstance(iparent, VerticalLoop):
-                # Why are we doing this?
-                emsg = ('Trying to add {} {} to {} {} but it is already '
-                        'in VerticalLoop {}')
-                raise ParseInternalError(emsg.format(item.__class__.__name__,
-                                                     item.name,
-                                                     self.__class__.__name__,
-                                                     self.name, iparent.name))
-            else:
-                pitem = iparent.part(-1, error=False)
-                added = False
-                if isinstance(pitem, VerticalLoop):
-                    # Can we attach item to this loop?
-                    if pitem.dimension_name == item.needs_vertical:
-                        pitem.add_part(item)
-                        if replace:
-                            self.remove_part(index)
-                        # end if (no else, we already added it)
-                        added = True
-                    # end if
-                # end if
-                if not added:
-                    # Need to add item to a new VerticalLoop
-                    # We are in the process of providing the vertical coord
-                    vert_index = item.needs_vertical
-                    item.needs_vertical = None
-                    new_vl = VerticalLoop(vert_index, self.__context,
-                                          self, self.run_env, items=[item])
-                    if replace:
-                        self.remove_part(index)
-                    # end if (no else, adding the loop below)
-                    self.__parts.insert(index, new_vl)
-                    item.reset_parent(new_vl)
-                # end if
-            # end if
-        else:
-            # Just add <item>
-            self.__parts.insert(index, item)
-            item.reset_parent(self)
-        # end if
+        # Just add <item>
+        self.__parts.insert(index, item)
+        item.reset_parent(self)
 
     def remove_part(self, index):
         """Remove the SuiteObject part at index"""
@@ -529,27 +482,6 @@ class SuiteObject(VarDictionary):
             # end if
         # end if
         return found_dims
-
-    def vert_dim_match(self, vloop_subst):
-        """If self is or is a part of a VerticalLoop object for
-        the substitute index for <vloop_subst>, return the substitute
-        loop index standard name, otherwise, return None.
-        """
-        dim_match = None
-        parent = self
-        if len(vloop_subst.required_stdnames) != 1:
-            errmsg = 'vert_dim_match can only handle one substitute index'
-            raise ParseInternalError(errmsg)
-        # end if
-        index_dim = vloop_subst.required_stdnames[0]
-        while parent is not None:
-            if isinstance(parent, VerticalLoop) and (parent.name == index_dim):
-                dim_match = index_dim
-                break
-            # end if
-            parent = parent.parent
-        # end for
-        return dim_match
 
     def horiz_dim_match(self, ndim, hdim, nloop_subst):
         """Find a match between <ndim> and <hdim>, if they are both
@@ -1228,11 +1160,6 @@ class Scheme(SuiteObject):
                     self.update_group_call_list_variable(clone)
                 # end if
             else:
-                if missing_vert is not None:
-                    # This Scheme needs to be in a VerticalLoop
-                    self.needs_vertical = missing_vert
-                    break # Deal with this and come back
-                # end if
                 if vintent == 'out':
                     if self.__group is None:
                         errmsg = 'Group not defined for {}'.format(self.name)
@@ -1285,14 +1212,6 @@ class Scheme(SuiteObject):
             # end if
 
         # end for
-        if self.needs_vertical is not None:
-            self.parent.add_part(self, replace=True) # Should add a vloop
-            if isinstance(self.parent, VerticalLoop):
-                # Restart the loop analysis
-                scheme_mods = self.parent.analyze(phase, group, scheme_library,
-                                                  suite_vars, level)
-            # end if
-        # end if
         return scheme_mods
 
     def add_var_debug_check(self, var):
@@ -1935,104 +1854,6 @@ class Scheme(SuiteObject):
     def __str__(self):
         """Create a readable string for this Scheme"""
         return '<Scheme {}: {}>'.format(self.name, self.subroutine_name)
-
-###############################################################################
-
-class VerticalLoop(SuiteObject):
-    """Class to call a group of schemes or scheme collections in a
-    loop over a vertical dimension."""
-
-    def __init__(self, index_name, context, parent, run_env, items=None):
-        """ <index_name> is the standard name of the variable holding the
-        number of iterations (e.g., vertical_layer_dimension)."""
-        # self._dim_name is the standard name for the number of iterations
-        self._dim_name = VarDictionary.find_loop_dim_from_index(index_name)
-        if self._dim_name is None:
-            errmsg = 'No VerticalLoop dimension name for index = {}'
-            raise ParseInternalError(errmsg.format(index_name))
-        # end if
-        if ':' in self._dim_name:
-            dims = self._dim_name.split(':')
-            if not dims[1]:
-                errmsg = 'Invalid loop dimension, {}'
-                raise ParseInternalError(errmsg.format(self._dim_name))
-            # end if
-            self._dim_name = dims[1]
-        # end if
-        # self._local_dim_name is the variable name for self._dim_name
-        self._local_dim_name = None
-        super().__init__(index_name, context, parent, run_env)
-        if run_env.verbose:
-            lmsg = "Adding VerticalLoop for '{}'"
-            run_env.logger.debug(lmsg.format(index_name))
-        # end if
-        # Add any items
-        if not isinstance(items, list):
-            if items is None:
-                items = list()
-            else:
-                items = [items]
-            # end if
-        # end if
-        for item in items:
-            self.add_part(item)
-        # end for
-
-    def analyze(self, phase, group, scheme_library, suite_vars, level):
-        """Analyze the VerticalLoop's interface to prepare for writing"""
-        # Handle all the suite objects inside of this subcycle
-        scheme_mods = set()
-        # Create a variable for the loop index
-        newvar = Var({'local_name':self.name, 'standard_name':self.name,
-                      'type':'integer', 'units':'count', 'dimensions':'()'},
-                     _API_LOCAL, self.run_env)
-        # The Group will manage this variable
-        group.manage_variable(newvar)
-        # Find the loop-extent variable
-        dim_name = self._dim_name
-        local_dim = group.find_variable(standard_name=dim_name, any_scope=False)
-        if local_dim is None:
-            local_dim = group.call_list.find_variable(standard_name=dim_name,
-                                                      any_scope=False)
-        # end if
-        # If not found, check the suite level
-        if local_dim is None:
-            local_dim = group.suite.find_variable(standard_name=dim_name)
-        # end if
-        if local_dim is None:
-            emsg = 'No variable found for vertical loop dimension {}'
-            raise ParseInternalError(emsg.format(self._dim_name))
-        # end if
-        self._local_dim_name = local_dim.get_prop_value('local_name')
-        emsg = "VerticalLoop local name for '{}'".format(self.name)
-        emsg += " is '{}".format(self.dimension_name)
-        if self.run_env.logger:
-            self.run_env.logger.debug(emsg)
-        # end if
-        # Analyze our internal items
-        for item in self.parts:
-            smods = item.analyze(phase, group, scheme_library,
-                                 suite_vars, level+1)
-            for smod in smods:
-                scheme_mods.add(smod)
-            # end for
-        # end for
-        return scheme_mods
-
-    def write(self, outfile, errcode, errmsg, indent):
-        """Write code for the vertical loop, including contents, to <outfile>"""
-        outfile.write('do {} = 1, {}'.format(self.name, self.dimension_name),
-                      indent)
-        # Note that 'scheme' may be a sybcycle or other construct
-        for item in self.parts:
-            item.write(outfile, errcode, errmsg, indent+1)
-        # end for
-        outfile.write('end do', 2)
-
-    @property
-    def dimension_name(self):
-        """Return the vertical dimension over which this VerticalLoop loops"""
-        return self._local_dim_name
 
 ###############################################################################
 
