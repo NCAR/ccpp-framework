@@ -371,7 +371,7 @@ class SDFParseTestCase(unittest.TestCase):
             _ = validate_xml_file(compare, 'suite', schema_version, logger)
         # end with
         emsg = "Schemas validity error : Element 'group', attribute 'name': " + \
-            "'group1' is not a valid value of the atomic type 'xs:ID'"
+            "'group1' is not a valid value of the atomic type 'fortran_id_type_unique'"
         fmsg = str(context.exception)
         self.assertTrue(emsg in fmsg, msg=fmsg)
         if not emsg in fmsg:
@@ -534,3 +534,29 @@ class SDFParseTestCase(unittest.TestCase):
         # Check exception for expected error messages
         self.assertTrue("version attribute required" in str(context.exception),
                         msg=f"Bad exception for missing suite version")
+
+    def test_bad_fortran_id(self):
+        """Test that verification system recognizes a bad Fortran ID entry"""
+        num_tests = 3
+        header = "Test trapping of invalid Fortran ID"
+        exc_strings = ["The value 'scheme-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
+                       "The value 'group-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
+                       "he value 'ver-test-suite' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}"]
+        for test_num in range(num_tests):
+            # Setup
+            testname = f"suite_bad_invalid_fortran_id_{test_num+1:{0}{2}}"
+            source = os.path.join(_SAMPLE_FILES_DIR, f"{testname}.xml")
+            logger = self.get_logger()
+            _, xml_root = read_xml_file(source, logger)
+            schema_version = find_schema_version(xml_root)
+            self.assertEqual(schema_version[0], 2)
+            self.assertEqual(schema_version[1], 0)
+            # Exercise
+            with self.assertRaises(Exception) as context:
+                res = validate_xml_file(source, 'suite', schema_version, logger)
+            # end with
+            # Check exception for expected error messages
+            exp_str = str(context.exception)
+            self.assertTrue(exc_strings[test_num] in exp_str,
+                            msg=f"Bad exception in test {test_num + 1}, '{exp_str}'")
+        # end for
