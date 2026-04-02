@@ -38,7 +38,7 @@
 
   <xs:complexType name="scheme_type">
     <xs:simpleContent>
-      <xs:extension base="fortran_id_type_unique">
+      <xs:extension base="fortran_id_type">
         <xs:attribute name="version" type="version_type" use="optional"/>
       </xs:extension>
     </xs:simpleContent>
