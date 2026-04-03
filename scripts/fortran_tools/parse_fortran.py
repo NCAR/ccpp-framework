@@ -701,6 +701,8 @@ def parse_fortran_var_decl(line, source, run_env, imports=None):
     ['8']
     >>> parse_fortran_var_decl("character(len=*), intent(out) :: errmsg", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[1][0]
     'Syntax error: Invalid variable declaration, character(len=*), intent(out) :: errmsg, intent not allowed in module variable, in <standard input>'
+    >>> parse_fortran_var_decl("type(banana_t) :: bananas(0:N_FRUITS)", ParseSource('foo.F90', 'module', ParseContext()), _DUMMY_RUN_ENV)[1][0]
+    "bananas: '0:N_FRUITS' is an invalid dimension name; integer dimension indices not supported, in <standard input>"
 
     ## NB: Expressions (including function calls) not currently supported here
     #>>> parse_fortran_var_decl("real(kind_phys), intent(out) :: foo(size(bar))", ParseSource('foo.F90', 'scheme', ParseContext()), _DUMMY_RUN_ENV)[0].get_prop_value('dimensions')
@@ -814,7 +816,7 @@ def parse_fortran_var_decl(line, source, run_env, imports=None):
                                  fortran_imports=imports)
                 newvars.append(var)
             except ParseSyntaxError as perr:
-                errors.append(perr)
+                errors.append(str(perr))
             # end try
         # end for
     # No else (not a variable declaration)

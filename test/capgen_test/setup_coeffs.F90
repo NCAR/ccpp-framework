@@ -1,5 +1,5 @@
 module setup_coeffs
-  use ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
   implicit none
 
   public :: setup_coeffs_timestep_init
@@ -10,9 +10,9 @@ contains
   !!
   subroutine setup_coeffs_timestep_init(coeffs, errmsg, errflg)
 
-    real(kind_phys),    intent(inout) :: coeffs(:)
-    character(len=512), intent(out)   :: errmsg
-    integer,            intent(out)   :: errflg
+    real(kind=kind_phys), intent(inout) :: coeffs(:)
+    character(len=512), intent(out) :: errmsg
+    integer, intent(out) :: errflg
 
     errmsg = ''
     errflg = 0
