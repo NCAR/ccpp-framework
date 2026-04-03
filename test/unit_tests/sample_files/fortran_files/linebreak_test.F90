@@ -10,13 +10,13 @@
 ! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
 !>
 !! @brief Auto-generated Test of line breaking for FortranWriter
 !!
 !
 module linebreak_test
 
+! codee format off
   character(len=7) :: data(100) = (/ 'name000', 'name001', 'name002', 'name003', 'name004', &
       'name005', 'name006', 'name007', 'name008', 'name009', 'name010', 'name011', 'name012', &
       'name013', 'name014', 'name015', 'name016', 'name017', 'name018', 'name019', 'name020', &
@@ -30,6 +30,7 @@ module linebreak_test
       'name077', 'name078', 'name079', 'name080', 'name081', 'name082', 'name083', 'name084', &
       'name085', 'name086', 'name087', 'name088', 'name089', 'name090', 'name091', 'name092', &
       'name093', 'name094', 'name095', 'name096', 'name097', 'name098', 'name099' /)
+! codee format on
 
 contains
 
