@@ -10,7 +10,6 @@
 ! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
 !>
 !! @brief Auto-generated Test of line breaking for FortranWriter
 !!
@@ -40,12 +39,14 @@ contains
     integer, intent(in) :: volcaero_constituents(:)
     integer, intent(in) :: other_constituents(:)
     real, allocatable :: tracer_data_test_dynamic_constituents(:)
+! codee format off
     allocate(tracer_data_test_dynamic_constituents(0+size(ozone_constituents)+size( &
         aerosol_constituents)+size(volcaero_constituents)+size(other_constituents)))
 
     write(6, '(a)') &
         'Cannot read columns_on_task from file'// &
         ', columns_on_task has no horizontal dimension; columns_on_task is a protected variable'
+! codee format on
   end subroutine foo
 
 end module linebreak_test

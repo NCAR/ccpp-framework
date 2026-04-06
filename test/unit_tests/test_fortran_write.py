@@ -92,6 +92,7 @@ class FortranWriterTestCase(unittest.TestCase):
             gen.write("integer, intent(in) :: volcaero_constituents(:)", 2)
             gen.write("integer, intent(in) :: other_constituents(:)", 2)
             gen.write("real, allocatable :: tracer_data_test_dynamic_constituents(:)", 2)
+            gen.comment("codee format off", 0)
             gen.write("allocate(tracer_data_test_dynamic_constituents(0+"
                       "size(ozone_constituents)+size(aerosol_constituents)"
                       "+size(volcaero_constituents)+size(other_constituents)))", 2)
@@ -101,6 +102,7 @@ class FortranWriterTestCase(unittest.TestCase):
                           "dimension; columns_on_task is a ",
                           "protected variable'"]
             gen.write(f"{''.join(line_items)}", 2)
+            gen.comment("codee format on", 0)
             gen.write("end subroutine foo", 1)
         # end with
 
@@ -119,7 +121,9 @@ class FortranWriterTestCase(unittest.TestCase):
         # Exercise
         header = "Test of comment writing for FortranWriter"
         with FortranWriter(generate, 'w', header, f"{testname}") as gen:
+            gen.comment("codee format off", 0)
             gen.comment("We can write comments in the module header", 0)
+            gen.comment("codee format on", 0)
             gen.comment("We can write indented comments in the header", 1)
             gen.write("integer :: foo ! Comment at end of line works", 1)
             # Test long comments at end of line
@@ -145,11 +149,11 @@ class FortranWriterTestCase(unittest.TestCase):
         generate = os.path.join(_TMP_DIR, f"{testname}.F90")
         # Exercise
         header = "Test of long string breaking for FortranWriter"
-        foostr = ''.join(['0123456789']*10)
+        foostr = '0123456789'*10
         nxtchr = ord('0')
         with FortranWriter(generate, 'w', header, f"{testname}") as gen:
             while len(foostr) < 130:
-                gen.write(f"foo{len(foostr)} = '{foostr}'", 1)
+                gen.write(f"character(len={len(foostr)}) :: foo{len(foostr)} = '{foostr.strip()}'", 1)
                 foostr += chr(nxtchr)
                 nxtchr += 1
                 if nxtchr > ord('9'):

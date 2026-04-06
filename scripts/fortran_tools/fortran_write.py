@@ -25,7 +25,9 @@ class FortranWriter:
 
     __LINE_FILL = 97      # Target line length
 
-    __LINE_MAX = 130      # Max line length
+    __LINE_MAX = 120      # Max line length (for Codee)
+
+    __BREAK_CHARS = [',', '+', '*', '/', '(', ')']
 
     __BREAK_CHARS = [',', '+', '*', '/', '(', ')']
 
@@ -40,8 +42,7 @@ class FortranWriter:
 ! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
 ! THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 ! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-'''
+! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.'''
 
     __MOD_HEADER = '''
 !>
@@ -142,13 +143,7 @@ end module {module}'''
             ostmt = statement.strip()
             is_comment_stmt = ostmt and (ostmt[0] == '!')
             in_comment = ""
-            if ostmt and (ostmt[0] != '&'):
-                # Skip indent for continue that is in the middle of a
-                #    token or a quoted region
-                outstr = istr + ostmt
-            else:
-                outstr = ostmt
-            # end if
+            outstr = istr + ostmt
             line_len = len(outstr)
             if line_len > self.__line_fill:
                 # Collect pretty break points
@@ -218,6 +213,9 @@ end module {module}'''
                 # end if
                 if len(outstr) > best:
                     if self._in_quote(outstr[0:best+1]):
+                        if best >= FortranWriter.__LINE_MAX - 1:
+                            best = FortranWriter.__LINE_MAX - 2
+                        # end if
                         line_continue = '&'
                     elif not outstr[best+1:].lstrip():
                         # If the next line is empty, the current line is done
@@ -249,10 +247,11 @@ end module {module}'''
                     raise ValueError(f"{imsg}, '{statement}'")
                 # end if
                 statement = in_comment + outstr[best+1:]
-                if isinstance(line_continue, str) and statement:
+                if isinstance(line_continue, str) and statement.strip():
                     statement = line_continue + statement
                 # end if
-                self.write(statement, indent_level, continue_line=line_continue)
+                if statement.strip():
+                    self.write(statement, indent_level, continue_line=line_continue)
             else:
                 self.__file.write(f"{outstr}\n")
             # End if
