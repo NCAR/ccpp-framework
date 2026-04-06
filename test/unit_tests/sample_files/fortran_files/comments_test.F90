@@ -10,24 +10,25 @@
 ! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
 !>
 !! @brief Auto-generated Test of comment writing for FortranWriter
 !!
 !
 module comments_test
 
+! codee format off
 ! We can write comments in the module header
-   ! We can write indented comments in the header
-   integer :: foo ! Comment at end of line works
-   integer :: bar !
-   ! xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   !
-   integer :: baz !
-   ! yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
-   ! yyyyy
+! codee format on
+  ! We can write indented comments in the header
+  integer :: foo ! Comment at end of line works
+  integer :: bar !
+  ! xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  !
+  integer :: baz !
+  ! yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+  ! yyyyyyyyyyyyyy
 
-CONTAINS
-   ! We can write comments in the module body
+contains
+  ! We can write comments in the module body
 
 end module comments_test
