@@ -29,8 +29,6 @@ class FortranWriter:
 
     __BREAK_CHARS = [',', '+', '*', '/', '(', ')']
 
-    __BREAK_CHARS = [',', '+', '*', '/', '(', ')']
-
     # CCPP copyright statement to be included in all generated Fortran files
     __COPYRIGHT = '''!
 ! This work (Common Community Physics Package Framework), identified by
