@@ -36,9 +36,8 @@ jobs:
 
           # Filter list of modified files to exclude certain files
           EXCLUDED_FILES=(
-            test/unit_tests/sample_files/fortran_files/linebreak_test.F90
-            test/unit_tests/sample_files/fortran_files/comments_test.F90
-            test/unit_tests/sample_files/fortran_files/long_string_test.F90
+            # file1
+            # file2
           )
           FILTERED_FILES=()
           while IFS= read -r file; do
