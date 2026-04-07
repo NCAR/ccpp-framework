@@ -19,13 +19,15 @@ class FortranWriter:
     ###########################################################################
     # Class variables
     ###########################################################################
-    __INDENT = 3          # Spaces per indent level
+    __INDENT = 2          # Spaces per indent level
 
-    __CONTINUE_INDENT = 5 # Extra spaces on continuation line
+    __CONTINUE_INDENT = 4 # Extra spaces on continuation line
 
     __LINE_FILL = 97      # Target line length
 
-    __LINE_MAX = 130      # Max line length
+    __LINE_MAX = 120      # Max line length (for Codee)
+
+    __BREAK_CHARS = [',', '+', '*', '/', '(', ')']
 
     # CCPP copyright statement to be included in all generated Fortran files
     __COPYRIGHT = '''!
@@ -38,8 +40,7 @@ class FortranWriter:
 ! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
 ! THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 ! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-'''
+! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.'''
 
     __MOD_HEADER = '''
 !>
@@ -52,7 +53,7 @@ module {module}
     __MOD_PREAMBLE = ["implicit none", "private"]
 
     __CONTAINS = '''
-CONTAINS'''
+contains'''
 
     __MOD_FOOTER = '''
 end module {module}'''
@@ -140,18 +141,12 @@ end module {module}'''
             ostmt = statement.strip()
             is_comment_stmt = ostmt and (ostmt[0] == '!')
             in_comment = ""
-            if ostmt and (ostmt[0] != '&'):
-                # Skip indent for continue that is in the middle of a
-                #    token or a quoted region
-                outstr = istr + ostmt
-            else:
-                outstr = ostmt
-            # end if
+            outstr = istr + ostmt
             line_len = len(outstr)
             if line_len > self.__line_fill:
                 # Collect pretty break points
-                spaces = list()
-                commas = list()
+                spaces = []
+                break_chars = []
                 sptr = len(istr)
                 in_single_char = False
                 in_double_char = False
@@ -180,12 +175,12 @@ end module {module}'''
                     elif outstr[sptr] == ' ':
                         # Non-quote spaces are where we can break
                         spaces.append(sptr)
-                    elif outstr[sptr] == ',':
-                        # Non-quote commas are where we can break
-                        commas.append(sptr)
                     elif outstr[sptr:sptr+2] == '//':
-                        # Non-quote commas are where we can break
-                        commas.append(sptr + 1)
+                        # Non-quote syntax are where we can break
+                        break_chars.append(sptr + 1)
+                    elif outstr[sptr] in FortranWriter.__BREAK_CHARS:
+                        # Non-quote syntax are where we can break
+                        break_chars.append(sptr)
                     # End if (no else, other characters will be ignored)
                     sptr = sptr + 1
                 # End while
@@ -203,7 +198,7 @@ end module {module}'''
                     # end if
                 best = self.find_best_break(spaces)
                 if best >= self.__line_fill:
-                    best = min(best, self.find_best_break(commas))
+                    best = min(best, self.find_best_break(break_chars))
                 # End if
                 line_continue = False
                 if best >= self.__line_max:
@@ -216,10 +211,13 @@ end module {module}'''
                 # end if
                 if len(outstr) > best:
                     if self._in_quote(outstr[0:best+1]):
+                        if best >= FortranWriter.__LINE_MAX - 1:
+                            best = FortranWriter.__LINE_MAX - 2
+                        # end if
                         line_continue = '&'
                     elif not outstr[best+1:].lstrip():
-                        # If the next line is empty, the current line is done 
-                        #  and is equal to the max line length. Do not use 
+                        # If the next line is empty, the current line is done
+                        #  and is equal to the max line length. Do not use
                         #  continue and set best to line_max (best+1)
                         line_continue = False
                         best = best+1
@@ -233,24 +231,27 @@ end module {module}'''
                 if in_comment or is_comment_stmt:
                     line_continue = False
                 # end if
-                if line_continue:
-                    fill = "{}&".format((self.__line_fill - best)*' ')
+                if line_continue == '&':
+                    fill = '&'
+                elif line_continue:
+                    fill = ' &'
                 else:
                     fill = ""
                 # End if
-                outline = f"{outstr[0:best+1]}{fill}".rstrip()
+                outline = f"{outstr[0:best+1].rstrip()}{fill}"
                 self.__file.write(f"{outline}\n")
                 if best <= 0:
                     imsg = "Internal ERROR: Unable to break line"
                     raise ValueError(f"{imsg}, '{statement}'")
                 # end if
                 statement = in_comment + outstr[best+1:]
-                if isinstance(line_continue, str) and statement:
+                if isinstance(line_continue, str) and statement.strip():
                     statement = line_continue + statement
                 # end if
-                self.write(statement, indent_level, continue_line=line_continue)
+                if statement.strip():
+                    self.write(statement, indent_level, continue_line=line_continue)
             else:
-                self.__file.write("{}\n".format(outstr))
+                self.__file.write(f"{outstr}\n")
             # End if
         # End if
 
