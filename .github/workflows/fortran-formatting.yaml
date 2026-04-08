@@ -33,13 +33,39 @@ jobs:
           if [[ "${MODIFIED_FILES}" == "" ]]; then
             exit 0
           fi
+
+          # Filter list of modified files to exclude certain files
+          EXCLUDED_FILES=(
+            # file1
+            # file2
+          )
+          FILTERED_FILES=()
+          while IFS= read -r file; do
+            skip=false
+            for excluded in "${EXCLUDED_FILES[@]}"; do
+              if [[ "$file" == "$excluded" ]]; then
+                skip=true
+                break
+              fi
+            done
+            if [[ "$skip" == false ]]; then
+              FILTERED_FILES+=("$file")
+            fi
+          done <<< "$MODIFIED_FILES"
+          echo "MODIFIED_FILES: ${MODIFIED_FILES[@]}"
+          echo "EXCLUDED_FILES: ${EXCLUDED_FILES[@]}"
+          echo "FILTERED_FILES: ${FILTERED_FILES[@]}"
+          if [[ "${FILTERED_FILES}" == "" ]]; then
+            exit 0
+          fi
+
           #
           echo "Installing Codee ${CODEE_VERSION} ..."
           wget https://codee.com/release/codee-${CODEE_VERSION}-linux-x86_64.tar.gz
           tar -xf codee-${CODEE_VERSION}-linux-x86_64.tar.gz
           export PATH="${PWD}/codee-${CODEE_VERSION}-linux-x86_64/bin:${PATH}"
           #
-          codee format --accept-eula --verbose ${MODIFIED_FILES}
+          codee format --accept-eula --verbose ${FILTERED_FILES}
           REFORMATTED_FILES=$(git diff --name-only --diff-filter=d)
           if [[ "${REFORMATTED_FILES}" == "" ]]; then
             exit 0
