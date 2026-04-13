@@ -88,7 +88,7 @@ SpacesAroundOperators:
   Relational:      Both
   RelationalLegacy: Both
   LogicalBinary:   Both
-  LogicalNot:      NoTrailing
+  LogicalNot:      Both
   UnaryPlusMinus:  NoTrailing
   Comma:           OnlyTrailing
   Concat:          Both
