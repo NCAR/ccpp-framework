@@ -100,7 +100,6 @@
         <xs:element name="scheme" type="scheme_type"/>
       </xs:choice>
       <xs:attribute name="loop" type="subcycle_type" use="optional"/>
-      <xs:attribute name="name" type="fortran_id_type_unique" use="optional"/>
     </xs:complexType>
   </xs:element>
 
