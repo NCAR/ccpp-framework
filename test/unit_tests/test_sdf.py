@@ -535,16 +535,23 @@ class SDFParseTestCase(unittest.TestCase):
         self.assertTrue("version attribute required" in str(context.exception),
                         msg=f"Bad exception for missing suite version")
 
-    def test_bad_fortran_id(self):
+    def test_invalid_fortran_id(self):
         """Test that verification system recognizes a bad Fortran ID entry"""
         num_tests = 3
         header = "Test trapping of invalid Fortran ID"
-        exc_strings = ["The value 'scheme-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
-                       "The value 'group-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
-                       "he value 'ver-test-suite' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}"]
+        tests = [
+            "suite_invalid_scheme_fortran_id",
+            "suite_invalid_group_fortran_id",
+            "suite_invalid_suite_fortran_id",
+        ]
+        exc_strings = [
+            "The value 'scheme-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
+            "The value 'group-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
+            "he value 'ver-test-suite' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
+        ]
         for test_num in range(num_tests):
             # Setup
-            testname = f"suite_bad_invalid_fortran_id_{test_num+1:{0}{2}}"
+            testname = tests[test_num]
             source = os.path.join(_SAMPLE_FILES_DIR, f"{testname}.xml")
             logger = self.get_logger()
             _, xml_root = read_xml_file(source, logger)
