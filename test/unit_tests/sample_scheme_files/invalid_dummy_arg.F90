@@ -1,31 +1,31 @@
 ! Test parameterization with no vertical level
 !
 
-MODULE invalid_dummy_arg
+module invalid_dummy_arg
 
-  USE ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
 
-  IMPLICIT NONE
-  PRIVATE
+  implicit none
+  private
 
-  PUBLIC :: invalid_dummy_arg_run
+  public :: invalid_dummy_arg_run
 
-CONTAINS
+contains
 
   !> \section arg_table_invalid_dummy_arg_run  Argument Table
   !! \htmlinclude arg_table_invalid_dummy_arg_run.html
   !!
-  subroutine invalid_dummy_arg_run(foo, timestep, temp_prev, temp_layer, qv, ps,    &
-       errmsg, errflg)
+  subroutine invalid_dummy_arg_run(foo, timestep, temp_prev, temp_layer, qv, ps, &
+      errmsg, errflg)
 
-    integer,            intent(in)    :: foo
-    real(kind_phys),    intent(in)    :: timestep
-    real(kind_phys),    intent(inout) :: qv(:)
-    real(kind_phys),    intent(inout) :: ps(:)
-    REAL(kind_phys),    intent(in)    :: woohoo(:)
-    REAL(kind_phys),    intent(inout) :: temp_layer(foo)
-    character(len=512), intent(out)   :: errmsg
-    integer,            intent(out)   :: errflg
+    integer, intent(in) :: foo
+    real(kind=kind_phys), intent(in) :: timestep
+    real(kind=kind_phys), intent(inout) :: qv(:)
+    real(kind=kind_phys), intent(inout) :: ps(:)
+    real(kind=kind_phys), intent(in) :: woohoo(:)
+    real(kind=kind_phys), intent(inout) :: temp_layer(foo)
+    character(len=512), intent(out) :: errmsg
+    integer, intent(out) :: errflg
     !----------------------------------------------------------------
 
     integer :: col_index
@@ -34,10 +34,10 @@ CONTAINS
     errflg = 0
 
     do col_index = 1, foo
-       temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)
-       qv(col_index) = qv(col_index) + 1.0_kind_phys
+      temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)
+      qv(col_index) = qv(col_index) + 1.0_kind_phys
     end do
 
-  END SUBROUTINE invalid_dummy_arg_run
+  end subroutine invalid_dummy_arg_run
 
-END MODULE invalid_dummy_arg
+end module invalid_dummy_arg
