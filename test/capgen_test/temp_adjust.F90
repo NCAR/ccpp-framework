@@ -39,13 +39,13 @@ contains
 
     integer, intent(in) :: foo
     real(kind=kind_phys), intent(in) :: timestep
-    real(kind=kind_phys), intent(inout), optional :: qv(:)
+    real(kind=kind_phys), intent(inout), optional :: qv(:, :)
     real(kind=kind_phys), intent(inout) :: ps(:)
     ! codee format off
-    REAL(kind_phys), intent(in) :: temp_prev(:)
-    REAL(kind_phys), intent(inout) :: temp_layer(foo)
+    REAL(kind_phys), intent(in) :: temp_prev(:,:)
+    REAL(kind_phys), intent(inout) :: temp_layer(:,:)
     ! codee format on
-    real(kind=kind_temp), intent(in) :: to_promote(:)
+    real(kind=kind_temp), intent(in) :: to_promote(:, :)
     real(kind=kind_phys), intent(in) :: promote_pcnst(:)
     integer, intent(out) :: interstitial_var(:)
     character(len=512), intent(out) :: errmsg
@@ -73,8 +73,8 @@ contains
     end if
 
     do col_index = 1, foo
-      temp_layer(col_index) = temp_layer(col_index) + temp_prev(col_index)
-      if (present(qv)) qv(col_index) = qv(col_index) + 1.0_kind_phys
+      temp_layer(col_index, :) = temp_layer(col_index, :) + temp_prev(col_index, :)
+      if (present(qv)) qv(col_index, :) = qv(col_index, :) + 1.0_kind_phys
     end do
     if (present(innie) .and. present(outie) .and. present(optsie)) then
       outie = innie * optsie
