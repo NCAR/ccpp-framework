@@ -54,7 +54,7 @@
 [ temp_calc ]
   standard_name = potential_temperature_at_previous_timestep
   units = K
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = out
