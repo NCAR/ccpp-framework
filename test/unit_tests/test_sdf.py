@@ -547,7 +547,7 @@ class SDFParseTestCase(unittest.TestCase):
         exc_strings = [
             "The value 'scheme-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
             "The value 'group-1' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
-            "he value 'ver-test-suite' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
+            "The value 'ver-test-suite' is not accepted by the pattern '[A-Za-z][A-Za-z0-9_]{0,63}",
         ]
         for test_num in range(num_tests):
             # Setup
