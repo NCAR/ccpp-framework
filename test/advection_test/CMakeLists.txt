@@ -22,7 +22,6 @@ list(APPEND ADVECTION_HOST_METADATA_FILES "${HOST}.meta")
 
 # Run ccpp_capgen that we expect to fail
 ccpp_capgen(CAPGEN_EXPECT_THROW_ERROR ON
-            CAPGEN_DEBUG ON
             VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${ADVECTION_HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_ERROR_META_FILES}
@@ -31,8 +30,7 @@ ccpp_capgen(CAPGEN_EXPECT_THROW_ERROR ON
             OUTPUT_ROOT "${CCPP_CAP_FILES}")
 
 # Run ccpp_capgen
-ccpp_capgen(CAPGEN_DEBUG ON
-            VERBOSITY ${CCPP_VERBOSITY}
+ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${ADVECTION_HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_META_FILES}
             SUITES ${SUITE_FILES}
