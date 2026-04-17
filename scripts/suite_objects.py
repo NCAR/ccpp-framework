@@ -1211,6 +1211,22 @@ class Scheme(SuiteObject):
         # end for
         return scheme_mods
 
+    def add_optional_var(self, dict_var, var, has_transform):
+        """Add local pointer needed for optional variable(s) in Group Cap. Also,
+        add any host variables from active condition that are needed to associate
+        the local pointer correctly."""
+
+        lname = var.get_prop_value('local_name')
+        sname = var.get_prop_value('standard_name')
+        lname_ptr  = lname + '_ptr'
+        newvar_ptr = var.clone(lname_ptr)
+        # Group write phase needs new pointer variable for declaration step.
+        self.__group.optional_vars.append(newvar_ptr)
+        # Scheme write phase needs more info for transformations/local-pointer assignments.
+        self.__optional_vars.append([dict_var, var, has_transform])
+        return
+    # end def
+
     def handle_downstream_variables(self, var):
         """Ensure all dimension and optional variable arguments are available"""
         # Get the basic attributes that decide whether we need
@@ -1268,22 +1284,6 @@ class Scheme(SuiteObject):
                     else:
                         self.update_group_call_list_variable(udim_var)
                     # end if
-
-    def add_optional_var(self, dict_var, var, has_transform):
-        """Add local pointer needed for optional variable(s) in Group Cap. Also,
-        add any host variables from active condition that are needed to associate
-        the local pointer correctly."""
-
-        lname = var.get_prop_value('local_name')
-        sname = var.get_prop_value('standard_name')
-        lname_ptr  = lname + '_ptr'
-        newvar_ptr = var.clone(lname_ptr)
-        # Group write phase needs new pointer variable for declaration step.
-        self.__group.optional_vars.append(newvar_ptr)
-        # Scheme write phase needs more info for transformations/local-pointer assignments.
-        self.__optional_vars.append([dict_var, var, has_transform])
-        return
-    # end def
 
     def associate_optional_var(self, dict_var, var, has_transform, cldicts, indent, outfile):
         """Write local pointer association for optional variable."""
@@ -1438,112 +1438,6 @@ class Scheme(SuiteObject):
             # Scheme has optional varaible, host has varaible defined as Mandatory.
             else:
                 outfile.write(f"nullify({lname_ptr})",  indent)
-            # end if
-        # end if
-    # end def
-
-    def assign_pointer_to_var(self, dict_var, var, has_transform, cldicts, indent, outfile):
-        """Write local pointer assignment to variable."""
-        # Use the local name from the Scheme call list, append "_ptr" suffix.
-        standard_name = var.get_prop_value('standard_name')
-        dvar = self.__group.call_list.find_variable(standard_name=standard_name, any_scope=False)
-        search_dict = self.__group.call_list
-        if dvar:
-            var_in_call_list = True
-            # If we find a call_list variable that is a DDT, check to see if it has components.
-            # Variables that are components of a DDT are NOT part of the call_list.
-            if dvar.is_ddt():
-                if dvar.components:
-                    var_in_call_list = False
-                # end if
-            # end if
-        else:
-            var_in_call_list = False
-            # If it is not in the call list, try to find it
-            # in the local variables of this group subroutine.
-            dvar = self.__group.find_variable(standard_name=standard_name, any_scope=False)
-            if not dvar:
-                # This variable is handled by the group
-                # and is declared as a module variable
-                for var_dict in self.__group.suite_dicts():
-                    dvar = var_dict.find_variable(standard_name=standard_name, any_scope=False)
-                    if dvar:
-                        search_dict = var_dict
-                        break
-                    # end if
-                # end for
-            # end if
-        # end if
-        if not dvar:
-            raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
-        # end if  
-        # Handle the dimensions...
-        dimensions = dvar.get_dimensions()
-        dimstr = ''
-        if dimensions:
-            dimstr = dimstr + '('
-            for cnt,dim in enumerate(dimensions):
-                if is_horizontal_dimension(dim):
-                    if self.run_phase():
-                        if var_in_call_list and \
-                           self.find_variable(standard_name="horizontal_loop_extent"):
-                            ldim = "ccpp_constant_one"
-                            udim = "horizontal_loop_extent"
-                        else:
-                            ldim = "horizontal_loop_begin"
-                            udim = "horizontal_loop_end"
-                        # endif
-                    else:
-                        ldim = "ccpp_constant_one"
-                        udim = "horizontal_dimension"
-                    # endif
-                    # Get dimension for lower bound
-                    for var_dict in cldicts:
-                        lvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
-                        if lvar is not None:
-                            break
-                        # end if
-                    # end for
-                    if not lvar:
-                        raise Exception(f"No variable with standard name '{ldim}' in cldicts")
-                    # end if
-                    ldim_lname = lvar.get_prop_value('local_name')
-                    # Get dimension for upper bound
-                    for var_dict in cldicts:
-                        uvar = var_dict.find_variable(standard_name=udim, any_scope=False)
-                        if uvar is not None:
-                            break
-                        # end if
-                    # end for
-                    if not uvar:
-                        raise Exception(f"No variable with standard name '{udim}' in cldicts")
-                    # end if
-                    udim_lname = uvar.get_prop_value('local_name')
-                    dimstr = dimstr + ldim_lname + ':' + udim_lname
-                else:
-                    dimstr = dimstr + ':'
-                # end if
-                if cnt < len(dimensions)-1: dimstr = dimstr+','
-            # end for
-            dimstr = dimstr+')'
-        # end if
-        if (dict_var):
-            intent = var.get_prop_value('intent')
-            if (intent == 'out' or intent == 'inout'):
-                (conditional, vars_needed) = dvar.conditional(cldicts)
-                if (has_transform):
-                    lname = dvar.get_prop_value('local_name')+'_local'
-                else:
-                    lname = dvar.call_string(search_dict)
-                # end if
-                lname_ptr = var.get_prop_value('local_name') + '_ptr'
-                if conditional != '.true.':
-                    outfile.write(f"if {conditional} then", indent)
-                    outfile.write(f"{lname+dimstr} = {lname_ptr}", indent+1)
-                    outfile.write(f"end if", indent)
-                else:
-                    outfile.write(f"{lname+dimstr} = {lname_ptr}", indent)
-                # end if
             # end if
         # end if
     # end def
