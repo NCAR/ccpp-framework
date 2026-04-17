@@ -222,6 +222,11 @@ class CallList(VarDictionary):
                     for (var_trans_local, var_lname, sname, rindices, lindices, compat_obj) in sub_lname_list:
                         if (sname == stdname):
                             lname = var_trans_local
+                            # For the case of optional argument with a variable transform,
+                            # any loop substitution are handled during the pointer assignment (earlier)
+                            if var.get_prop_value('optional'):
+                                lname = var_lname+'_ptr'
+                            # end if
                         # end if
                     # end for
                 # end if
@@ -1882,17 +1887,17 @@ class Scheme(SuiteObject):
             if (has_transform):
                 lname = var.get_prop_value('local_name')+'_local'
             else:
-                lname = dvar.call_string(search_dict)
+                lname = dvar.call_string(search_dict)+dimstr
             # end if
             lname_ptr = var.get_prop_value('local_name') + '_ptr'
             # Scheme has optional varaible, host has varaible defined as Conditional (Active).
             if conditional != '.true.':
                 outfile.write(f"if {conditional} then", indent)
-                outfile.write(f"{lname_ptr} => {lname+dimstr}", indent+1)
+                outfile.write(f"{lname_ptr} => {lname}", indent+1)
                 outfile.write(f"end if", indent)
              # Scheme has optional varaible, host has varaible defined as Mandatory.
             else:
-                outfile.write(f"{lname_ptr} => {lname+dimstr}", indent)
+                outfile.write(f"{lname_ptr} => {lname}", indent)
             # end if
         # end if
     # end def
@@ -2035,17 +2040,17 @@ class Scheme(SuiteObject):
             if (intent == 'out' or intent == 'inout'):
                 (conditional, vars_needed) = dvar.conditional(cldicts)
                 if (has_transform):
-                    lname = dvar.get_prop_value('local_name')+'_local'
+                    lname = var.get_prop_value('local_name')+'_local'
                 else:
-                    lname = dvar.call_string(search_dict)
+                    lname = dvar.call_string(search_dict)+dimstr
                 # end if
                 lname_ptr = var.get_prop_value('local_name') + '_ptr'
                 if conditional != '.true.':
                     outfile.write(f"if {conditional} then", indent)
-                    outfile.write(f"{lname+dimstr} = {lname_ptr}", indent+1)
+                    outfile.write(f"{lname} = {lname_ptr}", indent+1)
                     outfile.write(f"end if", indent)
                 else:
-                    outfile.write(f"{lname+dimstr} = {lname_ptr}", indent)
+                    outfile.write(f"{lname} = {lname_ptr}", indent)
                 # end if
             # end if
         # end if
