@@ -1192,7 +1192,7 @@ class Scheme(SuiteObject):
                                            compat_obj.has_unit_transforms or
                                            compat_obj.has_kind_transforms):
                 if scheme_var is not None:
-                    print("SWALES scheme_var for transform",scheme_var.get_prop_value('local_name'))
+                    #print("SWALES scheme_var for transform",scheme_var.get_prop_value('local_name'))
                     self.add_var_transform(scheme_var, compat_obj)
                 else:
                     self.add_var_transform(var, compat_obj)
@@ -1503,8 +1503,9 @@ class Scheme(SuiteObject):
 
         # If needed, modify horizontal dimension for loop substitution.
         # NOT YET IMPLEMENTED
-        #hdim = find_horizontal_dimension(var.get_dimensions())
+        hdim = find_horizontal_dimension(var.get_dimensions())
         #if compat_obj.has_dim_transforms:
+        print("SWALES ",hdim,var.get_prop_value('local_name'))
 
         # Register any reverse (pre-Scheme) transforms. Also, save local_name used in
         # transform (used in write stage).
