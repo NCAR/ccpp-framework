@@ -49,6 +49,7 @@ There are several `<options>...` to enable tests:
 3) `-DCCPP_RUN_CAPGEN_TEST=ON` Turns on only the capgen test
 4) `-DCCPP_RUN_DDT_HOST_TEST=ON` Turns on only the ddt host test
 5) `-DCCPP_RUN_VAR_COMPATIBILITY_TEST=ON` Turns on only the variable compatibility test
+5) `-DCCPP_RUN_NESTED_SUITE_TEST=ON` Turns on only the nested suite test
 
 By default, the tests will build in release mode.  To enable debug mode, you will need to set the build type: `-DCMAKE_BUILD_TYPE=Release` (or if you want release with debug symbols: `-DCMAKE_BUILD_TYPE=RelWithDebInfo`).
 

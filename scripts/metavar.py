@@ -674,13 +674,16 @@ class Var:
         # end if
         return dimstr
 
-    def call_string(self, var_dict, loop_vars=None):
+    def call_string(self, var_dicts, loop_vars=None):
         """Construct the actual argument string for this Var by translating
         standard names to local names.
         String includes array bounds unless loop_vars is None.
         if <loop_vars> is not None, look there first for array bounds,
         even if usage requires a loop substitution.
         """
+        if not isinstance(var_dicts, list):
+           var_dicts = [var_dicts]
+        # end if
         if loop_vars is None:
             call_str = self.get_prop_value('local_name')
             # Look for dims in case this is an array selection variable
@@ -709,8 +712,15 @@ class Var:
                     lname = ""
                     for item in dim.split(':'):
                         if item:
-                            dvar = var_dict.find_variable(standard_name=item,
-                                                          any_scope=False)
+                            for var_dict in var_dicts:
+                                dvar = var_dict.find_variable(standard_name=item,
+                                                              any_scope=False)
+                                if dvar is not None:
+                                    iname = dvar.call_string(var_dict,
+                                                             loop_vars=loop_vars)
+                                    break
+                                # end if
+                            # end for
                             if dvar is None:
                                 try:
                                     dval = int(item)
@@ -718,9 +728,6 @@ class Var:
                                 except ValueError:
                                     iname = None
                                 # end try
-                            else:
-                                iname = dvar.call_string(var_dict,
-                                                         loop_vars=loop_vars)
                             # end if
                         else:
                             iname = ''
@@ -729,9 +736,8 @@ class Var:
                             lname = lname + isep + iname
                             isep = ':'
                         else:
-                            errmsg = 'No local variable {} in {}{}'
+                            errmsg = 'No local variable {} in variable dictionaries'
                             ctx = context_string(self.context)
-                            dname = var_dict.name
                             raise CCPPError(errmsg.format(item, dname, ctx))
                         # end if
                     # end for
