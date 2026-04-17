@@ -1192,7 +1192,6 @@ class Scheme(SuiteObject):
                                            compat_obj.has_unit_transforms or
                                            compat_obj.has_kind_transforms):
                 if scheme_var is not None:
-                    #print("SWALES scheme_var for transform",scheme_var.get_prop_value('local_name'))
                     self.add_var_transform(scheme_var, compat_obj)
                 else:
                     self.add_var_transform(var, compat_obj)
@@ -1502,10 +1501,27 @@ class Scheme(SuiteObject):
         # end if
 
         # If needed, modify horizontal dimension for loop substitution.
+        cldicts = [self]#.__group, self.__group.call_list]
+        #cldicts.extend(self.__group.suite_dicts())
         # NOT YET IMPLEMENTED
-        hdim = find_horizontal_dimension(var.get_dimensions())
-        #if compat_obj.has_dim_transforms:
-        print("SWALES ",hdim,var.get_prop_value('local_name'))
+        var_hdim,hdim = find_horizontal_dimension(var.get_dimensions())
+        if var_hdim:
+            if self.run_phase():
+                ldim = "horizontal_loop_begin"
+                udim = "horizontal_loop_end"
+            else:
+                ldim = "ccpp_constant_one"
+                udim = "horizontal_dimension"
+            # end if
+            lvar = self.find_variable(ldim)
+            if lvar is None:
+                raise CCPPError(f"add_var_transform: Cannot find dimension variable, {ldim}")
+            # end if
+            uvar = self.find_variable(udim)
+            if uvar is None:
+                raise CCPPError(f"add_var_transform: Cannot find dimension variable, {udim}")
+            # end if
+            rindices[hdim] = lvar.get_prop_value('local_name')+':'+uvar.get_prop_value('local_name')
 
         # Register any reverse (pre-Scheme) transforms. Also, save local_name used in
         # transform (used in write stage).
@@ -1542,6 +1558,7 @@ class Scheme(SuiteObject):
         <lindices> are the LHS indices of <var>   for forward transforms (after  Scheme).
         <rindices> are the RHS indices of <dummy> for forward transforms (after  Scheme).
         """
+
         #
         # Write reverse (pre-Scheme) transform.
         #
@@ -1561,7 +1578,7 @@ class Scheme(SuiteObject):
                                                 lvar_indices=rindices,
                                                 rvar_indices=lindices)
         # end if
-
+        
         (conditional, vars_needed) = var.conditional(cldicts)
         if conditional != '.true.':
             outfile.write(f"if {conditional} then", indent)
