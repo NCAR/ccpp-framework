@@ -159,7 +159,7 @@ class CallList(VarDictionary):
                         raise CCPPError(errmsg.format(stdname, clnames))
                     # end if
                     dimensions = dvar.get_dimensions()
-                    lname = dvar.call_string(cldict)
+                    lname = dvar.call_string(cldicts)
                     # Optional variables in the caps are associated with
                     # local pointers of <lname>_ptr
                     if var.get_prop_value('optional'):
@@ -770,7 +770,7 @@ class SuiteObject(VarDictionary):
             if self.phase() == 'register':
                 found_var = True
                 new_vdims = [':']
-                return found_var, local_var, dict_var, var_vdim, new_vdims, compat_obj
+                return found_var, local_var, dict_var, var_vdim, new_vdims, compat_obj, scheme_var
             else:
                 errmsg = "Variables of type ccpp_constituent_properties_t only allowed in register phase: "
                 sname  = var.get_prop_value('standard_name')
