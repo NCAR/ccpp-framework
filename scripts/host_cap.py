@@ -511,7 +511,7 @@ def suite_part_call_list(host_model, const_dict, suite_part, subst_loop_vars,
             raise CCPPError(errmsg)
         # End if
         if stdname not in CCPP_CONSTANT_VARS:
-            lname = var_dict.var_call_string(hvar, loop_vars=loop_vars)
+            lname = var_dict.var_call_string(hvar)
             hmvars.append(f"{sp_lname}={lname}")
         # End if
     # End for
