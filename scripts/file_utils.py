@@ -5,9 +5,6 @@ Utilities for checking and manipulating file status
 """
 
 # Python library imports
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import filecmp
 import glob
 import os

@@ -1,6 +1,5 @@
 """Public API for the parse_tools library
 """
-from __future__ import absolute_import
 import sys
 import os.path
 sys.path.insert(0, os.path.dirname(__file__))
