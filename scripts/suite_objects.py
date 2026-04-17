@@ -164,9 +164,10 @@ class CallList(VarDictionary):
                     # local pointers of <lname>_ptr
                     if var.get_prop_value('optional'):
                         lname = dummy+'_ptr'
+                    # end if
                     # Finally, handle the dimensions.
                     else:
-                        if dimensions and not host_var:
+                        if dimensions:# and not host_var:
                             dimstr = '('
                             for cnt,dim in enumerate(dimensions):
                                 if is_horizontal_dimension(dim):
@@ -1684,17 +1685,17 @@ class Scheme(SuiteObject):
             if (has_transform):
                 lname = var.get_prop_value('local_name')+'_local'
             else:
-                lname = dvar.call_string(search_dict)
+                lname = dvar.call_string(search_dict)+dimstr
             # end if
             lname_ptr = var.get_prop_value('local_name') + '_ptr'
             # Scheme has optional varaible, host has varaible defined as Conditional (Active).
             if conditional != '.true.':
                 outfile.write(f"if {conditional} then", indent)
-                outfile.write(f"{lname_ptr} => {lname+dimstr}", indent+1)
+                outfile.write(f"{lname_ptr} => {lname}", indent+1)
                 outfile.write(f"end if", indent)
              # Scheme has optional varaible, host has varaible defined as Mandatory.
             else:
-                outfile.write(f"{lname_ptr} => {lname+dimstr}", indent)
+                outfile.write(f"{lname_ptr} => {lname}", indent)
             # end if
         # end if
     # end def
@@ -1835,8 +1836,8 @@ class Scheme(SuiteObject):
                                               local_trans_var.get_prop_value('local_name'),
                                               lindices, rindices, compat_obj])
         # end if
-    def write_var_transform(self, var, dummy, rindices, lindices, compat_obj,
-                            outfile, indent, forward):
+    def write_var_transform(self, var, var_name, dummy, rindices, lindices, compat_obj,
+                            outfile, indent, forward, cldicts):
         """Write variable transformation needed to call this Scheme in <outfile>.
         <var> is the variable that needs transformation before and after calling Scheme.
         <dummy> is the local variable needed for the transformation..
@@ -1851,7 +1852,7 @@ class Scheme(SuiteObject):
         if not forward:
             # dummy(lindices) = var(rindices)
             stmt = compat_obj.reverse_transform(lvar_lname=dummy,
-                                                rvar_lname=var,
+                                                rvar_lname=var_name,
                                                 lvar_indices=lindices,
                                                 rvar_indices=rindices)
         #
@@ -1859,12 +1860,21 @@ class Scheme(SuiteObject):
         #
         else:
             # var(lindices) = dummy(rindices)
-            stmt = compat_obj.forward_transform(lvar_lname=var,
+            stmt = compat_obj.forward_transform(lvar_lname=var_name,
                                                 rvar_lname=dummy,
                                                 lvar_indices=rindices,
                                                 rvar_indices=lindices)
         # end if
-        outfile.write(stmt, indent)
+
+        (conditional, vars_needed) = var.conditional(cldicts)
+        if conditional != '.true.':
+            outfile.write(f"if {conditional} then", indent)
+            outfile.write(stmt, indent+1)
+            outfile.write(f"end if", indent)
+        # Scheme has optional varaible, host has varaible defined as Mandatory.                                                                
+        else:
+            outfile.write(stmt, indent)
+        # end if
 
     def write(self, outfile, errcode, errmsg, indent):
         # Unused arguments are for consistent write interface
@@ -1913,7 +1923,7 @@ class Scheme(SuiteObject):
             # Group's call_list.
             lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
             lvar_lname = lvar.call_string(self.__group.call_list)
-            tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, False)
+            tstmt = self.write_var_transform(lvar, lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, False, cldicts)
         # end for
         outfile.write('',indent+1)
         #
@@ -1958,7 +1968,7 @@ class Scheme(SuiteObject):
             # Group's call_list.
             lvar       = self.__group.call_list.find_variable(standard_name=var_sname)
             lvar_lname = lvar.call_string(self.__group.call_list)
-            tstmt = self.write_var_transform(lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, True)
+            tstmt = self.write_var_transform(lvar, lvar_lname, dummy, rindices, lindices, compat_obj, outfile, indent+1, True, cldicts)
         # end for
         outfile.write('', indent)
         outfile.write('end if', indent)
