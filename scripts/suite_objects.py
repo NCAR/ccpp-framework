@@ -1104,7 +1104,7 @@ class Scheme(SuiteObject):
             vdims = var.get_dimensions()
             vintent = var.get_prop_value('intent')
             args = self.match_variable(var, self.run_env, host_dict)
-            found, dict_var, local_var, vert_dim, new_dims, compat_obj, scheme_var = args
+            found, dict_var, local_var, var_vdim, new_dims, compat_obj, scheme_var = args
             if dict_var:
                 if dict_var.is_ddt():
                     subst_dict = {'intent':'inout'}
@@ -1125,8 +1125,8 @@ class Scheme(SuiteObject):
                         # end if
                     # end if
                 # end if
-                if not self.has_vertical_dim:
-                    self.__has_vertical_dimension = vert_dim is not None
+#                if not self.has_vertical_dim:
+#                    self.__has_vertical_dimension = vert_dim is not None
                 # end if
                 # We have a match, make sure var is in call list
                 if new_dims == vdims:
@@ -1197,9 +1197,9 @@ class Scheme(SuiteObject):
                                            compat_obj.has_kind_transforms):
                 if scheme_var is not None:
                     print("SWALES scheme_var for transform",scheme_var.get_prop_value('local_name'))
-                    self.add_var_transform(scheme_var, compat_obj, vert_dim)
+                    self.add_var_transform(scheme_var, compat_obj)
                 else:
-                    self.add_var_transform(var, compat_obj, vert_dim)
+                    self.add_var_transform(var, compat_obj)
                 # end if
                 has_transform = True
             # end if
@@ -1853,7 +1853,7 @@ class Scheme(SuiteObject):
         # end if
     # end def
 
-    def add_var_transform(self, var, compat_obj, vert_dim):
+    def add_var_transform(self, var, compat_obj):
         """Register any variable transformation needed by <var> for this Scheme.
         For any transformation identified in <compat_obj>, create dummy variable
         from <var> to perform the transformation. Determine the indices needed
@@ -1886,7 +1886,7 @@ class Scheme(SuiteObject):
         # If needed, modify vertical dimension for vertical orientation flipping
         _, vdim    = find_vertical_dimension(var.get_dimensions())
         if vdim >= 0:
-           vdims  = vert_dim.split(':')
+           vdims  = vdim.split(':')
            vdim_name  = vdims[-1]
            group_vvar = self.__group.call_list.find_variable(vdim_name)
            if group_vvar is None:
