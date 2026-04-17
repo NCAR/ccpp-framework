@@ -51,7 +51,7 @@ There are several `<options>...` to enable tests:
 5) `-DCCPP_RUN_VAR_COMPATIBILITY_TEST=ON` Turns on only the variable compatibility test
 5) `-DCCPP_RUN_NESTED_SUITE_TEST=ON` Turns on only the nested suite test
 
-By default, the tests will build in release mode.  To enable debug mode, you will need to set the build type: `-DCMAKE_BUILD_TYPE=Release` (or if you want release with debug symbols: `-DCMAKE_BUILD_TYPE=RelWithDebInfo`).
+By default, the tests will build in debug mode.  To enable release mode, you will need to set the build type: `-DCMAKE_BUILD_TYPE=Release` (or if you want release with debug symbols: `-DCMAKE_BUILD_TYPE=RelWithDebInfo`).
 
 To enable more verbose output for `ccpp_capgen.py`, add `-DCCPP_VERBOSITY=<n>` to the `cmake` command line arguments where `n={1,2,3}` (`n=0` or no verbosity by default).
 
