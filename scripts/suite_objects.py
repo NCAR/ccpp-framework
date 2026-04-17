@@ -1026,7 +1026,7 @@ class Scheme(SuiteObject):
                 # Hack to get the missing dimensions promoted to the right place
                 # Add variable allocation checks for group, suite and host variables
                 if dict_var:
-                    self.add_var_debug_check(dict_var)
+                    self.handle_downstream_variables(dict_var)
                 # end if
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
@@ -1096,14 +1096,8 @@ class Scheme(SuiteObject):
         # end for
         return scheme_mods
 
-    def add_var_debug_check(self, var):
-        """Add a debug check for a given variable var (host model variable,
-        suite variable or group module variable) for this scheme.
-        Return the variable and an associated dummy variable that is
-        managed by the group subroutine that calls the scheme, and
-        which is used to assign the scalar or the lower and upper bounds
-        of the array to if the intent is 'inout' or 'out'.
-        """
+    def handle_downstream_variables(self, var):
+        """Ensure all dimension and optional variable arguments are available"""
         # Get the basic attributes that decide whether we need
         # to check the variable when we write the group
         standard_name = var.get_prop_value('standard_name')
@@ -1125,34 +1119,6 @@ class Scheme(SuiteObject):
             (_, vars_needed) = var.conditional(var_dicts)
             for var_needed in vars_needed:
                 self.update_group_call_list_variable(var_needed)
-
-        # For scalars and arrays, need an internal_var variable (same kind and type)
-        # that we can assign the scalar or the lbound/ubound of the array to.
-        # We need to treat DDTs and variables with kind attributes slightly
-        # differently, and make sure there are no duplicate variables. We
-        # also need to assign a bogus standard name to these local variables.
-        vtype = var.get_prop_value('type')
-        if var.is_ddt():
-            vkind = ''
-            units = ''
-        else:
-            vkind = var.get_prop_value('kind')
-            units = var.get_prop_value('units')
-        if vkind:
-            internal_var_lname = f'internal_var_{vtype.replace("=","_")}_{vkind.replace("=","_")}'
-        else:
-            internal_var_lname = f'internal_var_{vtype.replace("=","_")}'
-        if var.is_ddt():
-            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
-                         'ddt_type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
-                         _API_LOCAL, self.run_env)
-        else:
-            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
-                         'type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
-                         _API_LOCAL, self.run_env)
-        found = self.__group.find_variable(source_var=internal_var, any_scope=False)
-        if not found:
-            self.__group.manage_variable(internal_var)
 
         # For arrays, we need to get information on the dimensions and add it to
         # the group's call list so that we can test for the correct size later on
