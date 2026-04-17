@@ -738,7 +738,7 @@ class Var:
                         else:
                             errmsg = 'No local variable {} in variable dictionaries'
                             ctx = context_string(self.context)
-                            raise CCPPError(errmsg.format(item, dname, ctx))
+                            raise CCPPError(errmsg.format(item, lname, ctx))
                         # end if
                     # end for
                 # end if
