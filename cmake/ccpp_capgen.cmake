@@ -1,7 +1,6 @@
 # CMake wrapper for ccpp_capgen.py
 # Currently meant to be a CMake API needed for generating caps for regression tests.
 #
-# CAPGEN_DEBUG              - ON/OFF (Default: OFF) - Enables debug capability through ccpp_capgen.py
 # CAPGEN_EXPECT_THROW_ERROR - ON/OFF (Default: OFF) - Scans ccpp_capgen.py log for error string and errors if not found.
 # HOST_NAME                 - String name of host
 # OUTPUT_ROOT               - String path to put generated caps
@@ -10,7 +9,7 @@
 # SCHEMEFILES               - CMake list of scheme metadata files
 # SUITES                    - CMake list of suite xml files
 function(ccpp_capgen)
-  set(optionalArgs CAPGEN_DEBUG CAPGEN_EXPECT_THROW_ERROR)
+  set(optionalArgs CAPGEN_EXPECT_THROW_ERROR)
   set(oneValueArgs HOST_NAME OUTPUT_ROOT VERBOSITY KIND_SPECS)
   set(multi_value_keywords HOSTFILES SCHEMEFILES SUITES)
 
@@ -23,9 +22,6 @@ function(ccpp_capgen)
   endif()
 
   # Interpret parsed arguments
-  if(DEFINED arg_CAPGEN_DEBUG)
-    list(APPEND CCPP_CAPGEN_CMD_LIST "--debug")
-  endif()
   if(DEFINED arg_HOSTFILES)
     list(JOIN arg_HOSTFILES "," HOSTFILES_SEPARATED)
     list(APPEND CCPP_CAPGEN_CMD_LIST "--host-files" "${HOSTFILES_SEPARATED}")
