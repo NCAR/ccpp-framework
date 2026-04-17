@@ -54,14 +54,14 @@
 [ temp_prev ]
   standard_name = potential_temperature_at_previous_timestep
   units = K
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = in
 [ temp_layer ]
   standard_name = potential_temperature
   units = K
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = inout
@@ -69,7 +69,7 @@
 [ qv ]
   standard_name = water_vapor_specific_humidity
   units = kg kg-1
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = inout
@@ -86,7 +86,7 @@
 [ to_promote ]
   standard_name = promote_this_variable_to_suite
   units = K
-  dimensions = (horizontal_loop_extent)
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
   type = real
   kind = kind_temp
   intent = in

@@ -72,8 +72,25 @@ add_library(CAPGEN_TESTLIB OBJECT ${SCHEME_FORTRAN_FILES}
 
 # Setup test executable with needed dependencies
 add_executable(capgen_host_integration test_capgen_host_integration.F90 ${HOST}.F90)
+if(OPENMP)
+  target_link_libraries(capgen_host_integration PRIVATE OpenMP::OpenMP_Fortran)
+endif()
 target_link_libraries(capgen_host_integration PRIVATE CAPGEN_TESTLIB test_utils)
 target_include_directories(capgen_host_integration PRIVATE "$<TARGET_PROPERTY:test_utils,BINARY_DIR>")
 
 # Add executable to be called with ctest
-add_test(NAME ctest_capgen_host_integration COMMAND capgen_host_integration)
+add_test(NAME ctest_capgen_host_integration_omp1
+         COMMAND capgen_host_integration)
+
+add_test(NAME ctest_capgen_host_integration_omp2
+         COMMAND capgen_host_integration)
+
+set_tests_properties(ctest_capgen_host_integration_omp1
+    PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1"
+)
+
+set_tests_properties(ctest_capgen_host_integration_omp2
+    PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=2"
+)

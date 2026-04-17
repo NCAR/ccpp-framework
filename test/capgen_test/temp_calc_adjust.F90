@@ -1,108 +1,111 @@
 !Test parameterization with no vertical level and hanging intent(out) variable
 !
 
-MODULE temp_calc_adjust
+module temp_calc_adjust
 
-   USE ccpp_kinds, ONLY: kind_phys
+  use ccpp_kinds, only: kind_phys
 
-   IMPLICIT NONE
-   PRIVATE
+  implicit none
+  private
 
-   PUBLIC :: temp_calc_adjust_register
-   PUBLIC :: temp_calc_adjust_init
-   PUBLIC :: temp_calc_adjust_run
-   PUBLIC :: temp_calc_adjust_finalize
+  public :: temp_calc_adjust_register
+  public :: temp_calc_adjust_init
+  public :: temp_calc_adjust_run
+  public :: temp_calc_adjust_finalize
 
-CONTAINS
+contains
 
-   !> \section arg_table_temp_calc_adjust_register  Argument Table
-   !! \htmlinclude arg_table_temp_calc_adjust_register.html
-   !!
-   SUBROUTINE temp_calc_adjust_register(dim_inter, errmsg, errflg)
-       integer, intent(out) :: dim_inter
-       character(len=512), intent(out) :: errmsg
-       integer, intent(out) :: errflg
+! codee format off
+!> \section arg_table_temp_calc_adjust_register  Argument Table
+!! \htmlinclude arg_table_temp_calc_adjust_register.html
+!!
+  SUBROUTINE temp_calc_adjust_register(dim_inter, errmsg, errflg)
+! codee format on
+    integer, intent(out) :: dim_inter
+    character(len=512), intent(out) :: errmsg
+    integer, intent(out) :: errflg
 
-       errflg = 0
-       errmsg = ''
-       dim_inter = 3
-   END SUBROUTINE temp_calc_adjust_register
-   !> \section arg_table_temp_calc_adjust_run  Argument Table
-   !! \htmlinclude arg_table_temp_calc_adjust_run.html
-   !!
-   SUBROUTINE temp_calc_adjust_run(nbox, timestep, temp_level, temp_calc,     &
-        errmsg, errflg)
+    errflg = 0
+    errmsg = ''
+    dim_inter = 3
+  end subroutine temp_calc_adjust_register
 
-      integer,            intent(in)    :: nbox
-      real(kind_phys),    intent(in)    :: timestep
-      real(kind_phys),    intent(in)    :: temp_level(:,:)
-      REAL(kind_phys),    intent(out)   :: temp_calc(:)
-      character(len=512), intent(out)   :: errmsg
-      integer,            intent(out)   :: errflg
-      !----------------------------------------------------------------
+  !> \section arg_table_temp_calc_adjust_run  Argument Table
+  !! \htmlinclude arg_table_temp_calc_adjust_run.html
+  !!
+  subroutine temp_calc_adjust_run(nbox, timestep, temp_level, temp_calc, &
+      errmsg, errflg)
 
-      integer         :: col_index
-      real(kind_phys) :: bar = 1.0_kind_phys
+    integer, intent(in) :: nbox
+    real(kind=kind_phys), intent(in) :: timestep
+    real(kind=kind_phys), intent(in) :: temp_level(:, :)
+    real(kind=kind_phys), intent(out) :: temp_calc(:, :)
+    character(len=512), intent(out) :: errmsg
+    integer, intent(out) :: errflg
+    !----------------------------------------------------------------
 
-      errmsg = ''
-      errflg = 0
+    integer :: col_index
+    real(kind=kind_phys) :: bar = 1.0_kind_phys
 
-      call temp_calc_adjust_nested_subroutine(temp_calc)
-      if (check_foo()) then
-         call foo(bar)
-      end if
+    errmsg = ''
+    errflg = 0
 
-   CONTAINS
+    call temp_calc_adjust_nested_subroutine(temp_calc)
+    if (check_foo()) then
+      call foo(bar)
+    end if
 
-      ELEMENTAL SUBROUTINE temp_calc_adjust_nested_subroutine(temp)
+  contains
 
-         REAL(kind_phys),    intent(out)   :: temp
-         !-------------------------------------------------------------
+    elemental subroutine temp_calc_adjust_nested_subroutine(temp)
 
-         temp = 1.0_kind_phys
+      real(kind=kind_phys), intent(out) :: temp
+      !-------------------------------------------------------------
 
-      END SUBROUTINE temp_calc_adjust_nested_subroutine
+      temp = 1.0_kind_phys
 
-      SUBROUTINE foo(bar)
-         REAL(kind_phys), intent(inout) :: bar
-         bar = bar + 1.0_kind_phys
+    end subroutine temp_calc_adjust_nested_subroutine
 
-      END SUBROUTINE
+    subroutine foo(bar)
+      real(kind=kind_phys), intent(inout) :: bar
+      bar = bar + 1.0_kind_phys
 
-      logical function check_foo()
-         check_foo = .true.
-      end function check_foo
+    end subroutine foo
 
-   END SUBROUTINE
+    logical function check_foo()
+      check_foo = .true.
+    end function check_foo
 
-   !> \section arg_table_temp_calc_adjust_init  Argument Table
-   !! \htmlinclude arg_table_temp_calc_adjust_init.html
-   !!
-   subroutine temp_calc_adjust_init (errmsg, errflg)
+  end subroutine temp_calc_adjust_run
 
-      character(len=512),      intent(out)   :: errmsg
-      integer,                 intent(out)   :: errflg
+  !> \section arg_table_temp_calc_adjust_init  Argument Table
+  !! \htmlinclude arg_table_temp_calc_adjust_init.html
+  !!
+  subroutine temp_calc_adjust_init(errmsg, errflg)
 
-      ! This routine currently does nothing
+    character(len=512), intent(out) :: errmsg
+    integer, intent(out) :: errflg
 
-      errmsg = ''
-      errflg = 0
+    ! This routine currently does nothing
 
-   end subroutine temp_calc_adjust_init
+    errmsg = ''
+    errflg = 0
 
-   !> \section arg_table_temp_calc_adjust_finalize  Argument Table
-   !! \htmlinclude arg_table_temp_calc_adjust_finalize.html
-   !!
-   subroutine temp_calc_adjust_finalize (errmsg, errflg)
+  end subroutine temp_calc_adjust_init
 
-      character(len=512),      intent(out)   :: errmsg
-      integer,                 intent(out)   :: errflg
+  !> \section arg_table_temp_calc_adjust_finalize  Argument Table
+  !! \htmlinclude arg_table_temp_calc_adjust_finalize.html
+  !!
+  subroutine temp_calc_adjust_finalize(errmsg, errflg)
 
-      ! This routine currently does nothing
+    character(len=512), intent(out) :: errmsg
+    integer, intent(out) :: errflg
 
-      errmsg = ''
-      errflg = 0
+    ! This routine currently does nothing
 
-   end subroutine temp_calc_adjust_finalize
+    errmsg = ''
+    errflg = 0
 
-END MODULE temp_calc_adjust
+  end subroutine temp_calc_adjust_finalize
+
+end module temp_calc_adjust

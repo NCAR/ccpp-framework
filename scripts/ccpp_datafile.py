@@ -27,7 +27,7 @@ from metadata_table import UNKNOWN_PROCESS_TYPE
 from metavar import Var
 from parse_tools import read_xml_file, write_xml_file
 from parse_tools import ParseContext, ParseSource
-from suite_objects import VerticalLoop, Subcycle
+from suite_objects import  Subcycle
 
 # Global data
 _INDENT_STR = "  "
@@ -1093,9 +1093,6 @@ def _add_suite_object(parent, suite_object):
     ptype = suite_object.phase_type
     if ptype:
         obj_elem.set("phase", ptype)
-    # end if
-    if isinstance(suite_object, VerticalLoop):
-        obj_elem.set("dimension_name", suite_object.dimension_name)
     # end if
     if isinstance(suite_object, Subcycle):
         obj_elem.set("loop", suite_object._loop)

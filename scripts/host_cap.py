@@ -732,12 +732,12 @@ def write_host_cap(host_model, api, module_name, output_dir, run_env):
                     cap.write("return", 4)
                     cap.write("end if", 3)
                     # Allocate the suite's dynamic constituents array
-                    size_string = "0+"
+                    size_string = "0 +"
                     for var in host_local_vars.variable_list():
                         vtype = var.get_prop_value('type')
                         if vtype == 'ccpp_constituent_properties_t':
                             local_name = var.get_prop_value('local_name')
-                            size_string += f"size({local_name})+"
+                            size_string += f"size({local_name}) +"
                         # end if
                     # end for
                     if not has_dyn_consts:
