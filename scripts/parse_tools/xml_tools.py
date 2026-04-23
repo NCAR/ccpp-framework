@@ -5,7 +5,6 @@ Parse a host-model registry XML file and return the captured variables.
 """
 
 # Python library imports
-from __future__ import print_function
 import os
 import re
 import shutil

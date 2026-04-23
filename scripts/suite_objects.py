@@ -946,7 +946,6 @@ class Scheme(SuiteObject):
         self.__lib = scheme_xml.get('lib', None)
         self.__has_vertical_dimension = False
         self.__group = None
-        self.__var_debug_checks = list()
         self.__forward_transforms = list()
         self.__reverse_transforms = list()
         self._has_run_phase = True
@@ -1024,10 +1023,10 @@ class Scheme(SuiteObject):
             args = self.match_variable(var, self.run_env)
             found, dict_var, vert_dim, new_dims, compat_obj = args
             if found:
-                if self.__group.run_env.debug:
-                    # Add variable allocation checks for group, suite and host variables
-                    if dict_var:
-                        self.add_var_debug_check(dict_var)
+                # Hack to get the missing dimensions promoted to the right place
+                # Add variable allocation checks for group, suite and host variables
+                if dict_var:
+                    self.handle_downstream_variables(dict_var)
                 # end if
                 if not self.has_vertical_dim:
                     self.__has_vertical_dimension = vert_dim is not None
@@ -1097,14 +1096,8 @@ class Scheme(SuiteObject):
         # end for
         return scheme_mods
 
-    def add_var_debug_check(self, var):
-        """Add a debug check for a given variable var (host model variable,
-        suite variable or group module variable) for this scheme.
-        Return the variable and an associated dummy variable that is
-        managed by the group subroutine that calls the scheme, and
-        which is used to assign the scalar or the lower and upper bounds
-        of the array to if the intent is 'inout' or 'out'.
-        """
+    def handle_downstream_variables(self, var):
+        """Ensure all dimension and optional variable arguments are available"""
         # Get the basic attributes that decide whether we need
         # to check the variable when we write the group
         standard_name = var.get_prop_value('standard_name')
@@ -1126,34 +1119,6 @@ class Scheme(SuiteObject):
             (_, vars_needed) = var.conditional(var_dicts)
             for var_needed in vars_needed:
                 self.update_group_call_list_variable(var_needed)
-
-        # For scalars and arrays, need an internal_var variable (same kind and type)
-        # that we can assign the scalar or the lbound/ubound of the array to.
-        # We need to treat DDTs and variables with kind attributes slightly
-        # differently, and make sure there are no duplicate variables. We
-        # also need to assign a bogus standard name to these local variables.
-        vtype = var.get_prop_value('type')
-        if var.is_ddt():
-            vkind = ''
-            units = ''
-        else:
-            vkind = var.get_prop_value('kind')
-            units = var.get_prop_value('units')
-        if vkind:
-            internal_var_lname = f'internal_var_{vtype.replace("=","_")}_{vkind.replace("=","_")}'
-        else:
-            internal_var_lname = f'internal_var_{vtype.replace("=","_")}'
-        if var.is_ddt():
-            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
-                         'ddt_type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
-                         _API_LOCAL, self.run_env)
-        else:
-            internal_var = Var({'local_name':internal_var_lname, 'standard_name':f'{internal_var_lname}_local',
-                         'type':vtype, 'kind':vkind, 'units':units, 'dimensions':'()'},
-                         _API_LOCAL, self.run_env)
-        found = self.__group.find_variable(source_var=internal_var, any_scope=False)
-        if not found:
-            self.__group.manage_variable(internal_var)
 
         # For arrays, we need to get information on the dimensions and add it to
         # the group's call list so that we can test for the correct size later on
@@ -1188,269 +1153,6 @@ class Scheme(SuiteObject):
                     else:
                         self.update_group_call_list_variable(udim_var)
                     # end if
-
-        # Add the variable to the list of variables to check. Record which internal_var to use.
-        self.__var_debug_checks.append([var, internal_var])
-
-    def replace_horiz_dim_debug_check(self, dim, cldicts, var_in_call_list):
-        """Determine the correct horizontal dimension to use for a given variable,
-        depending on the CCPP phase and origin of the variable (from the host/suite
-        or defined as a module variable for the parent group, or local to the group.
-        Return the dimension length and other properties needed for debug checks."""
-        if not is_horizontal_dimension(dim):
-            raise Exception(f"Dimension {dim} is not a horizontal dimension")
-        if self.run_phase():
-            if var_in_call_list and \
-                self.find_variable(standard_name="horizontal_loop_extent"):
-                ldim = "ccpp_constant_one"
-                udim = "horizontal_loop_extent"
-            else:
-                ldim = "horizontal_loop_begin"
-                udim = "horizontal_loop_end"
-        else:
-            ldim = "ccpp_constant_one"
-            udim = "horizontal_dimension"
-        # Get dimension for lower bound
-        for var_dict in cldicts:
-            dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
-            if dvar is not None:
-                break
-        if not dvar:
-            raise Exception(f"No variable with standard name '{ldim}' in cldicts")
-        ldim_lname = dvar.get_prop_value('local_name')
-        # Get dimension for upper bound
-        for var_dict in cldicts:
-            dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
-            if dvar is not None:
-                break
-        if not dvar:
-            raise Exception(f"No variable with standard name '{udim}' in cldicts")
-        udim_lname = dvar.get_prop_value('local_name')
-        # Assemble dimensions and bounds for size checking
-        dim_length = f'{udim_lname}-{ldim_lname}+1'
-        # If the variable that uses these dimensions is not in the group's call
-        # list, then it is defined as a module variable for this group and the
-        # dimensions run from ldim to udim, otherwise from 1:dim_length.
-        if not var_in_call_list:
-            dim_string = f"{ldim_lname}:{udim_lname}"
-            lbound_string = ldim_lname
-            ubound_string = udim_lname
-        else:
-            dim_string = ":"
-            lbound_string = '1'
-            ubound_string = f'{udim_lname}-{ldim_lname}+1'
-        return (dim_length, dim_string, lbound_string, ubound_string)
-
-    def write_var_debug_check(self, var, internal_var, cldicts, outfile, errcode, errmsg, indent):
-        """Write the variable debug check for the given variable, as determined
-        in a previous step (add_var_debug_check). Assign the scalar or lower and
-        upper bounds of the array to the internal_var variable, and for arrays also check
-        that the size of the array matches the dimensions from the metadata.
-        """
-        # Get the basic attributes for writing the check
-        standard_name = var.get_prop_value('standard_name')
-        dimensions = var.get_dimensions()
-        active = var.get_prop_value('active')
-        allocatable = var.get_prop_value('allocatable')
-        vtype = var.get_prop_value('type')
-
-        # Need the local name from the group call list,
-        # from the locally-defined variables of the group,
-        # or from the suite, not how it is called in the scheme (var)
-        # First, check if the variable is in the call list.
-        dvar = self.__group.call_list.find_variable(standard_name=standard_name, any_scope=False)
-        if dvar:
-            var_in_call_list = True
-        else:
-            var_in_call_list = False
-            # If it is not in the call list, try to find it
-            # in the local variables of this group subroutine.
-            dvar = self.__group.find_variable(standard_name=standard_name, any_scope=False)
-            if not dvar:
-                # This variable is handled by the group
-                # and is declared as a module variable
-                for var_dict in self.__group.suite_dicts():
-                    dvar = var_dict.find_variable(standard_name=standard_name, any_scope=False)
-                    if dvar:
-                        break
-        if not dvar:
-            raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
-        local_name = dvar.get_prop_value('local_name')
-
-        # If the variable is allocatable and the intent for the scheme is 'out',
-        # then we can't test anything because the scheme is going to allocate
-        # the variable. We don't have this information earlier in
-        # add_var_debug_check, therefore need to back out here,
-        # using the information from the scheme variable (call list).
-        svar = self.call_list.find_variable(standard_name=standard_name, any_scope=False)
-        intent = svar.get_prop_value('intent')
-        if intent == 'out' and allocatable:
-            return
-        # end if
-
-        # Get the condition on which the variable is active
-        (conditional, _) = var.conditional(cldicts)
-
-        # For scalars, assign to internal_var variable if the variable intent is in/inout
-        if not dimensions:
-            if not intent == 'out':
-                internal_var_lname = internal_var.get_prop_value('local_name')
-                tmp_indent = indent
-                if conditional != '.true.':
-                    tmp_indent = indent + 1
-                    outfile.write(f"if {conditional} then", indent)
-                # end if
-                outfile.write(f"! Assign value of {local_name} to {internal_var_lname}", tmp_indent)
-                outfile.write(f"{internal_var_lname} = {local_name}", tmp_indent)
-                outfile.write('',tmp_indent)
-                if conditional != '.true.':
-                    outfile.write(f"end if", indent)
-                # end if
-        # For arrays, check size of array against dimensions in metadata, then assign
-        # the lower and upper bounds to the internal_var variable if the intent is in/inout
-        else:
-            array_size = 1
-            dim_strings = []
-            lbound_strings = []
-            ubound_strings = []
-            dim_lengths = []
-            local_names = []
-            for dim in dimensions:
-                if not ':' in dim:
-                    # In capgen, any true dimension (that is not a single index) does
-                    # have a colon (:) in the dimension, therefore this is an index
-                    for var_dict in cldicts:
-                        dvar = var_dict.find_variable(standard_name=dim, any_scope=False)
-                        if dvar is not None:
-                            break
-                    if not dvar:
-                        raise Exception(f"No variable with standard name '{dim}' in cldicts")
-                    dim_lname = dvar.get_prop_value('local_name')
-                    dim_length = 1
-                    dim_strings.append(dim_lname)
-                    lbound_strings.append(dim_lname)
-                    ubound_strings.append(dim_lname)
-                else:
-                    # Horizontal dimension needs to be dealt with separately, because it
-                    # depends on the CCPP phase, whether the variable is a host/suite
-                    # variable or locally defined on the group level.
-                    if is_horizontal_dimension(dim):
-                        (dim_length, dim_string, lbound_string, ubound_string) = \
-                            self.replace_horiz_dim_debug_check(dim, cldicts, var_in_call_list)
-                    else:
-                        (ldim, udim) = dim.split(":")
-                        # Get dimension for lower bound
-                        for var_dict in cldicts:
-                            dvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
-                            if dvar is not None:
-                                ldim_lname = dvar.get_prop_value('local_name')
-                                break
-                        if not dvar:
-                            # To allow for numerical dimensions in metadata.
-                            if ldim.isnumeric():
-                                ldim_lname = ldim
-                            else:
-                                raise Exception(f"No variable with standard name '{ldim}' in cldicts")
-                            # endif
-                        # endif
-                        # Get dimension for upper bound
-                        for var_dict in cldicts:
-                            dvar = var_dict.find_variable(standard_name=udim, any_scope=False)
-                            if dvar is not None:
-                                udim_lname = dvar.get_prop_value('local_name')
-                                break
-                        if not dvar:
-                            # To allow for numerical dimensions in metadata.
-                            if udim.isnumeric():
-                                udim_lname = udim
-                            else:
-                                raise Exception(f"No variable with standard name '{udim}' in cldicts")
-                            # end if
-                        # end if
-                        # Assemble dimensions and bounds for size checking
-                        dim_length = f'{udim_lname}-{ldim_lname}+1'
-                        dim_string = ":"
-                        lbound_string = ldim_lname
-                        ubound_string = udim_lname
-                    # end if
-                    dim_strings.append(dim_string)
-                    lbound_strings.append(lbound_string)
-                    ubound_strings.append(ubound_string)
-                array_size = f'{array_size}*({dim_length})'
-                dim_lengths.append(dim_length)
-                local_names.append(local_name)
-            # end for
-            # Various strings needed to get the right size
-            # and lower/upper bound of the array
-            dim_string = '(' + ','.join(dim_strings) + ')'
-            lbound_string = '(' + ','.join(lbound_strings) + ')'
-            ubound_string = '(' + ','.join(ubound_strings) + ')'
-
-            # Write size check
-            # - Only for types int and real.
-            if (vtype == "integer") or (vtype == "real"):
-                tmp_indent = indent
-                if conditional != '.true.':
-                    tmp_indent = indent + 1
-                    outfile.write(f"if {conditional} then", indent)
-                # end if
-                outfile.write(f"! Check size of array {local_name}", tmp_indent)
-                outfile.write(f"if (size({local_name}{dim_string}) /= {array_size}) then", tmp_indent)
-                outfile.write(f"write({errmsg}, '(2(a,i8))') 'In group {self.__group.name} before  "\
-                              f"{self.__subroutine_name}: for array {local_name}, expected size ', "\
-                              f"{array_size}, ' but got ', size({local_name})", tmp_indent+1)
-                outfile.write(f"{errcode} = 1", tmp_indent+1)
-                outfile.write(f"return", tmp_indent+1)
-                outfile.write(f"end if", tmp_indent)
-                if conditional != '.true.':
-                    outfile.write(f"end if", indent)
-                # end if
-                outfile.write('',indent)
-            # end if
-
-            # Write size check for each dimension in array.
-            #  - If intent is not out.
-            #  - Only for types int and real.
-            if (vtype == "integer") or (vtype == "real"):
-                if not intent == 'out':
-                    tmp_indent = indent
-                    if conditional != '.true.':
-                        tmp_indent = indent + 1
-                        outfile.write(f"if {conditional} then", indent)
-                    # end if
-                    ndims = len(dim_lengths)
-
-                    # Loop through dimensions in var and check if length of each dimension
-                    # is the correct size. Skip for 1D variables.
-                    if (ndims > 1):
-                        for index, dim_length in enumerate(dim_lengths):
-                            array_ref = '('
-                            # Dimension(s) before current rank to be checked.
-                            array_ref += '1,'*(index)
-                            # Dimension to check.
-                            array_ref += dim_strings[index]
-                            # Dimension(s) after current rank to be checked.
-                            array_ref += ',1'*(ndims-(index+1))
-                            array_ref += ')'
-                            #
-                            outfile.write(f"! Check length of {local_names[index]}{array_ref}", tmp_indent)
-                            outfile.write(f"if (size({local_names[index]}{array_ref}) /= {dim_length}) then ",    \
-                                          tmp_indent)
-                            outfile.write(f"write({errmsg}, '(2(a,i8))') 'In group {self.__group.name} before "   \
-                                          f"{self.__subroutine_name}: for array {local_names[index]}{array_ref}, "\
-                                          f"expected size ', {dim_length}, ' but got ', "                         \
-                                          f"size({local_names[index]}{array_ref})", tmp_indent+1)
-                            outfile.write(f"{errcode} = 1", tmp_indent+1)
-                            outfile.write(f"return", tmp_indent+1)
-                            outfile.write(f"end if", tmp_indent)
-                        # end for
-                    #end if
-                    if conditional != '.true.':
-                        outfile.write(f"end if", indent)
-                    # end if
-                    outfile.write('',indent)
-                # endif
-            # end if
 
     def associate_optional_var(self, dict_var, var, var_ptr, has_transform, cldicts, indent, outfile):
         """Write local pointer association for optional variables."""
@@ -1619,25 +1321,6 @@ class Scheme(SuiteObject):
         #
         outfile.write('', indent)
         outfile.write('if ({} == 0) then'.format(errcode), indent)
-        #
-        # Write debug checks (operating on variables
-        # coming from the group's call list)
-        #
-        if self.__var_debug_checks:
-            outfile.write('! ##################################################################', indent+1)
-            outfile.comment('Begin debug tests', indent+1)
-            outfile.write('! ##################################################################', indent+1)
-            outfile.write('', indent+1)
-        # end if
-        for (var, internal_var) in self.__var_debug_checks:
-            stmt = self.write_var_debug_check(var, internal_var, cldicts, outfile, errcode, errmsg, indent+1)
-        # end for
-        if self.__var_debug_checks:
-            outfile.write('! ##################################################################', indent+1)
-            outfile.comment('End debug tests', indent+1)
-            outfile.write('! ##################################################################', indent+1)
-            outfile.write('', indent+1)
-        # end if
         #
         # Write any reverse (pre-Scheme) transforms.
         if len(self.__reverse_transforms) > 0:
