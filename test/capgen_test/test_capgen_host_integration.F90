@@ -5,45 +5,42 @@ program test
   character(len=cs), target :: test_parts1(2) = (/ 'physics1        ', &
       'physics2        ' /)
   character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-  character(len=cm), target :: test_invars1(12) = (/ &
-      'potential_temperature               ', &
-      'potential_temperature_at_interface  ', &
-      'coefficients_for_interpolation      ', &
-      'surface_air_pressure                ', &
-      'water_vapor_specific_humidity       ', &
-      'potential_temperature_increment     ', &
-      'soil_levels                         ', &
-      'temperature_at_diagnostic_levels    ', &
-      'time_step_for_physics               ', &
-      'array_variable_for_testing          ', &
-      'cloud_fraction                      ', & 
-      'do_cloud_fraction_adjustment        '/) 
-  character(len=cm), target :: test_outvars1(10) = (/ &
-      'potential_temperature               ', &
-      'potential_temperature_at_interface  ', &
-      'coefficients_for_interpolation      ', &
-      'surface_air_pressure                ', &
-      'water_vapor_specific_humidity       ', &
-      'soil_levels                         ', &
-      'temperature_at_diagnostic_levels    ', &
-      'ccpp_error_code                     ', &
-      'ccpp_error_message                  ', &
-      'array_variable_for_testing          ' /)
-  character(len=cm), target :: test_reqvars1(14) = (/ &
-      'potential_temperature               ', &
-      'potential_temperature_at_interface  ', &
-      'coefficients_for_interpolation      ', &
-      'surface_air_pressure                ', &
-      'water_vapor_specific_humidity       ', &
-      'potential_temperature_increment     ', &
-      'time_step_for_physics               ', &
-      'soil_levels                         ', &
-      'temperature_at_diagnostic_levels    ', &
-      'ccpp_error_code                     ', &
-      'ccpp_error_message                  ', &
-      'array_variable_for_testing          ', &
-      'cloud_fraction                      ', &
-      'do_cloud_fraction_adjustment        '/)
+  character(len=cm), target :: test_invars1(10) = (/ &
+      'array_variable_for_testing            ', & 
+      'coefficients_for_interpolation        ', & 
+      'physics_state_derived_type            ', & 
+      'potential_temperature                 ', & 
+      'potential_temperature_at_interface    ', & 
+      'temperature_at_diagnostic_levels      ', & 
+      'index_of_water_vapor_specific_humidity', & 
+      'do_cloud_fraction_adjustment          ', & 
+      'potential_temperature_increment       ', & 
+      'time_step_for_physics                 '/)
+
+  character(len=cm), target :: test_outvars1(9) = (/ &
+      'array_variable_for_testing            ', &
+      'coefficients_for_interpolation        ', &
+      'physics_state_derived_type            ', &
+      'potential_temperature                 ', &
+      'potential_temperature_at_interface    ', &
+      'temperature_at_diagnostic_levels      ', &
+      'index_of_water_vapor_specific_humidity', &
+      'ccpp_error_code                       ', &
+      'ccpp_error_message                    '/)
+
+  character(len=cm), target :: test_reqvars1(12) = (/ &
+      'array_variable_for_testing            ', &
+      'coefficients_for_interpolation        ', &
+      'physics_state_derived_type            ', &
+      'potential_temperature                 ', &
+      'potential_temperature_at_interface    ', &
+      'temperature_at_diagnostic_levels      ', &
+      'index_of_water_vapor_specific_humidity', &
+      'do_cloud_fraction_adjustment          ', &
+      'potential_temperature_increment       ', &
+      'time_step_for_physics                 ', &
+      'ccpp_error_code                       ', &
+      'ccpp_error_message                    '/)
 
   character(len=cm), target :: test_invars2(3) = (/ &
       'model_times                         ', &
