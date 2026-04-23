@@ -66,3 +66,8 @@ CONTAINS
   end subroutine reorder_finalize
 
 END MODULE reorder
+
+  ! add some stuff here to check if codee really ignores this
+
+
+! BLA
