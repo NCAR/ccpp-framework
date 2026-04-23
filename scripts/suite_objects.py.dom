@@ -1207,6 +1207,7 @@ class Scheme(SuiteObject):
                                            compat_obj.has_unit_transforms or
                                            compat_obj.has_kind_transforms):
                 if scheme_var is not None:
+                    #print("SWALES scheme_var for transform",scheme_var.get_prop_value('local_name'))
                     self.add_var_transform(scheme_var, compat_obj)
                 else:
                     self.add_var_transform(var, compat_obj)
@@ -1322,7 +1323,7 @@ class Scheme(SuiteObject):
             dvar = self.__group.find_variable(standard_name=standard_name, any_scope=False)
             if not dvar:
                 # This variable is handled by the group
-                # and is declared as a module variable
+	        # and is declared as a module variable
                 for var_dict in self.__group.suite_dicts():
                     dvar = var_dict.find_variable(standard_name=standard_name, any_scope=False)
                     if dvar:
@@ -1335,9 +1336,6 @@ class Scheme(SuiteObject):
         if not dvar:
             raise Exception(f"No variable with standard name '{standard_name}' in cldicts")
         # end if
-        # DH*
-        print(f"DH BBB GOT YOU! {standard_name} / {var.get_prop_value('local_name')} / / {dvar.get_prop_value('local_name')} % .")
-        # *DH
         # Handle the dimensions...
         dimensions = dvar.get_dimensions()
         dimstr = ''
@@ -1410,11 +1408,6 @@ class Scheme(SuiteObject):
                 outfile.write(f"{lname_ptr} => {lname}", indent)
             # end if
         # end if
-
-        if lname_ptr and lname_ptr=="qv_ptr":
-            raise Exception(f"DH CCC: {lname_ptr} => {lname}")
-
-
     # end def
 
     def nullify_optional_var(self, dict_var, var, has_transform, cldicts, indent, outfile):
@@ -1524,8 +1517,6 @@ class Scheme(SuiteObject):
         # end if
 
         # If needed, modify horizontal dimension for loop substitution.
-        #cldicts = [self]#.__group, self.__group.call_list]
-        #cldicts.extend(self.__group.suite_dicts())
         # NOT YET IMPLEMENTED
         hdim = find_horizontal_dimension(var.get_dimensions())
         #if compat_obj.has_dim_transforms:
