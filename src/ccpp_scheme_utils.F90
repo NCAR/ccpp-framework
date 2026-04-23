@@ -2,8 +2,7 @@ module ccpp_scheme_utils
 
   ! Module of utilities available to CCPP schemes
 
-  use ccpp_constituent_prop_mod, only: ccpp_model_constituents_t, &
-                                       int_unassigned
+  use ccpp_constituent_prop_mod, only: ccpp_model_constituents_t, int_unassigned
 
   implicit none
   private
@@ -63,7 +62,7 @@ contains
     ! Dummy arguments
     type(ccpp_model_constituents_t), pointer, intent(in) :: const_obj
 
-    if ( .not. initialized) then
+    if (.not.initialized) then
       constituent_obj => const_obj
       initialized = .true.
     end if

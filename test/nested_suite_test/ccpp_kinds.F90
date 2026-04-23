@@ -10,18 +10,18 @@
 ! IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ! CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 !>
 !! @brief Auto-generated kinds for CCPP
 !!
 !
 module ccpp_kinds
 
-  use iso_fortran_env, only: &
-      kind_phys => real64
+   use ISO_FORTRAN_ENV, only: kind_phys => REAL64
 
-  implicit none
-  private
+   implicit none
+   private
 
-  public :: kind_phys
+   public :: kind_phys
 
 end module ccpp_kinds

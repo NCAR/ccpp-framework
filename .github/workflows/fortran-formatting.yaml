@@ -36,8 +36,32 @@ jobs:
 
           # Filter list of modified files to exclude certain files
           EXCLUDED_FILES=(
-            # file1
-            # file2
+            # Exclude all .F90 files in test/unit_tests/**
+            test/unit_tests/sample_files/test_fortran_to_metadata.F90
+            test/unit_tests/sample_files/fortran_files/array_parsing_test.F90
+            test/unit_tests/sample_files/fortran_files/linebreak_test.F90
+            test/unit_tests/sample_files/fortran_files/long_string_test.F90
+            test/unit_tests/sample_files/fortran_files/comments_test.F90
+            test/unit_tests/sample_host_files/ddt1_plus.F90
+            test/unit_tests/sample_host_files/mismatch_hdim_mod.F90
+            test/unit_tests/sample_host_files/ddt1.F90
+            test/unit_tests/sample_host_files/ddt2_extra_var.F90
+            test/unit_tests/sample_host_files/ddt2.F90
+            test/unit_tests/sample_host_files/ddt_data1_mod.F90
+            test/unit_tests/sample_host_files/data1_mod.F90
+            test/unit_tests/sample_scheme_files/CCPPnotset_var_missing_in_meta.F90
+            test/unit_tests/sample_scheme_files/CCPPeq1_var_missing_in_meta.F90
+            test/unit_tests/sample_scheme_files/missing_fort_header.F90
+            test/unit_tests/sample_scheme_files/mismatch_intent.F90
+            test/unit_tests/sample_scheme_files/CCPPgt1_var_in_fort_meta.F90
+            test/unit_tests/sample_scheme_files/mismatch_hdim.F90
+            test/unit_tests/sample_scheme_files/CCPPeq1_var_missing_in_fort.F90
+            test/unit_tests/sample_scheme_files/temp_adjust.F90
+            test/unit_tests/sample_scheme_files/CCPPeq1_var_in_fort_meta.F90
+            test/unit_tests/sample_scheme_files/reorder.F90
+            test/unit_tests/sample_scheme_files/invalid_dummy_arg.F90
+            test/unit_tests/sample_scheme_files/invalid_subr_stmnt.F90
+            test/unit_tests/sample_scheme_files/missing_arg_table.F90
           )
           FILTERED_FILES=()
           while IFS= read -r file; do

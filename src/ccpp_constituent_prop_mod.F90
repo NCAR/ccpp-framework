@@ -3,10 +3,8 @@ module ccpp_constituent_prop_mod
   ! ccpp_contituent_prop_mod contains types and procedures for storing
   ! and retrieving constituent properties
 
-  use ccpp_hashable, only: ccpp_hashable_t, &
-                           ccpp_hashable_char_t
-  use ccpp_hash_table, only: ccpp_hash_table_t, &
-                             ccpp_hash_iterator_t
+  use ccpp_hashable, only: ccpp_hashable_t, ccpp_hashable_char_t
+  use ccpp_hash_table, only: ccpp_hash_table_t, ccpp_hash_iterator_t
   use ccpp_kinds, only: kind_phys
 
   implicit none
@@ -370,7 +368,7 @@ contains
 
     ccp_is_instantiated = allocated(this%var_std_name)
     call initialize_errvars(errcode, errmsg)
-    if ( .not. ccp_is_instantiated) then
+    if (.not.ccp_is_instantiated) then
       call append_errvars(1, "ccpp_constituent_properties_t object is not initialized", &
           subname, errcode=errcode, errmsg=errmsg)
     end if
@@ -1095,7 +1093,7 @@ contains
     ! Use an initialized hash table as double check
     if (this%hash_table%is_initialized()) then
       ccp_model_const_locked = this%table_locked .and. this%data_locked
-      if (( .not. (this%table_locked .and. this%data_locked)) .and. &
+      if ((.not.(this%table_locked .and. this%data_locked)) .and. &
           present(errmsg) .and. present(warn_func)) then
         ! Write a warning as a courtesy to calling function but do not set
         !   errcode (let caller decide).
@@ -1127,7 +1125,7 @@ contains
     ! Use an initialized hash table as double check
     if (this%hash_table%is_initialized()) then
       ccp_model_const_props_locked = this%table_locked
-      if ( .not. this%table_locked .and. &
+      if (.not.this%table_locked .and. &
           present(errmsg) .and. present(warn_func)) then
         ! Write a warning as a courtesy to calling function but do not set
         !   errcode (let caller decide).
@@ -1160,7 +1158,7 @@ contains
     ! Use an initialized hash table as double check
     if (this%hash_table%is_initialized()) then
       ccp_model_const_data_locked = this%data_locked
-      if ( .not. this%data_locked .and. &
+      if (.not.this%data_locked .and. &
           present(errmsg) .and. present(warn_func)) then
         ! Write a warning as a courtesy to calling function but do not set
         !   errcode (let caller decide).
@@ -1193,10 +1191,10 @@ contains
 
     ccp_model_const_okay_to_add = this%hash_table%is_initialized()
     if (ccp_model_const_okay_to_add) then
-      ccp_model_const_okay_to_add = .not. (this%const_props_locked(errcode=errcode, &
+      ccp_model_const_okay_to_add = .not.(this%const_props_locked(errcode=errcode, &
           errmsg=errmsg, warn_func=subname) .or. this%const_data_locked(errcode=errcode, &
           errmsg=errmsg, warn_func=subname))
-      if ( .not. ccp_model_const_okay_to_add) then
+      if (.not.ccp_model_const_okay_to_add) then
         call append_errvars(1, &
             "WARNING: Model constituents are locked", &
             subname, errcode=errcode, errmsg=errmsg, caller=warn_func)
@@ -1442,7 +1440,7 @@ contains
                 call this%const_metadata(index_const)%set(cprop)
               end if
               ! Make sure this is a layer variable
-              if ( .not. cprop%is_layer_var()) then
+              if (.not.cprop%is_layer_var()) then
                 call cprop%vertical_dimension(dimname, &
                     errcode=errcode, errmsg=errmsg)
                 call append_errvars(1, "ERROR: Bad vertical dimension, '" // &
@@ -1512,7 +1510,7 @@ contains
           "WARNING: Model constituent data already locked, ignoring", &
           subname, errcode=errcode, errmsg=errmsg)
       errcode_local = errcode_local + 1
-    else if ( .not. this%const_props_locked(errcode=errcode, errmsg=errmsg, &
+    else if (.not.this%const_props_locked(errcode=errcode, errmsg=errmsg, &
           warn_func=subname)) then
       call append_errvars(1, &
           "WARNING: Model constituent properties not yet locked, ignoring", &

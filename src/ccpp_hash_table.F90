@@ -260,8 +260,8 @@ contains
       end if
     end if
 
-    if (( .not. associated(tbl_val)) .and. present(errmsg)) then
-      if ( .not. have_error(errmsg)) then ! Still need to test for empty
+    if ((.not.associated(tbl_val)) .and. present(errmsg)) then
+      if (.not.have_error(errmsg)) then ! Still need to test for empty
         write(errmsg, *) subname, ": No entry for '", trim(key), "'"
       end if
     end if
@@ -453,7 +453,7 @@ contains
       end if
       if (has_table_next) then
         this%table_entry => this%table_entry%next
-      else if (( .not. has_table_entry) .and. &
+      else if ((.not.has_table_entry) .and. &
             associated(this%hash_table%table(this%index)%next)) then
         this%table_entry => this%hash_table%table(this%index)%next
       else

@@ -3,8 +3,7 @@
 
 module temp_adjust
 
-  use ccpp_kinds, only: kind_phys, &
-                        kind_temp
+  use ccpp_kinds, only: kind_phys, kind_temp
 
   implicit none
   private
@@ -68,7 +67,7 @@ contains
       return
     end if
 
-    if ( .not. module_level_config) then
+    if (.not.module_level_config) then
       ! do nothing
       return
     end if

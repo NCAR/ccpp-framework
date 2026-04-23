@@ -1,24 +1,24 @@
 ! Test parameterization with no vertical level
 !
 
-module invalid_subr_stmnt
+MODULE invalid_subr_stmnt
 
-  use ccpp_kinds, only: kind_phys
+  USE ccpp_kinds, ONLY: kind_phys
 
-  implicit none
-  private
+  IMPLICIT NONE
+  PRIVATE
 
-  public :: invalid_subr_stmnt_init
+  PUBLIC :: invalid_subr_stmnt_init
 
-contains
+CONTAINS
 
   !> \section arg_table_invalid_subr_stmnt_init  Argument Table
   !! \htmlinclude arg_table_invalid_subr_stmnt_init.html
   !!
-  subroutine invalid_subr_stmnt_init(woohoo, errflg)
+  subroutine invalid_subr_stmnt_init (woohoo, errflg)
 
-    character(len=512), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    character(len=512),      intent(out)   :: errmsg
+    integer,                 intent(out)   :: errflg
 
     ! This routine currently does nothing
 
@@ -27,4 +27,4 @@ contains
 
   end subroutine invalid_subr_stmnt_init
 
-end module invalid_subr_stmnt
+END MODULE invalid_subr_stmnt

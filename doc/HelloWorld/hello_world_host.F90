@@ -7,51 +7,50 @@ module hello_world_host
 
   public hello_world_sub
 
-contains
+CONTAINS
 
   !> \section arg_table_hello_world_sub  Argument Table
   !! \htmlinclude arg_table_hello_world_sub.html
   !!
   subroutine hello_world_sub()
 
-    use hello_world_mod, only: ncols
-    use helloworld_ccpp_cap, only: helloworld_ccpp_physics_initialize
-    use helloworld_ccpp_cap, only: helloworld_ccpp_physics_timestep_initial
-    use helloworld_ccpp_cap, only: helloworld_ccpp_physics_run
-    use helloworld_ccpp_cap, only: helloworld_ccpp_physics_timestep_final
-    use helloworld_ccpp_cap, only: helloworld_ccpp_physics_finalize
-    use helloworld_ccpp_cap, only: ccpp_physics_suite_list
-    use helloworld_ccpp_cap, only: ccpp_physics_suite_part_list
-    use hello_world_mod, only: init_temp, &
-                               compare_temp
+    use hello_world_mod,     only: ncols
+    use HelloWorld_ccpp_cap, only: HelloWorld_ccpp_physics_initialize
+    use HelloWorld_ccpp_cap, only: HelloWorld_ccpp_physics_timestep_initial
+    use HelloWorld_ccpp_cap, only: HelloWorld_ccpp_physics_run
+    use HelloWorld_ccpp_cap, only: HelloWorld_ccpp_physics_timestep_final
+    use HelloWorld_ccpp_cap, only: HelloWorld_ccpp_physics_finalize
+    use HelloWorld_ccpp_cap, only: ccpp_physics_suite_list
+    use HelloWorld_ccpp_cap, only: ccpp_physics_suite_part_list
+    use hello_world_mod,     only: init_temp, compare_temp
 
-    integer :: col_start, col_end
-    integer :: index
+    integer                         :: col_start, col_end
+    integer                         :: index
     character(len=128), allocatable :: part_names(:)
-    character(len=512) :: errmsg
-    integer :: errflg
+    character(len=512)              :: errmsg
+    integer                         :: errflg
 
     ! Initialize our 'data'
     call init_temp()
 
     ! Use the suite information to setup the run
-    call helloworld_ccpp_physics_initialize('hello_world_suite', errmsg, errflg)
+    call HelloWorld_ccpp_physics_initialize('hello_world_suite', errmsg, errflg)
     if (errflg /= 0) then
       write(6, *) trim(errmsg)
       stop
     end if
 
     ! Initialize the timestep
-    call helloworld_ccpp_physics_timestep_initial('hello_world_suite', errmsg, errflg)
+    call HelloWorld_ccpp_physics_timestep_initial('hello_world_suite', errmsg, errflg)
     if (errflg /= 0) then
       write(6, *) trim(errmsg)
       stop
     end if
 
     do col_start = 1, ncols, 5
-      col_end = min(col_start + 4, ncols)
+      col_end = MIN(col_start + 4, ncols)
 
-      call helloworld_ccpp_physics_run('hello_world_suite', 'physics', col_start, col_end, errmsg, errflg)
+      call HelloWorld_ccpp_physics_run('hello_world_suite', 'physics', col_start, col_end, errmsg, errflg)
       if (errflg /= 0) then
         write(6, *) trim(errmsg)
         call ccpp_physics_suite_part_list('hello_world_suite', part_names, errmsg, errflg)
@@ -63,12 +62,12 @@ contains
       end if
     end do
 
-    call helloworld_ccpp_physics_timestep_final('hello_world_suite', errmsg, errflg)
+    call HelloWorld_ccpp_physics_timestep_final('hello_world_suite', errmsg, errflg)
 
-    call helloworld_ccpp_physics_finalize('hello_world_suite', errmsg, errflg)
+    call HelloWorld_ccpp_physics_finalize('hello_world_suite', errmsg, errflg)
     if (errflg /= 0) then
       write(6, *) trim(errmsg)
-      write(6, '(a)') 'An error occurred in ccpp_timestep_final, Exiting...'
+      write(6,'(a)') 'An error occurred in ccpp_timestep_final, Exiting...'
       stop
     end if
 

@@ -1,58 +1,58 @@
 module marbl_logging
 
-  ! ============
-  ! Module Usage
-  ! ============
-  !
-  ! Assume a variable named StatusLog (as appears in the marbl_interface_class)
-  !
-  ! -----------------------------------------------
-  ! Use the following routines to write log entries
-  ! -----------------------------------------------
-  !
-  ! (1) StatusLog%log_noerror -- this stores a log message in StatusLog that does
-  !     not contain a fatal error
-  ! (2) StatusLog%log_header -- this stores a log message in StatusLog that is
-  !     meant to be read as a section header; e.g. StatusLog%log_header('HEADER',...)
-  !     writes the following (including blank lines)
-  !
-  !     ------
-  !     HEADER
-  !     ------
-  !
-  ! (3) StatusLog%log_error -- this stores a log message in StatusLog that DOES
-  !     contain a fatal error. It does this by setting StatusLog%labort_marbl =
-  !     .true.; when a call from the GCM to MARBL returns, it is important for the
-  !     GCM to check the value of StatusLog%labort_marbl and abort the run if an
-  !     error has been reported.
-  ! (4) StatusLog%log_error_trace -- this stores a log message in StatusLog
-  !     detailing what subroutine was just called and where it was called from. It
-  !     is meant to provide more information when trying to trace the path through
-  !     the code that resulted in an error.
-  !
-  ! -----------------------------------------------
-  ! Pseudo-code for writing StatusLog in the driver
-  ! -----------------------------------------------
-  !
-  !  type(marbl_status_log_entry_type), pointer :: LogEntry
-  !
-  !  ! Set pointer to first entry of the log
-  !  LogEntry => StatusLog%FullLog
-  !
-  !  do while (associated(LogEntry))
-  !    ! If running in parallel, you may want to check if you are the master
-  !    ! task or if LogEntry%lalltasks = .true.
-  !    write(stdout,*) trim(LogEntry%LogMessage)
-  !    LogEntry => LogEntry%next
-  !  end do
-  !
-  !  ! Erase contents of log now that they have been written out
-  !  call StatusLog%erase()
-  !
-  !  if (StatusLog%labort_marbl) then
-  !    [GCM abort call: "error found in MARBL"]
-  !  end if
-  !
+! ============
+! Module Usage
+! ============
+!
+! Assume a variable named StatusLog (as appears in the marbl_interface_class)
+!
+! -----------------------------------------------
+! Use the following routines to write log entries
+! -----------------------------------------------
+!
+! (1) StatusLog%log_noerror -- this stores a log message in StatusLog that does
+!     not contain a fatal error
+! (2) StatusLog%log_header -- this stores a log message in StatusLog that is
+!     meant to be read as a section header; e.g. StatusLog%log_header('HEADER',...)
+!     writes the following (including blank lines)
+!
+!     ------
+!     HEADER
+!     ------
+!
+! (3) StatusLog%log_error -- this stores a log message in StatusLog that DOES
+!     contain a fatal error. It does this by setting StatusLog%labort_marbl =
+!     .true.; when a call from the GCM to MARBL returns, it is important for the
+!     GCM to check the value of StatusLog%labort_marbl and abort the run if an
+!     error has been reported.
+! (4) StatusLog%log_error_trace -- this stores a log message in StatusLog
+!     detailing what subroutine was just called and where it was called from. It
+!     is meant to provide more information when trying to trace the path through
+!     the code that resulted in an error.
+!
+! -----------------------------------------------
+! Pseudo-code for writing StatusLog in the driver
+! -----------------------------------------------
+!
+!  type(marbl_status_log_entry_type), pointer :: LogEntry
+!
+!  ! Set pointer to first entry of the log
+!  LogEntry => StatusLog%FullLog
+!
+!  do while (associated(LogEntry))
+!    ! If running in parallel, you may want to check if you are the master
+!    ! task or if LogEntry%lalltasks = .true.
+!    write(stdout,*) trim(LogEntry%LogMessage)
+!    LogEntry => LogEntry%next
+!  end do
+!
+!  ! Erase contents of log now that they have been written out
+!  call StatusLog%erase()
+!
+!  if (StatusLog%labort_marbl) then
+!    [GCM abort call: "error found in MARBL"]
+!  end if
+!
 
   use marbl_kinds_mod, only : char_len
 
@@ -60,16 +60,16 @@ module marbl_logging
   private
   save
 
-  integer, parameter, private :: marbl_log_len = 2 * char_len
+  integer, parameter, private :: marbl_log_len = 2*char_len
 
   !****************************************************************************
 
   type, public :: marbl_status_log_entry_type
-    integer :: elementind = -1 ! ElementInd < 0 implies no location data
-    logical :: lonly_master_writes ! True => message should be written to stdout
-    !                  master task; False => all tasks
-    character(len=marbl_log_len) :: logmessage ! Message text
-    character(len=char_len) :: codelocation ! Information on where log was written
+    integer :: ElementInd = -1      ! ElementInd < 0 implies no location data
+    logical :: lonly_master_writes  ! True => message should be written to stdout
+                           !                  master task; False => all tasks
+    character(len=marbl_log_len) :: LogMessage   ! Message text
+    character(len=char_len)      :: CodeLocation ! Information on where log was written
 
     type(marbl_status_log_entry_type), pointer :: next
   end type marbl_status_log_entry_type
@@ -89,12 +89,12 @@ module marbl_logging
   !       code in this file.
   type, private :: marbl_log_output_options_type
     logical :: labort_on_warning ! True => elevate Warnings to Errors
-    logical :: llogverbose ! Debugging output should be given Verbose label
-    logical :: llognamelist ! Write namelists to log?
-    logical :: lloggeneral ! General diagnostic output
-    logical :: llogwarning ! Warnings (can be elevated to errors via labort_on_warning)
-    logical :: llogerror ! Errors (will toggle labort_marbl whether log
-    ! is written or not)
+    logical :: lLogVerbose       ! Debugging output should be given Verbose label
+    logical :: lLogNamelist      ! Write namelists to log?
+    logical :: lLogGeneral       ! General diagnostic output
+    logical :: lLogWarning       ! Warnings (can be elevated to errors via labort_on_warning)
+    logical :: lLogError         ! Errors (will toggle labort_marbl whether log
+                                 ! is written or not)
   contains
     procedure :: construct => marbl_output_options_constructor
   end type marbl_log_output_options_type
@@ -103,17 +103,17 @@ module marbl_logging
 
   type, public :: marbl_log_type
     logical, private :: lconstructed = .false. ! True => constructor was already called
-    logical, public :: labort_marbl = .false. ! True => driver should abort GCM
-    logical, public :: lwarning = .false. ! True => warnings are present
-    type(marbl_log_output_options_type) :: outputoptions
-    type(marbl_status_log_entry_type), pointer :: fulllog
-    type(marbl_status_log_entry_type), pointer :: lastentry
+    logical, public  :: labort_marbl = .false. ! True => driver should abort GCM
+    logical, public  :: lwarning     = .false. ! True => warnings are present
+    type(marbl_log_output_options_type) :: OutputOptions
+    type(marbl_status_log_entry_type), pointer :: FullLog
+    type(marbl_status_log_entry_type), pointer :: LastEntry
   contains
     procedure, public :: construct => marbl_log_constructor
-    procedure, public :: log_header => marbl_log_header
-    procedure, public :: log_error => marbl_log_error
-    procedure, public :: log_warning => marbl_log_warning
-    procedure, public :: log_noerror => marbl_log_noerror
+    procedure, public :: log_header   => marbl_log_header
+    procedure, public :: log_error    => marbl_log_error
+    procedure, public :: log_warning  => marbl_log_warning
+    procedure, public :: log_noerror  => marbl_log_noerror
     procedure, public :: log_error_trace => marbl_log_error_trace
     procedure, public :: log_warning_trace => marbl_log_warning_trace
     procedure, public :: erase => marbl_log_erase
@@ -126,12 +126,12 @@ contains
 
   !****************************************************************************
 
-  subroutine marbl_output_options_constructor(this, labort_on_warning, logverbose, lognamelist, &
-      loggeneral, logwarning, logerror)
+  subroutine marbl_output_options_constructor(this, labort_on_warning, LogVerbose, LogNamelist, &
+                                              LogGeneral, LogWarning, LogError)
 
     class(marbl_log_output_options_type), intent(inout) :: this
-    logical, intent(in), optional :: labort_on_warning, logverbose, lognamelist
-    logical, intent(in), optional :: loggeneral, logwarning, logerror
+    logical, intent(in), optional :: labort_on_warning, LogVerbose, LogNamelist
+    logical, intent(in), optional :: LogGeneral, LogWarning, LogError
 
     if (present(labort_on_warning)) then
       this%labort_on_warning = labort_on_warning
@@ -139,34 +139,34 @@ contains
       this%labort_on_warning = .false.
     end if
 
-    if (present(logverbose)) then
-      this%llogverbose = logverbose
+    if (present(LogVerbose)) then
+      this%lLogVerbose = LogVerbose
     else
-      this%llogverbose = .false.
+      this%lLogVerbose = .false.
     end if
 
-    if (present(lognamelist)) then
-      this%llognamelist = lognamelist
+    if (present(LogNamelist)) then
+      this%lLogNamelist = LogNamelist
     else
-      this%llognamelist = .true.
+      this%lLogNamelist = .true.
     end if
 
-    if (present(loggeneral)) then
-      this%lloggeneral = loggeneral
+    if (present(LogGeneral)) then
+      this%lLogGeneral = LogGeneral
     else
-      this%lloggeneral = .true.
+      this%lLogGeneral = .true.
     end if
 
-    if (present(logwarning)) then
-      this%llogwarning = logwarning
+    if (present(LogWarning)) then
+      this%lLogWarning = LogWarning
     else
-      this%llogwarning = .true.
+      this%lLogWarning = .true.
     end if
 
-    if (present(logerror)) then
-      this%llogerror = logerror
+    if (present(LogError)) then
+      this%lLogError = LogError
     else
-      this%llogerror = .true.
+      this%lLogError = .true.
     end if
 
   end subroutine marbl_output_options_constructor
@@ -179,162 +179,162 @@ contains
 
     if (this%lconstructed) return
     this%lconstructed = .true.
-    nullify(this%fulllog)
-    nullify(this%lastentry)
-    call this%outputoptions%construct()
+    nullify(this%FullLog)
+    nullify(this%LastEntry)
+    call this%OutputOptions%construct()
 
   end subroutine marbl_log_constructor
 
   !****************************************************************************
 
-  subroutine marbl_log_header(this, headermsg, codeloc)
+  subroutine marbl_log_header(this, HeaderMsg, CodeLoc)
 
     class(marbl_log_type), intent(inout) :: this
     ! StatusMsg is the message to be printed in the log; it does not need to
     !    contain the name of the module or subroutine producing the log message
     ! CodeLoc is the name of the subroutine that is calling StatusLog%log_noerror
-    character(len=*), intent(in) :: headermsg, codeloc
+    character(len=*),      intent(in)    :: HeaderMsg, CodeLoc
 
-    character(len=len_trim(headermsg)) :: dashes
+    character(len=len_trim(HeaderMsg)) :: dashes
     integer :: n
 
-    do n = 1, len(dashes)
+    do n=1, len(dashes)
       dashes(n:n) = '-'
     end do
-    call this%log_noerror('', codeloc)
-    call this%log_noerror(dashes, codeloc)
-    call this%log_noerror(headermsg, codeloc)
-    call this%log_noerror(dashes, codeloc)
-    call this%log_noerror('', codeloc)
+    call this%log_noerror('', CodeLoc)
+    call this%log_noerror(dashes, CodeLoc)
+    call this%log_noerror(HeaderMsg, CodeLoc)
+    call this%log_noerror(dashes, CodeLoc)
+    call this%log_noerror('', CodeLoc)
 
   end subroutine marbl_log_header
 
   !****************************************************************************
 
-  subroutine marbl_log_error(this, errormsg, codeloc, elemind)
+  subroutine marbl_log_error(this, ErrorMsg, CodeLoc, ElemInd)
 
     class(marbl_log_type), intent(inout) :: this
     ! ErrorMsg is the error message to be printed in the log; it does not need
     !     to contain the name of the module or subroutine triggering the error
     ! CodeLoc is the name of the subroutine that is calling StatusLog%log_error
-    character(len=*), intent(in) :: errormsg, codeloc
-    integer, optional, intent(in) :: elemind
+    character(len=*),      intent(in)    :: ErrorMsg, CodeLoc
+    integer, optional,     intent(in)    :: ElemInd
 
-    character(len=marbl_log_len) :: errormsg_loc ! Message text
+    character(len=marbl_log_len) :: ErrorMsg_loc   ! Message text
 
     this%labort_marbl = .true.
 
     ! Only allocate memory and add entry if we want to log full namelist!
-    if ( .not. this%outputoptions%llogerror) then
+    if (.not.this%OutputOptions%lLogError) then
       return
     end if
 
-    write(errormsg_loc, "(4A)") "MARBL ERROR (", trim(codeloc), "): ", &
-        trim(errormsg)
+    write(ErrorMsg_loc, "(4A)") "MARBL ERROR (", trim(CodeLoc), "): ", &
+                                        trim(ErrorMsg)
 
-    call this%append_to_log(errormsg_loc, codeloc, elemind, lonly_master_writes=.false.)
+    call this%append_to_log(ErrorMsg_loc, CodeLoc, ElemInd, lonly_master_writes=.false.)
 
   end subroutine marbl_log_error
 
   !****************************************************************************
 
-  subroutine marbl_log_warning(this, warningmsg, codeloc, elemind)
+  subroutine marbl_log_warning(this, WarningMsg, CodeLoc, ElemInd)
 
     class(marbl_log_type), intent(inout) :: this
     ! WarningMsg is the message to be printed in the log; it does not need to
     !    contain the name of the module or subroutine producing the log message
     ! CodeLoc is the name of the subroutine that is calling StatusLog%log_warning
-    character(len=*), intent(in) :: warningmsg, codeloc
-    integer, optional, intent(in) :: elemind
+    character(len=*),      intent(in)    :: WarningMsg, CodeLoc
+    integer, optional,     intent(in)    :: ElemInd
 
-    character(len=marbl_log_len) :: warningmsg_loc ! Message text
+    character(len=marbl_log_len) :: WarningMsg_loc   ! Message text
 
     this%lwarning = .true.
 
     ! Only allocate memory and add entry if we want to log full namelist!
-    if ( .not. this%outputoptions%llogwarning) then
+    if (.not.this%OutputOptions%lLogWarning) then
       return
     end if
 
-    write(warningmsg_loc, "(4A)") "MARBL WARNING (", trim(codeloc), "): ", &
-        trim(warningmsg)
+    write(WarningMsg_loc, "(4A)") "MARBL WARNING (", trim(CodeLoc), "): ", &
+                                        trim(WarningMsg)
 
-    call this%append_to_log(warningmsg_loc, codeloc, elemind, lonly_master_writes=.false.)
+    call this%append_to_log(WarningMsg_loc, CodeLoc, ElemInd, lonly_master_writes=.false.)
 
   end subroutine marbl_log_warning
 
   !****************************************************************************
 
-  subroutine marbl_log_noerror(this, statusmsg, codeloc, elemind, lonly_master_writes)
+  subroutine marbl_log_noerror(this, StatusMsg, CodeLoc, ElemInd, lonly_master_writes)
 
     class(marbl_log_type), intent(inout) :: this
     ! StatusMsg is the message to be printed in the log; it does not need to
     !    contain the name of the module or subroutine producing the log message
     ! CodeLoc is the name of the subroutine that is calling StatusLog%log_noerror
-    character(len=*), intent(in) :: statusmsg, codeloc
-    integer, optional, intent(in) :: elemind
+    character(len=*),      intent(in)    :: StatusMsg, CodeLoc
+    integer, optional,     intent(in)    :: ElemInd
     ! If lonly_master_writes is .false., then this is a message that should be
     ! printed out regardless of which task produced it. By default, MARBL assumes
     ! that only the master task needs to print a message
-    logical, optional, intent(in) :: lonly_master_writes
+    logical, optional,     intent(in)    :: lonly_master_writes
 
     ! Only allocate memory and add entry if we want to log full namelist!
-    if ( .not. this%outputoptions%lloggeneral) then
+    if (.not.this%OutputOptions%lLogGeneral) then
       return
     end if
 
-    call this%append_to_log(statusmsg, codeloc, elemind, lonly_master_writes)
+    call this%append_to_log(StatusMsg, CodeLoc, ElemInd, lonly_master_writes)
 
   end subroutine marbl_log_noerror
 
   !****************************************************************************
 
-  subroutine append_to_log(this, statusmsg, codeloc, elemind, lonly_master_writes)
+  subroutine append_to_log(this, StatusMsg, CodeLoc, ElemInd, lonly_master_writes)
 
     class(marbl_log_type), intent(inout) :: this
     ! StatusMsg is the message to be printed in the log; it does not need to
     !    contain the name of the module or subroutine producing the log message
     ! CodeLoc is the name of the subroutine that is calling StatusLog%log_noerror
-    character(len=*), intent(in) :: statusmsg, codeloc
-    integer, optional, intent(in) :: elemind
+    character(len=*),      intent(in)    :: StatusMsg, CodeLoc
+    integer, optional,     intent(in)    :: ElemInd
     ! If lonly_master_writes is .false., then this is a message that should be
     ! printed out regardless of which task produced it. By default, MARBL assumes
     ! that only the master task needs to print a message
-    logical, optional, intent(in) :: lonly_master_writes
+    logical, optional,     intent(in)    :: lonly_master_writes
     type(marbl_status_log_entry_type), pointer :: new_entry
 
     allocate(new_entry)
     nullify(new_entry%next)
-    if (present(elemind)) then
-      new_entry%elementind = elemind
+    if (present(ElemInd)) then
+      new_entry%ElementInd = ElemInd
     else
-      new_entry%elementind = -1
+      new_entry%ElementInd = -1
     end if
-    new_entry%logmessage = trim(statusmsg)
-    new_entry%codelocation = trim(codeloc)
+    new_entry%LogMessage   = trim(StatusMsg)
+    new_entry%CodeLocation = trim(CodeLoc)
     if (present(lonly_master_writes)) then
       new_entry%lonly_master_writes = lonly_master_writes
     else
       new_entry%lonly_master_writes = .true.
     end if
 
-    if (associated(this%fulllog)) then
+    if (associated(this%FullLog)) then
       ! Append new entry to last entry in the log
-      this%lastentry%next => new_entry
+      this%LastEntry%next => new_entry
     else
-      this%fulllog => new_entry
+      this%FullLog => new_entry
     end if
     ! Update LastEntry attribute of linked list
-    this%lastentry => new_entry
+    this%LastEntry => new_entry
 
   end subroutine append_to_log
 
   !****************************************************************************
 
-  subroutine marbl_log_error_trace(this, routinename, codeloc, elemind)
+  subroutine marbl_log_error_trace(this, RoutineName, CodeLoc, ElemInd)
 
-    ! This routine should only be called if another subroutine has returned and
-    ! StatusLog%labort_marbl = .true.
+  ! This routine should only be called if another subroutine has returned and
+  ! StatusLog%labort_marbl = .true.
 
     class(marbl_log_type), intent(inout) :: this
     ! RoutineName is the name of the subroutine that returned with
@@ -347,21 +347,21 @@ contains
     !
     ! When the log is printed, this will provide a traceback through the sequence
     ! of calls that led to the original error message.
-    character(len=*), intent(in) :: routinename, codeloc
-    integer, optional, intent(in) :: elemind
+    character(len=*),      intent(in)    :: RoutineName, CodeLoc
+    integer, optional,     intent(in)    :: ElemInd
     character(len=char_len) :: log_message
 
-    write(log_message, "(2A)") "Error reported from ", trim(routinename)
-    call this%log_error(log_message, codeloc, elemind)
+    write(log_message, "(2A)") "Error reported from ", trim(RoutineName)
+    call this%log_error(log_message, CodeLoc, ElemInd)
 
   end subroutine marbl_log_error_trace
 
   !****************************************************************************
 
-  subroutine marbl_log_warning_trace(this, routinename, codeloc, elemind)
+  subroutine marbl_log_warning_trace(this, RoutineName, CodeLoc, ElemInd)
 
-    ! This routine should only be called if another subroutine has returned and
-    ! StatusLog%lwarning = .true.
+  ! This routine should only be called if another subroutine has returned and
+  ! StatusLog%lwarning = .true.
 
     class(marbl_log_type), intent(inout) :: this
     ! RoutineName is the name of the subroutine that returned with
@@ -374,12 +374,12 @@ contains
     !
     ! When the log is printed, this will provide a traceback through the sequence
     ! of calls that led to the original warning message.
-    character(len=*), intent(in) :: routinename, codeloc
-    integer, optional, intent(in) :: elemind
+    character(len=*),      intent(in)    :: RoutineName, CodeLoc
+    integer, optional,     intent(in)    :: ElemInd
     character(len=char_len) :: log_message
 
-    write(log_message, "(2A)") "Warning reported from ", trim(routinename)
-    call this%log_warning(log_message, codeloc, elemind)
+    write(log_message, "(2A)") "Warning reported from ", trim(RoutineName)
+    call this%log_warning(log_message, CodeLoc, ElemInd)
     this%lwarning = .false.
 
   end subroutine marbl_log_warning_trace
@@ -391,13 +391,13 @@ contains
     class(marbl_log_type), intent(inout) :: this
     type(marbl_status_log_entry_type), pointer :: tmp
 
-    do while (associated(this%fulllog))
-      tmp => this%fulllog%next
-      deallocate(this%fulllog)
-      this%fulllog => tmp
+    do while (associated(this%FullLog))
+      tmp => this%FullLog%next
+      deallocate(this%FullLog)
+      this%FullLog => tmp
     end do
-    nullify(this%fulllog)
-    nullify(this%lastentry)
+    nullify(this%FullLog)
+    nullify(this%LastEntry)
 
     this%lwarning = .false.
 
