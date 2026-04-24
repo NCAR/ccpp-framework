@@ -106,7 +106,8 @@ contains
 #ifdef _OPENMP
     use omp_lib
 #endif
-    use test_host_mod, only: ncols, num_time_steps
+    use test_host_mod, only: ncols, &
+        num_time_steps
     use test_host_ccpp_cap, only: test_host_ccpp_physics_register
     use test_host_ccpp_cap, only: test_host_ccpp_physics_initialize
     use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_initial
@@ -114,7 +115,9 @@ contains
     use test_host_ccpp_cap, only: test_host_ccpp_physics_timestep_final
     use test_host_ccpp_cap, only: test_host_ccpp_physics_finalize
     use test_host_ccpp_cap, only: ccpp_physics_suite_list
-    use test_host_mod, only: init_data, compare_data, check_model_times
+    use test_host_mod, only: init_data, &
+        compare_data, &
+        check_model_times
     use test_utils, only: check_list
 
     type(suite_info), intent(in) :: test_suites(:)
@@ -156,7 +159,7 @@ contains
       end do
     end if
     !!! Return here if any check failed
-    if (.not.retval) then
+    if (.not. retval) then
       return
     end if
 
@@ -284,7 +287,7 @@ contains
 
     if (errflg == 0) then
       ! Run finished without error, check answers
-      if (.not.check_model_times()) then
+      if (.not. check_model_times()) then
         write(6, *) 'Model times error!'
         errflg = -1
       else if (compare_data()) then
