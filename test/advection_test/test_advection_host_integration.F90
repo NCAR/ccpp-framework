@@ -4,60 +4,51 @@ program test
     implicit none
 
    character(len=cs), target :: test_parts1(1)
-   character(len=cm), target :: test_invars1(12)
-   character(len=cm), target :: test_outvars1(13)
-   character(len=cm), target :: test_reqvars1(18)
+   character(len=cm), target :: test_invars1(8)
+   character(len=cm), target :: test_outvars1(11)
+   character(len=cm), target :: test_reqvars1(14)
 
     type(suite_info) :: test_suites(1)
     logical :: run_okay
 
     test_parts1 = (/ 'physics         '/)
-    test_invars1 = (/                          &
-        'banana_array_dim                         ',                          &
+
+    test_invars1 = (/                                                         &
+        'ccpp_model_constituents_object           ',                          &
         'cloud_ice_dry_mixing_ratio               ',                          &
         'cloud_liquid_dry_mixing_ratio            ',                          &
+        'physics_state_derived_type               ',                          &
         'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
-        'surface_air_pressure                     ',                          &
-        'temperature                              ',                          &
+        'banana_array_dim                         ',                          &
         'time_step_for_physics                    ',                          &
-        'water_temperature_at_freezing            ',                          &
-        'ccpp_constituent_tendencies              ',                          &
-        'ccpp_constituents                        ',                          &
-        'number_of_ccpp_constituents              ',                          &
-        'water_vapor_specific_humidity            ' /)
-    test_outvars1 = (/                         &
-        'ccpp_error_message                       ',                          &
+        'water_temperature_at_freezing            ' /)
+    test_outvars1 = (/                                                        &
+        'ccpp_model_constituents_object           ',                          &
+        'cloud_ice_dry_mixing_ratio               ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'physics_state_derived_type               ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
         'ccpp_error_code                          ',                          &
-        'temperature                              ',                          &
-        'water_vapor_specific_humidity            ',                          &
-        'cloud_liquid_dry_mixing_ratio            ',                          &
-        'ccpp_constituent_tendencies              ',                          &
-        'ccpp_constituents                        ',                          &
-        'dynamic_constituents_for_cld_liq         ',                          &
-        'dynamic_constituents_for_cld_ice         ',                          &
-        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
-        'test_banana_constituent_index            ',                          &
-        'test_banana_constituent_indices          ',                          &
-        'cloud_ice_dry_mixing_ratio               ' /)
-    test_reqvars1 = (/                         &
-        'banana_array_dim                         ',                          &
-        'surface_air_pressure                     ',                          &
-        'temperature                              ',                          &
-        'time_step_for_physics                    ',                          &
-        'cloud_liquid_dry_mixing_ratio            ',                          &
-        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
-        'cloud_ice_dry_mixing_ratio               ',                          &
-        'dynamic_constituents_for_cld_liq         ',                          &
-        'dynamic_constituents_for_cld_ice         ',                          &
-        'water_temperature_at_freezing            ',                          &
-        'ccpp_constituent_tendencies              ',                          &
-        'ccpp_constituents                        ',                          &
-        'number_of_ccpp_constituents              ',                          &
-        'test_banana_constituent_index            ',                          &
-        'test_banana_constituent_indices          ',                          &
-        'water_vapor_specific_humidity            ',                          &
         'ccpp_error_message                       ',                          &
-        'ccpp_error_code                          ' /)
+        'dynamic_constituents_for_cld_ice         ',                          &
+        'dynamic_constituents_for_cld_liq         ',                          &
+        'test_banana_constituent_index            ',                          &
+        'test_banana_constituent_indices          ' /)
+    test_reqvars1 = (/                                                        &
+        'ccpp_model_constituents_object           ',                          &
+        'cloud_ice_dry_mixing_ratio               ',                          &
+        'cloud_liquid_dry_mixing_ratio            ',                          &
+        'physics_state_derived_type               ',                          &
+        'tendency_of_cloud_liquid_dry_mixing_ratio',                          &
+        'banana_array_dim                         ',                          &
+        'time_step_for_physics                    ',                          &
+        'water_temperature_at_freezing            ',                          &
+        'ccpp_error_code                          ',                          &
+        'ccpp_error_message                       ',                          &
+        'dynamic_constituents_for_cld_ice         ',                          &
+        'dynamic_constituents_for_cld_liq         ',                          &
+        'test_banana_constituent_index            ',                          &
+        'test_banana_constituent_indices          ' /)
 
     ! Setup expected test suite info
     test_suites(1)%suite_name = 'cld_suite'
