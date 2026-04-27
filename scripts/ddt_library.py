@@ -101,16 +101,14 @@ class VarDDT(Var):
         # end if
         return clone_var
 
-    def call_string(self, var_dict, loop_vars=None, dhdebug=False):
+    def call_string(self, var_dict, loop_vars=None):
         """Return a legal call string of this VarDDT's local name sequence.
         """
         # XXgoldyXX: Need to add dimensions to this
         call_str = super().get_prop_value('local_name')
-        if dhdebug:
-            print(f"DH DEBUG VarDDT.call_string: '{call_str}', '{self.field}'")
         if self.field is not None:
             call_str += '%' + self.field.call_string(var_dict,
-                                                     loop_vars=loop_vars, dhdebug=dhdebug)
+                                                     loop_vars=loop_vars)
         # end if
         return call_str
 

@@ -692,7 +692,7 @@ class Var:
         # end if
         return dimstr
 
-    def call_string(self, var_dicts, loop_vars=None, dhdebug=False):
+    def call_string(self, var_dicts, loop_vars=None):
         """Construct the actual argument string for this Var by translating
         standard names to local names.
         String includes array bounds unless loop_vars is None.
@@ -708,13 +708,11 @@ class Var:
         # end if
         if loop_vars is None:
             call_str = self.get_prop_value('local_name')
-            if dhdebug:
-                print(f"DH call_string: '{call_str}'")
             # Look for dims in case this is an array selection variable
             # DH*
             # Will this work with something like ddt1(some_index)%nested_ddt(other_index)%myvar(dimstring)?
             # Is local_name guaranteed to be just the member of the innermost DDT?
-            # *DH
+            # Better to use split_dims_from_name ...
             dind = call_str.find('(')
             if dind > 0:
                 dimstr = call_str[dind+1:].rstrip()[:-1]
@@ -723,6 +721,7 @@ class Var:
             else:
                 dims = None
             # end if
+            # *DH
         else:
             call_str, dims = self.handle_array_ref()
         # end if
