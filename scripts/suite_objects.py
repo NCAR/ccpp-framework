@@ -224,7 +224,6 @@ class CallList(VarDictionary):
                         if dimensions and not host_var:
                             dimstr = '('
                             for cnt,dim in enumerate(dimensions):
-                                print(f"DH ZZZ: {cnt} / {dim} / {is_horizontal_dimension(dim)}")
                                 if is_horizontal_dimension(dim):
                                     if self.routine.run_phase():
                                         #if var_in_call_list and \
@@ -1390,6 +1389,7 @@ class Scheme(SuiteObject):
         dimensions = dvar.get_dimensions()
         # Need to use local_name in Group's call list (self.__group.call_list),
         # not the local_name in var.
+        # DH* a lot of repeated logic here ... consolidate!
         if (dict_var):
             (conditional, _) = dvar.conditional(cldicts)
             if (has_transform):
@@ -1445,10 +1445,10 @@ class Scheme(SuiteObject):
                 # contains the correct horizontal and vertical extents, the former
                 # does not - they can be ranges (containing ":") or indices
                 # (that is, the variable is a slice of another variable).
-                # We need to walk the lim specifier left to right and for each
+                # We need to walk the ldims list left to right and for each
                 # dimension we need to check if it is a range or not. If it is
-                # a range, we insert the first range from dimstr, then we remove
-                # this range from dimstr and move on to the next.
+                # a range, we insert the first element from ddims, then we remove
+                # this range from ddims and move on to the next.
                 if ldims:
                     # Consistency check:
                     if len(ldims) < len(ddims):
@@ -1475,6 +1475,7 @@ class Scheme(SuiteObject):
                 outfile.write(f"{lname_ptr} => {lname}", indent)
             # end if
         # end if
+        # *DH
     # end def
 
     def nullify_optional_var(self, dict_var, var, has_transform, cldicts, indent, outfile):
