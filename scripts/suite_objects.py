@@ -226,6 +226,14 @@ class CallList(VarDictionary):
                             for cnt,dim in enumerate(dimensions):
                                 if is_horizontal_dimension(dim):
                                     if self.routine.run_phase():
+                                        # DH* Using this produces out of range exceptions. Begs a
+                                        # larger question of we should - internally - *always* use 
+                                        # horizontal_loop_begin:horizontal_loop_end, regardless
+                                        # of how it is defined in the metadata (e.g. convert
+                                        #   ccpp_constant_one:horizontal_loop_extent
+                                        # to
+                                        #   horizontal_loop_begin:horizontal_loop_end
+                                        # for the run phase when parsing the metadata ?
                                         #if var_in_call_list and \
                                         #   self.find_variable(standard_name="horizontal_loop_extent"):
                                         #    ldim = "ccpp_constant_one"
@@ -233,9 +241,10 @@ class CallList(VarDictionary):
                                         #else:
                                         #    ldim = "horizontal_loop_begin"
                                         #    udim = "horizontal_loop_end"
+                                        # endif
                                         ldim = "horizontal_loop_begin"
                                         udim = "horizontal_loop_end"
-                                        # endif
+                                        # *DH
                                     else:
                                         ldim = "ccpp_constant_one"
                                         udim = "horizontal_dimension"
