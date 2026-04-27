@@ -29,11 +29,11 @@ jobs:
           python3 \
           git \
           libxml2-utils
-        #python -m pip install --upgrade pip
-        #pip install pytest
+        python -m pip install --upgrade pip
+        pip install pytest
         which xmllint
         xmllint --version
-        #which pytest
+        which pytest
 
     - name: Build the framework
       run: |
@@ -46,15 +46,15 @@ jobs:
         cd build
         ctest --rerun-failed --output-on-failure . --verbose
 
-    #- name: Run python tests
-    #  run: |
-    #    BUILD_DIR=./build \
-    #    PYTHONPATH=test/:scripts/ \
-    #      pytest \
-    #        test/capgen_test/capgen_test_reports.py \
-    #        test/advection_test/advection_test_reports.py \
-    #        test/ddthost_test/ddthost_test_reports.py \
-    #        test/var_compatibility_test/var_compatibility_test_reports.py
+    - name: Run python tests
+      run: |
+        BUILD_DIR=./build \
+        PYTHONPATH=test/:scripts/ \
+          pytest \
+            test/capgen_test/capgen_test_reports.py \
+            test/advection_test/advection_test_reports.py \
+            test/ddthost_test/ddthost_test_reports.py \
+            test/var_compatibility_test/var_compatibility_test_reports.py
 
     - name: Run Fortran to metadata test
       run: cd test && ./test_fortran_to_metadata.sh

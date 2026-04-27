@@ -47,9 +47,9 @@ _MODULE_LIST = ["environ_conditions", "make_ddt", "setup_coeffs", "temp_adjust",
 _SUITE_LIST = ["ddt_suite", "temp_suite"]
 _INPUT_VARS_DDT = ["model_times", "number_of_model_times",
                    "horizontal_loop_begin", "horizontal_loop_end",
-                   "surface_air_pressure", "horizontal_dimension"]
+                   "physics_state_derived_type", "horizontal_dimension"]
 _OUTPUT_VARS_DDT = ["ccpp_error_code", "ccpp_error_message", "model_times",
-                    "surface_air_pressure", "number_of_model_times"]
+                    "physics_state_derived_type", "number_of_model_times"]
 _REQUIRED_VARS_DDT = _INPUT_VARS_DDT + _OUTPUT_VARS_DDT
 _PROT_VARS_TEMP = ["horizontal_loop_begin", "horizontal_loop_end",
                    "horizontal_dimension", "vertical_layer_dimension",
@@ -65,26 +65,25 @@ _REQUIRED_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                        "potential_temperature_at_interface",
                        "coefficients_for_interpolation",
                        "potential_temperature_increment",
-                       "surface_air_pressure", "time_step_for_physics",
-                       "water_vapor_specific_humidity",
-                       "soil_levels",
+                       "time_step_for_physics",
+                       "physics_state_derived_type",
+                       "do_cloud_fraction_adjustment",
                        "temperature_at_diagnostic_levels",
                        "array_variable_for_testing"]
 _INPUT_VARS_TEMP = ["potential_temperature",
                     "potential_temperature_at_interface",
                     "coefficients_for_interpolation",
                     "potential_temperature_increment",
-                    "surface_air_pressure", "time_step_for_physics",
-                    "water_vapor_specific_humidity",
-                    "soil_levels",
+                    "time_step_for_physics",
+                    "do_cloud_fraction_adjustment",
+                    "physics_state_derived_type",
                     "temperature_at_diagnostic_levels",
                     "array_variable_for_testing"]
 _OUTPUT_VARS_TEMP = ["ccpp_error_code", "ccpp_error_message",
                      "potential_temperature",
                      "potential_temperature_at_interface",
                      "coefficients_for_interpolation",
-                     "surface_air_pressure", "water_vapor_specific_humidity",
-                     "soil_levels",
+                     "physics_state_derived_type",
                      "temperature_at_diagnostic_levels",
                      "array_variable_for_testing"]
 
