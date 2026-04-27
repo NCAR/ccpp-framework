@@ -666,68 +666,57 @@ class Var:
         # end if
         return dimstr
 
-    def call_string(self, var_dict, loop_vars=None):
+    def call_string(self, var_dict):
         """Construct the actual argument string for this Var by translating
         standard names to local names.
         String includes array bounds unless loop_vars is None.
         if <loop_vars> is not None, look there first for array bounds,
         even if usage requires a loop substitution.
         """
-        if loop_vars is None:
-            call_str = self.get_prop_value('local_name')
-            # Look for dims in case this is an array selection variable
-            dind = call_str.find('(')
-            if dind > 0:
-                dimstr = call_str[dind+1:].rstrip()[:-1]
-                dims = [x.strip() for x in dimstr.split(',')]
-                call_str = call_str[:dind].strip()
-            else:
-                dims = None
-            # end if
+        call_str = self.get_prop_value('local_name')
+        # Look for dims in case this is an array selection variable
+        dind = call_str.find('(')
+        if dind > 0:
+            dimstr = call_str[dind+1:].rstrip()[:-1]
+            dims = [x.strip() for x in dimstr.split(',')]
+            call_str = call_str[:dind].strip()
         else:
-            call_str, dims = self.handle_array_ref()
+            dims = None
         # end if
         if dims:
             call_str += '('
             dsep = ''
             for dim in dims:
-                if loop_vars:
-                    lname = loop_vars.find_loop_dim_match(dim)
-                else:
-                    lname = None
-                # end if
-                if lname is None:
-                    isep = ''
-                    lname = ""
-                    for item in dim.split(':'):
-                        if item:
-                            dvar = var_dict.find_variable(standard_name=item,
-                                                          any_scope=False)
-                            if dvar is None:
-                                try:
-                                    dval = int(item)
-                                    iname = item
-                                except ValueError:
-                                    iname = None
-                                # end try
-                            else:
-                                iname = dvar.call_string(var_dict,
-                                                         loop_vars=loop_vars)
-                            # end if
+                isep = ''
+                lname = ""
+                for item in dim.split(':'):
+                    if item:
+                        dvar = var_dict.find_variable(standard_name=item,
+                                                      any_scope=False)
+                        if dvar is None:
+                            try:
+                                dval = int(item)
+                                iname = item
+                            except ValueError:
+                                iname = None
+                            # end try
                         else:
-                            iname = ''
+                            iname = dvar.call_string(var_dict,
+                                                     loop_vars=loop_vars)
                         # end if
-                        if iname is not None:
-                            lname = lname + isep + iname
-                            isep = ':'
-                        else:
-                            errmsg = 'No local variable {} in {}{}'
-                            ctx = context_string(self.context)
-                            dname = var_dict.name
-                            raise CCPPError(errmsg.format(item, dname, ctx))
-                        # end if
-                    # end for
-                # end if
+                    else:
+                        iname = ''
+                    # end if
+                    if iname is not None:
+                        lname = lname + isep + iname
+                        isep = ':'
+                    else:
+                        errmsg = 'No local variable {} in {}{}'
+                        ctx = context_string(self.context)
+                        dname = var_dict.name
+                        raise CCPPError(errmsg.format(item, dname, ctx))
+                    # end if
+                # end for
                 if lname is not None:
                     call_str += dsep + lname
                     dsep = ', '
@@ -2090,13 +2079,13 @@ class VarDictionary(OrderedDict):
         # end if
         return my_var
 
-    def var_call_string(self, var, loop_vars=None):
+    def var_call_string(self, var):
         """Construct the actual argument string for <var> by translating
         standard names to local names. String includes array bounds.
         if <loop_vars> is present, look there first for array bounds,
         even if usage requires a loop substitution.
         """
-        return var.call_string(self, loop_vars=loop_vars)
+        return var.call_string(self)
 
     def new_internal_variable_name(self, prefix=None, max_len=63):
         """Find a new local variable name for this dictionary.
