@@ -34,7 +34,6 @@ contains
             end if
             write(errmsg(len_trim(errmsg)+1:), '(a,i0)') ', should be ', num_items
             write(6, *) trim(errmsg)
-            write(6,*) test_list
             errmsg = ''
             check_list = .false.
         end if
