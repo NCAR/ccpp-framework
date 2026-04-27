@@ -183,26 +183,32 @@ class CallList(VarDictionary):
                 dummy = var.get_prop_value('local_name')
                 # Now, find the local variable name
                 if cldicts is not None:
+                    # DH* I believe this can be folded into find_variable
+                    # to ALWAYS search with any_scope=False first, and if
+                    # not found look with any_scope=True if the argument
+                    # any_scope=True is passed to find_variable
                     for cldict in cldicts:
                         dvar = cldict.find_variable(standard_name=stdname,
                                                     any_scope=False)
-                        host_var = False
-                        if dvar is not None:
-                            var_in_call_list = True
-                            if dvar.is_ddt():
-                                if dvar.components:
-                                    var_in_call_list = False
-                                # end if
-                            #else:
-                            #    # If we get here, the variable is explicitly in the Group call_list,
-                            #    # not a DDT component. No need to modify the dimensions in the Scheme
-                            #    # call list, as these were handled in the Suite Cap call_list.
-                            #    host_var = True
-                            # end if
+                        if dvar:
                             break
-                        # end if
                     # end for
-                    if dvar is None:
+                    if not dvar:
+                        for cldict in cldicts:
+                            dvar = cldict.find_variable(standard_name=stdname,
+                                                        any_scope=True)
+                            if dvar:
+                                break
+                        # end for
+                    # end if
+                    # *DH
+                    if dvar is not None:
+                        var_in_call_list = True
+                        if dvar.is_ddt():
+                            if dvar.components:
+                                var_in_call_list = False
+                            # end if
+                    else:
                         if subname is not None:
                             errmsg = "{}: ".format(subname)
                         else:
@@ -212,6 +218,7 @@ class CallList(VarDictionary):
                         clnames = [x.name for x in cldicts]
                         raise CCPPError(errmsg.format(stdname, clnames))
                     # end if
+
                     dimensions = dvar.get_dimensions()
                     lname = dvar.call_string(cldicts)
                     # Optional variables in the caps are associated with
@@ -220,8 +227,7 @@ class CallList(VarDictionary):
                         lname = dummy+'_ptr'
                     # Finally, handle the dimensions unless it's an allocatable var
                     elif not var.get_prop_value('allocatable'):
-                        # DH* host_var still needed?
-                        if dimensions and not host_var:
+                        if dimensions:
                             dimstr = '('
                             for cnt,dim in enumerate(dimensions):
                                 if is_horizontal_dimension(dim):
