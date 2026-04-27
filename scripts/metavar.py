@@ -891,8 +891,8 @@ class Var:
     @parent.setter
     def parent(self, parent_var):
         """Set this variable's parent if not already set"""
-        if self.__parent_var is not None:
-            emsg = 'Attempting to set parent for {} but parent already set'
+        if self.__parent_var is not None and self.__parent_var != parent_var:
+            emsg = 'Attempting to set parent for {} but different parent already set'
             lname = self.get_prop_value('local_name')
             raise ParseInternalError(emsg.format(lname))
         # end if
