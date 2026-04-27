@@ -6,53 +6,57 @@ program test
    character(len=cs), target :: test_parts1(2) = (/ 'physics1        ',       &
                                                     'physics2        ' /)
    character(len=cs), target :: test_parts2(1) = (/ 'data_prep       ' /)
-   character(len=cm), target :: test_invars1(7) = (/                          &
-        'potential_temperature               ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'coefficients_for_interpolation      ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'potential_temperature_increment     ',                               &
-        'time_step_for_physics               ' /)
-   character(len=cm), target :: test_outvars1(7) = (/                         &
-        'potential_temperature               ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'coefficients_for_interpolation      ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
-   character(len=cm), target :: test_reqvars1(9) = (/                         &
-        'potential_temperature               ',                               &
-        'potential_temperature_at_interface  ',                               &
-        'coefficients_for_interpolation      ',                               &
-        'surface_air_pressure                ',                               &
-        'water_vapor_specific_humidity       ',                               &
-        'potential_temperature_increment     ',                               &
-        'time_step_for_physics               ',                               &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ' /)
+   character(len=cm), target :: test_invars1(8) = (/                          &
+        'potential_temperature                 ',                             &
+        'potential_temperature_at_interface    ',                             &
+        'coefficients_for_interpolation        ',                             &
+        'index_of_water_vapor_specific_humidity',                             &
+        'host_standard_ccpp_type               ',                             &
+        'potential_temperature_increment       ',                             &
+        'physics_state_derived_type            ',                             &
+        'time_step_for_physics                 ' /)
+   character(len=cm), target :: test_outvars1(8) = (/                         &
+        'potential_temperature                 ',                             &
+        'potential_temperature_at_interface    ',                             &
+        'coefficients_for_interpolation        ',                             &
+        'index_of_water_vapor_specific_humidity',                             &
+        'host_standard_ccpp_type               ',                             &
+        'physics_state_derived_type            ',	                      &
+        'ccpp_error_code                       ',                             &
+        'ccpp_error_message                    ' /)
+   character(len=cm), target :: test_reqvars1(10) = (/                        &
+        'potential_temperature                 ',                             &
+        'potential_temperature_at_interface    ',                             &
+        'coefficients_for_interpolation        ',                             &
+        'index_of_water_vapor_specific_humidity',                             &
+        'host_standard_ccpp_type               ',                             &        
+        'potential_temperature_increment       ',                             &
+        'physics_state_derived_type            ',                             &
+        'time_step_for_physics                 ',                             &
+        'ccpp_error_code                       ',                             &
+        'ccpp_error_message                    ' /)
 
    character(len=cm), target :: test_invars2(4) = (/                          &
-        'model_times                         ',                               &
-        'number_of_model_times               ',                               &
-        'surface_air_pressure                ',                               &
-        'host_standard_ccpp_type             ' /)
+        'model_times                           ',                             &
+        'number_of_model_times                 ',                             &
+        'physics_state_derived_type            ',                             &
+        'host_standard_ccpp_type               ' /)
 
-   character(len=cm), target :: test_outvars2(5) = (/                         &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ',                               &
-        'model_times                         ',                               &
-        'surface_air_pressure                ',                               &
-        'number_of_model_times               ' /)
+   character(len=cm), target :: test_outvars2(6) = (/                         &
+        'ccpp_error_code                       ',                             &
+        'ccpp_error_message                    ',                             &
+        'model_times                           ',                             &
+        'physics_state_derived_type            ',                             &
+	'host_standard_ccpp_type               ',                             &
+        'number_of_model_times                 ' /)
 
    character(len=cm), target :: test_reqvars2(6) = (/                         &
-        'model_times                         ',                               &
-        'number_of_model_times               ',                               &
-        'surface_air_pressure                ',                               &
-        'ccpp_error_code                     ',                               &
-        'ccpp_error_message                  ',                               &
-        'host_standard_ccpp_type             ' /)
+        'model_times                           ',                             &
+        'number_of_model_times                 ',                             &
+        'ccpp_error_code                       ',                             &
+        'ccpp_error_message                    ',                             &
+        'physics_state_derived_type            ',     	      	      	      &
+        'host_standard_ccpp_type               ' /)
     type(suite_info) :: test_suites(2)
     logical :: run_okay
 

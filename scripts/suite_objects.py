@@ -267,7 +267,7 @@ class CallList(VarDictionary):
                                     if not lvar:
                                         raise Exception(f"No variable with standard name '{ldim}' in cldict")
                                     # end if
-                                    ldim_lname = lvar.get_prop_value('local_name')
+                                    ldim_lname = lvar.call_string('local_name')
                                     # Get dimension for upper bound
                                     for cldict in cldicts:
                                         #uvar = cldict.find_variable(standard_name=udim, any_scope=True)
@@ -277,7 +277,7 @@ class CallList(VarDictionary):
                                     if not uvar:
                                         raise Exception(f"No variable with standard name '{udim}' in cldict")
                                     # end if
-                                    udim_lname = uvar.get_prop_value('local_name')
+                                    udim_lname = uvar.call_string('local_name')
                                     ddims.append(ldim_lname + ':' + udim_lname)
                                 else:
                                     # DH* TODO - explicit lbound and ubound as for optional args below

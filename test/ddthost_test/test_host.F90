@@ -9,7 +9,7 @@ module test_prog
 
    ! Public data and interfaces
    integer, public, parameter :: cs = 16
-   integer, public, parameter :: cm = 36
+   integer, public, parameter :: cm = 38
 
    !> \section arg_table_suite_info  Argument Table
    !! \htmlinclude arg_table_suite_info.html
