@@ -191,6 +191,7 @@ class CallList(VarDictionary):
                         dvar = cldict.find_variable(standard_name=stdname,
                                                     any_scope=False)
                         if dvar:
+                            search_dict = cldict
                             break
                     # end for
                     if not dvar:
@@ -198,6 +199,7 @@ class CallList(VarDictionary):
                             dvar = cldict.find_variable(standard_name=stdname,
                                                         any_scope=True)
                             if dvar:
+                                search_dict = cldict
                                 break
                         # end for
                     # end if
@@ -227,10 +229,11 @@ class CallList(VarDictionary):
                         lname = dummy+'_ptr'
                     # Finally, handle the dimensions unless it's an allocatable var
                     elif not var.get_prop_value('allocatable'):
+                        # DH* Consolidate this with the logic below for optional arguments ...
                         if dimensions:
-                            dimstr = '('
-                            for cnt,dim in enumerate(dimensions):
-                                if is_horizontal_dimension(dim):
+                            ddims = []
+                            for i in range(len(dimensions)):
+                                if is_horizontal_dimension(dimensions[i]):
                                     if self.routine.run_phase():
                                         # DH* Using this produces out of range exceptions. Begs a
                                         # larger question of we should - internally - *always* use 
@@ -275,14 +278,39 @@ class CallList(VarDictionary):
                                         raise Exception(f"No variable with standard name '{udim}' in cldict")
                                     # end if
                                     udim_lname = uvar.get_prop_value('local_name')
-                                    dimstr = dimstr + ldim_lname + ':' + udim_lname
+                                    ddims.append(ldim_lname + ':' + udim_lname)
                                 else:
-                                    dimstr = dimstr + ':'
+                                    # DH* TODO - explicit lbound and ubound as for optional args below
+                                    ddims.append(':')
+                                    # *DH
                                 # endif
-                                if cnt < len(dimensions)-1: dimstr = dimstr+','
                             # end for
-                            dimstr = dimstr+')'
-                            lname = lname + dimstr
+
+                            lname, ldims = split_dims_from_name(dvar.call_string(search_dict))
+                            # This is where it gets tricky. We have a dimension specifier
+                            # as part of the local name, and we have a dimstr. The latter
+                            # contains the correct horizontal and vertical extents, the former
+                            # does not - they can be ranges (containing ":") or indices
+                            # (that is, the variable is a slice of another variable).
+                            # We need to walk the ldims list left to right and for each
+                            # dimension we need to check if it is a range or not. If it is
+                            # a range, we insert the first element from ddims, then we remove
+                            # this range from ddims and move on to the next.
+                            if ldims:
+                                # Consistency check:
+                                if len(ldims) < len(ddims):
+                                    raise Exception("Logic error in associate_optional_var: len({ldims}) < len({ddims})")
+                                for i in range(len(ldims)):
+                                    if ':' in ldims[i]:
+                                        ldims[i] = ddims.pop(0)
+                                # At the end ddims must be empty
+                                if ddims:
+                                    raise Exception("Logic error in associate_optional_var: after filling ldims='{ldims}' from ddims, ddims is not empty: '{ddims}'")
+                                dimstr = '(' + ','.join(ldims) + ')'
+                            else:
+                                dimstr = '(' + ','.join(ddims) + ')'
+                            lname += dimstr
+
                         # end if
                     # end if
                 else:
