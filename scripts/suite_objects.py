@@ -191,11 +191,11 @@ class CallList(VarDictionary):
                                 if dvar.components:
                                     var_in_call_list = False
                                 # end if
-                            else:
-                                # If we get here, the variable is explicitly in the Group call_list,
-                                # not a DDT component. No need to modify the dimensions in the Scheme
-                                # call list, as these were handled in the Suite Cap call_list.
-                                host_var = True
+                            #else:
+                            #    # If we get here, the variable is explicitly in the Group call_list,
+                            #    # not a DDT component. No need to modify the dimensions in the Scheme
+                            #    # call list, as these were handled in the Suite Cap call_list.
+                            #    host_var = True
                             # end if
                             break
                         # end if
@@ -223,36 +223,47 @@ class CallList(VarDictionary):
                     # local pointers of <lname>_ptr
                     if var.get_prop_value('optional'):
                         lname = dummy+'_ptr'
-                    # end if
                     # Finally, handle the dimensions.
-                    else:
+                    elif not var.get_prop_value('allocatable'):
+                    #else:
                         print(f"DH AAA host_var? {host_var}")
+                        print(f"DH AAA allocatable? {var.get_prop_value('allocatable')}")
                         if dimensions and not host_var:
                             dimstr = '('
                             for cnt,dim in enumerate(dimensions):
                                 print(f"DH ZZZ: {cnt} / {dim} / {is_horizontal_dimension(dim)}")
                                 if is_horizontal_dimension(dim):
                                     if self.routine.run_phase():
-                                        if var_in_call_list and \
-                                           self.find_variable(standard_name="horizontal_loop_extent"):
-                                            ldim = "ccpp_constant_one"
-                                            udim = "horizontal_loop_extent"
-                                        else:
-                                            ldim = "horizontal_loop_begin"
-                                            udim = "horizontal_loop_end"
+                                        #if var_in_call_list and \
+                                        #   self.find_variable(standard_name="horizontal_loop_extent"):
+                                        #    ldim = "ccpp_constant_one"
+                                        #    udim = "horizontal_loop_extent"
+                                        #else:
+                                        #    ldim = "horizontal_loop_begin"
+                                        #    udim = "horizontal_loop_end"
+                                        ldim = "horizontal_loop_begin"
+                                        udim = "horizontal_loop_end"
                                         # endif
                                     else:
                                         ldim = "ccpp_constant_one"
                                         udim = "horizontal_dimension"
                                     # endif
                                     # Get dimension for lower bound
-                                    lvar = cldict.find_variable(standard_name=ldim, any_scope=True)
+                                    for cldict in cldicts:
+                                        #lvar = cldict.find_variable(standard_name=ldim, any_scope=True)
+                                        lvar = cldict.find_variable(standard_name=ldim, any_scope=False)
+                                        if lvar:
+                                            break
                                     if not lvar:
                                         raise Exception(f"No variable with standard name '{ldim}' in cldict")
                                     # end if
                                     ldim_lname = lvar.get_prop_value('local_name')
                                     # Get dimension for upper bound
-                                    uvar = cldict.find_variable(standard_name=udim, any_scope=True)
+                                    for cldict in cldicts:
+                                        #uvar = cldict.find_variable(standard_name=udim, any_scope=True)
+                                        uvar = cldict.find_variable(standard_name=udim, any_scope=False)
+                                        if uvar:
+                                            break
                                     if not uvar:
                                         raise Exception(f"No variable with standard name '{udim}' in cldict")
                                     # end if
@@ -293,22 +304,22 @@ class CallList(VarDictionary):
                         # end if
                     # end for
                 # end if
-                if is_func_call:
-                    if cldicts is not None:
-                        use_dicts = cldicts
-                    else:
-                        use_dicts = [self]
-                    # end if
-                    run_phase = self.routine.run_phase()
-                    # We only need dimensions for suite variables in run phase
-                    need_dims = SuiteObject.is_suite_variable(dvar) and run_phase
-                    vdims = var.call_dimstring(var_dicts=use_dicts,
-                                               explicit_dims=need_dims,
-                                               loop_subst=run_phase)
-                    if _BLANK_DIMS_RE.match(vdims) is None:
-                        lname = lname + vdims
-                    # end if
-                # end if
+                #if is_func_call:
+                #    if cldicts is not None:
+                #        use_dicts = cldicts
+                #    else:
+                #        use_dicts = [self]
+                #    # end if
+                #    run_phase = self.routine.run_phase()
+                #    # We only need dimensions for suite variables in run phase
+                #    need_dims = SuiteObject.is_suite_variable(dvar) and run_phase
+                #    vdims = var.call_dimstring(var_dicts=use_dicts,
+                #                               explicit_dims=need_dims,
+                #                               loop_subst=run_phase)
+                #    if _BLANK_DIMS_RE.match(vdims) is None:
+                #        lname = lname + vdims
+                #    # end if
+                ## end if
                 if is_func_call:
                     arg_str += "{}{}={}".format(arg_sep, dummy, lname)
                 else:
@@ -1172,6 +1183,10 @@ class Scheme(SuiteObject):
             vintent = var.get_prop_value('intent')
             args = self.match_variable(var, self.run_env, host_dict)
             found, dict_var, local_var, var_vdim, new_dims, compat_obj, scheme_var = args
+            # DH*
+            print(f"DH DEBUG ABC: {self.subroutine_name} / {vstdname} / {vdims} / {found} / {dict_var} / {local_var} ")
+            #if vstdname == "ozone":
+            #    raise Exception("XXX")
             if dict_var:
                 if dict_var.is_ddt():
                     subst_dict = {'intent':'inout'}
@@ -1652,12 +1667,27 @@ class Scheme(SuiteObject):
         # end if
 
         # If needed, modify horizontal dimension for loop substitution.
-        #cldicts = [self]#.__group, self.__group.call_list]
+        cldicts = [self]#.__group, self.__group.call_list]
         #cldicts.extend(self.__group.suite_dicts())
         # NOT YET IMPLEMENTED
-        hdim = find_horizontal_dimension(var.get_dimensions())
-        #if compat_obj.has_dim_transforms:
-        print("SWALES ",hdim,var.get_prop_value('local_name'))
+        var_hdim,hdim = find_horizontal_dimension(var.get_dimensions())
+        if var_hdim:
+            if self.run_phase():
+                ldim = "horizontal_loop_begin"
+                udim = "horizontal_loop_end"
+            else:
+                ldim = "ccpp_constant_one"
+                udim = "horizontal_dimension"
+            # end if
+            lvar = self.find_variable(ldim)
+            if lvar is None:
+                raise CCPPError(f"add_var_transform: Cannot find dimension variable, {ldim}")
+            # end if
+            uvar = self.find_variable(udim)
+            if uvar is None:
+                raise CCPPError(f"add_var_transform: Cannot find dimension variable, {udim}")
+            # end if
+            rindices[hdim] = lvar.get_prop_value('local_name')+':'+uvar.get_prop_value('local_name')
 
         # Register any reverse (pre-Scheme) transforms. Also, save local_name used in
         # transform (used in write stage).
