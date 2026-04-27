@@ -1,7 +1,8 @@
 module test_host_mod
 
   use ccpp_kinds, only: kind_phys
-  use test_host_data, only: physics_state, allocate_physics_state
+  use test_host_data, only: physics_state, &
+      allocate_physics_state
 
   implicit none
   public
@@ -80,7 +81,7 @@ contains
     check_model_times = (num_model_times > 0)
     if (check_model_times) then
       check_model_times = (size(model_times) == num_model_times)
-      if (.not.check_model_times) then
+      if (.not. check_model_times) then
         write(6, '(2(a,i0))') 'model_times size mismatch, ', &
             size(model_times), ' should be ', num_model_times
       end if

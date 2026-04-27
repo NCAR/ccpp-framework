@@ -13,11 +13,11 @@ contains
   !!
   subroutine rad_sw_run(ncol, sfc_up_sw, sfc_down_sw, errmsg, errflg)
 
-    integer,            intent(in)    :: ncol
-    real(kind_phys),    intent(inout) :: sfc_up_sw(:)
-    real(kind_phys),    intent(inout) :: sfc_down_sw(:)
-    character(len=512), intent(out)   :: errmsg
-    integer,            intent(out)   :: errflg
+    integer, intent(in) :: ncol
+    real(kind=kind_phys), intent(inout) :: sfc_up_sw(:)
+    real(kind=kind_phys), intent(inout) :: sfc_down_sw(:)
+    character(len=512), intent(out) :: errmsg
+    integer, intent(out) :: errflg
 
     ! Locals
     integer :: icol
@@ -25,10 +25,10 @@ contains
     errmsg = ''
     errflg = 0
 
-    do icol=1,ncol
-       sfc_up_sw(icol)   = 100._kind_phys
-       sfc_down_sw(icol) = 400._kind_phys
-    enddo
+    do icol = 1, ncol
+      sfc_up_sw(icol) = 100._kind_phys
+      sfc_down_sw(icol) = 400._kind_phys
+    end do
 
   end subroutine rad_sw_run
 

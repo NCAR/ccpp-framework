@@ -1,5 +1,8 @@
 program test
-  use test_prog, only: test_host, suite_info, cm, cs
+  use test_prog, only: test_host, &
+      suite_info, &
+      cm, &
+      cs
 
   implicit none
   character(len=cs), target :: test_parts1(2) = (/ 'physics1        ', &
