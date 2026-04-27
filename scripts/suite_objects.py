@@ -830,7 +830,7 @@ class SuiteObject(VarDictionary):
             # end if
             # Create compatability object, containing any necessary forward/reverse 
             # transforms from <var> and <dict_var>
-            compat_obj = var.compatible(dict_var, run_env)
+            #compat_obj = var.compatible(dict_var, run_env)
             # Add the variable to the parent call tree
             if dict_dims == new_dict_dims:
                 sdict = {}
@@ -862,7 +862,7 @@ class SuiteObject(VarDictionary):
         if dict_var is not None:
             dict_var = self.parent.find_variable(source_var=var, any_scope=True)
             if scheme_var is not None:
-                compat_obj = var.compatible(scheme_var, run_env)
+                compat_obj = var.compatible(scheme_var, run_env, is_host_var=True)
             else:
                 compat_obj = var.compatible(dict_var, run_env)
             # end if
@@ -1501,9 +1501,6 @@ class Scheme(SuiteObject):
         # end if
 
         # If needed, modify horizontal dimension for loop substitution.
-        cldicts = [self]#.__group, self.__group.call_list]
-        #cldicts.extend(self.__group.suite_dicts())
-        # NOT YET IMPLEMENTED
         var_hdim,hdim = find_horizontal_dimension(var.get_dimensions())
         if var_hdim:
             if self.run_phase():

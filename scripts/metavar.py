@@ -375,26 +375,44 @@ class Var:
             # end if
         # end try
 
-    def compatible(self, other, run_env, is_tend=False):
+    def compatible(self, other, run_env, is_tend=False, is_host_var=False):
         """Return a VarCompatObj object which describes the equivalence,
         compatibility, or incompatibility between <self> and <other>.
+        If <host_var>, reverse the variable properties.
         """
         # We accept character(len=*) as compatible with
         # character(len=INTEGER_VALUE)
-        stype = self.get_prop_value('type')
-        skind = self.get_prop_value('kind')
-        sunits = self.get_prop_value('units')
-        sstd_name = self.get_prop_value('standard_name')
-        sloc_name = self.get_prop_value('local_name')
-        stopp = self.get_prop_value('top_at_one')
-        sdims = self.get_dimensions()
-        otype = other.get_prop_value('type')
-        okind = other.get_prop_value('kind')
-        ounits = other.get_prop_value('units')
-        ostd_name = other.get_prop_value('standard_name')
-        oloc_name = other.get_prop_value('local_name')
-        otopp = other.get_prop_value('top_at_one')
-        odims = other.get_dimensions()
+        if not is_host_var:
+            stype = self.get_prop_value('type')
+            skind = self.get_prop_value('kind')
+            sstd_name = self.get_prop_value('standard_name')
+            sloc_name = self.get_prop_value('local_name')
+            stopp = self.get_prop_value('top_at_one')
+            sdims = self.get_dimensions()
+            sunits = self.get_prop_value('units')
+            otype = other.get_prop_value('type')
+            okind = other.get_prop_value('kind')
+            ostd_name = other.get_prop_value('standard_name')
+            oloc_name = other.get_prop_value('local_name')
+            otopp = other.get_prop_value('top_at_one')
+            odims = other.get_dimensions()
+            ounits = other.get_prop_value('units')
+        else:
+            otype = self.get_prop_value('type')
+            okind = self.get_prop_value('kind')
+            ostd_name = self.get_prop_value('standard_name')
+            oloc_name = self.get_prop_value('local_name')
+            otopp = self.get_prop_value('top_at_one')
+            odims = self.get_dimensions()
+            ounits = self.get_prop_value('units')
+            stype = other.get_prop_value('type')
+            skind = other.get_prop_value('kind')
+            sstd_name = other.get_prop_value('standard_name')
+            sloc_name = other.get_prop_value('local_name')
+            stopp = other.get_prop_value('top_at_one')
+            sdims = other.get_dimensions()
+            sunits = other.get_prop_value('units')
+        # end if
         compat = VarCompatObj(sstd_name, stype, skind, sunits, sdims, sloc_name, stopp,
                               ostd_name, otype, okind, ounits, odims, oloc_name, otopp,
                               run_env,
