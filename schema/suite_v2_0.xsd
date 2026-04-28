@@ -66,35 +66,9 @@
 
   <!-- definition of suite elements -->
 
-  <xs:element name="time_split">
-    <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="time_split"/>
-        <xs:element ref="process_split"/>
-        <xs:element ref="subcycle"/>
-        <xs:element ref="subcol"/>
-        <xs:element name="scheme" type="scheme_type"/>
-      </xs:choice>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="process_split">
-    <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="time_split"/>
-        <xs:element ref="process_split"/>
-        <xs:element ref="subcycle"/>
-        <xs:element ref="subcol"/>
-        <xs:element name="scheme" type="scheme_type"/>
-      </xs:choice>
-    </xs:complexType>
-  </xs:element>
-
   <xs:element name="subcycle">
     <xs:complexType>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="time_split"/>
-        <xs:element ref="process_split"/>
         <xs:element ref="subcycle"/>
         <xs:element ref="subcol"/>
         <xs:element name="scheme" type="scheme_type"/>
@@ -106,8 +80,6 @@
   <xs:element name="subcol">
     <xs:complexType>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="time_split"/>
-        <xs:element ref="process_split"/>
         <xs:element ref="subcycle"/>
         <xs:element ref="subcol"/>
         <xs:element name="scheme" type="scheme_type"/>
@@ -120,8 +92,6 @@
   <xs:element name="group">
     <xs:complexType>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="time_split"/>
-        <xs:element ref="process_split"/>
         <xs:element ref="subcycle"/>
         <xs:element ref="subcol"/>
         <xs:element name="scheme" type="scheme_type"/>
