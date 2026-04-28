@@ -360,6 +360,7 @@ class Var:
         # Make sure all the variable values are valid
         try:
             for prop_name, prop_val in self.var_properties():
+                #print(f"DHDEBUG: prop_name, prop_val: '{prop_name}' / '{prop_val}'")
                 prop = Var.get_prop(prop_name)
                 _ = prop.valid_value(prop_val,
                                      prop_dict=self._prop_dict, error=True)
@@ -561,6 +562,8 @@ class Var:
         ('foo', ['ccpp_constant_one:dim1', 'ccpp_constant_one:dim2', 'bar'])
         >>> Var({'local_name' : 'foo(bar,:)', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).handle_array_ref()
         ('foo', ['bar', 'ccpp_constant_one:dim1'])
+        >>> Var({'local_name' : 'foo(:)', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).handle_array_ref()
+        ('foo', ['ccpp_constant_one:dim1'])
         >>> Var({'local_name' : 'foo(bar)', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).handle_array_ref() #doctest: +IGNORE_EXCEPTION_DETAIL
         Traceback (most recent call last):
         CCPPError: Call dims mismatch for foo(bar), not enough colons
@@ -610,8 +613,8 @@ class Var:
         # end if
         return lname, dimlist
 
-    def call_dimstring(self, var_dicts=None,
-                       explicit_dims=False, loop_subst=False):
+    def call_dimstring(self, var_dicts=None, explicit_dims=False,
+                       loop_subst=False, prepend_varname=False):
         """Return the dimensions string for a variable call.
         If <var_dict> is present, find and substitute a local_name for
         each standard_name in this variable's dimensions.
@@ -621,7 +624,7 @@ class Var:
            missing dimension.
         """
         emsg = ''
-        _, dims = self.handle_array_ref()
+        varname, dims = self.handle_array_ref()
         if var_dicts is not None:
             dimlist = []
             sepstr = ''
@@ -644,6 +647,13 @@ class Var:
                 if (not dvar) and add_dims:
                     dnames = []
                     for stdname in dstdnames:
+                        # Leave integers (parameters) alone
+                        try:
+                            if isinstance(int(stdname), int):
+                                dnames.append(stdname)
+                                continue
+                        except ValueError:
+                            pass
                         for vdict in var_dicts:
                             dvar = vdict.find_variable(standard_name=stdname,
                                                        any_scope=False)
@@ -690,7 +700,10 @@ class Var:
             lname = self.get_prop_value('local_name')
             raise CCPPError(emsg.format(vlnam=lname, ctx=ctx))
         # end if
-        return dimstr
+        if prepend_varname:
+            return varname + dimstr
+        else:
+            return dimstr
 
     def call_string(self, var_dicts, loop_vars=None):
         """Construct the actual argument string for this Var by translating
@@ -700,8 +713,8 @@ class Var:
         even if usage requires a loop substitution.
         """
         # DH*
-        if loop_vars:
-            raise Exception(f"DH DEBUG: WE DO USE loop_vars in call_string! '{loop_vars}'")
+        #if loop_vars:
+        #    raise Exception(f"DH DEBUG: WE DO USE loop_vars in call_string! '{loop_vars}'")
         # *DH
         if not isinstance(var_dicts, list):
            var_dicts = [var_dicts]

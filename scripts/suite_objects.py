@@ -309,8 +309,24 @@ class CallList(VarDictionary):
                                 dimstr = '(' + ','.join(ldims) + ')'
                             else:
                                 dimstr = '(' + ','.join(ddims) + ')'
+                            if True: #ldims:
+                                print(f"DH DEBUG: dvar.call_string(search_dict) is '{dvar.call_string(search_dict)}'")
+                                print(f"DH DEBUG: lname, ldims: '{lname}' / '{ldims}'")
+                                print(f"DH DEBUG: dimstr: '{dimstr}'")
+                                tlname, tldims = dvar.handle_array_ref()
+                                print(f"DH DEBUG: tlname, tldims: '{tlname}' / '{tldims}'")
+                                print(f"DH DEBUG: dvar.call_dimstring(): '{dvar.call_dimstring()}'")
+                                print(f"DH DEBUG: dvar.call_dimstring(explicit_dims=True): '{dvar.call_dimstring(explicit_dims=True)}'")
+                                #print(f"DH DEBUG: dvar.call_dimstring(var_dicts=[self], explicit_dims=True): '{dvar.call_dimstring(var_dicts=[self], explicit_dims=True)}'")
+                                print(f"DH DEBUG: dvar.call_dimstring(var_dicts=cldicts, explicit_dims=True): '{dvar.call_dimstring(var_dicts=cldicts, explicit_dims=True)}'")
+                                print(f"DH DEBUG: dvar.call_dimstring(var_dicts=cldicts, explicit_dims=True, loop_subst=True): '{dvar.call_dimstring(var_dicts=cldicts, explicit_dims=True, loop_subst=True)}'")
+                                print(" ")
+                                #raise Exception("XXX")
+                            # DH*
+                            lname, ldims = split_dims_from_name(dvar.call_string(search_dict))
+                            dimstr = dvar.call_dimstring(var_dicts=cldicts, explicit_dims=True, loop_subst=self.routine.run_phase())
+                            # *DH
                             lname += dimstr
-
                         # end if
                     # end if
                 else:
@@ -1438,74 +1454,85 @@ class Scheme(SuiteObject):
             if (has_transform):
                 lname = var.get_prop_value('local_name')+'_local'
             else:
-                ddims = dvar.get_dimensions()
-                for i in range(len(ddims)):
-                    dim = ddims[i]
-                    if is_horizontal_dimension(dim):
-                        if self.run_phase():
-                            if var_in_call_list and \
-                               self.find_variable(standard_name="horizontal_loop_extent"):
-                                ldim = "ccpp_constant_one"
-                                udim = "horizontal_loop_extent"
-                            else:
-                                ldim = "horizontal_loop_begin"
-                                udim = "horizontal_loop_end"
-                            # endif
-                        else:
-                            ldim = "ccpp_constant_one"
-                            udim = "horizontal_dimension"
-                        # endif
-                    else:
-                        ldim, udim = dim.split(':')
-                    # end if
-                    # Get dimension for lower bound
-                    for var_dict in cldicts:
-                        lvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
-                        if lvar is not None:
-                            break
-                        # end if
-                    # end for
-                    if not lvar:
-                        raise Exception(f"No variable with standard name '{ldim}' in cldicts")
-                    # end if
-                    ldim_lname = lvar.get_prop_value('local_name')
-                    # Get dimension for upper bound
-                    for var_dict in cldicts:
-                        uvar = var_dict.find_variable(standard_name=udim, any_scope=False)
-                        if uvar is not None:
-                            break
-                        # end if
-                    # end for
-                    if not uvar:
-                        raise Exception(f"No variable with standard name '{udim}' in cldicts")
-                    # end if
-                    udim_lname = uvar.get_prop_value('local_name')
-                    ddims[i] = ldim_lname + ':' + udim_lname
-                # end for
+                #ddims = dvar.get_dimensions()
+                #for i in range(len(ddims)):
+                #    dim = ddims[i]
+                #    if is_horizontal_dimension(dim):
+                #        if self.run_phase():
+                #            if var_in_call_list and \
+                #               self.find_variable(standard_name="horizontal_loop_extent"):
+                #                ldim = "ccpp_constant_one"
+                #                udim = "horizontal_loop_extent"
+                #            else:
+                #                ldim = "horizontal_loop_begin"
+                #                udim = "horizontal_loop_end"
+                #            # endif
+                #        else:
+                #            ldim = "ccpp_constant_one"
+                #            udim = "horizontal_dimension"
+                #        # endif
+                #    else:
+                #        ldim, udim = dim.split(':')
+                #    # end if
+                #    # Get dimension for lower bound
+                #    for var_dict in cldicts:
+                #        lvar = var_dict.find_variable(standard_name=ldim, any_scope=False)
+                #        if lvar is not None:
+                #            break
+                #        # end if
+                #    # end for
+                #    if not lvar:
+                #        raise Exception(f"No variable with standard name '{ldim}' in cldicts")
+                #    # end if
+                #    ldim_lname = lvar.get_prop_value('local_name')
+                #    # Get dimension for upper bound
+                #    for var_dict in cldicts:
+                #        uvar = var_dict.find_variable(standard_name=udim, any_scope=False)
+                #        if uvar is not None:
+                #            break
+                #        # end if
+                #    # end for
+                #    if not uvar:
+                #        raise Exception(f"No variable with standard name '{udim}' in cldicts")
+                #    # end if
+                #    udim_lname = uvar.get_prop_value('local_name')
+                #    ddims[i] = ldim_lname + ':' + udim_lname
+                ## end for
+                #lname, ldims = split_dims_from_name(dvar.call_string(search_dict))
+                ## This is where it gets tricky. We have a dimension specifier
+                ## as part of the local name, and we have a dimstr. The latter
+                ## contains the correct horizontal and vertical extents, the former
+                ## does not - they can be ranges (containing ":") or indices
+                ## (that is, the variable is a slice of another variable).
+                ## We need to walk the ldims list left to right and for each
+                ## dimension we need to check if it is a range or not. If it is
+                ## a range, we insert the first element from ddims, then we remove
+                ## this range from ddims and move on to the next.
+                #if ldims:
+                #    # Consistency check:
+                #    if len(ldims) < len(ddims):
+                #        raise Exception("Logic error in associate_optional_var: len({ldims}) < len({ddims})")
+                #    for i in range(len(ldims)):
+                #        if ':' in ldims[i]:
+                #            ldims[i] = ddims.pop(0)
+                #    # At the end ddims must be empty
+                #    if ddims:
+                #        raise Exception("Logic error in associate_optional_var: after filling ldims='{ldims}' from ddims, ddims is not empty: '{ddims}'")
+                #    dimstr = '(' + ','.join(ldims) + ')'
+                #else:
+                #    dimstr = '(' + ','.join(ddims) + ')'
+                lname = dvar.get_prop_value("local_name")
+                print(f"lname 1: {lname}")
                 lname, ldims = split_dims_from_name(dvar.call_string(search_dict))
-                # This is where it gets tricky. We have a dimension specifier
-                # as part of the local name, and we have a dimstr. The latter
-                # contains the correct horizontal and vertical extents, the former
-                # does not - they can be ranges (containing ":") or indices
-                # (that is, the variable is a slice of another variable).
-                # We need to walk the ldims list left to right and for each
-                # dimension we need to check if it is a range or not. If it is
-                # a range, we insert the first element from ddims, then we remove
-                # this range from ddims and move on to the next.
-                if ldims:
-                    # Consistency check:
-                    if len(ldims) < len(ddims):
-                        raise Exception("Logic error in associate_optional_var: len({ldims}) < len({ddims})")
-                    for i in range(len(ldims)):
-                        if ':' in ldims[i]:
-                            ldims[i] = ddims.pop(0)
-                    # At the end ddims must be empty
-                    if ddims:
-                        raise Exception("Logic error in associate_optional_var: after filling ldims='{ldims}' from ddims, ddims is not empty: '{ddims}'")
-                    dimstr = '(' + ','.join(ldims) + ')'
-                else:
-                    dimstr = '(' + ','.join(ddims) + ')'
+                dimstr = dvar.call_dimstring(var_dicts=cldicts, explicit_dims=True, loop_subst=self.run_phase())
                 lname += dimstr
+                print(f"lname 2: {lname}")
+                lnametest = dvar.call_dimstring(var_dicts=cldicts, explicit_dims=True, loop_subst=self.run_phase(), prepend_varname=True)
+                print(f"lname 3: {lnametest}")
+                lnametest = dvar.call_string(search_dict, loop_vars=search_dict)
+                print(f"lname 4: {lnametest}")
+                #raise Exception("XXX")
+                
             # end if
             lname_ptr = var.get_prop_value('local_name') + '_ptr'
             # Scheme has optional varaible, host has varaible defined as Conditional (Active).
