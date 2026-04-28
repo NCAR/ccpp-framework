@@ -41,7 +41,7 @@ contains
   !> \section arg_table_cld_liq_run  Argument Table
   !! \htmlinclude arg_table_cld_liq_run.html
   !!
-  subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, ps, &
+  subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, qv_not_state, ps, &
       cld_liq_tend, errmsg, errflg)
 
     integer, intent(in) :: ncol
@@ -49,6 +49,7 @@ contains
     real(kind=kind_phys), intent(in) :: tcld
     real(kind=kind_phys), intent(inout) :: temp(:, :)
     real(kind=kind_phys), intent(inout) :: qv(:, :)
+    real(kind=kind_phys), intent(inout) :: qv_not_state(:, :)
     real(kind=kind_phys), intent(in) :: ps(:)
     real(kind=kind_phys), intent(inout) :: cld_liq_tend(:, :)
     character(len=512), intent(out) :: errmsg
@@ -70,6 +71,7 @@ contains
           cond = min(qv(icol, ilev), 0.1_kind_phys)
           cld_liq_tend(icol, ilev) = cond
           qv(icol, ilev) = qv(icol, ilev) - cond
+          qv_not_state(icol, ilev) = qv_not_state(icol, ilev) - cond
           if (cond > 0.0_kind_phys) then
             temp(icol, ilev) = temp(icol, ilev) + (cond * 5.0_kind_phys)
           end if

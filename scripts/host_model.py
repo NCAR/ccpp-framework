@@ -192,10 +192,16 @@ class HostModel(VarDictionary):
         # Now, find all the used module variables
         cap_modname = self.ccpp_cap_name()
         for name in lnames:
+            # Grab base local name; no dimensions
+            if '(' in name:
+                newname = name.split('(')[0]
+            else:
+                newname = name
+            # End if
             module = self.host_variable_module(name)
             used = self.__used_variables and (name in self.__used_variables)
             if module and used and (module != cap_modname):
-                varset.add((module, name))
+                varset.add((module, newname))
             # No else, either no module or a zero-length module name
             # End if
         # End for

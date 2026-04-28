@@ -78,7 +78,8 @@ contains
     end if
     ! Check the input variables
     call ccpp_physics_suite_variables(test_suite%suite_name, test_list, &
-        errmsg, errflg, input_vars=.true., output_vars=.false.)
+        errmsg, errflg, input_vars=.true., output_vars=.false., &
+        struct_elements=.false.)
     if (errflg == 0) then
       check = check_list(test_list, test_suite%suite_input_vars, &
           'input variable names', suite_name=test_suite%suite_name)
@@ -92,7 +93,8 @@ contains
     end if
     ! Check the output variables
     call ccpp_physics_suite_variables(test_suite%suite_name, test_list, &
-        errmsg, errflg, input_vars=.false., output_vars=.true.)
+        errmsg, errflg, input_vars=.false., output_vars=.true., &
+        struct_elements=.false.)
     if (errflg == 0) then
       check = check_list(test_list, test_suite%suite_output_vars, &
           'output variable names', suite_name=test_suite%suite_name)
@@ -106,7 +108,7 @@ contains
     end if
     ! Check all required variables
     call ccpp_physics_suite_variables(test_suite%suite_name, test_list, &
-        errmsg, errflg)
+        errmsg, errflg, struct_elements=.false.)
     if (errflg == 0) then
       check = check_list(test_list, test_suite%suite_required_vars, &
           'required variable names', suite_name=test_suite%suite_name)
@@ -122,7 +124,7 @@ contains
 
   subroutine advect_constituents()
     use test_host_mod, only: phys_state, &
-        ncnst
+        ncnst, q_not_state
     use test_host_mod, only: twist_array
 
     ! Local variables
@@ -130,6 +132,7 @@ contains
 
     do q_ind = 1, ncnst ! Skip checks, they were done in constituents_in
       call twist_array(phys_state%q(:, :, q_ind))
+      call twist_array(q_not_state(:, :, q_ind))
     end do
   end subroutine advect_constituents
 

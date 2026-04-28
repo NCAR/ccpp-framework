@@ -18,11 +18,13 @@ module test_host_mod
   integer, parameter :: pverp = pver + 1
   integer, protected :: ncnst = -1
   integer, protected :: index_qv = -1
+  integer, protected :: index_qv_not_state = -1
   real(kind=kind_phys) :: dt
   real(kind=kind_phys), parameter :: tfreeze = 273.15_kind_phys
   type(physics_state) :: phys_state
   integer :: num_model_times = -1
   integer, allocatable :: model_times(:)
+  real(kind=kind_phys), allocatable :: q_not_state(:,:,:)
 
   public :: init_data
   public :: compare_data
@@ -58,9 +60,12 @@ contains
     ncnst = size(constituent_array, 3)
     call allocate_physics_state(ncols, pver, constituent_array, phys_state)
     index_qv = index_qv_use
+    index_qv_not_state = index_qv_use
     ind_liq = index_liq
     ind_ice = index_ice
     allocate(check_vals(ncols, pver, ncnst))
+    allocate(q_not_state(ncols, pver, ncnst))
+    q_not_state = constituent_array
     check_vals(:, :, :) = 0.0_kind_phys
     check_vals(:, :, index_dyn) = 1.0_kind_phys
     do lev = 1, pver
@@ -69,8 +74,10 @@ contains
       do col = 1, ncols
         if (mod(col, 2) == 1) then
           phys_state%q(col, lev, index_qv) = qmax
+          q_not_state(col, lev, index_qv_not_state) = qmax
         else
           phys_state%q(col, lev, index_qv) = 0.0_kind_phys
+          q_not_state(col, lev, index_qv_not_state) = 0.0_kind_phys
         end if
       end do
     end do
@@ -166,6 +173,19 @@ contains
             write(6, '(3i5,2(3x,es15.7))') col, lev, cind, &
                 phys_state%q(col, lev, cind), check
             compare_data = .false.
+          end if
+          if (cind == index_qv_not_state) then
+            if (abs((q_not_state(col, lev, cind) - check) / denom) >      &
+                tolerance) then
+              if (need_header) then
+                write(6, '(2(2x,a),3x,a,10x,a,14x,a)')                   &
+                    'COL', 'LEV', 'C#', 'Q NOT STATE', 'EXPECTED'
+                need_header = .false.
+              end if
+              write(6, '(3i5,2(3x,es15.7))') col, lev, cind,              &
+                  q_not_state(col, lev, cind), check
+              compare_data = .false.
+            end if
           end if
         end do
       end do

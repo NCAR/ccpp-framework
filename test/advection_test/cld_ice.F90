@@ -48,13 +48,14 @@ contains
   !> \section arg_table_cld_ice_run  Argument Table
   !! \htmlinclude arg_table_cld_ice_run.html
   !!
-  subroutine cld_ice_run(ncol, timestep, temp, qv, ps, cld_ice_array, &
+  subroutine cld_ice_run(ncol, timestep, temp, qv, qv_not_state, ps, cld_ice_array, &
       errmsg, errflg)
 
     integer, intent(in) :: ncol
     real(kind=kind_phys), intent(in) :: timestep
     real(kind=kind_phys), intent(inout) :: temp(:, :)
     real(kind=kind_phys), intent(inout) :: qv(:, :)
+    real(kind=kind_phys), intent(inout) :: qv_not_state(:, :)
     real(kind=kind_phys), intent(in) :: ps(:)
     real(kind=kind_phys), intent(inout) :: cld_ice_array(:, :)
     character(len=512), intent(out) :: errmsg
@@ -75,6 +76,7 @@ contains
           frz = max(qv(icol, ilev) - 0.5_kind_phys, 0.0_kind_phys)
           cld_ice_array(icol, ilev) = cld_ice_array(icol, ilev) + frz
           qv(icol, ilev) = qv(icol, ilev) - frz
+          qv_not_state(icol, ilev) = qv_not_state(icol, ilev) - frz
           if (frz > 0.0_kind_phys) then
             temp(icol, ilev) = temp(icol, ilev) + 1.0_kind_phys
           end if

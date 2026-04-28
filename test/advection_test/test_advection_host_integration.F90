@@ -7,9 +7,9 @@ program test
   implicit none
 
   character(len=cs), target :: test_parts1(1)
-  character(len=cm), target :: test_invars1(8)
-  character(len=cm), target :: test_outvars1(11)
-  character(len=cm), target :: test_reqvars1(14)
+  character(len=cm), target :: test_invars1(9)
+  character(len=cm), target :: test_outvars1(12)
+  character(len=cm), target :: test_reqvars1(15)
 
   type(suite_info) :: test_suites(1)
   logical :: run_okay
@@ -24,9 +24,11 @@ program test
       'tendency_of_cloud_liquid_dry_mixing_ratio', &
       'banana_array_dim                         ', &
       'time_step_for_physics                    ', &
+      'water_vapor_specific_humidity_not_state  ', &
       'water_temperature_at_freezing            ' /)
   test_outvars1 = (/ &
       'ccpp_model_constituents_object           ', &
+      'water_vapor_specific_humidity_not_state  ', &
       'cloud_ice_dry_mixing_ratio               ', &
       'cloud_liquid_dry_mixing_ratio            ', &
       'physics_state_derived_type               ', &
@@ -43,6 +45,7 @@ program test
       'cloud_liquid_dry_mixing_ratio            ', &
       'physics_state_derived_type               ', &
       'tendency_of_cloud_liquid_dry_mixing_ratio', &
+      'water_vapor_specific_humidity_not_state  ', &
       'banana_array_dim                         ', &
       'time_step_for_physics                    ', &
       'water_temperature_at_freezing            ', &

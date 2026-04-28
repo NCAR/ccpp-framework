@@ -63,6 +63,13 @@
   type = real
   kind = kind_phys
   intent = inout
+[ qv_not_state ]
+  standard_name = water_vapor_specific_humidity_not_state
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
 [ ps ]
   standard_name = surface_air_pressure
   state_variable = true
