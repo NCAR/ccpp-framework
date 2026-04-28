@@ -44,8 +44,6 @@ _API_LOCAL_VAR_TYPES = [_API_LOCAL_VAR_NAME, _API_SUITE_VAR_NAME]
 _API_CONTEXT = ParseContext(filename="ccpp_suite.py")
 _API_SOURCE = ParseSource(_API_SOURCE_NAME, _API_SCHEME_VAR_NAME, _API_CONTEXT)
 _API_LOCAL = ParseSource(_API_SOURCE_NAME, _API_LOCAL_VAR_NAME, _API_CONTEXT)
-_API_TIMESPLIT_TAG = 'time_split'
-_API_PROCESSSPLIT_TAG = 'process_split'
 _API_LOGGING = init_log('ccpp_suite')
 set_log_to_null(_API_LOGGING)
 _API_DUMMY_RUN_ENV = CCPPFrameworkEnv(_API_LOGGING,
@@ -62,8 +60,6 @@ def new_suite_object(item, context, parent, run_env, loop_count=0):
         new_item = Subcycle(item, context, parent, run_env, loop_count=loop_count)
     elif item.tag == 'scheme':
         new_item = Scheme(item, context, parent, run_env)
-    elif item.tag == _API_TIMESPLIT_TAG:
-        new_item = TimeSplit(item, context, parent, run_env)
     else:
         emsg = "Unknown CCPP suite element type, '{}'"
         raise CCPPError(emsg.format(item.tag))
@@ -825,22 +821,6 @@ class SuiteObject(VarDictionary):
             # end if
         # end if
         return found_var, dict_var, local_var, var_vdim, new_vdims, compat_obj, scheme_var
-
-    def in_process_split(self):
-        """Find out if we are in a process-split region"""
-        proc_split = False
-        obj = self
-        while obj is not None:
-            if isinstance(obj, ProcessSplit):
-                proc_split = True
-                break
-            # end if
-            if isinstance(obj, TimeSplit):
-                break
-            # end if (other object types do not change status)
-            obj = obj.parent
-        # end while
-        return proc_split
 
     def part(self, index, error=True):
         """Return one of this SuiteObject's parts raise an exception, or,
@@ -1680,70 +1660,6 @@ class Subcycle(SuiteObject):
 
 ###############################################################################
 
-class TimeSplit(SuiteObject):
-    """Class to represent a group of processes to be computed in a time-split
-    manner -- each parameterization or other construct is called with an
-    state which has been updated from the previous step.
-    """
-
-    def __init__(self, sub_xml, context, parent, run_env):
-        super().__init__('TimeSplit', context, parent, run_env)
-        for part in sub_xml:
-            new_item = new_suite_object(part, context, self, run_env)
-            self.add_part(new_item)
-        # end for
-
-    def analyze(self, phase, group, scheme_library, suite_vars, level, host_dict):
-        # Unused arguments are for consistent analyze interface
-        # pylint: disable=unused-argument
-        """Analyze the TimeSplit's interface to prepare for writing"""
-        # Handle all the suite objects inside of this group
-        scheme_mods = set()
-        for item in self.parts:
-            smods = item.analyze(phase, group, scheme_library,
-                                 suite_vars, level+1, host_dict)
-            for smod in smods:
-                scheme_mods.add(smod)
-            # end for
-        # end for
-        return scheme_mods
-
-    def write(self, outfile, errcode, errmsg, indent):
-        """Write code for this TimeSplit section, including contents,
-        to <outfile>"""
-        for item in self.parts:
-            item.write(outfile, errcode, errmsg, indent)
-        # end for
-
-###############################################################################
-
-class ProcessSplit(SuiteObject):
-    """Class to represent a group of processes to be computed in a
-    process-split manner -- all parameterizations or other constructs are
-    called with the same state.
-    NOTE: Currently a stub
-    """
-
-    def __init__(self, sub_xml, context, parent, run_env):
-        # Unused arguments are for consistent __init__ interface
-        # pylint: disable=unused-argument
-        super().__init__('ProcessSplit', context, parent, run_env)
-        raise CCPPError('ProcessSplit not yet implemented')
-
-    def analyze(self, phase, group, scheme_library, suite_vars, level, host_dict):
-        # Unused arguments are for consistent analyze interface
-        # pylint: disable=unused-argument
-        """Analyze the ProcessSplit's interface to prepare for writing"""
-        # Handle all the suite objects inside of this group
-        raise CCPPError('ProcessSplit not yet implemented')
-
-    def write(self, outfile, errcode, errmsg, indent):
-        """Write code for this ProcessSplit section, including contents,
-        to <outfile>"""
-        raise CCPPError('ProcessSplit not yet implemented')
-
-###############################################################################
-
 class Group(SuiteObject):
     """Class to represent a grouping of schemes in a suite
     A Group object is implemented as a subroutine callable by the API.
@@ -1773,12 +1689,6 @@ class Group(SuiteObject):
                                 ('end if', 1),
                                 ('#endif', -1)])
 
-    __process_types = [_API_TIMESPLIT_TAG, _API_PROCESSSPLIT_TAG]
-
-    __process_xml = {}
-    for gptype in __process_types:
-        __process_xml[gptype] = '<{ptype}></{ptype}>'.format(ptype=gptype)
-    # end for
 
     def __init__(self, group_xml, transition, parent, context, run_env):
         """Initialize this Group object from <group_xml>.
@@ -1792,20 +1702,8 @@ class Group(SuiteObject):
         # Initialize the dictionary of variables internal to group
         super().__init__(name, context, parent, run_env,
                          active_call_list=True, phase_type=transition)
-        # Add the items but first make sure we know the process type for
-        # the group (e.g., TimeSplit or ProcessSplit).
-        if (transition == RUN_PHASE_NAME) and ((not group_xml) or
-                                               (group_xml[0].tag not in
-                                                Group.__process_types)):
-            # Default is TimeSplit
-            tsxml = ET.fromstring(Group.__process_xml[_API_TIMESPLIT_TAG])
-            time_split = new_suite_object(tsxml, context, self, run_env)
-            add_to = time_split
-            self.add_part(time_split)
-        else:
-            add_to = self
-        # end if
-        # Add the sub objects either directly to the Group or to the TimeSplit
+        add_to = self
+        # Add the sub objects
         for item in group_xml:
             new_item = new_suite_object(item, context, add_to, run_env)
             add_to.add_part(new_item)
