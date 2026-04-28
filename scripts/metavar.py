@@ -622,6 +622,7 @@ class Var:
         If <explicit_dims> is True, include the variable's dimensions.
         If <loop_subst> is True, apply a loop substitution, if found for any
            missing dimension.
+        If <prepend_varname> is True, prepend the local variable name.
         """
         emsg = ''
         varname, dims = self.handle_array_ref()
