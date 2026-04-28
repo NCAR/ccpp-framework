@@ -103,13 +103,7 @@ class VarDDT(Var):
 
     def call_dimstring(self, var_dicts=None, explicit_dims=False,
                        loop_subst=False, prepend_varname=False):
-        """Return the dimensions string for a variable call.
-        If <var_dict> is present, find and substitute a local_name for
-        each standard_name in this variable's dimensions.
-        If <var_dict> is not present, return a colon for each dimension.
-        If <explicit_dims> is True, include the variable's dimensions.
-        If <loop_subst> is True, apply a loop substitution, if found for any
-           missing dimension.
+        """Return the dimensions string for a variable call for self.field.
         If <prepend_varname> is True, prepend the VarDDT's local name sequence.
         """
         if self.field is not None:
