@@ -52,6 +52,7 @@ _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "banana_array_dim",
                       "test_banana_name_array",
                       "test_banana_constituent_index",
+                      "water_vapor_specific_humidity_not_state",
                       # Added by --debug option
                       "horizontal_dimension",
                       "vertical_layer_dimension"]
@@ -65,6 +66,7 @@ _INPUT_VARS_CLD = ["horizontal_loop_begin", "horizontal_loop_end",
                    "index_of_water_vapor_specific_humidity",
                    "banana_array_dim",
                    "test_banana_name_array", "test_banana_name",
+                   "water_vapor_specific_humidity_not_state",
                    # Added by --debug option
                    "horizontal_dimension",
                    "vertical_layer_dimension"]
@@ -78,7 +80,8 @@ _OUTPUT_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                     "dynamic_constituents_for_cld_liq",
                     "dynamic_constituents_for_cld_liq",
                     "test_banana_constituent_indices",
-                    "test_banana_constituent_index"]
+                    "test_banana_constituent_index",
+                    "water_vapor_specific_humidity_not_state"]
 
 
 class TestAdvectionHostDataTables(unittest.TestCase, BaseTests.TestHostDataTables):
