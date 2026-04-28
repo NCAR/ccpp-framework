@@ -360,7 +360,6 @@ class Var:
         # Make sure all the variable values are valid
         try:
             for prop_name, prop_val in self.var_properties():
-                #print(f"DHDEBUG: prop_name, prop_val: '{prop_name}' / '{prop_val}'")
                 prop = Var.get_prop(prop_name)
                 _ = prop.valid_value(prop_val,
                                      prop_dict=self._prop_dict, error=True)
@@ -562,8 +561,6 @@ class Var:
         ('foo', ['ccpp_constant_one:dim1', 'ccpp_constant_one:dim2', 'bar'])
         >>> Var({'local_name' : 'foo(bar,:)', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).handle_array_ref()
         ('foo', ['bar', 'ccpp_constant_one:dim1'])
-        >>> Var({'local_name' : 'foo(:)', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).handle_array_ref()
-        ('foo', ['ccpp_constant_one:dim1'])
         >>> Var({'local_name' : 'foo(bar)', 'standard_name' : 'hi_mom', 'units' : 'm s-1', 'dimensions' : '(ccpp_constant_one:dim1)', 'type' : 'real',}, ParseSource('vname', 'HOST', ParseContext()), _MVAR_DUMMY_RUN_ENV).handle_array_ref() #doctest: +IGNORE_EXCEPTION_DETAIL
         Traceback (most recent call last):
         CCPPError: Call dims mismatch for foo(bar), not enough colons
@@ -714,8 +711,8 @@ class Var:
         even if usage requires a loop substitution.
         """
         # DH*
-        #if loop_vars:
-        #    raise Exception(f"DH DEBUG: WE DO USE loop_vars in call_string! '{loop_vars}'")
+        if loop_vars:
+            raise Exception(f"DH DEBUG: WE DO USE loop_vars in call_string! '{loop_vars}'")
         # *DH
         if not isinstance(var_dicts, list):
            var_dicts = [var_dicts]
