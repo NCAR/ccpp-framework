@@ -286,7 +286,7 @@ def move_modified_files(src_dir, dest_dir, overwrite=False, remove_src=False):
                 if overwrite:
                     fmove = True
                 else:
-                    fmove = filecmp.cmp(src_path, dest_path, shallow=False)
+                    fmove = not filecmp.cmp(src_path, dest_path, shallow=False)
                 # end if
             else:
                 fmove = True
