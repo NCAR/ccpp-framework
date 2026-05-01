@@ -610,8 +610,8 @@ class Var:
         # end if
         return lname, dimlist
 
-    def call_dimstring(self, var_dicts=None,
-                       explicit_dims=False, loop_subst=False):
+    def call_dimstring(self, var_dicts=None, explicit_dims=False,
+                       loop_subst=False, prepend_varname=False):
         """Return the dimensions string for a variable call.
         If <var_dict> is present, find and substitute a local_name for
         each standard_name in this variable's dimensions.
@@ -619,9 +619,10 @@ class Var:
         If <explicit_dims> is True, include the variable's dimensions.
         If <loop_subst> is True, apply a loop substitution, if found for any
            missing dimension.
+        If <prepend_varname> is True, prepend the local variable name.
         """
         emsg = ''
-        _, dims = self.handle_array_ref()
+        varname, dims = self.handle_array_ref()
         if var_dicts is not None:
             dimlist = []
             sepstr = ''
@@ -644,6 +645,13 @@ class Var:
                 if (not dvar) and add_dims:
                     dnames = []
                     for stdname in dstdnames:
+                        # Leave integers (parameters) alone
+                        try:
+                            if isinstance(int(stdname), int):
+                                dnames.append(stdname)
+                                continue
+                        except ValueError:
+                            pass
                         for vdict in var_dicts:
                             dvar = vdict.find_variable(standard_name=stdname,
                                                        any_scope=False)
@@ -690,7 +698,10 @@ class Var:
             lname = self.get_prop_value('local_name')
             raise CCPPError(emsg.format(vlnam=lname, ctx=ctx))
         # end if
-        return dimstr
+        if prepend_varname:
+            return varname + dimstr
+        else:
+            return dimstr
 
     def call_string(self, var_dicts, loop_vars=None):
         """Construct the actual argument string for this Var by translating

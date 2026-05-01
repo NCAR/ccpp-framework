@@ -68,12 +68,10 @@ contains
   !> \section arg_table_make_ddt_init  Argument Table
   !! \htmlinclude arg_table_make_ddt_init.html
   !!
-  subroutine make_ddt_init(nbox, ccpp_info, vmr, errmsg, errflg)
-    use host_ccpp_ddt, only: ccpp_info_t
+  subroutine make_ddt_init(nbox, vmr, errmsg, errflg)
 
     ! Dummy arguments
     integer, intent(in) :: nbox
-    type(ccpp_info_t), intent(in) :: ccpp_info
     type(vmr_type), intent(out) :: vmr
     character(len=512), intent(out) :: errmsg
     integer, intent(out) :: errflg
