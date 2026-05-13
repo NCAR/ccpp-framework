@@ -1093,6 +1093,38 @@ class TestAttributeOwnership(unittest.TestCase):
         tables = _parse_text(text)
         self.assertEqual(len(tables), 1)
 
+    def test_active_expression_is_lowercased(self):
+        """Mixed-case identifiers in 'active' must be normalised to lowercase
+        so they match the canonical lowercase standard names stored on host
+        variables (see check_cf_standard_name).
+        """
+        text = """
+            [ccpp-table-properties]
+              name = my_host
+              type = host
+
+            [ccpp-arg-table]
+              name = my_host
+              type = host
+            [ flag ]
+              standard_name = flag_for_aerosol_input_mg_radiation
+              units = flag
+              dimensions = ()
+              type = logical
+            [ x ]
+              standard_name = foo
+              units = m
+              dimensions = ()
+              type = real
+              active = (flag_for_aerosol_input_MG_radiation)
+        """
+        tables = _parse_text(text)
+        x_var = next(
+            v for v in tables[0].sections()[0].variables
+            if v.local_name == 'x'
+        )
+        self.assertEqual(x_var.active, '(flag_for_aerosol_input_mg_radiation)')
+
     def test_optional_in_scheme_allowed(self):
         """'optional' attribute in scheme metadata is valid."""
         text = """

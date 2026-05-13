@@ -587,7 +587,11 @@ class MetaVar:
         elif key == 'optional':
             self.optional = _parse_bool(value, context)
         elif key == 'active':
-            self.active = value.strip()
+            # Standard names elsewhere are canonicalised to lowercase by
+            # check_cf_standard_name; an active expression references those
+            # same names, so normalise here too. Fortran is case-insensitive,
+            # so embedded logical operators/literals are unaffected.
+            self.active = value.strip().lower()
         elif key == 'protected':
             self.protected = _parse_bool(value, context)
         elif key == 'allocatable':

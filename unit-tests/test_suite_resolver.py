@@ -2864,6 +2864,392 @@ class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):
                          'index_of_some_other_constituent_not_in_host')
 
 
+class TestDimDDTComponentResolution(unittest.TestCase):
+    """When a dimension standard name maps to a DDT-component host
+    entry (e.g. ``vertical_layer_dimension`` is ``physics%Model%levs``,
+    a two-level DDT walk inside the SCM/UFS host), the resolver must:
+
+    1. Emit the full ``access_path`` in subscript expressions
+       (``1:physics%Model%levs``), NOT the bare leaf (``1:levs``).
+    2. Walk back to the access-path *root* for the USE statement
+       (``use scm_host_mod, only: physics``), NOT the leaf
+       (``use scm_host_mod, only: levs`` — undefined symbol).
+    3. Behave identically to today for plain module-level host vars
+       (``access_path == local_name``).
+
+    Historical: this was a long-standing pain point in the original
+    capgen → SCM migration.  The pre-2026-05-13 capgen-ng emitted
+    ``use scm_type_defs, only: levs`` and similar bogus imports for
+    every DDT-component dim, producing many ``Symbol referenced ...
+    not found in module`` errors at compile time.
+    """
+
+    # Mimics SCM: ``physics`` is host-level (module ``scm_host_mod``),
+    # of type ``physics_t`` (a DDT) which has component ``Model`` of
+    # type ``gfs_control_t`` (a DDT) which has scalar ``levs`` and
+    # ``ncols`` declared on it.
+    _DDT_SRC = (
+        '[ccpp-table-properties]\n'
+        '  name = gfs_control_t\n'
+        '  type = ddt\n'
+        '[ccpp-arg-table]\n'
+        '  name = gfs_control_t\n'
+        '  type = ddt\n'
+        '[levs]\n'
+        '  standard_name = vertical_layer_dimension\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '[ncol]\n'
+        '  standard_name = horizontal_dimension_total\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '\n'
+        '[ccpp-table-properties]\n'
+        '  name = physics_t\n'
+        '  type = ddt\n'
+        '[ccpp-arg-table]\n'
+        '  name = physics_t\n'
+        '  type = ddt\n'
+        '[Model]\n'
+        '  standard_name = gfs_control_instance\n'
+        '  units = DDT\n'
+        '  dimensions = ()\n'
+        '  type = gfs_control_t\n'
+    )
+
+    _HOST_SRC = (
+        '[ccpp-table-properties]\n'
+        '  name = scm_host_mod\n'
+        '  type = host\n'
+        '[ccpp-arg-table]\n'
+        '  name = scm_host_mod\n'
+        '  type = host\n'
+        # Plain (non-DDT) horizontal dim — for the mixed-dim test.
+        '[ncols]\n'
+        '  standard_name = horizontal_dimension\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        # The DDT instance.  Resolver should produce
+        # access_path == 'physics' for the instance, and
+        # 'physics%Model%levs' for the leaf dim.
+        '[physics]\n'
+        '  standard_name = physics_state_instance\n'
+        '  units = DDT\n'
+        '  dimensions = ()\n'
+        '  type = physics_t\n'
+    )
+
+    def _host_dict(self):
+        return build_flat_host_dict(
+            _parse(self._HOST_SRC), [], _parse(self._DDT_SRC),
+        )
+
+    # ---- Unit-level: host_dict entry shape (the prerequisite) -----------
+
+    def test_host_dict_levs_has_ddt_walk_access_path(self):
+        hd = self._host_dict()
+        entry = hd.get('vertical_layer_dimension')
+        self.assertIsNotNone(entry)
+        self.assertEqual(entry.local_name, 'levs')
+        self.assertEqual(entry.access_path, 'physics%Model%levs')
+        self.assertEqual(entry.module_name, 'scm_host_mod')
+
+    # ---- Unit-level: _resolve_single_bound (the primary fix site) -------
+
+    def test_resolve_single_bound_returns_access_path_for_ddt_dim(self):
+        from generator.suite_resolver import _resolve_single_bound
+        hd = self._host_dict()
+        used = set()
+        result = _resolve_single_bound('vertical_layer_dimension', hd, used)
+        self.assertEqual(result, 'physics%Model%levs')
+        self.assertIn('vertical_layer_dimension', used)
+
+    def test_resolve_single_bound_plain_var_unchanged(self):
+        # ncols is a plain host var (access_path == local_name == 'ncols').
+        from generator.suite_resolver import _resolve_single_bound
+        hd = self._host_dict()
+        used = set()
+        result = _resolve_single_bound('horizontal_dimension', hd, used)
+        self.assertEqual(result, 'ncols')
+
+    # ---- Unit-level: _one_dim_part wrapping -----------------------------
+
+    def test_one_dim_part_bare_form_uses_ddt_walk(self):
+        from generator.suite_resolver import _one_dim_part
+        hd = self._host_dict()
+        # Bare std name normalises to ``ccpp_constant_one:<name>``.
+        part, used = _one_dim_part(
+            'vertical_layer_dimension', 'run', hd,
+        )
+        self.assertEqual(part, '1:physics%Model%levs')
+        self.assertIn('vertical_layer_dimension', used)
+
+    def test_one_dim_part_range_form_uses_ddt_walk(self):
+        from generator.suite_resolver import _one_dim_part
+        hd = self._host_dict()
+        part, used = _one_dim_part(
+            'ccpp_constant_one:vertical_layer_dimension', 'run', hd,
+        )
+        self.assertEqual(part, '1:physics%Model%levs')
+
+    def test_one_dim_part_ddt_dim_as_lower_bound(self):
+        # Stress: DDT-component appears as the LOWER bound of a range.
+        from generator.suite_resolver import _one_dim_part
+        hd = self._host_dict()
+        part, used = _one_dim_part(
+            'vertical_layer_dimension:horizontal_dimension_total', 'run', hd,
+        )
+        # Both bounds walked: physics%Model%levs : physics%Model%ncol
+        self.assertEqual(part, 'physics%Model%levs:physics%Model%ncol')
+
+    # ---- Unit-level: _build_call_subscript composition -----------------
+
+    def test_build_call_subscript_two_ddt_dims(self):
+        # Two DDT-component dims side by side: both must walk.
+        from generator.suite_resolver import _build_call_subscript
+        hd = self._host_dict()
+        sub, used = _build_call_subscript(
+            ['horizontal_dimension_total', 'vertical_layer_dimension'],
+            'run', hd,
+        )
+        self.assertEqual(
+            sub, '(1:physics%Model%ncol, 1:physics%Model%levs)',
+        )
+
+    def test_build_call_subscript_pure_ddt_dims(self):
+        from generator.suite_resolver import _build_call_subscript
+        hd = self._host_dict()
+        sub, used = _build_call_subscript(
+            ['vertical_layer_dimension', 'vertical_layer_dimension'],
+            'run', hd,
+        )
+        self.assertEqual(sub, '(1:physics%Model%levs, 1:physics%Model%levs)')
+
+    # ---- Sliced-subscript path: _build_merged_subscript ---------------
+
+    def test_build_merged_subscript_ddt_index_token(self):
+        # Mirrors host metadata like ``q(:,:,vertical_layer_dimension)``
+        # but here we exercise the helper directly with a synthetic
+        # local_subscript carrying a std-name token whose target lives
+        # on a DDT.  The third token must be the full DDT walk, not
+        # the bare leaf — bug pre-2026-05-13 produced ``levs`` instead
+        # of ``physics%Model%levs`` and the generated cap then failed
+        # to compile against the host module.
+        from generator.suite_resolver import _build_merged_subscript
+        hd = self._host_dict()
+        # Use ``horizontal_dimension_total`` for the leading dims so the
+        # fixture doesn't need loop bounds.
+        merged, used = _build_merged_subscript(
+            host_dims=['horizontal_dimension_total',
+                       'horizontal_dimension_total'],
+            local_subscript=[':', ':', 'vertical_layer_dimension'],
+            phase='run', host_dict=hd, suite_vars={},
+        )
+        # Third subscript token = full DDT walk.
+        self.assertTrue(
+            merged.rstrip(')').endswith('physics%Model%levs'),
+            'merged subscript should end with the DDT walk; got {!r}'
+            .format(merged),
+        )
+        # Leaf should not leak.
+        self.assertNotIn(', levs)', merged)
+
+    # ---- Group-cap USE collection: _collect_dim_uses --------------------
+
+    @staticmethod
+    def _mock_arg(used_dim_std_names):
+        from unittest.mock import MagicMock
+        arg = MagicMock()
+        arg.used_dim_std_names = set(used_dim_std_names)
+        return arg
+
+    def _mock_rg(self, arg):
+        from unittest.mock import MagicMock
+        from generator.suite_resolver import ResolvedCall
+        rg = MagicMock()
+        rg.phase_calls = {
+            'run': [ResolvedCall(
+                scheme_name='dummy', phase='run',
+                args=[arg], scheme_module='dummy_mod',
+            )],
+        }
+        return rg
+
+    def test_collect_dim_uses_walks_to_root_for_ddt_dim(self):
+        from generator.suite_resolver import _collect_dim_uses
+        hd = self._host_dict()
+        arg = self._mock_arg({'vertical_layer_dimension'})
+        rg = self._mock_rg(arg)
+        dim_uses = _collect_dim_uses(rg, hd, suite_vars={})
+        # USE clause must pull the ROOT (``physics``), not the leaf
+        # (``levs``, which is not a module symbol).
+        self.assertIn('scm_host_mod', dim_uses)
+        self.assertIn('physics', dim_uses['scm_host_mod'])
+        self.assertNotIn('levs', dim_uses['scm_host_mod'])
+        self.assertNotIn('Model', dim_uses['scm_host_mod'])
+
+    def test_collect_dim_uses_plain_var_unchanged(self):
+        # Regression: behaviour identical for plain host vars.
+        from generator.suite_resolver import _collect_dim_uses
+        hd = self._host_dict()
+        arg = self._mock_arg({'horizontal_dimension'})
+        rg = self._mock_rg(arg)
+        dim_uses = _collect_dim_uses(rg, hd, suite_vars={})
+        self.assertEqual(dim_uses.get('scm_host_mod'), {'ncols'})
+
+    def test_collect_dim_uses_two_ddt_dims_dedupe_root(self):
+        # Both ``vertical_layer_dimension`` and
+        # ``horizontal_dimension_total`` live on the same ``physics``
+        # instance — USE clause emits ``physics`` ONCE, not twice.
+        from generator.suite_resolver import _collect_dim_uses
+        hd = self._host_dict()
+        arg = self._mock_arg({'vertical_layer_dimension',
+                              'horizontal_dimension_total'})
+        rg = self._mock_rg(arg)
+        dim_uses = _collect_dim_uses(rg, hd, suite_vars={})
+        self.assertEqual(dim_uses.get('scm_host_mod'), {'physics'})
+
+    # ---- End-to-end: resolve_suite + group cap output ------------------
+
+    def test_end_to_end_ddt_dim_in_group_cap(self):
+        """Scheme arg with a DDT-component dim should compile.
+
+        Builds the full pipeline: parse scheme + host metadata, resolve
+        the suite, and generate the group cap text.  Asserts:
+
+        - The scheme call subscript contains ``1:physics%Model%levs``
+          (NOT ``1:levs``).
+        - The group cap's ``use scm_host_mod, only: ...`` clause
+          contains ``physics`` (the DDT root) and NOT ``levs`` (the
+          leaf, which would be an undefined symbol).
+        """
+        # Add control vars so the static API can build.
+        control_src = (
+            '[ccpp-table-properties]\n'
+            '  name = control\n'
+            '  type = control\n'
+            '[ccpp-arg-table]\n'
+            '  name = control\n'
+            '  type = control\n'
+            '[errmsg]\n'
+            '  standard_name = ccpp_error_message\n'
+            '  units = none\n'
+            '  dimensions = ()\n'
+            '  type = character | kind = len=512\n'
+            '[errflg]\n'
+            '  standard_name = ccpp_error_code\n'
+            '  units = 1\n'
+            '  dimensions = ()\n'
+            '  type = integer\n'
+            '[ilb]\n'
+            '  standard_name = horizontal_loop_begin\n'
+            '  units = count\n'
+            '  dimensions = ()\n'
+            '  type = integer\n'
+            '[iub]\n'
+            '  standard_name = horizontal_loop_end\n'
+            '  units = count\n'
+            '  dimensions = ()\n'
+            '  type = integer\n'
+        )
+        scheme_src = (
+            '[ccpp-table-properties]\n'
+            '  name = ddt_dim_user\n'
+            '  type = scheme\n'
+            '[ccpp-arg-table]\n'
+            '  name = ddt_dim_user_run\n'
+            '  type = scheme\n'
+            '[temp]\n'
+            '  standard_name = air_temperature\n'
+            '  units = K\n'
+            '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+            '  type = real | kind = kind_phys\n'
+            '  intent = inout\n'
+            '[errmsg]\n'
+            '  standard_name = ccpp_error_message\n'
+            '  units = none\n'
+            '  dimensions = ()\n'
+            '  type = character | kind = len=*\n'
+            '  intent = out\n'
+            '[errflg]\n'
+            '  standard_name = ccpp_error_code\n'
+            '  units = 1\n'
+            '  dimensions = ()\n'
+            '  type = integer\n'
+            '  intent = out\n'
+        )
+        # Extend the host with horizontal_dimension + air_temperature
+        # so the scheme's dims resolve.
+        host_src = self._HOST_SRC + (
+            '[gt0]\n'
+            '  standard_name = air_temperature\n'
+            '  units = K\n'
+            '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+            '  type = real | kind = kind_phys\n'
+        )
+        hd = build_flat_host_dict(
+            _parse(host_src), _parse(control_src), _parse(self._DDT_SRC),
+        )
+        store = SchemeStore.build_from(_parse(scheme_src))
+
+        # Build a tiny suite XML and resolve it.
+        suite_xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<suite name="ddt_dim_suite" version="1.0">\n'
+            '  <group name="run_grp"><scheme>ddt_dim_user</scheme></group>\n'
+            '</suite>\n'
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xml_path = os.path.join(tmpdir, 's.xml')
+            with open(xml_path, 'w') as fh:
+                fh.write(suite_xml)
+            from generator.suite_xml import parse_suite_xml
+            import logging
+            logger = logging.getLogger('ddt_dim_e2e')
+            suite = parse_suite_xml(xml_path, tmpdir, logger,
+                                    skip_validation=True)
+            sr = resolve_suite(suite, store, hd)
+
+            # Inspect the resolved scheme arg's subscript.
+            run_call = list(iter_phase_calls(sr.groups[0].phase_calls['run']))[0]
+            temp_arg = [a for a in run_call.args
+                        if a.scheme_local_name == 'temp'][0]
+            self.assertIn('physics%Model%levs', temp_arg.subscript)
+            # Leaf name must not appear bare anywhere in the call expr.
+            self.assertNotIn(', 1:levs)', temp_arg.call_expr)
+
+            # Now emit the group cap and inspect the USE clause.
+            from generator.group_cap import _generate_group_cap
+            group_lines = _generate_group_cap(
+                suite_name=sr.suite_name,
+                group_name=sr.groups[0].group_name,
+                rg=sr.groups[0], host_dict=hd,
+            )
+            group_text = '\n'.join(group_lines)
+        # Pull the host-module USE line.  Must import ``physics``,
+        # must NOT import the bare leaf ``levs``.
+        import re as _re
+        host_use_lines = [
+            ln for ln in group_text.splitlines()
+            if _re.search(r'use\s+scm_host_mod\b', ln)
+        ]
+        self.assertTrue(host_use_lines,
+                        "group cap missing ``use scm_host_mod`` line")
+        joined = ' '.join(host_use_lines)
+        self.assertIn('physics', joined)
+        # Word-boundary check so we don't false-match a substring like
+        # ``physics`` containing ``levs`` etc.
+        self.assertIsNone(_re.search(r'\blevs\b', joined),
+                          "group cap leaked DDT-leaf ``levs`` into USE: "
+                          + joined)
+        self.assertIsNone(_re.search(r'\bModel\b', joined),
+                          "group cap leaked DDT-mid-component ``Model`` "
+                          "into USE: " + joined)
+
+
 ########################################################################
 # Doctest loader
 ########################################################################

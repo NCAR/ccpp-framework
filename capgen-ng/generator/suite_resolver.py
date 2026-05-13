@@ -328,7 +328,14 @@ def _resolve_single_bound(
     entry = host_dict.get(bound)
     if entry is not None:
         used.add(bound)
-        return entry.local_name
+        # Use ``access_path``, not ``local_name``: for plain module-
+        # level host vars these are identical, but for DDT-component
+        # vars (e.g. ``physics%Model%levs`` with std_name
+        # ``vertical_layer_dimension``) the full DDT walk is required
+        # so the emitted subscript references the actual storage and
+        # the USE statement (which walks back to the root via
+        # ``_root_symbol``) imports the right top-level symbol.
+        return entry.access_path
     if suite_vars:
         sv = suite_vars.get(bound)
         if sv is not None:
@@ -558,7 +565,12 @@ def _build_merged_subscript(
             key = token.lower()
             entry = host_dict.get(key)
             if entry is not None:
-                parts.append(entry.local_name)
+                # Use ``access_path`` so DDT-component subscript indices
+                # (e.g. ``q(:,:,index_of_<X>)`` where index_of_X lives
+                # on a DDT) resolve to the full DDT walk, not the bare
+                # leaf name.  Identical to ``local_name`` for plain
+                # module-level host vars.
+                parts.append(entry.access_path)
                 used.add(key)
             elif suite_vars and key in suite_vars:
                 parts.append(suite_vars[key].access_path)
@@ -2010,7 +2022,13 @@ def _collect_dim_uses(
                     entry = host_dict.get(dim_std)
                     if entry is not None and entry.module_name is not None:
                         mod = entry.module_name
-                        sym = entry.local_name
+                        # Walk back to the access-path root so DDT-
+                        # component dims (e.g. ``physics%Model%levs``)
+                        # USE the top-level instance (``physics``) and
+                        # not the leaf (``levs``, which doesn't exist
+                        # as a module symbol).  Equivalent to
+                        # ``entry.local_name`` for plain host vars.
+                        sym = _root_symbol(entry.access_path)
                         dim_uses.setdefault(mod, set()).add(sym)
                     elif suite_vars and dim_std in suite_vars:
                         sv = suite_vars[dim_std]
