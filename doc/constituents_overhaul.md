@@ -2,8 +2,14 @@
 
 **Authors:** Dom Heinzeller (lead), Claude (assistant)
 **Date drafted:** 2026-05-12
+**Last revised:** 2026-05-13
 **Intended audience:** CCPP framework team, CAM-SIMA team
-**Status:** Discussion document — no decisions are final.
+**Status:** Discussion document — no decisions are final.  Proposals
+A/B/C below remain pending the upcoming meeting; the bug fix from
+Proposal A (the `ccpt_deallocate` ownership flag) and the capgen-ng
+internal cleanup from Proposal B (§4.8) have landed; the missing
+setters from Proposal A and the `is_match` relaxation from Proposal B
+have not.
 
 ---
 
@@ -361,8 +367,9 @@ intentionally left for this discussion.
   updated to call `set_framework_owned(.true.)` after `allocate`.
   Diffs in `src/ccpp_constituent_prop_mod.F90` (and capgen-ng's
   parallel copy) + `scripts/constituents.py`.
-- **Status**: framework tests pass, capgen-ng tests pass (954). Needs
-  upstream PR to ccpp-framework + ccpp-capgen.
+- **Status**: framework tests pass; capgen-ng unit-test suite (1127 passing
+  as of 2026-05-13) is green.  Still needs upstream PR to ccpp-framework +
+  original ccpp-capgen.
 
 ### 4.2 Framework: missing setters (OPEN)
 
@@ -446,12 +453,12 @@ The synthetic scope between suite and host serves correctness but
 adds a code path that most contributors don't read. If we drop it
 (capgen-ng has), the variable-matching algorithm shrinks.
 
-### 4.8 Capgen-ng: `_FRAMEWORK_CONST_DIM_INPUTS` is hand-curated (OPEN)
+### 4.8 Capgen-ng: `_FRAMEWORK_CONST_DIM_INPUTS` cleanup (LANDED 2026-05-13)
 
-`generator/static_api.py` carries a frozenset of standard names
-(currently just `number_of_ccpp_constituents`) that introspection
-treats specially. Cleaner: a dedicated `used_const_dim_std_names`
-field on `ResolvedArg`. Marked REVISIT in the code.
+`generator/static_api.py` no longer carries the hand-curated frozenset of
+standard names; framework-constituent dimension references now ride on a
+dedicated `used_const_dim_std_names` field on `ResolvedArg`.  Closes the
+"hand-curated → structured field" REVISIT note that was in the code.
 
 ### 4.9 Capgen-ng: no codegen-time cross-check of scheme registration (OPEN)
 
@@ -571,7 +578,7 @@ constituent property is conceptually owned by either the scheme
 - **Document the lifecycle** clearly. `doc/constituents.md` is
   ~960 lines; targeted additions for "register-then-override"
   workflow once the new setters land.
-- **Capgen-ng-internal cleanup**: replace
+- **Capgen-ng-internal cleanup** (LANDED 2026-05-13): replaced
   `_FRAMEWORK_CONST_DIM_INPUTS` with a `used_const_dim_std_names`
   field on `ResolvedArg`.
 
@@ -696,8 +703,8 @@ scheme on `advected` still hit the "incompatible constituent" error.
   workflow.
 - (capgen-ng) Reject `diagnostic_name` on `is_constituent=True`
   scheme args at parse time, or downgrade it to a default-only hint.
-- (capgen-ng) Replace `_FRAMEWORK_CONST_DIM_INPUTS` with a
-  `ResolvedArg.used_const_dim_std_names` field.
+- (capgen-ng) **DONE 2026-05-13**: replaced `_FRAMEWORK_CONST_DIM_INPUTS`
+  with a `ResolvedArg.used_const_dim_std_names` field.
 
 **Cost**: ~150 lines framework + ~50 lines capgen-ng + tests.
 CAM-SIMA host code can stay as-is (the 4 scheme-side registrations

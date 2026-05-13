@@ -1,11 +1,18 @@
 # CCPP Framework Code Generator — Redesign Specification
 
+*Last revised: 2026-05-13.*
+
 ## Purpose
 
 This document is a complete implementation specification for a new CCPP Framework code
 generator (`ccpp-capgen-ng`). It supersedes both `ccpp-prebuild` and `ccpp-capgen`. An
 implementer should be able to build the new generator from scratch using this document
 alone, supplemented by the real-world examples in `redesign_analysis.md`.
+
+The spec is essentially as-implemented as of the date above.  User-facing
+deltas relative to ccpp-prebuild and the original ccpp-capgen are
+collected in `doc/migration.md`; section 18 of this document is a rolling
+"outstanding work" tracker.
 
 ---
 
@@ -235,7 +242,12 @@ character arguments.
 | `number_of_physics_threads` | `integer` | Thread budget for physics-internal OpenMP; pass `1` if none |
 | `ccpp_error_message` | `character` | Error message string |
 | `ccpp_error_code` | `integer` | Integer error return code |
-| `instance_number` | `integer` | Current model instance index; pass `1` if single-instance |
+
+`instance_number` is **paired-optional** with `number_of_instances` (host
+table, §3.6): declare both for a multi-instance API, declare neither for a
+single-instance API.  Declaring exactly one is a hard error.  When the pair
+is absent, the static API signatures drop the `instance_number` argument
+entirely and per-instance state arrays size to 1.
 
 `group_name` is **not** in the required set. It is included in the static API signature
 only if the host declares it in their `type=control` table. When absent: the static API
@@ -290,25 +302,31 @@ Eight entry points are generated in the static API. Two tiers:
 
 ### 5.1 Framework lifecycle (no group_name dispatch)
 
-These operate on the entire suite at once. They take `suite_name` plus
-`ccpp_error_message` and `ccpp_error_code`. No scheme `_run/_init/_final` calls.
+These operate on the entire suite at once. They take `suite_name`,
+`ccpp_error_code`, and `ccpp_error_message` (plus `instance_number` when the
+host opts into the multi-instance pair, §4.1).  No scheme `_run/_init/_final`
+calls.
 
 | Entry point | Purpose |
 |---|---|
-| `ccpp_register(suite_name, constituents, errmsg, errcode)` | Calls each scheme's `_register` entrypoint; allocates and populates the `ccpp_model_constituents_t` object passed by the host |
-| `ccpp_init(suite_name, [number_of_instances,] errmsg, errcode)` | Allocates integer state arrays in all group caps; allocates suite-owned interstitial data; no scheme calls |
-| `ccpp_final(suite_name, errmsg, errcode)` | Deallocates integer state arrays and suite-owned data; no scheme calls |
+| `ccpp_register(suite_name, errcode, errmsg, [instance_number])` | Calls each scheme's `_register` entrypoint; transitions suite state to `REGISTERED`.  Auto-provisions `ccpp_model_constituents_obj(:)` and friends in `ccpp_host_constituents.F90` when any register-phase scheme declares `ccpp_constituent_properties_t(:)` (constituents are not a formal arg). |
+| `ccpp_init(suite_name, errcode, errmsg, [instance_number])` | Allocates integer state arrays in all group caps; allocates suite-owned interstitial data; calls the suite-level `<init>` scheme if declared (§5.5); no per-group scheme calls. |
+| `ccpp_final(suite_name, errcode, errmsg, [instance_number])` | Calls the suite-level `<final>` scheme if declared (§5.5); deallocates integer state arrays and suite-owned data; no per-group scheme calls. |
 
-`constituents` in `ccpp_register` is `intent(inout)`: unallocated on entry, allocated
-and populated on exit. The host declares and owns this object (imports
-`ccpp_model_constituents_t` from the framework library). The argument is mandatory.
+Constituents are **opt-in**: a separate generated module
+`ccpp_host_constituents.F90` declares `ccpp_model_constituents_obj(:)` and a
+host-facing API (`ccpp_register_constituents`, `ccpp_initialize_constituents`,
+`ccpp_const_get_index`, `ccpp_constituents_array(instance_number)`,
+`ccpp_advected_constituents_array`, `ccpp_model_const_properties`,
+`ccpp_number_constituents`, `ccpp_gather_constituents`,
+`ccpp_update_constituents`, `ccpp_is_scheme_constituent`).  The host calls
+these directly — they are not formal arguments of `ccpp_register` / `ccpp_init`.
+See `doc/constituents.md`.
 
-`number_of_instances` in `ccpp_init` is **conditional**: included as an explicit
-`intent(in)` integer argument when the host metadata declares a variable with standard
-name `number_of_instances`; omitted entirely for single-instance models. The generator
-detects this automatically at parse time (same conditionality rule as `instance_number`).
-When present it is passed through the call chain:
-`ccpp_init` → `<suite>_init` → each group's `state_alloc`.
+`instance_number` appears in every framework-lifecycle signature only when
+the host declares the `instance_number` / `number_of_instances` pair (§4.1).
+When present it propagates: `ccpp_init` → `<suite>_init` → each group's
+`state_alloc(number_of_instances, ...)`.
 
 ### 5.2 Physics group invocation (dispatched by suite_name + group_name)
 
@@ -373,26 +391,29 @@ Constraints:
 - The named scheme must have the matching phase in its metadata.
   Missing-phase metadata is a generator error.
 
-### 5.4 Suite introspection routines (planned)
+### 5.4 Suite introspection routines
 
-In addition to the eight entry points above, the static API will expose four
-**suite-introspection** subroutines that let a host query, at runtime, what is
+In addition to the eight entry points above, the static API exposes **five**
+suite-introspection subroutines that let a host query, at runtime, what is
 compiled into the API. These mirror the equivalent routines in the original
-capgen (`scripts/ccpp_suite.py` — `write_inspection_routines`) and are required
-for CMake integration and host-side build glue. They are **planned but not yet
-implemented**; signatures below are the proposed shape and may be refined when
-the original capgen sources are reviewed for adoption.
+capgen (`scripts/ccpp_suite.py` — `write_inspection_routines`) and are
+used by CMake integration and host-side build glue.
 
 | Entry point | Purpose |
 |---|---|
 | `ccpp_physics_suite_list(suites)` | Return all suite names compiled into the API |
-| `ccpp_physics_suite_part_list(suite_name, part_list, errmsg, errcode)` | Return the list of group ("part") names for a given suite |
-| `ccpp_physics_suite_variables(suite_name, variable_list, errmsg, errcode, [input_vars], [output_vars], [struct_elements])` | Return the standard-name list a suite consumes/produces; optional flags filter by intent and whether DDT sub-fields are flattened |
-| `ccpp_physics_suite_schemes(suite_name, scheme_list, errmsg, errcode)` | Return the list of scheme module names that compose a suite |
+| `ccpp_physics_suite_part_list(suite_name, part_list, errmsg, errflg)` | Return the list of group ("part") names for a given suite |
+| `ccpp_physics_suite_schemes(suite_name, scheme_list, errmsg, errflg)` | Return the list of scheme module names that compose a suite |
+| `ccpp_physics_suite_variables(suite_name, variable_list, errmsg, errflg, [input_vars], [output_vars], [struct_elements])` | Standard-name list a suite consumes/produces; optional flags filter by intent and whether DDT sub-fields are flattened |
+| `ccpp_physics_suite_host_data(suite_name, variable_list, errmsg, errflg)` | Standard-name list of host data the suite reads — DDT-collapsed view, excludes generated control variables |
 
 These routines do not advance the state machine and do not call any scheme
 entrypoints. All inputs derive from generator-time data already held in
 `SuiteResolution` plus the host/scheme metadata; no new metadata is required.
+The `_variables` vs `_host_data` split distinguishes the flat-leaf view
+(every DDT field that is actually consumed) from the DDT-collapsed view
+(parent DDT instances), and excludes capgen-ng-generated control
+variables from `_host_data` since the host owns those.
 
 ---
 
@@ -408,7 +429,8 @@ All three levels are fully auto-generated. No hand-written components in the cap
   USEd only by files that declare kind-typed variables: group caps, the suite types
   module, and the suite data module.
 - Dispatches all eight entry points by `suite_name` to the appropriate suite cap
-- Passes `ccpp_model_constituents_t` through as an explicit argument (does not own it)
+- Does not own constituent state; constituents are accessed via the separate
+  `ccpp_host_constituents.F90` module by both the host and group caps
 - Holds no physics state
 
 ### 6.2 Suite cap (`ccpp_<suite>_cap.F90`)
@@ -1105,10 +1127,9 @@ The following patterns from prebuild or capgen are explicitly **not** carried fo
 ## 18. Outstanding Work
 
 See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
-(deferred items) for the canonical list.  Snapshot as of 2026-05-12
-(end of session):
+(deferred items) for the canonical list.  Snapshot as of 2026-05-13:
 
-### Landed this session
+### Landed in the 2026-05-12 session
 
 - **`instance_number` / `number_of_instances` paired opt-in** — hosts
   may omit both for a single-instance API.
@@ -1128,8 +1149,9 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 - **TARGET on `ccpp_suite_data(:)`** module-level array.
 - **Group-state alloc idempotency** (matches suite-state alloc).
 - **Framework PR**: `ccpt_deallocate` ownership tracking via
-  `framework_owns_me` flag.  Backward-compatible.  Needs upstream
-  merge to ccpp-framework + ccpp-capgen.
+  `framework_owns_me` flag.  Backward-compatible.  Landed in
+  capgen-ng's vendored framework copy; still needs upstream merge
+  to ccpp-framework + original ccpp-capgen.
 - **Identity unit conversions** no longer emit misleading "unit
   conversion: kind_phys to kind_phys" comment.
 - **Improved duplicate-standard-name error** lists both colliding
@@ -1138,12 +1160,38 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   scheme's init/final phase emitted inside `<suite>_init` /
   `<suite>_final`.  Single scheme only; long-form spellings
   (`<initalize>`, `<initialize>`, `<finalize>`) rejected.
-- **Test count**: 1070 passing.
+- **Constituent resolver — host metadata wins**: hosts that declare
+  framework-named std_names (`ccpp_constituents`, `index_of_<X>`, ...)
+  short-circuit capgen-ng's auto-provisioning so legacy hosts (GFS,
+  SCM) keep using their own short local names (e.g. `ntcw`) without
+  blowing Fortran's 63-char identifier limit.
+
+### Landed 2026-05-13
+
+- **`--legacy-mode` shim** — transient parse-time rewrite of legacy
+  CCPP standard names (`horizontal_loop_extent` →
+  `horizontal_dimension`).  Available on `ccpp_capgen_ng.py` and
+  `ccpp_validator.py`; loud banner at startup.  Isolated in
+  `metadata/legacy_compat.py` and tagged `# legacy-compat:` for clean
+  removal once scheme metadata has been migrated.
+- **`_FRAMEWORK_CONST_DIM_INPUTS` cleanup** — the hand-curated
+  frozenset in `generator/static_api.py` was removed; framework-
+  constituent dimension references now ride on a dedicated
+  `used_const_dim_std_names` field on `ResolvedArg`.
+- **`active` expression case-folding** — mixed-case standard names
+  in `active = (...)` are now lowercased at parse time so they match
+  the canonical lowercase host_dict keys (Fortran is case-insensitive,
+  so embedded logical operators are unaffected).
+
+### Test status
+
+- **Unit tests**: 1127 passing (`python -m pytest unit-tests/`).
+- **End-to-end tests**: `advection`, `unit_conv`, `nested_suite`,
+  `variable_transform` covered.  Tree is off-limits for in-session
+  edits — user-driven.
 
 ### Still deferred
 
-- **End-to-end integration tests** — user-driven; off-limits for in-session
-  edits.
 - **Constituents overhaul** — discussion doc at
   `doc/constituents_overhaul.md` (2026-05-12).  Three proposals on the
   table (A bugfix-only / B class-A/B split + setters / C host-only
@@ -1157,16 +1205,26 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 - **Codegen-time scheme-registration cross-check** — new metadata attr
   `registers_std_names = a, b, c` on register-phase tables; replaces
   current runtime `int_unassigned` check with codegen-time error.
-- **Capgen-ng cleanup**: replace `_FRAMEWORK_CONST_DIM_INPUTS` frozenset
-  in `generator/static_api.py` with `used_const_dim_std_names: Set[str]`
-  on `ResolvedArg`.
-- **Nested subcycle `ccpp_loop_counter` semantics**: currently a scheme
-  inside a nested subcycle requesting `ccpp_loop_counter` would get
-  the OUTERMOST counter, not the innermost.  None of the cam-sima
-  schemes use this — revisit if a real scheme needs the innermost.
+- **Suppress `ccpp_host_constituents.F90` when unused** — currently
+  emitted for every build; now *correct* (empty) for SCM-style hosts
+  thanks to the host-wins rule, but still dead code.
+- **`--legacy-mode` shim removal** — transient; remove
+  `metadata/legacy_compat.py`, `unit-tests/test_legacy_compat.py`, and
+  every `# legacy-compat:` touchpoint when scheme metadata has
+  migrated.
+- **Nested subcycle `ccpp_loop_counter` semantics**: a scheme inside a
+  nested subcycle requesting `ccpp_loop_counter` would get the
+  OUTERMOST counter, not the innermost.  None of the cam-sima schemes
+  use this — revisit if a real scheme needs the innermost.
+- **Python linter / formatter pass** — pick `ruff` and apply across
+  `capgen-ng/`.
+- **Generated Fortran ↔ Codee formatter idempotency** — emitted `.F90`
+  must round-trip cleanly through the project's Codee formatter.
+- **`fortran_to_metadata` developer utility** — bootstrap a `.meta`
+  skeleton from an existing `.F90` subroutine.
 
 ### Where to find the migration summary
 
-`doc/migration.md` (created 2026-05-12) — user-facing single-page
-summary of metadata + SDF + host-Fortran requirements after all the
-above changes.  Read it first when porting a host model.
+`doc/migration.md` — user-facing single-page summary of metadata + SDF
++ host-Fortran requirements after all the above changes.  Read it
+first when porting a host model.

@@ -1,6 +1,6 @@
 # CCPP capgen-ng — Constituents Reference
 
-*Last revised: 2026-05-11.*
+*Last revised: 2026-05-13.*
 
 This document is the authoritative reference for **constituent variables** in
 capgen-ng — what they are, how scheme authors declare them in metadata, what

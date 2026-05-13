@@ -6,7 +6,7 @@ Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
 **capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
-Generated as of 2026-05-13.  Current unit-test suite: 1113 passing.
+*Last revised: 2026-05-13.*  Current unit-test suite: 1127 passing.
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
 `capgen-ng/` (top-level of this repo).  Unit tests live at the top
@@ -330,13 +330,31 @@ Generated `datatable.xml` carries:
 
 - `<capgen_files>` — generated outputs (utilities/host_files/suite_files).
 - `<inspection_files>` — `<suite>.meta` and expanded SDF.
-- `<schemes>` — per-scheme call lists.
+- `<schemes>` — per-scheme call lists, **scoped to schemes that are
+  actually referenced by the loaded suites** (group phase calls + the
+  suite-level `<init>`/`<final>` hooks).  Scheme metadata files passed
+  on the CLI but never referenced are silently dropped.
+- `<dependencies>` — `dependencies = …` from host/control/ddt tables
+  (always) plus the same per-scheme list as `<schemes>` (filtered to
+  the used set).  Build systems that compile against
+  `ccpp_datafile.py --dependencies` therefore only pull in scheme deps
+  for compiled schemes; missing transitive deps in scheme metadata
+  surface as link errors and should be fixed in the `.meta` file.
 - `<var_dictionaries>` — host/api/suite/group dictionaries.
 
 Query via `ccpp_datafile.py --<flag> <datatable.xml>`.  Flags include
 `--dependencies`, `--capgen-files`, `--host-files`, `--utility-files`,
-`--suite-list`, `--required-variables <suite>`, `--input-variables <suite>`,
+`--suite-files`, `--scheme-files`, `--suite-list`,
+`--required-variables <suite>`, `--input-variables <suite>`,
 `--output-variables <suite>`, `--host-variables`, `--show`.
+
+`--suite-files` returns capgen-generated cap files (`ccpp_<suite>_cap.F90`,
+etc.).  `--scheme-files` returns the **user-supplied scheme `.F90` sources**
+that the loaded suites actually reference — the filtered compile manifest.
+Each used scheme's source is resolved as `<source_path>/<meta_basename>.<ext>`
+(extension preference order: `.F90`, `.f90`, `.F`, `.f`); missing files are
+warned about and the canonical `.F90` guess is emitted so the build-system
+query stays useful.
 
 ### 4.3 CMake helpers
 
@@ -529,6 +547,7 @@ complete).  See `project_validator_host_check_deferred.md` (memory).
 | Generated Fortran ↔ Codee formatter idempotency | Deferred; emitted `.F90` must round-trip cleanly through the project's Codee Fortran formatter. |
 | `fortran_to_metadata` developer utility    | Deferred; bootstraps a `.meta` skeleton from an existing `.F90` subroutine. |
 | `--legacy-mode` shim removal               | Transient; remove `metadata/legacy_compat.py`, `unit-tests/test_legacy_compat.py`, and every `# legacy-compat:` touchpoint when scheme metadata has migrated. |
+| `ccpp_datafile.py` query CLI rework        | Deferred (2026-05-13); collapse `--host-files` / `--suite-files` / `--utility-files` into `--capgen-files`, then repurpose `--host-files` as a filtered list of **input** host metadata files (parallel to `--scheme-files`).  Most hosts pack all host data into a handful of shared files, so the filtering pay-off is small — the draw is API symmetry. |
 | Original capgen auto-clone path             | Intentionally dropped in favour of explicit registration; kept in memory as "Option B" fallback. |
 
 ---
