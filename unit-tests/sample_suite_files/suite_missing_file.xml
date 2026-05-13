@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="main_suite" version="2.0" >
+  <group name="main11">
+    <nested_suite name="another_suite2" group="another_group3" file="another_suite2.xml"/>
+    <nested_suite name="another_suite" group="another_group" file="another_suite.xml"/>
+  </group>
+  <nested_suite name="nested_full_suite"/>
+</suite>

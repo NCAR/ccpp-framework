@@ -1,0 +1,108 @@
+# const_indices just returns some constituent indices as a test
+[ccpp-table-properties]
+  name = const_indices
+  type = scheme
+[ccpp-arg-table]
+  name = const_indices_run
+  type = scheme
+[ const_std_name ]
+  standard_name = test_banana_name
+  type = character | kind = len=*
+  units = 1
+  dimensions = ()
+  protected = true
+  intent = in
+[ num_consts ]
+  standard_name = banana_array_dim
+  long_name = Size of test_banana_name_array
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = in
+[ test_stdname_array ]
+  standard_name = test_banana_name_array
+  type = character | kind = len=*
+  units = count
+  dimensions = (banana_array_dim)
+  intent = in
+[ const_index ]
+  standard_name = test_banana_constituent_index
+  long_name = Constituent index
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ const_inds ]
+  standard_name = test_banana_constituent_indices
+  long_name = Array of constituent indices
+  units = 1
+  dimensions = (banana_array_dim)
+  type = integer
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ccpp-arg-table]
+  name = const_indices_init
+  type = scheme
+[ const_std_name ]
+  standard_name = test_banana_name
+  type = character | kind = len=*
+  units = 1
+  dimensions = ()
+  protected = true
+  intent = in
+[ num_consts ]
+  standard_name = banana_array_dim
+  long_name = Size of test_banana_name_array
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = in
+[ test_stdname_array ]
+  standard_name = test_banana_name_array
+  type = character | kind = len=*
+  units = count
+  dimensions = (banana_array_dim)
+  intent = in
+[ const_index ]
+  standard_name = test_banana_constituent_index
+  long_name = Constituent index
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ const_inds ]
+  standard_name = test_banana_constituent_indices
+  long_name = Array of constituent indices
+  units = 1
+  dimensions = (banana_array_dim)
+  type = integer
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

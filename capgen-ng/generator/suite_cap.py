@@ -1,0 +1,1056 @@
+#!/usr/bin/env python3
+
+"""Generate the suite-level cap module ``ccpp_<suite>_cap.F90``.
+
+The suite cap:
+
+* Imports all group cap modules and the constituent property module.
+* Exposes eight public entry points:
+
+  - ``<suite>_register`` — calls each scheme's ``_register`` to populate
+    the host-owned ``ccpp_model_constituents_t`` object.
+  - ``<suite>_init`` / ``<suite>_final`` — framework setup / teardown.
+  - ``<suite>_physics_init``, ``<suite>_physics_timestep_init``,
+    ``<suite>_physics_run``, ``<suite>_physics_timestep_final``,
+    ``<suite>_physics_final`` — dispatch by ``group_name`` to the
+    appropriate group cap subroutine.
+
+The static API (``ccpp_static_api.F90``) dispatches by ``suite_name`` to
+these subroutines.
+"""
+
+import os
+from typing import Dict, List, Set
+
+from metadata.variable_resolver import HostVarEntry, SchemeStore
+from generator.suite_resolver import (
+    ResolvedArg,
+    ResolvedGroup,
+    SuiteResolution,
+    iter_phase_calls,
+)
+from generator.group_cap import (
+    _ctrl_args_for_phase,
+    _ctrl_intent_for,
+    _ctrl_local,
+    _extra_dim_ctrl_entries,
+    _ctrl_entries_for_signature,
+    _fortran_type_str,
+    _dim_decl,
+    _instance_idx,
+    _instance_local,
+    _intent_clause,
+)
+
+_INDENT = '  '
+
+# Canonical set of physics phases, always dispatched by the suite cap.
+_PHYSICS_PHASES = ('init', 'timestep_init', 'run', 'timestep_final', 'final')
+
+# Constituent type / module constants.
+_CONST_MOD          = 'ccpp_constituent_prop_mod'
+_CONST_DDT          = 'ccpp_model_constituents_t'
+_CONST_PROP_TYPE    = 'ccpp_constituent_properties_t'
+_CONST_PROP_PTR_TYPE = 'ccpp_constituent_prop_ptr_t'
+_CONST_OBJ_STDNAME  = 'ccpp_model_constituents_object'
+
+# Framework-provided constituent symbol names — emitted as suite-cap
+# module variables when the suite references constituent state.
+_CONST_BASE_ARRAY = 'ccpp_constituents'
+_CONST_TEND_ARRAY = 'ccpp_constituent_tendencies'
+_CONST_PROPS      = 'ccpp_constituent_properties'
+_CONST_NUM        = 'number_of_ccpp_constituents'
+
+
+########################################################################
+# Helpers
+########################################################################
+
+def _all_suite_scheme_names(suite_res: SuiteResolution) -> List[str]:
+    """Return deduplicated scheme names from all groups and phases.
+
+    The order is first-seen across groups (alphabetical by group, then by
+    order within each group's phase call list).
+
+    >>> from generator.suite_resolver import SuiteResolution, ResolvedGroup, ResolvedCall
+    >>> rg = ResolvedGroup('grp', phase_calls={'run': [ResolvedCall('sch_a', 'run'), ResolvedCall('sch_b', 'run')]})
+    >>> sr = SuiteResolution('s', groups=[rg])
+    >>> _all_suite_scheme_names(sr)
+    ['sch_a', 'sch_b']
+    """
+    seen: Set[str] = set()
+    names: List[str] = []
+    for rg in suite_res.groups:
+        for items in rg.phase_calls.values():
+            for rc in iter_phase_calls(items):
+                if rc.scheme_name not in seen:
+                    seen.add(rc.scheme_name)
+                    names.append(rc.scheme_name)
+    return names
+
+
+def _schemes_with_register(
+    scheme_names: List[str],
+    scheme_store: SchemeStore,
+) -> List[str]:
+    """Return those scheme names that have a ``register`` phase.
+
+    >>> from unittest.mock import MagicMock
+    >>> store = MagicMock()
+    >>> store.phases_for.side_effect = lambda n: ['register', 'run'] if n == 'sch_a' else ['run']
+    >>> _schemes_with_register(['sch_a', 'sch_b'], store)
+    ['sch_a']
+    """
+    return [n for n in scheme_names if 'register' in scheme_store.phases_for(n)]
+
+
+def _suite_ctrl_args_for_phase(
+    suite_res: SuiteResolution,
+    phase: str,
+) -> List[ResolvedArg]:
+    """Return the union of control args across all groups for *phase*.
+
+    The result is deduplicated by standard_name and preserves first-seen order.
+    """
+    seen: Dict[str, ResolvedArg] = {}
+    for rg in suite_res.groups:
+        for arg in _ctrl_args_for_phase(rg, phase):
+            if arg.standard_name not in seen:
+                seen[arg.standard_name] = arg
+    return list(seen.values())
+
+
+def _group_ctrl_arg_names(rg: ResolvedGroup, phase: str, host_dict=None) -> List[str]:
+    """Return the local_name list for the control args of a group phase.
+
+    These are the keyword names passed when calling the group cap subroutine.
+    Includes extra control vars needed for state indexing and dimension subscripts
+    (instance_number for suite-var access, control vars used only in dim subscripts).
+    """
+    ctrl_args = _ctrl_args_for_phase(rg, phase)
+    names = [
+        a.host_entry.local_name
+        for a in ctrl_args
+        if a.host_entry is not None
+    ]
+    phase_items = rg.phase_calls.get(phase, [])
+    for entry in _extra_dim_ctrl_entries(phase_items, phase, ctrl_args, host_dict):
+        if entry.local_name not in names:
+            names.append(entry.local_name)
+    return names
+
+
+def _suite_extra_ctrl_entries_for_phase(
+    suite_res: SuiteResolution,
+    phase: str,
+    ctrl_std_names: Set[str],
+    host_dict,
+) -> List[HostVarEntry]:
+    """Return extra HostVarEntry objects needed by any group for *phase* but not
+    already represented in *ctrl_std_names* (the direct scheme control args).
+
+    This covers the same cases as ``_extra_dim_ctrl_entries`` but aggregated
+    across all groups so the suite-level dispatch subroutine has them in its
+    signature and can pass them down.
+    """
+    if host_dict is None:
+        return []
+    seen = set(ctrl_std_names)
+    result: Dict[str, HostVarEntry] = {}
+    for rg in suite_res.groups:
+        phase_items = rg.phase_calls.get(phase, [])
+        ctrl_args = _ctrl_args_for_phase(rg, phase)
+        for entry in _extra_dim_ctrl_entries(phase_items, phase, ctrl_args, host_dict):
+            if entry.standard_name not in seen and entry.standard_name not in result:
+                result[entry.standard_name] = entry
+    return list(result.values())
+
+
+########################################################################
+# Subroutine generators
+########################################################################
+
+def _register_calls(suite_res: SuiteResolution):
+    """Yield (group_name, ResolvedCall) for every register-phase scheme call.
+
+    Groups are visited in suite-XML order; within each group the calls follow
+    the resolver's ordering (which mirrors the suite XML).
+    """
+    for rg in suite_res.groups:
+        for rc in iter_phase_calls(rg.phase_calls.get('register', [])):
+            yield rg.group_name, rc
+
+
+def _register_uses(
+    suite_res: SuiteResolution,
+    suite_name: str,
+    host_dict=None,
+) -> Dict[str, Set[str]]:
+    """Collect ``{module: {symbol}}`` requirements for register-phase scheme calls.
+
+    Includes:
+      - host modules for any host-owned register args,
+      - ``ccpp_<suite>_data`` for any suite-owned register args,
+      - one entry per scheme module for its ``_register`` symbol,
+      - the constituent property type and the per-suite dynamic-constituent
+        buffer (owned by ``ccpp_host_constituents``) when any register call
+        produces constituents.
+    """
+    uses: Dict[str, Set[str]] = {}
+    seen_schemes: Set[str] = set()
+    for _gname, rc in _register_calls(suite_res):
+        if rc.scheme_name not in seen_schemes:
+            seen_schemes.add(rc.scheme_name)
+            # Module is metadata-declared (``module_name`` in table props)
+            # when present; otherwise falls back to the scheme name.
+            scheme_module = rc.scheme_module or rc.scheme_name
+            uses.setdefault(scheme_module, set()).add(
+                '{}_register'.format(rc.scheme_name)
+            )
+        for arg in rc.args:
+            if arg.is_constituent_arg:
+                continue   # local temp, not a USE'd var
+            mod = arg.module_name
+            if mod is not None:
+                uses.setdefault(mod, set()).add(arg.root_symbol)
+    # Per-suite dynamic-constituent buffer is owned by ccpp_host_constituents
+    # and written into here.  Pull in the constituent property type plus the
+    # buffer symbol.
+    if suite_res.constituent_register_calls:
+        uses.setdefault(_CONST_MOD, set()).add(_CONST_PROP_TYPE)
+        buf = '{}_dynamic_constituents'.format(suite_name)
+        uses.setdefault('ccpp_host_constituents', set()).add(buf)
+    return uses
+
+
+def _add_call_uses(uses: Dict[str, Set[str]], rc) -> None:
+    """Merge USE-statement requirements for a single :class:`ResolvedCall`.
+
+    Adds:
+      * the scheme module → ``<scheme_name>_<phase>`` symbol so the call
+        site can resolve;
+      * each non-control arg's host/suite module → ``arg.root_symbol``
+        (the top-level token of its access path) so the value is in
+        scope.
+
+    Mutates *uses* in place.  Used by ``<suite>_init`` and
+    ``<suite>_final`` to integrate the suite-level <init>/<final>
+    scheme calls into the USE block.
+    """
+    scheme_module = rc.scheme_module or rc.scheme_name
+    uses.setdefault(scheme_module, set()).add(
+        '{}_{}'.format(rc.scheme_name, rc.phase)
+    )
+    for arg in rc.args:
+        mod = arg.module_name
+        if mod is not None:
+            uses.setdefault(mod, set()).add(arg.root_symbol)
+
+
+def _emit_register_call(rc, indent: str, errflg_local: str, lines: List[str]) -> None:
+    """Emit one scheme ``_register`` call with keyword args + error guard.
+
+    Register-phase calls are kept simple: no transformations (transform code
+    paths are physics-phase only), keyword-arg style for clarity.
+    """
+    sub = '{}_register'.format(rc.scheme_name)
+    if not rc.args:
+        lines.append('{}call {}()'.format(indent, sub))
+    else:
+        lines.append('{}call {}( &'.format(indent, sub))
+        for i, arg in enumerate(rc.args):
+            sep = ', &' if i < len(rc.args) - 1 else ')'
+            lines.append('{}    {}={}{}'.format(
+                indent, arg.scheme_local_name, arg.call_expr, sep
+            ))
+    if errflg_local:
+        lines.append('{}if ({} /= 0) return'.format(indent, errflg_local))
+
+
+def _register_lines(
+    suite_name: str,
+    suite_res: SuiteResolution,
+    host_dict=None,
+) -> List[str]:
+    """Generate the ``<suite>_register`` subroutine lines.
+
+    Mandatory entry point: emitted unconditionally.  Allocates the suite
+    state array and the suite-owned DDT array on first call, dispatches each
+    register-phase scheme call across all groups in suite-XML order, and
+    transitions the suite state for this instance to ``CCPP_SUITE_REGISTERED``.
+
+    Minimal signature: ``(instance_number, errmsg, errflg)`` (instance_number
+    is included only when the host declares it).
+    """
+    sub_name = '{}_register'.format(suite_name)
+    i1 = _INDENT
+    i2 = _INDENT * 2
+
+    inst_local = _instance_local(host_dict)
+    inst_idx   = _instance_idx(host_dict)
+
+    ninstances_entry = host_dict.get('number_of_instances') if host_dict else None
+    ninstances_local = ninstances_entry.local_name if ninstances_entry else None
+    ninstances_arg   = ninstances_local if ninstances_local else '1'
+
+    errflg_local = _ctrl_local(host_dict, 'ccpp_error_code') or 'errflg'
+    errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message') or 'errmsg'
+
+    sig_args: List[str] = []
+    if inst_local:
+        sig_args.append(inst_local)
+    sig_args += [errmsg_local, errflg_local]
+
+    lines: List[str] = []
+    lines.append('')
+    lines.append('{}subroutine {}({})'.format(i1, sub_name, ', '.join(sig_args)))
+
+    # USE statements: scheme modules + host/suite-data modules referenced by
+    # register-phase scheme args.
+    reg_uses = _register_uses(suite_res, suite_name, host_dict)
+    if ninstances_local and ninstances_entry is not None and ninstances_entry.module_name:
+        reg_uses.setdefault(ninstances_entry.module_name, set()).add(
+            ninstances_local
+        )
+    for mod in sorted(reg_uses):
+        syms = ', '.join(sorted(reg_uses[mod]))
+        lines.append('{}use {}, only: {}'.format(i2, mod, syms))
+
+    lines.append('')
+    if inst_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    lines += [
+        '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
+        '{}integer, intent(out) :: {}'.format(i2, errflg_local),
+    ]
+
+    # Constituent merge: declare a per-scheme array temporary and a counter.
+    has_consts = bool(suite_res.constituent_register_calls)
+    if has_consts:
+        lines.append('')
+        lines.append(
+            '{}type({}), allocatable :: scheme_consts(:)'.format(
+                i2, _CONST_PROP_TYPE
+            )
+        )
+        lines.append('{}integer :: num_consts, i'.format(i2))
+
+    lines += [
+        '',
+        "{}{} = ''".format(i2, errmsg_local),
+        '{}{} = 0'.format(i2, errflg_local),
+        '',
+    ]
+
+    # Allocate state and DDT array on first call (idempotent).
+    suite_alloc_sub = '{}_suite_state_alloc'.format(suite_name)
+    lines.append('{}call {}({}, {}, {})'.format(
+        i2, suite_alloc_sub, ninstances_arg, errmsg_local, errflg_local
+    ))
+    lines.append('{}if ({} /= 0) return'.format(i2, errflg_local))
+    lines.append('')
+
+    # Per-instance idempotent skip: already registered or further along.
+    lines.append(
+        '{}if (ccpp_suite_state({}) >= CCPP_SUITE_REGISTERED) return'.format(
+            i2, inst_idx
+        )
+    )
+    lines.append('')
+
+    if has_consts:
+        # Pack constituent-producing schemes' arrays into the per-suite
+        # buffer in ccpp_host_constituents.  The actual merge into each
+        # instance's ``ccpp_model_constituents_obj(inst)`` happens later
+        # when the host calls ``ccpp_register_constituents`` per instance.
+        #
+        # The buffer itself is shared across instances (registration is
+        # identical per instance) — gated by ``.not. allocated`` so that
+        # only the first instance to enter does the two-pass count+pack.
+        # Subsequent instances reuse the same buffer.  The state-array
+        # transition still runs per instance (after this block).
+        const_scheme_names = {sn for sn, _ in suite_res.constituent_register_calls}
+        buf = '{}_dynamic_constituents'.format(suite_name)
+
+        lines.append(
+            '{}if (.not. allocated({})) then'.format(i2, buf)
+        )
+        lines.append('{}num_consts = 0'.format(i2 + _INDENT))
+        lines.append('{}! First pass: count constituents'.format(i2 + _INDENT))
+        for _gname, rc in _register_calls(suite_res):
+            if rc.scheme_name in const_scheme_names:
+                _emit_register_call(rc, i2 + _INDENT, errflg_local, lines)
+                lines.append(
+                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
+                        i2 + _INDENT,
+                    )
+                )
+                lines.append('{}deallocate(scheme_consts)'.format(i2 + _INDENT))
+        lines.append('')
+        lines.append('{}allocate({}(num_consts))'.format(i2 + _INDENT, buf))
+        lines.append('{}num_consts = 0'.format(i2 + _INDENT))
+        lines.append('')
+        lines.append('{}! Second pass: copy into per-suite buffer'.format(i2 + _INDENT))
+        for _gname, rc in _register_calls(suite_res):
+            if rc.scheme_name in const_scheme_names:
+                _emit_register_call(rc, i2 + _INDENT, errflg_local, lines)
+                lines.append('{}do i = 1, size(scheme_consts, 1)'.format(i2 + _INDENT))
+                lines.append(
+                    '{}{}(num_consts + i) = scheme_consts(i)'.format(
+                        i2 + _INDENT * 2, buf,
+                    )
+                )
+                lines.append('{}end do'.format(i2 + _INDENT))
+                lines.append(
+                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
+                        i2 + _INDENT,
+                    )
+                )
+                lines.append('{}deallocate(scheme_consts)'.format(i2 + _INDENT))
+        lines.append('{}end if'.format(i2))
+        lines.append('')
+        # Emit any non-constituent register calls in addition (always, per instance).
+        for _gname, rc in _register_calls(suite_res):
+            if rc.scheme_name not in const_scheme_names:
+                _emit_register_call(rc, i2, errflg_local, lines)
+    else:
+        # No constituent merge — emit register calls in suite-XML order.
+        for _gname, rc in _register_calls(suite_res):
+            _emit_register_call(rc, i2, errflg_local, lines)
+
+    lines.append('')
+    lines.append(
+        '{}ccpp_suite_state({}) = CCPP_SUITE_REGISTERED'.format(i2, inst_idx)
+    )
+    lines.append('')
+    lines.append('{}end subroutine {}'.format(i1, sub_name))
+    return lines
+
+
+def _init_lines(
+    suite_name: str,
+    suite_res: SuiteResolution,
+    host_dict=None,
+) -> List[str]:
+    """Generate the ``<suite>_init`` framework-setup subroutine lines.
+
+    Per-instance lifecycle: every call passes ``instance_number`` (when the host
+    declares it).  Requires the suite to be in ``CCPP_SUITE_REGISTERED`` (i.e.
+    ``ccpp_register`` was called).  The body:
+
+    1. Verifies state is ``REGISTERED``; idempotent skip if already
+       ``FRAMEWORK_INITIALIZED``; error otherwise.
+    2. Calls each group ``state_alloc`` routine (idempotent first-call alloc).
+    3. Calls the suite-data ``init_fields`` routine which allocates inner
+       allocatable suite-data fields using suite-owned dim values that may have
+       been written during the register phase.
+    4. Sets ``ccpp_suite_state(instance_number) = CCPP_SUITE_FRAMEWORK_INITIALIZED``.
+
+    Minimal signature: ``(instance_number, errmsg, errflg)``.
+    """
+    sub_name = '{}_init'.format(suite_name)
+    i1 = _INDENT
+    i2 = _INDENT * 2
+
+    ninstances_entry = host_dict.get('number_of_instances') if host_dict else None
+    ninstances_local = ninstances_entry.local_name if ninstances_entry else None
+    ninstances_arg   = ninstances_local if ninstances_local else '1'
+
+    inst_local = _instance_local(host_dict)
+    inst_idx   = _instance_idx(host_dict)
+
+    errflg_local = _ctrl_local(host_dict, 'ccpp_error_code') or 'errflg'
+    errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message') or 'errmsg'
+
+    sig_args: List[str] = []
+    if inst_local:
+        sig_args.append(inst_local)
+    sig_args += [errmsg_local, errflg_local]
+
+    lines: List[str] = ['']
+    lines.append('{}subroutine {}({})'.format(i1, sub_name, ', '.join(sig_args)))
+
+    # USE: number_of_instances (from host module) for group state alloc;
+    # suite_data init_fields routine when this suite owns any vars;
+    # constituent object (from host module) for pointer binding;
+    # suite-level <init> scheme module + per-arg host modules.
+    extra_uses: Dict[str, Set[str]] = {}
+    if ninstances_local and ninstances_entry is not None and ninstances_entry.module_name:
+        extra_uses.setdefault(ninstances_entry.module_name, set()).add(
+            ninstances_local
+        )
+    if suite_res.suite_vars:
+        data_mod    = 'ccpp_{}_data'.format(suite_name)
+        init_fields = 'ccpp_{}_suite_data_init_fields'.format(suite_name)
+        extra_uses.setdefault(data_mod, set()).add(init_fields)
+    if suite_res.suite_init_call is not None:
+        _add_call_uses(extra_uses, suite_res.suite_init_call)
+    for mod in sorted(extra_uses):
+        syms = ', '.join(sorted(extra_uses[mod]))
+        lines.append('{}use {}, only: {}'.format(i2, mod, syms))
+
+    lines.append('')
+    if inst_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    lines += [
+        '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
+        '{}integer, intent(out) :: {}'.format(i2, errflg_local),
+        '',
+        "{}{} = ''".format(i2, errmsg_local),
+        '{}{} = 0'.format(i2, errflg_local),
+        '',
+    ]
+
+    # State guard: must be in REGISTERED state (or already INITIALIZED — idempotent).
+    sub_label = '{}_init'.format(suite_name)
+    lines += [
+        '{}if (.not. allocated(ccpp_suite_state)) then'.format(i2),
+        "{}  {} = '{}: ccpp_register has not been called'".format(
+            i2, errmsg_local, sub_label
+        ),
+        '{}  {} = 1'.format(i2, errflg_local),
+        '{}  return'.format(i2),
+        '{}end if'.format(i2),
+        '{}if (ccpp_suite_state({}) == CCPP_SUITE_FRAMEWORK_INITIALIZED) return'.format(
+            i2, inst_idx
+        ),
+        '{}if (ccpp_suite_state({}) /= CCPP_SUITE_REGISTERED) then'.format(
+            i2, inst_idx
+        ),
+        "{}  {} = '{}: invalid suite state (expected REGISTERED)'".format(
+            i2, errmsg_local, sub_label
+        ),
+        '{}  {} = 1'.format(i2, errflg_local),
+        '{}  return'.format(i2),
+        '{}end if'.format(i2),
+        '',
+    ]
+
+    # Group state allocators (idempotent).
+    for rg in suite_res.groups:
+        alloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_alloc')
+        lines.append('{}call {}({}, {}, {})'.format(
+            i2, alloc_sub, ninstances_arg, errmsg_local, errflg_local
+        ))
+        lines.append('{}if ({} /= 0) return'.format(i2, errflg_local))
+
+    # Allocate inner suite-data allocatable fields for this instance.
+    if suite_res.suite_vars:
+        init_fields = 'ccpp_{}_suite_data_init_fields'.format(suite_name)
+        lines.append('{}call {}({}, {}, {})'.format(
+            i2, init_fields, inst_idx, errmsg_local, errflg_local
+        ))
+        lines.append('{}if ({} /= 0) return'.format(i2, errflg_local))
+
+    # Constituent state binding is owned by the host_constituents module
+    # under option A — the host calls ccpp_initialize_constituents separately
+    # to bind ccpp_constituents/ccpp_constituent_tendencies and populate the
+    # index_of_<X> integers.
+
+    # Suite-level <init> scheme call (if declared in the SDF).  Runs once
+    # per ``<suite>_init`` invocation, after all group state allocators
+    # have populated their state arrays, and before the suite-state
+    # transition to FRAMEWORK_INITIALIZED.  Errflg check follows the call.
+    if suite_res.suite_init_call is not None:
+        lines.append('')
+        from generator.group_cap import _emit_one_call
+        _emit_one_call(suite_res.suite_init_call, i2, lines)
+
+    lines += [
+        '',
+        '{}ccpp_suite_state({}) = CCPP_SUITE_FRAMEWORK_INITIALIZED'.format(
+            i2, inst_idx
+        ),
+        '',
+        '{}end subroutine {}'.format(i1, sub_name),
+    ]
+    return lines
+
+
+def _final_lines(
+    suite_name: str,
+    suite_res: SuiteResolution,
+    host_dict=None,
+) -> List[str]:
+    """Generate the ``<suite>_final`` framework-teardown subroutine lines.
+
+    Per-instance lifecycle:
+
+    1. Errors if ``ccpp_suite_state`` is not allocated.
+    2. Per-instance idempotent skip: returns immediately if this instance's slot
+       is already ``CCPP_SUITE_UNREGISTERED``.
+    3. Calls suite-data ``final_fields`` for this instance to deallocate inner
+       allocatable suite-data fields (when this suite owns any).
+    4. Sets ``ccpp_suite_state(instance_number) = CCPP_SUITE_UNREGISTERED``.
+    5. Last-to-leave dealloc: when every slot is ``UNREGISTERED`` after the
+       flip, calls each group ``state_dealloc`` and the suite ``state_dealloc``
+       (which also tears down the suite_data DDT array).
+
+    Minimal signature: ``(instance_number, errmsg, errflg)``.
+    """
+    sub_name = '{}_final'.format(suite_name)
+    i1 = _INDENT
+    i2 = _INDENT * 2
+
+    inst_local = _instance_local(host_dict)
+    inst_idx   = _instance_idx(host_dict)
+
+    errflg_local = _ctrl_local(host_dict, 'ccpp_error_code') or 'errflg'
+    errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message') or 'errmsg'
+
+    sig_args: List[str] = []
+    if inst_local:
+        sig_args.append(inst_local)
+    sig_args += [errmsg_local, errflg_local]
+
+    lines: List[str] = ['']
+    lines.append('{}subroutine {}({})'.format(i1, sub_name, ', '.join(sig_args)))
+
+    final_uses: Dict[str, Set[str]] = {}
+    if suite_res.suite_vars:
+        data_mod     = 'ccpp_{}_data'.format(suite_name)
+        final_fields = 'ccpp_{}_suite_data_final_fields'.format(suite_name)
+        final_uses.setdefault(data_mod, set()).add(final_fields)
+
+    # If we registered constituents, the per-suite buffer (owned by
+    # ccpp_host_constituents) is torn down here in the last-to-leave block.
+    if suite_res.constituent_register_calls:
+        buf = '{}_dynamic_constituents'.format(suite_name)
+        final_uses.setdefault('ccpp_host_constituents', set()).add(buf)
+
+    # Suite-level <final> scheme call (if declared in the SDF) — pull
+    # in the scheme module and any host modules its args reference.
+    if suite_res.suite_final_call is not None:
+        _add_call_uses(final_uses, suite_res.suite_final_call)
+
+    for mod in sorted(final_uses):
+        syms = ', '.join(sorted(final_uses[mod]))
+        lines.append('{}use {}, only: {}'.format(i2, mod, syms))
+
+    lines.append('')
+    if inst_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    lines += [
+        '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
+        '{}integer, intent(out) :: {}'.format(i2, errflg_local),
+        '',
+        "{}{} = ''".format(i2, errmsg_local),
+        '{}{} = 0'.format(i2, errflg_local),
+        '',
+        '{}if (.not. allocated(ccpp_suite_state)) then'.format(i2),
+        "{}  {} = '{}_final: ccpp_register has not been called'".format(
+            i2, errmsg_local, suite_name
+        ),
+        '{}  {} = 1'.format(i2, errflg_local),
+        '{}  return'.format(i2),
+        '{}end if'.format(i2),
+        '',
+        '{}if (ccpp_suite_state({}) == CCPP_SUITE_UNREGISTERED) return'.format(
+            i2, inst_idx
+        ),
+        '',
+    ]
+
+    # Deallocate inner suite-data fields if this instance was past REGISTERED.
+    if suite_res.suite_vars:
+        final_fields = 'ccpp_{}_suite_data_final_fields'.format(suite_name)
+        lines.append(
+            '{}if (ccpp_suite_state({}) == CCPP_SUITE_FRAMEWORK_INITIALIZED) then'.format(
+                i2, inst_idx
+            )
+        )
+        lines.append('{}  call {}({}, {}, {})'.format(
+            i2, final_fields, inst_idx, errmsg_local, errflg_local
+        ))
+        lines.append('{}  if ({} /= 0) return'.format(i2, errflg_local))
+        lines.append('{}end if'.format(i2))
+        lines.append('')
+
+    # Suite-level <final> scheme call (if declared in the SDF).  Runs
+    # once per ``<suite>_final`` invocation, before the suite-state
+    # transition to UNREGISTERED.  Errflg check follows the call.
+    if suite_res.suite_final_call is not None:
+        from generator.group_cap import _emit_one_call
+        _emit_one_call(suite_res.suite_final_call, i2, lines)
+
+    lines.append(
+        '{}ccpp_suite_state({}) = CCPP_SUITE_UNREGISTERED'.format(i2, inst_idx)
+    )
+    lines.append('')
+    lines.append(
+        '{}if (all(ccpp_suite_state == CCPP_SUITE_UNREGISTERED)) then'.format(i2)
+    )
+    for rg in suite_res.groups:
+        dealloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_dealloc')
+        lines.append('{}  call {}({}, {})'.format(
+            i2, dealloc_sub, errmsg_local, errflg_local
+        ))
+        lines.append('{}  if ({} /= 0) return'.format(i2, errflg_local))
+    suite_dealloc_sub = '{}_suite_state_dealloc'.format(suite_name)
+    lines.append('{}  call {}({}, {})'.format(
+        i2, suite_dealloc_sub, errmsg_local, errflg_local
+    ))
+    lines.append('{}  if ({} /= 0) return'.format(i2, errflg_local))
+    # Constituent OBJ teardown lives in ccpp_deallocate_dynamic_constituents
+    # (the host calls it per instance + last-to-leave dealloc).  The
+    # per-suite ``<suite>_dynamic_constituents`` buffer, however, is
+    # tied to THIS suite's lifecycle — populated by ``<suite>_register``
+    # under the suite-cap state guard — so it must be deallocated here
+    # in the last-to-leave block, not in the constituent-deallocate
+    # routine.  Otherwise the next ``ccpp_register`` short-circuits on
+    # the state guard without re-filling the buffer.
+    if suite_res.constituent_register_calls:
+        buf = '{}_dynamic_constituents'.format(suite_name)
+        lines.append('{}  if (allocated({})) deallocate({})'.format(
+            i2, buf, buf,
+        ))
+    lines += [
+        '{}end if'.format(i2),
+        '',
+        '{}end subroutine {}'.format(i1, sub_name),
+    ]
+    return lines
+
+
+def _physics_dispatch_lines(
+    suite_name: str,
+    phase: str,
+    suite_res: SuiteResolution,
+    host_dict=None,
+) -> List[str]:
+    """Generate a ``<suite>_physics_<phase>`` dispatch subroutine.
+
+    The subroutine signature is derived entirely from the host's ``type=control``
+    metadata (all control variables except ``suite_name``, which is consumed at the
+    static API dispatch level).  When ``group_name`` is in the control table the
+    body uses a ``select case`` dispatch; otherwise all groups are called
+    unconditionally.
+    """
+    sub_name = '{}_physics_{}'.format(suite_name, phase)
+    i1 = _INDENT
+    i2 = _INDENT * 2
+    i3 = _INDENT * 3
+
+    # Suite-level signature: all ctrl vars excluding suite_name.
+    ctrl_entries = _ctrl_entries_for_signature(host_dict, exclude={'suite_name'})
+    ctrl_local_names = [e.local_name for e in ctrl_entries]
+
+    # Determine if group_name is in the control table.
+    group_name_entry = next(
+        (e for e in ctrl_entries if e.standard_name == 'group_name'), None
+    )
+    has_group_name = group_name_entry is not None
+
+    # Group-level args passed when calling group cap subroutines.
+    group_ctrl_entries = _ctrl_entries_for_signature(
+        host_dict, exclude={'suite_name', 'group_name'}
+    )
+    group_ctrl_local = [e.local_name for e in group_ctrl_entries]
+
+    lines: List[str] = []
+    lines.append('')
+
+    # Subroutine signature.
+    if ctrl_local_names:
+        lines.append('{}subroutine {}( &'.format(i1, sub_name))
+        for i, lname in enumerate(ctrl_local_names):
+            sep = ', &' if i < len(ctrl_local_names) - 1 else ')'
+            lines.append('{}    {}{}'.format(i1, lname, sep))
+    else:
+        lines.append('{}subroutine {}()'.format(i1, sub_name))
+
+    # Dummy argument declarations.
+    lines.append('')
+    for entry in ctrl_entries:
+        # Character control dummies always use len=* so the host's specific
+        # length doesn't propagate into the generated signature.
+        kind = 'len=*' if entry.type.strip().lower() == 'character' else entry.kind
+        t   = _fortran_type_str(entry.type, kind)
+        dim = _dim_decl(entry.dimensions)
+        intent = _intent_clause(_ctrl_intent_for(entry.standard_name))
+        lines.append(
+            '{}{}{}{}  :: {}'.format(i2, t, intent, dim, entry.local_name)
+        )
+
+    lines.append('')
+
+    # Initialize error reporting vars before any work, then guard on the
+    # per-instance suite state.
+    errflg_local = _ctrl_local(host_dict, 'ccpp_error_code')
+    errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message')
+    if errflg_local and errmsg_local:
+        lines.append("{}{} = ''".format(i2, errmsg_local))
+        lines.append('{}{} = 0'.format(i2, errflg_local))
+        lines.append('')
+
+        inst_idx = _instance_idx(host_dict)
+        sub_label = '{}_physics_{}'.format(suite_name, phase)
+        lines += [
+            '{}if (.not. allocated(ccpp_suite_state)) then'.format(i2),
+            "{}  {} = '{}: ccpp_register has not been called'".format(
+                i2, errmsg_local, sub_label
+            ),
+            '{}  {} = 1'.format(i2, errflg_local),
+            '{}  return'.format(i2),
+            '{}end if'.format(i2),
+            '{}if (ccpp_suite_state({}) /= CCPP_SUITE_FRAMEWORK_INITIALIZED) then'.format(
+                i2, inst_idx
+            ),
+            "{}  {} = '{}: invalid suite state'".format(
+                i2, errmsg_local, sub_label
+            ),
+            '{}  {} = 1'.format(i2, errflg_local),
+            '{}  return'.format(i2),
+            '{}end if'.format(i2),
+            '',
+        ]
+
+    def _emit_group_call(rg, indent):
+        # Group phase subroutines are always emitted (so the per-group state
+        # machine transitions through every phase), so we always dispatch.
+        cap_sub = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, phase)
+        if group_ctrl_local:
+            lines.append('{}call {}( &'.format(indent, cap_sub))
+            for idx, lname in enumerate(group_ctrl_local):
+                sep = ', &' if idx < len(group_ctrl_local) - 1 else ')'
+                lines.append('{}    {}{}'.format(indent, lname, sep))
+        else:
+            lines.append('{}call {}()'.format(indent, cap_sub))
+
+    if has_group_name:
+        grp_local = group_name_entry.local_name
+        lines.append('{}select case(trim({}))'.format(i2, grp_local))
+        # '' or 'all' → call all groups.
+        lines.append("{}case('', 'all')".format(i2))
+        for rg in suite_res.groups:
+            _emit_group_call(rg, i3)
+        # Individual group cases.
+        for rg in suite_res.groups:
+            lines.append("{}case('{}')".format(i2, rg.group_name))
+            _emit_group_call(rg, i3)
+        lines.append('{}end select'.format(i2))
+    else:
+        # No group_name control var: call all groups unconditionally.
+        for rg in suite_res.groups:
+            _emit_group_call(rg, i2)
+
+    lines.append('')
+    lines.append('{}end subroutine {}'.format(i1, sub_name))
+    return lines
+
+
+def _suite_state_alloc_lines(
+    suite_name: str,
+    has_suite_vars: bool,
+) -> List[str]:
+    """Generate the ``<suite>_suite_state_alloc`` subroutine.
+
+    Idempotent allocator for the per-instance suite state array and the
+    suite-owned DDT array.  Inner allocatable fields inside the DDT are NOT
+    allocated here — that happens in ``ccpp_<suite>_suite_data_init_fields``,
+    called from ``<suite>_init`` after register-phase scheme calls have set
+    any suite-owned scalar dimensions.
+    """
+    sub_name    = '{}_suite_state_alloc'.format(suite_name)
+    data_alloc  = 'ccpp_{}_suite_data_alloc'.format(suite_name)
+    data_mod    = 'ccpp_{}_data'.format(suite_name)
+    i1 = _INDENT
+    i2 = _INDENT * 2
+    lines = [
+        '',
+        '{}subroutine {}(number_of_instances, errmsg, errflg)'.format(i1, sub_name),
+    ]
+    if has_suite_vars:
+        lines.append('{}use {}, only: {}'.format(i2, data_mod, data_alloc))
+    lines += [
+        '',
+        '{}integer, intent(in) :: number_of_instances'.format(i2),
+        '{}character(len=*), intent(out) :: errmsg'.format(i2),
+        '{}integer, intent(out) :: errflg'.format(i2),
+        '',
+        "{}errmsg = ''".format(i2),
+        '{}errflg = 0'.format(i2),
+        '{}if (allocated(ccpp_suite_state)) return'.format(i2),
+        '{}allocate(ccpp_suite_state(number_of_instances))'.format(i2),
+        '{}ccpp_suite_state(:) = CCPP_SUITE_UNREGISTERED'.format(i2),
+    ]
+    if has_suite_vars:
+        lines += [
+            '{}call {}(number_of_instances, errmsg, errflg)'.format(i2, data_alloc),
+            '{}if (errflg /= 0) return'.format(i2),
+        ]
+    lines += [
+        '',
+        '{}end subroutine {}'.format(i1, sub_name),
+    ]
+    return lines
+
+
+def _suite_state_dealloc_lines(
+    suite_name: str,
+    has_suite_vars: bool,
+) -> List[str]:
+    """Generate the ``<suite>_suite_state_dealloc`` subroutine."""
+    sub_name      = '{}_suite_state_dealloc'.format(suite_name)
+    data_dealloc  = 'ccpp_{}_suite_data_dealloc'.format(suite_name)
+    data_mod      = 'ccpp_{}_data'.format(suite_name)
+    i1 = _INDENT
+    i2 = _INDENT * 2
+    lines = [
+        '',
+        '{}subroutine {}(errmsg, errflg)'.format(i1, sub_name),
+    ]
+    if has_suite_vars:
+        lines.append('{}use {}, only: {}'.format(i2, data_mod, data_dealloc))
+    lines += [
+        '',
+        '{}character(len=*), intent(out) :: errmsg'.format(i2),
+        '{}integer, intent(out) :: errflg'.format(i2),
+        '',
+        "{}errmsg = ''".format(i2),
+        '{}errflg = 0'.format(i2),
+    ]
+    if has_suite_vars:
+        lines += [
+            '{}call {}(errmsg, errflg)'.format(i2, data_dealloc),
+            '{}if (errflg /= 0) return'.format(i2),
+        ]
+    lines += [
+        '{}if (allocated(ccpp_suite_state)) deallocate(ccpp_suite_state)'.format(i2),
+        '',
+        '{}end subroutine {}'.format(i1, sub_name),
+    ]
+    return lines
+
+
+########################################################################
+# Module generator
+########################################################################
+
+def _generate_suite_cap(
+    suite_name: str,
+    suite_res: SuiteResolution,
+    scheme_store: SchemeStore,
+    host_dict=None,
+) -> List[str]:
+    """Generate the full ``ccpp_<suite>_cap.F90`` module source lines.
+
+    Parameters
+    ----------
+    suite_name : str
+    suite_res : SuiteResolution
+    scheme_store : SchemeStore
+    host_dict : dict, optional
+        Flat host+control variable dictionary.  When provided, ``number_of_instances``
+        and ``instance_number`` are used for multi-instance state array sizing and
+        indexing.
+
+    Returns
+    -------
+    list of str (no trailing newlines)
+    """
+    mod_name = 'ccpp_{}_cap'.format(suite_name)
+    lines: List[str] = []
+
+    # Module header.
+    lines.append(
+        '! ccpp_{}_cap.F90 -- generated by ccpp_capgen_ng, do not edit'.format(
+            suite_name
+        )
+    )
+    lines.append('module {}'.format(mod_name))
+    lines.append('')
+
+    # USE statements: one per group cap (all phase + state subroutines).
+    for rg in suite_res.groups:
+        group_cap_mod = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'cap')
+        syms_list = [
+            'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, p)
+            for p in _PHYSICS_PHASES
+        ]
+        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_alloc'))
+        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_dealloc'))
+        lines.append('{}use {}, only: {}'.format(
+            _INDENT, group_cap_mod, ', '.join(syms_list)
+        ))
+
+    lines.append('')
+    lines.append('{}implicit none'.format(_INDENT))
+    lines.append('{}private'.format(_INDENT))
+    lines.append('')
+
+    # Public declarations: all framework lifecycle and physics phase entry
+    # points are always emitted.  ``ccpp_register`` is mandatory in the new
+    # design — even an empty register phase fires the state transition.
+    pub_subs = []
+    pub_subs.append('{}_register'.format(suite_name))
+    pub_subs.append('{}_init'.format(suite_name))
+    for phase in _PHYSICS_PHASES:
+        pub_subs.append('{}_physics_{}'.format(suite_name, phase))
+    pub_subs.append('{}_final'.format(suite_name))
+    pub_subs.append('{}_suite_state_alloc'.format(suite_name))
+    pub_subs.append('{}_suite_state_dealloc'.format(suite_name))
+
+    for sub in pub_subs:
+        lines.append('{}public :: {}'.format(_INDENT, sub))
+
+    lines.append('')
+    lines.append('{}integer, private, parameter :: CCPP_SUITE_UNREGISTERED         = 0'.format(_INDENT))
+    lines.append('{}integer, private, parameter :: CCPP_SUITE_REGISTERED           = 1'.format(_INDENT))
+    lines.append('{}integer, private, parameter :: CCPP_SUITE_FRAMEWORK_INITIALIZED = 2'.format(_INDENT))
+    lines.append('{}integer, private, allocatable :: ccpp_suite_state(:)'.format(_INDENT))
+    lines.append('')
+    lines.append('contains')
+
+    # Subroutines.  Order: register, init, physics_*, final, state_alloc/dealloc.
+    lines.extend(_register_lines(suite_name, suite_res, host_dict))
+    lines.extend(_init_lines(suite_name, suite_res, host_dict))
+    for phase in _PHYSICS_PHASES:
+        lines.extend(_physics_dispatch_lines(suite_name, phase, suite_res, host_dict))
+    lines.extend(_final_lines(suite_name, suite_res, host_dict))
+
+    has_suite_vars = bool(suite_res.suite_vars)
+    lines.extend(_suite_state_alloc_lines(suite_name, has_suite_vars))
+    lines.extend(_suite_state_dealloc_lines(suite_name, has_suite_vars))
+
+    lines.append('')
+    lines.append('end module {}'.format(mod_name))
+    return lines
+
+
+########################################################################
+# Public API
+########################################################################
+
+def write_suite_cap(
+    suite_name: str,
+    suite_res: SuiteResolution,
+    scheme_store: SchemeStore,
+    output_root: str,
+    host_dict=None,
+) -> str:
+    """Write ``ccpp_<suite>_cap.F90`` to *output_root*.
+
+    Parameters
+    ----------
+    suite_name : str
+    suite_res : SuiteResolution
+    scheme_store : SchemeStore
+    output_root : str
+        Output directory (created if absent).
+    host_dict : dict, optional
+        Flat host+control dictionary for multi-instance support.
+
+    Returns
+    -------
+    str
+        Absolute path of the written file.
+    """
+    os.makedirs(output_root, exist_ok=True)
+    filename = 'ccpp_{}_cap.F90'.format(suite_name)
+    out_path  = os.path.join(output_root, filename)
+
+    lines = _generate_suite_cap(suite_name, suite_res, scheme_store, host_dict)
+    with open(out_path, 'w', encoding='utf-8') as fh:
+        fh.write('\n'.join(lines) + '\n')
+    return out_path

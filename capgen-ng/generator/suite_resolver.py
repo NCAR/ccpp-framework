@@ -1,0 +1,2039 @@
+#!/usr/bin/env python3
+
+"""Variable matching and call-site resolution for the cap code generator.
+
+Resolves every scheme argument against the flat host/control dictionary built by
+:func:`metadata.variable_resolver.build_flat_host_dict`, discovers suite-owned
+(interstitial) variables, detects unit/kind transformations, and builds the
+complete call-site information needed by :mod:`generator.group_cap`.
+
+Variable matching rules (Section 8.4 of the redesign spec)
+-----------------------------------------------------------
+For each standard name requested by a scheme argument:
+
+1. **Found in host/control dict** → direct reference; check units/kind for
+   transformation.
+2. **Not found, first use is ``intent(out)``** → suite-owned variable; add to
+   suite data, generate declaration in ``ccpp_<suite>_data.F90``.
+3. **Not found, first use is ``intent(in)`` or ``intent(inout)``** → code
+   generation error: variable used before it is provided.
+4. **Already in suite data (from a prior scheme)** → reference suite data path;
+   check units/kind for transformation.
+
+Dimension indexing rules (Section 9.2)
+---------------------------------------
+Each entry in the ``dimensions`` list of a host/suite variable is either a
+bare standard name (``'vertical_layer_dimension'``) or an explicit
+``lower:upper`` range (``'ccpp_constant_one:horizontal_dimension'``,
+``'bot_idx:vertical_interface_dimension'``).  Bare names are normalised to
+``ccpp_constant_one:<name>`` before processing.
+
+After normalisation the upper-bound standard name drives dispatch:
+
+- ``instance_dimension`` / ``number_of_instances`` → ``<instance_number_local>``
+  (scalar extraction; the instance subscript is already in the access path for
+  DDT fields, but needed here for the DDT instance variable itself when it is
+  passed directly).
+- ``horizontal_dimension`` / ``horizontal_loop_extent`` →
+  ``<lb_local>:<ub_local>`` (all phases).  The lower bound must resolve to
+  ``1`` (i.e. be ``ccpp_constant_one`` or the integer literal ``1``).
+- Everything else → ``<lower_expr>:<upper_expr>`` where both bounds are
+  resolved from *host_dict* or as integer literals.
+
+Transform cases (Section 10.3)
+-------------------------------
+Four cases, determined by ``optional`` and whether units/kind differ:
+
+======  ================  ============
+Case    optional?         transform?
+======  ================  ============
+1       no                no
+2       yes               no
+3       no                yes
+4       yes               yes
+======  ================  ============
+"""
+
+import re
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set, Tuple, Union
+
+from metadata.parse_tools import CCPPError, FORTRAN_CONDITIONAL_REGEX
+from metadata.variable_resolver import HostVarEntry, _INSTANCE_DIMS
+
+# Dimension standard names that map to horizontal loop bounds.
+_HORIZ_LOOP_DIMS: frozenset = frozenset({
+    'horizontal_dimension',
+    'horizontal_loop_extent',
+})
+
+# Standard names for horizontal loop bounds and full horizontal dimension.
+_HORIZ_BEGIN_STD  = 'horizontal_loop_begin'
+_HORIZ_END_STD    = 'horizontal_loop_end'
+_HORIZ_DIM_STD    = 'horizontal_dimension'
+_INSTANCE_NUM_STD = 'instance_number'
+
+# Vertical-dimension standard names (used by the vertical-flip transform
+# when host and scheme metadata disagree on the ``top_at_one`` attribute).
+_VDIM_STDS: frozenset = frozenset({
+    'vertical_layer_dimension',
+    'vertical_interface_dimension',
+})
+
+# Physics scheme phases that operate on the per-call horizontal slice and
+# therefore receive (ub - lb + 1) when a scheme asks for a scalar
+# horizontal_dimension.  Register is excluded: it runs at suite-cap level
+# with the minimal framework signature (no loop bounds available).
+_PHYSICS_PHASES: frozenset = frozenset({
+    'init', 'timestep_init', 'run', 'timestep_final', 'final',
+})
+
+# Framework constant whose Fortran value is always 1.  Used as the implicit
+# lower bound when a dimension string carries no explicit range, and is the
+# only non-integer lower bound accepted for horizontal dimensions.
+_CCPP_CONSTANT_ONE = 'ccpp_constant_one'
+
+# Type marker for register-phase constituent registration args.  A scheme
+# arg with this type, ``intent=out``, in the ``register`` phase is recognised
+# as the per-scheme constituent array for the two-pass merge into the host's
+# ``ccpp_model_constituents_object``.
+_CONST_PROP_TYPE = 'ccpp_constituent_properties_t'
+
+# Standard name the host model uses to expose its ``ccpp_model_constituents_t``
+# object via the ``type=host`` table (opt-in, only required when at least
+# one register-phase scheme produces constituents).
+_CONST_OBJ_STDNAME = 'ccpp_model_constituents_object'
+
+# Framework-provided constituent standard names.  The suite cap owns
+# these symbols (allocates/binds them at init time); schemes reference
+# them like any other variable and the resolver routes them to a
+# synthetic source category ``'constituent'``.
+_CONST_BASE_ARRAY_STD = 'ccpp_constituents'
+_CONST_TEND_ARRAY_STD = 'ccpp_constituent_tendencies'
+_CONST_PROPS_ARRAY_STD = 'ccpp_constituent_properties'
+_CONST_NUM_STD         = 'number_of_ccpp_constituents'
+_TEND_PREFIX           = 'tendency_of_'
+_INDEX_PREFIX          = 'index_of_'
+
+# Std names directly satisfied by host-constituents-module-owned symbols.
+_FRAMEWORK_CONST_STDS = frozenset({
+    _CONST_BASE_ARRAY_STD,
+    _CONST_TEND_ARRAY_STD,
+    _CONST_PROPS_ARRAY_STD,
+    _CONST_NUM_STD,
+})
+
+# Per-instance constituent object name in ccpp_host_constituents.  Schemes
+# access constituent state through ``<obj>(inst_num)%<member>``.
+_CONST_OBJ_VAR = 'ccpp_model_constituents_obj'
+
+# Mapping from framework-named std_name → DDT member.  Used to translate
+# scheme args declaring one of these framework names into the matching
+# per-instance access expression.
+_FRAMEWORK_NAME_TO_MEMBER = {
+    _CONST_BASE_ARRAY_STD:  'vars_layer',
+    _CONST_TEND_ARRAY_STD:  'vars_layer_tend',
+    _CONST_PROPS_ARRAY_STD: 'const_metadata',
+    _CONST_NUM_STD:         'num_layer_vars',
+}
+
+
+# Single host-wide module that owns the constituent object, the
+# framework-shared pointers, the per-suite dynamic-constituent buffers,
+# and the host-facing constituent API.  All suite caps USE this module
+# for their constituent symbol references.
+_HOST_CONST_MOD = 'ccpp_host_constituents'
+
+
+def _constituent_module_name(suite_name: str) -> str:
+    """Return the module name that owns the host-wide constituent state.
+
+    Constant across suites: in capgen-ng (option A, matching original
+    capgen) the constituent object is host-wide, not suite-local.
+    """
+    return _HOST_CONST_MOD
+
+
+########################################################################
+# Unit conversion look-up
+########################################################################
+
+def _normalize_unit_string(unit: str) -> str:
+    """Canonicalise a unit string so that bare positive exponents carry an
+    explicit ``+`` sign.
+
+    The CF / udunits conventions allow either ``m2`` or ``m+2`` to denote
+    "metres squared".  The two forms are equivalent, but downstream code
+    treats unit strings as opaque tokens and compares them with ``==``.
+    Without normalisation, a host declaring ``m2 s-2`` and a scheme
+    declaring ``m+2 s-2`` would be flagged as a unit mismatch.
+
+    Normalisation rule: a letter immediately followed by an unsigned
+    positive integer is rewritten as ``letter+integer``.  Existing
+    ``letter+N`` and ``letter-N`` forms are left unchanged.
+    """
+    return re.sub(r'([A-Za-z])(\d+)', r'\1+\2', unit)
+
+
+def _unit_to_id(unit: str) -> str:
+    """Convert a unit string to the Python identifier fragment used in
+    :mod:`metadata.unit_conversion`.
+
+    The input is first normalised by :func:`_normalize_unit_string` so
+    that bare and explicit positive exponents collapse to the same form.
+
+    Rules (after normalisation):
+
+    * Spaces → ``_``
+    * ``letter-N`` → ``letter_minus_N``
+    * ``letter+N`` → ``letter_plus_N``
+    """
+    result = _normalize_unit_string(unit).replace(' ', '_')
+    result = re.sub(r'([A-Za-z])([+])(\d+)', r'\1_plus_\3', result)
+    result = re.sub(r'([A-Za-z])(-)(\d+)',   r'\1_minus_\3', result)
+    return result
+
+
+def find_unit_conversion(from_unit: str, to_unit: str):
+    """Return the conversion formula callable, or ``None`` if unavailable.
+
+    The formula callable takes no arguments and returns a format string
+    where ``{var}`` is the Fortran expression to convert and ``{kind}``
+    is the kind suffix (``_kind_phys`` or ``''``).
+
+    Input unit strings are normalised by :func:`_normalize_unit_string`
+    before the equality check and the function-name lookup, so equivalent
+    forms (``m2`` and ``m+2``) compare equal and resolve to the same
+    conversion entry.
+    """
+    from_norm = _normalize_unit_string(from_unit)
+    to_norm   = _normalize_unit_string(to_unit)
+    if from_norm == to_norm:
+        return None
+    from metadata import unit_conversion as _uc
+    fn_name = '{}__to__{}'.format(_unit_to_id(from_norm), _unit_to_id(to_norm))
+    return getattr(_uc, fn_name, None)
+
+
+def _apply_transform_formula(formula_fn, var_expr: str, kind: str) -> str:
+    """Apply a unit-conversion formula callable.
+
+    Parameters
+    ----------
+    formula_fn : callable
+        Returned by :func:`find_unit_conversion`.
+    var_expr : str
+        Fortran expression for the source variable.
+    kind : str
+        Kind parameter name (e.g. ``'kind_phys'``), or ``''``.
+
+    Returns
+    -------
+    str
+        Fortran expression for the converted value.
+    """
+    kind_suffix = '_{}'.format(kind) if kind else ''
+    return formula_fn().format(kind=kind_suffix, var=var_expr)
+
+
+########################################################################
+# Dimension subscript helpers
+########################################################################
+
+def _format_available_std_names(
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+    near: Optional[str] = None,
+) -> str:
+    """Build a sorted listing of every standard name the resolver can see.
+
+    Used in error messages when a lookup fails.  Each line is
+    ``  <std_name>  [<source>]`` where source is ``control``,
+    ``host: <module>``, or ``suite: <suite_module>``.  The final list
+    is sorted alphabetically (case-insensitive); when *near* is a
+    misspelled or mis-cased candidate, close matches surface first
+    under a separate "did you mean" header so the user spots the
+    typo quickly.
+    """
+    rows: List[Tuple[str, str]] = []
+    for std, entry in host_dict.items():
+        if entry.is_control:
+            rows.append((std, 'control'))
+        elif entry.module_name:
+            rows.append((std, 'host: {}'.format(entry.module_name)))
+        else:
+            rows.append((std, 'host'))
+    if suite_vars:
+        for std, sv in suite_vars.items():
+            rows.append((std, 'suite: {}'.format(sv.suite_module_name)))
+    rows.sort(key=lambda t: t[0])
+
+    if not rows:
+        return '\n  (host_dict and suite_vars are both empty)'
+
+    width = max(len(s) for s, _ in rows)
+    fmt = '  {{:<{}}}  [{{}}]'.format(width)
+
+    sections: List[str] = []
+    if near:
+        import difflib
+        candidates = difflib.get_close_matches(
+            near, [s for s, _ in rows], n=5, cutoff=0.6,
+        )
+        if not candidates:
+            # Try a case-insensitive direct hit (the most common cause:
+            # mixed-case in metadata vs lower-cased standard name).
+            low = near.lower()
+            candidates = [s for s, _ in rows if s == low]
+        if candidates:
+            sections.append('Did you mean (close matches to {!r}):'.format(near))
+            sections.extend(
+                fmt.format(s, src)
+                for s, src in rows if s in candidates
+            )
+            sections.append('')
+
+    sections.append('Available standard names ({} entries):'.format(len(rows)))
+    sections.extend(fmt.format(s, src) for s, src in rows)
+    return '\n' + '\n'.join(sections)
+
+
+def _resolve_single_bound(
+    bound: str,
+    host_dict: Dict[str, HostVarEntry],
+    used: Set[str],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+) -> Optional[str]:
+    """Resolve one dimension bound token to a Fortran expression.
+
+    Recognises, in order:
+
+    1. ``ccpp_constant_one`` — the framework constant equal to ``1``.
+    2. Any integer literal — returned as a string unchanged.
+    3. A standard name present in *host_dict* — returns the local Fortran name
+       and records the standard name in *used*.
+    4. A standard name present in *suite_vars* — returns the suite data access
+       path (e.g. ``ccpp_suite_data(inst)%dim_inter``) and records the standard
+       name in *used*.  Suite-owned scalars set during ``_register`` are read
+       here as dimension bounds in later phases.
+
+    Returns ``None`` when the bound cannot be resolved.
+    """
+    if bound == _CCPP_CONSTANT_ONE:
+        return '1'
+    try:
+        return str(int(bound))
+    except ValueError:
+        pass
+    entry = host_dict.get(bound)
+    if entry is not None:
+        used.add(bound)
+        return entry.local_name
+    if suite_vars:
+        sv = suite_vars.get(bound)
+        if sv is not None:
+            used.add(bound)
+            return sv.access_path
+    return None
+
+
+def _build_call_subscript(
+    dimensions: List[str],
+    phase: str,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+    flip_vertical: bool = False,
+) -> Tuple[str, Set[str]]:
+    """Build the Fortran subscript string for a variable's dimension list.
+
+    Returns the subscript string (empty for scalars or ``'(s1, s2, ...)'`` for
+    arrays) and the set of dimension standard names that were resolved via
+    *host_dict* (needed for USE-statement generation).
+
+    Parameters
+    ----------
+    dimensions : list of str
+        Ordered dimension standard names from the host/suite variable entry.
+    phase : str
+        Current scheme phase (affects horizontal subscripting).
+    host_dict : dict
+        Flat host+control variable dictionary.
+    flip_vertical : bool
+        When ``True``, every vertical-dimension entry is emitted with
+        reverse stride (``<upper>:<lower>:-1`` instead of ``<lower>:<upper>``).
+        Used by the vertical-flip transform when host and scheme disagree
+        on ``top_at_one``.
+
+    Returns
+    -------
+    tuple (subscript_str, used_std_names)
+
+    Raises
+    ------
+    CCPPError
+        If a dimension standard name cannot be resolved.
+    """
+    if not dimensions:
+        return '', set()
+
+    parts: List[str] = []
+    used: Set[str] = set()
+    for dim in dimensions:
+        part, u = _one_dim_part(dim, phase, host_dict, suite_vars=suite_vars,
+                                flip_vertical=flip_vertical)
+        parts.append(part)
+        used.update(u)
+    return '({})'.format(', '.join(parts)), used
+
+
+def _one_dim_part(
+    dim: str,
+    phase: str,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+    flip_vertical: bool = False,
+) -> Tuple[str, Set[str]]:
+    """Return the Fortran subscript expression for one dimension entry.
+
+    A dimension entry is either a bare standard name (``'vertical_layer_dimension'``)
+    or an explicit lower:upper range (``'ccpp_constant_one:horizontal_dimension'``,
+    ``'bot_idx:vertical_interface_dimension'``).  Bare names are normalised
+    internally to ``ccpp_constant_one:<name>`` before processing.
+
+    Rules applied after normalisation:
+
+    * Upper bound in :data:`_INSTANCE_DIMS` → scalar ``instance_number``.
+    * Upper bound in :data:`_HORIZ_LOOP_DIMS` → ``lb:ub`` (loop bounds).
+      Lower bound **must** resolve to ``'1'`` (i.e. be ``ccpp_constant_one``
+      or the integer literal ``1``); any other value is an error.
+    * Everything else → resolve both bounds from *host_dict* or as integer
+      literals and return ``lower_expr:upper_expr``.
+
+    When *flip_vertical* is True and the dimension is a vertical-axis
+    dimension (its upper bound is in :data:`_VDIM_STDS`), the bounds are
+    emitted in reverse-stride form ``<upper_expr>:<lower_expr>:-1`` so the
+    array section reads (and writes) the vertical axis bottom-to-top
+    instead of top-to-bottom.  This is how the host-side access expression
+    is rendered when host metadata declares ``top_at_one = .true.`` but
+    the scheme expects bottom-at-one (or vice versa).
+
+    Returns ``(expr, used_std_names)`` where *expr* is the subscript token
+    and *used_std_names* is the set of standard names consumed from *host_dict*.
+    """
+    used: Set[str] = set()
+
+    # Normalise to range: bare name → ccpp_constant_one:name
+    if ':' not in dim:
+        lower_str = _CCPP_CONSTANT_ONE
+        upper_str = dim
+    else:
+        lower_str, upper_str = dim.split(':', 1)
+        lower_str = lower_str.strip()
+        upper_str = upper_str.strip()
+
+    # Instance dimension: scalar subscript regardless of lower bound
+    if upper_str in _INSTANCE_DIMS:
+        inst_entry = host_dict.get(_INSTANCE_NUM_STD)
+        if inst_entry is None:
+            raise CCPPError(
+                "Host metadata references instance dimension '{}' but the "
+                "host's type=control table does not declare "
+                "'instance_number'. Declare 'instance_number' and "
+                "'number_of_instances' (paired) for a multi-instance API, "
+                "or remove the instance dimension from the affected "
+                "metadata for a single-instance host.".format(upper_str)
+            )
+        used.add(_INSTANCE_NUM_STD)
+        return inst_entry.local_name, used
+
+    # Horizontal dimension: validate lower, return loop bounds
+    if upper_str in _HORIZ_LOOP_DIMS:
+        lower_expr = _resolve_single_bound(lower_str, host_dict, set())
+        if lower_expr != '1':
+            raise CCPPError(
+                "Lower bound '{}' for horizontal dimension '{}' must be "
+                "1 or ccpp_constant_one".format(lower_str, upper_str)
+            )
+        lb = host_dict.get(_HORIZ_BEGIN_STD)
+        ub = host_dict.get(_HORIZ_END_STD)
+        if lb is None or ub is None:
+            raise CCPPError(
+                "Dimension '{}' requires '{}' and '{}' in the host "
+                "metadata but they were not found".format(
+                    dim, _HORIZ_BEGIN_STD, _HORIZ_END_STD
+                )
+            )
+        used.update({_HORIZ_BEGIN_STD, _HORIZ_END_STD, upper_str})
+        return '{}:{}'.format(lb.local_name, ub.local_name), used
+
+    # General range: resolve both bounds independently
+    lower_expr = _resolve_single_bound(lower_str, host_dict, used,
+                                       suite_vars=suite_vars)
+    if lower_expr is None:
+        raise CCPPError(
+            "Dimension lower bound '{}' in '{}' is not in the "
+            "host metadata or suite-owned variables.{}".format(
+                lower_str, dim,
+                _format_available_std_names(host_dict, suite_vars, near=lower_str),
+            )
+        )
+    upper_expr = _resolve_single_bound(upper_str, host_dict, used,
+                                       suite_vars=suite_vars)
+    if upper_expr is None:
+        if upper_str.startswith('vertical_'):
+            raise CCPPError(
+                "Vertical dimension '{}' is not in the host metadata.{}".format(
+                    upper_str,
+                    _format_available_std_names(host_dict, suite_vars, near=upper_str),
+                )
+            )
+        raise CCPPError(
+            "Dimension '{}' is not in the host metadata or suite-owned "
+            "variables.{}".format(
+                dim,
+                _format_available_std_names(host_dict, suite_vars, near=upper_str),
+            )
+        )
+    if flip_vertical and upper_str in _VDIM_STDS:
+        # Reverse-stride form for the vertical axis (top_at_one mismatch).
+        return '{}:{}:-1'.format(upper_expr, lower_expr), used
+    return '{}:{}'.format(lower_expr, upper_expr), used
+
+
+def _build_merged_subscript(
+    host_dims: List[str],
+    local_subscript: List[str],
+    phase: str,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+    flip_vertical: bool = False,
+) -> Tuple[str, Set[str]]:
+    """Build a call subscript merging a local-name template with host dimensions.
+
+    Walk *local_subscript* tokens left to right:
+
+    * ``':'`` — dimension placeholder: consume the next entry from *host_dims*
+      and emit the appropriate range expression (``lb:ub``, ``1:nlev``, etc.)
+      via :func:`_one_dim_part`.
+    * an integer literal — emitted verbatim.
+    * any other token — explicit index using a CCPP standard name: resolved
+      case-insensitively (standard names are case-insensitive) to the
+      corresponding local Fortran name from *host_dict* (or *suite_vars*).
+      The resolved standard name is added to the returned ``used`` set so the
+      group cap emits a ``use <module>, only: <local>`` for it.  An
+      unresolved non-literal token is a metadata error: subscript indices in
+      a sliced ``local_name`` must be standard names with a defining source.
+
+    When *local_subscript* is empty this is equivalent to calling
+    :func:`_build_call_subscript` directly.
+
+    Example
+    -------
+    local_subscript = [':', ':', 'index_of_water_vapor']
+    host_dims       = ['horizontal_dimension', 'vertical_layer_dimension']
+    phase = 'run'
+    → '(lb:ub, 1:nlev, wv_idx)'
+    """
+    if not local_subscript:
+        return _build_call_subscript(host_dims, phase, host_dict,
+                                     suite_vars=suite_vars,
+                                     flip_vertical=flip_vertical)
+
+    dim_iter = iter(host_dims)
+    parts: List[str] = []
+    used: Set[str] = set()
+
+    for token in local_subscript:
+        token = token.strip()
+        if token == ':':
+            dim = next(dim_iter)
+            part, u = _one_dim_part(dim, phase, host_dict,
+                                    suite_vars=suite_vars,
+                                    flip_vertical=flip_vertical)
+            parts.append(part)
+            used.update(u)
+        elif token.isdigit():
+            parts.append(token)
+        else:
+            key = token.lower()
+            entry = host_dict.get(key)
+            if entry is not None:
+                parts.append(entry.local_name)
+                used.add(key)
+            elif suite_vars and key in suite_vars:
+                parts.append(suite_vars[key].access_path)
+                used.add(key)
+            else:
+                raise CCPPError(
+                    "Subscript index '{}' in a sliced local_name is not a "
+                    "known CCPP standard name in the host or suite metadata; "
+                    "subscript indices must be standard names with a "
+                    "defining source so the cap can resolve and import "
+                    "the corresponding local variable".format(token)
+                )
+
+    return '({})'.format(', '.join(parts)), used
+
+
+def _dim_has_vertical(dim: str) -> bool:
+    """Return True if a dimension entry's upper bound is a vertical-axis
+    standard name.
+
+    Accepts both the bare form (``'vertical_layer_dimension'``) and the
+    explicit ``lower:upper`` form (``'ccpp_constant_one:vertical_layer_dimension'``,
+    ``'bot_idx:vertical_interface_dimension'``).
+    """
+    upper = dim.split(':', 1)[-1].strip() if ':' in dim else dim.strip()
+    return upper in _VDIM_STDS
+
+
+def _substitute_instance_idx(
+    expr: str, host_dict: Dict[str, HostVarEntry],
+) -> str:
+    """Resolve the DDT-instance template ``(instance_number)`` in an
+    access expression.
+
+    :func:`metadata.variable_resolver._instance_subscript` bakes the
+    literal string ``(instance_number)`` into the access path of every
+    HostVarEntry derived from a DDT-instance array.  That string is a
+    *standard-name placeholder*; at codegen time it must be substituted
+    with the host's actual Fortran local name for ``instance_number``.
+    When the host has not declared the instance pair (single-instance
+    API), substitute ``(1)`` so the access path is still well-formed
+    against length-1 internal arrays.
+    """
+    if '(instance_number)' not in expr:
+        return expr
+    inst_entry = host_dict.get(_INSTANCE_NUM_STD)
+    if inst_entry is None:
+        return expr.replace('(instance_number)', '(1)')
+    return expr.replace(
+        '(instance_number)', '({})'.format(inst_entry.local_name)
+    )
+
+
+def _translate_active_expr(active: str, host_dict: Dict[str, HostVarEntry]) -> str:
+    """Translate standard names in an ``active`` expression to local Fortran.
+
+    Standard-name identifiers are replaced with the host entry's full
+    Fortran access path (with any ``(instance_number)`` DDT-instance
+    template resolved to the host's actual local name).  For free host
+    variables this collapses to ``entry.local_name``; for DDT-component
+    entries the substitution yields the fully qualified access path
+    (e.g. ``instance_data(instance)%opt_array_flag``).
+    """
+    if not active:
+        return ''
+
+    def _replace(m: re.Match) -> str:
+        word = m.group(0)
+        entry = host_dict.get(word)
+        if entry is None:
+            return word
+        return _substitute_instance_idx(entry.access_path, host_dict)
+
+    return FORTRAN_CONDITIONAL_REGEX.sub(_replace, active)
+
+
+def _root_symbol(access_path: str) -> str:
+    """Return the root Fortran symbol from an access path.
+
+    This is the part before any ``%`` or ``(``, which is the name that
+    appears in the ``use module, only: <name>`` statement.
+    """
+    return re.split(r'[%(]', access_path)[0]
+
+
+########################################################################
+# Data classes
+########################################################################
+
+@dataclass
+class SuiteVar:
+    """A suite-owned variable discovered during variable resolution.
+
+    Suite-owned variables are not provided by the host model; they are
+    first written by a scheme with ``intent(out)`` and then read by
+    subsequent schemes.  They are declared in the generated
+    ``ccpp_<suite>_data.F90`` module.
+
+    Attributes
+    ----------
+    standard_name : str
+    local_name : str
+        Scheme's local variable name that first produces this variable.
+    type_ : str
+        Fortran type string from the scheme metadata.
+    kind : str
+        Optional kind parameter.
+    units : str
+    dimensions : list of str
+    source_scheme : str
+        Name of the scheme that first declared it (intent out).
+    source_phase : str
+    """
+    standard_name: str
+    local_name: str
+    type_: str
+    kind: str
+    units: str
+    dimensions: List[str]
+    source_scheme: str
+    source_phase: str
+    suite_module_name: str = ''
+    inst_access: str = '(1)'
+    allocatable: bool = False
+
+    @property
+    def access_path(self) -> str:
+        """Fortran access expression in the suite data module."""
+        return 'ccpp_suite_data{}%{}'.format(self.inst_access, self.local_name)
+
+    @property
+    def module_name(self) -> str:
+        return self.suite_module_name if self.suite_module_name else 'ccpp_suite_data'
+
+
+@dataclass
+class ResolvedArg:
+    """One resolved argument at a scheme call site.
+
+    Attributes
+    ----------
+    standard_name : str
+    scheme_local_name : str
+        Keyword name for the Fortran call (from the scheme metadata ``[ name ]``
+        header).
+    intent : str
+        ``'in'``, ``'out'``, or ``'inout'``.
+    is_optional : bool
+    active : str
+        Active condition in standard names (empty if always active).
+    active_local : str
+        Active condition translated to local Fortran names.
+    source : str
+        ``'host'``, ``'control'``, or ``'suite'``.
+    host_entry : HostVarEntry or None
+        The resolved host/control entry (``None`` for suite-owned vars
+        that have already been declared before this call).
+    suite_var : SuiteVar or None
+        The suite data entry (``None`` for host/control vars).
+    base_expr : str
+        Fortran access path (without dimension subscripts).
+    subscript : str
+        Dimension subscript string, e.g. ``'(lb:ub, 1:nlev)'`` or ``''``.
+    call_expr : str
+        Full call-site expression: ``base_expr + subscript``.
+    used_dim_std_names : set of str
+        Standard names of host/control/suite dimension variables
+        referenced in the subscript.  Used to drive USE statements and
+        dummy-arg injection in the group cap.
+    used_const_dim_std_names : set of str
+        Standard names of *framework-constituent* dimension references
+        (notably ``number_of_ccpp_constituents``) referenced in the
+        subscript.  These do not produce USE statements (the value is
+        reached via the per-instance constituent object), but they DO
+        appear in the host-facing introspection inputs list — original
+        capgen reports framework-constituent dim names there.
+    needs_unit_transform : bool
+    needs_kind_transform : bool
+    unit_forward : str
+        Fortran expression: host/suite → scheme (for pre-call, intent in/inout).
+        Empty if no transformation needed.
+    unit_backward : str
+        Fortran expression: scheme → host/suite (for post-call, intent out/inout).
+        Empty if no transformation needed.
+    kind_scheme : str
+        Kind declared in the scheme metadata.
+    kind_host : str
+        Kind of the host/suite variable.
+    temp_name : str
+        Name for the transformation temporary (``local_name + '_l'``).
+    ptr_name : str
+        Name for the optional pointer (``local_name + '_p'``).
+    transform_case : int
+        1 = direct, 2 = pointer only, 3 = transform only, 4 = pointer+transform.
+    """
+    standard_name: str
+    scheme_local_name: str
+    intent: str
+    is_optional: bool
+    active: str
+    active_local: str
+    source: str
+    host_entry: Optional[HostVarEntry]
+    suite_var: Optional['SuiteVar']
+    base_expr: str
+    subscript: str
+    call_expr: str
+    used_dim_std_names: Set[str]
+    needs_unit_transform: bool
+    needs_kind_transform: bool
+    unit_forward: str
+    unit_backward: str
+    kind_scheme: str
+    kind_host: str
+    temp_name: str
+    ptr_name: str
+    transform_case: int
+    scheme_dimensions: List[str]
+    # ``needs_vert_flip`` is True when host and scheme metadata disagree on
+    # ``top_at_one``: the host-side access expression carries a reverse-stride
+    # subscript on the vertical axis and the transform pipeline copies through
+    # a temp local just like a unit conversion does.  Composes with unit/kind
+    # transforms when present.
+    needs_vert_flip: bool = False
+    is_constituent_arg: bool = False
+    # ``is_constituent`` is True if the scheme metadata flagged this variable
+    # with any of ``constituent``, ``advected``, or ``molar_mass`` (a non-default
+    # value).  Distinct from :attr:`is_constituent_arg`, which marks the
+    # ``ccpp_constituent_properties_t`` register-phase array argument.
+    is_constituent: bool = False
+    # For ``source == 'constituent'`` args: module that owns the constituent
+    # symbols this arg references (typically the suite cap module).  ``None``
+    # for non-constituent args.
+    constituent_module_name: Optional[str] = None
+    # Extra symbols (beyond :attr:`root_symbol`) that the group cap must USE
+    # from :attr:`constituent_module_name`.  Typically ``index_of_<X>``
+    # integers referenced inside the constituent array subscript.
+    constituent_extra_symbols: Set[str] = field(default_factory=set)
+    # Framework-constituent dim std names referenced in the subscript
+    # (e.g. ``number_of_ccpp_constituents`` as the trailing axis of
+    # ``ccpp_constituents``).  These are not USE'd from any module — the
+    # value is reached via the per-instance constituent object — but
+    # they're surfaced as inputs by the introspection routines in
+    # :mod:`generator.static_api`.  Replaces the older trick of stuffing
+    # them into :attr:`used_dim_std_names`.
+    used_const_dim_std_names: Set[str] = field(default_factory=set)
+
+    @property
+    def needs_transform(self) -> bool:
+        return (self.needs_unit_transform or self.needs_kind_transform
+                or self.needs_vert_flip)
+
+    @property
+    def module_name(self) -> Optional[str]:
+        """Module to USE for this argument (``None`` for control vars)."""
+        if self.source == 'constituent':
+            return self.constituent_module_name
+        if self.host_entry is not None:
+            return self.host_entry.module_name
+        if self.suite_var is not None:
+            return self.suite_var.module_name
+        return None
+
+    @property
+    def root_symbol(self) -> str:
+        """Root Fortran symbol name for the USE statement."""
+        return _root_symbol(self.base_expr)
+
+
+@dataclass
+class ResolvedCall:
+    """All resolved arguments for one scheme phase call."""
+    scheme_name: str
+    phase: str
+    args: List[ResolvedArg] = field(default_factory=list)
+    # Fortran module that exports the scheme's subroutines.  Defaults to
+    # ``scheme_name`` for the common-case where the .meta table name and
+    # the Fortran module name match; overridden by the ``module_name``
+    # attribute in ``[ccpp-table-properties]`` when the two differ.
+    scheme_module: str = ''
+
+    @property
+    def used_modules(self) -> Dict[str, Set[str]]:
+        """Return ``{module_name: {symbol, ...}}`` for USE-statement building."""
+        result: Dict[str, Set[str]] = {}
+        for arg in self.args:
+            mod = arg.module_name
+            if mod is not None:
+                sym = arg.root_symbol
+                result.setdefault(mod, set()).add(sym)
+            for dim_std in arg.used_dim_std_names:
+                pass  # dim vars added separately by the group cap writer
+        return result
+
+
+def _resolve_subcycle_loop_bound(
+    loop_str: Optional[str],
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+) -> Tuple[str, str]:
+    """Resolve a subcycle ``loop=`` attribute into Fortran source.
+
+    Returns ``(fortran_expr, std_name)`` where:
+
+    * *fortran_expr* is the value to splice into ``do ccpp_loop_counter
+      = 1, <fortran_expr>``.  For an absent or literal-integer value
+      this is the literal itself; for a CCPP standard name it is the
+      host's (or suite's) Fortran local name.
+    * *std_name* is the resolved CCPP standard name (lower-cased) when
+      the loop bound was a symbol, otherwise the empty string.  Used by
+      the group cap to (a) emit ``use <module>, only: <local>`` for
+      host-owned bounds and (b) inject the bound as a dummy argument
+      when it's a control variable.
+
+    Raises ``CCPPError`` if the loop bound is a non-integer token that
+    doesn't resolve against the host/control dictionary or the suite's
+    interstitial variables.
+    """
+    if loop_str is None:
+        return '1', ''
+    raw = loop_str.strip()
+    if not raw:
+        return '1', ''
+    # Integer literal — pass through verbatim (also handles negative
+    # numbers for completeness, though those aren't physically meaningful).
+    try:
+        int(raw)
+        return raw, ''
+    except ValueError:
+        pass
+    # Treat as a CCPP standard name.  Standard names are lower-cased at
+    # parse time; the XML attribute may carry a mixed-case spelling, so
+    # normalise before lookup.
+    key = raw.lower()
+    entry = host_dict.get(key)
+    if entry is not None:
+        # Use the full access_path — for a free module variable this is
+        # just the local name, but for a DDT-component the access path is
+        # ``<instance>%<component>`` (or
+        # ``<instance>(instance_number)%<component>`` when the parent is
+        # in an instance-dimensioned array; resolve that template here).
+        return _substitute_instance_idx(entry.access_path, host_dict), key
+    if suite_vars and key in suite_vars:
+        sv = suite_vars[key]
+        return sv.access_path, key
+    raise CCPPError(
+        "Subcycle loop=\"{}\" is not an integer literal and does not "
+        "resolve to a CCPP standard name in the host/control metadata or "
+        "as a suite-owned variable; declare it (typically in the "
+        "type=control or type=host table) before using it as a subcycle "
+        "loop bound".format(loop_str)
+    )
+
+
+@dataclass
+class ResolvedSubcycle:
+    """A subcycle ``do`` loop wrapping one or more scheme run calls.
+
+    Only appears in ``phase_calls['run']``; non-run phases are always flat
+    (subcycle boundaries are not meaningful for init/final).
+
+    Attributes
+    ----------
+    loop : str
+        Loop-count Fortran expression to splice into ``do
+        ccpp_loop_counter = 1, <loop>``.  An integer literal when the
+        XML attribute was a literal; otherwise the host's local Fortran
+        name resolved from the CCPP standard name in the XML.
+    loop_std_name : str
+        The resolved CCPP standard name (lower-cased) when *loop* came
+        from a symbol; empty string when *loop* is an integer literal.
+        Drives USE-statement emission and control-variable dummy-arg
+        injection in the group cap.
+    calls : list of :data:`PhaseItem`
+        Items wrapped by this loop.  Element types: :class:`ResolvedCall`
+        for scheme calls; :class:`ResolvedSubcycle` for nested loops
+        (yes, this is recursive — SDFs may declare arbitrary subcycle
+        nesting and the resolver preserves that structure for the cap
+        emitter to render as nested ``do`` loops).
+    """
+    loop: str
+    # Use a forward-ref string for ``PhaseItem`` because the alias is
+    # defined just below this class.  Runtime type-checking still works.
+    calls: List['PhaseItem'] = field(default_factory=list)
+    loop_std_name: str = ''
+
+
+# Type alias for the contents of a phase's call list (and a subcycle's
+# inner items).  PhaseItem is itself the union of plain scheme calls and
+# nested subcycles, so a phase / subcycle can carry arbitrary nesting.
+PhaseItem = Union[ResolvedCall, ResolvedSubcycle]
+
+
+def iter_phase_calls(items: List[PhaseItem]):
+    """Yield every :class:`ResolvedCall` in *items*, recursing into
+    nested :class:`ResolvedSubcycle` items.  Subcycles themselves are
+    not yielded — only the leaf scheme calls."""
+    for item in items:
+        if isinstance(item, ResolvedCall):
+            yield item
+        elif isinstance(item, ResolvedSubcycle):
+            # Recurse so nested ``ResolvedSubcycle`` items unwrap too.
+            yield from iter_phase_calls(item.calls)
+
+
+def iter_phase_subcycles(items: List[PhaseItem]):
+    """Yield every :class:`ResolvedSubcycle` in *items*, including nested
+    subcycles.  Used by the group cap to emit nested ``do`` loops and
+    by ``_collect_host_io`` to find every loop bound."""
+    for item in items:
+        if isinstance(item, ResolvedSubcycle):
+            yield item
+            yield from iter_phase_subcycles(item.calls)
+
+
+@dataclass
+class ResolvedGroup:
+    """Resolution results for one suite group."""
+    group_name: str
+    # One list of PhaseItem objects per phase.  Non-run phases contain only
+    # ResolvedCall; the run phase may also contain ResolvedSubcycle items.
+    phase_calls: Dict[str, List[PhaseItem]] = field(default_factory=dict)
+    # Module → symbols referenced by dimension lookups in this group.
+    dim_uses: Dict[str, Set[str]] = field(default_factory=dict)
+
+
+@dataclass
+class SuiteResolution:
+    """Complete resolution result for one suite.
+
+    Attributes
+    ----------
+    constituent_register_calls : list of (scheme_name, scheme_local_name)
+        For each register-phase scheme arg whose ``type`` is
+        ``ccpp_constituent_properties_t`` (intent=out, allocatable), records
+        the (scheme, scheme arg local name) pair.  The suite cap uses this
+        list to emit two-pass merge logic that populates the host's
+        ``ccpp_model_constituents_object`` with the per-scheme constituent
+        arrays.  Empty when no register-phase scheme produces constituents.
+    constituent_index_names : list of str
+        Sorted list of base-constituent standard names that need an
+        ``index_of_<X>`` integer emitted in the suite cap.  Collected by
+        scanning every ``source='constituent'`` ResolvedArg's
+        ``constituent_extra_symbols`` for ``index_of_*`` tokens.  Used by
+        :mod:`generator.suite_cap` to emit the index declarations and the
+        ``ccpp_model_constituents_object%const_index`` population calls
+        in ``<suite>_init``.
+    uses_constituents : bool
+        True iff any scheme arg in this suite has ``source='constituent'``
+        (excluding the legacy register-phase ``is_constituent_arg``).
+        Drives suite-cap emission of the ccpp_constituents /
+        ccpp_constituent_tendencies pointers and related state.
+    suite_init_call : ResolvedCall or None
+        Resolved call for the suite-level ``<init>`` scheme (if any).
+        The scheme's ``init`` phase is invoked once per ``<suite>_init``
+        call (per instance, per suite), after the group ``state_alloc``
+        loop and before the state transition to
+        ``CCPP_SUITE_FRAMEWORK_INITIALIZED``.
+    suite_final_call : ResolvedCall or None
+        Resolved call for the suite-level ``<final>`` scheme (if any).
+        The scheme's ``final`` phase is invoked once per ``<suite>_final``
+        call (per instance, per suite), before the state transition to
+        ``CCPP_SUITE_UNREGISTERED``.
+    """
+    suite_name: str
+    groups: List[ResolvedGroup] = field(default_factory=list)
+    suite_vars: Dict[str, SuiteVar] = field(default_factory=dict)
+    uses_instance_dimension: bool = False
+    constituent_register_calls: List[Tuple[str, str]] = field(default_factory=list)
+    constituent_index_names: List[str] = field(default_factory=list)
+    uses_constituents: bool = False
+    suite_init_call:  Optional[ResolvedCall] = None
+    suite_final_call: Optional[ResolvedCall] = None
+
+
+########################################################################
+# Argument resolution helpers
+########################################################################
+
+def _local_name_conflict(
+    name: str,
+    existing_names: Set[str],
+) -> str:
+    """Return *name* with a numeric suffix if it already exists in *existing_names*."""
+    if name not in existing_names:
+        return name
+    # Split on last '_' to find the suffix ('_l' or '_p').
+    if '_' in name:
+        base, suffix = name.rsplit('_', 1)
+        suffix = '_' + suffix
+    else:
+        base, suffix = name, ''
+    n = 2
+    while True:
+        candidate = '{}_{}{}' .format(base, n, suffix)
+        if candidate not in existing_names:
+            return candidate
+        n += 1
+
+
+def _resolve_one_arg(
+    scheme_var,           # MetaVar from scheme metadata
+    phase: str,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Dict[str, SuiteVar],
+    scheme_name: str,
+    used_local_names: Set[str],
+    suite_name: str = '',
+) -> ResolvedArg:
+    """Resolve one scheme argument against host/control/suite dictionaries.
+
+    Implements the four variable-matching cases from Section 8.4.
+
+    Parameters
+    ----------
+    scheme_var : MetaVar
+        The variable entry from the scheme's phase metadata section.
+    phase : str
+        The current scheme phase (affects subscripting and error messages).
+    host_dict : dict
+        Flat host+control variable dict.
+    suite_vars : dict
+        Accumulated suite-owned variables (mutated if Case 2 applies).
+    scheme_name : str
+        Name of the enclosing scheme (for error messages).
+    used_local_names : set of str
+        Already-used local variable names in this group cap function (for
+        conflict resolution of temp/pointer names).
+
+    Returns
+    -------
+    ResolvedArg
+
+    Raises
+    ------
+    CCPPError
+        Case 3: variable not found and intent is not ``'out'``.
+    """
+    std_name = scheme_var.standard_name
+    intent   = scheme_var.intent or 'in'
+    local    = scheme_var.local_name
+    optional = scheme_var.optional
+
+    # ---- detect constituent register args (special-cased) ---------------
+    # Schemes that register dynamic constituents declare an intent=out
+    # ``ccpp_constituent_properties_t`` allocatable array.  Those arguments
+    # are NOT promoted to suite-owned data — they are local temporaries in
+    # the suite cap's ``<suite>_register`` subroutine, used to count and
+    # populate the host's ``ccpp_model_constituents_object`` via the
+    # two-pass merge pattern.
+    is_constituent = (
+        phase == 'register'
+        and intent == 'out'
+        and scheme_var.type.strip() == _CONST_PROP_TYPE
+    )
+    if is_constituent:
+        return ResolvedArg(
+            standard_name=std_name,
+            scheme_local_name=local,
+            intent=intent,
+            is_optional=optional,
+            active='',
+            active_local='',
+            source='constituent',
+            host_entry=None,
+            suite_var=None,
+            base_expr='scheme_consts',
+            subscript='',
+            call_expr='scheme_consts',
+            used_dim_std_names=set(),
+            needs_unit_transform=False,
+            needs_kind_transform=False,
+            unit_forward='',
+            unit_backward='',
+            kind_scheme=scheme_var.kind,
+            kind_host='',
+            temp_name='',
+            ptr_name='',
+            transform_case=1,
+            scheme_dimensions=list(scheme_var.dimensions),
+            is_constituent_arg=True,
+        )
+
+    # ---- detect constituent-sourced scheme args (framework auto-provision)
+    # Returns a synthesised ``source='constituent'`` ResolvedArg for:
+    #   * scheme args declaring a framework-known std name
+    #     (ccpp_constituents, ccpp_constituent_tendencies,
+    #     number_of_ccpp_constituents, ccpp_constituent_properties);
+    #   * scheme args flagged ``is_constituent`` with intent=in/inout
+    #     (routed to ccpp_constituents(<slice>, index_of_<X>));
+    #   * scheme args flagged ``is_constituent`` with intent=out and
+    #     standard name starting with ``tendency_of_`` (routed to
+    #     ccpp_constituent_tendencies(<slice>, index_of_<base>)).
+    # Returns ``None`` if the arg is not constituent-related.
+    const_arg = _resolve_constituent_arg(
+        scheme_var, phase, host_dict, suite_vars, scheme_name, suite_name,
+    )
+    if const_arg is not None:
+        return const_arg
+
+    # ---- determine source -----------------------------------------------
+    host_entry: Optional[HostVarEntry] = host_dict.get(std_name)
+
+    # active is a host-model-only attribute; read it from the host entry only.
+    active = host_entry.active if host_entry is not None else ''
+    sv: Optional[SuiteVar]             = suite_vars.get(std_name)
+
+    if host_entry is not None and sv is None:
+        source = 'control' if host_entry.is_control else 'host'
+    elif sv is not None and host_entry is None:
+        source = 'suite'
+    elif host_entry is None and sv is None:
+        # Case 2 or 3.
+        if intent == 'out':
+            inst_entry = host_dict.get('instance_number')
+            inst_access = '({})'.format(inst_entry.local_name) if inst_entry else '(1)'
+            sv = SuiteVar(
+                standard_name=std_name,
+                local_name=local,
+                type_=scheme_var.type,
+                kind=scheme_var.kind,
+                units=scheme_var.units,
+                dimensions=list(scheme_var.dimensions),
+                source_scheme=scheme_name,
+                source_phase=phase,
+                suite_module_name='ccpp_{}_data'.format(suite_name),
+                inst_access=inst_access,
+                allocatable=scheme_var.allocatable,
+            )
+            suite_vars[std_name] = sv
+            source = 'suite'
+        else:
+            raise CCPPError(
+                "Variable '{}' (standard_name='{}') requested by scheme "
+                "'{}' phase '{}' with intent({}) is not provided by the host "
+                "metadata or by any prior scheme; "
+                "either add it to the host metadata or ensure an earlier "
+                "scheme provides it with intent(out)".format(
+                    local, std_name, scheme_name, phase, intent
+                )
+            )
+    else:
+        # Both found — host takes precedence (suite data shouldn't duplicate host).
+        source = 'control' if host_entry.is_control else 'host'
+
+    # ---- build access expression -----------------------------------------
+    if host_entry is not None:
+        # ``host_entry.access_path`` is the verbatim form from
+        # build_flat_host_dict; for DDT-instance arrays it carries the
+        # ``(instance_number)`` template that needs codegen-time resolution.
+        base_expr = _substitute_instance_idx(host_entry.access_path, host_dict)
+        host_dims = host_entry.dimensions
+        host_units = host_entry.units
+        host_kind  = host_entry.kind
+        host_allocatable = host_entry.allocatable
+    else:
+        base_expr  = sv.access_path
+        host_dims  = sv.dimensions
+        host_units = sv.units
+        host_kind  = sv.kind
+        host_allocatable = sv.allocatable
+
+    # ---- allocatable compatibility check ---------------------------------
+    # An actual argument that is not allocatable cannot be passed to an
+    # allocatable dummy.  The reverse direction (allocatable host -> plain
+    # assumed-shape dummy) is legal Fortran and is permitted: the scheme
+    # simply forgoes access to the allocation status.
+    if scheme_var.allocatable and not host_allocatable:
+        raise CCPPError(
+            "Variable '{}' (standard_name='{}'): scheme '{}' declares "
+            "allocatable=True but {} declares allocatable=False; "
+            "an allocatable dummy cannot receive a non-allocatable actual "
+            "argument".format(
+                local, std_name, scheme_name, source
+            )
+        )
+
+    # ---- vertical-flip detection (top_at_one mismatch) ------------------
+    # Both host and scheme declare a top_at_one attribute (default False).
+    # A mismatch triggers a reverse-stride substitution on the host-side
+    # subscript at the vertical-dim position so the array section is read
+    # (and written) in flipped order.  Only meaningful when the variable
+    # actually has a vertical dimension.
+    if host_entry is not None:
+        host_top_at_one = host_entry.top_at_one
+    else:
+        host_top_at_one = False
+    scheme_top_at_one = bool(getattr(scheme_var, 'top_at_one', False))
+    needs_vert_flip = (
+        host_top_at_one != scheme_top_at_one
+        and any(_dim_has_vertical(d) for d in host_dims)
+    )
+
+    if host_allocatable:
+        # Allocatable actual arguments must omit explicit dimension ranges:
+        # the callee declares the dummy as allocatable too and assumes the
+        # array shape from the actual.
+        subscript: str = ''
+        used_dim_std: Set[str] = set()
+    else:
+        local_sub = host_entry.local_subscript if host_entry is not None else []
+        subscript, used_dim_std = _build_merged_subscript(
+            host_dims, local_sub, phase, host_dict, suite_vars=suite_vars,
+            flip_vertical=needs_vert_flip,
+        )
+    call_expr = base_expr + subscript
+
+    # Scalar horizontal_dimension in a physics phase: the scheme is asking
+    # for the size of the horizontal slice it actually receives.  During run
+    # the host passes a chunk (lb:ub); during the other physics phases the
+    # loop bounds collapse to 1:ncols.  In both cases (ub - lb + 1) yields
+    # the correct extent, so we synthesise it from the loop-bound control
+    # variables and bypass the host's full-domain scalar (e.g. ncols).
+    if (phase in _PHYSICS_PHASES
+            and std_name == _HORIZ_DIM_STD
+            and not scheme_var.dimensions):
+        lb = host_dict.get(_HORIZ_BEGIN_STD)
+        ub = host_dict.get(_HORIZ_END_STD)
+        if lb is None or ub is None:
+            raise CCPPError(
+                "Scheme '{}' phase '{}' requests scalar '{}' but the host "
+                "metadata lacks '{}'/'{}' (required to compute the per-call "
+                "horizontal extent)".format(
+                    scheme_name, phase, _HORIZ_DIM_STD,
+                    _HORIZ_BEGIN_STD, _HORIZ_END_STD
+                )
+            )
+        call_expr = '({} - {} + 1)'.format(ub.local_name, lb.local_name)
+        used_dim_std.update({_HORIZ_BEGIN_STD, _HORIZ_END_STD})
+
+    # ---- active expression translation -----------------------------------
+    active_local = _translate_active_expr(active, host_dict)
+
+    # ---- transformation detection ----------------------------------------
+    # Normalise both unit strings so that equivalent spellings (``m2`` and
+    # ``m+2``) compare equal and do not appear as bogus mismatches.
+    host_units   = _normalize_unit_string(host_units)
+    scheme_units = _normalize_unit_string(scheme_var.units)
+    scheme_kind  = scheme_var.kind
+
+    fwd_fn  = find_unit_conversion(host_units, scheme_units) if host_units != scheme_units else None
+    bwd_fn  = find_unit_conversion(scheme_units, host_units) if host_units != scheme_units else None
+
+    needs_unit  = fwd_fn is not None or bwd_fn is not None
+    # Unit mismatch with no known conversion is an error only if units differ.
+    if host_units != scheme_units and not needs_unit:
+        raise CCPPError(
+            "Variable '{}' (standard_name='{}'): host units '{}' differ from "
+            "scheme '{}' units '{}' but no unit conversion is known; "
+            "add a conversion to metadata/unit_conversion.py or fix the "
+            "metadata".format(
+                local, std_name, host_units, scheme_name, scheme_units
+            )
+        )
+
+    # Character kind handling (len=N / len=*):
+    #   - len=* in the scheme is always compatible with any host len=<N>.
+    #   - Matching specific len=N values need no transform (naturally equal).
+    #   - Mismatched specific lengths (len=N vs len=M) are a metadata error;
+    #     the scheme must declare len=* or match the defining metadata exactly.
+    _host_is_len  = host_kind.startswith('len=')  if host_kind  else False
+    _scheme_is_len = scheme_kind.startswith('len=') if scheme_kind else False
+    if _host_is_len or _scheme_is_len:
+        if scheme_kind != 'len=*' and host_kind != scheme_kind:
+            raise CCPPError(
+                "Character variable '{}' (standard_name='{}'): host declares "
+                "kind='{}' but scheme '{}' declares kind='{}'; scheme must "
+                "use kind=len=* or match the defining kind exactly".format(
+                    local, std_name, host_kind, scheme_name, scheme_kind
+                )
+            )
+        needs_kind = False
+    else:
+        needs_kind = bool(host_kind) and bool(scheme_kind) and host_kind != scheme_kind
+
+    # Forward transformation expression (host/suite → scheme local).
+    # ``call_expr`` already carries the flipped vertical subscript when
+    # ``needs_vert_flip`` is True, so the unit-conversion formula naturally
+    # composes the flip on the host-side RHS.  For a pure-flip case (no
+    # unit conversion) we emit a plain copy ``temp = host(...flipped)``.
+    unit_forward = ''
+    if needs_unit and fwd_fn is not None and intent in ('in', 'inout'):
+        unit_forward = _apply_transform_formula(fwd_fn, call_expr, scheme_kind)
+    elif needs_vert_flip and not needs_unit and intent in ('in', 'inout'):
+        unit_forward = call_expr
+
+    # Backward transformation expression (scheme local → host/suite).
+    unit_backward = ''
+    if needs_unit and bwd_fn is not None and intent in ('out', 'inout'):
+        unit_backward_expr = '{}_l'.format(local)
+        unit_backward = _apply_transform_formula(bwd_fn, unit_backward_expr, host_kind)
+    elif needs_vert_flip and not needs_unit and intent in ('out', 'inout'):
+        unit_backward = '{}_l'.format(local)
+
+    needs_transform = needs_unit or needs_kind or needs_vert_flip
+
+    # ---- local variable names (transformation temp + pointer) ------------
+    temp_name = ''
+    ptr_name  = ''
+    if needs_transform:
+        candidate = '{}_l'.format(local)
+        temp_name = _local_name_conflict(candidate, used_local_names)
+        used_local_names.add(temp_name)
+
+    if optional:
+        candidate = '{}_p'.format(local)
+        ptr_name = _local_name_conflict(candidate, used_local_names)
+        used_local_names.add(ptr_name)
+
+    # ---- transform case --------------------------------------------------
+    if optional and needs_transform:
+        transform_case = 4
+    elif optional:
+        transform_case = 2
+    elif needs_transform:
+        transform_case = 3
+    else:
+        transform_case = 1
+
+    return ResolvedArg(
+        standard_name=std_name,
+        scheme_local_name=local,
+        intent=intent,
+        is_optional=optional,
+        active=active,
+        active_local=active_local,
+        source=source,
+        host_entry=host_entry,
+        suite_var=sv if source == 'suite' else None,
+        base_expr=base_expr,
+        subscript=subscript,
+        call_expr=call_expr,
+        used_dim_std_names=used_dim_std,
+        needs_unit_transform=needs_unit,
+        needs_kind_transform=needs_kind,
+        unit_forward=unit_forward,
+        unit_backward=unit_backward,
+        kind_scheme=scheme_kind,
+        kind_host=host_kind,
+        temp_name=temp_name,
+        ptr_name=ptr_name,
+        transform_case=transform_case,
+        scheme_dimensions=list(scheme_var.dimensions),
+        needs_vert_flip=needs_vert_flip,
+        is_constituent=scheme_var.is_constituent,
+    )
+
+
+########################################################################
+# Constituent-source synthesis (framework auto-provisioning)
+########################################################################
+
+def _const_dim_part(
+    dim: str,
+    phase: str,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+) -> Tuple[str, Set[str], Set[str], Set[str]]:
+    """One-dim subscript with framework-constituent dim recognition.
+
+    Returns ``(part, used_host_std, used_const_std, used_const_dim_std)``.
+
+    The trailing dim ``number_of_ccpp_constituents`` is emitted as
+    ``':'`` (whole-axis slice).  The std name is added to
+    ``used_const_dim_std`` so the introspection routine
+    (:func:`generator.static_api._collect_host_io`) can include it in
+    its inputs list — original capgen reports framework-constituent dim
+    names there.  No USE statement is emitted for the name: it isn't in
+    host_dict (the framework provides it via the per-instance
+    constituent object), so ``_collect_group_uses`` and
+    ``_extra_dim_ctrl_entries`` both silently skip it.  All other dims
+    fall through to :func:`_one_dim_part` and their std names go into
+    ``used_host_std``.
+
+    ``used_const_std`` collects framework-constituent *symbols* that
+    need a USE statement (currently unused at this layer; reserved for
+    future framework-constituent symbols that might appear inside a
+    dim expression).
+    """
+    if dim == _CONST_NUM_STD or dim.endswith(':' + _CONST_NUM_STD):
+        return ':', set(), set(), {_CONST_NUM_STD}
+    part, used = _one_dim_part(dim, phase, host_dict, suite_vars=suite_vars)
+    return part, used, set(), set()
+
+
+def _build_const_subscript(
+    dimensions: List[str],
+    phase: str,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+) -> Tuple[str, Set[str], Set[str], Set[str]]:
+    """Build a subscript for a constituent-sourced arg.
+
+    Like :func:`_build_call_subscript` but recognises
+    ``number_of_ccpp_constituents`` as a whole-axis slice.  Returns
+    ``(subscript, used_host_std, used_const_std, used_const_dim_std)``;
+    *used_const_std* collects framework-constituent symbols that need
+    a USE statement (reserved for future use), and
+    *used_const_dim_std* collects framework-constituent dim std names
+    (e.g. ``number_of_ccpp_constituents``) for introspection.
+    """
+    if not dimensions:
+        return '', set(), set(), set()
+    parts: List[str] = []
+    used_host: Set[str] = set()
+    used_const: Set[str] = set()
+    used_const_dim: Set[str] = set()
+    for dim in dimensions:
+        part, uh, uc, ucd = _const_dim_part(dim, phase, host_dict, suite_vars)
+        parts.append(part)
+        used_host.update(uh)
+        used_const.update(uc)
+        used_const_dim.update(ucd)
+    return ('({})'.format(', '.join(parts)),
+            used_host, used_const, used_const_dim)
+
+
+def _resolve_constituent_arg(
+    scheme_var,
+    phase: str,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Dict[str, 'SuiteVar'],
+    scheme_name: str,
+    suite_name: str,
+) -> Optional[ResolvedArg]:
+    """Synthesise a ``source='constituent'`` ResolvedArg, or return ``None``.
+
+    Per-instance access pattern: every constituent state lookup goes
+    through ``ccpp_model_constituents_obj(<inst_num>)%<member>`` where
+    *inst_num* is the host's local name for ``instance_number`` (or
+    ``1`` if the host doesn't declare it).  The ``index_of_<X>``
+    integers and ``ccpp_model_const_stdnames`` parameter array are
+    module-level scalars on ``ccpp_host_constituents`` (identical
+    across instances).
+
+    Host metadata always wins: if the host declares ``std_name`` as a
+    regular variable, this routine returns ``None`` and normal host-arg
+    resolution takes over.  Constituent auto-provisioning is reserved
+    for names the host has not claimed.
+
+    Three argument categories are recognised:
+
+    1. **Framework-named std_name** — one of
+       :data:`_FRAMEWORK_CONST_STDS` or starts with ``index_of_`` *and*
+       not declared by the host.
+
+       * ``ccpp_constituents`` → ``ccpp_model_constituents_obj(inst)%vars_layer<sub>``
+       * ``ccpp_constituent_tendencies`` → ``...%vars_layer_tend<sub>``
+       * ``ccpp_constituent_properties`` → ``...%const_metadata<sub>``
+       * ``number_of_ccpp_constituents`` → ``...%num_layer_vars`` (scalar)
+       * ``index_of_<X>`` → ``index_of_<X>`` (module-level integer)
+
+    2. **Base constituent** — ``scheme_var.is_constituent`` true, intent
+       in/inout, std_name not a ``tendency_of_*``.  Routed to
+       ``...%vars_layer(<slice>, index_of_<std_name>)``.
+
+    3. **Constituent tendency** — ``scheme_var.is_constituent`` true,
+       intent=out, std_name=``tendency_of_<X>``.  Routed to
+       ``...%vars_layer_tend(<slice>, index_of_<X>)``.
+
+    Mismatched combinations are hard errors (see error messages below).
+    The constituent arg always carries ``instance_number`` in
+    ``used_dim_std_names`` (when the host declares it) so the group cap
+    auto-injects it as a dummy via :func:`_extra_dim_ctrl_entries`.
+    """
+    std_name = scheme_var.standard_name
+    intent   = scheme_var.intent or 'in'
+    local    = scheme_var.local_name
+    optional = scheme_var.optional
+    scheme_dims = list(scheme_var.dimensions)
+
+    is_tendency_name  = std_name.startswith(_TEND_PREFIX)
+    is_index_name     = std_name.startswith(_INDEX_PREFIX)
+    is_framework_name = std_name in _FRAMEWORK_CONST_STDS or is_index_name
+
+    # Host metadata wins: if the host declares this std_name as a regular
+    # variable (e.g. a `protected integer` named `ntcw` with
+    # standard_name = index_of_..._tracer_concentration_array), defer to
+    # normal host-arg resolution so the scheme call uses the host's short
+    # local name.  Constituent auto-provisioning is reserved for
+    # framework-named std_names the host has not claimed.
+    if is_framework_name and host_dict and std_name in host_dict:
+        return None
+
+    constituent_module = _constituent_module_name(suite_name)
+    inst_entry = host_dict.get(_INSTANCE_NUM_STD) if host_dict else None
+    inst_local = inst_entry.local_name if inst_entry else None
+    inst_idx   = inst_local if inst_local else '1'
+
+    def _common_kwargs(base_expr, subscript, call_expr,
+                       used_host_std, extra_symbols,
+                       used_const_dim_std=None):
+        used_host_std = set(used_host_std)
+        if inst_local:
+            used_host_std.add(_INSTANCE_NUM_STD)
+        return dict(
+            standard_name=std_name,
+            scheme_local_name=local,
+            intent=intent,
+            is_optional=optional,
+            active='',
+            active_local='',
+            source='constituent',
+            host_entry=None,
+            suite_var=None,
+            base_expr=base_expr,
+            subscript=subscript,
+            call_expr=call_expr,
+            used_dim_std_names=used_host_std,
+            needs_unit_transform=False,
+            needs_kind_transform=False,
+            unit_forward='',
+            unit_backward='',
+            kind_scheme=scheme_var.kind,
+            kind_host='',
+            temp_name='',
+            ptr_name='',
+            transform_case=1,
+            scheme_dimensions=scheme_dims,
+            is_constituent=scheme_var.is_constituent,
+            constituent_module_name=constituent_module,
+            constituent_extra_symbols=extra_symbols,
+            used_const_dim_std_names=(set(used_const_dim_std)
+                                      if used_const_dim_std else set()),
+        )
+
+    # ---- Path 1a: index_of_<X> — module-level integer, no per-instance --
+    if is_index_name:
+        return ResolvedArg(**_common_kwargs(
+            base_expr=std_name, subscript='', call_expr=std_name,
+            used_host_std=set(), extra_symbols={std_name},
+        ))
+
+    # ---- Path 1b: framework-named std_name → DDT member -----------------
+    if is_framework_name:
+        member = _FRAMEWORK_NAME_TO_MEMBER[std_name]
+        subscript, used_host_std, used_const_std, used_const_dim_std = \
+            _build_const_subscript(
+                scheme_dims, phase, host_dict, suite_vars,
+            )
+        base_expr = '{}({})%{}'.format(_CONST_OBJ_VAR, inst_idx, member)
+        call_expr = base_expr + subscript if subscript else base_expr
+        # Framework-constituent dim refs (e.g. number_of_ccpp_constituents)
+        # travel on the dedicated used_const_dim_std_names channel — no
+        # USE statement, but surfaced as inputs by the introspection
+        # routines in generator.static_api.
+        return ResolvedArg(**_common_kwargs(
+            base_expr=base_expr, subscript=subscript, call_expr=call_expr,
+            used_host_std=used_host_std,
+            extra_symbols={_CONST_OBJ_VAR} | used_const_std,
+            used_const_dim_std=used_const_dim_std,
+        ))
+
+    if not scheme_var.is_constituent:
+        return None  # not constituent-related
+
+    # ---- Paths 2/3: is_constituent base or tendency ---------------------
+    if intent == 'out':
+        if not is_tendency_name:
+            raise CCPPError(
+                "Constituent-flagged scheme arg '{}' (standard_name='{}', "
+                "scheme='{}', phase='{}') has intent=out but its standard "
+                "name does not start with 'tendency_of_'.  Physics phases "
+                "may only produce constituent tendencies; new base "
+                "constituents must be declared via a "
+                "ccpp_constituent_properties_t argument in a register-phase "
+                "scheme.".format(local, std_name, scheme_name, phase)
+            )
+        base_std = std_name[len(_TEND_PREFIX):]
+        member   = 'vars_layer_tend'
+    else:  # in / inout
+        if is_tendency_name:
+            raise CCPPError(
+                "Constituent tendency arg '{}' (standard_name='{}', "
+                "scheme='{}', phase='{}') must be declared with intent=out; "
+                "physics phases only produce tendencies, never consume "
+                "them.".format(local, std_name, scheme_name, phase)
+            )
+        base_std = std_name
+        member   = 'vars_layer'
+
+    leading_sub, used_host_std = _build_call_subscript(
+        scheme_dims, phase, host_dict, suite_vars=suite_vars,
+    )
+    index_sym = '{}{}'.format(_INDEX_PREFIX, base_std)
+    if leading_sub:
+        subscript = leading_sub[:-1] + ', ' + index_sym + ')'
+    else:
+        subscript = '(' + index_sym + ')'
+    base_expr = '{}({})%{}'.format(_CONST_OBJ_VAR, inst_idx, member)
+    call_expr = base_expr + subscript
+
+    return ResolvedArg(**_common_kwargs(
+        base_expr=base_expr, subscript=subscript, call_expr=call_expr,
+        used_host_std=used_host_std,
+        extra_symbols={index_sym, _CONST_OBJ_VAR},
+    ))
+
+
+########################################################################
+# Suite resolution
+########################################################################
+
+def resolve_suite(
+    suite,                            # generator.suite_xml.Suite
+    scheme_store,                     # metadata.variable_resolver.SchemeStore
+    host_dict: Dict[str, HostVarEntry],
+    phases: Optional[List[str]] = None,
+) -> SuiteResolution:
+    """Resolve all scheme arguments for every group and phase in *suite*.
+
+    Parameters
+    ----------
+    suite : Suite
+        Parsed suite XML object.
+    scheme_store : SchemeStore
+        Scheme metadata organised for lookup.
+    host_dict : dict
+        Flat host+control variable dictionary.
+    phases : list of str, optional
+        Phases to resolve.  Defaults to all six phases in chronological order
+        (register first), so that suite-owned variables produced by
+        ``_register`` are visible as dimensions or as ``intent(in)`` reads
+        in subsequent phases.
+
+    Returns
+    -------
+    SuiteResolution
+
+    Raises
+    ------
+    CCPPError
+        On any variable matching failure.
+    """
+    if phases is None:
+        phases = ['register', 'init', 'timestep_init', 'run',
+                  'timestep_final', 'final']
+
+    # Detect whether any host variable uses an instance dimension.
+    uses_instance = any(
+        any(d in _INSTANCE_DIMS for d in entry.dimensions)
+        for entry in host_dict.values()
+    )
+
+    suite_vars: Dict[str, SuiteVar] = {}
+    resolved_groups: List[ResolvedGroup] = []
+
+    for group in suite.groups:
+        rg = ResolvedGroup(group_name=group.name)
+
+        for phase in phases:
+            used_local_names_phase: Set[str] = set()
+
+            if phase == 'run':
+                # Preserve subcycle structure for run-phase loop generation.
+                items_for_phase = _resolve_run_phase(
+                    group, phase, scheme_store, host_dict, suite_vars,
+                    used_local_names_phase,
+                    suite_name=suite.name,
+                )
+            else:
+                # Non-run phases: flatten all subcycles and silently
+                # deduplicate scheme names within the group.  A scheme that
+                # appears multiple times in the suite XML (typically because
+                # it runs once per constituent in the ``run`` phase) must
+                # still have its register/init/finalize entry points invoked
+                # exactly once per group — matches ``design_init_dedup.md``.
+                scheme_names_flat = _dedup_scheme_names(
+                    _collect_scheme_names(group)
+                )
+                items_for_phase = _resolve_flat_phase(
+                    scheme_names_flat, phase, scheme_store, host_dict,
+                    suite_vars, used_local_names_phase,
+                    suite_name=suite.name,
+                )
+
+            if items_for_phase:
+                rg.phase_calls[phase] = items_for_phase
+
+        # Collect dimension variable USE info for this group.
+        rg.dim_uses = _collect_dim_uses(rg, host_dict, suite_vars=suite_vars)
+        resolved_groups.append(rg)
+
+    # Constituent register calls: gather the (scheme_name, scheme_local_name)
+    # pairs for every register-phase arg that was flagged as a constituent.
+    # The suite cap uses these to emit two-pass merge logic.
+    constituent_calls: List[Tuple[str, str]] = []
+    for rg in resolved_groups:
+        for rc in iter_phase_calls(rg.phase_calls.get('register', [])):
+            for arg in rc.args:
+                if arg.is_constituent_arg:
+                    constituent_calls.append(
+                        (rc.scheme_name, arg.scheme_local_name)
+                    )
+    # Walk every constituent-sourced arg (excluding the legacy
+    # register-phase ccpp_constituent_properties_t case) and collect:
+    #   * uses_constituents  — whether any constituent state is referenced
+    #   * constituent_index_names — base std names X needing an index_of_X
+    uses_constituents = False
+    index_names: Set[str] = set()
+    for rg in resolved_groups:
+        for items in rg.phase_calls.values():
+            for rc in iter_phase_calls(items):
+                for arg in rc.args:
+                    if arg.source != 'constituent' or arg.is_constituent_arg:
+                        continue
+                    uses_constituents = True
+                    for sym in arg.constituent_extra_symbols:
+                        if sym.startswith(_INDEX_PREFIX):
+                            index_names.add(sym[len(_INDEX_PREFIX):])
+    constituent_index_names = sorted(index_names)
+
+    # Under option A the constituent object is generator-owned (lives in
+    # the ccpp_host_constituents module), so the host is no longer
+    # required to declare ``ccpp_model_constituents_object`` in its
+    # type=host metadata.  No validation is needed here.
+
+    # ---- suite-level <init> / <final> schemes ------------------------------
+    # SDF v2.0 schema accepts an optional single ``<init>`` and ``<final>``
+    # scheme name at the suite root.  Resolve each to a ResolvedCall against
+    # the scheme's ``init`` / ``final`` phase metadata respectively.  The
+    # local-name dedup set is fresh per call (these calls live outside any
+    # group and don't share locals with group phases).
+    suite_init_call:  Optional[ResolvedCall] = None
+    suite_final_call: Optional[ResolvedCall] = None
+    if suite.init_scheme:
+        suite_init_locals: Set[str] = set()
+        suite_init_call = _resolve_one_call(
+            suite.init_scheme, 'init', scheme_store, host_dict,
+            suite_vars, suite_init_locals, suite_name=suite.name,
+        )
+        if suite_init_call is None:
+            raise CCPPError(
+                "Suite '{}' declares <init>{}</init> but scheme '{}' "
+                "has no ``init`` phase in its metadata.".format(
+                    suite.name, suite.init_scheme, suite.init_scheme,
+                )
+            )
+    if suite.final_scheme:
+        suite_final_locals: Set[str] = set()
+        suite_final_call = _resolve_one_call(
+            suite.final_scheme, 'final', scheme_store, host_dict,
+            suite_vars, suite_final_locals, suite_name=suite.name,
+        )
+        if suite_final_call is None:
+            raise CCPPError(
+                "Suite '{}' declares <final>{}</final> but scheme '{}' "
+                "has no ``final`` phase in its metadata.".format(
+                    suite.name, suite.final_scheme, suite.final_scheme,
+                )
+            )
+
+    return SuiteResolution(
+        suite_name=suite.name,
+        groups=resolved_groups,
+        suite_vars=suite_vars,
+        constituent_register_calls=constituent_calls,
+        uses_instance_dimension=uses_instance,
+        constituent_index_names=constituent_index_names,
+        uses_constituents=uses_constituents,
+        suite_init_call=suite_init_call,
+        suite_final_call=suite_final_call,
+    )
+
+
+def _collect_scheme_names(group) -> List[str]:
+    """Return ordered list of scheme names from a group, expanding subcycles/subcols."""
+    names: List[str] = []
+    from generator.suite_xml import SuiteScheme, SuiteSubcycle, SuiteSubcol
+    for item in group.items:
+        if isinstance(item, SuiteScheme):
+            names.append(item.name)
+        elif isinstance(item, (SuiteSubcycle, SuiteSubcol)):
+            for sn in item.scheme_names():
+                names.append(sn)
+    return names
+
+
+def _dedup_scheme_names(scheme_names: List[str]) -> List[str]:
+    """Return *scheme_names* with duplicates removed (first occurrence kept).
+
+    Used by :func:`resolve_suite` for non-run phases: a scheme that appears
+    more than once in the suite XML still has its register/init/finalize
+    entry points invoked exactly once per group, while preserving the order
+    of first appearance.
+    """
+    seen: Set[str] = set()
+    deduped: List[str] = []
+    for sn in scheme_names:
+        if sn in seen:
+            continue
+        seen.add(sn)
+        deduped.append(sn)
+    return deduped
+
+
+def _resolve_one_call(
+    scheme_name: str,
+    phase: str,
+    scheme_store,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Dict[str, 'SuiteVar'],
+    used_local_names: Set[str],
+    suite_name: str = '',
+) -> Optional[ResolvedCall]:
+    """Build a ResolvedCall for one scheme/phase, or return None if not defined."""
+    vars_list = scheme_store.variables_for(scheme_name, phase)
+    if vars_list is None:
+        return None
+    rc = ResolvedCall(
+        scheme_name=scheme_name, phase=phase,
+        scheme_module=scheme_store.module_for(scheme_name),
+    )
+    for sv in vars_list:
+        arg = _resolve_one_arg(
+            sv, phase, host_dict, suite_vars, scheme_name, used_local_names,
+            suite_name=suite_name,
+        )
+        rc.args.append(arg)
+    return rc
+
+
+def _resolve_flat_phase(
+    scheme_names: List[str],
+    phase: str,
+    scheme_store,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Dict[str, 'SuiteVar'],
+    used_local_names: Set[str],
+    suite_name: str = '',
+) -> List[ResolvedCall]:
+    """Resolve a flat (non-subcycle) phase into a list of ResolvedCall."""
+    result: List[ResolvedCall] = []
+    for sn in scheme_names:
+        rc = _resolve_one_call(sn, phase, scheme_store, host_dict,
+                               suite_vars, used_local_names,
+                               suite_name=suite_name)
+        if rc is not None:
+            result.append(rc)
+    return result
+
+
+def _resolve_run_phase(
+    group,
+    phase: str,
+    scheme_store,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Dict[str, 'SuiteVar'],
+    used_local_names: Set[str],
+    suite_name: str = '',
+) -> List[PhaseItem]:
+    """Resolve the run phase, preserving subcycle do-loop structure.
+
+    :class:`SuiteScheme` items become :class:`ResolvedCall`.
+    :class:`SuiteSubcycle` items become :class:`ResolvedSubcycle`.  When
+    a subcycle contains nested ``<subcycle>`` elements, they are
+    preserved recursively so the cap emitter renders the corresponding
+    nested ``do`` loops (matches original capgen behaviour).
+    :class:`SuiteSubcol` items are flattened (treated as plain schemes).
+    """
+    from generator.suite_xml import SuiteScheme, SuiteSubcycle, SuiteSubcol
+
+    def _resolve_items(suite_items) -> List[PhaseItem]:
+        """Recursively turn a list of SuiteScheme/SuiteSubcycle/SuiteSubcol
+        children into a list of :data:`PhaseItem`.  Used at the top level
+        of a group AND for the body of every (possibly nested) subcycle.
+        """
+        out: List[PhaseItem] = []
+        for sub in suite_items:
+            if isinstance(sub, SuiteScheme):
+                rc = _resolve_one_call(
+                    sub.name, phase, scheme_store, host_dict,
+                    suite_vars, used_local_names,
+                    suite_name=suite_name,
+                )
+                if rc is not None:
+                    out.append(rc)
+            elif isinstance(sub, SuiteSubcycle):
+                inner = _resolve_items(sub.items)
+                if inner:
+                    loop_count, loop_std = _resolve_subcycle_loop_bound(
+                        sub.loop, host_dict, suite_vars=suite_vars,
+                    )
+                    out.append(ResolvedSubcycle(
+                        loop=loop_count, calls=inner,
+                        loop_std_name=loop_std,
+                    ))
+            elif isinstance(sub, SuiteSubcol):
+                # SuiteSubcol is flattened in place — the framework
+                # doesn't render it as a separate loop level.
+                for sn in sub.scheme_names():
+                    rc = _resolve_one_call(
+                        sn, phase, scheme_store, host_dict,
+                        suite_vars, used_local_names,
+                        suite_name=suite_name,
+                    )
+                    if rc is not None:
+                        out.append(rc)
+        return out
+
+    result: List[PhaseItem] = []
+
+    for item in group.items:
+        if isinstance(item, SuiteScheme):
+            rc = _resolve_one_call(item.name, phase, scheme_store, host_dict,
+                                   suite_vars, used_local_names,
+                                   suite_name=suite_name)
+            if rc is not None:
+                result.append(rc)
+        elif isinstance(item, SuiteSubcycle):
+            inner = _resolve_items(item.items)
+            if inner:
+                loop_count, loop_std = _resolve_subcycle_loop_bound(
+                    item.loop, host_dict, suite_vars=suite_vars,
+                )
+                result.append(ResolvedSubcycle(
+                    loop=loop_count, calls=inner,
+                    loop_std_name=loop_std,
+                ))
+        elif isinstance(item, SuiteSubcol):
+            for sn in item.scheme_names():
+                rc = _resolve_one_call(sn, phase, scheme_store, host_dict,
+                                       suite_vars, used_local_names,
+                                       suite_name=suite_name)
+                if rc is not None:
+                    result.append(rc)
+
+    return result
+
+
+def _collect_dim_uses(
+    rg: ResolvedGroup,
+    host_dict: Dict[str, HostVarEntry],
+    suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
+) -> Dict[str, Set[str]]:
+    """Collect dimension variable USE requirements across all phases of a group.
+
+    Host-module dimensions resolve to ``{host_module: {local_name}}``.
+    Suite-owned dimensions (set by ``_register``) resolve to
+    ``{ccpp_<suite>_data: {ccpp_suite_data}}`` so the group cap can USE the
+    suite data module to access ``ccpp_suite_data(inst)%<local>`` in dimension
+    expressions.
+    """
+    dim_uses: Dict[str, Set[str]] = {}
+    for items in rg.phase_calls.values():
+        for rc in iter_phase_calls(items):
+            for arg in rc.args:
+                for dim_std in arg.used_dim_std_names:
+                    entry = host_dict.get(dim_std)
+                    if entry is not None and entry.module_name is not None:
+                        mod = entry.module_name
+                        sym = entry.local_name
+                        dim_uses.setdefault(mod, set()).add(sym)
+                    elif suite_vars and dim_std in suite_vars:
+                        sv = suite_vars[dim_std]
+                        dim_uses.setdefault(sv.module_name, set()).add(
+                            'ccpp_suite_data')
+        # Subcycle loop bounds resolved from CCPP standard names also need
+        # a USE entry (or, for control vars, a dummy arg — handled elsewhere).
+        # USE the *root* of the access path so DDT-component bounds pull
+        # in the parent instance (e.g. ``use mod, only: phys_state``)
+        # rather than the bare component name.  Walk *every* subcycle in
+        # the phase, including nested ones — each level's bound must be
+        # in scope at do-loop emission time.
+        for item in iter_phase_subcycles(items):
+            if not item.loop_std_name:
+                continue
+            entry = host_dict.get(item.loop_std_name)
+            if entry is not None and entry.module_name is not None:
+                dim_uses.setdefault(entry.module_name, set()).add(
+                    _root_symbol(entry.access_path)
+                )
+            elif suite_vars and item.loop_std_name in suite_vars:
+                sv = suite_vars[item.loop_std_name]
+                dim_uses.setdefault(sv.module_name, set()).add(
+                    'ccpp_suite_data'
+                )
+    return dim_uses

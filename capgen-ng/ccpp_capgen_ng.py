@@ -1,0 +1,1068 @@
+#!/usr/bin/env python3
+
+"""ccpp_capgen_ng — next-generation CCPP cap code generator.
+
+This script replaces both ``ccpp_prebuild.py`` and ``ccpp_capgen.py`` from the
+legacy toolchain.  It reads host-model metadata files, scheme metadata files,
+and suite XML definition files, resolves all variable connections, and writes:
+
+* ``ccpp_kinds.F90``       — kind parameter definitions
+* ``ccpp_static_api.F90``  — static dispatch API
+* ``ccpp_<suite>_cap.F90`` — suite-level cap (state machine, group dispatch)
+* ``ccpp_<suite>_<group>_cap.F90`` — group-level cap (scheme call sites)
+* ``ccpp_<suite>_data.F90``        — suite-owned interstitial data module
+* ``ccpp_<suite>_types.F90``       — shared types (pointer wrappers, temp locals)
+* ``ccpp_<suite>.meta``            — generated suite metadata (for inspection)
+* ``datatable.xml``                — generator database for ``ccpp_datafile.py``
+
+Usage
+-----
+::
+
+    ccpp_capgen_ng.py \\
+        --host-name    <name> \\
+        --host-files   <f1.meta,f2.meta,...> \\
+        --scheme-files <f1.meta,f2.meta,...> \\
+        --suites       <s1.xml,s2.xml,...> \\
+        --output-root  <path> \\
+        --kind-type    NAME=[MODULE:]SPEC \\   # repeatable, see below
+        --verbose                              # once=INFO, twice=DEBUG
+
+``--kind-type``
+^^^^^^^^^^^^^^^
+
+Each ``--kind-type`` entry maps a CCPP-visible kind name to a Fortran
+precision constant.  The syntax is::
+
+    --kind-type <name>=[<module>:]<spec>
+
+* ``<name>`` is the kind name as it will be published in ``ccpp_kinds`` and
+  referenced in scheme metadata (e.g. ``kind_phys``).
+* ``<spec>`` is the name of a precision constant (a kind parameter) defined
+  in some Fortran module.
+* ``<module>`` is the Fortran module that defines ``<spec>``.  When
+  ``<module>:`` is omitted, ``<spec>`` must be a standard
+  ``ISO_FORTRAN_ENV`` constant (``REAL32``, ``REAL64``, ``INT32`` etc.) and
+  the module defaults to ``iso_fortran_env``.
+
+The flag may be specified multiple times.
+
+Examples::
+
+    --kind-type kind_phys=REAL64
+        # → use iso_fortran_env, only: REAL64
+        #   integer, parameter, public :: kind_phys = REAL64
+
+    --kind-type kind_phys=my_host_kinds:kind_r8
+        # → use my_host_kinds, only: kind_r8
+        #   integer, parameter, public :: kind_phys = kind_r8
+
+If no ``--kind-type`` is supplied (or ``kind_phys`` is omitted from a
+non-empty list), the generator injects ``kind_phys=iso_fortran_env:REAL64``
+and logs an INFO message.  ``ccpp_kinds.F90`` is always written.
+
+Exit codes
+----------
+0 — success
+1 — user error (metadata problem, missing file, etc.)
+2 — internal error (bug in the generator)
+"""
+
+import argparse
+import logging
+import os
+import sys
+from typing import Dict, List, Optional, Tuple
+
+# Ensure the capgen-ng package is importable when invoked directly.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PACKAGE_DIR = os.path.dirname(_SCRIPT_DIR)
+if _PACKAGE_DIR not in sys.path:
+    sys.path.insert(0, _PACKAGE_DIR)
+
+from metadata.parse_tools import CCPPError, init_log, set_log_level
+from metadata.metadata_table import parse_metadata_file, MetadataTable
+from metadata.variable_resolver import (
+    build_ddt_module_map,
+    build_flat_host_dict,
+    SchemeStore,
+)
+from generator.kinds_writer import write_ccpp_kinds
+from generator.suite_xml import parse_suite_xml_files
+from generator.suite_resolver import resolve_suite
+from generator.group_cap import write_group_cap
+from generator.suite_data import write_suite_data, write_suite_meta
+from generator.suite_cap import write_suite_cap
+from generator.suite_types import write_suite_types
+from generator.static_api import write_static_api
+from generator.host_constituents import write_host_constituents
+from generator.datatable import write_datatable
+
+
+########################################################################
+# Logging
+########################################################################
+
+_LOGGER = init_log('ccpp_capgen_ng')
+
+
+########################################################################
+# Framework-shipped metadata
+########################################################################
+
+# Path to the framework-shipped constituent module metadata, auto-included
+# as a host metadata file so that the constituent DDT types are always known
+# to the generator (even when the host metadata does not declare them).
+_FRAMEWORK_SRC_DIR = os.path.join(_SCRIPT_DIR, 'src')
+_FRAMEWORK_HOST_META = [
+    os.path.join(_FRAMEWORK_SRC_DIR, 'ccpp_constituent_prop_mod.meta'),
+]
+
+# Framework Fortran source files that must be compiled alongside the
+# generated cap modules whenever any suite touches constituent state.
+# Listed in datatable.xml's <utilities> so host CMake projects pick them
+# up via ccpp_datafile.py --utility-files / --ccpp-files queries.  All
+# of these live in :data:`_FRAMEWORK_SRC_DIR` (capgen-ng's own ``src/``);
+# capgen-ng ships self-contained — no external src/ companion needed.
+_FRAMEWORK_F90_FILES = [
+    'ccpp_constituent_prop_mod.F90',
+    'ccpp_hashable.F90',
+    'ccpp_hash_table.F90',
+    'ccpp_scheme_utils.F90',
+]
+
+
+def _resolve_framework_f90_files() -> List[str]:
+    """Return absolute paths for the framework F90 files.
+
+    Each name in :data:`_FRAMEWORK_F90_FILES` is looked up under
+    :data:`_FRAMEWORK_SRC_DIR` (``capgen-ng/src/``).  A missing file is
+    a hard error: capgen-ng/src/ is the canonical (and only) location;
+    a missing file means the deployment is incomplete and the host
+    build would fail later with an opaque "Cannot open module file"
+    error.  Surface it now with a precise message instead.
+    """
+    found: List[str] = []
+    missing: List[str] = []
+    for name in _FRAMEWORK_F90_FILES:
+        p = os.path.join(_FRAMEWORK_SRC_DIR, name)
+        if os.path.isfile(p):
+            found.append(os.path.abspath(p))
+        else:
+            missing.append(p)
+    if missing:
+        raise CCPPError(
+            "capgen-ng deployment is incomplete: required framework "
+            "Fortran source file(s) not found under {!r}:\n  {}\n"
+            "Vendor the missing file(s) into capgen-ng/src/ (the "
+            "canonical location for files capgen-ng emits a USE for).".format(
+                _FRAMEWORK_SRC_DIR, '\n  '.join(missing),
+            )
+        )
+    return found
+
+
+########################################################################
+# CLI
+########################################################################
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build and return the argument parser.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+    """
+    parser = argparse.ArgumentParser(
+        prog='ccpp_capgen_ng.py',
+        description='CCPP next-generation cap code generator',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    parser.add_argument(
+        '--host-name',
+        required=True,
+        metavar='NAME',
+        help='Host model identifier (used in generated subroutine names)',
+    )
+    parser.add_argument(
+        '--host-files',
+        required=True,
+        metavar='FILE[,FILE...]',
+        help='Comma-separated list of host-model metadata (.meta) files',
+    )
+    parser.add_argument(
+        '--scheme-files',
+        required=True,
+        metavar='FILE[,FILE...]',
+        help='Comma-separated list of physics scheme metadata (.meta) files',
+    )
+    parser.add_argument(
+        '--suites',
+        required=True,
+        metavar='FILE[,FILE...]',
+        help='Comma-separated list of suite XML definition (.xml) files',
+    )
+    parser.add_argument(
+        '--output-root',
+        required=True,
+        metavar='DIR',
+        help='Output directory for all generated files',
+    )
+    parser.add_argument(
+        '--kind-type',
+        action='append',
+        default=[],
+        metavar='NAME=[MODULE:]SPEC',
+        help=(
+            'Map a CCPP kind name to a Fortran precision constant. Syntax: '
+            '``<name>=[<module>:]<spec>``. When ``<module>:`` is omitted, '
+            '``<spec>`` must be an ISO_FORTRAN_ENV constant (REAL32/REAL64/'
+            'INT32/...) and the module defaults to ``iso_fortran_env``. '
+            'Examples: ``--kind-type kind_phys=REAL64``, '
+            '``--kind-type kind_phys=my_host_kinds:kind_r8``. May be '
+            'specified multiple times. If kind_phys is not supplied, '
+            '``kind_phys=iso_fortran_env:REAL64`` is injected automatically.'
+        ),
+    )
+    parser.add_argument(
+        '--verbose', '-v',
+        action='count',
+        default=0,
+        help=(
+            'Increase verbosity.  Use once for INFO messages, '
+            'twice (-vv) for DEBUG messages.'
+        ),
+    )
+    # legacy-compat: transient migration shim (delete the argument,
+    # the enable() call below, and the rest of the legacy_compat
+    # touchpoints when the migration is complete).
+    parser.add_argument(
+        '--legacy-mode',
+        action='store_true',
+        help=(
+            "TRANSIENT MIGRATION SHIM.  Accept legacy CCPP standard "
+            "names (currently 'horizontal_loop_extent') in scheme "
+            "metadata and silently rewrite them to their canonical "
+            "capgen-ng equivalents ('horizontal_dimension').  Emits a "
+            "loud warning at startup.  Will be removed."
+        ),
+    )
+    return parser
+
+
+# Standard ISO_FORTRAN_ENV kind constants accepted as a bare ``<spec>`` (i.e.
+# without an explicit ``<module>:`` prefix).  Compared case-insensitively.
+_ISO_FORTRAN_KINDS = frozenset({
+    'INT8', 'INT16', 'INT32', 'INT64',
+    'REAL32', 'REAL64', 'REAL128',
+})
+
+_ISO_FORTRAN_MODULE = 'iso_fortran_env'
+
+
+def _parse_kind_types(
+    kind_type_args: List[str],
+) -> Dict[str, Tuple[str, str]]:
+    """Parse ``--kind-type NAME=[MODULE:]SPEC`` arguments into a mapping.
+
+    Parameters
+    ----------
+    kind_type_args : list of str
+        Each entry must have the form ``<name>=[<module>:]<spec>``.
+
+    Returns
+    -------
+    dict
+        Mapping from kind name to a ``(module, spec)`` tuple.
+
+    Raises
+    ------
+    CCPPError
+        If any entry is malformed, has a duplicate name, or omits the module
+        for a non-ISO ``<spec>``.
+
+    Examples
+    --------
+    Default ``iso_fortran_env`` module when spec is a known ISO kind:
+
+    >>> _parse_kind_types(['kind_phys=REAL64', 'kind_dyn=REAL32'])
+    {'kind_phys': ('iso_fortran_env', 'REAL64'), 'kind_dyn': ('iso_fortran_env', 'REAL32')}
+
+    Explicit host-supplied module:
+
+    >>> _parse_kind_types(['kind_phys=my_host_kinds:kind_r8'])
+    {'kind_phys': ('my_host_kinds', 'kind_r8')}
+
+    Mixed:
+
+    >>> sorted(_parse_kind_types([
+    ...     'kind_iso=REAL64',
+    ...     'kind_host=my_kinds:kind_r4',
+    ... ]).items())
+    [('kind_host', ('my_kinds', 'kind_r4')), ('kind_iso', ('iso_fortran_env', 'REAL64'))]
+
+    Malformed (missing ``=``):
+
+    >>> _parse_kind_types(['bad_entry'])
+    Traceback (most recent call last):
+        ...
+    metadata.parse_tools.parse_source.CCPPError: --kind-type 'bad_entry' must have the form NAME=[MODULE:]SPEC
+
+    Duplicate entry:
+
+    >>> _parse_kind_types(['kind_phys=REAL64', 'kind_phys=REAL32'])
+    Traceback (most recent call last):
+        ...
+    metadata.parse_tools.parse_source.CCPPError: Duplicate --kind-type entry for 'kind_phys'
+
+    Non-ISO spec without explicit module:
+
+    >>> _parse_kind_types(['kind_phys=kind_r8'])
+    Traceback (most recent call last):
+        ...
+    metadata.parse_tools.parse_source.CCPPError: --kind-type 'kind_phys=kind_r8': spec 'kind_r8' is not a standard ISO_FORTRAN_ENV constant; supply the module explicitly as <module>:<spec>
+    """
+    mapping: Dict[str, Tuple[str, str]] = {}
+    for entry in kind_type_args:
+        head, sep, tail = entry.partition('=')
+        if not sep or not head.strip() or not tail.strip():
+            raise CCPPError(
+                "--kind-type '{}' must have the form NAME=[MODULE:]SPEC".format(entry)
+            )
+        kind_name = head.strip()
+        rhs       = tail.strip()
+
+        # Split the right-hand side on ':'.  At most one colon is permitted.
+        rhs_parts = rhs.split(':')
+        if len(rhs_parts) == 1:
+            spec   = rhs_parts[0].strip()
+            module = _ISO_FORTRAN_MODULE
+            if spec.upper() not in _ISO_FORTRAN_KINDS:
+                raise CCPPError(
+                    "--kind-type '{}': spec '{}' is not a standard "
+                    "ISO_FORTRAN_ENV constant; supply the module "
+                    "explicitly as <module>:<spec>".format(entry, spec)
+                )
+        elif len(rhs_parts) == 2:
+            module = rhs_parts[0].strip()
+            spec   = rhs_parts[1].strip()
+            if not module or not spec:
+                raise CCPPError(
+                    "--kind-type '{}': both <module> and <spec> must be "
+                    "non-empty when using the <module>:<spec> form".format(entry)
+                )
+        else:
+            raise CCPPError(
+                "--kind-type '{}': at most one ':' is permitted "
+                "(syntax is NAME=[MODULE:]SPEC)".format(entry)
+            )
+
+        if kind_name in mapping:
+            raise CCPPError(
+                "Duplicate --kind-type entry for '{}'".format(kind_name)
+            )
+        mapping[kind_name] = (module, spec)
+    return mapping
+
+
+def _ensure_kind_phys_default(
+    kind_types: Dict[str, Tuple[str, str]],
+    log: logging.Logger,
+) -> Dict[str, Tuple[str, str]]:
+    """Inject ``kind_phys=iso_fortran_env:REAL64`` if not already mapped.
+
+    Mutates and returns *kind_types*.  Logs an INFO message when the default
+    is injected, so users always know that the fallback is in effect.
+    """
+    if 'kind_phys' not in kind_types:
+        kind_types['kind_phys'] = (_ISO_FORTRAN_MODULE, 'REAL64')
+        log.info(
+            "kind_phys not supplied via --kind-type or metadata kind_spec; "
+            "defaulting to REAL64 from iso_fortran_env"
+        )
+    return kind_types
+
+
+def _collect_metadata_kind_specs(
+    tables: List[MetadataTable],
+) -> Dict[str, Tuple[str, str]]:
+    """Aggregate ``kind_spec`` declarations across loaded metadata tables.
+
+    Each table contributes zero or more ``(kind_name, module, spec)`` triples
+    via :attr:`MetadataTable.kind_specs`.  All contributions for the same
+    ``kind_name`` must agree; identical duplicates are collapsed silently
+    while a divergent ``(module, spec)`` raises :exc:`CCPPError` with a
+    message naming both source files.
+
+    Parameters
+    ----------
+    tables : list of MetadataTable
+        Host and scheme metadata tables, in any order.
+
+    Returns
+    -------
+    dict
+        Mapping ``kind_name -> (module, spec)``.
+
+    Raises
+    ------
+    CCPPError
+        If two tables declare the same ``kind_name`` with different
+        ``(module, spec)`` pairs.
+    """
+    result:  Dict[str, Tuple[str, str]] = {}
+    sources: Dict[str, str]             = {}
+    for tbl in tables:
+        for kind_name, module, spec in tbl.kind_specs:
+            pair   = (module, spec)
+            origin = "{} (table '{}')".format(tbl.file_path, tbl.table_name)
+            existing = result.get(kind_name)
+            if existing is None:
+                result[kind_name]  = pair
+                sources[kind_name] = origin
+            elif existing != pair:
+                raise CCPPError(
+                    "Conflicting kind_spec for kind '{}': {} declares "
+                    "'{}:{}' but {} declares '{}:{}'".format(
+                        kind_name, sources[kind_name],
+                        existing[0], existing[1],
+                        origin, pair[0], pair[1],
+                    )
+                )
+    return result
+
+
+def _merge_cli_and_metadata_kinds(
+    cli_kinds:  Dict[str, Tuple[str, str]],
+    meta_kinds: Dict[str, Tuple[str, str]],
+) -> Dict[str, Tuple[str, str]]:
+    """Combine ``--kind-type`` CLI mappings with metadata-declared kinds.
+
+    For any ``kind_name`` defined in both sides the ``(module, spec)`` pair
+    must match exactly.  Identical pairs collapse silently; mismatches raise
+    :exc:`CCPPError`.
+
+    Parameters
+    ----------
+    cli_kinds : dict
+        Mapping from :func:`_parse_kind_types`.
+    meta_kinds : dict
+        Mapping from :func:`_collect_metadata_kind_specs`.
+
+    Returns
+    -------
+    dict
+        Merged mapping ``kind_name -> (module, spec)``.
+
+    Raises
+    ------
+    CCPPError
+        If CLI and metadata declare the same kind name with different
+        ``(module, spec)`` pairs.
+    """
+    merged = dict(cli_kinds)
+    for kind_name, pair in meta_kinds.items():
+        existing = merged.get(kind_name)
+        if existing is None:
+            merged[kind_name] = pair
+        elif existing != pair:
+            raise CCPPError(
+                "Kind '{}' declared inconsistently: --kind-type says "
+                "'{}:{}' but metadata kind_spec says '{}:{}'".format(
+                    kind_name, existing[0], existing[1], pair[0], pair[1],
+                )
+            )
+    return merged
+
+
+def _split_file_list(arg: str) -> List[str]:
+    """Split a comma-separated file-list argument, stripping whitespace.
+
+    Parameters
+    ----------
+    arg : str
+        Comma-separated list of file paths.
+
+    Returns
+    -------
+    list of str
+
+    Examples
+    --------
+    >>> _split_file_list('a.meta, b.meta, c.meta')
+    ['a.meta', 'b.meta', 'c.meta']
+    >>> _split_file_list('single.meta')
+    ['single.meta']
+    >>> _split_file_list('')
+    []
+    """
+    return [f.strip() for f in arg.split(',') if f.strip()]
+
+
+########################################################################
+# Metadata loading
+########################################################################
+
+# Loop-bound standard names that must never appear as variable dimensions.
+# These are control variables (scalars passed as subroutine arguments) and
+# using them as array dimensions indicates a porting error from the legacy
+# toolchain.  Remove this guard once migration is complete.
+_FORBIDDEN_DIMENSION_NAMES = frozenset({
+    'horizontal_loop_extent',
+    'horizontal_loop_begin',
+    'horizontal_loop_end',
+})
+
+
+def _check_no_loop_dimensions(tables: list) -> None:
+    """Raise CCPPError if any variable uses a forbidden dimension name.
+
+    Parameters
+    ----------
+    tables : list of MetadataTable
+
+    Raises
+    ------
+    CCPPError
+        If any variable's dimensions list contains a name from
+        ``_FORBIDDEN_DIMENSION_NAMES``.  All violations are collected and
+        reported together.
+    """
+    errors = []
+    for tbl in tables:
+        for sec in tbl.sections():
+            for var in sec.variables:
+                for dim in var.dimensions:
+                    if dim in _FORBIDDEN_DIMENSION_NAMES:
+                        errors.append(
+                            "Variable '{}' (standard_name='{}') in table "
+                            "'{}' (type={}) in '{}' uses '{}' as a "
+                            "dimension. Loop-bound control/legacy vars must "
+                            "not appear in dimension attributes; use "
+                            "horizontal_dimension instead.".format(
+                                var.local_name, var.standard_name,
+                                tbl.table_name, tbl.table_type,
+                                tbl.file_path, dim,
+                            )
+                        )
+    if errors:
+        raise CCPPError(
+            "Forbidden dimension names found in metadata:\n\n{}".format(
+                '\n\n'.join("ERROR: " + e for e in errors)
+            )
+        )
+
+def _load_metadata_files(
+    file_list: List[str],
+    expected_types: frozenset,
+    label: str,
+) -> List[MetadataTable]:
+    """Load and validate a list of metadata files.
+
+    Parameters
+    ----------
+    file_list : list of str
+        Paths to ``.meta`` files.
+    expected_types : frozenset of str
+        Table types that are acceptable in these files.  Any table with a
+        different type raises a :exc:`CCPPError`.
+    label : str
+        Human-readable description (``'host'`` or ``'scheme'``) used in
+        error messages.
+
+    Returns
+    -------
+    list of MetadataTable
+        All tables parsed from all files, in order.
+
+    Raises
+    ------
+    CCPPError
+        On any parse error or unexpected table type.
+    """
+    tables: List[MetadataTable] = []
+    for fpath in file_list:
+        _LOGGER.info("Reading %s metadata: %s", label, fpath)
+        file_tables = parse_metadata_file(fpath)
+        for tbl in file_tables:
+            if tbl.table_type not in expected_types:
+                raise CCPPError(
+                    "Unexpected table type '{}' in {} metadata file '{}'; "
+                    "expected one of {}".format(
+                        tbl.table_type, label, fpath, sorted(expected_types)
+                    )
+                )
+        _check_no_loop_dimensions(file_tables)
+        tables.extend(file_tables)
+    return tables
+
+
+########################################################################
+# Control-variable validation
+########################################################################
+
+# Required control variables: (standard_name, expected_fortran_type, description)
+_REQUIRED_CTRL_VARS = [
+    ('suite_name',               'character', 'drives suite dispatch'),
+    ('horizontal_loop_begin',    'integer',   'lower horizontal slice bound at scheme call sites'),
+    ('horizontal_loop_end',      'integer',   'upper horizontal slice bound at scheme call sites'),
+    ('thread_number',            'integer',   'current thread number (pass 1 if single-threaded)'),
+    ('number_of_threads',        'integer',   'total thread count (pass 1 if single-threaded)'),
+    ('number_of_physics_threads','integer',   'physics-internal thread budget (pass 1 if unused)'),
+    ('ccpp_error_code',          'integer',   'CCPP error flag'),
+    ('ccpp_error_message',       'character', 'CCPP error message'),
+]
+
+# Optional control variables that must be declared as a *pair*.  Hosts that
+# need a multi-instance API declare both ``instance_number`` (the index) and
+# ``number_of_instances`` (the bound).  Hosts that don't may omit both; the
+# generator will emit a single-instance API and dimension all per-instance
+# arrays to length 1.  Declaring exactly one is an error.
+_PAIRED_OPTIONAL_CTRL_VARS = [
+    ('instance_number',     'integer', 'current model instance index'),
+    ('number_of_instances', 'integer', 'total number of model instances'),
+]
+
+
+def _validate_required_control_vars(
+    host_name: str,
+    host_dict: dict,
+) -> None:
+    """Check that every required control variable is present in *host_dict*.
+
+    Collects all failures and raises a single :exc:`CCPPError` listing them.
+
+    Parameters
+    ----------
+    host_name : str
+        Host model identifier, used in error messages.
+    host_dict : dict
+        Flat host variable dictionary built by :func:`build_flat_host_dict`.
+
+    Raises
+    ------
+    CCPPError
+        If any required control variable is missing, not marked as a control
+        variable, has the wrong Fortran type, or is not a scalar.
+    """
+    errors = []
+
+    def _check_control_var(std_name, expected_type, description, required: bool) -> None:
+        """Validate a variable that must live in a ``type=control`` table."""
+        entry = host_dict.get(std_name)
+
+        if entry is None:
+            if required:
+                errors.append(
+                    "Required control variable '{}' not found in host '{}' "
+                    "type=control metadata.\n"
+                    "  This variable {}. Add it to a "
+                    "[ccpp-table-properties] / type=control block in your "
+                    "host metadata files.".format(std_name, host_name, description)
+                )
+            return
+
+        if not entry.is_control:
+            errors.append(
+                "Variable '{}' must be declared in a type=control table for "
+                "host '{}', but it was found in a type=host table.\n"
+                "  Move it to a [ccpp-table-properties] / type=control "
+                "block.".format(std_name, host_name)
+            )
+            return
+
+        if entry.type.lower() != expected_type.lower():
+            errors.append(
+                "Required control variable '{}' in host '{}' has Fortran "
+                "type '{}' but '{}' is required.".format(
+                    std_name, host_name, entry.type, expected_type
+                )
+            )
+
+        if entry.dimensions:
+            errors.append(
+                "Required control variable '{}' in host '{}' must be a "
+                "scalar (rank-0) but has dimensions {}.".format(
+                    std_name, host_name, entry.dimensions
+                )
+            )
+
+    def _check_host_module_var(std_name, expected_type, description) -> None:
+        """Validate a variable that must live in a ``type=host`` table.
+
+        Used for symbols the generator emits via ``use <module>, only:
+        <local>`` rather than as call-arg control vars.
+        """
+        entry = host_dict.get(std_name)
+        if entry is None:
+            return
+
+        if entry.is_control:
+            errors.append(
+                "Variable '{}' must be declared in a type=host table for "
+                "host '{}' (it is USE'd from the host module), but it was "
+                "found in a type=control table.\n"
+                "  Move it to a [ccpp-table-properties] / type=host "
+                "block.".format(std_name, host_name)
+            )
+            return
+
+        if entry.type.lower() != expected_type.lower():
+            errors.append(
+                "Host variable '{}' in host '{}' has Fortran type '{}' but "
+                "'{}' is required.".format(
+                    std_name, host_name, entry.type, expected_type
+                )
+            )
+
+        if entry.dimensions:
+            errors.append(
+                "Host variable '{}' in host '{}' must be a scalar (rank-0) "
+                "but has dimensions {}.".format(
+                    std_name, host_name, entry.dimensions
+                )
+            )
+
+    for std_name, expected_type, description in _REQUIRED_CTRL_VARS:
+        _check_control_var(std_name, expected_type, description, required=True)
+
+    # Paired optional: instance_number lives in type=control (call-arg);
+    # number_of_instances lives in type=host (USE'd by the suite cap for
+    # state-array sizing).  Either both declared or neither.
+    _check_control_var(
+        'instance_number', 'integer',
+        'current model instance index', required=False,
+    )
+    _check_host_module_var(
+        'number_of_instances', 'integer',
+        'total number of model instances',
+    )
+
+    inst_present  = host_dict.get('instance_number')  is not None
+    ninst_present = host_dict.get('number_of_instances') is not None
+    if inst_present ^ ninst_present:
+        present, missing, present_table, missing_table = (
+            ('instance_number', 'number_of_instances', 'control', 'host')
+            if inst_present
+            else ('number_of_instances', 'instance_number', 'host', 'control')
+        )
+        errors.append(
+            "Host '{}' declares '{}' (in a type={} table) but is missing "
+            "the paired variable '{}' (which must be declared in a "
+            "type={} table).\n"
+            "  Declare both for a multi-instance API, or neither for a "
+            "single-instance API.".format(
+                host_name, present, present_table,
+                missing, missing_table,
+            )
+        )
+
+    if errors:
+        raise CCPPError(
+            "Host '{}' is missing required control variables:\n\n{}".format(
+                host_name,
+                '\n\n'.join("ERROR: " + e for e in errors),
+            )
+        )
+
+
+########################################################################
+# Entry point
+########################################################################
+
+def capgen(
+    host_name: str,
+    host_files: List[str],
+    scheme_files: List[str],
+    suite_files: List[str],
+    output_root: str,
+    kind_types: Dict[str, Tuple[str, str]],
+    logger: Optional[logging.Logger] = None,
+) -> None:
+    """Programmatic entry point for the cap generator.
+
+    Mirrors the CLI behaviour.  Both the CLI and programmatic paths call
+    this function.
+
+    Parameters
+    ----------
+    host_name : str
+        Host model identifier.
+    host_files : list of str
+        Host metadata (``.meta``) file paths.
+    scheme_files : list of str
+        Scheme metadata (``.meta``) file paths.
+    suite_files : list of str
+        Suite XML (``.xml``) file paths.
+    output_root : str
+        Directory where all generated files are written.
+    kind_types : dict
+        Mapping ``kind_name -> (module_name, kind_spec)``.  May be empty;
+        ``kind_phys=(iso_fortran_env, REAL64)`` is injected automatically
+        when missing.
+    logger : logging.Logger, optional
+        Logger to use.  Defaults to the module-level logger.
+
+    Raises
+    ------
+    CCPPError
+        On any user-facing error.
+    """
+    log = logger or _LOGGER
+
+    # Snapshot the CLI-provided kinds; the default ``kind_phys`` and any
+    # metadata-declared kind_specs are folded in below, after metadata loads.
+    cli_kind_types = dict(kind_types)
+
+    # ---- validate output directory -----------------------------------------
+    os.makedirs(output_root, exist_ok=True)
+
+    # ---- load host metadata (host + control tables) -------------------------
+    log.info("Loading host metadata for host '%s'", host_name)
+    framework_meta = [p for p in _FRAMEWORK_HOST_META if os.path.isfile(p)]
+    if framework_meta:
+        log.info("Auto-including framework metadata: %s", framework_meta)
+    host_tables = _load_metadata_files(
+        framework_meta + list(host_files),
+        expected_types=frozenset({'host', 'control', 'ddt'}),
+        label='host',
+    )
+    log.info("Loaded %d host/control/ddt tables", len(host_tables))
+
+    # ---- load scheme metadata -----------------------------------------------
+    log.info("Loading scheme metadata")
+    scheme_tables = _load_metadata_files(
+        scheme_files,
+        expected_types=frozenset({'scheme', 'ddt'}),
+        label='scheme',
+    )
+    log.info("Loaded %d scheme/ddt tables", len(scheme_tables))
+
+    # ---- merge --kind-type with metadata kind_spec declarations -----------
+    meta_kind_types = _collect_metadata_kind_specs(host_tables + scheme_tables)
+    if meta_kind_types:
+        log.info(
+            "Found %d kind_spec declaration(s) in metadata: %s",
+            len(meta_kind_types), sorted(meta_kind_types),
+        )
+    kind_types = _merge_cli_and_metadata_kinds(cli_kind_types, meta_kind_types)
+    kind_types = _ensure_kind_phys_default(kind_types, log)
+
+    # ---- build flat host variable dictionary --------------------------------
+    host_only    = [t for t in host_tables if t.table_type == 'host']
+    control_only = [t for t in host_tables if t.table_type == 'control']
+    ddt_from_host = [t for t in host_tables if t.table_type == 'ddt']
+    ddt_from_schemes = [t for t in scheme_tables if t.table_type == 'ddt']
+    all_ddt_tables = ddt_from_host + ddt_from_schemes
+
+    host_dict = build_flat_host_dict(host_only, control_only, all_ddt_tables)
+    log.info("Host dictionary contains %d variables", len(host_dict))
+
+    # Map DDT type name → defining Fortran module, derived from co-located
+    # tables in each .meta file.  Used by the suite data generator to emit
+    # USE statements for DDT-typed suite-owned variables.
+    ddt_module_map = build_ddt_module_map(host_tables + scheme_tables)
+
+    # ---- Phase 1 validation: required control variables ---------------------
+    _validate_required_control_vars(host_name, host_dict)
+
+    # Signal which instance API the host opted into so users can tell which
+    # branch the generator took.  Paired-presence has already been enforced.
+    if host_dict.get('instance_number') is not None:
+        log.info("Host '%s' declares instance_number — generating "
+                 "multi-instance API.", host_name)
+    else:
+        log.info("Host '%s' did not declare instance_number — generating "
+                 "single-instance API (per-instance arrays sized to 1).",
+                 host_name)
+
+    # ---- build scheme metadata store ----------------------------------------
+    scheme_store = SchemeStore.build_from(scheme_tables)
+    log.info("Scheme store contains %d schemes: %s",
+             len(scheme_store.scheme_names()), scheme_store.scheme_names())
+
+    # ---- write ccpp_kinds.F90 (always generated) ---------------------------
+    kinds_path = write_ccpp_kinds(kind_types, output_root)
+    log.info("Wrote %s", kinds_path)
+
+    # ---- parse suite XML files ----------------------------------------------
+    suites = parse_suite_xml_files(suite_files, output_root, log)
+    log.info("Loaded %d suite(s): %s", len(suites), [s.name for s in suites])
+
+    # ---- resolve and generate per-suite outputs ----------------------------
+    suite_names       = []
+    suite_resolutions = []
+
+    for suite in suites:
+        log.info("Resolving suite '%s'", suite.name)
+        suite_res = resolve_suite(suite, scheme_store, host_dict)
+        suite_names.append(suite.name)
+        suite_resolutions.append(suite_res)
+
+        # Group caps
+        for rg in suite_res.groups:
+            cap_path = write_group_cap(
+                suite.name, rg.group_name, rg, host_dict, output_root
+            )
+            log.info("Wrote %s", cap_path)
+
+        # Suite data module
+        data_path = write_suite_data(
+            suite.name, suite_res.suite_vars, output_root, host_dict,
+            ddt_module_map=ddt_module_map,
+        )
+        log.info("Wrote %s", data_path)
+
+        # Suite metadata (for inspection)
+        meta_path = write_suite_meta(suite.name, suite_res.suite_vars, output_root)
+        log.info("Wrote %s", meta_path)
+
+        # Suite types module (only when optional args are present)
+        types_path = write_suite_types(suite.name, suite_res, output_root)
+        if types_path:
+            log.info("Wrote %s", types_path)
+
+        # Suite cap
+        suite_cap_path = write_suite_cap(
+            suite.name, suite_res, scheme_store, output_root, host_dict
+        )
+        log.info("Wrote %s", suite_cap_path)
+
+    # ---- static API (one file for all suites) ------------------------------
+    static_path = write_static_api(
+        suite_names, suite_resolutions, output_root, host_dict, scheme_store
+    )
+    log.info("Wrote %s", static_path)
+
+    # ---- host-wide constituent module (only when any suite touches
+    #      constituent state) ------------------------------------------------
+    host_consts_path = write_host_constituents(
+        suite_resolutions, output_root, host_dict=host_dict,
+    )
+    if host_consts_path:
+        log.info("Wrote %s", host_consts_path)
+
+    # ---- datatable.xml ------------------------------------------------------
+    abs_root = os.path.abspath(output_root)
+    utility_paths = [
+        os.path.join(abs_root, 'ccpp_kinds.F90'),
+    ]
+    if host_consts_path:
+        utility_paths.append(host_consts_path)
+        # The generated ccpp_host_constituents.F90 USEs ccpp_constituent_prop_mod
+        # (and transitively ccpp_hashable / ccpp_hash_table); host code that
+        # calls ccpp_constituent_index pulls in ccpp_scheme_utils.  Add all
+        # framework F90 dependencies so the host build picks them up.
+        utility_paths.extend(_resolve_framework_f90_files())
+    host_file_paths = [
+        os.path.join(abs_root, 'ccpp_static_api.F90'),
+    ]
+    suite_file_paths = []
+    suite_meta_paths = []
+    for sname, sr in zip(suite_names, suite_resolutions):
+        suite_file_paths.append(
+            os.path.join(abs_root, 'ccpp_{}_cap.F90'.format(sname))
+        )
+        suite_file_paths.append(
+            os.path.join(abs_root, 'ccpp_{}_data.F90'.format(sname))
+        )
+        # Types module is only present when optional args exist.
+        types_file = os.path.join(abs_root, 'ccpp_{}_types.F90'.format(sname))
+        if os.path.isfile(types_file):
+            suite_file_paths.append(types_file)
+        for rg in sr.groups:
+            suite_file_paths.append(
+                os.path.join(
+                    abs_root,
+                    'ccpp_{}_{}_cap.F90'.format(sname, rg.group_name),
+                )
+            )
+        suite_meta_paths.append(
+            os.path.join(abs_root, 'ccpp_{}.meta'.format(sname))
+        )
+    # Expanded SDFs (one per parsed suite) are inspection artifacts; carry
+    # the paths set by parse_suite_xml() forward into datatable.xml.
+    expanded_sdf_paths = [s.expanded_file for s in suites if s.expanded_file]
+    # Collect dependency paths from EVERY parsed metadata table —
+    # host, control, ddt, and scheme alike.  ``dependencies =`` is
+    # legal on any [ccpp-table-properties] block per
+    # ``MetadataTable.apply_table_props``, so all of them must
+    # contribute to datatable.xml's <dependencies> section.
+    # Duplicates are collapsed by ``write_datatable``.
+    dependency_paths = []
+    for tbl in host_tables + scheme_tables:
+        dependency_paths.extend(tbl.dependencies)
+
+    datatable_path = write_datatable(
+        suite_resolutions, scheme_store, utility_paths, suite_file_paths,
+        output_root, host_file_paths=host_file_paths,
+        dependency_paths=dependency_paths,
+        suite_meta_paths=suite_meta_paths,
+        expanded_sdf_paths=expanded_sdf_paths,
+        host_dict=host_dict, host_name=host_name,
+    )
+    log.info("Wrote %s", datatable_path)
+
+    log.info("Cap generation complete.")
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """Command-line entry point.
+
+    Parameters
+    ----------
+    argv : list of str, optional
+        Override ``sys.argv[1:]`` (used by tests).
+
+    Returns
+    -------
+    int
+        Exit code: 0 = success, 1 = user error, 2 = internal error.
+    """
+    parser = _build_arg_parser()
+    args = parser.parse_args(argv)
+
+    # ---- configure logging -------------------------------------------------
+    if args.verbose == 0:
+        set_log_level(_LOGGER, logging.WARNING)
+    elif args.verbose == 1:
+        set_log_level(_LOGGER, logging.INFO)
+    else:
+        set_log_level(_LOGGER, logging.DEBUG)
+
+    # legacy-compat: transient migration shim.  Emit the loud banner
+    # before any parsing happens so user has fair warning.
+    if args.legacy_mode:
+        from metadata import legacy_compat
+        legacy_compat.enable(_LOGGER)
+
+    # ---- parse kind types --------------------------------------------------
+    try:
+        kind_types = _parse_kind_types(args.kind_type)
+    except CCPPError as exc:
+        _LOGGER.error("%s", exc)
+        return 1
+
+    # ---- call the generator ------------------------------------------------
+    try:
+        capgen(
+            host_name=args.host_name,
+            host_files=_split_file_list(args.host_files),
+            scheme_files=_split_file_list(args.scheme_files),
+            suite_files=_split_file_list(args.suites),
+            output_root=args.output_root,
+            kind_types=kind_types,
+        )
+    except CCPPError as exc:
+        _LOGGER.error("%s", exc)
+        return 1
+    except Exception as exc:  # pylint: disable=broad-except
+        _LOGGER.error("Internal error: %s", exc, exc_info=True)
+        return 2
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

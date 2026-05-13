@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="interstitial" version="1.0">
+  <group name="diag_group">
+    <scheme>interstitial_producer</scheme>
+    <scheme>interstitial_consumer</scheme>
+  </group>
+</suite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+
+<suite name="v2_suite" version="2.0">
+  <group name="main_group">
+    <subcycle loop="num_subcycles_for_scheme6">
+      <scheme>scheme6</scheme>
+    </subcycle>
+    <subcycle loop="num_subcycles_for_ag3">
+      <scheme>another_scheme</scheme>
+    </subcycle>
+    <scheme>more_scheme</scheme>
+  </group>
+</suite>

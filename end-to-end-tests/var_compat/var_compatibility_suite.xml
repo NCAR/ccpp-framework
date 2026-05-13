@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="var_compatibility_suite" version="1.0">
+  <group name="radiation">
+    <subcycle loop="num_subcycles_for_effr">
+      <scheme>effr_pre</scheme>
+      <subcycle loop="2">
+        <subcycle loop="2">
+          <scheme>effr_calc</scheme>
+        </subcycle>
+      </subcycle>
+      <scheme>effr_post</scheme>
+    </subcycle>
+    <subcycle loop="num_subcycles_for_effr">
+      <scheme>effrs_calc</scheme>
+    </subcycle>
+    <scheme>effr_diag</scheme>
+    <scheme>rad_lw</scheme>
+    <scheme>rad_sw</scheme>
+  </group>
+</suite>

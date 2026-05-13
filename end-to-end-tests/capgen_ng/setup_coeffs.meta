@@ -1,0 +1,29 @@
+[ccpp-table-properties]
+  name = setup_coeffs
+  type = scheme
+[ccpp-arg-table]
+  name = setup_coeffs_timestep_init
+  type = scheme
+[ coeffs ]
+  standard_name = coefficients_for_interpolation
+  long_name = coefficients for interpolation
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
