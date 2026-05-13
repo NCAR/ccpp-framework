@@ -17,8 +17,12 @@ jobs:
         fortran-compiler: [gfortran-9, gfortran-10, gfortran-11, gfortran-12]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
-    - name: update repos and install dependencies
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+    - name: Update repos and install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
