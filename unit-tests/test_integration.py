@@ -1202,6 +1202,166 @@ class TestHostTableDependenciesInDatatable(unittest.TestCase):
         self.assertIn('/tmp/fake_phys/chemistry/some_chem.F90',       joined)
 
 
+class TestUnusedSchemeDependenciesFiltered(unittest.TestCase):
+    """Scheme metadata files supplied on the CLI but not referenced by
+    any loaded suite must not contribute to datatable.xml's
+    <dependencies>.  Host build systems often pass the full physics
+    metadata catalog and rely on capgen-ng to narrow the compile set.
+    """
+
+    _USED_DEP   = '/tmp/used_phys/used_dep.F90'
+    _UNUSED_DEP = '/tmp/unused_phys/unused_dep.F90'
+
+    def setUp(self):
+        self._tmpdir = tempfile.mkdtemp()
+        used = os.path.join(self._tmpdir, 'used_scheme.meta')
+        unused = os.path.join(self._tmpdir, 'unused_scheme.meta')
+        # The "used" scheme is the existing scheme_multipart fixture
+        # with a single ``dependencies =`` line spliced into its outer
+        # [ccpp-table-properties] block.
+        with open(_sf('scheme_multipart.meta')) as src:
+            body = src.read()
+        used_body = body.replace(
+            '  type = scheme\n',
+            '  type = scheme\n  dependencies = {}\n'.format(self._USED_DEP),
+            1,
+        )
+        with open(used, 'w') as fh:
+            fh.write(used_body)
+        # The "unused" scheme has its own dependency.  The SDF below
+        # references temp_calc_adjust only, so this file's deps must be
+        # filtered out of datatable.xml.
+        with open(unused, 'w') as fh:
+            fh.write(
+                "[ccpp-table-properties]\n"
+                "  name = scheme_never_used\n"
+                "  type = scheme\n"
+                "  dependencies = {}\n"
+                "\n"
+                "[ccpp-arg-table]\n"
+                "  name = scheme_never_used_run\n"
+                "  type = scheme\n"
+                "[ errmsg ]\n"
+                "  standard_name = ccpp_error_message\n"
+                "  units = none\n"
+                "  dimensions = ()\n"
+                "  type = character\n"
+                "  kind = len=512\n"
+                "  intent = out\n"
+                "[ errflg ]\n"
+                "  standard_name = ccpp_error_code\n"
+                "  units = 1\n"
+                "  dimensions = ()\n"
+                "  type = integer\n"
+                "  intent = out\n".format(self._UNUSED_DEP)
+            )
+        # Drop a placeholder .F90 next to the used scheme's .meta so the
+        # source-path resolver picks it up rather than warning.  The
+        # filename matches the .meta basename per the convention.
+        with open(
+            os.path.join(self._tmpdir, 'used_scheme.F90'), 'w'
+        ) as fh:
+            fh.write('! placeholder for source-path resolution\n')
+        capgen(
+            host_name='test_host',
+            host_files=[_sf('host_full.meta'), _sf('control_full.meta')],
+            scheme_files=[used, unused],
+            suite_files=[_suite_file('suite_test_simple.xml')],
+            output_root=self._tmpdir,
+            kind_types={},
+        )
+        tree = ET.parse(os.path.join(self._tmpdir, 'datatable.xml'))
+        root = tree.getroot()
+        self._deps = [
+            d.text for d in root.find('dependencies').findall('dependency')
+        ]
+        self._scheme_files = [
+            f.text for f in root.find('scheme_files').findall('file')
+        ]
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self._tmpdir)
+
+    def test_used_scheme_dependency_present(self):
+        self.assertIn(self._USED_DEP, self._deps)
+
+    def test_unused_scheme_dependency_absent(self):
+        self.assertNotIn(self._UNUSED_DEP, self._deps)
+
+    def test_used_scheme_source_listed(self):
+        """<scheme_files> contains the resolved .F90 path for the used
+        scheme (same-base-name convention against the .meta file)."""
+        names = [os.path.basename(p) for p in self._scheme_files]
+        self.assertIn('used_scheme.F90', names)
+
+    def test_unused_scheme_source_absent(self):
+        """A scheme metadata file passed on the CLI but not called by any
+        suite must not contribute its .F90 to <scheme_files>."""
+        names = [os.path.basename(p) for p in self._scheme_files]
+        self.assertNotIn('unused_scheme.F90', names)
+        self.assertNotIn('unused_scheme.f90', names)
+
+
+class TestDdtDependenciesInSchemeMetaPreserved(unittest.TestCase):
+    """A scheme metadata file may carry a ``type = ddt`` block alongside
+    its ``type = scheme`` blocks (real-world pattern: a scheme that
+    constructs a DDT instance declares the DDT type in the same .meta).
+    The DDT block's ``dependencies = …`` must reach datatable.xml even
+    though the table name ('vmr_type', not the scheme name) won't match
+    the used-schemes set.  Regression for the bug that broke the
+    end-to-end-tests/capgen_ng test where ddt2.F90 went missing because
+    the DDT's deps were filtered out alongside actual scheme deps."""
+
+    _DDT_DEP = '/tmp/ddt_phys/inner_ddt.F90'
+
+    def setUp(self):
+        self._tmpdir = tempfile.mkdtemp()
+        meta = os.path.join(self._tmpdir, 'mixed_scheme.meta')
+        # Splice a ``type = ddt`` table in front of the existing
+        # scheme_multipart body so the .meta carries both kinds.
+        with open(_sf('scheme_multipart.meta')) as src:
+            body = src.read()
+        ddt_block = (
+            "[ccpp-table-properties]\n"
+            "  name = inner_ddt_type\n"
+            "  type = ddt\n"
+            "  dependencies = {dep}\n"
+            "[ccpp-arg-table]\n"
+            "  name = inner_ddt_type\n"
+            "  type = ddt\n"
+            "[ pad ]\n"
+            "  standard_name = inner_ddt_padding\n"
+            "  units = count\n"
+            "  dimensions = ()\n"
+            "  type = integer\n"
+            "\n"
+        ).format(dep=self._DDT_DEP)
+        with open(meta, 'w') as fh:
+            fh.write(ddt_block)
+            fh.write(body)
+        capgen(
+            host_name='test_host',
+            host_files=[_sf('host_full.meta'), _sf('control_full.meta')],
+            scheme_files=[meta],
+            suite_files=[_suite_file('suite_test_simple.xml')],
+            output_root=self._tmpdir,
+            kind_types={},
+        )
+        tree = ET.parse(os.path.join(self._tmpdir, 'datatable.xml'))
+        self._deps = [
+            d.text for d in tree.getroot()
+                .find('dependencies').findall('dependency')
+        ]
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self._tmpdir)
+
+    def test_ddt_dependency_preserved(self):
+        self.assertIn(self._DDT_DEP, self._deps)
+
+
 class TestSuiteInitFinalEmission(unittest.TestCase):
     """End-to-end: an SDF with ``<init>`` and ``<final>`` at the suite
     level produces calls to the named scheme's init/final phases inside
@@ -1285,6 +1445,19 @@ class TestSuiteInitFinalEmission(unittest.TestCase):
             )
         )
         self.assertLess(call_pos, state_set)
+
+    def test_suite_init_final_scheme_listed_in_datatable(self):
+        """The suite-level <init>/<final> scheme is genuinely 'used',
+        so it must appear in datatable.xml's <schemes> section alongside
+        any group-phase schemes.  Without this, downstream consumers
+        (e.g. CMake glue iterating <schemes>) miss the file."""
+        tree = ET.parse(os.path.join(self._tmpdir, 'datatable.xml'))
+        names = {
+            s.get('name')
+            for s in tree.getroot().find('schemes').findall('scheme')
+        }
+        self.assertIn('suite_init_final_scheme', names)
+        self.assertIn('temp_calc_adjust', names)
 
 
 class TestNestedSubcycleEmission(unittest.TestCase):

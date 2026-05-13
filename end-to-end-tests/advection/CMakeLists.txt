@@ -41,10 +41,14 @@ ccpp_datafile(DATATABLE "${OUTPUT_ROOT}/datatable.xml"
               REPORT_NAME "--dependencies")
 set(CAPGEN_DEPENDENCIES ${CCPP_FILES})
 ccpp_datafile(DATATABLE "${OUTPUT_ROOT}/datatable.xml"
+              REPORT_NAME "--scheme-files")
+set(SCHEME_FORTRAN_FILES_FILTERED ${CCPP_FILES})
+ccpp_datafile(DATATABLE "${OUTPUT_ROOT}/datatable.xml"
               REPORT_NAME "--capgen-files")
 set(CAPGEN_FILES ${CCPP_FILES})
 
 message(STATUS "List of capgen dependencies: ${CAPGEN_DEPENDENCIES}")
+message(STATUS "List of filtered scheme files: ${SCHEME_FORTRAN_FILES_FILTERED}")
 message(STATUS "List of capgen-generated files: ${CAPGEN_FILES}")
 
 # Add extra files needed for testing
@@ -55,7 +59,7 @@ set(EXTRA_FILES
 add_executable(test_advection.x
   ${EXTRA_FILES}
   ${CAPGEN_DEPENDENCIES}
-  ${SCHEME_FORTRAN_FILES}
+  ${SCHEME_FORTRAN_FILES_FILTERED}
   ${HOST_FORTRAN_FILES}
   ${CAPGEN_FILES}
   test_advection_host_integration.F90

@@ -89,7 +89,7 @@ from metadata.variable_resolver import (
 )
 from generator.kinds_writer import write_ccpp_kinds
 from generator.suite_xml import parse_suite_xml_files
-from generator.suite_resolver import resolve_suite
+from generator.suite_resolver import resolve_suite, iter_phase_calls
 from generator.group_cap import write_group_cap
 from generator.suite_data import write_suite_data, write_suite_meta
 from generator.suite_cap import write_suite_cap
@@ -984,19 +984,82 @@ def capgen(
     # Expanded SDFs (one per parsed suite) are inspection artifacts; carry
     # the paths set by parse_suite_xml() forward into datatable.xml.
     expanded_sdf_paths = [s.expanded_file for s in suites if s.expanded_file]
-    # Collect dependency paths from EVERY parsed metadata table —
-    # host, control, ddt, and scheme alike.  ``dependencies =`` is
-    # legal on any [ccpp-table-properties] block per
-    # ``MetadataTable.apply_table_props``, so all of them must
-    # contribute to datatable.xml's <dependencies> section.
-    # Duplicates are collapsed by ``write_datatable``.
+    # Collect dependency paths.  Host/control/ddt tables always contribute
+    # (their Fortran is shared across suites).  Scheme-type tables only
+    # contribute when the scheme is actually referenced by a resolved
+    # suite — group phase calls, the suite-level <init> scheme, or the
+    # suite-level <final> scheme.  DDT tables co-located in a scheme
+    # ``.meta`` file (``type = ddt`` block alongside ``type = scheme``
+    # blocks) always contribute since DDT modules are shared host-side
+    # data, not gated on which scheme uses them.  Unreferenced scheme
+    # metadata may sit on the CLI line for build-system convenience; we
+    # don't want its dependencies to leak into datatable.xml.  Duplicates
+    # are collapsed by ``write_datatable``.
+    used_scheme_names: set = set()
+    for sr in suite_resolutions:
+        for rg in sr.groups:
+            for items in rg.phase_calls.values():
+                for rc in iter_phase_calls(items):
+                    used_scheme_names.add(rc.scheme_name)
+        if sr.suite_init_call is not None:
+            used_scheme_names.add(sr.suite_init_call.scheme_name)
+        if sr.suite_final_call is not None:
+            used_scheme_names.add(sr.suite_final_call.scheme_name)
+
     dependency_paths = []
-    for tbl in host_tables + scheme_tables:
+    for tbl in host_tables:
         dependency_paths.extend(tbl.dependencies)
+    for tbl in scheme_tables:
+        if tbl.table_type != 'scheme':
+            # DDT (or other non-scheme) tables that live alongside scheme
+            # tables in scheme metadata files — always contribute.
+            dependency_paths.extend(tbl.dependencies)
+        elif tbl.table_name in used_scheme_names:
+            dependency_paths.extend(tbl.dependencies)
+
+    # Used-scheme Fortran source paths.  Convention (shared with the
+    # validator's ``_fortran_file_for_table``): the ``.F90`` (or ``.F`` /
+    # ``.f90`` / ``.f``) lives under ``table.source_path`` with the same
+    # base name as the ``.meta`` file.  Multiple scheme tables in one
+    # ``.meta`` share that single source file, so dedupe per path.
+    scheme_file_paths: List[str] = []
+    _seen_scheme_files: set = set()
+    for tbl in scheme_tables:
+        # DDT tables inside scheme .meta files do not correspond to a
+        # scheme .F90 — skip them outright.
+        if tbl.table_type != 'scheme':
+            continue
+        if tbl.table_name not in used_scheme_names:
+            continue
+        meta_base = os.path.splitext(os.path.basename(tbl.file_path))[0]
+        search_dir = tbl.source_path or os.path.dirname(
+            os.path.abspath(tbl.file_path)
+        )
+        resolved = None
+        for ext in ('.F90', '.f90', '.F', '.f'):
+            candidate = os.path.join(search_dir, meta_base + ext)
+            if os.path.isfile(candidate):
+                resolved = candidate
+                break
+        if resolved is None:
+            # Fall back to the canonical .F90 guess so the build-system
+            # query returns a useful (if missing) path; surface the gap
+            # at the same time so the user can fix source_path.
+            resolved = os.path.join(search_dir, meta_base + '.F90')
+            log.warning(
+                "Scheme '%s': no Fortran source found under '%s' for "
+                "any of .F90/.f90/.F/.f; using '%s' as the datatable "
+                "entry.  Check the scheme's source_path table-property.",
+                tbl.table_name, search_dir, resolved,
+            )
+        if resolved not in _seen_scheme_files:
+            _seen_scheme_files.add(resolved)
+            scheme_file_paths.append(resolved)
 
     datatable_path = write_datatable(
         suite_resolutions, scheme_store, utility_paths, suite_file_paths,
         output_root, host_file_paths=host_file_paths,
+        scheme_file_paths=scheme_file_paths,
         dependency_paths=dependency_paths,
         suite_meta_paths=suite_meta_paths,
         expanded_sdf_paths=expanded_sdf_paths,

@@ -51,6 +51,12 @@ _VALID_REPORTS = [
      "help": "Return a list of host CAP Fortran files created by capgen"},
     {"report": "suite_files", "type": bool,
      "help": "Return a list of suite CAP Fortran files created by capgen"},
+    {"report": "scheme_files", "type": bool,
+     "help": ("Return a list of scheme Fortran source files actually "
+              "referenced by some loaded suite (group phases + "
+              "suite-level <init>/<final> hooks).  These are the "
+              "user-supplied scheme .F90 files, NOT capgen-generated "
+              "caps")},
     {"report": "utility_files", "type": bool,
      "help": ("Return a list of utility Fortran files created by "
               "capgen (e.g., ccpp_kinds.F90)")},
@@ -285,6 +291,58 @@ def _retrieve_capgen_files(table, file_type=None):
                     emsg = "Invalid file list entry type, '{}'"
                     raise CCPPDatatableError(emsg.format(entry.tag))
     return capgen_files
+
+
+def _retrieve_scheme_files(table):
+    """Find and return the list of used-scheme Fortran source paths from <table>.
+
+    The ``<scheme_files>`` section lists the user-supplied scheme ``.F90``
+    (or ``.F`` / ``.f90`` / ``.f``) sources for schemes that the loaded
+    suites actually reference.  Build systems use this to compile exactly
+    the scheme set the suites consume; unreferenced scheme metadata
+    files passed on the capgen-ng CLI for convenience are filtered out.
+
+    # Test valid scheme files
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><scheme_files>"\
+                "<file>/path/to/scheme1.F90</file>"\
+                "<file>/path/to/scheme2.F90</file>"\
+                "</scheme_files></ccpp_datatable>")
+    >>> _retrieve_scheme_files(table)
+    ['/path/to/scheme1.F90', '/path/to/scheme2.F90']
+
+    # Test empty
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><scheme_files>"\
+                "</scheme_files></ccpp_datatable>")
+    >>> _retrieve_scheme_files(table)
+    []
+
+    # Test missing section
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'></ccpp_datatable>")
+    >>> _retrieve_scheme_files(table)
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Element type, 'scheme_files', not found in table
+
+    # Test invalid entry type
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><scheme_files>"\
+                "<banana>/path/to/scheme1.F90</banana>"\
+                "</scheme_files></ccpp_datatable>")
+    >>> _retrieve_scheme_files(table)
+    Traceback (most recent call last):
+    ...
+    ccpp_datafile.CCPPDatatableError: Invalid scheme file entry type, 'banana'
+    """
+    result = []
+    section = _find_table_section(table, "scheme_files")
+    for entry in section:
+        if entry.tag == "file":
+            if entry.text is not None:
+                result.append(entry.text)
+        else:
+            raise CCPPDatatableError(
+                "Invalid scheme file entry type, '{}'".format(entry.tag)
+            )
+    return result
 
 
 def _retrieve_inspection_files(table, file_type=None):
@@ -686,6 +744,8 @@ def datatable_report(datatable, action, sep, exclude_protected=False):
         result = _retrieve_capgen_files(table, file_type="host_files")
     elif action.action_is("suite_files"):
         result = _retrieve_capgen_files(table, file_type="suite_files")
+    elif action.action_is("scheme_files"):
+        result = _retrieve_scheme_files(table)
     elif action.action_is("utility_files"):
         result = _retrieve_capgen_files(table, file_type="utilities")
     elif action.action_is("inspection_files"):

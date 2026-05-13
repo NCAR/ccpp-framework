@@ -37,7 +37,8 @@ from generator.suite_resolver import resolve_suite
 
 def _build_datatable(tmpdir, host_name='test_host',
                     host_file_paths=None, utility_paths=None,
-                    suite_file_paths=None, dependency_paths=None,
+                    suite_file_paths=None, scheme_file_paths=None,
+                    dependency_paths=None,
                     suite_meta_paths=None, expanded_sdf_paths=None,
                     protect_first_host_var=False):
     """Build a real datatable.xml in *tmpdir* and return its path."""
@@ -56,6 +57,7 @@ def _build_datatable(tmpdir, host_name='test_host',
                              '/out/ccpp_test_simple_physics_cap.F90'],
         tmpdir,
         host_file_paths=host_file_paths or ['/out/ccpp_static_api.F90'],
+        scheme_file_paths=scheme_file_paths,
         dependency_paths=dependency_paths or [],
         suite_meta_paths=suite_meta_paths,
         expanded_sdf_paths=expanded_sdf_paths,
@@ -167,6 +169,34 @@ class TestDatatableReportSchemeActions(_DTBase):
     def test_dependencies_empty_when_none(self):
         out = datatable_report(self._datatable,
                                DatatableReport('dependencies'), ',')
+        self.assertEqual(out, '')
+
+
+class TestDatatableReportSchemeFiles(unittest.TestCase):
+    """--scheme-files returns the used-scheme Fortran source paths from
+    <scheme_files>; the section is always present (possibly empty) so the
+    query never raises on a vanilla datatable."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self._tmpdir)
+
+    def test_scheme_files_returns_listed_paths(self):
+        path = _build_datatable(
+            self._tmpdir,
+            scheme_file_paths=['/phys/scheme_b.F90', '/phys/scheme_a.F90'],
+        )
+        out = datatable_report(path, DatatableReport('scheme_files'), ',')
+        items = out.split(',')
+        # Writer preserves caller order; do not assume sort.
+        self.assertIn('/phys/scheme_b.F90', items)
+        self.assertIn('/phys/scheme_a.F90', items)
+
+    def test_scheme_files_empty_when_none_given(self):
+        path = _build_datatable(self._tmpdir)
+        out = datatable_report(path, DatatableReport('scheme_files'), ',')
         self.assertEqual(out, '')
 
 
