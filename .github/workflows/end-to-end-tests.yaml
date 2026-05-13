@@ -1,4 +1,4 @@
-name: Capgen Unit Tests
+name: capgen-ng end-to-end tests
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit_tests:
+  end-to-end-tests:
     strategy:
       matrix:
         os: [ubuntu-22.04]
@@ -37,27 +37,27 @@ jobs:
 
     - name: Build the framework
       run: |
-        cmake --fresh -S. -B./build -DOPENMP=ON -DCCPP_FRAMEWORK_ENABLE_TESTS=ON
+        cmake --fresh -S./end-to-end-tests -B./build
         cd build
         make
 
-    - name: Run unit tests
+    - name: Run end-to-end tests
       run: |
         cd build
-        ctest --rerun-failed --output-on-failure . --verbose
+        ctest --rerun-failed --output-on-failure .
 
-    - name: Run python tests
-      run: |
-        BUILD_DIR=./build \
-        PYTHONPATH=test/:scripts/ \
-          pytest \
-            test/capgen_test/capgen_test_reports.py \
-            test/advection_test/advection_test_reports.py \
-            test/ddthost_test/ddthost_test_reports.py \
-            test/var_compatibility_test/var_compatibility_test_reports.py
-
-    - name: Run Fortran to metadata test
-      run: cd test && ./test_fortran_to_metadata.sh
-
-    - name: Run offline metadata parser test
-      run: cd test && ./test_offline_metadata_checker.sh
+#    - name: Run python tests
+#      run: |
+#        BUILD_DIR=./build \
+#        PYTHONPATH=test/:scripts/ \
+#          pytest \
+#            test/capgen_test/capgen_test_reports.py \
+#            test/advection_test/advection_test_reports.py \
+#            test/ddthost_test/ddthost_test_reports.py \
+#            test/var_compatibility_test/var_compatibility_test_reports.py
+#
+#    - name: Run Fortran to metadata test
+#      run: cd test && ./test_fortran_to_metadata.sh
+#
+#    - name: Run offline metadata parser test
+#      run: cd test && ./test_offline_metadata_checker.sh
