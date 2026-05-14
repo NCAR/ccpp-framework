@@ -537,7 +537,14 @@ def expand_nested_suites(suite, default_path, logger=None):
 ###############################################################################
 def write_xml_file(root, file_path, logger=None):
 ###############################################################################
-    """Pretty-prints element root to an ASCII file using xml.dom.minidom"""
+    """Pretty-prints element root to an ASCII file using xml.dom.minidom.
+
+    Routes the serialised XML through :func:`io_helpers.write_if_changed`
+    so an unchanged regeneration leaves the on-disk mtime alone.  When
+    *logger* is supplied, the helper logs ``Wrote <path>`` or
+    ``Unchanged: <path>`` so the user can see at a glance whether the
+    file actually changed.
+    """
 
     def remove_whitespace_nodes(node):
         """Helper function to recursively remove all text nodes that contain
@@ -560,12 +567,12 @@ def write_xml_file(root, file_path, logger=None):
     # Generate pretty-printed XML string
     pretty_xml = reparsed.toprettyxml(indent="  ")
 
-    # Write to file
-    with open(file_path, 'w', errors='xmlcharrefreplace') as f:
-        f.write(pretty_xml)
-
-    # Tell everyone!
-    if logger:
-        logger.debug(f"Writing XML file {file_path}")
+    # Route through write_if_changed so identical regenerated XML doesn't
+    # touch the mtime (downstream build tools rely on this to skip
+    # recompilation).  Passing *logger* lets the helper emit the
+    # "Wrote / Unchanged" line directly, replacing the old debug-only
+    # write notice.
+    from .io_helpers import write_if_changed
+    write_if_changed(file_path, pretty_xml, logger=logger)
 
 ##############################################################################

@@ -230,8 +230,11 @@ class TestCcppPhysicsSubroutines(unittest.TestCase):
     def test_final_dispatches_to_suite_cap(self):
         self.assertIn('call test_simple_physics_final()', self.text)
 
-    def test_physics_no_default_error_case(self):
-        # Physics dispatch has no error case for unknown suite — just skips.
+    def test_physics_no_default_error_case_without_host_dict(self):
+        # When no host_dict is available the standard error-reporting
+        # control vars (ccpp_error_code / ccpp_error_message) aren't in
+        # scope, so the physics dispatch has nowhere to write a "unknown
+        # suite" message — case default is intentionally omitted.
         run_block_start = self.text.index('subroutine ccpp_physics_run')
         run_block_end   = self.text.index('end subroutine ccpp_physics_run')
         run_block = self.text[run_block_start:run_block_end]
@@ -239,6 +242,36 @@ class TestCcppPhysicsSubroutines(unittest.TestCase):
 
     def test_select_case_on_suite_name(self):
         self.assertIn('select case(trim(suite_name))', self.text)
+
+
+class TestCcppPhysicsUnknownSuiteErrors(unittest.TestCase):
+    """When the host provides ccpp_error_code / ccpp_error_message in
+    its control table, the physics dispatch ``select case`` MUST end
+    with a ``case default`` that sets errflg=1 and writes a message
+    naming the unknown suite — never silently fall through.
+    """
+
+    def setUp(self):
+        hd  = _load_full_host_dict()
+        sr  = _resolve()
+        self.text = '\n'.join(_generate_static_api(['test_simple'], [sr], hd))
+
+    def test_physics_run_has_default_case_with_errflg(self):
+        run_block_start = self.text.index('subroutine ccpp_physics_run')
+        run_block_end   = self.text.index('end subroutine ccpp_physics_run')
+        run_block = self.text[run_block_start:run_block_end]
+        self.assertIn('case default', run_block)
+        # errflg must be set non-zero in the default branch.
+        self.assertRegex(run_block, r'case default[^!]*?errflg = 1')
+
+    def test_physics_run_default_message_names_suite(self):
+        run_block_start = self.text.index('subroutine ccpp_physics_run')
+        run_block_end   = self.text.index('end subroutine ccpp_physics_run')
+        run_block = self.text[run_block_start:run_block_end]
+        self.assertIn(
+            "ccpp_physics_run: unknown suite: ' // trim(suite_name)",
+            run_block,
+        )
 
 
 class TestMultipleSuites(unittest.TestCase):

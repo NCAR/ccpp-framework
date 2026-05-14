@@ -42,10 +42,11 @@ Example output for ``--kind-type kind_phys=my_host_kinds:kind_r8`` (host module)
 generated Fortran files that reference any kind parameter.
 """
 
+import logging
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from metadata.parse_tools import CCPPError
+from metadata.parse_tools import CCPPError, open_if_changed
 
 _KINDS_FILENAME = 'ccpp_kinds.F90'
 _KINDS_MODULE   = 'ccpp_kinds'
@@ -59,7 +60,11 @@ KindMap  = Dict[str, KindSpec]
 # Public API
 ########################################################################
 
-def write_ccpp_kinds(kind_types: KindMap, output_root: str) -> str:
+def write_ccpp_kinds(
+    kind_types: KindMap,
+    output_root: str,
+    logger: Optional[logging.Logger] = None,
+) -> str:
     """Write ``ccpp_kinds.F90`` to *output_root*.
 
     Parameters
@@ -86,7 +91,7 @@ def write_ccpp_kinds(kind_types: KindMap, output_root: str) -> str:
     os.makedirs(output_root, exist_ok=True)
     lines = _generate_ccpp_kinds(kind_types)
     out_path = os.path.join(output_root, _KINDS_FILENAME)
-    with open(out_path, 'w', encoding='utf-8') as fh:
+    with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path
 

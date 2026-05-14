@@ -37,3 +37,7 @@ from .xml_tools import (
     expand_nested_suites,
     write_xml_file,
 )
+from .io_helpers import (
+    write_if_changed,
+    open_if_changed,
+)

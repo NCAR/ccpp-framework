@@ -56,14 +56,18 @@ from .parse_tools import CCPPError, check_fortran_intrinsic, FORTRAN_SCALAR_REF_
 # Registered dimension constants
 ########################################################################
 
-#: Dimension standard names that indicate a DDT is indexed by instance.
-#: The host access path gains a ``(instance_number)`` subscript.
-#: See Section 4.3 ("instance_dimension") and the Section 3.5 example
-#: ("number_of_instances").
-_INSTANCE_DIMS: frozenset = frozenset({
-    'instance_dimension',
-    'number_of_instances',
-})
+# The set of registered scalar-index dimensions (e.g.
+# ``number_of_instances`` → ``instance_number``,
+# ``number_of_threads`` → ``thread_number``) lives in a single
+# documented module so the contract is easy for users and developers to
+# find and extend.  See ``capgen-ng/metadata/registered_dimensions.py``
+# for the full table and the two rules that govern it.
+from .registered_dimensions import (
+    SCALAR_INDEX_DIMS,
+    scalar_index_for,
+    is_scalar_index_dim,
+    registered_count_dims,
+)
 
 #: Regex that normalises ``type(typename)`` → ``typename``.
 _TYPE_PAREN_RE = re.compile(
@@ -150,16 +154,87 @@ def _resolve_subscript(subscript: str, host_dict: Dict[str, 'HostVarEntry']) -> 
     return ', '.join(resolved)
 
 
-def _instance_subscript(var: MetaVar) -> str:
-    """Return ``'(instance_number)'`` if *var* is a DDT instance array, else ``''``.
+def _validate_leaf_dims(var: 'MetaVar', source_label: str) -> None:
+    """Reject leaf variables that declare a registered scalar-index dim.
 
-    A variable is treated as a DDT instance array when any of its declared
-    dimension standard names matches one of the :data:`_INSTANCE_DIMS` names.
+    Rule 2 of the registered-scalar-index-dimension contract (see
+    :mod:`metadata.registered_dimensions`): a *leaf* variable — one that
+    a physics scheme actually binds to (intrinsic-typed or ``external:``
+    Fortran type) — MUST NOT declare a dim like ``number_of_instances``
+    or ``number_of_threads``.  Those dims belong on container
+    DDT-instance variables in the access path, never on the leaf data
+    itself.
+
+    Raises
+    ------
+    CCPPError
+        With a message that names the offending variable, the offending
+        dim, the paired index variable, the source label (host file /
+        DDT table where the leaf was declared), and a pointer back to
+        :mod:`metadata.registered_dimensions` for the full table and
+        the remediation pattern.
     """
+    offenders = [d for d in var.dimensions if is_scalar_index_dim(d)]
+    if not offenders:
+        return
+    dim = offenders[0]
+    idx_std = scalar_index_for(dim)
+    raise CCPPError(
+        "Variable '{name}' (standard_name='{std}', declared in {src}) "
+        "is a leaf data variable but its dimensions list includes "
+        "'{dim}', a registered scalar-index dimension reserved for "
+        "DDT-instance container variables (paired with index "
+        "'{idx}').\n"
+        "\n"
+        "Leaf variables (intrinsic- or external-typed, the kind a "
+        "physics scheme binds to) MUST NOT carry registered scalar-"
+        "index dimensions.  Wrap '{name}' in a container DDT whose "
+        "dimensions = ({dim}), and declare '{name}' inside that DDT "
+        "with only its spatial / tracer / count dims.  The generator "
+        "will emit '<container>({idx})%{name}(...)' at every scheme "
+        "call site automatically.\n"
+        "\n"
+        "See capgen-ng/metadata/registered_dimensions.py for the full "
+        "table of registered scalar-index pairings and how to extend "
+        "it.".format(
+            name=var.local_name,
+            std=var.standard_name,
+            src=source_label,
+            dim=dim,
+            idx=idx_std,
+        )
+    )
+
+
+def _instance_subscript(var: MetaVar) -> str:
+    """Return the scalar-index subscript for a container DDT-instance variable.
+
+    Walks *var*'s declared dimensions in order; for each dim that is a
+    registered scalar-index dim (see
+    :mod:`metadata.registered_dimensions`), emits the paired index
+    variable's standard name as a placeholder.  The placeholder is
+    resolved to the host's local Fortran name at codegen time by
+    :func:`generator.suite_resolver._substitute_scalar_idx`.
+
+    Returns
+    -------
+    str
+        Subscript string such as ``'(instance_number)'``,
+        ``'(thread_number)'``, or for multi-pair containers
+        ``'(instance_number, thread_number)'`` — one component per
+        registered scalar-index dim found in *var.dimensions* in
+        declared order.  Returns ``''`` when no registered scalar dim
+        is present (the caller is left to handle non-registered dims
+        through the normal slice machinery).
+    """
+    parts = []
     for dim in var.dimensions:
-        if dim in _INSTANCE_DIMS:
-            return '(instance_number)'
-    return ''
+        idx = scalar_index_for(dim)
+        if idx is not None:
+            parts.append(idx)
+    if not parts:
+        return ''
+    return '({})'.format(', '.join(parts))
 
 
 ########################################################################
@@ -277,21 +352,61 @@ def _build_ddt_index(ddt_tables: List[MetadataTable]) -> Dict[str, MetadataTable
     return {tbl.table_name: tbl for tbl in ddt_tables}
 
 
+def _resolve_module_name(tbl: MetadataTable) -> str:
+    """Return the Fortran module that exports *tbl*'s symbols.
+
+    Honors the per-table ``module_name = …`` override from
+    ``[ccpp-table-properties]`` when present (the
+    ``design_module_name_override`` rule); otherwise falls back to the
+    table name (the implicit "module name = table name" convention).
+    """
+    return (tbl.module_name or '').strip() or tbl.table_name
+
+
 def build_ddt_module_map(
     all_tables: List[MetadataTable],
 ) -> Dict[str, str]:
     """Build a map from DDT type name → Fortran module that defines it.
 
-    A DDT table inherits its defining Fortran module from a co-located
-    ``host``, ``control``, or ``scheme`` table in the same ``.meta`` file.
-    The convention is that a CCPP scheme/host/control table's name is the
-    name of the Fortran module that contains it; a DDT type defined alongside
-    such a table is assumed to be defined in the same Fortran module.
+    Resolution order, per DDT table:
 
-    DDT tables in a file with no co-located scheme/host/control table are
-    skipped (no entry written).  DDTs that are only referenced as types of
-    host instance variables (declared in the host's own Fortran code) do not
-    need an entry — the host's Fortran code already imports the type.
+    1. **DDT's own override.**  If the DDT's own ``[ccpp-table-properties]``
+       carries ``module_name = …``, that wins.  Most specific source — a
+       DDT may genuinely live in a different Fortran module than the
+       scheme/host its ``.meta`` is paired with.  Required when the DDT
+       lives in a file with no co-located scheme/host/control table at
+       all (real-world example: CCPP-physics
+       ``Radiation/RRTMG/radsw_param.meta`` declares ``cmpfsw_type`` in
+       Fortran ``module module_radsw_parameters``, with no co-located
+       scheme metadata).
+    2. **Co-located table's resolved module.**  Failing the DDT's own
+       override, inherit from a co-located ``host``, ``control``, or
+       ``scheme`` table in the same ``.meta`` file.  Its module is
+       resolved by the same rule used elsewhere in capgen-ng
+       (:func:`_resolve_module_name`): the co-located table's own
+       ``module_name = …`` if declared, else its table name.
+
+    DDT tables that pass neither rule are skipped (no entry written).
+    Those DDTs are only safe to leave out when no generator output
+    references them directly — e.g. a DDT referenced only as the type
+    of a host instance variable, where the host's own Fortran already
+    imports the type.
+
+    What happens when both are present
+    ----------------------------------
+
+    +-------------------------+-------------------------+-----------------+
+    | DDT ``module_name=``    | Co-located ``module_    | Result          |
+    |                         | name=`` (or table name) |                 |
+    +=========================+=========================+=================+
+    | X (set)                 | Y (set or default)      | X — DDT wins    |
+    +-------------------------+-------------------------+-----------------+
+    | unset                   | Y (set or default)      | Y               |
+    +-------------------------+-------------------------+-----------------+
+    | X (set)                 | (no co-located table)   | X               |
+    +-------------------------+-------------------------+-----------------+
+    | unset                   | (no co-located table)   | (skipped)       |
+    +-------------------------+-------------------------+-----------------+
 
     Parameters
     ----------
@@ -309,16 +424,25 @@ def build_ddt_module_map(
 
     result: Dict[str, str] = {}
     for fpath, tables in by_file.items():
-        module_name: Optional[str] = None
+        # Co-located non-DDT table provides the fallback module name.
+        # Apply the same module_name-override-then-table-name resolution
+        # that ``build_flat_host_dict`` uses so a host/scheme that
+        # carries ``module_name = X`` is honored consistently.
+        colocated_module: Optional[str] = None
         for tbl in tables:
             if tbl.table_type in ('scheme', 'host', 'control'):
-                module_name = tbl.table_name
+                colocated_module = _resolve_module_name(tbl)
                 break
-        if module_name is None:
-            continue
+
         for tbl in tables:
-            if tbl.table_type == 'ddt':
-                result[tbl.table_name] = module_name
+            if tbl.table_type != 'ddt':
+                continue
+            # Per-table explicit override on the DDT itself wins.
+            if tbl.module_name:
+                result[tbl.table_name] = tbl.module_name
+                continue
+            if colocated_module is not None:
+                result[tbl.table_name] = colocated_module
     return result
 
 
@@ -383,6 +507,28 @@ def _flatten_ddt_instance(
 
     ddt_table = ddt_index[ddt_name]
     subscript = _instance_subscript(var)
+    # If the DDT instance has dimensions but NONE of them are a
+    # registered scalar-index dim, capgen-ng can't bake a meaningful
+    # scalar subscript into field access paths.  Two outcomes are both
+    # legitimate, depending on how schemes use this DDT:
+    #
+    #   (a) Schemes take the whole sliced DDT array as a single arg
+    #       (e.g. ``call rad_lw_run(fluxLW=phys_state%fluxLW(lb:ub), …)``)
+    #       and dereference inner fields inside the scheme.  Flattening
+    #       this DDT's components into host_dict is wasted and emits
+    #       Fortran the compiler rejects.
+    #   (b) Schemes request individual inner fields by standard name,
+    #       which would require ``parent%var(<idx>)%field(…)`` access
+    #       with a meaningful ``<idx>`` capgen-ng can't synthesize.
+    #
+    # Skip the recursion either way: the DDT-instance's own entry is
+    # still recorded (case (a) just works), and case (b) trips the
+    # resolver's existing "standard_name not found" error when a scheme
+    # tries to use a would-have-been-flattened inner field.  Use
+    # ``--legacy-mode`` (or fix the host metadata) when the underlying
+    # cause is a deprecated dimension name like
+    # ``number_of_openmp_threads``.
+    skip_recurse = bool(var.dimensions) and not subscript
     # Fortran access path to this DDT instance (without field component).
     instance_access = access_prefix + var.local_name + subscript
 
@@ -406,6 +552,14 @@ def _flatten_ddt_instance(
         top_at_one=var.top_at_one,
     ))
 
+    # When the DDT-instance carries non-registered dims (skip_recurse),
+    # leave its fields un-flattened — only the DDT-instance entry above
+    # is recorded.  Schemes taking the whole sliced DDT work via that
+    # entry; schemes asking for inner fields by std_name trip the
+    # resolver's standard "not found" error.
+    if skip_recurse:
+        return entries
+
     # Expand each field of the DDT.
     for sec in ddt_table.sections():
         for field in sec.variables:
@@ -420,6 +574,16 @@ def _flatten_ddt_instance(
                     max_depth=max_depth,
                 ))
             else:
+                # Rule 2: a leaf DDT field cannot carry a registered
+                # scalar-index dim.  Surface the violation at parse time
+                # with a clear remediation pointer.
+                _validate_leaf_dims(
+                    field,
+                    "DDT '{}' (file: {})".format(
+                        ddt_name,
+                        ddt_table.file_path,
+                    ),
+                )
                 base_field, sub_str = _split_local_name(field.local_name)
                 sub_tokens = [t.strip() for t in sub_str.split(',') if t.strip()] if sub_str else []
                 field_path = instance_access + '%' + base_field
@@ -524,6 +688,12 @@ def build_flat_host_dict(
                     ):
                         _add(entry, tbl.table_name)
                 elif _is_intrinsic(var.type) or _is_external(var.type):
+                    _validate_leaf_dims(
+                        var,
+                        "host table '{}' (file: {})".format(
+                            tbl.table_name, tbl.file_path,
+                        ),
+                    )
                     base_name, sub_str = _split_local_name(var.local_name)
                     sub_tokens = [t.strip() for t in sub_str.split(',') if t.strip()] if sub_str else []
                     _add(HostVarEntry(
@@ -559,6 +729,12 @@ def build_flat_host_dict(
     for tbl in control_tables:
         for sec in tbl.sections():
             for var in sec.variables:
+                _validate_leaf_dims(
+                    var,
+                    "control table '{}' (file: {})".format(
+                        tbl.table_name, tbl.file_path,
+                    ),
+                )
                 base_name, sub_str = _split_local_name(var.local_name)
                 sub_tokens = [t.strip() for t in sub_str.split(',') if t.strip()] if sub_str else []
                 _add(HostVarEntry(

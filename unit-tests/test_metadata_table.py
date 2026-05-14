@@ -278,6 +278,39 @@ class TestMetaVar(unittest.TestCase):
         with self.assertRaises(CCPPError):
             var.set_attr('intent', 'banana', ctx)
 
+    def test_invalid_attribute_error_carries_full_context(self):
+        """When a check_X helper rejects a value, the resulting CCPPError
+        MUST name the offending variable, the attribute, the raw value,
+        AND the source location.  Without this enrichment the user sees
+        a bare ``'' is not a valid unit`` with no clue which file/line/var
+        is at fault — every check_X helper is unaware of context.
+        Regression for the SCM ccpp-physics 61-file parse where the user
+        couldn't locate the offending metadata.
+        """
+        ctx = ParseContext(linenum=42, filename='broken_scheme.meta')
+        var = MetaVar('my_bad_var', ctx)
+        with self.assertRaises(CCPPError) as raised:
+            var.set_attr('units', '', ctx)
+        msg = str(raised.exception)
+        self.assertIn("'my_bad_var'", msg)        # variable name
+        self.assertIn("'units'", msg)              # attribute name
+        self.assertIn("broken_scheme.meta", msg)   # file
+        self.assertIn(":43", msg)                  # line (1-based)
+        self.assertIn("not a valid unit", msg)     # inner reason
+
+    def test_invalid_attribute_error_does_not_double_wrap(self):
+        """Helpers that already include the location (``_parse_dimensions``,
+        ``_check_var_type``) should not have their location duplicated in
+        the wrapper message.  Test confirms the wrapper detects the
+        already-present location and re-raises unchanged."""
+        ctx = ParseContext(linenum=5, filename='dim_broken.meta')
+        var = MetaVar('v', ctx)
+        with self.assertRaises(CCPPError) as raised:
+            var.set_attr('dimensions', '(this is malformed', ctx)
+        msg = str(raised.exception)
+        # Location appears exactly once (no nested duplication).
+        self.assertEqual(msg.count('dim_broken.meta'), 1)
+
     def test_protected_bool(self):
         var = self._make_var(protected='True')
         self.assertTrue(var.protected)

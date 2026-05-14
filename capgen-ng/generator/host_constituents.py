@@ -26,9 +26,11 @@ old module-level pointer bindings (``ccpp_constituents`` etc.) have
 been removed.
 """
 
+import logging
 import os
 from typing import List, Optional, Set, Tuple
 
+from metadata.parse_tools import open_if_changed
 from generator.suite_resolver import SuiteResolution
 
 _INDENT = '  '
@@ -629,6 +631,7 @@ def write_host_constituents(
     suite_results: List[SuiteResolution],
     outdir: str,
     host_dict=None,
+    logger: Optional[logging.Logger] = None,
 ) -> Optional[str]:
     """Write ``ccpp_host_constituents.F90`` if needed, return its path or ``None``."""
     lines = _generate_host_constituents(suite_results, host_dict)
@@ -637,6 +640,6 @@ def write_host_constituents(
     if not os.path.isdir(outdir):
         os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, 'ccpp_host_constituents.F90')
-    with open(path, 'w') as fh:
+    with open_if_changed(path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return os.path.abspath(path)

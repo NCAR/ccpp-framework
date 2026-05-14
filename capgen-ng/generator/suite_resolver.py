@@ -30,10 +30,14 @@ bare standard name (``'vertical_layer_dimension'``) or an explicit
 
 After normalisation the upper-bound standard name drives dispatch:
 
-- ``instance_dimension`` / ``number_of_instances`` → ``<instance_number_local>``
-  (scalar extraction; the instance subscript is already in the access path for
-  DDT fields, but needed here for the DDT instance variable itself when it is
-  passed directly).
+- Registered scalar-index dim (see
+  ``metadata.registered_dimensions.SCALAR_INDEX_DIMS``; currently
+  ``number_of_instances`` → ``instance_number``,
+  ``number_of_threads`` → ``thread_number``) → scalar extraction using
+  the paired index variable's local name.  The scalar subscript is
+  already in the access path for DDT-component fields, but needed here
+  for a DDT instance variable itself when passed directly, and for any
+  flat-array dim that hits the same registered name.
 - ``horizontal_dimension`` / ``horizontal_loop_extent`` →
   ``<lb_local>:<ub_local>`` (all phases).  The lower bound must resolve to
   ``1`` (i.e. be ``ccpp_constant_one`` or the integer literal ``1``).
@@ -59,7 +63,12 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 from metadata.parse_tools import CCPPError, FORTRAN_CONDITIONAL_REGEX
-from metadata.variable_resolver import HostVarEntry, _INSTANCE_DIMS
+from metadata.registered_dimensions import (
+    SCALAR_INDEX_DIMS,
+    scalar_index_for,
+    is_scalar_index_dim,
+)
+from metadata.variable_resolver import HostVarEntry
 
 # Dimension standard names that map to horizontal loop bounds.
 _HORIZ_LOOP_DIMS: frozenset = frozenset({
@@ -335,7 +344,14 @@ def _resolve_single_bound(
         # so the emitted subscript references the actual storage and
         # the USE statement (which walks back to the root via
         # ``_root_symbol``) imports the right top-level symbol.
-        return entry.access_path
+        # The DDT-instance walk bakes registered scalar-index std
+        # names (e.g. ``(thread_number)``, ``(instance_number)``) into
+        # the access path as placeholders; resolve them to the host's
+        # local Fortran names here so a bound that turns into a
+        # subscript on a per-thread/per-instance DDT field doesn't
+        # leak the std-name placeholder through to the emitted cap
+        # code (Fortran rejects it as "no IMPLICIT type").
+        return _substitute_scalar_idx(entry.access_path, host_dict)
     if suite_vars:
         sv = suite_vars.get(bound)
         if sv is not None:
@@ -409,7 +425,10 @@ def _one_dim_part(
 
     Rules applied after normalisation:
 
-    * Upper bound in :data:`_INSTANCE_DIMS` → scalar ``instance_number``.
+    * Upper bound is a registered scalar-index dim (see
+      :data:`metadata.registered_dimensions.SCALAR_INDEX_DIMS`) → scalar
+      subscript using the paired index variable's local name (e.g.
+      ``instance_number``, ``thread_number``).
     * Upper bound in :data:`_HORIZ_LOOP_DIMS` → ``lb:ub`` (loop bounds).
       Lower bound **must** resolve to ``'1'`` (i.e. be ``ccpp_constant_one``
       or the integer literal ``1``); any other value is an error.
@@ -438,20 +457,27 @@ def _one_dim_part(
         lower_str = lower_str.strip()
         upper_str = upper_str.strip()
 
-    # Instance dimension: scalar subscript regardless of lower bound
-    if upper_str in _INSTANCE_DIMS:
-        inst_entry = host_dict.get(_INSTANCE_NUM_STD)
-        if inst_entry is None:
+    # Registered scalar-index dimension: collapse to the paired index
+    # variable's local Fortran name regardless of lower bound.  See
+    # capgen-ng/metadata/registered_dimensions.py for the contract.
+    idx_std = scalar_index_for(upper_str)
+    if idx_std is not None:
+        idx_entry = host_dict.get(idx_std)
+        if idx_entry is None:
             raise CCPPError(
-                "Host metadata references instance dimension '{}' but the "
-                "host's type=control table does not declare "
-                "'instance_number'. Declare 'instance_number' and "
-                "'number_of_instances' (paired) for a multi-instance API, "
-                "or remove the instance dimension from the affected "
-                "metadata for a single-instance host.".format(upper_str)
+                "Metadata references registered scalar-index dimension "
+                "'{dim}', which is paired with index variable '{idx}', "
+                "but the host has not declared '{idx}' in any type=control "
+                "or type=host table.  Either declare '{idx}' as a scalar "
+                "integer in the host control/host metadata, or remove "
+                "the '{dim}' dimension from the affected metadata.  See "
+                "capgen-ng/metadata/registered_dimensions.py for the full "
+                "table of registered scalar-index pairings.".format(
+                    dim=upper_str, idx=idx_std,
+                )
             )
-        used.add(_INSTANCE_NUM_STD)
-        return inst_entry.local_name, used
+        used.add(idx_std)
+        return idx_entry.local_name, used
 
     # Horizontal dimension: validate lower, return loop bounds
     if upper_str in _HORIZ_LOOP_DIMS:
@@ -599,29 +625,54 @@ def _dim_has_vertical(dim: str) -> bool:
     return upper in _VDIM_STDS
 
 
-def _substitute_instance_idx(
+def _substitute_scalar_idx(
     expr: str, host_dict: Dict[str, HostVarEntry],
 ) -> str:
-    """Resolve the DDT-instance template ``(instance_number)`` in an
-    access expression.
+    """Resolve registered scalar-index placeholders in a DDT access expr.
 
-    :func:`metadata.variable_resolver._instance_subscript` bakes the
-    literal string ``(instance_number)`` into the access path of every
-    HostVarEntry derived from a DDT-instance array.  That string is a
-    *standard-name placeholder*; at codegen time it must be substituted
-    with the host's actual Fortran local name for ``instance_number``.
-    When the host has not declared the instance pair (single-instance
-    API), substitute ``(1)`` so the access path is still well-formed
-    against length-1 internal arrays.
+    :func:`metadata.variable_resolver._instance_subscript` bakes one
+    placeholder per registered scalar-index dim into the access path of
+    every HostVarEntry derived from a DDT-instance container.  The
+    placeholders are *standard names* (e.g. ``instance_number``,
+    ``thread_number``) drawn from
+    :data:`metadata.registered_dimensions.SCALAR_INDEX_DIMS`; this
+    function resolves each to the host's actual Fortran local name at
+    codegen time.
+
+    Resolution rules per placeholder:
+
+    * Found in *host_dict* → substitute the host's ``local_name``.
+    * Absent from *host_dict* → substitute the literal ``1`` (consistent
+      with the ``instance_number`` paired-opt-in single-instance fallback;
+      length-1 internal arrays still address correctly).
+
+    Multi-pair access paths like ``foo(instance_number, thread_number)``
+    are handled in a single pass — every registered placeholder in the
+    expression is rewritten.
     """
-    if '(instance_number)' not in expr:
+    # Optimization: skip the work when no placeholder could possibly be
+    # present.  ``(`` is the cheapest distinguishing token.
+    if '(' not in expr:
         return expr
-    inst_entry = host_dict.get(_INSTANCE_NUM_STD)
-    if inst_entry is None:
-        return expr.replace('(instance_number)', '(1)')
-    return expr.replace(
-        '(instance_number)', '({})'.format(inst_entry.local_name)
-    )
+    out = expr
+    for idx_std in SCALAR_INDEX_DIMS.values():
+        # Multiple placeholders may appear: as a sole subscript
+        # ``(idx_std)`` or as one of several ``(a, idx_std)``.  Replace
+        # the bare std name token-wise, but only when it's clearly an
+        # index placeholder (preceded by ``(`` or ``, `` and followed by
+        # ``)`` or ``,``).  In practice _instance_subscript only emits
+        # these inside a fresh subscript, so word-boundary replace is
+        # safe; we use re.sub to enforce the word boundary.
+        pattern = r'\b' + re.escape(idx_std) + r'\b'
+        entry = host_dict.get(idx_std)
+        replacement = entry.local_name if entry is not None else '1'
+        out = re.sub(pattern, replacement, out)
+    return out
+
+
+# Backwards-compatibility shim — older code (and one external test) may
+# still import the old name.  Forward to the generalized impl.
+_substitute_instance_idx = _substitute_scalar_idx
 
 
 def _translate_active_expr(active: str, host_dict: Dict[str, HostVarEntry]) -> str:
@@ -1071,6 +1122,14 @@ def _local_name_conflict(
         n += 1
 
 
+#: Standard names of the two loop-context control variables (see
+#: doc/redesign_prompt.md §4.2).  Scheme args declaring these resolve
+#: to the generated do-loop locals emitted by the group cap — they are
+#: in scope only inside a ``<subcycle>`` block.
+_LOOP_COUNTER_STD = 'ccpp_loop_counter'
+_LOOP_EXTENT_STD  = 'ccpp_loop_extent'
+
+
 def _resolve_one_arg(
     scheme_var,           # MetaVar from scheme metadata
     phase: str,
@@ -1079,6 +1138,7 @@ def _resolve_one_arg(
     scheme_name: str,
     used_local_names: Set[str],
     suite_name: str = '',
+    loop_context: Optional[List[Tuple[str, Optional[str]]]] = None,
 ) -> ResolvedArg:
     """Resolve one scheme argument against host/control/suite dictionaries.
 
@@ -1099,6 +1159,12 @@ def _resolve_one_arg(
     used_local_names : set of str
         Already-used local variable names in this group cap function (for
         conflict resolution of temp/pointer names).
+    loop_context : list of (str, str or None), optional
+        Stack of ``(loop_count_expr, loop_std_name)`` pairs for the
+        enclosing ``<subcycle>`` blocks, outermost first.  Empty (or
+        omitted) when the call is not inside any subcycle.  Used to
+        resolve ``ccpp_loop_counter`` / ``ccpp_loop_extent`` scheme
+        args against the generated do-loop locals.
 
     Returns
     -------
@@ -1113,6 +1179,75 @@ def _resolve_one_arg(
     intent   = scheme_var.intent or 'in'
     local    = scheme_var.local_name
     optional = scheme_var.optional
+
+    # ---- loop-context std names (ccpp_loop_counter / ccpp_loop_extent) -
+    # Per design (doc/redesign_prompt.md §4.2): these are scoped to the
+    # body of a ``<subcycle>``.  Resolve them against the generated do-
+    # loop locals; outside a subcycle, raise a clear error pointing at
+    # the SDF contract rather than the host metadata.
+    if std_name in (_LOOP_COUNTER_STD, _LOOP_EXTENT_STD):
+        if not loop_context:
+            raise CCPPError(
+                "Scheme '{scheme}' (phase '{phase}') requests standard "
+                "name '{std}' for argument '{local}', but the scheme is "
+                "not placed inside a ``<subcycle>`` block in the suite "
+                "definition file.\n"
+                "\n"
+                "'{std}' is a loop-context control variable scoped to a "
+                "subcycle do-loop body (see doc/redesign_prompt.md "
+                "§4.2).  Either wrap the scheme in ``<subcycle "
+                "loop=\"…\">…</subcycle>`` in the SDF, or remove the "
+                "'{std}' argument from the scheme metadata.".format(
+                    scheme=scheme_name,
+                    phase=phase,
+                    std=std_name,
+                    local=local,
+                )
+            )
+        # Resolve to the OUTERMOST enclosing subcycle.  Per the deferred
+        # item in doc/migration.md §8 ("Nested subcycle
+        # ccpp_loop_counter semantics"), nested-loop schemes that need
+        # the innermost counter aren't supported yet — every cam-sima
+        # / SCM use we've audited reads the OUTERMOST counter only.
+        outer_count_expr, _outer_std = loop_context[0]
+        if std_name == _LOOP_COUNTER_STD:
+            # The group cap emits the outermost do-loop with local
+            # variable ``ccpp_loop_counter`` (group_cap._loop_counter_name
+            # depth 1).  Match that name verbatim — it's in scope wherever
+            # this scheme call site is emitted.
+            call_expr = 'ccpp_loop_counter'
+        else:  # _LOOP_EXTENT_STD
+            # ``ccpp_loop_extent`` is the OUTERMOST subcycle's loop
+            # count — either an integer literal (e.g. ``'3'``) or a
+            # host-resolved local name (e.g. ``'n_sub'``) depending on
+            # how the SDF declared ``loop=``.
+            call_expr = outer_count_expr
+        return ResolvedArg(
+            standard_name=std_name,
+            scheme_local_name=local,
+            intent=intent,
+            is_optional=optional,
+            active='',
+            active_local='',
+            source='control',
+            host_entry=None,
+            suite_var=None,
+            base_expr=call_expr,
+            subscript='',
+            call_expr=call_expr,
+            used_dim_std_names=set(),
+            needs_unit_transform=False,
+            needs_kind_transform=False,
+            unit_forward='',
+            unit_backward='',
+            kind_scheme=scheme_var.kind,
+            kind_host='',
+            temp_name='',
+            ptr_name='',
+            transform_case=1,
+            scheme_dimensions=list(scheme_var.dimensions),
+            used_const_dim_std_names=set(),
+        )
 
     # ---- detect constituent register args (special-cased) ---------------
     # Schemes that register dynamic constituents declare an intent=out
@@ -1709,9 +1844,54 @@ def resolve_suite(
         phases = ['register', 'init', 'timestep_init', 'run',
                   'timestep_final', 'final']
 
-    # Detect whether any host variable uses an instance dimension.
+    # Validate up-front: every scheme name referenced by this suite —
+    # in any group (including nested subcycles/subcols) AND the
+    # suite-level <init>/<final> hooks — MUST be present in the scheme
+    # store.  When a scheme is missing the resolver silently emits
+    # empty phase entries, which the cap generator then writes as a
+    # syntactically valid but semantically empty group cap (the user
+    # gets a successful build with the wrong runtime behaviour).
+    # Surface the configuration error here with the full list of
+    # missing schemes and a remediation pointer.
+    referenced_schemes: List[str] = list(suite.all_scheme_names())
+    if suite.init_scheme:
+        referenced_schemes.append(suite.init_scheme)
+    if suite.final_scheme:
+        referenced_schemes.append(suite.final_scheme)
+    missing: List[str] = []
+    seen_missing: Set[str] = set()
+    for sname in referenced_schemes:
+        if not scheme_store.has_scheme(sname) and sname not in seen_missing:
+            missing.append(sname)
+            seen_missing.add(sname)
+    if missing:
+        raise CCPPError(
+            "Suite '{suite}' references {n} scheme(s) whose metadata is "
+            "not loaded:\n\n"
+            "    {names}\n\n"
+            "These schemes are listed in the SDF but no matching "
+            "``[ccpp-table-properties] type = scheme`` table is available "
+            "in the metadata files passed via ``--scheme-files``.  Add "
+            "the missing scheme ``.meta`` files to the generator's "
+            "--scheme-files argument (CMake users: add them to the "
+            "scheme metadata list in the relevant ``CMakeLists.txt``).\n"
+            "\n"
+            "Without this check capgen-ng would silently emit an empty "
+            "group cap and the build would succeed with the wrong "
+            "runtime behaviour (schemes never run).".format(
+                suite=suite.name,
+                n=len(missing),
+                names='\n    '.join(missing),
+            )
+        )
+
+    # Detect whether any host variable uses the instance dimension
+    # specifically (multi-instance API marker on SuiteResolution).  This
+    # is narrower than the general "registered scalar-index dim" check —
+    # we want to know only about the multi-instance pair here, not
+    # number_of_threads or future additions.
     uses_instance = any(
-        any(d in _INSTANCE_DIMS for d in entry.dimensions)
+        'number_of_instances' in entry.dimensions
         for entry in host_dict.values()
     )
 
@@ -1875,8 +2055,16 @@ def _resolve_one_call(
     suite_vars: Dict[str, 'SuiteVar'],
     used_local_names: Set[str],
     suite_name: str = '',
+    loop_context: Optional[List[Tuple[str, Optional[str]]]] = None,
 ) -> Optional[ResolvedCall]:
-    """Build a ResolvedCall for one scheme/phase, or return None if not defined."""
+    """Build a ResolvedCall for one scheme/phase, or return None if not defined.
+
+    *loop_context* is a list of ``(loop_count_expr, loop_std_name)`` tuples
+    describing the enclosing ``<subcycle>`` blocks, outermost first.  Empty
+    when the call is not inside any subcycle.  Forwarded to
+    :func:`_resolve_one_arg` so scheme args declaring ``ccpp_loop_counter``
+    or ``ccpp_loop_extent`` can resolve against the generated loop locals.
+    """
     vars_list = scheme_store.variables_for(scheme_name, phase)
     if vars_list is None:
         return None
@@ -1887,7 +2075,7 @@ def _resolve_one_call(
     for sv in vars_list:
         arg = _resolve_one_arg(
             sv, phase, host_dict, suite_vars, scheme_name, used_local_names,
-            suite_name=suite_name,
+            suite_name=suite_name, loop_context=loop_context,
         )
         rc.args.append(arg)
     return rc
@@ -1933,10 +2121,18 @@ def _resolve_run_phase(
     """
     from generator.suite_xml import SuiteScheme, SuiteSubcycle, SuiteSubcol
 
-    def _resolve_items(suite_items) -> List[PhaseItem]:
+    def _resolve_items(
+        suite_items,
+        loop_context: List[Tuple[str, Optional[str]]],
+    ) -> List[PhaseItem]:
         """Recursively turn a list of SuiteScheme/SuiteSubcycle/SuiteSubcol
         children into a list of :data:`PhaseItem`.  Used at the top level
         of a group AND for the body of every (possibly nested) subcycle.
+
+        *loop_context* is the stack of enclosing ``<subcycle>`` blocks
+        (outermost first), each as ``(loop_count_expr, loop_std_name)``.
+        Empty at the top level of a group; one entry per nested
+        subcycle depth.
         """
         out: List[PhaseItem] = []
         for sub in suite_items:
@@ -1945,15 +2141,18 @@ def _resolve_run_phase(
                     sub.name, phase, scheme_store, host_dict,
                     suite_vars, used_local_names,
                     suite_name=suite_name,
+                    loop_context=loop_context,
                 )
                 if rc is not None:
                     out.append(rc)
             elif isinstance(sub, SuiteSubcycle):
-                inner = _resolve_items(sub.items)
+                loop_count, loop_std = _resolve_subcycle_loop_bound(
+                    sub.loop, host_dict, suite_vars=suite_vars,
+                )
+                inner = _resolve_items(
+                    sub.items, loop_context + [(loop_count, loop_std)],
+                )
                 if inner:
-                    loop_count, loop_std = _resolve_subcycle_loop_bound(
-                        sub.loop, host_dict, suite_vars=suite_vars,
-                    )
                     out.append(ResolvedSubcycle(
                         loop=loop_count, calls=inner,
                         loop_std_name=loop_std,
@@ -1966,6 +2165,7 @@ def _resolve_run_phase(
                         sn, phase, scheme_store, host_dict,
                         suite_vars, used_local_names,
                         suite_name=suite_name,
+                        loop_context=loop_context,
                     )
                     if rc is not None:
                         out.append(rc)
@@ -1977,15 +2177,18 @@ def _resolve_run_phase(
         if isinstance(item, SuiteScheme):
             rc = _resolve_one_call(item.name, phase, scheme_store, host_dict,
                                    suite_vars, used_local_names,
-                                   suite_name=suite_name)
+                                   suite_name=suite_name,
+                                   loop_context=[])
             if rc is not None:
                 result.append(rc)
         elif isinstance(item, SuiteSubcycle):
-            inner = _resolve_items(item.items)
+            loop_count, loop_std = _resolve_subcycle_loop_bound(
+                item.loop, host_dict, suite_vars=suite_vars,
+            )
+            inner = _resolve_items(
+                item.items, [(loop_count, loop_std)],
+            )
             if inner:
-                loop_count, loop_std = _resolve_subcycle_loop_bound(
-                    item.loop, host_dict, suite_vars=suite_vars,
-                )
                 result.append(ResolvedSubcycle(
                     loop=loop_count, calls=inner,
                     loop_std_name=loop_std,
@@ -1994,7 +2197,8 @@ def _resolve_run_phase(
             for sn in item.scheme_names():
                 rc = _resolve_one_call(sn, phase, scheme_store, host_dict,
                                        suite_vars, used_local_names,
-                                       suite_name=suite_name)
+                                       suite_name=suite_name,
+                                       loop_context=[])
                 if rc is not None:
                     result.append(rc)
 

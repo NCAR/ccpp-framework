@@ -230,6 +230,61 @@ class TestPhysicsDispatch(unittest.TestCase):
         self.assertNotIn('select case(trim(group_name))', self.text)
 
 
+class TestGroupDispatchUnknownGroupError(unittest.TestCase):
+    """When the host carries ``group_name`` in its control table the
+    suite cap dispatches via ``select case(trim(group_name))``.  Every
+    such dispatch MUST end with a ``case default`` that sets errflg=1
+    and writes a message naming the unknown group — caller asking for a
+    group this suite doesn't define is a runtime error, not a silent
+    fall-through.
+    """
+
+    def setUp(self):
+        sr, store = _resolve()
+        self.text = '\n'.join(
+            _generate_suite_cap('test_simple', sr, store, _load_full_host_dict())
+        )
+
+    def _phase_block(self, phase):
+        sub = 'subroutine test_simple_physics_{}'.format(phase)
+        start = self.text.index(sub)
+        end   = self.text.index('end subroutine test_simple_physics_{}'.format(phase), start)
+        return self.text[start:end]
+
+    def test_run_dispatch_has_case_default(self):
+        block = self._phase_block('run')
+        # control_full.meta names the group_name local as grp_name; assert
+        # against the local name rather than the standard name.
+        self.assertIn('select case(trim(grp_name))', block)
+        self.assertIn('case default', block)
+        # errflg must be set non-zero in the default branch.
+        self.assertRegex(block, r'case default[^!]*?errflg = 1')
+
+    def test_default_message_names_unknown_group(self):
+        block = self._phase_block('run')
+        self.assertIn(
+            "test_simple_physics_run: unknown group: ' // trim(grp_name)",
+            block,
+        )
+
+    def test_default_branch_returns(self):
+        """The default branch must ``return`` after setting errflg —
+        otherwise execution falls out of the select and into any code
+        that follows the dispatch (state transitions, etc.)."""
+        block = self._phase_block('run')
+        # Find the case-default section.
+        case_idx = block.index('case default')
+        end_idx  = block.index('end select', case_idx)
+        default_block = block[case_idx:end_idx]
+        self.assertIn('return', default_block)
+
+    def test_all_phases_have_default_case(self):
+        for phase in ('init', 'timestep_init', 'run', 'timestep_final', 'final'):
+            block = self._phase_block(phase)
+            self.assertIn('case default', block,
+                          "phase '{}' missing case default".format(phase))
+
+
 class TestWriteSuiteCap(unittest.TestCase):
 
     def test_writes_file(self):

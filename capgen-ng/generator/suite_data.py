@@ -2,10 +2,11 @@
 
 """Generate the suite data module ``ccpp_<suite>_data.F90``."""
 
+import logging
 import os
 from typing import Dict, List, Optional
 
-from metadata.parse_tools import CCPPError
+from metadata.parse_tools import CCPPError, open_if_changed
 from generator.suite_resolver import SuiteVar
 
 _INDENT = '  '
@@ -377,6 +378,7 @@ def write_suite_data(
     output_root: str,
     host_dict=None,
     ddt_module_map: Optional[Dict[str, str]] = None,
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """Write ``ccpp_<suite>_data.F90`` to *output_root*."""
     os.makedirs(output_root, exist_ok=True)
@@ -384,7 +386,7 @@ def write_suite_data(
     out_path  = os.path.join(output_root, filename)
     lines = _generate_suite_data(suite_name, suite_vars, host_dict,
                                  ddt_module_map=ddt_module_map)
-    with open(out_path, 'w', encoding='utf-8') as fh:
+    with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path
 
@@ -435,12 +437,13 @@ def write_suite_meta(
     suite_name: str,
     suite_vars: Dict[str, SuiteVar],
     output_root: str,
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """Write ``ccpp_<suite>.meta`` to *output_root* and return its path."""
     os.makedirs(output_root, exist_ok=True)
     filename = 'ccpp_{}.meta'.format(suite_name)
     out_path  = os.path.join(output_root, filename)
     lines = _generate_suite_meta(suite_name, suite_vars)
-    with open(out_path, 'w', encoding='utf-8') as fh:
+    with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path

@@ -24,6 +24,7 @@ from generator.suite_resolver import (
     _apply_transform_formula,
     _build_call_subscript,
     _build_merged_subscript,
+    _resolve_single_bound,
     _substitute_instance_idx,
     _translate_active_expr,
     _root_symbol,
@@ -454,6 +455,73 @@ _HOST_SLICE_SRC = _HOST_DICT_SRC + '''[ index_qv ]
   type = integer
   protected = True
 '''
+
+
+class TestResolveSingleBoundSubstitutesScalarIdx(unittest.TestCase):
+    """``_resolve_single_bound`` returns the host entry's access path
+    for a DDT-component dim bound.  The access path may carry baked-in
+    registered scalar-index placeholders (``(instance_number)``,
+    ``(thread_number)``) — those MUST be resolved to the host's local
+    Fortran names before the bound is spliced into a generated cap
+    subscript.  Otherwise the cap leaks the std-name placeholder
+    verbatim and the Fortran compiler rejects it as "no IMPLICIT
+    type".  Regression for the SCM phys_ps cap bug where
+    ``physics%Interstitial(thread_number)%nvdiff`` appeared inside the
+    ``vdftra`` slice expression."""
+
+    def _build_dict(self):
+        from metadata.metadata_table import _parse_lines
+        from metadata.variable_resolver import build_flat_host_dict
+        ddt_src = (
+            "[ccpp-table-properties]\n  name = GFS_interstitial_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = GFS_interstitial_type\n  type = ddt\n"
+            "[ nvdiff ]\n  standard_name = number_of_vertical_diffusion_tracers\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+            "\n"
+            "[ccpp-table-properties]\n  name = scm_phys_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = scm_phys_type\n  type = ddt\n"
+            "[ Interstitial ]\n  standard_name = GFS_interstitial_type_instance\n"
+            "  units = DDT\n  dimensions = (number_of_threads)\n"
+            "  type = GFS_interstitial_type\n"
+        )
+        host_src = (
+            "[ccpp-table-properties]\n  name = scm_type_defs\n  type = host\n"
+            "[ccpp-arg-table]\n  name = scm_type_defs\n  type = host\n"
+            "[ physics ]\n  standard_name = scm_physics_type_instance\n"
+            "  units = DDT\n  dimensions = ()\n  type = scm_phys_type\n"
+        )
+        ctrl_src = (
+            "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
+            "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
+            "[ mythread ]\n  standard_name = thread_number\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+        )
+        return build_flat_host_dict(
+            _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
+            _parse_lines(ctrl_src.splitlines(keepends=True), 'ctrl.meta'),
+            _parse_lines(ddt_src.splitlines(keepends=True), 'ddt.meta'),
+        )
+
+    def test_thread_number_placeholder_substituted_to_host_local(self):
+        hd = self._build_dict()
+        # Pre-condition: the baked access path carries the std-name
+        # placeholder (``thread_number``), not yet ``mythread``.
+        self.assertEqual(
+            hd['number_of_vertical_diffusion_tracers'].access_path,
+            'physics%Interstitial(thread_number)%nvdiff',
+        )
+        used = set()
+        resolved = _resolve_single_bound(
+            'number_of_vertical_diffusion_tracers', hd, used,
+        )
+        # The substitution must fire: ``thread_number`` → host local
+        # ``mythread``.  Without it the cap leaks the std-name placeholder.
+        self.assertEqual(
+            resolved, 'physics%Interstitial(mythread)%nvdiff',
+        )
+        self.assertNotIn('thread_number', resolved)
+        # The bound std name is recorded in *used* for USE-list tracking.
+        self.assertIn('number_of_vertical_diffusion_tracers', used)
 
 
 class TestBuildMergedSubscript(unittest.TestCase):
@@ -1196,6 +1264,212 @@ class TestResolveSuite(unittest.TestCase):
         ctrl = [a for a in calls[0].args if a.source == 'control']
         for c in ctrl:
             self.assertIsNone(c.module_name)
+
+
+class TestResolveSuiteLoopContextVariables(unittest.TestCase):
+    """``ccpp_loop_counter`` and ``ccpp_loop_extent`` are loop-context
+    control variables scoped to the body of a ``<subcycle>`` block.
+    Scheme args declaring them MUST resolve against the generated
+    do-loop locals when inside a subcycle, and raise a clear error
+    when outside.  Regression for the SCM GFS_surface_loop_control
+    failure where the resolver bailed with the generic 'not provided
+    by host' message."""
+
+    def _build_suite_from_xml(self, xml_src: str):
+        import tempfile, os
+        from generator.suite_xml import parse_suite_xml
+        from metadata.parse_tools import init_log
+        log = init_log('test_loop_ctx')
+        with tempfile.TemporaryDirectory() as tdir:
+            path = os.path.join(tdir, 's.xml')
+            with open(path, 'w') as fh:
+                fh.write(xml_src)
+            return parse_suite_xml(path, output_root=tdir, logger=log)
+
+    _LOOP_SCHEME_SRC = '''
+[ccpp-table-properties]
+  name = loop_scheme
+  type = scheme
+[ccpp-arg-table]
+  name = loop_scheme_run
+  type = scheme
+[ iter ]
+  standard_name = ccpp_loop_counter
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[ niter ]
+  standard_name = ccpp_loop_extent
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
+
+    def _store(self):
+        from metadata.variable_resolver import SchemeStore
+        return SchemeStore.build_from(
+            _parse(self._LOOP_SCHEME_SRC, 'loop_scheme.meta')
+        )
+
+    def _args_by_name(self, sr):
+        calls = list(iter_phase_calls(sr.groups[0].phase_calls['run']))
+        return {a.scheme_local_name: a for a in calls[0].args}
+
+    def test_counter_inside_subcycle_resolves_to_loop_local(self):
+        xml = (
+            "<?xml version='1.0' encoding='UTF-8'?>\n"
+            "<suite name='loop_simple' version='2.0'>\n"
+            "  <group name='physics'>\n"
+            "    <subcycle loop='3'>\n"
+            "      <scheme>loop_scheme</scheme>\n"
+            "    </subcycle>\n"
+            "  </group>\n"
+            "</suite>\n"
+        )
+        sr = resolve_suite(self._build_suite_from_xml(xml),
+                           self._store(), _load_full_host_dict())
+        args = self._args_by_name(sr)
+        self.assertEqual(args['iter'].standard_name, 'ccpp_loop_counter')
+        self.assertEqual(args['iter'].call_expr, 'ccpp_loop_counter')
+        self.assertEqual(args['iter'].source, 'control')
+
+    def test_extent_integer_literal(self):
+        xml = (
+            "<?xml version='1.0' encoding='UTF-8'?>\n"
+            "<suite name='loop_extent' version='2.0'>\n"
+            "  <group name='physics'>\n"
+            "    <subcycle loop='3'>\n"
+            "      <scheme>loop_scheme</scheme>\n"
+            "    </subcycle>\n"
+            "  </group>\n"
+            "</suite>\n"
+        )
+        sr = resolve_suite(self._build_suite_from_xml(xml),
+                           self._store(), _load_full_host_dict())
+        args = self._args_by_name(sr)
+        # ``loop=3`` is a literal — extent resolves to the same literal.
+        self.assertEqual(args['niter'].call_expr, '3')
+
+    def test_extent_std_name_resolves_to_host_local(self):
+        """``loop=<std_name>`` (e.g. host control var ``num_subcycles_for_test``
+        with local name ``n_sub``) must resolve ccpp_loop_extent to the
+        host's local Fortran name."""
+        from metadata.metadata_table import parse_metadata_file
+        from metadata.variable_resolver import build_flat_host_dict
+        host_tbls = parse_metadata_file(_sf('host_full.meta'))
+        ctrl_tbls = parse_metadata_file(_sf('control_full.meta'))
+        extra_tbls = parse_metadata_file(_sf('host_subcycle_stdname.meta'))
+        hd = build_flat_host_dict(host_tbls + extra_tbls, ctrl_tbls, [])
+        xml = (
+            "<?xml version='1.0' encoding='UTF-8'?>\n"
+            "<suite name='loop_named' version='2.0'>\n"
+            "  <group name='physics'>\n"
+            "    <subcycle loop='num_subcycles_for_test'>\n"
+            "      <scheme>loop_scheme</scheme>\n"
+            "    </subcycle>\n"
+            "  </group>\n"
+            "</suite>\n"
+        )
+        sr = resolve_suite(self._build_suite_from_xml(xml),
+                           self._store(), hd)
+        args = self._args_by_name(sr)
+        self.assertEqual(args['niter'].call_expr, 'n_sub')
+
+    def test_outside_subcycle_raises_clear_error(self):
+        xml = (
+            "<?xml version='1.0' encoding='UTF-8'?>\n"
+            "<suite name='no_subcycle' version='2.0'>\n"
+            "  <group name='physics'>\n"
+            "    <scheme>loop_scheme</scheme>\n"
+            "  </group>\n"
+            "</suite>\n"
+        )
+        with self.assertRaises(CCPPError) as ctx:
+            resolve_suite(self._build_suite_from_xml(xml),
+                          self._store(), _load_full_host_dict())
+        msg = str(ctx.exception)
+        # Names the scheme + the offending std_name + the SDF remediation.
+        self.assertIn('loop_scheme', msg)
+        self.assertIn('ccpp_loop_counter', msg)
+        self.assertIn('<subcycle', msg)
+
+
+class TestResolveSuiteMissingSchemeFailsLoudly(unittest.TestCase):
+    """An SDF that references a scheme whose ``.meta`` was not passed
+    via ``--scheme-files`` MUST raise ``CCPPError`` at resolve time,
+    listing every missing scheme.  Regression for the silent-empty-cap
+    bug: capgen-ng would otherwise emit a syntactically valid but
+    semantically empty group cap and the build would succeed with the
+    wrong runtime behaviour."""
+
+    def _build_suite_from_xml(self, xml_src: str):
+        """Parse a suite XML string and return the resulting Suite."""
+        import tempfile, os
+        from generator.suite_xml import parse_suite_xml
+        from metadata.parse_tools import init_log
+        log = init_log('test_missing_scheme')
+        with tempfile.TemporaryDirectory() as tdir:
+            path = os.path.join(tdir, 'suite_missing.xml')
+            with open(path, 'w') as fh:
+                fh.write(xml_src)
+            return parse_suite_xml(path, output_root=tdir, logger=log)
+
+    def test_unknown_scheme_in_group_raises(self):
+        hd = _load_full_host_dict()
+        store = _load_scheme_store()  # has temp_calc_adjust only
+        xml_src = (
+            "<?xml version='1.0' encoding='UTF-8'?>\n"
+            "<suite name='bad_suite' version='2.0'>\n"
+            "  <group name='physics'>\n"
+            "    <scheme>temp_calc_adjust</scheme>\n"
+            "    <scheme>not_a_real_scheme</scheme>\n"
+            "    <scheme>also_missing</scheme>\n"
+            "  </group>\n"
+            "</suite>\n"
+        )
+        suite = self._build_suite_from_xml(xml_src)
+        with self.assertRaises(CCPPError) as ctx:
+            resolve_suite(suite, store, hd)
+        msg = str(ctx.exception)
+        # Names every missing scheme.
+        self.assertIn('not_a_real_scheme', msg)
+        self.assertIn('also_missing', msg)
+        # Names the suite for context.
+        self.assertIn('bad_suite', msg)
+        # Points the user at --scheme-files (or the CMake equivalent).
+        self.assertIn('--scheme-files', msg)
+
+    def test_unknown_scheme_in_suite_init_raises(self):
+        hd = _load_full_host_dict()
+        store = _load_scheme_store()
+        xml_src = (
+            "<?xml version='1.0' encoding='UTF-8'?>\n"
+            "<suite name='bad_init_suite' version='2.0'>\n"
+            "  <init>nowhere_to_find_me</init>\n"
+            "  <group name='physics'>\n"
+            "    <scheme>temp_calc_adjust</scheme>\n"
+            "  </group>\n"
+            "</suite>\n"
+        )
+        suite = self._build_suite_from_xml(xml_src)
+        with self.assertRaises(CCPPError) as ctx:
+            resolve_suite(suite, store, hd)
+        self.assertIn('nowhere_to_find_me', str(ctx.exception))
 
 
 class TestDedupSchemeNames(unittest.TestCase):

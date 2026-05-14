@@ -8,6 +8,7 @@ at the text/XML level.
 
 import os
 import tempfile
+import time
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -1301,6 +1302,102 @@ class TestUnusedSchemeDependenciesFiltered(unittest.TestCase):
         names = [os.path.basename(p) for p in self._scheme_files]
         self.assertNotIn('unused_scheme.F90', names)
         self.assertNotIn('unused_scheme.f90', names)
+
+
+class TestRegenerationIsNoopWhenContentUnchanged(unittest.TestCase):
+    """Running capgen twice with the same inputs must leave every
+    generated file's mtime untouched on the second invocation.  This is
+    what ccpp-prebuild and original ccpp-capgen did so CMake / Make /
+    Ninja do NOT rebuild dependents on a no-op regeneration.  The
+    generator stages each file via a sibling temp under the output root
+    and only replaces the target when content actually differs.
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.mkdtemp()
+        _run_simple(self._tmpdir)
+        self._first_run_files = sorted(
+            f for f in os.listdir(self._tmpdir) if not f.startswith('.')
+        )
+        # Capture mtimes after the first run, then back-date everything
+        # by an hour so any rewrite is detectable as a bumped mtime.
+        self._old_mtimes = {}
+        old = time.time() - 3600
+        for name in self._first_run_files:
+            path = os.path.join(self._tmpdir, name)
+            os.utime(path, (old, old))
+            self._old_mtimes[name] = os.path.getmtime(path)
+        # Second run with identical inputs.
+        _run_simple(self._tmpdir)
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self._tmpdir)
+
+    def test_no_generated_file_was_rewritten(self):
+        unchanged = []
+        rewritten = []
+        for name, old in self._old_mtimes.items():
+            path = os.path.join(self._tmpdir, name)
+            new = os.path.getmtime(path)
+            if new == old:
+                unchanged.append(name)
+            else:
+                rewritten.append((name, old, new))
+        self.assertEqual(
+            rewritten, [],
+            "files rewritten on no-op regeneration: {}".format(rewritten),
+        )
+        # Sanity check: we did see at least one file on disk to compare.
+        self.assertTrue(unchanged)
+
+    def test_no_temp_artifacts_remain(self):
+        """The staging temp files (``.capgen_tmp_*``) must be cleaned up
+        after each run; none may survive into the next build step."""
+        leftovers = [
+            f for f in os.listdir(self._tmpdir)
+            if f.startswith('.capgen_tmp_')
+        ]
+        self.assertEqual(leftovers, [])
+
+
+class TestRegenerationRewritesWhenContentChanges(unittest.TestCase):
+    """Negative of the above: when the inputs change between runs, the
+    affected generated files MUST be rewritten (bumped mtime).
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.mkdtemp()
+        _run_simple(self._tmpdir)
+        old = time.time() - 3600
+        for name in os.listdir(self._tmpdir):
+            if name.startswith('.'):
+                continue
+            path = os.path.join(self._tmpdir, name)
+            os.utime(path, (old, old))
+        # Second run picks a different SDF — exercises every cap file.
+        _run_simple(self._tmpdir, suite_xml='suite_test_subcycle.xml')
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self._tmpdir)
+
+    def test_at_least_one_cap_was_rewritten(self):
+        """The subcycle suite differs from the simple suite — some cap
+        files MUST have a fresh mtime."""
+        now = time.time()
+        any_recent = False
+        for name in os.listdir(self._tmpdir):
+            if name.startswith('.'):
+                continue
+            path = os.path.join(self._tmpdir, name)
+            if os.path.getmtime(path) > now - 60:
+                any_recent = True
+                break
+        self.assertTrue(
+            any_recent,
+            "no cap file was rewritten when the suite changed",
+        )
 
 
 class TestDdtDependenciesInSchemeMetaPreserved(unittest.TestCase):

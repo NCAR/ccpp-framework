@@ -67,11 +67,14 @@ class TestEnableDisable(_LegacyModeFixture):
         legacy_compat.enable(_stream=sink)
         self.assertTrue(legacy_compat.is_enabled())
         out = sink.getvalue()
-        # Bold banner: starred border, the deprecated name, and the
-        # canonical replacement all appear.
+        # Bold banner: starred border, the deprecated names, and the
+        # canonical replacements all appear.
         self.assertIn('LEGACY-MODE ENABLED', out)
         self.assertIn('horizontal_loop_extent', out)
         self.assertIn('horizontal_dimension', out)
+        # Banner also enumerates the number_of_openmp_threads pair.
+        self.assertIn('number_of_openmp_threads', out)
+        self.assertIn('number_of_threads', out)
         self.assertIn('TRANSIENT', out)
         self.assertIn('REMOVED', out)
         self.assertGreaterEqual(out.count('*' * 10), 2)
@@ -105,7 +108,9 @@ class TestEnableDisable(_LegacyModeFixture):
             legacy_compat.enable(logger=logger, _stream=io.StringIO())
             self.assertEqual(len(records), 1)
             self.assertEqual(records[0].levelno, logging.WARNING)
-            self.assertIn('horizontal_loop_extent', records[0].getMessage())
+            msg = records[0].getMessage()
+            self.assertIn('horizontal_loop_extent', msg)
+            self.assertIn('number_of_openmp_threads', msg)
         finally:
             logger.removeHandler(handler)
 
@@ -121,6 +126,17 @@ class TestTranslateOn(_LegacyModeFixture):
         self.assertEqual(
             legacy_compat.translate('horizontal_loop_extent'),
             'horizontal_dimension',
+        )
+
+    def test_number_of_openmp_threads_rewritten(self):
+        """Legacy CCPP-physics hosts (and SCM 17p8) size per-thread DDT
+        containers by ``number_of_openmp_threads``.  The capgen-ng
+        convention is ``number_of_threads`` (matching the
+        ``thread_number`` control variable name).  Legacy mode rewrites
+        both as a standard_name attribute AND as a dimension token."""
+        self.assertEqual(
+            legacy_compat.translate('number_of_openmp_threads'),
+            'number_of_threads',
         )
 
     def test_unknown_name_passes_through(self):

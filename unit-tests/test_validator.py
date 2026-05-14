@@ -109,6 +109,33 @@ class TestJoinContinuation(unittest.TestCase):
         for tok in ('foo', 'bar', 'baz'):
             self.assertIn(tok, result[0])
 
+    def test_sfc_sice_style_missing_trailing_ampersand(self):
+        """Fixed-form continuation where the second-to-last line has NO
+        trailing ``&`` but the next line has a column-6 ``&`` is a
+        valid F77 continuation.  CCPP physics has this in the wild
+        (``SFC_Models/SeaIce/CICE/sfc_sice.f::sfc_sice_run``).  Without
+        look-ahead at the next line's column-6 marker the parser ends
+        the logical line one step early and the closing ``)`` lands on
+        its own — args list never closes, signature regex captures 0
+        args, validator reports a bogus arg-count mismatch."""
+        src_lines = [
+            '      subroutine sfc_sice_run                                           &\n',
+            '     &     ( im, kice, ps, t1,                                          &\n',
+            '     &       errmsg, errflg\n',          # NO trailing ``&``
+            '     &     )\n',                          # column-6 ``&`` only
+        ]
+        result = _join_continuation(src_lines)
+        self.assertEqual(len(result), 1)
+        # Closing ``)`` must be present in the joined line.
+        self.assertIn(')', result[0])
+        # And no stray leading ``&`` remained in the joined output.
+        import re as _re
+        self.assertIsNotNone(
+            _re.search(r'subroutine\s+sfc_sice_run\s*\([^)]*\)', result[0]),
+            'joined signature lacks ``subroutine NAME (args)`` shape — got: {!r}'
+            .format(result[0]),
+        )
+
     def test_rrtmg_style_signature_round_trip(self):
         # The real-world failure mode that motivated the fix: a
         # fixed-form subroutine signature with 57 args spread across

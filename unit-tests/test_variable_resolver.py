@@ -173,13 +173,28 @@ class TestIsKnownDdt(unittest.TestCase):
 
 class TestInstanceSubscript(unittest.TestCase):
 
-    def test_instance_dimension(self):
-        v = _make_ddt_instance_var('gs', 'gst', 'gs_type', '(instance_dimension)')
-        self.assertEqual(_instance_subscript(v), '(instance_number)')
-
     def test_number_of_instances(self):
         v = _make_ddt_instance_var('gs', 'gst', 'gs_type', '(number_of_instances)')
         self.assertEqual(_instance_subscript(v), '(instance_number)')
+
+    def test_number_of_threads(self):
+        """Registered scalar-index dim 'number_of_threads' pairs with
+        the host's 'thread_number' control variable.  Regression for
+        the per-thread DDT-container pattern (e.g. SCM's
+        physics%Interstitial(thread_number))."""
+        v = _make_ddt_instance_var('inst', 'inst_std', 'gs_type',
+                                   '(number_of_threads)')
+        self.assertEqual(_instance_subscript(v), '(thread_number)')
+
+    def test_multiple_registered_dims(self):
+        """A DDT instance with two registered scalar-index dims emits
+        both index placeholders in declared order."""
+        v = _make_ddt_instance_var('foo', 'foo_std', 'foo_type',
+                                   '(number_of_instances, number_of_threads)')
+        self.assertEqual(
+            _instance_subscript(v),
+            '(instance_number, thread_number)',
+        )
 
     def test_scalar_no_subscript(self):
         v = _make_ddt_instance_var('gs', 'gst', 'gs_type', '()')
@@ -329,6 +344,82 @@ class TestBuildDdtModuleMap(unittest.TestCase):
 
     def test_empty(self):
         self.assertEqual(build_ddt_module_map([]), {})
+
+    # ---- Precedence cases for the DDT module map ------------------------
+    # Truth table (see build_ddt_module_map docstring):
+    #
+    #   DDT.module_name   | co-located resolved | Result
+    #   ------------------|---------------------|--------
+    #   X (set)           | Y (any)             | X     (DDT wins)
+    #   unset             | Y (any)             | Y
+    #   X (set)           | (no co-located tbl) | X
+    #   unset             | (no co-located tbl) | (skipped)
+    #
+    # The "co-located resolved" column is itself the same
+    # ``module_name or table_name`` rule used by build_flat_host_dict.
+
+    def test_explicit_module_name_used_when_no_colocated_table(self):
+        """Real-world fixture: CCPP-physics ``radsw_param.meta`` declares
+        ``cmpfsw_type`` in a file containing only DDT tables, where the
+        Fortran module name differs from any table name and is supplied
+        via ``module_name = …`` in ``[ccpp-table-properties]``.  Without
+        this resolution path the suite_types emitter can't find the
+        module and raises CCPPError on pointer-wrapper generation."""
+        ctx = _ctx()
+        tbl = MetadataTable('cmpfsw_type', 'ddt', 'radsw_param.meta', ctx)
+        tbl.module_name = 'module_radsw_parameters'
+        self.assertEqual(
+            build_ddt_module_map([tbl]),
+            {'cmpfsw_type': 'module_radsw_parameters'},
+        )
+
+    def test_ddt_module_name_overrides_colocated_table_name(self):
+        """``module_name`` on a DDT table beats the implicit co-located
+        scheme/host name — the DDT may genuinely live in a different
+        Fortran module than the scheme its .meta is paired with."""
+        ctx = _ctx()
+        ddt = MetadataTable('cmpfsw_type', 'ddt', 'rad.meta', ctx)
+        ddt.module_name = 'module_radsw_parameters'
+        sch = MetadataTable('radsw_main', 'scheme', 'rad.meta', ctx)
+        result = build_ddt_module_map([ddt, sch])
+        self.assertEqual(result['cmpfsw_type'], 'module_radsw_parameters')
+
+    def test_ddt_module_name_wins_over_colocated_module_name(self):
+        """Both the DDT and a co-located scheme declare module_name; the
+        DDT's takes precedence (most-specific-wins).  Documents the
+        truth-table row "X / Y / X"."""
+        ctx = _ctx()
+        ddt = MetadataTable('cmpfsw_type', 'ddt', 'rad.meta', ctx)
+        ddt.module_name = 'module_radsw_parameters'
+        sch = MetadataTable('radsw_main', 'scheme', 'rad.meta', ctx)
+        sch.module_name = 'mod_radsw_main'
+        result = build_ddt_module_map([ddt, sch])
+        self.assertEqual(result['cmpfsw_type'], 'module_radsw_parameters')
+
+    def test_colocated_module_name_used_when_ddt_has_none(self):
+        """When the DDT has no ``module_name`` but the co-located
+        scheme/host carries one, the co-located ``module_name``
+        (NOT its table name) wins.  Documents "unset / Y / Y" where
+        Y comes from the co-located override.  This is the bug we
+        fixed when refactoring build_ddt_module_map — the old code
+        used the co-located table_name and silently ignored its
+        own module_name override."""
+        ctx = _ctx()
+        ddt = MetadataTable('inner_t', 'ddt', 'a.meta', ctx)
+        # No DDT override.
+        sch = MetadataTable('scheme_a', 'scheme', 'a.meta', ctx)
+        sch.module_name = 'mod_a'   # Fortran module differs from table name
+        result = build_ddt_module_map([ddt, sch])
+        self.assertEqual(result['inner_t'], 'mod_a')
+
+    def test_colocated_table_name_used_when_neither_has_override(self):
+        """When neither carries module_name, the implicit "module = table
+        name" convention applies to the co-located scheme/host."""
+        ctx = _ctx()
+        ddt = MetadataTable('inner_t', 'ddt', 'a.meta', ctx)
+        sch = MetadataTable('scheme_a', 'scheme', 'a.meta', ctx)
+        result = build_ddt_module_map([ddt, sch])
+        self.assertEqual(result['inner_t'], 'scheme_a')
 
 
 ########################################################################
@@ -752,6 +843,201 @@ _SIMPLE_SCHEME_SRC = '''\
   type = integer
   intent = out
 '''
+
+
+class TestRule2LeafScalarDimRejection(unittest.TestCase):
+    """Rule 2 of the registered-scalar-index-dimension contract (see
+    capgen-ng/metadata/registered_dimensions.py): leaf data variables —
+    intrinsic-typed or external-typed, the kind a scheme binds to —
+    MUST NOT declare a registered scalar-index dim like
+    ``number_of_threads``.  ``build_flat_host_dict`` is the validation
+    site; the error must name the variable, the offending dim, the
+    paired index, and point at the registered_dimensions module.
+    """
+
+    _HOST_SRC = '''
+[ccpp-table-properties]
+  name = host_data
+  type = host
+
+[ccpp-arg-table]
+  name = host_data
+  type = host
+[ leaf_field ]
+  standard_name = bad_leaf
+  long_name = leaf with a registered scalar-index dim — illegal
+  units = K
+  dimensions = (number_of_threads, horizontal_dimension)
+  type = real
+  kind = kind_phys
+'''
+
+    def test_leaf_with_registered_dim_rejected(self):
+        host_tbls = _parse_lines(self._HOST_SRC.splitlines(keepends=True),
+                                 'host_bad.meta')
+        with self.assertRaises(CCPPError) as ctx:
+            build_flat_host_dict(host_tbls, [], [])
+        msg = str(ctx.exception)
+        # Names the offending variable.
+        self.assertIn("'leaf_field'", msg)
+        # Names the offending dim.
+        self.assertIn("'number_of_threads'", msg)
+        # Names the paired index.
+        self.assertIn("'thread_number'", msg)
+        # Points at the source module for further reading.
+        self.assertIn('registered_dimensions.py', msg)
+        # Tells the user how to fix it.
+        self.assertIn('container DDT', msg)
+
+    def test_leaf_with_instances_dim_rejected(self):
+        src = self._HOST_SRC.replace(
+            'number_of_threads, horizontal_dimension',
+            'number_of_instances, horizontal_dimension',
+        )
+        host_tbls = _parse_lines(src.splitlines(keepends=True),
+                                 'host_bad.meta')
+        with self.assertRaises(CCPPError) as ctx:
+            build_flat_host_dict(host_tbls, [], [])
+        msg = str(ctx.exception)
+        self.assertIn("'number_of_instances'", msg)
+        self.assertIn("'instance_number'", msg)
+
+    def test_ddt_instance_with_non_registered_dim_skips_field_flatten(self):
+        """A DDT-instance variable dimensioned by a non-registered dim
+        (e.g. ``horizontal_dimension`` on a per-column DDT array like
+        ``fluxLW(horizontal_dimension)`` of type ``ty_rad_lw``) is a
+        legitimate pattern: schemes take the whole sliced DDT array as
+        a single arg, not individual flattened inner fields.
+
+        capgen-ng must NOT flatten the inner fields in this case —
+        attempting to bake a scalar subscript would emit invalid
+        Fortran like ``parent%var%field(...)``.  Instead, only the
+        DDT-instance's own entry is recorded; schemes that take it
+        whole resolve via that entry, and schemes that ask for inner
+        fields by std_name trip the existing "not found" error.
+
+        Regression for the nested_suite + var_compat end-to-end fixtures
+        which use exactly this pattern.
+        """
+        ddt_src = '''
+[ccpp-table-properties]
+  name = ty_rad_lw
+  type = ddt
+[ccpp-arg-table]
+  name = ty_rad_lw
+  type = ddt
+[ sfc_up_lw ]
+  standard_name = surface_upwelling_longwave_radiation_flux
+  units = W m-2
+  dimensions = ()
+  type = real
+  kind = kind_phys
+'''
+        host_src = '''
+[ccpp-table-properties]
+  name = phys_state
+  type = host
+[ccpp-arg-table]
+  name = phys_state
+  type = host
+[ fluxLW ]
+  standard_name = longwave_radiation_fluxes
+  units = W m-2
+  dimensions = (horizontal_dimension)
+  type = ty_rad_lw
+'''
+        ddt_tbls  = _parse_lines(ddt_src.splitlines(keepends=True),
+                                 'module_rad_ddt.meta')
+        host_tbls = _parse_lines(host_src.splitlines(keepends=True),
+                                 'phys_state.meta')
+        # No exception — the DDT-instance entry alone is enough for
+        # schemes that take the whole sliced DDT as an arg.
+        d = build_flat_host_dict(host_tbls, [], ddt_tbls)
+        self.assertIn('longwave_radiation_fluxes', d)
+        # Inner field is NOT flattened (would have required a scalar
+        # subscript capgen-ng can't synthesize).
+        self.assertNotIn('surface_upwelling_longwave_radiation_flux', d)
+
+    def test_ddt_instance_with_non_registered_dim_no_fields_accepted(self):
+        """An empty DDT (no fields) dimensioned by a non-registered dim
+        should NOT trigger the flatten-time error — there's nothing to
+        flatten, so no broken access pattern is possible.  Real-world
+        case: ``ccpp_constituent_prop_ptr_t(:)`` field on a host's
+        constituent object.  This DDT is accessed via the dedicated
+        constituent resolver, not via field-flattening."""
+        ddt_src = '''
+[ccpp-table-properties]
+  name = empty_ddt
+  type = ddt
+[ccpp-arg-table]
+  name = empty_ddt
+  type = ddt
+'''
+        host_src = '''
+[ccpp-table-properties]
+  name = my_host
+  type = host
+[ccpp-arg-table]
+  name = my_host
+  type = host
+[ payload_arr ]
+  standard_name = some_payload_array
+  units = DDT
+  dimensions = (number_of_ccpp_constituents)
+  type = empty_ddt
+'''
+        ddt_tbls  = _parse_lines(ddt_src.splitlines(keepends=True),
+                                 'empty_ddt.meta')
+        host_tbls = _parse_lines(host_src.splitlines(keepends=True),
+                                 'my_host.meta')
+        # Should not raise.
+        result = build_flat_host_dict(host_tbls, [], ddt_tbls)
+        self.assertIn('some_payload_array', result)
+
+    def test_container_ddt_with_registered_dim_accepted(self):
+        """The same dim on a DDT-instance container variable is fine —
+        Rule 2 only applies to leaves."""
+        src = '''
+[ccpp-table-properties]
+  name = my_ddt
+  type = ddt
+
+[ccpp-arg-table]
+  name = my_ddt
+  type = ddt
+[ field ]
+  standard_name = inner_field
+  units = K
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+'''
+        host_src = '''
+[ccpp-table-properties]
+  name = host_data
+  type = host
+
+[ccpp-arg-table]
+  name = host_data
+  type = host
+[ inst_array ]
+  standard_name = instance_array
+  units = DDT
+  dimensions = (number_of_threads)
+  type = my_ddt
+'''
+        ddt_tbls  = _parse_lines(src.splitlines(keepends=True), 'ddt.meta')
+        host_tbls = _parse_lines(host_src.splitlines(keepends=True),
+                                 'host.meta')
+        # Should not raise — the dim is on a container.
+        result = build_flat_host_dict(host_tbls, [], ddt_tbls)
+        self.assertIn('inner_field', result)
+        # The flattened field's access path carries the (thread_number)
+        # placeholder.
+        self.assertEqual(
+            result['inner_field'].access_path,
+            'inst_array(thread_number)%field',
+        )
 
 
 class TestSchemeStore(unittest.TestCase):

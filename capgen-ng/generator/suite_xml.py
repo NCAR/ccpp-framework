@@ -592,9 +592,11 @@ def parse_suite_xml(
     os.makedirs(output_root, exist_ok=True)
     expanded_name = f"ccpp_{suite.name}_expanded.xml"
     expanded_path = os.path.join(output_root, expanded_name)
+    # write_xml_file logs "Wrote <path>" or "Unchanged: <path>" via
+    # write_if_changed when the logger is provided — no need to duplicate
+    # here.
     write_xml_file(root, expanded_path, log)
     suite.expanded_file = expanded_path
-    log.info("Wrote expanded suite XML: %s", expanded_path)
 
     # ---- re-validate the expanded XML (catches duplicate xs:ID errors) ----
     if not skip_validation:

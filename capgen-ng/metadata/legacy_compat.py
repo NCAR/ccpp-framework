@@ -62,6 +62,14 @@ _LEGACY_NAME_MAP: Dict[str, str] = {
     # ccpp-prebuild / original ccpp-capgen used ``horizontal_loop_extent``
     # in scheme metadata where capgen-ng uses ``horizontal_dimension``.
     'horizontal_loop_extent': 'horizontal_dimension',
+
+    # Legacy CCPP-physics hosts (and SCM 17p8 in particular) sized
+    # per-thread DDT containers by ``number_of_openmp_threads``; the
+    # capgen-ng convention is ``number_of_threads`` (matching the
+    # ``thread_number`` control variable name).  Aliasing here lets the
+    # host metadata flow through unchanged; once hosts have migrated,
+    # drop this entry.
+    'number_of_openmp_threads': 'number_of_threads',
 }
 
 
@@ -96,21 +104,41 @@ def enable(logger=None, _stream: Optional[TextIO] = None) -> None:
     _ENABLED = True
 
     stream = _stream if _stream is not None else sys.stderr
-    banner_lines = [
-        '',
-        '*' * 70,
-        '*** WARNING: LEGACY-MODE ENABLED                                   ***',
-        '***                                                                ***',
-        '*** Scheme metadata using the deprecated standard name             ***',
-        "***   'horizontal_loop_extent'                                     ***",
-        '*** will be silently rewritten to                                  ***',
-        "***   'horizontal_dimension'                                       ***",
-        '*** at parse time.                                                 ***',
-        '***                                                                ***',
-        '*** This is a TRANSIENT migration shim. Update your scheme         ***',
-        '*** metadata to use the canonical name; legacy mode WILL BE        ***',
-        '*** REMOVED in a future capgen-ng release.                         ***',
-        '*' * 70,
+    border_width = 70
+    border = '*' * border_width
+    # Content width between the leading ``*** `` and trailing ` ***``.
+    _content_width = border_width - len('*** ') - len(' ***')
+
+    def _pad(s: str) -> str:
+        """Format *s* as a banner row, left-padded to the border width."""
+        return '*** {:<{w}} ***'.format(s[:_content_width], w=_content_width)
+
+    banner_lines = ['', border, _pad('WARNING: LEGACY-MODE ENABLED'),
+                    _pad('')]
+    if len(_LEGACY_NAME_MAP) == 1:
+        # Singular phrasing reads better when there's only one pair.
+        old, new = next(iter(_LEGACY_NAME_MAP.items()))
+        banner_lines += [
+            _pad('Metadata using the deprecated standard name'),
+            _pad("  '{}'".format(old)),
+            _pad('will be silently rewritten to'),
+            _pad("  '{}'".format(new)),
+            _pad('at parse time.'),
+        ]
+    else:
+        banner_lines += [
+            _pad('Metadata using any of these deprecated standard names'),
+            _pad('will be silently rewritten at parse time:'),
+            _pad(''),
+        ]
+        for old, new in sorted(_LEGACY_NAME_MAP.items()):
+            banner_lines.append(_pad("  '{}'  ->  '{}'".format(old, new)))
+    banner_lines += [
+        _pad(''),
+        _pad('This is a TRANSIENT migration shim. Update your'),
+        _pad('metadata to use the canonical names; legacy mode'),
+        _pad('WILL BE REMOVED in a future capgen-ng release.'),
+        border,
         '',
     ]
     stream.write('\n'.join(banner_lines) + '\n')
@@ -120,10 +148,15 @@ def enable(logger=None, _stream: Optional[TextIO] = None) -> None:
         pass
 
     if logger is not None:
+        pair_str = ', '.join(
+            "'{}' -> '{}'".format(old, new)
+            for old, new in sorted(_LEGACY_NAME_MAP.items())
+        )
         logger.warning(
-            "Legacy mode enabled: 'horizontal_loop_extent' will be "
-            "rewritten to 'horizontal_dimension' in scheme metadata. "
-            "This shim is transient and will be removed."
+            "Legacy mode enabled: the following deprecated standard "
+            "names will be rewritten in metadata at parse time: %s. "
+            "This shim is transient and will be removed.",
+            pair_str,
         )
 
 

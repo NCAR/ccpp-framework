@@ -40,10 +40,11 @@ control table, and excluding them keeps the lists focused on the data the
 host has to read/write to interface with the suite.
 """
 
+import logging
 import os
 from typing import Dict, List, Optional, Set, Tuple
 
-from metadata.parse_tools import CCPPError
+from metadata.parse_tools import CCPPError, open_if_changed
 from metadata.variable_resolver import SchemeStore
 from generator.suite_resolver import (
     ResolvedArg,
@@ -565,6 +566,18 @@ def _physics_subroutine(
                 lines.append('{}    {}{}'.format(i3, carg, sep))
         else:
             lines.append('{}call {}()'.format(i3, cap_sub))
+    # case default: unknown suite name is a runtime error (not silent
+    # fall-through).  Skip emission only when the host doesn't carry the
+    # standard error-reporting control vars — without somewhere to write
+    # the message, there is nothing meaningful to do here.
+    if errflg_local and errmsg_local:
+        lines.append('{}case default'.format(i2))
+        lines.append('{}{} = 1'.format(i3, errflg_local))
+        lines.append(
+            "{}{} = '{}: unknown suite: ' // trim({})".format(
+                i3, errmsg_local, sub_name, suite_name_local,
+            )
+        )
     lines.append('{}end select'.format(i2))
 
     lines.append('')
@@ -949,6 +962,7 @@ def write_static_api(
     output_root: str,
     host_dict=None,
     scheme_store: Optional[SchemeStore] = None,
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """Write ``ccpp_static_api.F90`` to *output_root*.
 
@@ -977,6 +991,6 @@ def write_static_api(
     out_path  = os.path.join(output_root, filename)
 
     lines = _generate_static_api(suite_names, suite_resolutions, host_dict, scheme_store)
-    with open(out_path, 'w', encoding='utf-8') as fh:
+    with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path

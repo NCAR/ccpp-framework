@@ -21,10 +21,11 @@ subroutine calls scheme ``_init`` routines only when ``initialized(inst) == 0``
 and then sets the element to 1.
 """
 
+import logging
 import os
 from typing import Dict, List, Optional, Set, Tuple
 
-from metadata.parse_tools import FORTRAN_CONDITIONAL_REGEX
+from metadata.parse_tools import FORTRAN_CONDITIONAL_REGEX, open_if_changed
 from metadata.variable_resolver import HostVarEntry
 from generator.suite_types import _ptr_type_name, _ptr_type_for_arg
 from generator.suite_resolver import (
@@ -1157,6 +1158,7 @@ def write_group_cap(
     rg: ResolvedGroup,
     host_dict,
     output_root: str,
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """Write the group cap Fortran module to *output_root*.
 
@@ -1181,6 +1183,6 @@ def write_group_cap(
     out_path = os.path.join(output_root, filename)
 
     lines = _generate_group_cap(suite_name, group_name, rg, host_dict)
-    with open(out_path, 'w', encoding='utf-8') as fh:
+    with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path

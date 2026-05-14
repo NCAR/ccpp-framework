@@ -883,8 +883,10 @@ def capgen(
              len(scheme_store.scheme_names()), scheme_store.scheme_names())
 
     # ---- write ccpp_kinds.F90 (always generated) ---------------------------
-    kinds_path = write_ccpp_kinds(kind_types, output_root)
-    log.info("Wrote %s", kinds_path)
+    # Every writer below logs its own "Wrote <path>" / "Unchanged: <path>"
+    # line via the write-if-changed helper when *logger* is threaded
+    # through.  Don't duplicate that log here.
+    kinds_path = write_ccpp_kinds(kind_types, output_root, logger=log)
 
     # ---- parse suite XML files ----------------------------------------------
     suites = parse_suite_xml_files(suite_files, output_root, log)
@@ -902,46 +904,45 @@ def capgen(
 
         # Group caps
         for rg in suite_res.groups:
-            cap_path = write_group_cap(
-                suite.name, rg.group_name, rg, host_dict, output_root
+            write_group_cap(
+                suite.name, rg.group_name, rg, host_dict, output_root,
+                logger=log,
             )
-            log.info("Wrote %s", cap_path)
 
         # Suite data module
-        data_path = write_suite_data(
+        write_suite_data(
             suite.name, suite_res.suite_vars, output_root, host_dict,
-            ddt_module_map=ddt_module_map,
+            ddt_module_map=ddt_module_map, logger=log,
         )
-        log.info("Wrote %s", data_path)
 
         # Suite metadata (for inspection)
-        meta_path = write_suite_meta(suite.name, suite_res.suite_vars, output_root)
-        log.info("Wrote %s", meta_path)
+        write_suite_meta(
+            suite.name, suite_res.suite_vars, output_root, logger=log,
+        )
 
         # Suite types module (only when optional args are present)
-        types_path = write_suite_types(suite.name, suite_res, output_root)
-        if types_path:
-            log.info("Wrote %s", types_path)
+        write_suite_types(
+            suite.name, suite_res, output_root,
+            ddt_module_map=ddt_module_map, logger=log,
+        )
 
         # Suite cap
-        suite_cap_path = write_suite_cap(
-            suite.name, suite_res, scheme_store, output_root, host_dict
+        write_suite_cap(
+            suite.name, suite_res, scheme_store, output_root, host_dict,
+            logger=log,
         )
-        log.info("Wrote %s", suite_cap_path)
 
     # ---- static API (one file for all suites) ------------------------------
-    static_path = write_static_api(
-        suite_names, suite_resolutions, output_root, host_dict, scheme_store
+    write_static_api(
+        suite_names, suite_resolutions, output_root, host_dict, scheme_store,
+        logger=log,
     )
-    log.info("Wrote %s", static_path)
 
     # ---- host-wide constituent module (only when any suite touches
     #      constituent state) ------------------------------------------------
     host_consts_path = write_host_constituents(
-        suite_resolutions, output_root, host_dict=host_dict,
+        suite_resolutions, output_root, host_dict=host_dict, logger=log,
     )
-    if host_consts_path:
-        log.info("Wrote %s", host_consts_path)
 
     # ---- datatable.xml ------------------------------------------------------
     abs_root = os.path.abspath(output_root)
@@ -1056,7 +1057,7 @@ def capgen(
             _seen_scheme_files.add(resolved)
             scheme_file_paths.append(resolved)
 
-    datatable_path = write_datatable(
+    write_datatable(
         suite_resolutions, scheme_store, utility_paths, suite_file_paths,
         output_root, host_file_paths=host_file_paths,
         scheme_file_paths=scheme_file_paths,
@@ -1064,8 +1065,8 @@ def capgen(
         suite_meta_paths=suite_meta_paths,
         expanded_sdf_paths=expanded_sdf_paths,
         host_dict=host_dict, host_name=host_name,
+        logger=log,
     )
-    log.info("Wrote %s", datatable_path)
 
     log.info("Cap generation complete.")
 

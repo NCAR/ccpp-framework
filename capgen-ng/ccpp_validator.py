@@ -158,12 +158,20 @@ def _line_optional_names(line: str) -> List[str]:
 def _join_continuation(lines: List[str]) -> List[str]:
     """Join Fortran continuation lines (ending with ``&``) into single logical lines.
 
-    Handles both free-form (``&`` only at the trailing end of the prior
-    line) and fixed-form / dual-form continuation (``&`` at the trailing
-    end *and* at column 6 of the next line).  In dual-form code the
-    leading ``&`` is part of the continuation marker, not the continued
-    expression — it must be stripped before the next line is appended
-    to the buffer.
+    Handles three continuation conventions seen in real CCPP physics code:
+
+    * **Free-form**: ``&`` only at the trailing end of the prior line.
+    * **Dual-form**: ``&`` at the trailing end of the prior line *and*
+      at column 6 of the next line.  In this case the leading ``&`` is
+      part of the continuation marker, not the continued expression,
+      and is stripped before the next line is appended to the buffer.
+    * **Fixed-form leading-only**: NO trailing ``&`` on the prior line,
+      but a ``&`` (or any non-blank) at column 6 of the next line.  F77
+      / fixed-form Fortran treats this as a continuation; CCPP physics
+      occasionally relies on it (e.g. ``sfc_sice.f``'s ``sfc_sice_run``
+      signature, where the line before the closing ``)`` has no trailing
+      ``&``).  Detected by look-ahead at the next non-blank, non-comment
+      line.
 
     Examples
     --------
@@ -171,29 +179,54 @@ def _join_continuation(lines: List[str]) -> List[str]:
     ['  foo   bar', '  baz']
     >>> _join_continuation(['  foo &\\n', '     &  bar\\n', '  baz\\n'])
     ['  foo  bar', '  baz']
+    >>> _join_continuation(['  foo &\\n', '     &  bar\\n',
+    ...                     '     &   )\\n', '  baz\\n'])
+    ['  foo  bar   )', '  baz']
     """
-    result = []
-    buf = ''
+    # First pass: normalise each line — strip trailing newlines and any
+    # inline ``!`` comment.  Keep blank/comment-only lines as ``''`` so
+    # we can skip them when buffering and still use their position for
+    # look-ahead.
+    norm: List[str] = []
     for raw in lines:
         line = raw.rstrip('\n').rstrip('\r')
-        stripped = _COMMENT_RE.sub('', line)
+        norm.append(_COMMENT_RE.sub('', line))
+
+    def _next_starts_with_lead_cont(start_idx: int) -> bool:
+        """True iff the next non-blank, non-comment line begins with a
+        leading ``&`` (fixed-form column-6 continuation marker)."""
+        j = start_idx + 1
+        while j < len(norm) and not norm[j].strip():
+            j += 1
+        return j < len(norm) and bool(_LEAD_CONT_RE.match(norm[j]))
+
+    result: List[str] = []
+    buf = ''
+    for i, stripped in enumerate(norm):
         if buf and not stripped.strip():
             # Mid-continuation, and this line is blank or a pure
             # comment.  Fortran 90+ permits such lines interleaved
             # between continuation lines without ending the logical
-            # line — skip it and keep accumulating.
+            # line — skip and keep accumulating.
             continue
         if buf:
             # Mid-continuation: drop a leading ``&`` (fixed-form
             # column-6 marker) so it doesn't end up glued into the
             # continued expression.  No-op on free-form code.
             stripped = _LEAD_CONT_RE.sub('', stripped, count=1)
-        if _CONT_RE.search(stripped):
+        has_trailing = bool(_CONT_RE.search(stripped))
+        if has_trailing:
             buf += _CONT_RE.sub('', stripped)
-        else:
+            continue
+        # No trailing ``&`` — but a fixed-form continuation may still
+        # be implied by the next line's column-6 ``&``.  If so, keep
+        # buffering rather than flushing.
+        if _next_starts_with_lead_cont(i):
             buf += stripped
-            result.append(buf)
-            buf = ''
+            continue
+        buf += stripped
+        result.append(buf)
+        buf = ''
     if buf:
         result.append(buf)
     return result

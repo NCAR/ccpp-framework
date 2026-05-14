@@ -557,61 +557,85 @@ class MetaVar:
             )
         self._set_attrs.add(key)
 
-        if key == 'standard_name':
-            # legacy-compat: rewrite deprecated names (e.g.
-            # horizontal_loop_extent → horizontal_dimension) when
-            # legacy mode is enabled.  Applied *after*
-            # check_cf_standard_name (which lowercases) so mixed-case
-            # legacy spellings are captured.  No-op otherwise.
-            self.standard_name = legacy_compat.translate(
-                check_cf_standard_name(value, None, error=True))
-        elif key == 'long_name':
-            self.long_name = value
-        elif key == 'units':
-            self.units = check_units(value, None, error=True)
-        elif key == 'dimensions':
-            self.dimensions = _parse_dimensions(value, context)
-        elif key == 'type':
-            self.type = _check_var_type(value, context)
-        elif key == 'kind':
-            self.kind = value.strip()
-        elif key == 'intent':
-            iv = value.strip().lower()
-            if iv not in VALID_INTENTS:
-                raise CCPPError(
-                    "Invalid intent '{}' for '{}'; must be one of {}, at {}".format(
-                        value, self.local_name, sorted(VALID_INTENTS), context
+        # Wrap the per-attribute validation so any CCPPError raised by a
+        # check_X helper (which only sees the raw value) gets enriched
+        # with the variable name, the attribute name, and the source
+        # location.  Without this, a parse failure like an empty
+        # ``units =`` line surfaces as a bare "'' is not a valid unit"
+        # with no clue which file/line/variable is at fault.
+        try:
+            if key == 'standard_name':
+                # legacy-compat: rewrite deprecated names (e.g.
+                # horizontal_loop_extent → horizontal_dimension) when
+                # legacy mode is enabled.  Applied *after*
+                # check_cf_standard_name (which lowercases) so mixed-case
+                # legacy spellings are captured.  No-op otherwise.
+                self.standard_name = legacy_compat.translate(
+                    check_cf_standard_name(value, None, error=True))
+            elif key == 'long_name':
+                self.long_name = value
+            elif key == 'units':
+                self.units = check_units(value, None, error=True)
+            elif key == 'dimensions':
+                self.dimensions = _parse_dimensions(value, context)
+            elif key == 'type':
+                self.type = _check_var_type(value, context)
+            elif key == 'kind':
+                self.kind = value.strip()
+            elif key == 'intent':
+                iv = value.strip().lower()
+                if iv not in VALID_INTENTS:
+                    raise CCPPError(
+                        "Invalid intent '{}'; must be one of {}".format(
+                            value, sorted(VALID_INTENTS),
+                        )
                     )
+                self.intent = iv
+            elif key == 'optional':
+                self.optional = _parse_bool(value, context)
+            elif key == 'active':
+                # Standard names elsewhere are canonicalised to lowercase by
+                # check_cf_standard_name; an active expression references those
+                # same names, so normalise here too. Fortran is case-insensitive,
+                # so embedded logical operators/literals are unaffected.
+                self.active = value.strip().lower()
+            elif key == 'protected':
+                self.protected = _parse_bool(value, context)
+            elif key == 'allocatable':
+                self.allocatable = _parse_bool(value, context)
+            elif key == 'diagnostic_name':
+                self._diagnostic_name = check_diagnostic_id(
+                    value.strip(), self._prop_snapshot(), error=True
                 )
-            self.intent = iv
-        elif key == 'optional':
-            self.optional = _parse_bool(value, context)
-        elif key == 'active':
-            # Standard names elsewhere are canonicalised to lowercase by
-            # check_cf_standard_name; an active expression references those
-            # same names, so normalise here too. Fortran is case-insensitive,
-            # so embedded logical operators/literals are unaffected.
-            self.active = value.strip().lower()
-        elif key == 'protected':
-            self.protected = _parse_bool(value, context)
-        elif key == 'allocatable':
-            self.allocatable = _parse_bool(value, context)
-        elif key == 'diagnostic_name':
-            self._diagnostic_name = check_diagnostic_id(
-                value.strip(), self._prop_snapshot(), error=True
-            )
-        elif key == 'diagnostic_name_fixed':
-            self.diagnostic_name_fixed = check_diagnostic_fixed(
-                value.strip(), self._prop_snapshot(), error=True
-            )
-        elif key == 'constituent':
-            self.constituent = _parse_bool(value, context)
-        elif key == 'advected':
-            self.advected = _parse_bool(value, context)
-        elif key == 'molar_mass':
-            self.molar_mass = check_molar_mass(value.strip(), None, error=True)
-        elif key == 'top_at_one':
-            self.top_at_one = _parse_bool(value, context)
+            elif key == 'diagnostic_name_fixed':
+                self.diagnostic_name_fixed = check_diagnostic_fixed(
+                    value.strip(), self._prop_snapshot(), error=True
+                )
+            elif key == 'constituent':
+                self.constituent = _parse_bool(value, context)
+            elif key == 'advected':
+                self.advected = _parse_bool(value, context)
+            elif key == 'molar_mass':
+                self.molar_mass = check_molar_mass(value.strip(), None, error=True)
+            elif key == 'top_at_one':
+                self.top_at_one = _parse_bool(value, context)
+        except CCPPError as exc:
+            # Avoid double-wrapping if the inner check already carried
+            # the location (some helpers do; most don't).
+            inner = str(exc)
+            location = str(context)
+            if location and location in inner:
+                raise
+            raise CCPPError(
+                "Invalid metadata for variable '{name}', attribute "
+                "'{key}' = '{value}', at {ctx}:\n  {inner}".format(
+                    name=self.local_name or '<unknown>',
+                    key=key,
+                    value=value,
+                    ctx=context,
+                    inner=inner,
+                )
+            ) from exc
 
     # ------------------------------------------------------------------
     @property

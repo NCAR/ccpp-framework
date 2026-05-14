@@ -109,10 +109,13 @@ scheme children by tag rather than filtering on specific names, so this is
 forward-compatible.
 """
 
+import io
+import logging
 import os
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Set, Tuple
 
+from metadata.parse_tools import write_if_changed
 from generator.suite_resolver import SuiteResolution, iter_phase_calls
 
 _API_DICT_NAME = 'ccpp_api'
@@ -382,6 +385,7 @@ def write_datatable(
     expanded_sdf_paths: Optional[List[str]] = None,
     host_dict=None,
     host_name: str = 'host',
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """Write ``datatable.xml`` and return its absolute path.
 
@@ -462,10 +466,18 @@ def write_datatable(
     tree = ET.ElementTree(root)
     ET.indent(tree, space='  ')
     out_path = os.path.join(os.path.abspath(output_root), 'datatable.xml')
-    tree.write(out_path, encoding='unicode', xml_declaration=True)
 
-    # Ensure file ends with a newline.
-    with open(out_path, 'a') as fh:
-        fh.write('\n')
+    # Serialise to a string buffer instead of writing directly, then route
+    # through write_if_changed so unchanged datatables don't get a fresh
+    # mtime (preserves CMake/Make's no-rebuild behaviour).
+    buf = io.StringIO()
+    tree.write(buf, encoding='unicode', xml_declaration=True)
+    content = buf.getvalue()
+    # ElementTree's text serialiser omits the trailing newline; add one
+    # for POSIX-text-file convention so the comparison is stable across
+    # editors that auto-append a newline.
+    if not content.endswith('\n'):
+        content += '\n'
+    write_if_changed(out_path, content, logger=logger)
 
     return out_path

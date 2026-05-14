@@ -19,9 +19,11 @@ The static API (``ccpp_static_api.F90``) dispatches by ``suite_name`` to
 these subroutines.
 """
 
+import logging
 import os
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
+from metadata.parse_tools import open_if_changed
 from metadata.variable_resolver import HostVarEntry, SchemeStore
 from generator.suite_resolver import (
     ResolvedArg,
@@ -828,6 +830,21 @@ def _physics_dispatch_lines(
         for rg in suite_res.groups:
             lines.append("{}case('{}')".format(i2, rg.group_name))
             _emit_group_call(rg, i3)
+        # case default: anything other than '', 'all', or a known group
+        # is a runtime error — caller asked for a group this suite
+        # doesn't define.  Without ccpp_error_code/_message in the host
+        # control table there's nowhere to write the message, so skip
+        # emission rather than silently swallow.
+        if errflg_local and errmsg_local:
+            sub_label = '{}_physics_{}'.format(suite_name, phase)
+            lines.append('{}case default'.format(i2))
+            lines.append('{}{} = 1'.format(i3, errflg_local))
+            lines.append(
+                "{}{} = '{}: unknown group: ' // trim({})".format(
+                    i3, errmsg_local, sub_label, grp_local,
+                )
+            )
+            lines.append('{}return'.format(i3))
         lines.append('{}end select'.format(i2))
     else:
         # No group_name control var: call all groups unconditionally.
@@ -1028,6 +1045,7 @@ def write_suite_cap(
     scheme_store: SchemeStore,
     output_root: str,
     host_dict=None,
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """Write ``ccpp_<suite>_cap.F90`` to *output_root*.
 
@@ -1051,6 +1069,6 @@ def write_suite_cap(
     out_path  = os.path.join(output_root, filename)
 
     lines = _generate_suite_cap(suite_name, suite_res, scheme_store, host_dict)
-    with open(out_path, 'w', encoding='utf-8') as fh:
+    with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path
