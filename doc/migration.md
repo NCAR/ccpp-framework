@@ -6,7 +6,7 @@ Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
 **capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
-*Last revised: 2026-05-13 (late evening).*  Current unit-test suite: 1208 passing.
+*Last revised: 2026-05-14.*  Current unit-test suite: 1220 passing.
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
 `capgen-ng/` (top-level of this repo).  Unit tests live at the top
@@ -518,7 +518,7 @@ Always generated:
 - `ccpp_<suite>_<group>_cap.F90` — per-group phase implementations.
 - `ccpp_<suite>_data.F90` — suite-owned interstitial DDT + module-level array.
 - `ccpp_<suite>_types.F90` — pointer-wrapper types for optional args.
-- `ccpp_<suite>.meta` — inspection artifact; matches the generated cap.
+- `ccpp_<suite>_data.meta` — inspection artifact; pairs with `ccpp_<suite>_data.F90` (`.meta` ↔ `.F90` filename convention).
 - `datatable.xml` — build-system + host-introspection metadata.
 
 When any scheme registers constituents:

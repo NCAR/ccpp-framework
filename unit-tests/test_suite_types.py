@@ -7,11 +7,14 @@ end-to-end ``_generate_suite_types`` output structure.
 
 import unittest
 
+from types import SimpleNamespace
+
 from generator.suite_types import (
     _collect_ddt_uses,
     _fortran_type_str_simple,
     _generate_suite_types,
     _ptr_type_name,
+    _ptr_type_name_for_arg,
 )
 from metadata.parse_tools import CCPPError
 
@@ -124,6 +127,129 @@ class TestPtrTypeName(unittest.TestCase):
         illegal identifier."""
         with self.assertRaisesRegex(CCPPError, 'Fortran-identifier-safe'):
             _ptr_type_name('character', 'len=N+1', 1)
+
+    def test_error_context_prefixed_when_provided(self):
+        """When ``context`` is supplied, the prefix lands at the very
+        start of the error message so the user can immediately tell
+        which arg/scheme is the offender."""
+        import re as _re
+        prefix = "scheme 'GFS_rrtmgp_pre', optional argument [foo]"
+        with self.assertRaisesRegex(CCPPError, _re.escape(prefix)):
+            _ptr_type_name('character', 'len=*', 1, context=prefix)
+
+    def test_error_no_context_unchanged(self):
+        """No context → no prefix; existing message wording unchanged."""
+        with self.assertRaisesRegex(CCPPError, '^character\\(len=\\*\\)'):
+            _ptr_type_name('character', 'len=*', 1)
+
+
+class TestPtrTypeNameForArg(unittest.TestCase):
+    """``_ptr_type_name_for_arg`` builds a rich-context wrapper around
+    ``_ptr_type_name`` so the user can locate the offending metadata
+    block without grepping."""
+
+    def _make_arg(self, type_, host_kind, dimensions, local='foo',
+                  std='some_standard_name', intent='in',
+                  scheme_kind=''):
+        # Minimal duck-typed ResolvedArg.  _ptr_type_for_arg reads
+        # type_/host_kind from host_entry; scheme_kind from
+        # arg.kind_scheme; rank from host_entry.dimensions.  The
+        # context-string builder reads standard_name /
+        # scheme_local_name / intent.
+        host_entry = SimpleNamespace(
+            type=type_, kind=host_kind, dimensions=dimensions,
+        )
+        return SimpleNamespace(
+            host_entry=host_entry,
+            suite_var=None,
+            kind_scheme=scheme_kind,
+            standard_name=std,
+            scheme_local_name=local,
+            intent=intent,
+        )
+
+    def test_clean_case_returns_name(self):
+        """Happy path: concrete-length character with matching scheme
+        kind → wrapper name built without raising."""
+        arg = self._make_arg('character', 'len=10', ['ncols'],
+                             scheme_kind='len=10')
+        self.assertEqual(
+            _ptr_type_name_for_arg(arg, 'my_scheme'),
+            'character_len10_rank1_ptr_type',
+        )
+
+    def test_scheme_lenstar_host_concrete_uses_host_kind(self):
+        """The SCM case driving the narrow fix: scheme metadata
+        declares ``kind=len=*`` (legal as an assumed-length dummy) and
+        the host declares ``kind=len=128``.  The resolver treats this
+        pair as compatible with no kind transform, so the pointer
+        wrapper must use the host's concrete length — not the
+        scheme's ``len=*`` (which would be illegal as a DDT
+        component).  Without the override this raises CCPPError; with
+        the override it returns the concrete wrapper name."""
+        arg = self._make_arg(
+            'character', 'len=128',
+            ['number_of_active_gases_used_by_RRTMGP'],
+            local='active_gases_array',
+            std='list_of_active_gases_used_by_RRTMGP',
+            intent='in',
+            scheme_kind='len=*',
+        )
+        self.assertEqual(
+            _ptr_type_name_for_arg(arg, 'GFS_rrtmgp_pre'),
+            'character_len128_rank1_ptr_type',
+        )
+
+    def test_scheme_lenstar_host_deferred_uses_host_kind(self):
+        """Same override, but with the host declaring ``kind=len=:``
+        (deferred length).  The wrapper takes the host's ``len=:`` and
+        the name builder maps it to ``_deferred`` (existing
+        deferred-length rule)."""
+        arg = self._make_arg(
+            'character', 'len=:', ['ncols'],
+            scheme_kind='len=*',
+        )
+        self.assertEqual(
+            _ptr_type_name_for_arg(arg, 'my_scheme'),
+            'character_len_deferred_rank1_ptr_type',
+        )
+
+    def test_real_kind_transform_unchanged(self):
+        """Regression: the narrow override applies only to
+        ``character`` + scheme-``len=*``.  Real/integer args with a
+        kind transform must still take the scheme's kind so the Case-4
+        transform-temp wrapping keeps working."""
+        arg = self._make_arg(
+            'real', 'kind_dbl_prec', ['ncols'],
+            scheme_kind='kind_phys',
+        )
+        self.assertEqual(
+            _ptr_type_name_for_arg(arg, 'my_scheme'),
+            'real_kind_phys_rank1_ptr_type',
+        )
+
+    def test_host_actually_lenstar_still_errors(self):
+        """Edge case: if the *host* metadata itself declares
+        ``kind=len=*`` (which would normally be rejected upstream),
+        the wrapper builder still has nothing it can use — the error
+        fires and names the offending scheme + arg.  This guards the
+        error-enrichment path itself."""
+        arg = self._make_arg(
+            'character', 'len=*',
+            ['number_of_active_gases_used_by_RRTMGP'],
+            local='active_gases_array',
+            std='list_of_active_gases_used_by_RRTMGP',
+            intent='in',
+            scheme_kind='',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _ptr_type_name_for_arg(arg, 'GFS_rrtmgp_pre')
+        msg = str(cm.exception)
+        self.assertIn("scheme 'GFS_rrtmgp_pre'", msg)
+        self.assertIn('[active_gases_array]', msg)
+        self.assertIn('list_of_active_gases_used_by_RRTMGP', msg)
+        self.assertIn('intent=in', msg)
+        self.assertIn('cannot appear as a DDT component', msg)
 
 
 class TestCollectDdtUses(unittest.TestCase):

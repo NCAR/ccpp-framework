@@ -27,7 +27,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from metadata.parse_tools import FORTRAN_CONDITIONAL_REGEX, open_if_changed
 from metadata.variable_resolver import HostVarEntry
-from generator.suite_types import _ptr_type_name, _ptr_type_for_arg
+from generator.suite_types import _ptr_type_name_for_arg
 from generator.suite_resolver import (
     ResolvedArg,
     ResolvedCall,
@@ -858,8 +858,7 @@ def _generate_phase_subroutine(
                 )
             if arg.ptr_name and arg.ptr_name not in seen_ptr_names:
                 seen_ptr_names.add(arg.ptr_name)
-                type_, kind, rank = _ptr_type_for_arg(arg)
-                ptr_tname = _ptr_type_name(type_, kind, rank)
+                ptr_tname = _ptr_type_name_for_arg(arg, resolved_call.scheme_name)
                 local_decls.append(
                     '{}type({}) :: {}'.format(_INDENT * 2, ptr_tname, arg.ptr_name)
                 )
@@ -1065,13 +1064,17 @@ def _generate_group_cap(
     uses = _collect_group_uses(resolved_group, host_dict)
 
     # Add USE for types module when optional pointer args are present.
+    # Build the wrapper name via the per-arg helper so any
+    # unsupported shape (e.g. character(len=*)) raises a CCPPError
+    # naming the offending scheme + argument.
     ptr_type_names: Set[str] = set()
     for items in resolved_group.phase_calls.values():
         for resolved_call in iter_phase_calls(items):
             for arg in resolved_call.args:
                 if arg.ptr_name:
-                    type_, kind, rank = _ptr_type_for_arg(arg)
-                    ptr_type_names.add(_ptr_type_name(type_, kind, rank))
+                    ptr_type_names.add(
+                        _ptr_type_name_for_arg(arg, resolved_call.scheme_name)
+                    )
     if ptr_type_names:
         types_mod = 'ccpp_{}_types'.format(suite_name)
         uses[types_mod] = ptr_type_names

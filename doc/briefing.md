@@ -329,13 +329,19 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1208 passing on `main`.
+- **Unit tests**: 1220 passing on `main`.
 - **End-to-end tests passing**: `advection`, `unit_conv`,
   `nested_suite`, `variable_transform`, `instances`, `ddt`.
-- **CCPP-SCM**: actively driving development this week — every build
-  / runtime failure surfaced this week landed as a fix in capgen-ng
-  (rather than being patched around in the host).  Most of the
-  `phys_ps` group now builds end-to-end via `--legacy-mode`.
+- **CCPP-SCM**: actively driving development — every build / runtime
+  failure surfaced this week landed as a fix in capgen-ng (rather than
+  being patched around in the host).  Most of the `phys_ps` group now
+  builds end-to-end via `--legacy-mode`.
+- **`--no-host-introspection`** (new, 2026-05-14): stubs the bodies of
+  the five suite-introspection routines in `ccpp_static_api.F90`,
+  shrinking the file from ~33k lines to ~800 for the 10-suite SCM
+  build (the introspection case-blocks were making `-O3` compilation
+  effectively hang).  Signatures stay so existing host callers still
+  link; stubbed bodies return `errflg = 1` with a clear `errmsg`.
 - **CAM-SIMA**: not yet reconnected; pending the constituents
   overhaul decision.
 - **UFS Weather Model / NEPTUNE**: not yet attempted; SCM is the

@@ -56,7 +56,12 @@ def _split_external(type_: str) -> Tuple[str, str]:
 # Type-name helpers
 ########################################################################
 
-def _ptr_type_name(type_: str, kind: str, rank: int) -> str:
+def _ptr_type_name(
+    type_: str,
+    kind: str,
+    rank: int,
+    context: str = '',
+) -> str:
     """Return the Fortran derived-type name for a pointer wrapper.
 
     Parameters
@@ -70,6 +75,12 @@ def _ptr_type_name(type_: str, kind: str, rank: int) -> str:
         Kind parameter (e.g. ``'kind_phys'``), or ``''`` if none.
     rank : int
         Number of array dimensions (0 = scalar).
+    context : str, optional
+        Free-form prefix passed through to :func:`_sanitize_len_suffix`
+        and prepended to any error message raised from there.  Callers
+        identify the offending scheme + argument here so the user can
+        locate the metadata block to fix; see
+        :func:`_ptr_type_name_for_arg`.
 
     Returns
     -------
@@ -111,7 +122,7 @@ def _ptr_type_name(type_: str, kind: str, rank: int) -> str:
             # ``character_len:_rank1_ptr_type`` that the compiler
             # rejects.
             len_spec = kind[len('len='):].strip()
-            parts.append('len' + _sanitize_len_suffix(len_spec))
+            parts.append('len' + _sanitize_len_suffix(len_spec, context=context))
         else:
             parts.append(kind)
     parts.append('rank{}'.format(rank))
@@ -119,7 +130,7 @@ def _ptr_type_name(type_: str, kind: str, rank: int) -> str:
     return '_'.join(parts)
 
 
-def _sanitize_len_suffix(len_spec: str) -> str:
+def _sanitize_len_suffix(len_spec: str, context: str = '') -> str:
     """Return a Fortran-identifier-safe suffix for a ``character(len=…)`` spec.
 
     Pointer-wrapper type names embed the length specifier, e.g.
@@ -136,31 +147,36 @@ def _sanitize_len_suffix(len_spec: str) -> str:
 
     Anything that doesn't fit those forms raises ``CCPPError`` rather
     than silently producing an illegal Fortran identifier.
+
+    *context* — when non-empty, prefixed to every error message as
+    ``"<context>: ..."``.  Callers identify the offending scheme +
+    argument so the user can locate the metadata block to fix.
     """
+    prefix = '{}: '.format(context) if context else ''
     spec = len_spec.strip()
     if not spec:
         raise CCPPError(
-            "Empty character length specifier 'len=' in pointer-wrapper "
+            "{}Empty character length specifier 'len=' in pointer-wrapper "
             "type name construction; expected an integer literal, "
-            "a parameter name, or ':' for deferred length."
+            "a parameter name, or ':' for deferred length.".format(prefix)
         )
     if spec == ':':
         return '_deferred'
     if spec == '*':
         raise CCPPError(
-            "character(len=*) cannot appear as a DDT component, so "
+            "{}character(len=*) cannot appear as a DDT component, so "
             "capgen-ng cannot generate a pointer-wrapper type for it.  "
             "Use a concrete length, a parameter constant, or 'len=:' "
             "(deferred length, paired with allocatable / pointer) "
-            "in the metadata instead."
+            "in the metadata instead.".format(prefix)
         )
     # Plain integer literal (digits) or Fortran identifier — accept verbatim.
     if spec.isdigit() or _IDENT_RE.match(spec):
         return spec
     raise CCPPError(
-        "Cannot derive a Fortran-identifier-safe pointer-wrapper type "
+        "{}Cannot derive a Fortran-identifier-safe pointer-wrapper type "
         "name from 'len={}'.  Expected an integer literal, a parameter "
-        "identifier, or ':' (deferred length).".format(spec)
+        "identifier, or ':' (deferred length).".format(prefix, spec)
     )
 
 
@@ -187,15 +203,57 @@ def _ptr_type_for_arg(arg) -> Tuple[str, str, int]:
     variable directly — same type and kind.  For Case 4 (optional +
     transform), the pointer targets the transformation temporary, which
     carries the scheme's kind.
+
+    Narrow override for ``character(len=*)``: the resolver explicitly
+    accepts scheme ``kind=len=*`` paired with host ``kind=len=N`` (or
+    ``len=:``) as compatible and emits no kind transform — so we are
+    always in Case 2 here, and the pointer points at host data with a
+    concrete length.  The DDT-component rules forbid ``len=*``, but the
+    host's concrete kind is usable verbatim, so fall through to the
+    host kind in that one situation.  All other types keep the
+    scheme-wins precedence — Case 4 transform temps need the scheme
+    kind, and ``character`` is the only intrinsic where ``len=*``
+    survives the resolver as an unconverted compatibility.
     """
     if arg.host_entry is not None:
         type_ = arg.host_entry.type
     else:
         type_ = arg.suite_var.type_
-    kind  = arg.kind_scheme or (arg.host_entry.kind if arg.host_entry else
-                                arg.suite_var.kind)
+    host_kind = (arg.host_entry.kind if arg.host_entry
+                 else arg.suite_var.kind)
+    if type_ == 'character' and arg.kind_scheme == 'len=*':
+        kind = host_kind
+    else:
+        kind = arg.kind_scheme or host_kind
     rank  = _ptr_rank(arg)
     return type_, kind, rank
+
+
+def _ptr_type_name_for_arg(arg, scheme_name: str) -> str:
+    """Build the pointer-wrapper type name for *arg* with rich error context.
+
+    Resolves ``(type_, kind, rank)`` via :func:`_ptr_type_for_arg`, then
+    delegates to :func:`_ptr_type_name` passing a *context* string of
+    the form ``"scheme '<scheme>', optional argument [<local>]
+    (standard_name=<std>, intent=<int>)"``.  Any :class:`CCPPError` from
+    the name-construction path then carries enough information for the
+    user to find the offending metadata block without grepping.
+
+    Use this at every site that calls :func:`_ptr_type_name` on a
+    resolved scheme argument.  Bare :func:`_ptr_type_name` calls are
+    only appropriate when no per-argument context is available (e.g.
+    iterating the already-validated combo set in
+    :func:`_generate_suite_types`).
+    """
+    type_, kind, rank = _ptr_type_for_arg(arg)
+    context = (
+        "scheme '{}', optional argument [{}] "
+        "(standard_name={}, intent={})".format(
+            scheme_name, arg.scheme_local_name,
+            arg.standard_name, arg.intent,
+        )
+    )
+    return _ptr_type_name(type_, kind, rank, context=context)
 
 
 ########################################################################
@@ -206,6 +264,14 @@ def _collect_ptr_type_combos(
     suite_res: SuiteResolution,
 ) -> Set[Tuple[str, str, int]]:
     """Collect unique (type, kind, rank) tuples needed by optional args.
+
+    Validates each combo eagerly via :func:`_ptr_type_name_for_arg` so
+    that any unsupported shape (notably ``character(len=*)``) raises a
+    :class:`CCPPError` carrying the offending scheme + argument name
+    here, rather than later from the bare-tuple loop in
+    :func:`_generate_suite_types` (which would have nothing useful to
+    say to the user).  The constructed name itself is discarded — only
+    the validation matters at this point.
 
     Parameters
     ----------
@@ -221,6 +287,7 @@ def _collect_ptr_type_combos(
             for resolved_call in iter_phase_calls(items):
                 for arg in resolved_call.args:
                     if arg.ptr_name:
+                        _ptr_type_name_for_arg(arg, resolved_call.scheme_name)
                         combos.add(_ptr_type_for_arg(arg))
     return combos
 

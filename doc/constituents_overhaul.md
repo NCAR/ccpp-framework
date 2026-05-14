@@ -494,6 +494,60 @@ scheme-registering schemes don't rely on this; documented in
 `instance_number` through `ccpp_constituent_index` (interface
 change) or maintaining a per-instance pointer table.
 
+### 4.12 Capgen-ng: drop `diagnostic_name_fixed`, keep only `diagnostic_name` (OPEN — proposed simplification)
+
+Today the metadata layer carries two mutually-exclusive scheme-arg
+attributes:
+
+- `diagnostic_name = X` — emits `diagnostic_name="X"` in `datatable.xml`;
+  defaults to `local_name` when absent.
+- `diagnostic_name_fixed = Y` — emits `diagnostic_name_fixed="Y"` in
+  `datatable.xml`; the `diagnostic_name` slot stays empty (no
+  auto-default to `local_name`).
+
+The behavioural difference is purely *which attribute name* host
+tooling sees in `datatable.xml` — both attributes carry the same kind
+of value (a Fortran-identifier-shaped string), and both are passed
+through unmodified. `_fixed` is a signal to the host "use verbatim, do
+not decorate or transform"; but `diagnostic_name = X` already means
+exactly that — the cap code never decorates the value, and any host
+tooling that wants to decorate would have to opt in by parsing a
+separate attribute (or by syntactic convention on the value itself).
+
+**Proposal:** Remove `diagnostic_name_fixed` from the metadata layer
+and the parser. Keep `diagnostic_name` with the existing defaulting
+rule (explicit → use it; absent → fall back to `local_name`).  Hosts
+that today rely on the `_fixed` semantic ("don't auto-default to
+`local_name`") get the same outcome by simply *setting*
+`diagnostic_name` to the desired exact value.
+
+Touchpoints to retire:
+
+- `metadata/parse_tools/parse_checkers.py::check_diagnostic_fixed` and
+  the mutual-exclusion block at the top of `check_diagnostic_id`.
+- `metadata_table.py::MetaVar._KNOWN_ATTRS` entry and the
+  `@property diagnostic_name` fallback that returns `''` when
+  `_diagnostic_name_fixed` is set.
+- `generator/datatable.py:267-269` emission of the
+  `diagnostic_name_fixed` XML attribute.
+- Existing unit-test coverage for `diagnostic_name_fixed` becomes
+  obsolete and is removed (not migrated).
+
+**Why it's worth doing as part of the overhaul:** the attribute has no
+unique semantics that `diagnostic_name` can't express, and dropping it
+shrinks the metadata-layer surface area at the same time the
+`set_diagnostic_name(value)` framework setter (§4.4 / §4.10) is being
+added on the framework side. Hosts that want runtime override get
+`set_diagnostic_name`; hosts that want metadata-declared values get
+`diagnostic_name`. There is no third use case that needs `_fixed`.
+
+**Risk:** non-CCPP-ng metadata in the wild may carry
+`diagnostic_name_fixed`. Mitigation: a one-line legacy-mode rewrite
+(`metadata/legacy_compat.py`) translates the deprecated attribute to
+`diagnostic_name` at parse time with a loud warning, identical in
+spirit to the existing `horizontal_loop_extent → horizontal_dimension`
+shim. Remove the rewrite once known consumers are migrated.
+
 ---
 
 ## 5. Property classification (Class A vs Class B)

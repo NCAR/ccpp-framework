@@ -916,9 +916,11 @@ sites in the group cap, not in the suite cap.
 
 ### 13.3 Metadata
 
-The generator also writes a `type = suite` metadata table (`ccpp_<suite>.meta`) as a
-byproduct. This file is for inspection and debugging — it is not consumed by the
-generator on subsequent runs.
+The generator also writes a `type = suite` metadata table (`ccpp_<suite>_data.meta`)
+as a byproduct. The `_data` suffix matches the companion Fortran file
+`ccpp_<suite>_data.F90`, satisfying the `.meta` ↔ `.F90` filename pairing. This
+file is for inspection and debugging — it is not consumed by the generator on
+subsequent runs.
 
 ---
 
@@ -993,7 +995,7 @@ All files are written to `--output-root`.
 | `ccpp_<suite>_<group>_cap.F90` | Group cap — scheme call sites, state array, optionals, transformations. USEs `ccpp_kinds` for any kind referenced in transformation temporaries. |
 | `ccpp_<suite>_data.F90` | Suite data module — framework-owned interstitial DDT. USEs `ccpp_kinds` for any kind referenced in suite-var declarations. |
 | `ccpp_<suite>_types.F90` | Shared cap types — optional pointer wrapper types, transformation locals. USEs `ccpp_kinds` for any kind referenced in pointer wrappers. |
-| `ccpp_<suite>.meta` | Generated `type = suite` metadata table (output-only, for inspection) |
+| `ccpp_<suite>_data.meta` | Generated `type = suite` metadata table — pairs with `ccpp_<suite>_data.F90` (output-only, for inspection) |
 | `datatable.xml` | Generator database for `ccpp_datafile.py` queries. `ccpp_kinds.F90` and `ccpp_static_api.F90` appear in `<ccpp_files><utilities>...` (matches original capgen). |
 
 `ccpp_kinds.F90` is a dependency of all generated Fortran files that reference any kind parameter (group cap, suite types, suite data). The static API and suite cap have no kind references and do not USE it.
@@ -1254,7 +1256,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 
 ### Test status
 
-- **Unit tests**: 1208 passing (`python -m pytest unit-tests/`).
+- **Unit tests**: 1220 passing (`python -m pytest unit-tests/`).
 - **End-to-end tests**: `advection`, `unit_conv`, `nested_suite`,
   `variable_transform`, `instances`, `ddt` covered.  SCM running
   against ccpp-physics is the active driver right now — most of the
