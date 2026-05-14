@@ -33,7 +33,7 @@ but it carries:
   have no setters; `is_match` is overly strict about properties hosts
   should be free to change.
 - **Two registration models** coexist — original capgen's auto-clone of
-  is_constituent scheme args, and capgen-ng's explicit register-phase +
+  is_constituent scheme args, and capgen's/capgen-ng's explicit register-phase +
   host-side declaration. Capgen-ng deliberately dropped auto-clone.
 
 This document is a structured brief for a discussion this week. It does

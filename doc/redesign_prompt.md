@@ -1,6 +1,6 @@
 # CCPP Framework Code Generator — Redesign Specification
 
-*Last revised: 2026-05-13.*
+*Last revised: 2026-05-13 (late evening — SCM-driven session).*
 
 ## Purpose
 
@@ -277,7 +277,7 @@ The generator has built-in semantic knowledge of these dimension standard names:
 
 | Standard name | Indexing semantic |
 |---|---|
-| `instance_dimension` | Scalar extraction: `var(instance_number)` — `instance_number` is the control variable |
+| Any key of `SCALAR_INDEX_DIMS` (currently `number_of_instances`, `number_of_threads`) | Scalar extraction: substitute the paired index variable's local Fortran name (currently `instance_number`, `thread_number`).  See `capgen-ng/metadata/registered_dimensions.py` for the full table and the contract. |
 | `horizontal_dimension` | **At scheme call sites**: always `horizontal_loop_begin:horizontal_loop_end` (using control variable local names), for all phases. **For suite-owned array allocation sizing**: local name of `horizontal_dimension` from the host `type=host` table (accessed via module USE, not the control variable). |
 | `vertical_*` | Slice: `1:<local name of vertical_* variable>` |
 
@@ -289,10 +289,11 @@ dimensions — by looking up the variable with that standard name in the host me
 All other dimension standard names are resolved identically: look up the variable with
 that standard name, get its local Fortran name, emit `1:local_name`.
 
-The timing of `instance_dimension` substitution — whether at parse time (when building
-the flat dict access path) or at call-string generation time (like other registered
-dimensions) — is an implementation decision left to the developer. Either is correct;
-choose whichever is easier to implement, understand, and maintain.
+Registered scalar-index dims are subject to one hard contract (Rule 2 in
+`metadata/registered_dimensions.py`): they may appear only on **container
+DDT-instance variables** in the access path, never on leaf data variables
+(intrinsic- or `external:`-typed).  Leaves that declare them are rejected
+at parse time with a remediation pointer.  See `doc/migration.md` §3.4.
 
 ---
 
@@ -676,7 +677,12 @@ is maintained during code generation.
 For each variable, the generator constructs the call-site expression by applying
 dimension rules to each dimension in order:
 
-1. **`instance_dimension`** → substitute `instance_number` (scalar extraction)
+1. **Registered scalar-index dim** (key in `SCALAR_INDEX_DIMS`; currently
+   `number_of_instances` → `instance_number`,
+   `number_of_threads` → `thread_number`) → scalar extraction using the
+   paired index variable's local Fortran name.  Only permitted on
+   container DDT-instance variables, never on leaves (Rule 2; see
+   `capgen-ng/metadata/registered_dimensions.py`).
 2. **`horizontal_dimension`** → always substitute `horizontal_loop_begin:horizontal_loop_end`
    (using control variable local names) at scheme call sites. For suite-owned array
    allocation sizing, `horizontal_dimension` from the host `type=host` table is used directly.
@@ -1166,7 +1172,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   SCM) keep using their own short local names (e.g. `ntcw`) without
   blowing Fortran's 63-char identifier limit.
 
-### Landed 2026-05-13
+### Landed 2026-05-13 (morning + afternoon)
 
 - **`--legacy-mode` shim** — transient parse-time rewrite of legacy
   CCPP standard names (`horizontal_loop_extent` →
@@ -1183,12 +1189,77 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   the canonical lowercase host_dict keys (Fortran is case-insensitive,
   so embedded logical operators are unaffected).
 
+### Landed 2026-05-13 (late evening — SCM-driven session)
+
+- **`SCALAR_INDEX_DIMS` registered table** — `metadata/registered_dimensions.py`
+  carries the single source of truth for count-dim ↔ scalar-index pairings
+  (`number_of_instances → instance_number`, `number_of_threads → thread_number`).
+  Drops the old `instance_dimension` placeholder.  Rule 2 (leaves never carry
+  registered dims) enforced at parse time with rich error messages.
+- **Loop-context resolver wired** — scheme args declaring
+  `ccpp_loop_counter` / `ccpp_loop_extent` resolve inside `<subcycle>` to
+  the generated do-loop locals (or the loop's literal/host-resolved
+  bound for the extent).  Outside-subcycle raises a clear parse-time
+  error pointing at the SDF contract.
+- **Write-if-changed** — every generated cap file goes through
+  `metadata/parse_tools/io_helpers.py::write_if_changed`; unchanged
+  files keep their mtime so CMake/Make/Ninja don't trigger a rebuild
+  cascade on regenerate.  Staging temp lives next to the target under
+  `--output-root`, never `/tmp`.  Logger emits `"Wrote …"` vs
+  `"Unchanged: …"`.
+- **`--scheme-files` query** — `datatable.xml` carries a `<scheme_files>`
+  section listing the user-supplied scheme `.F90` source paths actually
+  referenced by some loaded suite (group phases + suite-level
+  `<init>` / `<final>` hooks).  Companion `<dependencies>` filter applied
+  to scheme tables (host/control/ddt deps still flow unconditionally).
+- **`ccpp_<suite>_cap.F90` group dispatch + `ccpp_physics_*` suite
+  dispatch case-default** — unknown `group_name` / `suite_name` now
+  sets `errflg=1` and writes a clear message, no silent fall-through.
+- **Missing-scheme parse-time detection** — `resolve_suite` walks every
+  scheme reference in the SDF (group phases + `<init>` + `<final>`)
+  and raises with the full list when any aren't in the scheme store.
+  Replaces silent empty-group-cap emission.
+- **Validator continuation look-ahead** — `_join_continuation` now
+  detects continuation when the *current* line has no trailing `&`
+  but the next line has a column-6 `&` marker (fixed-form F77).
+  Fixes `sfc_sice.f::sfc_sice_run` and similar legacy CCPP-physics
+  signatures.
+- **Metadata error enrichment** — `MetaVar.set_attr` wraps every
+  `check_X` helper failure with variable name + attribute name + raw
+  value + source location, so `'' is not a valid unit` becomes
+  actionable across a 60+ file load.
+- **Character pointer-wrapper name encodes len** — `_ptr_type_name`
+  bakes the length into the wrapper name so two `character(len=N)`
+  args of different lengths don't collide on a single
+  `character_rank1_ptr_type` symbol.  `len=:` → `_deferred`; `len=*`
+  rejected; unparseable lengths rejected.
+- **DDT-instance non-registered-dim diagnostic** — a DDT-instance
+  variable with dims none of which are registered scalar-index AND
+  with flattenable fields raises at parse time with the concrete
+  would-be-broken access pattern.  Empty DDTs (e.g.
+  `ccpp_constituent_prop_ptr_t`) flow through unchanged.
+- **`build_ddt_module_map` honors per-DDT `module_name` override** —
+  CCPP-physics `radsw_param.meta` declares `cmpfsw_type` in a
+  scheme-less file with explicit `module_name`; previously skipped.
+  Precedence: DDT's own `module_name` wins > co-located non-DDT
+  table's resolved module > skipped.
+- **`_resolve_single_bound` substitutes scalar-idx placeholders** —
+  dim bounds that resolve through a per-thread/per-instance DDT
+  field no longer leak the std-name placeholder in nested
+  subscripts.
+- **Legacy-mode adds second pair** — `--legacy-mode` now also
+  rewrites `number_of_openmp_threads → number_of_threads`.  Banner
+  enumerates every pair automatically; no hard-coded text per
+  pairing.
+
 ### Test status
 
-- **Unit tests**: 1127 passing (`python -m pytest unit-tests/`).
+- **Unit tests**: 1208 passing (`python -m pytest unit-tests/`).
 - **End-to-end tests**: `advection`, `unit_conv`, `nested_suite`,
-  `variable_transform` covered.  Tree is off-limits for in-session
-  edits — user-driven.
+  `variable_transform`, `instances`, `ddt` covered.  SCM running
+  against ccpp-physics is the active driver right now — most of the
+  late-evening landings were surfaced by SCM build/runtime failures.
+  Tree is off-limits for in-session edits — user-driven.
 
 ### Still deferred
 

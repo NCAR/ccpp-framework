@@ -6,7 +6,7 @@ Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
 **capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
-*Last revised: 2026-05-13.*  Current unit-test suite: 1127 passing.
+*Last revised: 2026-05-13 (late evening).*  Current unit-test suite: 1208 passing.
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
 `capgen-ng/` (top-level of this repo).  Unit tests live at the top
@@ -125,25 +125,46 @@ These two control variables are now **paired optional**:
 
 Hosts that don't need multi-instance bookkeeping can drop both declarations.
 
-### 1.8 `horizontal_loop_extent` → `horizontal_dimension`
+### 1.8 Deprecated standard names rewritten by `--legacy-mode`
 
-ccpp-prebuild / original ccpp-capgen used `horizontal_loop_extent` as
-the horizontal-axis std name in scheme metadata.  capgen-ng uses
-`horizontal_dimension` uniformly — the run-vs-non-run distinction
-isn't expressed in scheme metadata anymore (host passes
-`horizontal_loop_begin`/`horizontal_loop_end` as control vars and the
-generated cap slices accordingly).
+`--legacy-mode` is a transient migration shim that rewrites a small
+set of deprecated standard names to their canonical capgen-ng
+equivalents at parse time.  The full table currently covers:
+
+| Deprecated (legacy)            | Canonical (capgen-ng)    |
+|--------------------------------|--------------------------|
+| `horizontal_loop_extent`       | `horizontal_dimension`   |
+| `number_of_openmp_threads`     | `number_of_threads`      |
+
+Why each entry:
+
+* `horizontal_loop_extent` — ccpp-prebuild / original ccpp-capgen used
+  this for the horizontal-axis std name in scheme metadata.  capgen-ng
+  uses `horizontal_dimension` uniformly; the run-vs-non-run distinction
+  isn't expressed in scheme metadata anymore (host passes
+  `horizontal_loop_begin` / `horizontal_loop_end` as control vars and
+  the generated cap slices accordingly).
+* `number_of_openmp_threads` — legacy CCPP-physics hosts (CCPP-SCM
+  17p8 in particular) size per-thread DDT containers by
+  `number_of_openmp_threads` (e.g. `physics%Interstitial`).  capgen-ng
+  uses `number_of_threads`, which matches the `thread_number` control
+  variable, so the registered scalar-index dim table can substitute
+  `physics%Interstitial(thread_number)%…` automatically (see §3.4).
+
+The rewrite fires for both standard-name attributes AND dimension
+tokens (so a host's `dimensions = (number_of_openmp_threads)` becomes
+`dimensions = (number_of_threads)` before any further processing).
 
 Migration paths:
 
-1. **Edit the metadata** (recommended) — search-and-replace
-   `horizontal_loop_extent` → `horizontal_dimension` in every scheme
-   `.meta` you maintain.
+1. **Edit the metadata** (recommended) — search-and-replace the
+   legacy names in every host / scheme `.meta` you maintain.
 2. **Use `--legacy-mode`** (transient) — pass `--legacy-mode` to both
-   `ccpp_capgen_ng.py` and `ccpp_validator.py` and the rename happens
-   at parse time.  A loud warning banner prints at startup so the
-   rewrite is never invisible.  This shim *will be removed*; treat
-   it as a runway, not a destination.
+   `ccpp_capgen_ng.py` and `ccpp_validator.py` and the renames happen
+   at parse time.  A loud warning banner prints at startup, listing
+   every pair the shim is rewriting, so the substitution is never
+   invisible.  This shim *will be removed*; treat it as a runway,
+   not a destination.
 
 ---
 
@@ -193,6 +214,63 @@ counter variables follow the convention:
 
 Effective iteration count = product of every level's `loop=` value.
 `effr_calc` in the example runs 3·2 = 6 times.
+
+### 2.3.1 Passing the loop counter / extent to a scheme
+
+A scheme inside a `<subcycle>` block may consume the current iteration
+counter and the total iteration count via two CCPP standard names:
+
+| Standard name        | Fortran type | Meaning                                                  |
+|----------------------|--------------|----------------------------------------------------------|
+| `ccpp_loop_counter`  | integer      | Current subcycle iteration (1 … `ccpp_loop_extent`)      |
+| `ccpp_loop_extent`   | integer      | Total iterations — the `loop=` value on the `<subcycle>` |
+
+These are **loop-context control variables**: the host model does **not**
+declare them.  capgen-ng emits them automatically as locals in the
+generated group cap (the `do` loop's induction variable for the counter,
+the loop bound for the extent), and resolves any scheme arg requesting
+them against those locals.
+
+Example scheme metadata fragment:
+
+```
+[iter]
+  standard_name = ccpp_loop_counter
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[niter]
+  standard_name = ccpp_loop_extent
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+```
+
+Place the scheme in a `<subcycle>` in the SDF:
+
+```xml
+<subcycle loop="2">
+  <scheme>sfc_diff</scheme>
+  <scheme>GFS_surface_loop_control_part1</scheme>   <!-- uses iter / niter -->
+  <scheme>sfc_nst</scheme>
+</subcycle>
+```
+
+The generated group cap will emit `do ccpp_loop_counter = 1, 2` and call
+the scheme with `iter = ccpp_loop_counter, niter = 2` (or the loop's
+resolved local name when `loop=<std_name>` is used).
+
+**Scope is the subcycle body.**  A scheme that requests
+`ccpp_loop_counter` / `ccpp_loop_extent` but is NOT inside a
+`<subcycle>` block raises a clear parse-time error pointing at this
+contract.
+
+**Nested-subcycle nuance** (see §8): nested-subcycle schemes that ask
+for `ccpp_loop_counter` currently get the **outermost** loop's counter,
+not the innermost.  None of the in-tree physics catalogs use the
+inner-counter case yet; revisit when one needs it.
 
 ### 2.4 Suite-level `<init>` and `<final>` schemes
 
@@ -289,6 +367,56 @@ typically named after the table.  When that's not the case, use the
   module_name = mod_test_host_data
 ```
 
+### 3.4 Registered scalar-index dimensions
+
+A small set of CCPP standard-name dimensions are *registered*: each
+one is a count that capgen-ng auto-collapses to a paired scalar index
+variable at every access site.
+
+| Count dim (in `dimensions = (...)`) | Index var (capgen-ng substitutes) |
+|---|---|
+| `number_of_instances`               | `instance_number`                 |
+| `number_of_threads`                 | `thread_number`                   |
+
+**Where these may appear**: ONLY on container DDT-instance variables in
+the access path.  Example:
+
+```
+[Interstitial]
+  standard_name = GFS_interstitial_type_instance
+  type          = GFS_interstitial_type
+  dimensions    = (number_of_threads)
+```
+
+Every scheme that reaches into `Interstitial%<field>` will see the
+generator emit `physics%Interstitial(thread_number)%<field>` at the
+call site — no metadata work required on the scheme side.
+
+**Two rules govern this:**
+
+1. *(generalized)* A container DDT-instance variable may carry any
+   registered scalar-index dim — single (`(number_of_threads)`) or
+   paired (`(number_of_instances, number_of_threads)`).  Dims that
+   AREN'T registered flow through the normal slice machinery
+   (`horizontal_loop_begin:horizontal_loop_end`, `1:vertical_*`, …)
+   just like flat-array dims.
+2. *(enforced — hard parse-time error)* A **leaf** variable
+   (intrinsic-typed or `external:` — the kind a scheme binds to)
+   **MUST NOT** declare a registered scalar-index dim.  If you write::
+
+       [my_array]
+         type       = real | kind = kind_phys
+         dimensions = (number_of_threads, horizontal_dimension)   # ILLEGAL
+
+   capgen-ng will reject it at parse time with a message pointing
+   at the wrap-in-DDT remediation pattern.  Wrap the leaf in a
+   container DDT instead.
+
+The registered table lives in
+[`capgen-ng/metadata/registered_dimensions.py`](../capgen-ng/metadata/registered_dimensions.py).
+It carries a four-step recipe at the top of the file for adding new
+pairings.
+
 ---
 
 ## 4. Generator CLI and build integration
@@ -313,16 +441,18 @@ and the module defaults to `iso_fortran_env`.  `kind_phys` is
 auto-defaulted to `iso_fortran_env:REAL64` when not supplied.
 
 `--legacy-mode` (transient migration shim, will be removed): silently
-rewrites legacy CCPP standard names that ccpp-prebuild / original
-ccpp-capgen used to their capgen-ng equivalents at parse time.
-Currently translates `horizontal_loop_extent` → `horizontal_dimension`.
-Prints a loud warning banner at startup so the rewrite is never
-invisible.  Available on both `ccpp_capgen_ng.py` and `ccpp_validator.py`
-(keep the flag consistent between the two when both are invoked from
-CMake).  All translation logic is isolated in
-`metadata/legacy_compat.py` and tagged with `# legacy-compat:` comments
-at every touchpoint, so the shim can be cleanly removed when migration
-is complete.
+rewrites a small set of deprecated CCPP standard names to their
+capgen-ng equivalents at parse time — see §1.8 for the full table
+(`horizontal_loop_extent` → `horizontal_dimension`,
+`number_of_openmp_threads` → `number_of_threads`).  The rewrite fires
+for both standard-name attributes AND dimension tokens.  Prints a
+loud warning banner at startup, enumerating every pair the shim is
+rewriting, so the substitution is never invisible.  Available on both
+`ccpp_capgen_ng.py` and `ccpp_validator.py` (keep the flag consistent
+between the two when both are invoked from CMake).  All translation
+logic is isolated in `metadata/legacy_compat.py` and tagged with
+`# legacy-compat:` comments at every touchpoint, so the shim can be
+cleanly removed when migration is complete.
 
 ### 4.2 `ccpp_datafile.py` query CLI
 
@@ -361,6 +491,18 @@ query stays useful.
 `cmake/ccpp_capgen.cmake` and `cmake/ccpp_validator.cmake` provide the
 `ccpp_capgen(...)` and `ccpp_validator(...)` macros.  `ccpp_datafile(...)`
 queries datatable.xml at configure time.
+
+### 4.4 No-op regeneration preserves mtimes
+
+Every generated file (caps, `datatable.xml`, `ccpp_kinds.F90`, expanded
+SDFs, `.meta` artifacts) goes through `write_if_changed`: the new content
+is staged to a sibling temp file under the output root and atomically
+replaces the target only when the bytes actually differ.  Reruns with
+identical inputs therefore leave on-disk mtimes untouched, so CMake /
+Make / Ninja do not trigger a downstream rebuild cascade.  Matches the
+behaviour of legacy `ccpp-prebuild` / `ccpp-capgen`.  The staging temp
+file lives in the target's parent directory (always under
+`--output-root`), so no `/tmp` access is required.
 
 ---
 
