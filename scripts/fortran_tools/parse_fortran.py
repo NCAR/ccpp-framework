@@ -317,6 +317,10 @@ class FtypeCharacter(Ftype):
     'Character(len=512)'
     >>> FtypeCharacter('character(*)', None).__str__()
     'character(len=*)'
+    >>> FtypeCharacter('character(nf_file_length)', None).__str__()
+    'character(len=nf_file_length)'
+    >>> FtypeCharacter('character(len=nf_file_length)', None).__str__()
+    'character(len=nf_file_length)'
     >>> FtypeCharacter('character*7', None).__str__() #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ParseSyntaxError: Invalid character declaration, 'character*7', at <standard input>:1
@@ -335,9 +339,9 @@ class FtypeCharacter(Ftype):
     "character(len=15, kind=kind('b'))"
     """
 
-    char_re = re.compile(r"(?i)(character)\s*(\([A-Za-z0-9,=*:\s\'\"()]+\))?")
+    char_re = re.compile(r"(?i)(character)\s*(\([A-Za-z0-9_,=*:\s\'\"()]+\))?")
     chartrail_re = re.compile(r"\s*[,:]|\s+[A-Z]")
-    oldchar_re = re.compile(r"(?i)(character)\s*(\*)\s*([0-9]+\s*)")
+    oldchar_re = re.compile(r"(?i)(character)\s*(\*)\s*([A-Za-z0-9_]+\s*)")
     oldchartrail_re = re.compile(r"\s*[,]|\s+[A-Z]")
     len_token_re = re.compile(r"(?i)([:]|[*]|[0-9]+|[A-Z][A-Z0-9_]*)$")
 
