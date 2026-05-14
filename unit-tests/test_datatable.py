@@ -27,10 +27,10 @@ def _write(tmpdir, suite_xml='suite_test_simple.xml', utility_paths=None,
            suite_file_paths=None, host_file_paths=None, host_dict=None,
            host_name='test_host', suite_meta_paths=None,
            expanded_sdf_paths=None):
-    sr, store = _resolve(suite_xml)
+    suite_resolution, store = _resolve(suite_xml)
     return (
         write_datatable(
-            [sr],
+            [suite_resolution],
             store,
             utility_paths or ['/out/ccpp_kinds.F90', '/out/ccpp_static_api.F90'],
             suite_file_paths or ['/out/ccpp_test_simple_cap.F90'],
@@ -41,7 +41,7 @@ def _write(tmpdir, suite_xml='suite_test_simple.xml', utility_paths=None,
             host_dict=host_dict,
             host_name=host_name,
         ),
-        sr,
+        suite_resolution,
         store,
     )
 
@@ -138,7 +138,7 @@ class TestInspectionFilesSection(unittest.TestCase):
         self._tmpdir = tempfile.mkdtemp()
         path, _, _ = _write(
             self._tmpdir,
-            suite_meta_paths=['/out/ccpp_test_simple.meta'],
+            suite_meta_paths=['/out/ccpp_test_simple_data.meta'],
             expanded_sdf_paths=['/out/ccpp_test_simple_expanded.xml'],
         )
         self._root = ET.parse(path).getroot()
@@ -157,7 +157,7 @@ class TestInspectionFilesSection(unittest.TestCase):
         meta = self._inspection().find('suite_meta_files')
         self.assertIsNotNone(meta)
         files = [f.text for f in meta.findall('file')]
-        self.assertEqual(files, ['/out/ccpp_test_simple.meta'])
+        self.assertEqual(files, ['/out/ccpp_test_simple_data.meta'])
 
     def test_expanded_sdf_files_subsection(self):
         exp = self._inspection().find('expanded_sdf_files')
@@ -335,9 +335,9 @@ class TestDependenciesPopulated(unittest.TestCase):
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
-        sr, store = _resolve()
+        suite_resolution, store = _resolve()
         self._path = write_datatable(
-            [sr],
+            [suite_resolution],
             store,
             [],
             [],
@@ -415,9 +415,9 @@ class TestDiagnosticNameEmission(unittest.TestCase):
             target = next(mv for mv in mvars
                           if mv.standard_name == 'air_temperature')
             target._diagnostic_name = 'temperature'
-            sr, _ = _resolve()
+            suite_resolution, _ = _resolve()
             path = write_datatable(
-                [sr], store,
+                [suite_resolution], store,
                 ['/out/ccpp_kinds.F90'],
                 ['/out/ccpp_test_simple_cap.F90'],
                 d,
@@ -430,13 +430,13 @@ class TestDiagnosticNameEmission(unittest.TestCase):
 
     def test_diagnostic_name_fixed_emitted(self):
         with tempfile.TemporaryDirectory() as d:
-            sr, store = _resolve()
+            suite_resolution, store = _resolve()
             mvars = store.variables_for('temp_calc_adjust', 'run')
             target = next(mv for mv in mvars
                           if mv.standard_name == 'air_temperature')
             target.diagnostic_name_fixed = 'Q'
             path = write_datatable(
-                [sr], store,
+                [suite_resolution], store,
                 ['/out/ccpp_kinds.F90'],
                 ['/out/ccpp_test_simple_cap.F90'],
                 d,

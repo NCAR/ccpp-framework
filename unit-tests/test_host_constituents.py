@@ -14,7 +14,7 @@ from generator.host_constituents import (
 
 
 def _resolve_consumer():
-    """Resolve the consume_constituent fixture; return (sr, host_dict)."""
+    """Resolve the consume_constituent fixture; return (suite_resolution, host_dict)."""
     from test_suite_resolver import (
         _load_constituent_host_dict,
         _load_constituent_consumer_store,
@@ -27,7 +27,7 @@ def _resolve_consumer():
 
 
 def _resolve_register():
-    """Resolve the register_constituents fixture; return (sr, host_dict)."""
+    """Resolve the register_constituents fixture; return (suite_resolution, host_dict)."""
     from test_suite_resolver import (
         _load_constituent_host_dict,
         _load_constituent_scheme_store,
@@ -40,7 +40,7 @@ def _resolve_register():
 
 
 def _resolve_simple():
-    """Resolve the no-constituent fixture; return (sr, host_dict)."""
+    """Resolve the no-constituent fixture; return (suite_resolution, host_dict)."""
     from test_suite_resolver import (
         _load_full_host_dict,
         _load_scheme_store,
@@ -53,29 +53,29 @@ def _resolve_simple():
 
 
 def _render_consumer():
-    sr, hd = _resolve_consumer()
-    return '\n'.join(_generate_host_constituents([sr], host_dict=hd))
+    suite_resolution, hd = _resolve_consumer()
+    return '\n'.join(_generate_host_constituents([suite_resolution], host_dict=hd))
 
 
 def _render_register():
-    sr, hd = _resolve_register()
-    return '\n'.join(_generate_host_constituents([sr], host_dict=hd))
+    suite_resolution, hd = _resolve_register()
+    return '\n'.join(_generate_host_constituents([suite_resolution], host_dict=hd))
 
 
 class TestAggregationHelpers(unittest.TestCase):
     """``_any_constituent_state`` / ``_all_index_names`` / ``_suites_with_register_consts``."""
 
     def test_any_when_consumer_only(self):
-        sr, _hd = _resolve_consumer()
-        self.assertTrue(_any_constituent_state([sr]))
+        suite_resolution, _hd = _resolve_consumer()
+        self.assertTrue(_any_constituent_state([suite_resolution]))
 
     def test_any_when_register_only(self):
-        sr, _hd = _resolve_register()
-        self.assertTrue(_any_constituent_state([sr]))
+        suite_resolution, _hd = _resolve_register()
+        self.assertTrue(_any_constituent_state([suite_resolution]))
 
     def test_any_when_neither(self):
-        sr, _hd = _resolve_simple()
-        self.assertFalse(_any_constituent_state([sr]))
+        suite_resolution, _hd = _resolve_simple()
+        self.assertFalse(_any_constituent_state([suite_resolution]))
 
     def test_index_names_aggregated(self):
         consumer, _ch  = _resolve_consumer()
@@ -100,8 +100,8 @@ class TestModuleSkippedWhenNoConstituents(unittest.TestCase):
     constituent state — the module is not emitted at all."""
 
     def test_returns_none(self):
-        sr, _hd = _resolve_simple()
-        self.assertIsNone(_generate_host_constituents([sr]))
+        suite_resolution, _hd = _resolve_simple()
+        self.assertIsNone(_generate_host_constituents([suite_resolution]))
 
 
 class TestModuleHeaderAndUses(unittest.TestCase):

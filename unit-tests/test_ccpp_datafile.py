@@ -48,9 +48,9 @@ def _build_datatable(tmpdir, host_name='test_host',
         hd[first].protected = True
     store = _load_scheme_store()
     suite = _parse_suite('suite_test_simple.xml')
-    sr    = resolve_suite(suite, store, hd)
+    suite_resolution    = resolve_suite(suite, store, hd)
     return write_datatable(
-        [sr],
+        [suite_resolution],
         store,
         utility_paths or ['/out/ccpp_kinds.F90'],
         suite_file_paths or ['/out/ccpp_test_simple_cap.F90',
@@ -121,7 +121,7 @@ class TestDatatableReportInspectionFiles(unittest.TestCase):
         self._tmpdir = tempfile.mkdtemp()
         self._datatable = _build_datatable(
             self._tmpdir,
-            suite_meta_paths=['/out/ccpp_test_simple.meta'],
+            suite_meta_paths=['/out/ccpp_test_simple_data.meta'],
             expanded_sdf_paths=['/out/ccpp_test_simple_expanded.xml'],
         )
 
@@ -132,14 +132,14 @@ class TestDatatableReportInspectionFiles(unittest.TestCase):
         out = datatable_report(self._datatable,
                                DatatableReport('inspection_files'), ',')
         items = out.split(',')
-        self.assertIn('/out/ccpp_test_simple.meta', items)
+        self.assertIn('/out/ccpp_test_simple_data.meta', items)
         self.assertIn('/out/ccpp_test_simple_expanded.xml', items)
 
     def test_inspection_files_excluded_from_capgen_files(self):
         out = datatable_report(self._datatable,
                                DatatableReport('capgen_files'), ',')
         items = out.split(',')
-        self.assertNotIn('/out/ccpp_test_simple.meta', items)
+        self.assertNotIn('/out/ccpp_test_simple_data.meta', items)
         self.assertNotIn('/out/ccpp_test_simple_expanded.xml', items)
 
     def test_inspection_files_empty_when_none_given(self):
@@ -345,8 +345,8 @@ class TestMainCLI(unittest.TestCase):
         import contextlib
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            rc = cdf.main([self._datatable, '--suite-list'])
-        self.assertEqual(rc, 0)
+            resolved_call = cdf.main([self._datatable, '--suite-list'])
+        self.assertEqual(resolved_call, 0)
         self.assertEqual(buf.getvalue().strip(), 'test_simple')
 
     def test_main_mutually_exclusive(self):

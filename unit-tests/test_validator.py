@@ -161,6 +161,75 @@ class TestJoinContinuation(unittest.TestCase):
             .format(result[0]),
         )
 
+    def test_sfc_ocean_style_decorated_trailing_ampersand(self):
+        """Fixed-form continuation where the trailing ``&`` is followed by
+        a stray ``,`` and an inline comment.  In strict F77, columns
+        past 72 are ignored, so ``&,  ! --- inputs`` past col-71 is
+        invisible to the compiler.  The parser must not glue the ``,``
+        into the joined arg list — otherwise a phantom ``&`` token
+        appears between args.  Triggers the decoration-repair branch
+        (next line's column-6 ``&`` confirms continuation)."""
+        src_lines = [
+            '      subroutine sfc_ocean_run                                  &\n',
+            '     &     ( im, hvap, cp,                                     &\n',
+            '     &       wind,                  &,  ! --- inputs\n',
+            '     &       errmsg, errflg )\n',
+        ]
+        result = _join_continuation(src_lines, filename='sfc_ocean.F')
+        self.assertEqual(len(result), 1)
+        # Phantom ``&`` must not appear in the joined logical line.
+        self.assertNotIn('&', result[0])
+        # All real args must still be present.
+        for tok in ('im', 'hvap', 'cp', 'wind', 'errmsg', 'errflg'):
+            self.assertIn(tok, result[0])
+        # The stray comma from the decoration must NOT survive past
+        # ``wind`` (no double-comma).
+        self.assertNotIn(',,', result[0].replace(' ', ''))
+
+    def test_decoration_repair_preserves_real_tokens_past_amp(self):
+        """When tokens past ``&`` look like real identifiers, the line
+        is returned untouched so the parser surfaces a real error
+        instead of silently dropping code."""
+        # A pathological line: ``&`` mid-line with an identifier after.
+        # Next line is col-6 ``&`` so we enter the look-ahead branch.
+        src_lines = [
+            '      foo = a & extra_token\n',
+            '     &        + b\n',
+        ]
+        result = _join_continuation(src_lines, filename='/tmp/path.f')
+        # The line is left untouched (no repair); ``extra_token`` stays.
+        self.assertEqual(len(result), 1)
+        self.assertIn('extra_token', result[0])
+
+    def test_decoration_repair_emits_warning(self):
+        """The decoration-repair branch must emit a single
+        ``logger.warning`` naming the file:line so users see that their
+        source has decoration past the statement end."""
+        import logging as _logging
+        src_lines = [
+            '      subroutine foo(                                          &\n',
+            '     &       a, b,                                  &,  ! decoration\n',
+            '     &       c )\n',
+            '      end subroutine foo\n',
+        ]
+        # Capture warnings from the validator module's logger.
+        records = []
+
+        class _Capture(_logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        cap = _Capture(level=_logging.WARNING)
+        val_mod._LOGGER.addHandler(cap)
+        try:
+            _join_continuation(src_lines, filename='/some/path/foo.F')
+        finally:
+            val_mod._LOGGER.removeHandler(cap)
+        self.assertEqual(len(records), 1, "expected exactly one warning")
+        msg = records[0].getMessage()
+        self.assertIn('/some/path/foo.F', msg)
+        self.assertIn(':2:', msg)  # decoration is on line 2 of src_lines
+
 
 class TestParseSubroutines(unittest.TestCase):
 

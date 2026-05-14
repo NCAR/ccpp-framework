@@ -248,6 +248,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "loud warning at startup.  Will be removed."
         ),
     )
+    parser.add_argument(
+        '--no-host-introspection',
+        action='store_true',
+        help=(
+            "Stub the five suite-introspection routines in "
+            "ccpp_static_api.F90 (ccpp_physics_suite_list / "
+            "suite_part_list / suite_schemes / suite_variables / "
+            "suite_host_data).  Signatures remain so callers still "
+            "link, but bodies set errflg=1 with a clear errmsg "
+            "(suite_list, which has no errflg, writes to error_unit "
+            "and returns an empty list).  Use this to shrink the "
+            "generated ccpp_static_api.F90 from ~33000 lines to ~800 "
+            "for multi-suite builds where -O3 cannot finish compiling "
+            "the introspection case-blocks."
+        ),
+    )
     return parser
 
 
@@ -779,6 +795,7 @@ def capgen(
     output_root: str,
     kind_types: Dict[str, Tuple[str, str]],
     logger: Optional[logging.Logger] = None,
+    no_host_introspection: bool = False,
 ) -> None:
     """Programmatic entry point for the cap generator.
 
@@ -903,9 +920,9 @@ def capgen(
         suite_resolutions.append(suite_res)
 
         # Group caps
-        for rg in suite_res.groups:
+        for resolved_group in suite_res.groups:
             write_group_cap(
-                suite.name, rg.group_name, rg, host_dict, output_root,
+                suite.name, resolved_group.group_name, resolved_group, host_dict, output_root,
                 logger=log,
             )
 
@@ -936,6 +953,7 @@ def capgen(
     write_static_api(
         suite_names, suite_resolutions, output_root, host_dict, scheme_store,
         logger=log,
+        no_host_introspection=no_host_introspection,
     )
 
     # ---- host-wide constituent module (only when any suite touches
@@ -961,7 +979,7 @@ def capgen(
     ]
     suite_file_paths = []
     suite_meta_paths = []
-    for sname, sr in zip(suite_names, suite_resolutions):
+    for sname, suite_resolution in zip(suite_names, suite_resolutions):
         suite_file_paths.append(
             os.path.join(abs_root, 'ccpp_{}_cap.F90'.format(sname))
         )
@@ -972,15 +990,15 @@ def capgen(
         types_file = os.path.join(abs_root, 'ccpp_{}_types.F90'.format(sname))
         if os.path.isfile(types_file):
             suite_file_paths.append(types_file)
-        for rg in sr.groups:
+        for resolved_group in suite_resolution.groups:
             suite_file_paths.append(
                 os.path.join(
                     abs_root,
-                    'ccpp_{}_{}_cap.F90'.format(sname, rg.group_name),
+                    'ccpp_{}_{}_cap.F90'.format(sname, resolved_group.group_name),
                 )
             )
         suite_meta_paths.append(
-            os.path.join(abs_root, 'ccpp_{}.meta'.format(sname))
+            os.path.join(abs_root, 'ccpp_{}_data.meta'.format(sname))
         )
     # Expanded SDFs (one per parsed suite) are inspection artifacts; carry
     # the paths set by parse_suite_xml() forward into datatable.xml.
@@ -997,15 +1015,15 @@ def capgen(
     # don't want its dependencies to leak into datatable.xml.  Duplicates
     # are collapsed by ``write_datatable``.
     used_scheme_names: set = set()
-    for sr in suite_resolutions:
-        for rg in sr.groups:
-            for items in rg.phase_calls.values():
-                for rc in iter_phase_calls(items):
-                    used_scheme_names.add(rc.scheme_name)
-        if sr.suite_init_call is not None:
-            used_scheme_names.add(sr.suite_init_call.scheme_name)
-        if sr.suite_final_call is not None:
-            used_scheme_names.add(sr.suite_final_call.scheme_name)
+    for suite_resolution in suite_resolutions:
+        for resolved_group in suite_resolution.groups:
+            for items in resolved_group.phase_calls.values():
+                for resolved_call in iter_phase_calls(items):
+                    used_scheme_names.add(resolved_call.scheme_name)
+        if suite_resolution.suite_init_call is not None:
+            used_scheme_names.add(suite_resolution.suite_init_call.scheme_name)
+        if suite_resolution.suite_final_call is not None:
+            used_scheme_names.add(suite_resolution.suite_final_call.scheme_name)
 
     dependency_paths = []
     for tbl in host_tables:
@@ -1117,6 +1135,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             suite_files=_split_file_list(args.suites),
             output_root=args.output_root,
             kind_types=kind_types,
+            no_host_introspection=args.no_host_introspection,
         )
     except CCPPError as exc:
         _LOGGER.error("%s", exc)

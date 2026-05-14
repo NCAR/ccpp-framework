@@ -216,10 +216,10 @@ def _collect_ptr_type_combos(
     set of (type_, kind, rank)
     """
     combos: Set[Tuple[str, str, int]] = set()
-    for rg in suite_res.groups:
-        for items in rg.phase_calls.values():
-            for rc in iter_phase_calls(items):
-                for arg in rc.args:
+    for resolved_group in suite_res.groups:
+        for items in resolved_group.phase_calls.values():
+            for resolved_call in iter_phase_calls(items):
+                for arg in resolved_call.args:
                     if arg.ptr_name:
                         combos.add(_ptr_type_for_arg(arg))
     return combos

@@ -36,16 +36,16 @@ def _resolve():
 
 
 def _generate():
-    sr = _resolve()
-    return _generate_static_api(['test_simple'], [sr])
+    suite_resolution = _resolve()
+    return _generate_static_api(['test_simple'], [suite_resolution])
 
 
 class TestAllCtrlArgsForPhase(unittest.TestCase):
 
     def test_only_error_ctrl_args_in_test_case(self):
-        sr   = _resolve()
+        suite_resolution   = _resolve()
         # temp_calc_adjust uses errmsg/errflg which are now control vars.
-        args = _all_ctrl_args_for_phase([sr], 'run')
+        args = _all_ctrl_args_for_phase([suite_resolution], 'run')
         std_names = {a.standard_name for a in args}
         self.assertEqual(std_names, {'ccpp_error_message', 'ccpp_error_code'})
 
@@ -124,9 +124,9 @@ class TestStaticApiConstituentReexport(unittest.TestCase):
         hd    = _load_constituent_host_dict()
         store = _load_constituent_consumer_store()
         suite = _parse_suite('suite_consume_constituent.xml')
-        sr    = resolve_suite(suite, store, hd)
+        suite_resolution    = resolve_suite(suite, store, hd)
         self.text = '\n'.join(
-            _generate_static_api(['consume_consts'], [sr], host_dict=hd,
+            _generate_static_api(['consume_consts'], [suite_resolution], host_dict=hd,
                                  scheme_store=store),
         )
 
@@ -253,8 +253,8 @@ class TestCcppPhysicsUnknownSuiteErrors(unittest.TestCase):
 
     def setUp(self):
         hd  = _load_full_host_dict()
-        sr  = _resolve()
-        self.text = '\n'.join(_generate_static_api(['test_simple'], [sr], hd))
+        suite_resolution  = _resolve()
+        self.text = '\n'.join(_generate_static_api(['test_simple'], [suite_resolution], hd))
 
     def test_physics_run_has_default_case_with_errflg(self):
         run_block_start = self.text.index('subroutine ccpp_physics_run')
@@ -278,11 +278,11 @@ class TestMultipleSuites(unittest.TestCase):
     """Static API with two suites uses select case for both."""
 
     def setUp(self):
-        sr = _resolve()
+        suite_resolution = _resolve()
         from copy import deepcopy
-        sr2 = deepcopy(sr)
+        sr2 = deepcopy(suite_resolution)
         sr2.suite_name = 'suite_b'
-        lines = _generate_static_api(['test_simple', 'suite_b'], [sr, sr2])
+        lines = _generate_static_api(['test_simple', 'suite_b'], [suite_resolution, sr2])
         self.text = '\n'.join(lines)
 
     def test_both_suites_in_register(self):
@@ -298,16 +298,16 @@ class TestMultipleSuites(unittest.TestCase):
 class TestWriteStaticApi(unittest.TestCase):
 
     def test_writes_file(self):
-        sr = _resolve()
+        suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_static_api(['test_simple'], [sr], tmpdir)
+            path = write_static_api(['test_simple'], [suite_resolution], tmpdir)
             self.assertTrue(os.path.isfile(path))
             self.assertEqual(os.path.basename(path), 'ccpp_static_api.F90')
 
     def test_file_content(self):
-        sr = _resolve()
+        suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_static_api(['test_simple'], [sr], tmpdir)
+            path = write_static_api(['test_simple'], [suite_resolution], tmpdir)
             with open(path) as fh:
                 content = fh.read()
             self.assertIn('module ccpp_static_api', content)
@@ -316,16 +316,16 @@ class TestWriteStaticApi(unittest.TestCase):
             self.assertTrue(content.endswith('\n'))
 
     def test_creates_output_dir(self):
-        sr = _resolve()
+        suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
             subdir = os.path.join(tmpdir, 'api')
-            write_static_api(['test_simple'], [sr], subdir)
+            write_static_api(['test_simple'], [suite_resolution], subdir)
             self.assertTrue(os.path.isdir(subdir))
 
     def test_returns_absolute_path(self):
-        sr = _resolve()
+        suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_static_api(['test_simple'], [sr], tmpdir)
+            path = write_static_api(['test_simple'], [suite_resolution], tmpdir)
             self.assertTrue(os.path.isabs(path))
 
 
@@ -335,8 +335,8 @@ class TestCcppInitMultiInstance(unittest.TestCase):
 
     def setUp(self):
         hd = _load_full_host_dict()
-        sr = _resolve()
-        lines = _generate_static_api(['test_simple'], [sr], hd)
+        suite_resolution = _resolve()
+        lines = _generate_static_api(['test_simple'], [suite_resolution], hd)
         self.text = '\n'.join(lines)
 
     def test_init_signature_has_instance_number(self):
@@ -377,8 +377,8 @@ class TestCcppInitSingleInstance(unittest.TestCase):
     def setUp(self):
         hd = {k: v for k, v in _load_full_host_dict().items()
               if k not in ('number_of_instances', 'instance_number')}
-        sr = _resolve()
-        lines = _generate_static_api(['test_simple'], [sr], hd)
+        suite_resolution = _resolve()
+        lines = _generate_static_api(['test_simple'], [suite_resolution], hd)
         self.text = '\n'.join(lines)
 
     def test_init_signature_no_instance_args(self):
@@ -493,13 +493,13 @@ class TestCollectHostIo(unittest.TestCase):
     """_collect_host_io: intent partitioning, control-var exclusion, sort."""
 
     def setUp(self):
-        self.sr = _resolve()
+        self.suite_resolution = _resolve()
         self.hd = _load_full_host_dict()
 
     def test_includes_control_vars(self):
         # temp_calc_adjust declares errflg/errmsg with intent=out — they
         # appear in outputs.  Matches original capgen's introspection.
-        inputs, outputs = _collect_host_io(self.sr, self.hd)
+        inputs, outputs = _collect_host_io(self.suite_resolution, self.hd)
         self.assertIn('ccpp_error_code',    outputs)
         self.assertIn('ccpp_error_message', outputs)
         # …and not in inputs (intent=out only, not inout).
@@ -507,28 +507,28 @@ class TestCollectHostIo(unittest.TestCase):
         self.assertNotIn('ccpp_error_message', inputs)
 
     def test_includes_host_args(self):
-        inputs, outputs = _collect_host_io(self.sr, self.hd)
+        inputs, outputs = _collect_host_io(self.suite_resolution, self.hd)
         # air_temperature is intent=inout in run phase → both lists.
         self.assertIn('air_temperature', inputs)
         self.assertIn('air_temperature', outputs)
 
     def test_sorted_outputs(self):
-        inputs, outputs = _collect_host_io(self.sr, self.hd)
+        inputs, outputs = _collect_host_io(self.suite_resolution, self.hd)
         self.assertEqual(inputs, sorted(inputs))
         self.assertEqual(outputs, sorted(outputs))
 
     def test_collapse_ddts_no_ddts_unchanged(self):
         # host_full has no DDTs → collapse is a no-op.
-        flat_in, flat_out = _collect_host_io(self.sr, self.hd, collapse_ddts=False)
-        coll_in, coll_out = _collect_host_io(self.sr, self.hd, collapse_ddts=True)
+        flat_in, flat_out = _collect_host_io(self.suite_resolution, self.hd, collapse_ddts=False)
+        coll_in, coll_out = _collect_host_io(self.suite_resolution, self.hd, collapse_ddts=True)
         self.assertEqual(flat_in, coll_in)
         self.assertEqual(flat_out, coll_out)
 
     def test_no_host_dict_collapse_falls_back(self):
         # collapse_ddts=True without host_dict must not raise.
         # With no DDTs the result is identical to the non-collapsed view.
-        no_hd_in, _ = _collect_host_io(self.sr, None, collapse_ddts=True)
-        flat_in, _  = _collect_host_io(self.sr, self.hd, collapse_ddts=False)
+        no_hd_in, _ = _collect_host_io(self.suite_resolution, None, collapse_ddts=True)
+        flat_in, _  = _collect_host_io(self.suite_resolution, self.hd, collapse_ddts=False)
         self.assertEqual(no_hd_in, flat_in)
 
 
@@ -636,14 +636,14 @@ class TestCollectHostIoIncludesFrameworkDims(unittest.TestCase):
                 fh.write(suite_xml)
             suite = parse_suite_xml(xml_path, tmp, logging.getLogger('t'),
                                     skip_validation=True)
-        self.sr = resolve_suite(suite, store, self.hd)
+        self.suite_resolution = resolve_suite(suite, store, self.hd)
 
     def test_number_of_ccpp_constituents_in_inputs(self):
-        inputs, _ = _collect_host_io(self.sr, self.hd)
+        inputs, _ = _collect_host_io(self.suite_resolution, self.hd)
         self.assertIn('number_of_ccpp_constituents', inputs)
 
     def test_horizontal_dim_not_in_inputs(self):
-        inputs, _ = _collect_host_io(self.sr, self.hd)
+        inputs, _ = _collect_host_io(self.suite_resolution, self.hd)
         # Sanity: the host-side dims are NOT included even though they
         # appear as scheme arg dimensions.
         self.assertNotIn('horizontal_dimension',     inputs)
@@ -717,10 +717,10 @@ class TestCollectHostIoIncludesSubcycleLoopBound(unittest.TestCase):
                 fh.write(suite_xml)
             suite = parse_suite_xml(xml_path, tmp, logging.getLogger('t'),
                                     skip_validation=True)
-        self.sr = resolve_suite(suite, scheme_store, self.hd)
+        self.suite_resolution = resolve_suite(suite, scheme_store, self.hd)
 
     def test_subcycle_std_name_in_inputs(self):
-        inputs, _outputs = _collect_host_io(self.sr, self.hd)
+        inputs, _outputs = _collect_host_io(self.suite_resolution, self.hd)
         self.assertIn('num_subcycles_for_my_scheme', inputs)
 
     def test_integer_literal_subcycle_does_not_pollute(self):
@@ -752,8 +752,8 @@ class TestCollectHostIoIncludesSubcycleLoopBound(unittest.TestCase):
                 fh.write(suite_xml)
             suite = parse_suite_xml(xml_path, tmp, logging.getLogger('t'),
                                     skip_validation=True)
-        sr = resolve_suite(suite, store, hd)
-        inputs, _ = _collect_host_io(sr, hd)
+        suite_resolution = resolve_suite(suite, store, hd)
+        inputs, _ = _collect_host_io(suite_resolution, hd)
         # No spurious integer / std-name additions from the literal loop.
         self.assertNotIn('3', inputs)
 
@@ -845,15 +845,15 @@ class TestCollectHostIoIncludesActiveExpr(unittest.TestCase):
                 fh.write(suite_xml)
             suite = parse_suite_xml(xml_path, tmp, logging.getLogger('t'),
                                     skip_validation=True)
-        self.sr = resolve_suite(suite, store, self.hd)
+        self.suite_resolution = resolve_suite(suite, store, self.hd)
 
     def test_active_flag_in_inputs(self):
-        inputs, _outputs = _collect_host_io(self.sr, self.hd)
+        inputs, _outputs = _collect_host_io(self.suite_resolution, self.hd)
         self.assertIn('flag_for_passive_check', inputs)
 
     def test_active_flag_not_in_outputs(self):
         """The flag is a pure input — it must not leak into outputs."""
-        _, outputs = _collect_host_io(self.sr, self.hd)
+        _, outputs = _collect_host_io(self.suite_resolution, self.hd)
         self.assertNotIn('flag_for_passive_check', outputs)
 
 
@@ -888,8 +888,8 @@ class TestSuiteListSubroutine(unittest.TestCase):
 class TestSuitePartListSubroutine(unittest.TestCase):
 
     def setUp(self):
-        self.sr = _resolve()
-        self.text = '\n'.join(_suite_part_list_subroutine(['test_simple'], [self.sr]))
+        self.suite_resolution = _resolve()
+        self.text = '\n'.join(_suite_part_list_subroutine(['test_simple'], [self.suite_resolution]))
 
     def test_signature(self):
         self.assertIn('subroutine ccpp_physics_suite_part_list(', self.text)
@@ -904,7 +904,7 @@ class TestSuitePartListSubroutine(unittest.TestCase):
     def test_dispatch_and_groups(self):
         self.assertIn("case ('test_simple')", self.text)
         # test_simple has one group named 'physics'.
-        group_names = [g.group_name for g in self.sr.groups]
+        group_names = [g.group_name for g in self.suite_resolution.groups]
         for i, gname in enumerate(group_names):
             self.assertIn("part_list({}) = '{}'".format(i + 1, gname), self.text)
         self.assertIn('allocate(part_list({}))'.format(len(group_names)), self.text)
@@ -940,9 +940,9 @@ class TestSuitePartListSubroutine(unittest.TestCase):
 class TestSuiteSchemesSubroutine(unittest.TestCase):
 
     def setUp(self):
-        self.sr = _resolve()
+        self.suite_resolution = _resolve()
         self.text = '\n'.join(
-            _suite_schemes_subroutine(['test_simple'], [self.sr])
+            _suite_schemes_subroutine(['test_simple'], [self.suite_resolution])
         )
 
     def test_signature(self):
@@ -984,10 +984,10 @@ class TestSuiteSchemesSubroutine(unittest.TestCase):
 class TestSuiteVariablesSubroutine(unittest.TestCase):
 
     def setUp(self):
-        self.sr = _resolve()
+        self.suite_resolution = _resolve()
         self.hd = _load_full_host_dict()
         self.text = '\n'.join(_suite_io_subroutine(
-            ['test_simple'], [self.sr], self.hd, collapse_ddts=False,
+            ['test_simple'], [self.suite_resolution], self.hd, collapse_ddts=False,
         ))
 
     def test_subroutine_name(self):
@@ -1056,10 +1056,10 @@ class TestSuiteHostDataSubroutine(unittest.TestCase):
     """Same shape as _variables; differs only in DDT collapsing."""
 
     def setUp(self):
-        self.sr = _resolve()
+        self.suite_resolution = _resolve()
         self.hd = _load_full_host_dict()
         self.text = '\n'.join(_suite_io_subroutine(
-            ['test_simple'], [self.sr], self.hd, collapse_ddts=True,
+            ['test_simple'], [self.suite_resolution], self.hd, collapse_ddts=True,
         ))
 
     def test_subroutine_name(self):
@@ -1077,7 +1077,7 @@ class TestSuiteHostDataSubroutine(unittest.TestCase):
         # name and error message) should contain the same variable
         # literals as ..._variables.
         var_text = '\n'.join(_suite_io_subroutine(
-            ['test_simple'], [self.sr], self.hd, collapse_ddts=False,
+            ['test_simple'], [self.suite_resolution], self.hd, collapse_ddts=False,
         ))
         # A spot-check: any host-data variable in one is in the other.
         self.assertIn("'air_temperature'", self.text)
@@ -1105,6 +1105,158 @@ class TestIntrospectionRoutinesInModule(unittest.TestCase):
             self.assertIn('subroutine {}'.format(sub), self.text)
             self.assertIn('end subroutine {}'.format(sub), self.text)
             self.assertIn('public :: {}'.format(sub), self.text)
+
+
+########################################################################
+# Suite-introspection: --no-host-introspection stub bodies
+########################################################################
+
+class TestNoHostIntrospectionStubBodies(unittest.TestCase):
+    """When ``--no-host-introspection`` is set, each of the five
+    introspection routines retains its signature but the body is
+    replaced with an errflg=1 stub (or, for suite_list, an error_unit
+    write + empty allocation).  Tests assert the stub shape per routine
+    and that signatures remain stable so existing host callers still
+    link."""
+
+    _DISABLED_MSG = (
+        'suite introspection disabled at code-generation time; '
+        'regenerate caps without --no-host-introspection'
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.suite_resolution = _resolve()
+        cls.hd = _load_full_host_dict()
+
+    def test_suite_list_writes_error_unit_and_allocates_empty(self):
+        text = '\n'.join(_suite_list_subroutine(
+            ['a', 'b', 'c'], stub_body=True,
+        ))
+        # Signature preserved.
+        self.assertIn('subroutine ccpp_physics_suite_list(suites)', text)
+        # Stub body: error_unit message, empty allocation.
+        self.assertIn('write(error_unit,', text)
+        self.assertIn('ccpp_physics_suite_list:', text)
+        self.assertIn(self._DISABLED_MSG, text)
+        self.assertIn('allocate(suites(0))', text)
+        # The functional body must NOT appear.
+        self.assertNotIn("suites(1) = 'a'", text)
+        self.assertNotIn('allocate(suites(3))', text)
+
+    def test_suite_part_list_stub(self):
+        text = '\n'.join(_suite_part_list_subroutine(
+            ['test_simple'], [self.suite_resolution], stub_body=True,
+        ))
+        self.assertIn('subroutine ccpp_physics_suite_part_list(', text)
+        self.assertIn('errflg = 1', text)
+        self.assertIn('ccpp_physics_suite_part_list: ' + self._DISABLED_MSG,
+                      text)
+        self.assertIn('allocate(part_list(0))', text)
+        # Functional dispatch must not appear.
+        self.assertNotIn("case ('test_simple')", text)
+        self.assertNotIn('select case', text)
+
+    def test_suite_schemes_stub(self):
+        text = '\n'.join(_suite_schemes_subroutine(
+            ['test_simple'], [self.suite_resolution], stub_body=True,
+        ))
+        self.assertIn('subroutine ccpp_physics_suite_schemes(', text)
+        self.assertIn('errflg = 1', text)
+        self.assertIn('ccpp_physics_suite_schemes: ' + self._DISABLED_MSG,
+                      text)
+        self.assertIn('allocate(scheme_list(0))', text)
+        self.assertNotIn("scheme_list(1) =", text)
+
+    def test_suite_variables_stub(self):
+        text = '\n'.join(_suite_io_subroutine(
+            ['test_simple'], [self.suite_resolution], self.hd,
+            collapse_ddts=False, stub_body=True,
+        ))
+        self.assertIn('subroutine ccpp_physics_suite_variables(', text)
+        self.assertIn('errflg = 1', text)
+        self.assertIn('ccpp_physics_suite_variables: ' + self._DISABLED_MSG,
+                      text)
+        self.assertIn('allocate(variable_list(0))', text)
+        # The huge case-block must NOT appear.
+        self.assertNotIn('select case (trim(suite_name))', text)
+        self.assertNotIn("case ('test_simple')", text)
+        # Optional dummies are still declared so existing callers still
+        # type-check.
+        self.assertIn('logical, optional,             intent(in)    :: input_vars',
+                      text)
+        self.assertIn('logical, optional,             intent(in)    :: output_vars',
+                      text)
+
+    def test_suite_host_data_stub(self):
+        text = '\n'.join(_suite_io_subroutine(
+            ['test_simple'], [self.suite_resolution], self.hd,
+            collapse_ddts=True, stub_body=True,
+        ))
+        self.assertIn('subroutine ccpp_physics_suite_host_data(', text)
+        self.assertIn('errflg = 1', text)
+        self.assertIn('ccpp_physics_suite_host_data: ' + self._DISABLED_MSG,
+                      text)
+        self.assertIn('allocate(variable_list(0))', text)
+        self.assertNotIn('select case (trim(suite_name))', text)
+
+    def test_module_imports_error_unit_only_when_stubbed(self):
+        # With stub on: iso_fortran_env appears for error_unit.
+        text_on = '\n'.join(_generate_static_api(
+            ['test_simple'], [self.suite_resolution], self.hd,
+            no_host_introspection=True,
+        ))
+        self.assertIn('use iso_fortran_env, only: error_unit', text_on)
+        # With stub off: no such import.
+        text_off = '\n'.join(_generate_static_api(
+            ['test_simple'], [self.suite_resolution], self.hd,
+            no_host_introspection=False,
+        ))
+        self.assertNotIn('use iso_fortran_env', text_off)
+
+    def test_public_declarations_unchanged_when_stubbed(self):
+        # All five introspection routines remain public — callers must
+        # still link against them.
+        text = '\n'.join(_generate_static_api(
+            ['test_simple'], [self.suite_resolution], self.hd,
+            no_host_introspection=True,
+        ))
+        for sub in (
+            'ccpp_physics_suite_list',
+            'ccpp_physics_suite_part_list',
+            'ccpp_physics_suite_schemes',
+            'ccpp_physics_suite_variables',
+            'ccpp_physics_suite_host_data',
+        ):
+            self.assertIn('public :: {}'.format(sub), text)
+            self.assertIn('subroutine {}'.format(sub), text)
+            self.assertIn('end subroutine {}'.format(sub), text)
+
+    def test_line_count_drops_dramatically(self):
+        """The motivating case: 33k+ lines → ~800. We don't have 80
+        suites in unit-test fixtures, but even with one suite the
+        stubbed module must be strictly shorter than the full one."""
+        full  = _generate_static_api(['test_simple'], [self.suite_resolution],
+                                     self.hd, no_host_introspection=False)
+        stub  = _generate_static_api(['test_simple'], [self.suite_resolution],
+                                     self.hd, no_host_introspection=True)
+        self.assertLess(len(stub), len(full),
+                        'stubbed module should be shorter than the full one '
+                        '(full={}, stub={})'.format(len(full), len(stub)))
+
+    def test_write_static_api_passes_flag_through(self):
+        """``write_static_api(no_host_introspection=True, ...)`` must
+        produce a file containing stub bodies, not full ones."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = write_static_api(
+                ['test_simple'], [self.suite_resolution], tmpdir, self.hd,
+                no_host_introspection=True,
+            )
+            with open(out_path) as fh:
+                text = fh.read()
+        self.assertIn('ccpp_physics_suite_variables: ' + self._DISABLED_MSG,
+                      text)
+        self.assertIn('use iso_fortran_env, only: error_unit', text)
 
 
 def load_tests(loader, tests, ignore):

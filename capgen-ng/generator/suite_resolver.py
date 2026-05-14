@@ -273,8 +273,8 @@ def _format_available_std_names(
         else:
             rows.append((std, 'host'))
     if suite_vars:
-        for std, sv in suite_vars.items():
-            rows.append((std, 'suite: {}'.format(sv.suite_module_name)))
+        for std, suite_var in suite_vars.items():
+            rows.append((std, 'suite: {}'.format(suite_var.suite_module_name)))
     rows.sort(key=lambda t: t[0])
 
     if not rows:
@@ -353,10 +353,10 @@ def _resolve_single_bound(
         # code (Fortran rejects it as "no IMPLICIT type").
         return _substitute_scalar_idx(entry.access_path, host_dict)
     if suite_vars:
-        sv = suite_vars.get(bound)
-        if sv is not None:
+        suite_var = suite_vars.get(bound)
+        if suite_var is not None:
             used.add(bound)
-            return sv.access_path
+            return suite_var.access_path
     return None
 
 
@@ -965,8 +965,8 @@ def _resolve_subcycle_loop_bound(
         # in an instance-dimensioned array; resolve that template here).
         return _substitute_instance_idx(entry.access_path, host_dict), key
     if suite_vars and key in suite_vars:
-        sv = suite_vars[key]
-        return sv.access_path, key
+        suite_var = suite_vars[key]
+        return suite_var.access_path, key
     raise CCPPError(
         "Subcycle loop=\"{}\" is not an integer literal and does not "
         "resolve to a CCPP standard name in the host/control metadata or "
@@ -1311,18 +1311,18 @@ def _resolve_one_arg(
 
     # active is a host-model-only attribute; read it from the host entry only.
     active = host_entry.active if host_entry is not None else ''
-    sv: Optional[SuiteVar]             = suite_vars.get(std_name)
+    suite_var: Optional[SuiteVar]             = suite_vars.get(std_name)
 
-    if host_entry is not None and sv is None:
+    if host_entry is not None and suite_var is None:
         source = 'control' if host_entry.is_control else 'host'
-    elif sv is not None and host_entry is None:
+    elif suite_var is not None and host_entry is None:
         source = 'suite'
-    elif host_entry is None and sv is None:
+    elif host_entry is None and suite_var is None:
         # Case 2 or 3.
         if intent == 'out':
             inst_entry = host_dict.get('instance_number')
             inst_access = '({})'.format(inst_entry.local_name) if inst_entry else '(1)'
-            sv = SuiteVar(
+            suite_var = SuiteVar(
                 standard_name=std_name,
                 local_name=local,
                 type_=scheme_var.type,
@@ -1335,7 +1335,7 @@ def _resolve_one_arg(
                 inst_access=inst_access,
                 allocatable=scheme_var.allocatable,
             )
-            suite_vars[std_name] = sv
+            suite_vars[std_name] = suite_var
             source = 'suite'
         else:
             raise CCPPError(
@@ -1362,11 +1362,11 @@ def _resolve_one_arg(
         host_kind  = host_entry.kind
         host_allocatable = host_entry.allocatable
     else:
-        base_expr  = sv.access_path
-        host_dims  = sv.dimensions
-        host_units = sv.units
-        host_kind  = sv.kind
-        host_allocatable = sv.allocatable
+        base_expr  = suite_var.access_path
+        host_dims  = suite_var.dimensions
+        host_units = suite_var.units
+        host_kind  = suite_var.kind
+        host_allocatable = suite_var.allocatable
 
     # ---- allocatable compatibility check ---------------------------------
     # An actual argument that is not allocatable cannot be passed to an
@@ -1534,7 +1534,7 @@ def _resolve_one_arg(
         active_local=active_local,
         source=source,
         host_entry=host_entry,
-        suite_var=sv if source == 'suite' else None,
+        suite_var=suite_var if source == 'suite' else None,
         base_expr=base_expr,
         subscript=subscript,
         call_expr=call_expr,
@@ -1899,7 +1899,7 @@ def resolve_suite(
     resolved_groups: List[ResolvedGroup] = []
 
     for group in suite.groups:
-        rg = ResolvedGroup(group_name=group.name)
+        resolved_group = ResolvedGroup(group_name=group.name)
 
         for phase in phases:
             used_local_names_phase: Set[str] = set()
@@ -1928,22 +1928,22 @@ def resolve_suite(
                 )
 
             if items_for_phase:
-                rg.phase_calls[phase] = items_for_phase
+                resolved_group.phase_calls[phase] = items_for_phase
 
         # Collect dimension variable USE info for this group.
-        rg.dim_uses = _collect_dim_uses(rg, host_dict, suite_vars=suite_vars)
-        resolved_groups.append(rg)
+        resolved_group.dim_uses = _collect_dim_uses(resolved_group, host_dict, suite_vars=suite_vars)
+        resolved_groups.append(resolved_group)
 
     # Constituent register calls: gather the (scheme_name, scheme_local_name)
     # pairs for every register-phase arg that was flagged as a constituent.
     # The suite cap uses these to emit two-pass merge logic.
     constituent_calls: List[Tuple[str, str]] = []
-    for rg in resolved_groups:
-        for rc in iter_phase_calls(rg.phase_calls.get('register', [])):
-            for arg in rc.args:
+    for resolved_group in resolved_groups:
+        for resolved_call in iter_phase_calls(resolved_group.phase_calls.get('register', [])):
+            for arg in resolved_call.args:
                 if arg.is_constituent_arg:
                     constituent_calls.append(
-                        (rc.scheme_name, arg.scheme_local_name)
+                        (resolved_call.scheme_name, arg.scheme_local_name)
                     )
     # Walk every constituent-sourced arg (excluding the legacy
     # register-phase ccpp_constituent_properties_t case) and collect:
@@ -1951,10 +1951,10 @@ def resolve_suite(
     #   * constituent_index_names — base std names X needing an index_of_X
     uses_constituents = False
     index_names: Set[str] = set()
-    for rg in resolved_groups:
-        for items in rg.phase_calls.values():
-            for rc in iter_phase_calls(items):
-                for arg in rc.args:
+    for resolved_group in resolved_groups:
+        for items in resolved_group.phase_calls.values():
+            for resolved_call in iter_phase_calls(items):
+                for arg in resolved_call.args:
                     if arg.source != 'constituent' or arg.is_constituent_arg:
                         continue
                     uses_constituents = True
@@ -2024,8 +2024,8 @@ def _collect_scheme_names(group) -> List[str]:
         if isinstance(item, SuiteScheme):
             names.append(item.name)
         elif isinstance(item, (SuiteSubcycle, SuiteSubcol)):
-            for sn in item.scheme_names():
-                names.append(sn)
+            for scheme_name in item.scheme_names():
+                names.append(scheme_name)
     return names
 
 
@@ -2039,11 +2039,11 @@ def _dedup_scheme_names(scheme_names: List[str]) -> List[str]:
     """
     seen: Set[str] = set()
     deduped: List[str] = []
-    for sn in scheme_names:
-        if sn in seen:
+    for scheme_name in scheme_names:
+        if scheme_name in seen:
             continue
-        seen.add(sn)
-        deduped.append(sn)
+        seen.add(scheme_name)
+        deduped.append(scheme_name)
     return deduped
 
 
@@ -2068,17 +2068,17 @@ def _resolve_one_call(
     vars_list = scheme_store.variables_for(scheme_name, phase)
     if vars_list is None:
         return None
-    rc = ResolvedCall(
+    resolved_call = ResolvedCall(
         scheme_name=scheme_name, phase=phase,
         scheme_module=scheme_store.module_for(scheme_name),
     )
-    for sv in vars_list:
+    for scheme_var in vars_list:
         arg = _resolve_one_arg(
-            sv, phase, host_dict, suite_vars, scheme_name, used_local_names,
+            scheme_var, phase, host_dict, suite_vars, scheme_name, used_local_names,
             suite_name=suite_name, loop_context=loop_context,
         )
-        rc.args.append(arg)
-    return rc
+        resolved_call.args.append(arg)
+    return resolved_call
 
 
 def _resolve_flat_phase(
@@ -2092,12 +2092,12 @@ def _resolve_flat_phase(
 ) -> List[ResolvedCall]:
     """Resolve a flat (non-subcycle) phase into a list of ResolvedCall."""
     result: List[ResolvedCall] = []
-    for sn in scheme_names:
-        rc = _resolve_one_call(sn, phase, scheme_store, host_dict,
+    for scheme_name in scheme_names:
+        resolved_call = _resolve_one_call(scheme_name, phase, scheme_store, host_dict,
                                suite_vars, used_local_names,
                                suite_name=suite_name)
-        if rc is not None:
-            result.append(rc)
+        if resolved_call is not None:
+            result.append(resolved_call)
     return result
 
 
@@ -2137,14 +2137,14 @@ def _resolve_run_phase(
         out: List[PhaseItem] = []
         for sub in suite_items:
             if isinstance(sub, SuiteScheme):
-                rc = _resolve_one_call(
+                resolved_call = _resolve_one_call(
                     sub.name, phase, scheme_store, host_dict,
                     suite_vars, used_local_names,
                     suite_name=suite_name,
                     loop_context=loop_context,
                 )
-                if rc is not None:
-                    out.append(rc)
+                if resolved_call is not None:
+                    out.append(resolved_call)
             elif isinstance(sub, SuiteSubcycle):
                 loop_count, loop_std = _resolve_subcycle_loop_bound(
                     sub.loop, host_dict, suite_vars=suite_vars,
@@ -2160,27 +2160,27 @@ def _resolve_run_phase(
             elif isinstance(sub, SuiteSubcol):
                 # SuiteSubcol is flattened in place — the framework
                 # doesn't render it as a separate loop level.
-                for sn in sub.scheme_names():
-                    rc = _resolve_one_call(
-                        sn, phase, scheme_store, host_dict,
+                for scheme_name in sub.scheme_names():
+                    resolved_call = _resolve_one_call(
+                        scheme_name, phase, scheme_store, host_dict,
                         suite_vars, used_local_names,
                         suite_name=suite_name,
                         loop_context=loop_context,
                     )
-                    if rc is not None:
-                        out.append(rc)
+                    if resolved_call is not None:
+                        out.append(resolved_call)
         return out
 
     result: List[PhaseItem] = []
 
     for item in group.items:
         if isinstance(item, SuiteScheme):
-            rc = _resolve_one_call(item.name, phase, scheme_store, host_dict,
+            resolved_call = _resolve_one_call(item.name, phase, scheme_store, host_dict,
                                    suite_vars, used_local_names,
                                    suite_name=suite_name,
                                    loop_context=[])
-            if rc is not None:
-                result.append(rc)
+            if resolved_call is not None:
+                result.append(resolved_call)
         elif isinstance(item, SuiteSubcycle):
             loop_count, loop_std = _resolve_subcycle_loop_bound(
                 item.loop, host_dict, suite_vars=suite_vars,
@@ -2194,19 +2194,19 @@ def _resolve_run_phase(
                     loop_std_name=loop_std,
                 ))
         elif isinstance(item, SuiteSubcol):
-            for sn in item.scheme_names():
-                rc = _resolve_one_call(sn, phase, scheme_store, host_dict,
+            for scheme_name in item.scheme_names():
+                resolved_call = _resolve_one_call(scheme_name, phase, scheme_store, host_dict,
                                        suite_vars, used_local_names,
                                        suite_name=suite_name,
                                        loop_context=[])
-                if rc is not None:
-                    result.append(rc)
+                if resolved_call is not None:
+                    result.append(resolved_call)
 
     return result
 
 
 def _collect_dim_uses(
-    rg: ResolvedGroup,
+    resolved_group: ResolvedGroup,
     host_dict: Dict[str, HostVarEntry],
     suite_vars: Optional[Dict[str, 'SuiteVar']] = None,
 ) -> Dict[str, Set[str]]:
@@ -2219,9 +2219,9 @@ def _collect_dim_uses(
     expressions.
     """
     dim_uses: Dict[str, Set[str]] = {}
-    for items in rg.phase_calls.values():
-        for rc in iter_phase_calls(items):
-            for arg in rc.args:
+    for items in resolved_group.phase_calls.values():
+        for resolved_call in iter_phase_calls(items):
+            for arg in resolved_call.args:
                 for dim_std in arg.used_dim_std_names:
                     entry = host_dict.get(dim_std)
                     if entry is not None and entry.module_name is not None:
@@ -2235,8 +2235,8 @@ def _collect_dim_uses(
                         sym = _root_symbol(entry.access_path)
                         dim_uses.setdefault(mod, set()).add(sym)
                     elif suite_vars and dim_std in suite_vars:
-                        sv = suite_vars[dim_std]
-                        dim_uses.setdefault(sv.module_name, set()).add(
+                        suite_var = suite_vars[dim_std]
+                        dim_uses.setdefault(suite_var.module_name, set()).add(
                             'ccpp_suite_data')
         # Subcycle loop bounds resolved from CCPP standard names also need
         # a USE entry (or, for control vars, a dummy arg — handled elsewhere).
@@ -2254,8 +2254,8 @@ def _collect_dim_uses(
                     _root_symbol(entry.access_path)
                 )
             elif suite_vars and item.loop_std_name in suite_vars:
-                sv = suite_vars[item.loop_std_name]
-                dim_uses.setdefault(sv.module_name, set()).add(
+                suite_var = suite_vars[item.loop_std_name]
+                dim_uses.setdefault(suite_var.module_name, set()).add(
                     'ccpp_suite_data'
                 )
     return dim_uses

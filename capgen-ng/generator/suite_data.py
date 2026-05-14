@@ -59,8 +59,8 @@ def _collect_dim_uses(
     uses: Dict[str, List] = {}
     seen: set = set()
     suite_var_std_names = set(suite_vars.keys())
-    for sv in sorted(suite_vars.values(), key=lambda v: v.standard_name):
-        for dim_std in sv.dimensions:
+    for suite_var in sorted(suite_vars.values(), key=lambda v: v.standard_name):
+        for dim_std in suite_var.dimensions:
             if dim_std in seen:
                 continue
             seen.add(dim_std)
@@ -71,7 +71,7 @@ def _collect_dim_uses(
                 raise CCPPError(
                     "Suite-owned variable '{}' has dimension '{}' but no host "
                     "metadata was provided to resolve it".format(
-                        sv.standard_name, dim_std
+                        suite_var.standard_name, dim_std
                     )
                 )
             entry = host_dict.get(dim_std)
@@ -79,14 +79,14 @@ def _collect_dim_uses(
                 raise CCPPError(
                     "Suite-owned variable '{}' dimension '{}' not found in "
                     "host metadata or in suite-owned variables".format(
-                        sv.standard_name, dim_std
+                        suite_var.standard_name, dim_std
                     )
                 )
             if entry.is_control:
                 raise CCPPError(
                     "Suite-owned variable '{}' dimension '{}' is a control "
                     "variable; suite data must use host-module or "
-                    "suite-owned dimensions".format(sv.standard_name, dim_std)
+                    "suite-owned dimensions".format(suite_var.standard_name, dim_std)
                 )
             mod = entry.module_name
             if mod not in uses:
@@ -131,8 +131,8 @@ def _collect_ddt_uses(
     """
     uses: Dict[str, List[str]] = {}
     seen: set = set()
-    for sv in sorted(suite_vars.values(), key=lambda v: v.standard_name):
-        t = sv.type_.strip()
+    for suite_var in sorted(suite_vars.values(), key=lambda v: v.standard_name):
+        t = suite_var.type_.strip()
         tlow = t.lower()
         if tlow in _INTRINSICS or tlow.startswith('external:'):
             continue
@@ -146,7 +146,7 @@ def _collect_ddt_uses(
                 "Suite-owned variable '{}' has DDT type '{}' but its "
                 "defining Fortran module is unknown; the DDT must appear "
                 "in a metadata file alongside a scheme/host/control "
-                "table".format(sv.standard_name, t)
+                "table".format(suite_var.standard_name, t)
             )
         mod = ddt_module_map[t]
         uses.setdefault(mod, [])
@@ -190,8 +190,8 @@ def _generate_suite_data(
     # USE ccpp_kinds for any kind parameters referenced in suite-var
     # declarations (e.g. ``real(kind=kind_phys)``).
     kind_names = sorted({
-        sv.kind for sv in suite_vars.values()
-        if sv.kind and not sv.kind.startswith('len=')
+        suite_var.kind for suite_var in suite_vars.values()
+        if suite_var.kind and not suite_var.kind.startswith('len=')
     })
     if kind_names:
         lines.append(
@@ -223,18 +223,18 @@ def _generate_suite_data(
     # for optional-arg passing and transformation temporaries.
     lines.append('{}type, public :: {}'.format(i1, type_name))
     if suite_vars:
-        for sv in sorted(suite_vars.values(), key=lambda v: v.standard_name):
-            t = _type_str(sv.type_, sv.kind)
-            if sv.dimensions:
-                rank = len(sv.dimensions)
+        for suite_var in sorted(suite_vars.values(), key=lambda v: v.standard_name):
+            t = _type_str(suite_var.type_, suite_var.kind)
+            if suite_var.dimensions:
+                rank = len(suite_var.dimensions)
                 deferred = '({})'.format(','.join([':'] * rank))
                 lines.append(
                     '{}{}, allocatable :: {}{}'.format(
-                        i2, t, sv.local_name, deferred,
+                        i2, t, suite_var.local_name, deferred,
                     )
                 )
             else:
-                lines.append('{}{} :: {}'.format(i2, t, sv.local_name))
+                lines.append('{}{} :: {}'.format(i2, t, suite_var.local_name))
     else:
         lines.append('{}! (no suite-owned variables)'.format(i2))
     lines.append('{}end type {}'.format(i1, type_name))
@@ -324,15 +324,15 @@ def _generate_suite_data(
             "{}errmsg = ''".format(i2),
             '{}errflg = 0'.format(i2),
         ]
-        for sv in sorted_svs:
-            if sv.dimensions:
+        for suite_var in sorted_svs:
+            if suite_var.dimensions:
                 dim_exprs = [
                     _dim_local_expr(d, suite_vars, host_dict)
-                    for d in sv.dimensions
+                    for d in suite_var.dimensions
                 ]
                 lines.append(
                     '{}allocate(ccpp_suite_data(i)%{}({}))'.format(
-                        i2, sv.local_name, ', '.join(dim_exprs)
+                        i2, suite_var.local_name, ', '.join(dim_exprs)
                     )
                 )
         lines += [
@@ -354,12 +354,12 @@ def _generate_suite_data(
             "{}errmsg = ''".format(i2),
             '{}errflg = 0'.format(i2),
         ]
-        for sv in sorted_svs:
-            if sv.dimensions:
+        for suite_var in sorted_svs:
+            if suite_var.dimensions:
                 lines.append(
                     '{}if (allocated(ccpp_suite_data(i)%{})) '
                     'deallocate(ccpp_suite_data(i)%{})'.format(
-                        i2, sv.local_name, sv.local_name
+                        i2, suite_var.local_name, suite_var.local_name
                     )
                 )
         lines += [
@@ -395,10 +395,13 @@ def _generate_suite_meta(
     suite_name: str,
     suite_vars: Dict[str, SuiteVar],
 ) -> List[str]:
-    """Generate metadata lines for ``ccpp_<suite>.meta``.
+    """Generate metadata lines for ``ccpp_<suite>_data.meta``.
 
     The file documents all suite-owned variables in the standard ``.meta``
     format so that downstream tools can inspect what each suite provides.
+    The ``_data`` suffix matches the companion Fortran file
+    ``ccpp_<suite>_data.F90``, satisfying the ``.meta`` ↔ ``.F90`` pairing
+    convention.
 
     >>> lines = _generate_suite_meta('mysuite', {})
     >>> lines[0].startswith('!')
@@ -410,7 +413,7 @@ def _generate_suite_meta(
     i1 = _INDENT
     lines: List[str] = []
     lines.append(
-        '! ccpp_{}.meta -- generated by ccpp_capgen_ng, do not edit'.format(suite_name)
+        '! ccpp_{}_data.meta -- generated by ccpp_capgen_ng, do not edit'.format(suite_name)
     )
     lines.append('[ccpp-table-properties]')
     lines.append('{}name = {}'.format(i1, mod_name))
@@ -419,17 +422,17 @@ def _generate_suite_meta(
     lines.append('[ccpp-arg-table]')
     lines.append('{}name = {}'.format(i1, mod_name))
     lines.append('{}type = suite'.format(i1))
-    for sv in sorted(suite_vars.values(), key=lambda v: v.standard_name):
+    for suite_var in sorted(suite_vars.values(), key=lambda v: v.standard_name):
         lines.append('')
-        lines.append('[ {} ]'.format(sv.local_name))
-        lines.append('{}standard_name = {}'.format(i1, sv.standard_name))
-        lines.append('{}long_name = {}'.format(i1, sv.standard_name))
-        lines.append('{}units = {}'.format(i1, sv.units))
-        dim_str = '({})'.format(', '.join(sv.dimensions)) if sv.dimensions else '()'
+        lines.append('[ {} ]'.format(suite_var.local_name))
+        lines.append('{}standard_name = {}'.format(i1, suite_var.standard_name))
+        lines.append('{}long_name = {}'.format(i1, suite_var.standard_name))
+        lines.append('{}units = {}'.format(i1, suite_var.units))
+        dim_str = '({})'.format(', '.join(suite_var.dimensions)) if suite_var.dimensions else '()'
         lines.append('{}dimensions = {}'.format(i1, dim_str))
-        lines.append('{}type = {}'.format(i1, sv.type_))
-        if sv.kind:
-            lines.append('{}kind = {}'.format(i1, sv.kind))
+        lines.append('{}type = {}'.format(i1, suite_var.type_))
+        if suite_var.kind:
+            lines.append('{}kind = {}'.format(i1, suite_var.kind))
     return lines
 
 
@@ -439,9 +442,9 @@ def write_suite_meta(
     output_root: str,
     logger: Optional[logging.Logger] = None,
 ) -> str:
-    """Write ``ccpp_<suite>.meta`` to *output_root* and return its path."""
+    """Write ``ccpp_<suite>_data.meta`` to *output_root* and return its path."""
     os.makedirs(output_root, exist_ok=True)
-    filename = 'ccpp_{}.meta'.format(suite_name)
+    filename = 'ccpp_{}_data.meta'.format(suite_name)
     out_path  = os.path.join(output_root, filename)
     lines = _generate_suite_meta(suite_name, suite_vars)
     with open_if_changed(out_path, logger=logger) as fh:

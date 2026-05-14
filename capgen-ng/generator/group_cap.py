@@ -249,7 +249,7 @@ def _active_std_names(active: str) -> Set[str]:
 
 
 def _collect_group_uses(
-    rg: ResolvedGroup,
+    resolved_group: ResolvedGroup,
     host_dict,
 ) -> Dict[str, Set[str]]:
     """Collect ``{module: {symbol, ...}}`` across all phases of a group.
@@ -259,7 +259,7 @@ def _collect_group_uses(
 
     Parameters
     ----------
-    rg : ResolvedGroup
+    resolved_group : ResolvedGroup
     host_dict : dict
         Flat host+control variable dictionary (for dimension look-ups).
 
@@ -273,9 +273,9 @@ def _collect_group_uses(
         if mod is not None:
             uses.setdefault(mod, set()).add(sym)
 
-    for items in rg.phase_calls.values():
-        for rc in iter_phase_calls(items):
-            for arg in rc.args:
+    for items in resolved_group.phase_calls.values():
+        for resolved_call in iter_phase_calls(items):
+            for arg in resolved_call.args:
                 # Direct argument symbol.
                 if arg.source != 'control':
                     _add(arg.module_name, arg.root_symbol)
@@ -300,13 +300,13 @@ def _collect_group_uses(
                         _add(arg.constituent_module_name, sym)
 
     # Also add dim_uses already collected during resolution.
-    for mod, syms in rg.dim_uses.items():
+    for mod, syms in resolved_group.dim_uses.items():
         uses.setdefault(mod, set()).update(syms)
 
     return uses
 
 
-def _collect_kinds_used(rg: ResolvedGroup) -> List[str]:
+def _collect_kinds_used(resolved_group: ResolvedGroup) -> List[str]:
     """Collect kind parameter *names* referenced by transformation temporaries.
 
     Mirrors the kind-resolution logic in :func:`_generate_phase_subroutine`
@@ -321,9 +321,9 @@ def _collect_kinds_used(rg: ResolvedGroup) -> List[str]:
       (``1.0_8``) unchanged; only the USE list needs to filter them out.
     """
     kinds: Set[str] = set()
-    for items in rg.phase_calls.values():
-        for rc in iter_phase_calls(items):
-            for arg in rc.args:
+    for items in resolved_group.phase_calls.values():
+        for resolved_call in iter_phase_calls(items):
+            for arg in resolved_call.args:
                 if not arg.temp_name:
                     continue
                 kind = arg.kind_scheme or (
@@ -343,15 +343,15 @@ def _collect_kinds_used(rg: ResolvedGroup) -> List[str]:
 # Control variable dummy argument handling
 ########################################################################
 
-def _collect_control_args(rg: ResolvedGroup) -> List[ResolvedArg]:
+def _collect_control_args(resolved_group: ResolvedGroup) -> List[ResolvedArg]:
     """Return deduplicated control-variable arguments for the group subroutine.
 
     Returns one ResolvedArg per unique standard_name, in a consistent order.
     """
     seen: Dict[str, ResolvedArg] = {}
-    for items in rg.phase_calls.values():
-        for rc in iter_phase_calls(items):
-            for arg in rc.args:
+    for items in resolved_group.phase_calls.values():
+        for resolved_call in iter_phase_calls(items):
+            for arg in resolved_call.args:
                 if arg.source == 'control' and arg.standard_name not in seen:
                     seen[arg.standard_name] = arg
     return list(seen.values())
@@ -379,8 +379,8 @@ def _extra_dim_ctrl_entries(
 
     has_suite_vars = any(
         arg.source == 'suite'
-        for rc in iter_phase_calls(phase_items)
-        for arg in rc.args
+        for resolved_call in iter_phase_calls(phase_items)
+        for arg in resolved_call.args
     )
     needs_inst = (
         phase in ('init', 'final', 'timestep_init', 'timestep_final')
@@ -391,8 +391,8 @@ def _extra_dim_ctrl_entries(
         if inst_entry is not None and 'instance_number' not in already:
             extras['instance_number'] = inst_entry
 
-    for rc in iter_phase_calls(phase_items):
-        for arg in rc.args:
+    for resolved_call in iter_phase_calls(phase_items):
+        for arg in resolved_call.args:
             for dim_std in arg.used_dim_std_names:
                 if dim_std in already or dim_std in extras:
                     continue
@@ -436,7 +436,7 @@ def _use_statements(uses: Dict[str, Set[str]]) -> List[str]:
     return result
 
 
-def _collect_scheme_uses(rg: ResolvedGroup) -> List[Tuple[str, str, List[str]]]:
+def _collect_scheme_uses(resolved_group: ResolvedGroup) -> List[Tuple[str, str, List[str]]]:
     """Return ``[(scheme_name, module_name, [phase_routine, ...]), ...]``.
 
     Schemes are listed in first-seen order across phases (in canonical phase
@@ -452,16 +452,16 @@ def _collect_scheme_uses(rg: ResolvedGroup) -> List[Tuple[str, str, List[str]]]:
     scheme_modules: Dict[str, str] = {}
     order: List[str] = []
     for phase in _GROUP_PHASE_ORDER:
-        for rc in iter_phase_calls(rg.phase_calls.get(phase, [])):
-            if rc.scheme_name not in seen_schemes:
-                seen_schemes[rc.scheme_name] = set()
-                order.append(rc.scheme_name)
-            seen_schemes[rc.scheme_name].add(phase)
-            # rc.scheme_module is empty for old/legacy ResolvedCall objects
-            # built in tests; fall back to the scheme name so emission still
-            # works.
-            scheme_modules[rc.scheme_name] = (
-                rc.scheme_module or rc.scheme_name
+        for resolved_call in iter_phase_calls(resolved_group.phase_calls.get(phase, [])):
+            if resolved_call.scheme_name not in seen_schemes:
+                seen_schemes[resolved_call.scheme_name] = set()
+                order.append(resolved_call.scheme_name)
+            seen_schemes[resolved_call.scheme_name].add(phase)
+            # resolved_call.scheme_module is empty for old/legacy ResolvedCall
+            # objects built in tests; fall back to the scheme name so emission
+            # still works.
+            scheme_modules[resolved_call.scheme_name] = (
+                resolved_call.scheme_module or resolved_call.scheme_name
             )
     result: List[Tuple[str, str, List[str]]] = []
     for sname in order:
@@ -471,7 +471,7 @@ def _collect_scheme_uses(rg: ResolvedGroup) -> List[Tuple[str, str, List[str]]]:
     return result
 
 
-def _scheme_use_statements(rg: ResolvedGroup) -> List[str]:
+def _scheme_use_statements(resolved_group: ResolvedGroup) -> List[str]:
     """Generate ``use <module>, only: <scheme>_<phase>, ...`` lines.
 
     Schemes are emitted in first-seen order; phase routines within each
@@ -481,7 +481,7 @@ def _scheme_use_statements(rg: ResolvedGroup) -> List[str]:
     """
     return [
         '{}use {}, only: {}'.format(_INDENT, mod, ', '.join(syms))
-        for _sname, mod, syms in _collect_scheme_uses(rg)
+        for _sname, mod, syms in _collect_scheme_uses(resolved_group)
         if syms
     ]
 
@@ -664,20 +664,20 @@ def _emit_phase_items(
 
 
 def _emit_one_call(
-    rc: ResolvedCall,
+    resolved_call: ResolvedCall,
     indent: str,
     lines: List[str],
 ) -> None:
     """Append Fortran lines for a single scheme call (with transforms + errcheck)."""
     # Pre-call transformations.
-    for arg in rc.args:
+    for arg in resolved_call.args:
         lines.extend(_pre_call_lines(arg))
 
     call_args_exprs = [
         '{}={}'.format(a.scheme_local_name, _call_arg_expr(a))
-        for a in rc.args
+        for a in resolved_call.args
     ]
-    call_name = '{}_{}'.format(rc.scheme_name, rc.phase)
+    call_name = '{}_{}'.format(resolved_call.scheme_name, resolved_call.phase)
 
     if call_args_exprs:
         lines.append('{}call {}( &'.format(indent, call_name))
@@ -688,12 +688,12 @@ def _emit_one_call(
         lines.append('{}call {}()'.format(indent, call_name))
 
     errflg_arg = next(
-        (a for a in rc.args if a.standard_name == 'ccpp_error_code'), None
+        (a for a in resolved_call.args if a.standard_name == 'ccpp_error_code'), None
     )
     if errflg_arg is not None:
         lines.append('{}if ({} /= 0) return'.format(indent, _call_arg_expr(errflg_arg)))
 
-    for arg in rc.args:
+    for arg in resolved_call.args:
         lines.extend(_post_call_lines(arg))
     lines.append('')
 
@@ -836,8 +836,8 @@ def _generate_phase_subroutine(
 
     seen_temp_names: Set[str] = set()
     seen_ptr_names:  Set[str] = set()
-    for rc in iter_phase_calls(phase_items):
-        for arg in rc.args:
+    for resolved_call in iter_phase_calls(phase_items):
+        for arg in resolved_call.args:
             if arg.temp_name and arg.temp_name not in seen_temp_names:
                 seen_temp_names.add(arg.temp_name)
                 t   = _fortran_type_str(
@@ -1030,7 +1030,7 @@ def _generate_state_dealloc(suite_name: str, group_name: str) -> List[str]:
 def _generate_group_cap(
     suite_name: str,
     group_name: str,
-    rg: ResolvedGroup,
+    resolved_group: ResolvedGroup,
     host_dict,
 ) -> List[str]:
     """Generate the full group cap module source lines.
@@ -1039,7 +1039,7 @@ def _generate_group_cap(
     ----------
     suite_name : str
     group_name : str
-    rg : ResolvedGroup
+    resolved_group : ResolvedGroup
     host_dict : dict
         Flat host+control dictionary.
 
@@ -1062,13 +1062,13 @@ def _generate_group_cap(
     lines.append('')
 
     # ---- USE statements -------------------------------------------------
-    uses = _collect_group_uses(rg, host_dict)
+    uses = _collect_group_uses(resolved_group, host_dict)
 
     # Add USE for types module when optional pointer args are present.
     ptr_type_names: Set[str] = set()
-    for items in rg.phase_calls.values():
-        for rc in iter_phase_calls(items):
-            for arg in rc.args:
+    for items in resolved_group.phase_calls.values():
+        for resolved_call in iter_phase_calls(items):
+            for arg in resolved_call.args:
                 if arg.ptr_name:
                     type_, kind, rank = _ptr_type_for_arg(arg)
                     ptr_type_names.add(_ptr_type_name(type_, kind, rank))
@@ -1078,12 +1078,12 @@ def _generate_group_cap(
 
     # USE ccpp_kinds for any kind parameter referenced in transformation
     # temporaries declared in this group (e.g. ``real(kind=kind_phys)``).
-    kind_names = _collect_kinds_used(rg)
+    kind_names = _collect_kinds_used(resolved_group)
     if kind_names:
         uses['ccpp_kinds'] = set(kind_names)
 
     use_lines = _use_statements(uses)
-    use_lines.extend(_scheme_use_statements(rg))
+    use_lines.extend(_scheme_use_statements(resolved_group))
     lines.extend(use_lines)
     if use_lines:
         lines.append('')
@@ -1121,7 +1121,7 @@ def _generate_group_cap(
         host_dict, exclude={'suite_name', 'group_name'}
     )
     for phase in _GROUP_PHASE_ORDER:
-        phase_items = rg.phase_calls.get(phase, [])
+        phase_items = resolved_group.phase_calls.get(phase, [])
         sub_lines = _generate_phase_subroutine(
             suite_name, group_name, phase, phase_items, ctrl_sig_entries, host_dict
         )
@@ -1138,11 +1138,11 @@ def _generate_group_cap(
     return lines
 
 
-def _ctrl_args_for_phase(rg: ResolvedGroup, phase: str) -> List[ResolvedArg]:
+def _ctrl_args_for_phase(resolved_group: ResolvedGroup, phase: str) -> List[ResolvedArg]:
     """Return control args used in a specific phase, deduplicated."""
     seen: Dict[str, ResolvedArg] = {}
-    for rc in iter_phase_calls(rg.phase_calls.get(phase, [])):
-        for arg in rc.args:
+    for resolved_call in iter_phase_calls(resolved_group.phase_calls.get(phase, [])):
+        for arg in resolved_call.args:
             if arg.source == 'control' and arg.standard_name not in seen:
                 seen[arg.standard_name] = arg
     return list(seen.values())
@@ -1155,7 +1155,7 @@ def _ctrl_args_for_phase(rg: ResolvedGroup, phase: str) -> List[ResolvedArg]:
 def write_group_cap(
     suite_name: str,
     group_name: str,
-    rg: ResolvedGroup,
+    resolved_group: ResolvedGroup,
     host_dict,
     output_root: str,
     logger: Optional[logging.Logger] = None,
@@ -1166,7 +1166,7 @@ def write_group_cap(
     ----------
     suite_name : str
     group_name : str
-    rg : ResolvedGroup
+    resolved_group : ResolvedGroup
         Resolved call information for this group.
     host_dict : dict
         Flat host+control variable dictionary.
@@ -1182,7 +1182,7 @@ def write_group_cap(
     filename = 'ccpp_{}_{}_cap.F90'.format(suite_name, group_name)
     out_path = os.path.join(output_root, filename)
 
-    lines = _generate_group_cap(suite_name, group_name, rg, host_dict)
+    lines = _generate_group_cap(suite_name, group_name, resolved_group, host_dict)
     with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path

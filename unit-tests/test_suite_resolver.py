@@ -786,8 +786,8 @@ class TestResolveOneArg(unittest.TestCase):
     def test_case1_direct_host(self):
         """Case 1: scalar host variable, no transform."""
         hd = self._host_dict()
-        sv = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'my_scheme', set())
+        suite_var = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         self.assertEqual(arg.source, 'host')
         self.assertEqual(arg.transform_case, 1)
         self.assertEqual(arg.call_expr, 'im')
@@ -796,18 +796,18 @@ class TestResolveOneArg(unittest.TestCase):
     def test_case1_control_var(self):
         """Control variable → source='control', no USE module."""
         hd = self._host_dict()
-        sv = self._scheme_var('thread_num', 'thread_number', 'in', '1')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'my_scheme', set())
+        suite_var = self._scheme_var('thread_num', 'thread_number', 'in', '1')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         self.assertEqual(arg.source, 'control')
         self.assertIsNone(arg.module_name)
 
     def test_case1_2d_array_run(self):
         """2D array in run phase → subscript applied."""
         hd = self._host_dict()
-        sv = self._scheme_var('temp', 'air_temperature', 'inout', 'K',
+        suite_var = self._scheme_var('temp', 'air_temperature', 'inout', 'K',
                               '(horizontal_loop_extent, vertical_layer_dimension)',
                               'real', 'kind_phys')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'my_scheme', set())
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         # access_path = 'gt0', subscript = '(lb:ub, 1:nlev)'
         self.assertEqual(arg.call_expr, 'gt0(lb:ub, 1:nlev)')
         self.assertEqual(arg.transform_case, 1)
@@ -815,10 +815,10 @@ class TestResolveOneArg(unittest.TestCase):
     def test_case2_suite_owned(self):
         """Case 2: not in host, first use intent(out) → creates SuiteVar."""
         hd = self._host_dict()
-        sv = self._scheme_var('new_var', 'brand_new_standard_name', 'out', 'K',
+        suite_var = self._scheme_var('new_var', 'brand_new_standard_name', 'out', 'K',
                               '()', 'real', 'kind_phys')
         suite_vars: dict = {}
-        arg = _resolve_one_arg(sv, 'run', hd, suite_vars, 'my_scheme', set())
+        arg = _resolve_one_arg(suite_var, 'run', hd, suite_vars, 'my_scheme', set())
         self.assertEqual(arg.source, 'suite')
         self.assertIn('brand_new_standard_name', suite_vars)
         self.assertIsNotNone(arg.suite_var)
@@ -826,9 +826,9 @@ class TestResolveOneArg(unittest.TestCase):
     def test_case3_not_found_intent_in_raises(self):
         """Case 3: not in host, intent(in) → CCPPError."""
         hd = self._host_dict()
-        sv = self._scheme_var('missing', 'totally_missing_stdname', 'in', 'K')
+        suite_var = self._scheme_var('missing', 'totally_missing_stdname', 'in', 'K')
         with self.assertRaises(CCPPError) as cm:
-            _resolve_one_arg(sv, 'run', hd, {}, 'bad_scheme', set())
+            _resolve_one_arg(suite_var, 'run', hd, {}, 'bad_scheme', set())
         self.assertIn('totally_missing_stdname', str(cm.exception))
 
     def test_case4_suite_data_reuse(self):
@@ -870,8 +870,8 @@ class TestResolveOneArg(unittest.TestCase):
         extra_hd = build_flat_host_dict(extra_tbls, [], {})
         combined = {**hd, **extra_hd}
 
-        sv = self._scheme_var('p_hpa', 'air_pressure', 'in', 'hPa', '()', 'real', 'kind_phys')
-        arg = _resolve_one_arg(sv, 'run', combined, {}, 'my_scheme', set())
+        suite_var = self._scheme_var('p_hpa', 'air_pressure', 'in', 'hPa', '()', 'real', 'kind_phys')
+        arg = _resolve_one_arg(suite_var, 'run', combined, {}, 'my_scheme', set())
         self.assertTrue(arg.needs_unit_transform)
         self.assertEqual(arg.transform_case, 3)
         self.assertIn('temp_name', arg.__dataclass_fields__)  # has temp_name field
@@ -880,8 +880,8 @@ class TestResolveOneArg(unittest.TestCase):
     def test_no_transform_same_units(self):
         """Identical units → no transformation."""
         hd = self._host_dict()
-        sv = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'my_scheme', set())
+        suite_var = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         self.assertFalse(arg.needs_transform)
 
     def test_unknown_unit_mismatch_raises(self):
@@ -901,17 +901,17 @@ class TestResolveOneArg(unittest.TestCase):
   kind = kind_phys
 '''
         hd = build_flat_host_dict(_parse(src), [], {})
-        sv = self._scheme_var('v', 'some_value', 'in', 'abc_unit', '()', 'real', 'kind_phys')
+        suite_var = self._scheme_var('v', 'some_value', 'in', 'abc_unit', '()', 'real', 'kind_phys')
         with self.assertRaises(CCPPError) as cm:
-            _resolve_one_arg(sv, 'run', hd, {}, 'bad_scheme', set())
+            _resolve_one_arg(suite_var, 'run', hd, {}, 'bad_scheme', set())
         self.assertIn('xyz_unit', str(cm.exception))
 
     def test_optional_sets_ptr_name(self):
         """Optional argument → ptr_name set."""
         hd = self._host_dict()
-        sv = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count',
+        suite_var = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count',
                               optional=True)
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'my_scheme', set())
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         self.assertTrue(arg.is_optional)
         self.assertTrue(arg.ptr_name)
         self.assertEqual(arg.transform_case, 2)
@@ -989,35 +989,35 @@ class TestVerticalFlipTransform(unittest.TestCase):
 
         from metadata.metadata_table import MetaVar
         ctx = _ctx()
-        sv = MetaVar('temp', ctx)
-        sv.set_attr('standard_name', 'air_temperature', ctx)
-        sv.set_attr('units', scheme_units, ctx)
-        sv.set_attr('dimensions',
+        suite_var = MetaVar('temp', ctx)
+        suite_var.set_attr('standard_name', 'air_temperature', ctx)
+        suite_var.set_attr('units', scheme_units, ctx)
+        suite_var.set_attr('dimensions',
                     '(horizontal_loop_extent, vertical_layer_dimension)', ctx)
-        sv.set_attr('type', 'real', ctx)
-        sv.set_attr('kind', 'kind_phys', ctx)
-        sv.set_attr('intent', intent, ctx)
+        suite_var.set_attr('type', 'real', ctx)
+        suite_var.set_attr('kind', 'kind_phys', ctx)
+        suite_var.set_attr('intent', intent, ctx)
         if scheme_top_at_one:
-            sv.set_attr('top_at_one', 'True', ctx)
-        return hd, sv
+            suite_var.set_attr('top_at_one', 'True', ctx)
+        return hd, suite_var
 
     def test_no_flip_when_both_false(self):
-        hd, sv = self._build_host_and_scheme(False, False)
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        hd, suite_var = self._build_host_and_scheme(False, False)
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_vert_flip)
         self.assertEqual(arg.transform_case, 1)
         self.assertEqual(arg.call_expr, 'gt0(lb:ub, 1:nlev)')
 
     def test_no_flip_when_both_true(self):
-        hd, sv = self._build_host_and_scheme(True, True)
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        hd, suite_var = self._build_host_and_scheme(True, True)
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_vert_flip)
         self.assertEqual(arg.transform_case, 1)
         self.assertEqual(arg.call_expr, 'gt0(lb:ub, 1:nlev)')
 
     def test_flip_when_host_false_scheme_true(self):
-        hd, sv = self._build_host_and_scheme(False, True)
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        hd, suite_var = self._build_host_and_scheme(False, True)
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertTrue(arg.needs_vert_flip)
         self.assertTrue(arg.needs_transform)
         # Transform pipeline: temp local, transform_case 3, no unit conv.
@@ -1033,8 +1033,8 @@ class TestVerticalFlipTransform(unittest.TestCase):
         self.assertEqual(arg.unit_backward, 'temp_l')
 
     def test_flip_when_host_true_scheme_false(self):
-        hd, sv = self._build_host_and_scheme(True, False)
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        hd, suite_var = self._build_host_and_scheme(True, False)
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertTrue(arg.needs_vert_flip)
         self.assertEqual(arg.call_expr, 'gt0(lb:ub, nlev:1:-1)')
 
@@ -1042,9 +1042,9 @@ class TestVerticalFlipTransform(unittest.TestCase):
         """Mismatched top_at_one AND a unit conversion → the unit-forward
         formula is applied to the flipped call_expr; the temp pattern is
         a single combined assignment."""
-        hd, sv = self._build_host_and_scheme(False, True,
+        hd, suite_var = self._build_host_and_scheme(False, True,
                                               host_units='Pa', scheme_units='hPa')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertTrue(arg.needs_vert_flip)
         self.assertTrue(arg.needs_unit_transform)
         self.assertEqual(arg.transform_case, 3)
@@ -1057,15 +1057,15 @@ class TestVerticalFlipTransform(unittest.TestCase):
         self.assertEqual(arg.call_expr, 'gt0(lb:ub, nlev:1:-1)')
 
     def test_intent_in_only_emits_forward(self):
-        hd, sv = self._build_host_and_scheme(False, True, intent='in')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        hd, suite_var = self._build_host_and_scheme(False, True, intent='in')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertTrue(arg.needs_vert_flip)
         self.assertEqual(arg.unit_forward, 'gt0(lb:ub, nlev:1:-1)')
         self.assertEqual(arg.unit_backward, '')
 
     def test_intent_out_only_emits_backward(self):
-        hd, sv = self._build_host_and_scheme(False, True, intent='out')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        hd, suite_var = self._build_host_and_scheme(False, True, intent='out')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertTrue(arg.needs_vert_flip)
         self.assertEqual(arg.unit_forward, '')
         self.assertEqual(arg.unit_backward, 'temp_l')
@@ -1093,15 +1093,15 @@ class TestVerticalFlipTransform(unittest.TestCase):
 
         from metadata.metadata_table import MetaVar
         ctx = _ctx()
-        sv = MetaVar('s', ctx)
-        sv.set_attr('standard_name', 'some_scalar', ctx)
-        sv.set_attr('units', '1', ctx)
-        sv.set_attr('dimensions', '()', ctx)
-        sv.set_attr('type', 'real', ctx)
-        sv.set_attr('kind', 'kind_phys', ctx)
-        sv.set_attr('intent', 'in', ctx)
+        suite_var = MetaVar('s', ctx)
+        suite_var.set_attr('standard_name', 'some_scalar', ctx)
+        suite_var.set_attr('units', '1', ctx)
+        suite_var.set_attr('dimensions', '()', ctx)
+        suite_var.set_attr('type', 'real', ctx)
+        suite_var.set_attr('kind', 'kind_phys', ctx)
+        suite_var.set_attr('intent', 'in', ctx)
         # Scheme leaves top_at_one at default (False).
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_vert_flip)
 
 
@@ -1146,8 +1146,8 @@ class TestCharacterKindResolution(unittest.TestCase):
     def test_len_star_compatible_with_len_512(self):
         """len=* in scheme is always compatible — no transform, no error."""
         hd = self._host_with_char('len=512')
-        sv = self._scheme_var_char('msg', 'my_message', 'len=*')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        suite_var = self._scheme_var_char('msg', 'my_message', 'len=*')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_kind_transform)
         self.assertEqual(arg.transform_case, 1)
         self.assertEqual(arg.temp_name, '')
@@ -1155,32 +1155,32 @@ class TestCharacterKindResolution(unittest.TestCase):
     def test_len_match_compatible(self):
         """Same specific len=N in both host and scheme — no transform."""
         hd = self._host_with_char('len=512')
-        sv = self._scheme_var_char('msg', 'my_message', 'len=512')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        suite_var = self._scheme_var_char('msg', 'my_message', 'len=512')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_kind_transform)
 
     def test_len_star_in_host_no_error(self):
         """len=* in the host is also fine (assumed-length dummy everywhere)."""
         hd = self._host_with_char('len=*')
-        sv = self._scheme_var_char('msg', 'my_message', 'len=*')
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        suite_var = self._scheme_var_char('msg', 'my_message', 'len=*')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_kind_transform)
 
     def test_mismatched_specific_lengths_raises(self):
         """Specific len=128 vs len=512 is a metadata error."""
         hd = self._host_with_char('len=512')
-        sv = self._scheme_var_char('msg', 'my_message', 'len=128')
+        suite_var = self._scheme_var_char('msg', 'my_message', 'len=128')
         with self.assertRaises(CCPPError) as cm:
-            _resolve_one_arg(sv, 'run', hd, {}, 'bad_scheme', set())
+            _resolve_one_arg(suite_var, 'run', hd, {}, 'bad_scheme', set())
         self.assertIn('len=512', str(cm.exception))
         self.assertIn('len=128', str(cm.exception))
 
     def test_len_star_host_specific_scheme_raises(self):
         """len=* in host but specific len=256 in scheme — error."""
         hd = self._host_with_char('len=*')
-        sv = self._scheme_var_char('msg', 'my_message', 'len=256')
+        suite_var = self._scheme_var_char('msg', 'my_message', 'len=256')
         with self.assertRaises(CCPPError) as cm:
-            _resolve_one_arg(sv, 'run', hd, {}, 'bad_scheme', set())
+            _resolve_one_arg(suite_var, 'run', hd, {}, 'bad_scheme', set())
         self.assertIn('len=256', str(cm.exception))
 
 
@@ -1197,22 +1197,22 @@ class TestResolveSuite(unittest.TestCase):
         return resolve_suite(suite, store, hd), hd
 
     def test_groups_present(self):
-        sr, _ = self._resolve()
-        self.assertEqual(sr.suite_name, 'test_simple')
-        self.assertEqual(len(sr.groups), 1)
-        self.assertEqual(sr.groups[0].group_name, 'physics')
+        suite_resolution, _ = self._resolve()
+        self.assertEqual(suite_resolution.suite_name, 'test_simple')
+        self.assertEqual(len(suite_resolution.groups), 1)
+        self.assertEqual(suite_resolution.groups[0].group_name, 'physics')
 
     def test_run_phase_calls(self):
-        sr, _ = self._resolve()
-        rg = sr.groups[0]
-        self.assertIn('run', rg.phase_calls)
-        calls = rg.phase_calls['run']
+        suite_resolution, _ = self._resolve()
+        resolved_group = suite_resolution.groups[0]
+        self.assertIn('run', resolved_group.phase_calls)
+        calls = resolved_group.phase_calls['run']
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0].scheme_name, 'temp_calc_adjust')
 
     def test_run_phase_args(self):
-        sr, _ = self._resolve()
-        calls = sr.groups[0].phase_calls['run']
+        suite_resolution, _ = self._resolve()
+        calls = suite_resolution.groups[0].phase_calls['run']
         args = {a.scheme_local_name: a for a in calls[0].args}
         # im = horizontal_dimension: scalar arg is synthesised from the loop
         # bounds so the scheme sees the per-call chunk extent, not host ncols.
@@ -1226,41 +1226,41 @@ class TestResolveSuite(unittest.TestCase):
         self.assertIn('errflg', args)
 
     def test_init_phase_calls(self):
-        sr, _ = self._resolve()
-        rg = sr.groups[0]
-        self.assertIn('init', rg.phase_calls)
-        calls = rg.phase_calls['init']
+        suite_resolution, _ = self._resolve()
+        resolved_group = suite_resolution.groups[0]
+        self.assertIn('init', resolved_group.phase_calls)
+        calls = resolved_group.phase_calls['init']
         self.assertEqual(calls[0].scheme_name, 'temp_calc_adjust')
 
     def test_init_phase_horizontal_subscript(self):
         """In init phase, scalar horizontal_dimension does not produce an lb:ub slice."""
-        sr, _ = self._resolve()
-        rg = sr.groups[0]
+        suite_resolution, _ = self._resolve()
+        resolved_group = suite_resolution.groups[0]
         # temp_calc_adjust_init doesn't have temp, but the general rule should hold
         # for any 2D variable in a non-run phase: no lb:ub slice in init args.
         # (Scalar horizontal_dimension args are synthesised as (ub - lb + 1),
         # which collapses to ncols in non-run phases but never contains
         # the substring 'lb:ub'.)
-        calls = rg.phase_calls.get('init', [])
-        for rc in calls:
-            for arg in rc.args:
+        calls = resolved_group.phase_calls.get('init', [])
+        for resolved_call in calls:
+            for arg in resolved_call.args:
                 self.assertNotIn('lb:ub', arg.call_expr)
 
     def test_no_suite_vars(self):
         """All variables in temp_calc_adjust are provided by the host."""
-        sr, _ = self._resolve()
-        self.assertEqual(sr.suite_vars, {})
+        suite_resolution, _ = self._resolve()
+        self.assertEqual(suite_resolution.suite_vars, {})
 
     def test_used_modules(self):
-        sr, _ = self._resolve()
-        calls = sr.groups[0].phase_calls['run']
+        suite_resolution, _ = self._resolve()
+        calls = suite_resolution.groups[0].phase_calls['run']
         mods = calls[0].used_modules
         # host_phys should appear (air_temperature, horizontal_dimension, etc.)
         self.assertIn('host_phys', mods)
 
     def test_control_args_no_module(self):
-        sr, _ = self._resolve()
-        calls = sr.groups[0].phase_calls['run']
+        suite_resolution, _ = self._resolve()
+        calls = suite_resolution.groups[0].phase_calls['run']
         ctrl = [a for a in calls[0].args if a.source == 'control']
         for c in ctrl:
             self.assertIsNone(c.module_name)
@@ -1326,8 +1326,8 @@ class TestResolveSuiteLoopContextVariables(unittest.TestCase):
             _parse(self._LOOP_SCHEME_SRC, 'loop_scheme.meta')
         )
 
-    def _args_by_name(self, sr):
-        calls = list(iter_phase_calls(sr.groups[0].phase_calls['run']))
+    def _args_by_name(self, suite_resolution):
+        calls = list(iter_phase_calls(suite_resolution.groups[0].phase_calls['run']))
         return {a.scheme_local_name: a for a in calls[0].args}
 
     def test_counter_inside_subcycle_resolves_to_loop_local(self):
@@ -1341,9 +1341,9 @@ class TestResolveSuiteLoopContextVariables(unittest.TestCase):
             "  </group>\n"
             "</suite>\n"
         )
-        sr = resolve_suite(self._build_suite_from_xml(xml),
+        suite_resolution = resolve_suite(self._build_suite_from_xml(xml),
                            self._store(), _load_full_host_dict())
-        args = self._args_by_name(sr)
+        args = self._args_by_name(suite_resolution)
         self.assertEqual(args['iter'].standard_name, 'ccpp_loop_counter')
         self.assertEqual(args['iter'].call_expr, 'ccpp_loop_counter')
         self.assertEqual(args['iter'].source, 'control')
@@ -1359,9 +1359,9 @@ class TestResolveSuiteLoopContextVariables(unittest.TestCase):
             "  </group>\n"
             "</suite>\n"
         )
-        sr = resolve_suite(self._build_suite_from_xml(xml),
+        suite_resolution = resolve_suite(self._build_suite_from_xml(xml),
                            self._store(), _load_full_host_dict())
-        args = self._args_by_name(sr)
+        args = self._args_by_name(suite_resolution)
         # ``loop=3`` is a literal — extent resolves to the same literal.
         self.assertEqual(args['niter'].call_expr, '3')
 
@@ -1385,9 +1385,9 @@ class TestResolveSuiteLoopContextVariables(unittest.TestCase):
             "  </group>\n"
             "</suite>\n"
         )
-        sr = resolve_suite(self._build_suite_from_xml(xml),
+        suite_resolution = resolve_suite(self._build_suite_from_xml(xml),
                            self._store(), hd)
-        args = self._args_by_name(sr)
+        args = self._args_by_name(suite_resolution)
         self.assertEqual(args['niter'].call_expr, 'n_sub')
 
     def test_outside_subcycle_raises_clear_error(self):
@@ -1567,11 +1567,11 @@ class TestResolveSuiteInitFinalSchemes(unittest.TestCase):
             '  <group name="g"></group>\n'
             '</suite>\n'
         )
-        sr = self._resolve(suite_xml, self._SCHEME_META)
-        self.assertIsNotNone(sr.suite_init_call)
-        self.assertEqual(sr.suite_init_call.scheme_name, 'init_final_test')
-        self.assertEqual(sr.suite_init_call.phase, 'init')
-        self.assertIsNone(sr.suite_final_call)
+        suite_resolution = self._resolve(suite_xml, self._SCHEME_META)
+        self.assertIsNotNone(suite_resolution.suite_init_call)
+        self.assertEqual(suite_resolution.suite_init_call.scheme_name, 'init_final_test')
+        self.assertEqual(suite_resolution.suite_init_call.phase, 'init')
+        self.assertIsNone(suite_resolution.suite_final_call)
 
     def test_final_call_attached(self):
         suite_xml = (
@@ -1581,11 +1581,11 @@ class TestResolveSuiteInitFinalSchemes(unittest.TestCase):
             '  <final>init_final_test</final>\n'
             '</suite>\n'
         )
-        sr = self._resolve(suite_xml, self._SCHEME_META)
-        self.assertIsNone(sr.suite_init_call)
-        self.assertIsNotNone(sr.suite_final_call)
-        self.assertEqual(sr.suite_final_call.scheme_name, 'init_final_test')
-        self.assertEqual(sr.suite_final_call.phase, 'final')
+        suite_resolution = self._resolve(suite_xml, self._SCHEME_META)
+        self.assertIsNone(suite_resolution.suite_init_call)
+        self.assertIsNotNone(suite_resolution.suite_final_call)
+        self.assertEqual(suite_resolution.suite_final_call.scheme_name, 'init_final_test')
+        self.assertEqual(suite_resolution.suite_final_call.phase, 'final')
 
     def test_both_attached(self):
         suite_xml = (
@@ -1596,9 +1596,9 @@ class TestResolveSuiteInitFinalSchemes(unittest.TestCase):
             '  <final>init_final_test</final>\n'
             '</suite>\n'
         )
-        sr = self._resolve(suite_xml, self._SCHEME_META)
-        self.assertIsNotNone(sr.suite_init_call)
-        self.assertIsNotNone(sr.suite_final_call)
+        suite_resolution = self._resolve(suite_xml, self._SCHEME_META)
+        self.assertIsNotNone(suite_resolution.suite_init_call)
+        self.assertIsNotNone(suite_resolution.suite_final_call)
 
     def test_init_scheme_without_init_phase_raises(self):
         """If the named scheme has no ``init`` phase in its metadata,
@@ -1679,8 +1679,8 @@ class TestResolveSuiteDuplicateScheme(unittest.TestCase):
         self.assertIsNotNone(self._resolve())
 
     def test_run_phase_preserves_both_calls(self):
-        sr = self._resolve()
-        run_calls = list(iter_phase_calls(sr.groups[0].phase_calls['run']))
+        suite_resolution = self._resolve()
+        run_calls = list(iter_phase_calls(suite_resolution.groups[0].phase_calls['run']))
         self.assertEqual(len(run_calls), 2)
         self.assertEqual(
             [c.scheme_name for c in run_calls],
@@ -1688,14 +1688,14 @@ class TestResolveSuiteDuplicateScheme(unittest.TestCase):
         )
 
     def test_init_phase_dedupes(self):
-        sr = self._resolve()
-        init_calls = list(iter_phase_calls(sr.groups[0].phase_calls['init']))
+        suite_resolution = self._resolve()
+        init_calls = list(iter_phase_calls(suite_resolution.groups[0].phase_calls['init']))
         self.assertEqual(len(init_calls), 1)
         self.assertEqual(init_calls[0].scheme_name, 'temp_calc_adjust')
 
     def test_final_phase_dedupes(self):
-        sr = self._resolve()
-        final_calls = list(iter_phase_calls(sr.groups[0].phase_calls['final']))
+        suite_resolution = self._resolve()
+        final_calls = list(iter_phase_calls(suite_resolution.groups[0].phase_calls['final']))
         self.assertEqual(len(final_calls), 1)
 
 
@@ -1779,10 +1779,10 @@ class TestCollectKindsUsed(unittest.TestCase):
         # ``iter_phase_calls`` does ``isinstance(item, ResolvedCall)`` so a
         # MagicMock won't pass; build a real ResolvedCall (the only field
         # ``_collect_kinds_used`` reads is ``args``).
-        rc = ResolvedCall(scheme_name='s', phase='run', args=args)
-        rg = MagicMock()
-        rg.phase_calls = {'run': [rc]}
-        return rg
+        resolved_call = ResolvedCall(scheme_name='s', phase='run', args=args)
+        resolved_group = MagicMock()
+        resolved_group.phase_calls = {'run': [resolved_call]}
+        return resolved_group
 
     def test_keeps_kind_symbols(self):
         args = [self._fake_arg(kind_scheme='kind_phys'),
@@ -1927,9 +1927,9 @@ class TestGenerateGroupCap(unittest.TestCase):
         hd = _load_full_host_dict()
         store = _load_scheme_store()
         suite = _parse_suite('suite_test_simple.xml')
-        sr = resolve_suite(suite, store, hd)
-        rg = sr.groups[0]
-        lines = _generate_group_cap('test_simple', 'physics', rg, hd)
+        suite_resolution = resolve_suite(suite, store, hd)
+        resolved_group = suite_resolution.groups[0]
+        lines = _generate_group_cap('test_simple', 'physics', resolved_group, hd)
         return lines
 
     def test_module_header(self):
@@ -1998,10 +1998,10 @@ class TestGenerateGroupCap(unittest.TestCase):
         hd = _load_full_host_dict()
         store = _load_scheme_store()
         suite = _parse_suite('suite_test_simple.xml')
-        sr = resolve_suite(suite, store, hd)
-        rg = sr.groups[0]
+        suite_resolution = resolve_suite(suite, store, hd)
+        resolved_group = suite_resolution.groups[0]
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_group_cap('test_simple', 'physics', rg, hd, tmpdir)
+            path = write_group_cap('test_simple', 'physics', resolved_group, hd, tmpdir)
             self.assertTrue(os.path.isfile(path))
             self.assertEqual(os.path.basename(path), 'ccpp_test_simple_physics_cap.F90')
             with open(path) as fh:
@@ -2023,34 +2023,34 @@ class TestSubcycleResolution(unittest.TestCase):
         return resolve_suite(suite, store, hd)
 
     def test_run_phase_has_subcycle(self):
-        sr = self._resolve_subcycle()
-        rg = sr.groups[0]
-        run_items = rg.phase_calls['run']
+        suite_resolution = self._resolve_subcycle()
+        resolved_group = suite_resolution.groups[0]
+        run_items = resolved_group.phase_calls['run']
         self.assertEqual(len(run_items), 1)
         self.assertIsInstance(run_items[0], ResolvedSubcycle)
 
     def test_subcycle_loop_count(self):
-        sr = self._resolve_subcycle()
-        sub = sr.groups[0].phase_calls['run'][0]
+        suite_resolution = self._resolve_subcycle()
+        sub = suite_resolution.groups[0].phase_calls['run'][0]
         self.assertEqual(sub.loop, '3')
 
     def test_subcycle_contains_scheme(self):
-        sr = self._resolve_subcycle()
-        sub = sr.groups[0].phase_calls['run'][0]
+        suite_resolution = self._resolve_subcycle()
+        sub = suite_resolution.groups[0].phase_calls['run'][0]
         self.assertEqual(len(sub.calls), 1)
         self.assertEqual(sub.calls[0].scheme_name, 'temp_calc_adjust')
 
     def test_init_phase_is_flat(self):
         """Init phase flattens subcycles — no ResolvedSubcycle in init."""
-        sr = self._resolve_subcycle()
-        rg = sr.groups[0]
-        for item in rg.phase_calls.get('init', []):
+        suite_resolution = self._resolve_subcycle()
+        resolved_group = suite_resolution.groups[0]
+        for item in resolved_group.phase_calls.get('init', []):
             self.assertNotIsInstance(item, ResolvedSubcycle)
 
     def test_iter_phase_calls_flattens(self):
-        sr = self._resolve_subcycle()
-        rg = sr.groups[0]
-        all_calls = list(iter_phase_calls(rg.phase_calls['run']))
+        suite_resolution = self._resolve_subcycle()
+        resolved_group = suite_resolution.groups[0]
+        all_calls = list(iter_phase_calls(resolved_group.phase_calls['run']))
         self.assertEqual(len(all_calls), 1)
         self.assertEqual(all_calls[0].scheme_name, 'temp_calc_adjust')
 
@@ -2091,8 +2091,8 @@ class TestNestedSubcycleResolution(unittest.TestCase):
             '  </group>\n'
             '</suite>\n'
         )
-        sr = self._resolve_nested(suite_xml)
-        run = sr.groups[0].phase_calls['run']
+        suite_resolution = self._resolve_nested(suite_xml)
+        run = suite_resolution.groups[0].phase_calls['run']
         # Outer subcycle.
         self.assertEqual(len(run), 1)
         outer = run[0]
@@ -2123,8 +2123,8 @@ class TestNestedSubcycleResolution(unittest.TestCase):
             '  </group>\n'
             '</suite>\n'
         )
-        sr = self._resolve_nested(suite_xml)
-        run = sr.groups[0].phase_calls['run']
+        suite_resolution = self._resolve_nested(suite_xml)
+        run = suite_resolution.groups[0].phase_calls['run']
         outer = run[0]
         mid   = outer.calls[0]
         inner = mid.calls[0]
@@ -2149,8 +2149,8 @@ class TestNestedSubcycleResolution(unittest.TestCase):
             '  </group>\n'
             '</suite>\n'
         )
-        sr = self._resolve_nested(suite_xml)
-        run = sr.groups[0].phase_calls['run']
+        suite_resolution = self._resolve_nested(suite_xml)
+        run = suite_resolution.groups[0].phase_calls['run']
         calls = list(iter_phase_calls(run))
         # One scheme call, reachable through two subcycle wrappers.
         self.assertEqual(len(calls), 1)
@@ -2320,9 +2320,9 @@ class TestSubcycleGroupCapOutput(unittest.TestCase):
         hd     = _load_full_host_dict()
         store  = _load_scheme_store()
         suite  = _parse_suite('suite_test_subcycle.xml')
-        sr     = resolve_suite(suite, store, hd)
-        rg     = sr.groups[0]
-        self.lines = _generate_group_cap('test_subcycle', 'physics', rg, hd)
+        suite_resolution     = resolve_suite(suite, store, hd)
+        resolved_group     = suite_resolution.groups[0]
+        self.lines = _generate_group_cap('test_subcycle', 'physics', resolved_group, hd)
         self.text  = '\n'.join(self.lines)
 
     def test_do_loop_present(self):
@@ -2355,9 +2355,9 @@ class TestStateMachineGroupCap(unittest.TestCase):
         hd    = _load_full_host_dict()
         store = _load_scheme_store()
         suite = _parse_suite('suite_test_simple.xml')
-        sr    = resolve_suite(suite, store, hd)
-        rg    = sr.groups[0]
-        self.lines = _generate_group_cap('test_simple', 'physics', rg, hd)
+        suite_resolution    = resolve_suite(suite, store, hd)
+        resolved_group    = suite_resolution.groups[0]
+        self.lines = _generate_group_cap('test_simple', 'physics', resolved_group, hd)
         self.text  = '\n'.join(self.lines)
 
     def test_state_constants_declared(self):
@@ -2448,9 +2448,9 @@ class TestSuiteCapStateCalls(unittest.TestCase):
         hd    = _load_full_host_dict()
         store = _load_scheme_store()
         suite = _parse_suite('suite_test_simple.xml')
-        sr    = resolve_suite(suite, store, hd)
+        suite_resolution    = resolve_suite(suite, store, hd)
         # Pass host_dict so number_of_instances flows through.
-        lines = _generate_suite_cap('test_simple', sr, store, hd)
+        lines = _generate_suite_cap('test_simple', suite_resolution, store, hd)
         self.text = '\n'.join(lines)
 
     def test_init_calls_state_alloc_with_ninstances(self):
@@ -2486,8 +2486,8 @@ class TestSuiteCapStateCallsSingleInstance(unittest.TestCase):
         hd = {k: v for k, v in hd_full.items() if k != 'number_of_instances'}
         store = _load_scheme_store()
         suite = _parse_suite('suite_test_simple.xml')
-        sr    = resolve_suite(suite, store, hd)
-        lines = _generate_suite_cap('test_simple', sr, store, hd)
+        suite_resolution    = resolve_suite(suite, store, hd)
+        lines = _generate_suite_cap('test_simple', suite_resolution, store, hd)
         self.text = '\n'.join(lines)
 
     def test_init_calls_state_alloc_with_literal_1(self):
@@ -2520,41 +2520,41 @@ class TestRegisterPhaseSuiteOwnedDim(unittest.TestCase):
         self.hd     = _load_full_host_dict()
         self.store  = _load_register_dim_scheme_store()
         self.suite  = _parse_suite('suite_register_dim.xml')
-        self.sr     = resolve_suite(self.suite, self.store, self.hd)
+        self.suite_resolution     = resolve_suite(self.suite, self.store, self.hd)
 
     def test_dim_inter_promoted_to_suite_var(self):
         # The register-phase intent=out arg becomes a suite-owned variable.
         self.assertIn(
-            'dimension_for_interstitial_variable', self.sr.suite_vars,
+            'dimension_for_interstitial_variable', self.suite_resolution.suite_vars,
         )
-        sv = self.sr.suite_vars['dimension_for_interstitial_variable']
-        self.assertEqual(sv.type_, 'integer')
-        self.assertEqual(sv.dimensions, [])
-        self.assertEqual(sv.source_phase, 'register')
+        suite_var = self.suite_resolution.suite_vars['dimension_for_interstitial_variable']
+        self.assertEqual(suite_var.type_, 'integer')
+        self.assertEqual(suite_var.dimensions, [])
+        self.assertEqual(suite_var.source_phase, 'register')
 
     def test_interstitial_var_promoted_to_suite_var(self):
         # The run-phase intent=out array also becomes a suite var, dimensioned
         # by the register-set scalar.
         self.assertIn(
-            'output_only_interstitial_variable', self.sr.suite_vars,
+            'output_only_interstitial_variable', self.suite_resolution.suite_vars,
         )
-        sv = self.sr.suite_vars['output_only_interstitial_variable']
-        self.assertEqual(sv.dimensions, ['dimension_for_interstitial_variable'])
+        suite_var = self.suite_resolution.suite_vars['output_only_interstitial_variable']
+        self.assertEqual(suite_var.dimensions, ['dimension_for_interstitial_variable'])
 
     def test_register_phase_call_resolved(self):
         # Group's register phase has a ResolvedCall for the producer scheme.
-        rg = self.sr.groups[0]
-        register_calls = list(iter_phase_calls(rg.phase_calls.get('register', [])))
+        resolved_group = self.suite_resolution.groups[0]
+        register_calls = list(iter_phase_calls(resolved_group.phase_calls.get('register', [])))
         self.assertEqual(len(register_calls), 1)
         self.assertEqual(register_calls[0].scheme_name, 'register_dim_producer')
 
     def test_run_phase_dim_resolves_via_suite_var(self):
         # The run-phase consumer call's interstitial_var arg's call_expr
         # must reference ccpp_suite_data(...)%dim_inter as the upper bound.
-        rg = self.sr.groups[0]
-        run_calls = list(iter_phase_calls(rg.phase_calls.get('run', [])))
-        consumer = next(rc for rc in run_calls
-                        if rc.scheme_name == 'register_dim_consumer')
+        resolved_group = self.suite_resolution.groups[0]
+        run_calls = list(iter_phase_calls(resolved_group.phase_calls.get('run', [])))
+        consumer = next(resolved_call for resolved_call in run_calls
+                        if resolved_call.scheme_name == 'register_dim_consumer')
         inter_arg = next(a for a in consumer.args
                          if a.standard_name == 'output_only_interstitial_variable')
         self.assertIn('1:ccpp_suite_data', inter_arg.subscript)
@@ -2569,9 +2569,9 @@ class TestRegisterPhaseSuiteCapEmission(unittest.TestCase):
         self.hd    = _load_full_host_dict()
         self.store = _load_register_dim_scheme_store()
         self.suite = _parse_suite('suite_register_dim.xml')
-        self.sr    = resolve_suite(self.suite, self.store, self.hd)
+        self.suite_resolution    = resolve_suite(self.suite, self.store, self.hd)
         self.text  = '\n'.join(
-            _generate_suite_cap('reg_dim', self.sr, self.store, self.hd)
+            _generate_suite_cap('reg_dim', self.suite_resolution, self.store, self.hd)
         )
 
     def test_register_subroutine_emits_scheme_call(self):
@@ -2634,23 +2634,23 @@ class TestRegisterConstituentsResolver(unittest.TestCase):
         self.hd    = _load_constituent_host_dict()
         self.store = _load_constituent_scheme_store()
         self.suite = _parse_suite('suite_register_constituents.xml')
-        self.sr    = resolve_suite(self.suite, self.store, self.hd)
+        self.suite_resolution    = resolve_suite(self.suite, self.store, self.hd)
 
     def test_constituent_register_calls_recorded(self):
         self.assertEqual(
-            self.sr.constituent_register_calls,
+            self.suite_resolution.constituent_register_calls,
             [('register_constituents', 'dyn_const')],
         )
 
     def test_constituent_arg_not_promoted_to_suite_var(self):
         # The constituent array is per-scheme transient — never a SuiteVar.
         self.assertNotIn(
-            'dynamic_constituents_for_register_test', self.sr.suite_vars,
+            'dynamic_constituents_for_register_test', self.suite_resolution.suite_vars,
         )
 
     def test_constituent_arg_marked(self):
-        rg = self.sr.groups[0]
-        register_call = list(iter_phase_calls(rg.phase_calls['register']))[0]
+        resolved_group = self.suite_resolution.groups[0]
+        register_call = list(iter_phase_calls(resolved_group.phase_calls['register']))[0]
         const_arg = next(a for a in register_call.args if a.is_constituent_arg)
         self.assertEqual(const_arg.scheme_local_name, 'dyn_const')
         self.assertEqual(const_arg.call_expr, 'scheme_consts')
@@ -2665,11 +2665,11 @@ class TestRegisterConstituentsNoHostObjectRequired(unittest.TestCase):
         hd    = _load_full_host_dict()
         store = _load_constituent_scheme_store()
         suite = _parse_suite('suite_register_constituents.xml')
-        sr = resolve_suite(suite, store, hd)
+        suite_resolution = resolve_suite(suite, store, hd)
         # The register-phase scheme is still recorded for the suite cap to
         # populate the per-suite dynamic-constituent buffer.
         self.assertEqual(
-            sr.constituent_register_calls,
+            suite_resolution.constituent_register_calls,
             [('register_constituents', 'dyn_const')],
         )
 
@@ -2687,9 +2687,9 @@ class TestRegisterConstituentsSuiteCap(unittest.TestCase):
         self.hd    = _load_constituent_host_dict()
         self.store = _load_constituent_scheme_store()
         self.suite = _parse_suite('suite_register_constituents.xml')
-        self.sr    = resolve_suite(self.suite, self.store, self.hd)
+        self.suite_resolution    = resolve_suite(self.suite, self.store, self.hd)
         self.text  = '\n'.join(
-            _generate_suite_cap('reg_consts', self.sr, self.store, self.hd)
+            _generate_suite_cap('reg_consts', self.suite_resolution, self.store, self.hd)
         )
 
     def test_uses_constituent_prop_type(self):
@@ -2789,18 +2789,18 @@ class TestConstituentAutoResolution(unittest.TestCase):
         self.hd    = _load_constituent_host_dict()
         self.store = _load_constituent_consumer_store()
         self.suite = _parse_suite('suite_consume_constituent.xml')
-        self.sr    = resolve_suite(self.suite, self.store, self.hd)
-        run_calls  = list(iter_phase_calls(self.sr.groups[0].phase_calls['run']))
+        self.suite_resolution    = resolve_suite(self.suite, self.store, self.hd)
+        run_calls  = list(iter_phase_calls(self.suite_resolution.groups[0].phase_calls['run']))
         self.run_args = {a.scheme_local_name: a for a in run_calls[0].args}
 
     def test_uses_constituents_flag_set(self):
-        self.assertTrue(self.sr.uses_constituents)
+        self.assertTrue(self.suite_resolution.uses_constituents)
 
     def test_constituent_index_names_enumerated(self):
         # Both the base read and the tendency write reference the same
         # base std name.
         self.assertEqual(
-            self.sr.constituent_index_names,
+            self.suite_resolution.constituent_index_names,
             ['cloud_liquid_water_mixing_ratio'],
         )
 
@@ -2905,14 +2905,14 @@ class TestUsedConstDimStdNames(unittest.TestCase):
         # resolver routes through capgen-ng's auto-provisioning path.
         from generator.suite_resolver import _resolve_constituent_arg
         hd = _load_full_host_dict()
-        sv = self._scheme_var(
+        suite_var = self._scheme_var(
             'consts', 'ccpp_constituents',
             '(horizontal_dimension, vertical_layer_dimension, '
             'number_of_ccpp_constituents)',
             intent='in',
         )
         arg = _resolve_constituent_arg(
-            sv, 'run', hd, {}, 'consts_user', 'mysuite',
+            suite_var, 'run', hd, {}, 'consts_user', 'mysuite',
         )
         self.assertIsNotNone(arg)
         self.assertEqual(arg.source, 'constituent')
@@ -2932,14 +2932,14 @@ class TestUsedConstDimStdNames(unittest.TestCase):
         # intent=in).
         from generator.suite_resolver import _resolve_constituent_arg
         hd = _load_full_host_dict()
-        sv = self._scheme_var(
+        suite_var = self._scheme_var(
             'cldliq', 'cloud_liquid_water_mixing_ratio',
             '(horizontal_dimension, vertical_layer_dimension)',
             intent='in',
         )
-        sv.set_attr('advected', 'True', _ctx())
+        suite_var.set_attr('advected', 'True', _ctx())
         arg = _resolve_constituent_arg(
-            sv, 'run', hd, {}, 'cldliq_user', 'mysuite',
+            suite_var, 'run', hd, {}, 'cldliq_user', 'mysuite',
         )
         self.assertIsNotNone(arg)
         self.assertEqual(arg.used_const_dim_std_names, set())
@@ -3110,12 +3110,12 @@ class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):
 
     def test_host_index_of_resolves_to_host_local_name(self):
         hd = build_flat_host_dict(_parse(self._HOST_SRC), [], [])
-        sv = self._scheme_var(
+        suite_var = self._scheme_var(
             'ntcw',
             'index_of_cloud_liquid_water_mixing_ratio_in_tracer_concentration_array',
             intent='in',
         )
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'gfs_mp_generic_pre', set())
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'gfs_mp_generic_pre', set())
         # Host metadata wins: source=host, short local name, NO leakage of
         # the long std_name into ccpp_host_constituents.
         self.assertEqual(arg.source, 'host')
@@ -3128,11 +3128,11 @@ class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):
         ``index_of_<X>`` names the host does NOT declare — required for
         capgen-ng-owned constituent flows (cf. the advection e2e test)."""
         hd = build_flat_host_dict(_parse(self._HOST_SRC), [], [])
-        sv = self._scheme_var(
+        suite_var = self._scheme_var(
             'idx_other', 'index_of_some_other_constituent_not_in_host',
             intent='in',
         )
-        arg = _resolve_one_arg(sv, 'run', hd, {}, 'some_scheme', set())
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'some_scheme', set())
         self.assertEqual(arg.source, 'constituent')
         self.assertEqual(arg.call_expr,
                          'index_of_some_other_constituent_not_in_host')
@@ -3343,21 +3343,21 @@ class TestDimDDTComponentResolution(unittest.TestCase):
     def _mock_rg(self, arg):
         from unittest.mock import MagicMock
         from generator.suite_resolver import ResolvedCall
-        rg = MagicMock()
-        rg.phase_calls = {
+        resolved_group = MagicMock()
+        resolved_group.phase_calls = {
             'run': [ResolvedCall(
                 scheme_name='dummy', phase='run',
                 args=[arg], scheme_module='dummy_mod',
             )],
         }
-        return rg
+        return resolved_group
 
     def test_collect_dim_uses_walks_to_root_for_ddt_dim(self):
         from generator.suite_resolver import _collect_dim_uses
         hd = self._host_dict()
         arg = self._mock_arg({'vertical_layer_dimension'})
-        rg = self._mock_rg(arg)
-        dim_uses = _collect_dim_uses(rg, hd, suite_vars={})
+        resolved_group = self._mock_rg(arg)
+        dim_uses = _collect_dim_uses(resolved_group, hd, suite_vars={})
         # USE clause must pull the ROOT (``physics``), not the leaf
         # (``levs``, which is not a module symbol).
         self.assertIn('scm_host_mod', dim_uses)
@@ -3370,8 +3370,8 @@ class TestDimDDTComponentResolution(unittest.TestCase):
         from generator.suite_resolver import _collect_dim_uses
         hd = self._host_dict()
         arg = self._mock_arg({'horizontal_dimension'})
-        rg = self._mock_rg(arg)
-        dim_uses = _collect_dim_uses(rg, hd, suite_vars={})
+        resolved_group = self._mock_rg(arg)
+        dim_uses = _collect_dim_uses(resolved_group, hd, suite_vars={})
         self.assertEqual(dim_uses.get('scm_host_mod'), {'ncols'})
 
     def test_collect_dim_uses_two_ddt_dims_dedupe_root(self):
@@ -3382,8 +3382,8 @@ class TestDimDDTComponentResolution(unittest.TestCase):
         hd = self._host_dict()
         arg = self._mock_arg({'vertical_layer_dimension',
                               'horizontal_dimension_total'})
-        rg = self._mock_rg(arg)
-        dim_uses = _collect_dim_uses(rg, hd, suite_vars={})
+        resolved_group = self._mock_rg(arg)
+        dim_uses = _collect_dim_uses(resolved_group, hd, suite_vars={})
         self.assertEqual(dim_uses.get('scm_host_mod'), {'physics'})
 
     # ---- End-to-end: resolve_suite + group cap output ------------------
@@ -3485,10 +3485,10 @@ class TestDimDDTComponentResolution(unittest.TestCase):
             logger = logging.getLogger('ddt_dim_e2e')
             suite = parse_suite_xml(xml_path, tmpdir, logger,
                                     skip_validation=True)
-            sr = resolve_suite(suite, store, hd)
+            suite_resolution = resolve_suite(suite, store, hd)
 
             # Inspect the resolved scheme arg's subscript.
-            run_call = list(iter_phase_calls(sr.groups[0].phase_calls['run']))[0]
+            run_call = list(iter_phase_calls(suite_resolution.groups[0].phase_calls['run']))[0]
             temp_arg = [a for a in run_call.args
                         if a.scheme_local_name == 'temp'][0]
             self.assertIn('physics%Model%levs', temp_arg.subscript)
@@ -3498,9 +3498,9 @@ class TestDimDDTComponentResolution(unittest.TestCase):
             # Now emit the group cap and inspect the USE clause.
             from generator.group_cap import _generate_group_cap
             group_lines = _generate_group_cap(
-                suite_name=sr.suite_name,
-                group_name=sr.groups[0].group_name,
-                rg=sr.groups[0], host_dict=hd,
+                suite_name=suite_resolution.suite_name,
+                group_name=suite_resolution.groups[0].group_name,
+                resolved_group=suite_resolution.groups[0], host_dict=hd,
             )
             group_text = '\n'.join(group_lines)
         # Pull the host-module USE line.  Must import ``physics``,
@@ -3529,9 +3529,9 @@ class TestDimDDTComponentResolution(unittest.TestCase):
 ########################################################################
 
 def load_tests(loader, tests, ignore):
-    import generator.suite_resolver as sr
+    import generator.suite_resolver as suite_resolution
     import generator.group_cap as gc
-    tests.addTests(doctest.DocTestSuite(sr))
+    tests.addTests(doctest.DocTestSuite(suite_resolution))
     tests.addTests(doctest.DocTestSuite(gc))
     return tests
 

@@ -76,6 +76,39 @@ from generator.group_cap import (
 
 _INDENT = '  '
 
+# Message bodied into stubbed suite-introspection routines when the
+# generator was invoked with ``--no-host-introspection``.  Kept here so
+# every introspection routine produces the same wording and tests can
+# assert against a single constant.
+_INTROSPECTION_DISABLED_MSG = (
+    'suite introspection disabled at code-generation time; '
+    'regenerate caps without --no-host-introspection'
+)
+
+
+def _emit_introspection_stub_body(
+    routine_name: str,
+    list_arg_name: str,
+    indent: str,
+) -> List[str]:
+    """Emit the stub body shared by the four errflg-bearing introspection
+    routines (``suite_part_list``, ``suite_schemes``, ``suite_variables``,
+    ``suite_host_data``).
+
+    Sets ``errflg = 1`` and ``errmsg`` to the canonical disabled-message
+    prefixed with *routine_name*, then allocates *list_arg_name* to a
+    zero-length array so callers can safely ``size()`` / iterate without
+    a NULL-deref crash.  Indentation level *indent* matches the body
+    block of the calling routine.
+    """
+    lines: List[str] = []
+    lines.append("{}errmsg = '{}: {}'".format(
+        indent, routine_name, _INTROSPECTION_DISABLED_MSG,
+    ))
+    lines.append('{}errflg = 1'.format(indent))
+    lines.append('{}allocate({}(0))'.format(indent, list_arg_name))
+    return lines
+
 
 ########################################################################
 # Helpers
@@ -90,8 +123,8 @@ def _all_ctrl_args_for_phase(
     Deduplicated by standard_name, first-seen order.
     """
     seen: Dict[str, ResolvedArg] = {}
-    for sr in suite_resolutions:
-        for arg in _suite_ctrl_args_for_phase(sr, phase):
+    for suite_resolution in suite_resolutions:
+        for arg in _suite_ctrl_args_for_phase(suite_resolution, phase):
             if arg.standard_name not in seen:
                 seen[arg.standard_name] = arg
     return list(seen.values())
@@ -110,8 +143,8 @@ def _all_extra_ctrl_entries_for_phase(
         return []
     seen = set(ctrl_std_names)
     result: Dict[str, HostVarEntry] = {}
-    for sr in suite_resolutions:
-        for entry in _suite_extra_ctrl_entries_for_phase(sr, phase, seen, host_dict):
+    for suite_resolution in suite_resolutions:
+        for entry in _suite_extra_ctrl_entries_for_phase(suite_resolution, phase, seen, host_dict):
             if entry.standard_name not in seen and entry.standard_name not in result:
                 result[entry.standard_name] = entry
     return list(result.values())
@@ -190,13 +223,13 @@ def _arg_top_level_name(
 
 
 def _collect_host_io(
-    sr: SuiteResolution,
+    suite_resolution: SuiteResolution,
     host_dict=None,
     collapse_ddts: bool = False,
 ) -> Tuple[List[str], List[str]]:
     """Collect (inputs, outputs) standard names for the introspection routines.
 
-    Walks every phase of every group of *sr*.  Includes scheme args from
+    Walks every phase of every group of *suite_resolution*.  Includes scheme args from
     every ``source`` category EXCEPT ``'suite'`` — suite-owned vars are
     internal data flow between schemes (one scheme writes them, another
     reads them) and are not part of the host-facing variable list.
@@ -250,7 +283,7 @@ def _collect_host_io(
 
     inputs: Set[str] = set()
     outputs: Set[str] = set()
-    for group in sr.groups:
+    for group in suite_resolution.groups:
         for items in group.phase_calls.values():
             # Subcycle loop bounds named by a CCPP standard name (e.g.
             # ``<subcycle loop="num_subcycles_for_effr">``) are pure
@@ -260,9 +293,9 @@ def _collect_host_io(
             # the full subcycle tree.  Without this, the host's
             # compile-time bookkeeping (ccpp_physics_suite_variables /
             # _suite_host_data) would silently omit required inputs.
-            for sc in iter_phase_subcycles(items):
-                if sc.loop_std_name:
-                    inputs.add(_collapse_std(sc.loop_std_name))
+            for subcycle in iter_phase_subcycles(items):
+                if subcycle.loop_std_name:
+                    inputs.add(_collapse_std(subcycle.loop_std_name))
             for call in iter_phase_calls(items):
                 for arg in call.args:
                     # Suite-owned vars are internal scheme-to-scheme
@@ -589,11 +622,21 @@ def _physics_subroutine(
 # Suite-introspection subroutines
 ########################################################################
 
-def _suite_list_subroutine(suite_names: List[str]) -> List[str]:
+def _suite_list_subroutine(
+    suite_names: List[str],
+    stub_body: bool = False,
+) -> List[str]:
     """Generate ``ccpp_physics_suite_list(suites)``.
 
     Allocates ``suites`` to the number of compiled-in suites and assigns
     each entry to the suite name as a literal string.
+
+    When *stub_body* is true, emit a stub: write a clear message to
+    ``error_unit`` and return an empty list.  ``ccpp_physics_suite_list``
+    has no errflg/errmsg arguments, so ``error_unit`` is the only
+    available error channel.  The module-level ``use iso_fortran_env``
+    that this references is added by ``_generate_static_api`` when
+    ``no_host_introspection`` is on.
     """
     i1 = _INDENT
     i2 = _INDENT * 2
@@ -605,7 +648,17 @@ def _suite_list_subroutine(suite_names: List[str]) -> List[str]:
         '{}character(len=*), allocatable, intent(out) :: suites(:)'.format(i2)
     )
     lines.append('')
-    lines.extend(_emit_var_set_loop('suites', suite_names, i2))
+    if stub_body:
+        lines.append(
+            "{}write(error_unit, '(a)') 'ccpp_physics_suite_list: ' &"
+            .format(i2)
+        )
+        lines.append(
+            "{}    // '{}'".format(i2, _INTROSPECTION_DISABLED_MSG)
+        )
+        lines.append('{}allocate(suites(0))'.format(i2))
+    else:
+        lines.extend(_emit_var_set_loop('suites', suite_names, i2))
     lines.append('')
     lines.append('{}end subroutine ccpp_physics_suite_list'.format(i1))
     return lines
@@ -614,6 +667,7 @@ def _suite_list_subroutine(suite_names: List[str]) -> List[str]:
 def _suite_part_list_subroutine(
     suite_names: List[str],
     suite_resolutions: List[SuiteResolution],
+    stub_body: bool = False,
 ) -> List[str]:
     """Generate ``ccpp_physics_suite_part_list(suite_name, part_list, errmsg, errflg)``.
 
@@ -644,21 +698,28 @@ def _suite_part_list_subroutine(
         '{}integer,                       intent(out)   :: errflg'.format(i2)
     )
     lines.append('')
-    lines.append("{}errmsg = ''".format(i2))
-    lines.append('{}errflg = 0'.format(i2))
-    lines.append('')
-    lines.append('{}select case (trim(suite_name))'.format(i2))
-    for sname, sr in zip(suite_names, suite_resolutions):
-        groups = [g.group_name for g in sr.groups]
-        lines.append("{}case ('{}')".format(i2, sname))
-        lines.extend(_emit_var_set_loop('part_list', groups, i3))
-    lines.append('{}case default'.format(i2))
-    lines.append('{}errflg = 1'.format(i3))
-    lines.append(
-        "{}errmsg = 'ccpp_physics_suite_part_list: unknown suite: ' "
-        "// trim(suite_name)".format(i3)
-    )
-    lines.append('{}end select'.format(i2))
+    if stub_body:
+        lines.extend(
+            _emit_introspection_stub_body(
+                'ccpp_physics_suite_part_list', 'part_list', i2,
+            )
+        )
+    else:
+        lines.append("{}errmsg = ''".format(i2))
+        lines.append('{}errflg = 0'.format(i2))
+        lines.append('')
+        lines.append('{}select case (trim(suite_name))'.format(i2))
+        for sname, suite_resolution in zip(suite_names, suite_resolutions):
+            groups = [g.group_name for g in suite_resolution.groups]
+            lines.append("{}case ('{}')".format(i2, sname))
+            lines.extend(_emit_var_set_loop('part_list', groups, i3))
+        lines.append('{}case default'.format(i2))
+        lines.append('{}errflg = 1'.format(i3))
+        lines.append(
+            "{}errmsg = 'ccpp_physics_suite_part_list: unknown suite: ' "
+            "// trim(suite_name)".format(i3)
+        )
+        lines.append('{}end select'.format(i2))
     lines.append('')
     lines.append('{}end subroutine ccpp_physics_suite_part_list'.format(i1))
     return lines
@@ -667,6 +728,7 @@ def _suite_part_list_subroutine(
 def _suite_schemes_subroutine(
     suite_names: List[str],
     suite_resolutions: List[SuiteResolution],
+    stub_body: bool = False,
 ) -> List[str]:
     """Generate ``ccpp_physics_suite_schemes(suite_name, scheme_list, errmsg, errflg)``.
 
@@ -696,26 +758,33 @@ def _suite_schemes_subroutine(
         '{}integer,                       intent(out)   :: errflg'.format(i2)
     )
     lines.append('')
-    lines.append("{}errmsg = ''".format(i2))
-    lines.append('{}errflg = 0'.format(i2))
-    lines.append('')
-    lines.append('{}select case (trim(suite_name))'.format(i2))
-    for sname, sr in zip(suite_names, suite_resolutions):
-        schemes = sorted({
-            call.scheme_name
-            for group in sr.groups
-            for items in group.phase_calls.values()
-            for call in iter_phase_calls(items)
-        })
-        lines.append("{}case ('{}')".format(i2, sname))
-        lines.extend(_emit_var_set_loop('scheme_list', schemes, i3))
-    lines.append('{}case default'.format(i2))
-    lines.append('{}errflg = 1'.format(i3))
-    lines.append(
-        "{}errmsg = 'ccpp_physics_suite_schemes: unknown suite: ' "
-        "// trim(suite_name)".format(i3)
-    )
-    lines.append('{}end select'.format(i2))
+    if stub_body:
+        lines.extend(
+            _emit_introspection_stub_body(
+                'ccpp_physics_suite_schemes', 'scheme_list', i2,
+            )
+        )
+    else:
+        lines.append("{}errmsg = ''".format(i2))
+        lines.append('{}errflg = 0'.format(i2))
+        lines.append('')
+        lines.append('{}select case (trim(suite_name))'.format(i2))
+        for sname, suite_resolution in zip(suite_names, suite_resolutions):
+            schemes = sorted({
+                call.scheme_name
+                for group in suite_resolution.groups
+                for items in group.phase_calls.values()
+                for call in iter_phase_calls(items)
+            })
+            lines.append("{}case ('{}')".format(i2, sname))
+            lines.extend(_emit_var_set_loop('scheme_list', schemes, i3))
+        lines.append('{}case default'.format(i2))
+        lines.append('{}errflg = 1'.format(i3))
+        lines.append(
+            "{}errmsg = 'ccpp_physics_suite_schemes: unknown suite: ' "
+            "// trim(suite_name)".format(i3)
+        )
+        lines.append('{}end select'.format(i2))
     lines.append('')
     lines.append('{}end subroutine ccpp_physics_suite_schemes'.format(i1))
     return lines
@@ -726,6 +795,7 @@ def _suite_io_subroutine(
     suite_resolutions: List[SuiteResolution],
     host_dict=None,
     collapse_ddts: bool = False,
+    stub_body: bool = False,
 ) -> List[str]:
     """Generate ``ccpp_physics_suite_variables`` or ``ccpp_physics_suite_host_data``.
 
@@ -775,44 +845,56 @@ def _suite_io_subroutine(
         '{}logical, optional,             intent(in)    :: output_vars'.format(i2)
     )
     lines.append('')
-    lines.append('{}logical :: input_vars_use'.format(i2))
-    lines.append('{}logical :: output_vars_use'.format(i2))
-    lines.append('')
-    lines.append("{}errmsg = ''".format(i2))
-    lines.append('{}errflg = 0'.format(i2))
-    lines.append('')
-    lines.append('{}if (present(input_vars)) then'.format(i2))
-    lines.append('{}input_vars_use = input_vars'.format(i3))
-    lines.append('{}else'.format(i2))
-    lines.append('{}input_vars_use = .true.'.format(i3))
-    lines.append('{}end if'.format(i2))
-    lines.append('{}if (present(output_vars)) then'.format(i2))
-    lines.append('{}output_vars_use = output_vars'.format(i3))
-    lines.append('{}else'.format(i2))
-    lines.append('{}output_vars_use = .true.'.format(i3))
-    lines.append('{}end if'.format(i2))
-    lines.append('')
-    lines.append('{}select case (trim(suite_name))'.format(i2))
-    for sname, sr in zip(suite_names, suite_resolutions):
-        inputs, outputs = _collect_host_io(sr, host_dict, collapse_ddts)
-        union = sorted(set(inputs) | set(outputs))
-        lines.append("{}case ('{}')".format(i2, sname))
-        lines.append('{}if (input_vars_use .and. output_vars_use) then'.format(i3))
-        lines.extend(_emit_var_set_loop('variable_list', union, i4))
-        lines.append('{}else if (input_vars_use) then'.format(i3))
-        lines.extend(_emit_var_set_loop('variable_list', inputs, i4))
-        lines.append('{}else if (output_vars_use) then'.format(i3))
-        lines.extend(_emit_var_set_loop('variable_list', outputs, i4))
-        lines.append('{}else'.format(i3))
-        lines.append('{}allocate(variable_list(0))'.format(i4))
-        lines.append('{}end if'.format(i3))
-    lines.append('{}case default'.format(i2))
-    lines.append('{}errflg = 1'.format(i3))
-    lines.append(
-        "{}errmsg = '{}: unknown suite: ' "
-        "// trim(suite_name)".format(i3, sub_name)
-    )
-    lines.append('{}end select'.format(i2))
+    if stub_body:
+        # Stubbed body: set errflg + clear errmsg and allocate an empty
+        # list.  ``input_vars`` / ``output_vars`` are intentionally left
+        # unreferenced — they're declared ``intent(in), optional`` so
+        # compilers may warn about the unused dummy arg, but warning is
+        # the right outcome: the host built against introspection and
+        # is calling with filter flags that no longer matter.
+        lines.append('')
+        lines.extend(
+            _emit_introspection_stub_body(sub_name, 'variable_list', i2)
+        )
+    else:
+        lines.append('{}logical :: input_vars_use'.format(i2))
+        lines.append('{}logical :: output_vars_use'.format(i2))
+        lines.append('')
+        lines.append("{}errmsg = ''".format(i2))
+        lines.append('{}errflg = 0'.format(i2))
+        lines.append('')
+        lines.append('{}if (present(input_vars)) then'.format(i2))
+        lines.append('{}input_vars_use = input_vars'.format(i3))
+        lines.append('{}else'.format(i2))
+        lines.append('{}input_vars_use = .true.'.format(i3))
+        lines.append('{}end if'.format(i2))
+        lines.append('{}if (present(output_vars)) then'.format(i2))
+        lines.append('{}output_vars_use = output_vars'.format(i3))
+        lines.append('{}else'.format(i2))
+        lines.append('{}output_vars_use = .true.'.format(i3))
+        lines.append('{}end if'.format(i2))
+        lines.append('')
+        lines.append('{}select case (trim(suite_name))'.format(i2))
+        for sname, suite_resolution in zip(suite_names, suite_resolutions):
+            inputs, outputs = _collect_host_io(suite_resolution, host_dict, collapse_ddts)
+            union = sorted(set(inputs) | set(outputs))
+            lines.append("{}case ('{}')".format(i2, sname))
+            lines.append('{}if (input_vars_use .and. output_vars_use) then'.format(i3))
+            lines.extend(_emit_var_set_loop('variable_list', union, i4))
+            lines.append('{}else if (input_vars_use) then'.format(i3))
+            lines.extend(_emit_var_set_loop('variable_list', inputs, i4))
+            lines.append('{}else if (output_vars_use) then'.format(i3))
+            lines.extend(_emit_var_set_loop('variable_list', outputs, i4))
+            lines.append('{}else'.format(i3))
+            lines.append('{}allocate(variable_list(0))'.format(i4))
+            lines.append('{}end if'.format(i3))
+        lines.append('{}case default'.format(i2))
+        lines.append('{}errflg = 1'.format(i3))
+        lines.append(
+            "{}errmsg = '{}: unknown suite: ' "
+            "// trim(suite_name)".format(i3, sub_name)
+        )
+        lines.append('{}end select'.format(i2))
     lines.append('')
     lines.append('{}end subroutine {}'.format(i1, sub_name))
     return lines
@@ -827,6 +909,7 @@ def _generate_static_api(
     suite_resolutions: List[SuiteResolution],
     host_dict=None,
     scheme_store: Optional[SchemeStore] = None,
+    no_host_introspection: bool = False,
 ) -> List[str]:
     """Generate the full ``ccpp_static_api.F90`` module source lines.
 
@@ -862,6 +945,15 @@ def _generate_static_api(
     lines.append('module ccpp_static_api')
     lines.append('')
 
+    # Pull in ``error_unit`` for the stubbed ``ccpp_physics_suite_list``
+    # body (which has no errflg/errmsg arg, so error_unit is the only
+    # available channel).  Only emitted when --no-host-introspection is
+    # on, to keep the module imports minimal in the normal case.
+    if no_host_introspection:
+        lines.append(
+            '{}use iso_fortran_env, only: error_unit'.format(_INDENT)
+        )
+
     # USE each suite cap module.  ``<suite>_register`` is now mandatory and
     # always emitted in the suite cap, so always import it here too.
     for sname in suite_names:
@@ -882,8 +974,8 @@ def _generate_static_api(
     # constituent state (the ccpp_host_constituents module is only emitted
     # in that case too).
     uses_consts = any(
-        sr.uses_constituents or sr.constituent_register_calls
-        for sr in suite_resolutions
+        suite_resolution.uses_constituents or suite_resolution.constituent_register_calls
+        for suite_resolution in suite_resolutions
     )
     constituent_pub_syms = [
         'ccpp_model_constituents_obj',
@@ -937,14 +1029,26 @@ def _generate_static_api(
         lines.extend(_physics_subroutine(phase, suite_names, suite_resolutions, host_dict))
     lines.extend(_final_subroutine(suite_names, host_dict))
     # Introspection routines (do not advance state, no scheme calls).
-    lines.extend(_suite_list_subroutine(suite_names))
-    lines.extend(_suite_part_list_subroutine(suite_names, suite_resolutions))
-    lines.extend(_suite_schemes_subroutine(suite_names, suite_resolutions))
+    # With --no-host-introspection, each routine retains its signature
+    # but the body is replaced with an errflg=1 stub (or, for
+    # suite_list, an error_unit write + empty allocation), shrinking
+    # ccpp_static_api.F90 dramatically for multi-suite builds.
+    lines.extend(_suite_list_subroutine(
+        suite_names, stub_body=no_host_introspection,
+    ))
+    lines.extend(_suite_part_list_subroutine(
+        suite_names, suite_resolutions, stub_body=no_host_introspection,
+    ))
+    lines.extend(_suite_schemes_subroutine(
+        suite_names, suite_resolutions, stub_body=no_host_introspection,
+    ))
     lines.extend(_suite_io_subroutine(
         suite_names, suite_resolutions, host_dict, collapse_ddts=False,
+        stub_body=no_host_introspection,
     ))
     lines.extend(_suite_io_subroutine(
         suite_names, suite_resolutions, host_dict, collapse_ddts=True,
+        stub_body=no_host_introspection,
     ))
 
     lines.append('')
@@ -963,6 +1067,7 @@ def write_static_api(
     host_dict=None,
     scheme_store: Optional[SchemeStore] = None,
     logger: Optional[logging.Logger] = None,
+    no_host_introspection: bool = False,
 ) -> str:
     """Write ``ccpp_static_api.F90`` to *output_root*.
 
@@ -980,6 +1085,17 @@ def write_static_api(
         scheme; only those drive emission of ``ccpp_register`` and the
         constituent module USE.  When omitted, ``ccpp_register`` is omitted
         entirely.
+    no_host_introspection : bool, optional
+        When True, replace the bodies of the five suite-introspection
+        routines (``ccpp_physics_suite_list`` / ``..._suite_part_list`` /
+        ``..._suite_schemes`` / ``..._suite_variables`` /
+        ``..._suite_host_data``) with stubs that set ``errflg=1`` and a
+        clear ``errmsg`` (or write to ``error_unit`` for
+        ``ccpp_physics_suite_list``, which has no error channel).
+        Signatures remain so existing callers still link.  Use this to
+        shrink ``ccpp_static_api.F90`` from ~33k lines to ~800 for
+        multi-suite builds where the introspection case-blocks make
+        ``-O3`` compilation impractical.
 
     Returns
     -------
@@ -990,7 +1106,10 @@ def write_static_api(
     filename = 'ccpp_static_api.F90'
     out_path  = os.path.join(output_root, filename)
 
-    lines = _generate_static_api(suite_names, suite_resolutions, host_dict, scheme_store)
+    lines = _generate_static_api(
+        suite_names, suite_resolutions, host_dict, scheme_store,
+        no_host_introspection=no_host_introspection,
+    )
     with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path

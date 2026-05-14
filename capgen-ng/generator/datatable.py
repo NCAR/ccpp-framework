@@ -226,11 +226,11 @@ def _build_schemes(
     schemes_elem = ET.SubElement(root, 'schemes')
     seen_scheme_phases: Dict[str, Set[str]] = {}
 
-    for sr in suite_resolutions:
-        for rg in sr.groups:
-            for phase_name, items in rg.phase_calls.items():
-                for rc in iter_phase_calls(items):
-                    sname = rc.scheme_name
+    for suite_resolution in suite_resolutions:
+        for resolved_group in suite_resolution.groups:
+            for phase_name, items in resolved_group.phase_calls.items():
+                for resolved_call in iter_phase_calls(items):
+                    sname = resolved_call.scheme_name
                     if sname not in seen_scheme_phases:
                         seen_scheme_phases[sname] = set()
                     seen_scheme_phases[sname].add(phase_name)
@@ -238,13 +238,13 @@ def _build_schemes(
         # phase_calls — fold them in explicitly so the schemes they
         # name appear in <schemes> (and downstream queries pick them
         # up).  Their phase is fixed by the SDF element.
-        for rc, phase_name in (
-            (sr.suite_init_call,  'init'),
-            (sr.suite_final_call, 'final'),
+        for resolved_call, phase_name in (
+            (suite_resolution.suite_init_call,  'init'),
+            (suite_resolution.suite_final_call, 'final'),
         ):
-            if rc is None:
+            if resolved_call is None:
                 continue
-            seen_scheme_phases.setdefault(rc.scheme_name, set()).add(phase_name)
+            seen_scheme_phases.setdefault(resolved_call.scheme_name, set()).add(phase_name)
 
     for sname in sorted(seen_scheme_phases):
         scheme_elem = ET.SubElement(schemes_elem, 'scheme')
@@ -277,19 +277,19 @@ def _build_api(
     api_elem = ET.SubElement(root, 'api')
     suites_elem = ET.SubElement(api_elem, 'suites')
 
-    for sr in suite_resolutions:
+    for suite_resolution in suite_resolutions:
         suite_elem = ET.SubElement(suites_elem, 'suite')
-        suite_elem.set('name', sr.suite_name)
-        for rg in sr.groups:
+        suite_elem.set('name', suite_resolution.suite_name)
+        for resolved_group in suite_resolution.groups:
             group_elem = ET.SubElement(suite_elem, 'group')
-            group_elem.set('name', rg.group_name)
+            group_elem.set('name', resolved_group.group_name)
             seen: Set[str] = set()
-            for items in rg.phase_calls.values():
-                for rc in iter_phase_calls(items):
-                    if rc.scheme_name not in seen:
-                        seen.add(rc.scheme_name)
+            for items in resolved_group.phase_calls.values():
+                for resolved_call in iter_phase_calls(items):
+                    if resolved_call.scheme_name not in seen:
+                        seen.add(resolved_call.scheme_name)
                         sch = ET.SubElement(group_elem, 'scheme')
-                        sch.text = rc.scheme_name
+                        sch.text = resolved_call.scheme_name
 
 
 def _build_var_dictionaries(
@@ -335,30 +335,30 @@ def _build_var_dictionaries(
     api_d.set('parent', host_name)
     ET.SubElement(api_d, 'variables')
 
-    for sr in suite_resolutions:
+    for suite_resolution in suite_resolutions:
         suite_d = ET.SubElement(dicts, 'var_dictionary')
-        suite_d.set('name', sr.suite_name)
+        suite_d.set('name', suite_resolution.suite_name)
         suite_d.set('type', 'suite')
         suite_d.set('parent', _API_DICT_NAME)
         ET.SubElement(suite_d, 'variables')
 
-        for rg in sr.groups:
+        for resolved_group in suite_resolution.groups:
             group_d = ET.SubElement(dicts, 'var_dictionary')
-            group_d.set('name', rg.group_name)
+            group_d.set('name', resolved_group.group_name)
             group_d.set('type', 'group')
-            group_d.set('parent', sr.suite_name)
+            group_d.set('parent', suite_resolution.suite_name)
             ET.SubElement(group_d, 'variables')
 
             call_d = ET.SubElement(dicts, 'var_dictionary')
-            call_d.set('name', '{}_call_list'.format(rg.group_name))
+            call_d.set('name', '{}_call_list'.format(resolved_group.group_name))
             call_d.set('type', 'group_call_list')
-            call_d.set('parent', rg.group_name)
+            call_d.set('parent', resolved_group.group_name)
             cl_vars = ET.SubElement(call_d, 'variables')
 
             seen: Set[Tuple[str, str]] = set()
-            for items in rg.phase_calls.values():
-                for rc in iter_phase_calls(items):
-                    for arg in rc.args:
+            for items in resolved_group.phase_calls.values():
+                for resolved_call in iter_phase_calls(items):
+                    for arg in resolved_call.args:
                         intent = arg.intent or ''
                         key = (arg.standard_name, intent)
                         if key in seen:
@@ -430,12 +430,12 @@ def write_datatable(
     >>> import tempfile, os
     >>> from generator.datatable import write_datatable
     >>> from unittest.mock import MagicMock
-    >>> sr = MagicMock()
-    >>> sr.suite_name = 'test'
-    >>> sr.groups = []
+    >>> suite_resolution = MagicMock()
+    >>> suite_resolution.suite_name = 'test'
+    >>> suite_resolution.groups = []
     >>> store = MagicMock()
     >>> with tempfile.TemporaryDirectory() as d:
-    ...     path = write_datatable([sr], store, [], [], d)
+    ...     path = write_datatable([suite_resolution], store, [], [], d)
     ...     os.path.basename(path)
     'datatable.xml'
     """

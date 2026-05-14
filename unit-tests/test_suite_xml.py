@@ -151,25 +151,25 @@ class TestSuiteSubcycle(unittest.TestCase):
     """Tests for :class:`SuiteSubcycle`."""
 
     def test_literal_integer_loop(self):
-        sc = SuiteSubcycle(loop='2', items=[])
-        self.assertEqual(sc.loop, '2')
-        self.assertTrue(sc.is_literal_count)
+        subcycle = SuiteSubcycle(loop='2', items=[])
+        self.assertEqual(subcycle.loop, '2')
+        self.assertTrue(subcycle.is_literal_count)
 
     def test_stdname_loop(self):
-        sc = SuiteSubcycle(loop='num_subcycles_for_ag', items=[])
-        self.assertFalse(sc.is_literal_count)
+        subcycle = SuiteSubcycle(loop='num_subcycles_for_ag', items=[])
+        self.assertFalse(subcycle.is_literal_count)
 
     def test_none_loop_is_literal(self):
-        sc = SuiteSubcycle(loop=None, items=[])
-        self.assertIsNone(sc.loop)
-        self.assertTrue(sc.is_literal_count)
+        subcycle = SuiteSubcycle(loop=None, items=[])
+        self.assertIsNone(subcycle.loop)
+        self.assertTrue(subcycle.is_literal_count)
 
     def test_scheme_names_from_items(self):
-        sc = SuiteSubcycle(loop='2', items=[
+        subcycle = SuiteSubcycle(loop='2', items=[
             SuiteScheme('scheme_a'),
             SuiteScheme('scheme_b'),
         ])
-        self.assertEqual(sc.scheme_names(), ['scheme_a', 'scheme_b'])
+        self.assertEqual(subcycle.scheme_names(), ['scheme_a', 'scheme_b'])
 
     def test_nested_subcycle_scheme_names(self):
         inner = SuiteSubcycle(loop='3', items=[SuiteScheme('inner_sch')])
@@ -181,13 +181,13 @@ class TestSuiteSubcol(unittest.TestCase):
     """Tests for :class:`SuiteSubcol`."""
 
     def test_creation(self):
-        sc = SuiteSubcol('gen_routine', 'avg_routine', [SuiteScheme('sch')])
-        self.assertEqual(sc.gen_routine, 'gen_routine')
-        self.assertEqual(sc.avg_routine, 'avg_routine')
+        subcycle = SuiteSubcol('gen_routine', 'avg_routine', [SuiteScheme('sch')])
+        self.assertEqual(subcycle.gen_routine, 'gen_routine')
+        self.assertEqual(subcycle.avg_routine, 'avg_routine')
 
     def test_scheme_names(self):
-        sc = SuiteSubcol('g', 'a', [SuiteScheme('s1'), SuiteScheme('s2')])
-        self.assertEqual(sc.scheme_names(), ['s1', 's2'])
+        subcycle = SuiteSubcol('g', 'a', [SuiteScheme('s1'), SuiteScheme('s2')])
+        self.assertEqual(subcycle.scheme_names(), ['s1', 's2'])
 
 
 class TestSuiteGroup(unittest.TestCase):
@@ -274,10 +274,10 @@ class TestParseGroupItems(unittest.TestCase):
         el = ET.fromstring(xml)
         items = _parse_group_items(el)
         self.assertEqual(len(items), 1)
-        sc = items[0]
-        self.assertIsInstance(sc, SuiteSubcycle)
-        self.assertEqual(sc.loop, '3')
-        self.assertEqual(len(sc.items), 1)
+        subcycle = items[0]
+        self.assertIsInstance(subcycle, SuiteSubcycle)
+        self.assertEqual(subcycle.loop, '3')
+        self.assertEqual(len(subcycle.items), 1)
 
     def test_subcol(self):
         xml = ('<group name="g">'
@@ -431,10 +431,10 @@ class TestBuildSuite(unittest.TestCase):
         </suite>'''
         suite = self._parse(xml)
         grp = suite.groups[0]
-        sc = grp.items[0]
-        self.assertIsInstance(sc, SuiteSubcycle)
-        self.assertEqual(sc.loop, 'num_subcycles_for_scheme6')
-        self.assertFalse(sc.is_literal_count)
+        subcycle = grp.items[0]
+        self.assertIsInstance(subcycle, SuiteSubcycle)
+        self.assertEqual(subcycle.loop, 'num_subcycles_for_scheme6')
+        self.assertFalse(subcycle.is_literal_count)
 
 
 ########################################################################
@@ -522,9 +522,9 @@ class TestParseSuiteXmlValid(unittest.TestCase):
         suite = self._parse('suite_good_v2_test02.xml')
         grp = suite.get_group('main_group')
         # First item is the subcycle from the original suite
-        sc = grp.items[0]
-        self.assertIsInstance(sc, SuiteSubcycle)
-        self.assertEqual(sc.loop, 'num_subcycles_for_scheme6')
+        subcycle = grp.items[0]
+        self.assertIsInstance(subcycle, SuiteSubcycle)
+        self.assertEqual(subcycle.loop, 'num_subcycles_for_scheme6')
 
     def test_v2_suite_03_expand_multiple_nested_suites(self):
         """Expand two nested suites at group level + full suite at suite level."""

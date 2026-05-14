@@ -551,7 +551,7 @@ class TestDatatableContent(unittest.TestCase):
         meta_files = inspection.find('suite_meta_files')
         self.assertIsNotNone(meta_files)
         names = [os.path.basename(f.text) for f in meta_files.findall('file')]
-        self.assertIn('ccpp_test_simple.meta', names)
+        self.assertIn('ccpp_test_simple_data.meta', names)
 
     def test_suite_meta_not_in_capgen_files(self):
         capgen_files = self._root.find('capgen_files')
@@ -2116,14 +2116,14 @@ class TestInterstitialSuiteData(unittest.TestCase):
         self.assertIn('inst_num', physics_run)
 
     def test_suite_meta_file_exists(self):
-        """Polish 2: ccpp_<suite>.meta must be generated."""
+        """Polish 2: ccpp_<suite>_data.meta must be generated."""
         self.assertTrue(
-            os.path.isfile(os.path.join(self._tmpdir, 'ccpp_interstitial.meta'))
+            os.path.isfile(os.path.join(self._tmpdir, 'ccpp_interstitial_data.meta'))
         )
 
     def test_suite_meta_contains_suite_var(self):
         """Suite meta file must list suite-owned variable."""
-        with open(os.path.join(self._tmpdir, 'ccpp_interstitial.meta')) as fh:
+        with open(os.path.join(self._tmpdir, 'ccpp_interstitial_data.meta')) as fh:
             text = fh.read()
         self.assertIn('diagnostic_interstitial_field', text)
         self.assertIn('type = suite', text)
@@ -2271,11 +2271,11 @@ class TestTimestepStateGuards(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test: Polish 2 — ccpp_<suite>.meta output file
+# Test: Polish 2 — ccpp_<suite>_data.meta output file
 # ---------------------------------------------------------------------------
 
 class TestSuiteMetaOutput(unittest.TestCase):
-    """Polish 2: ccpp_<suite>.meta must be written for every suite."""
+    """Polish 2: ccpp_<suite>_data.meta must be written for every suite."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -2287,17 +2287,17 @@ class TestSuiteMetaOutput(unittest.TestCase):
 
     def test_meta_file_created(self):
         self.assertTrue(
-            os.path.isfile(os.path.join(self._tmpdir, 'ccpp_test_simple.meta'))
+            os.path.isfile(os.path.join(self._tmpdir, 'ccpp_test_simple_data.meta'))
         )
 
     def test_meta_header_comment(self):
-        with open(os.path.join(self._tmpdir, 'ccpp_test_simple.meta')) as fh:
+        with open(os.path.join(self._tmpdir, 'ccpp_test_simple_data.meta')) as fh:
             text = fh.read()
         self.assertTrue(text.startswith('!'))
         self.assertIn('ccpp_test_simple', text.split('\n')[0])
 
     def test_meta_table_properties(self):
-        with open(os.path.join(self._tmpdir, 'ccpp_test_simple.meta')) as fh:
+        with open(os.path.join(self._tmpdir, 'ccpp_test_simple_data.meta')) as fh:
             text = fh.read()
         self.assertIn('[ccpp-table-properties]', text)
         self.assertIn('name = ccpp_test_simple_data', text)
@@ -2305,7 +2305,7 @@ class TestSuiteMetaOutput(unittest.TestCase):
 
     def test_meta_empty_suite_has_no_var_entries(self):
         """simple suite has no suite-owned vars so no [ var ] blocks."""
-        with open(os.path.join(self._tmpdir, 'ccpp_test_simple.meta')) as fh:
+        with open(os.path.join(self._tmpdir, 'ccpp_test_simple_data.meta')) as fh:
             text = fh.read()
         self.assertNotIn('standard_name =', text)
 
@@ -2323,7 +2323,7 @@ class TestSuiteMetaOutput(unittest.TestCase):
                 output_root=d,
                 kind_types={},
             )
-            with open(os.path.join(d, 'ccpp_interstitial.meta')) as fh:
+            with open(os.path.join(d, 'ccpp_interstitial_data.meta')) as fh:
                 text = fh.read()
         self.assertIn('standard_name = diagnostic_interstitial_field', text)
         self.assertIn('units = K', text)

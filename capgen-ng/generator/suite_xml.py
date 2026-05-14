@@ -155,13 +155,13 @@ class SuiteSubcycle:
 
     Examples
     --------
-    >>> sc = SuiteSubcycle(loop='2', items=[SuiteScheme('sch_a')])
-    >>> sc.loop
+    >>> subcycle = SuiteSubcycle(loop='2', items=[SuiteScheme('sch_a')])
+    >>> subcycle.loop
     '2'
-    >>> sc.is_literal_count
+    >>> subcycle.is_literal_count
     True
-    >>> sc2 = SuiteSubcycle(loop='num_subcycles_for_ag', items=[])
-    >>> sc2.is_literal_count
+    >>> subcycle2 = SuiteSubcycle(loop='num_subcycles_for_ag', items=[])
+    >>> subcycle2.is_literal_count
     False
     """
 

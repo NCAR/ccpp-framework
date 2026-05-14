@@ -75,19 +75,19 @@ def _all_suite_scheme_names(suite_res: SuiteResolution) -> List[str]:
     order within each group's phase call list).
 
     >>> from generator.suite_resolver import SuiteResolution, ResolvedGroup, ResolvedCall
-    >>> rg = ResolvedGroup('grp', phase_calls={'run': [ResolvedCall('sch_a', 'run'), ResolvedCall('sch_b', 'run')]})
-    >>> sr = SuiteResolution('s', groups=[rg])
-    >>> _all_suite_scheme_names(sr)
+    >>> resolved_group = ResolvedGroup('grp', phase_calls={'run': [ResolvedCall('sch_a', 'run'), ResolvedCall('sch_b', 'run')]})
+    >>> suite_resolution = SuiteResolution('s', groups=[resolved_group])
+    >>> _all_suite_scheme_names(suite_resolution)
     ['sch_a', 'sch_b']
     """
     seen: Set[str] = set()
     names: List[str] = []
-    for rg in suite_res.groups:
-        for items in rg.phase_calls.values():
-            for rc in iter_phase_calls(items):
-                if rc.scheme_name not in seen:
-                    seen.add(rc.scheme_name)
-                    names.append(rc.scheme_name)
+    for resolved_group in suite_res.groups:
+        for items in resolved_group.phase_calls.values():
+            for resolved_call in iter_phase_calls(items):
+                if resolved_call.scheme_name not in seen:
+                    seen.add(resolved_call.scheme_name)
+                    names.append(resolved_call.scheme_name)
     return names
 
 
@@ -115,27 +115,27 @@ def _suite_ctrl_args_for_phase(
     The result is deduplicated by standard_name and preserves first-seen order.
     """
     seen: Dict[str, ResolvedArg] = {}
-    for rg in suite_res.groups:
-        for arg in _ctrl_args_for_phase(rg, phase):
+    for resolved_group in suite_res.groups:
+        for arg in _ctrl_args_for_phase(resolved_group, phase):
             if arg.standard_name not in seen:
                 seen[arg.standard_name] = arg
     return list(seen.values())
 
 
-def _group_ctrl_arg_names(rg: ResolvedGroup, phase: str, host_dict=None) -> List[str]:
+def _group_ctrl_arg_names(resolved_group: ResolvedGroup, phase: str, host_dict=None) -> List[str]:
     """Return the local_name list for the control args of a group phase.
 
     These are the keyword names passed when calling the group cap subroutine.
     Includes extra control vars needed for state indexing and dimension subscripts
     (instance_number for suite-var access, control vars used only in dim subscripts).
     """
-    ctrl_args = _ctrl_args_for_phase(rg, phase)
+    ctrl_args = _ctrl_args_for_phase(resolved_group, phase)
     names = [
         a.host_entry.local_name
         for a in ctrl_args
         if a.host_entry is not None
     ]
-    phase_items = rg.phase_calls.get(phase, [])
+    phase_items = resolved_group.phase_calls.get(phase, [])
     for entry in _extra_dim_ctrl_entries(phase_items, phase, ctrl_args, host_dict):
         if entry.local_name not in names:
             names.append(entry.local_name)
@@ -159,9 +159,9 @@ def _suite_extra_ctrl_entries_for_phase(
         return []
     seen = set(ctrl_std_names)
     result: Dict[str, HostVarEntry] = {}
-    for rg in suite_res.groups:
-        phase_items = rg.phase_calls.get(phase, [])
-        ctrl_args = _ctrl_args_for_phase(rg, phase)
+    for resolved_group in suite_res.groups:
+        phase_items = resolved_group.phase_calls.get(phase, [])
+        ctrl_args = _ctrl_args_for_phase(resolved_group, phase)
         for entry in _extra_dim_ctrl_entries(phase_items, phase, ctrl_args, host_dict):
             if entry.standard_name not in seen and entry.standard_name not in result:
                 result[entry.standard_name] = entry
@@ -178,9 +178,9 @@ def _register_calls(suite_res: SuiteResolution):
     Groups are visited in suite-XML order; within each group the calls follow
     the resolver's ordering (which mirrors the suite XML).
     """
-    for rg in suite_res.groups:
-        for rc in iter_phase_calls(rg.phase_calls.get('register', [])):
-            yield rg.group_name, rc
+    for resolved_group in suite_res.groups:
+        for resolved_call in iter_phase_calls(resolved_group.phase_calls.get('register', [])):
+            yield resolved_group.group_name, resolved_call
 
 
 def _register_uses(
@@ -200,16 +200,16 @@ def _register_uses(
     """
     uses: Dict[str, Set[str]] = {}
     seen_schemes: Set[str] = set()
-    for _gname, rc in _register_calls(suite_res):
-        if rc.scheme_name not in seen_schemes:
-            seen_schemes.add(rc.scheme_name)
+    for _gname, resolved_call in _register_calls(suite_res):
+        if resolved_call.scheme_name not in seen_schemes:
+            seen_schemes.add(resolved_call.scheme_name)
             # Module is metadata-declared (``module_name`` in table props)
             # when present; otherwise falls back to the scheme name.
-            scheme_module = rc.scheme_module or rc.scheme_name
+            scheme_module = resolved_call.scheme_module or resolved_call.scheme_name
             uses.setdefault(scheme_module, set()).add(
-                '{}_register'.format(rc.scheme_name)
+                '{}_register'.format(resolved_call.scheme_name)
             )
-        for arg in rc.args:
+        for arg in resolved_call.args:
             if arg.is_constituent_arg:
                 continue   # local temp, not a USE'd var
             mod = arg.module_name
@@ -225,7 +225,7 @@ def _register_uses(
     return uses
 
 
-def _add_call_uses(uses: Dict[str, Set[str]], rc) -> None:
+def _add_call_uses(uses: Dict[str, Set[str]], resolved_call) -> None:
     """Merge USE-statement requirements for a single :class:`ResolvedCall`.
 
     Adds:
@@ -239,29 +239,29 @@ def _add_call_uses(uses: Dict[str, Set[str]], rc) -> None:
     ``<suite>_final`` to integrate the suite-level <init>/<final>
     scheme calls into the USE block.
     """
-    scheme_module = rc.scheme_module or rc.scheme_name
+    scheme_module = resolved_call.scheme_module or resolved_call.scheme_name
     uses.setdefault(scheme_module, set()).add(
-        '{}_{}'.format(rc.scheme_name, rc.phase)
+        '{}_{}'.format(resolved_call.scheme_name, resolved_call.phase)
     )
-    for arg in rc.args:
+    for arg in resolved_call.args:
         mod = arg.module_name
         if mod is not None:
             uses.setdefault(mod, set()).add(arg.root_symbol)
 
 
-def _emit_register_call(rc, indent: str, errflg_local: str, lines: List[str]) -> None:
+def _emit_register_call(resolved_call, indent: str, errflg_local: str, lines: List[str]) -> None:
     """Emit one scheme ``_register`` call with keyword args + error guard.
 
     Register-phase calls are kept simple: no transformations (transform code
     paths are physics-phase only), keyword-arg style for clarity.
     """
-    sub = '{}_register'.format(rc.scheme_name)
-    if not rc.args:
+    sub = '{}_register'.format(resolved_call.scheme_name)
+    if not resolved_call.args:
         lines.append('{}call {}()'.format(indent, sub))
     else:
         lines.append('{}call {}( &'.format(indent, sub))
-        for i, arg in enumerate(rc.args):
-            sep = ', &' if i < len(rc.args) - 1 else ')'
+        for i, arg in enumerate(resolved_call.args):
+            sep = ', &' if i < len(resolved_call.args) - 1 else ')'
             lines.append('{}    {}={}{}'.format(
                 indent, arg.scheme_local_name, arg.call_expr, sep
             ))
@@ -371,7 +371,7 @@ def _register_lines(
         # only the first instance to enter does the two-pass count+pack.
         # Subsequent instances reuse the same buffer.  The state-array
         # transition still runs per instance (after this block).
-        const_scheme_names = {sn for sn, _ in suite_res.constituent_register_calls}
+        const_scheme_names = {scheme_name for scheme_name, _ in suite_res.constituent_register_calls}
         buf = '{}_dynamic_constituents'.format(suite_name)
 
         lines.append(
@@ -379,9 +379,9 @@ def _register_lines(
         )
         lines.append('{}num_consts = 0'.format(i2 + _INDENT))
         lines.append('{}! First pass: count constituents'.format(i2 + _INDENT))
-        for _gname, rc in _register_calls(suite_res):
-            if rc.scheme_name in const_scheme_names:
-                _emit_register_call(rc, i2 + _INDENT, errflg_local, lines)
+        for _gname, resolved_call in _register_calls(suite_res):
+            if resolved_call.scheme_name in const_scheme_names:
+                _emit_register_call(resolved_call, i2 + _INDENT, errflg_local, lines)
                 lines.append(
                     '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
                         i2 + _INDENT,
@@ -393,9 +393,9 @@ def _register_lines(
         lines.append('{}num_consts = 0'.format(i2 + _INDENT))
         lines.append('')
         lines.append('{}! Second pass: copy into per-suite buffer'.format(i2 + _INDENT))
-        for _gname, rc in _register_calls(suite_res):
-            if rc.scheme_name in const_scheme_names:
-                _emit_register_call(rc, i2 + _INDENT, errflg_local, lines)
+        for _gname, resolved_call in _register_calls(suite_res):
+            if resolved_call.scheme_name in const_scheme_names:
+                _emit_register_call(resolved_call, i2 + _INDENT, errflg_local, lines)
                 lines.append('{}do i = 1, size(scheme_consts, 1)'.format(i2 + _INDENT))
                 lines.append(
                     '{}{}(num_consts + i) = scheme_consts(i)'.format(
@@ -412,13 +412,13 @@ def _register_lines(
         lines.append('{}end if'.format(i2))
         lines.append('')
         # Emit any non-constituent register calls in addition (always, per instance).
-        for _gname, rc in _register_calls(suite_res):
-            if rc.scheme_name not in const_scheme_names:
-                _emit_register_call(rc, i2, errflg_local, lines)
+        for _gname, resolved_call in _register_calls(suite_res):
+            if resolved_call.scheme_name not in const_scheme_names:
+                _emit_register_call(resolved_call, i2, errflg_local, lines)
     else:
         # No constituent merge — emit register calls in suite-XML order.
-        for _gname, rc in _register_calls(suite_res):
-            _emit_register_call(rc, i2, errflg_local, lines)
+        for _gname, resolved_call in _register_calls(suite_res):
+            _emit_register_call(resolved_call, i2, errflg_local, lines)
 
     lines.append('')
     lines.append(
@@ -529,8 +529,8 @@ def _init_lines(
     ]
 
     # Group state allocators (idempotent).
-    for rg in suite_res.groups:
-        alloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_alloc')
+    for resolved_group in suite_res.groups:
+        alloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_alloc')
         lines.append('{}call {}({}, {}, {})'.format(
             i2, alloc_sub, ninstances_arg, errmsg_local, errflg_local
         ))
@@ -682,8 +682,8 @@ def _final_lines(
     lines.append(
         '{}if (all(ccpp_suite_state == CCPP_SUITE_UNREGISTERED)) then'.format(i2)
     )
-    for rg in suite_res.groups:
-        dealloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_dealloc')
+    for resolved_group in suite_res.groups:
+        dealloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_dealloc')
         lines.append('{}  call {}({}, {})'.format(
             i2, dealloc_sub, errmsg_local, errflg_local
         ))
@@ -807,10 +807,10 @@ def _physics_dispatch_lines(
             '',
         ]
 
-    def _emit_group_call(rg, indent):
+    def _emit_group_call(resolved_group, indent):
         # Group phase subroutines are always emitted (so the per-group state
         # machine transitions through every phase), so we always dispatch.
-        cap_sub = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, phase)
+        cap_sub = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, phase)
         if group_ctrl_local:
             lines.append('{}call {}( &'.format(indent, cap_sub))
             for idx, lname in enumerate(group_ctrl_local):
@@ -824,12 +824,12 @@ def _physics_dispatch_lines(
         lines.append('{}select case(trim({}))'.format(i2, grp_local))
         # '' or 'all' → call all groups.
         lines.append("{}case('', 'all')".format(i2))
-        for rg in suite_res.groups:
-            _emit_group_call(rg, i3)
+        for resolved_group in suite_res.groups:
+            _emit_group_call(resolved_group, i3)
         # Individual group cases.
-        for rg in suite_res.groups:
-            lines.append("{}case('{}')".format(i2, rg.group_name))
-            _emit_group_call(rg, i3)
+        for resolved_group in suite_res.groups:
+            lines.append("{}case('{}')".format(i2, resolved_group.group_name))
+            _emit_group_call(resolved_group, i3)
         # case default: anything other than '', 'all', or a known group
         # is a runtime error — caller asked for a group this suite
         # doesn't define.  Without ccpp_error_code/_message in the host
@@ -848,8 +848,8 @@ def _physics_dispatch_lines(
         lines.append('{}end select'.format(i2))
     else:
         # No group_name control var: call all groups unconditionally.
-        for rg in suite_res.groups:
-            _emit_group_call(rg, i2)
+        for resolved_group in suite_res.groups:
+            _emit_group_call(resolved_group, i2)
 
     lines.append('')
     lines.append('{}end subroutine {}'.format(i1, sub_name))
@@ -979,14 +979,14 @@ def _generate_suite_cap(
     lines.append('')
 
     # USE statements: one per group cap (all phase + state subroutines).
-    for rg in suite_res.groups:
-        group_cap_mod = 'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'cap')
+    for resolved_group in suite_res.groups:
+        group_cap_mod = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'cap')
         syms_list = [
-            'ccpp_{}_{}_{}'.format(suite_name, rg.group_name, p)
+            'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, p)
             for p in _PHYSICS_PHASES
         ]
-        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_alloc'))
-        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, rg.group_name, 'state_dealloc'))
+        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_alloc'))
+        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_dealloc'))
         lines.append('{}use {}, only: {}'.format(
             _INDENT, group_cap_mod, ', '.join(syms_list)
         ))

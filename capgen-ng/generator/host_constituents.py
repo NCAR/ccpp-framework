@@ -53,24 +53,24 @@ _CONST_OBJ = 'ccpp_model_constituents_obj'
 def _any_constituent_state(suite_results: List[SuiteResolution]) -> bool:
     """Return True iff any suite either uses or registers constituents."""
     return any(
-        sr.uses_constituents or sr.constituent_register_calls
-        for sr in suite_results
+        suite_resolution.uses_constituents or suite_resolution.constituent_register_calls
+        for suite_resolution in suite_results
     )
 
 
 def _all_index_names(suite_results: List[SuiteResolution]) -> List[str]:
     """Return sorted unique base std-names that need an ``index_of_<X>``."""
     names: Set[str] = set()
-    for sr in suite_results:
-        names.update(sr.constituent_index_names)
+    for suite_resolution in suite_results:
+        names.update(suite_resolution.constituent_index_names)
     return sorted(names)
 
 
 def _suites_with_register_consts(
     suite_results: List[SuiteResolution],
 ) -> List[str]:
-    return [sr.suite_name for sr in suite_results
-            if sr.constituent_register_calls]
+    return [suite_resolution.suite_name for suite_resolution in suite_results
+            if suite_resolution.constituent_register_calls]
 
 
 def _dyn_const_array_name(suite_name: str) -> str:

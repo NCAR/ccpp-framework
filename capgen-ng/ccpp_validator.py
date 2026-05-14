@@ -70,6 +70,11 @@ _COMMENT_RE = re.compile(r'!.*$')
 # on the prior line for portability with free-form parsers.  Only
 # applied when we know we are mid-continuation (the buffer is non-empty).
 _LEAD_CONT_RE = re.compile(r'^\s*&\s?')
+# Matches an identifier-character anywhere in a string.  Used by the
+# decoration-repair branch to distinguish "stray punctuation past a
+# trailing ``&``" (safe to drop) from "real tokens past a ``&``"
+# (leave alone so the parser surfaces a real error).
+_IDENT_CHAR_RE = re.compile(r'[A-Za-z_0-9]')
 
 
 class _SubSig(NamedTuple):
@@ -155,10 +160,13 @@ def _line_optional_names(line: str) -> List[str]:
     return names
 
 
-def _join_continuation(lines: List[str]) -> List[str]:
+def _join_continuation(
+    lines: List[str],
+    filename: Optional[str] = None,
+) -> List[str]:
     """Join Fortran continuation lines (ending with ``&``) into single logical lines.
 
-    Handles three continuation conventions seen in real CCPP physics code:
+    Handles four continuation conventions seen in real CCPP physics code:
 
     * **Free-form**: ``&`` only at the trailing end of the prior line.
     * **Dual-form**: ``&`` at the trailing end of the prior line *and*
@@ -172,6 +180,23 @@ def _join_continuation(lines: List[str]) -> List[str]:
       signature, where the line before the closing ``)`` has no trailing
       ``&``).  Detected by look-ahead at the next non-blank, non-comment
       line.
+    * **Decorated trailing ``&``** (repair): a ``&`` near the end of the
+      line is followed by stray non-identifier characters (commas,
+      parens, whitespace) — typically a typo or hand-edit artefact that
+      compilers silently ignore because it lives past column 72 in
+      strict fixed-form mode.  When the next line's column-6 ``&``
+      already proves we are mid-continuation, treat the last ``&`` as
+      the continuation marker, discard the decoration, and emit a
+      ``logger.warning`` naming *filename* so the user knows their
+      source has decoration past the statement end.
+
+    Parameters
+    ----------
+    lines : list of str
+        Source lines, each ending in ``\\n`` (as from ``splitlines(keepends=True)``).
+    filename : str, optional
+        Source path used only in the decoration-repair warning message.
+        Defaults to ``<unknown>`` when not supplied.
 
     Examples
     --------
@@ -220,8 +245,12 @@ def _join_continuation(lines: List[str]) -> List[str]:
             continue
         # No trailing ``&`` — but a fixed-form continuation may still
         # be implied by the next line's column-6 ``&``.  If so, keep
-        # buffering rather than flushing.
+        # buffering rather than flushing, and try the decoration-repair
+        # in case the trailing ``&`` was decorated with stray punctuation
+        # that lives past column 72 (compilers silently drop it; we'd
+        # otherwise glue it into the joined statement).
         if _next_starts_with_lead_cont(i):
+            stripped = _repair_decorated_trailing_amp(stripped, filename, i + 1)
             buf += stripped
             continue
         buf += stripped
@@ -232,7 +261,49 @@ def _join_continuation(lines: List[str]) -> List[str]:
     return result
 
 
-def _parse_subroutines(source: str) -> Dict[str, _SubSig]:
+def _repair_decorated_trailing_amp(
+    line: str,
+    filename: Optional[str],
+    line_no: int,
+) -> str:
+    """Strip a decorated trailing ``&`` from *line*.
+
+    Called from the fixed-form look-ahead branch of
+    :func:`_join_continuation`, where the next line's column-6 ``&`` has
+    already established that we are mid-continuation.  If *line*
+    contains a ``&`` followed only by non-identifier characters
+    (commas, parens, semicolons, whitespace), the ``&`` is the
+    decorated continuation marker — drop everything from it onward and
+    emit a single ``WARNING`` so the user sees that their source has
+    decoration the compiler is silently ignoring.
+
+    If *line* contains no ``&`` (true fixed-form-leading-only
+    continuation), or if any token past the last ``&`` looks like a
+    real Fortran identifier, the line is returned unchanged so the
+    parser can surface a real error.
+    """
+    amp_idx = line.rfind('&')
+    if amp_idx < 0:
+        return line
+    trailing = line[amp_idx + 1:].strip()
+    if not trailing:
+        # ``_CONT_RE`` should have caught this; defensive no-op.
+        return line
+    if _IDENT_CHAR_RE.search(trailing):
+        return line
+    _LOGGER.warning(
+        "%s:%d: dropping decoration past trailing '&' (%r); "
+        "compiler silently ignores this but the parser would otherwise "
+        "glue it into the statement",
+        filename or '<unknown>', line_no, line[amp_idx:],
+    )
+    return line[:amp_idx]
+
+
+def _parse_subroutines(
+    source: str,
+    filename: Optional[str] = None,
+) -> Dict[str, _SubSig]:
     """Extract subroutine signatures from Fortran *source*.
 
     Returns a mapping ``{subroutine_name_lower: _SubSig}`` where each
@@ -276,7 +347,9 @@ def _parse_subroutines(source: str) -> Dict[str, _SubSig]:
     >>> sorted(sig.optional)
     ['y', 'z']
     """
-    logical = _join_continuation(source.splitlines(keepends=True))
+    logical = _join_continuation(
+        source.splitlines(keepends=True), filename=filename,
+    )
     args_by_name: Dict[str, List[str]] = {}
     optional_by_name: Dict[str, Set[str]] = {}
     # Stack of names whose body we are currently scanning.  Each entry is
@@ -335,7 +408,7 @@ def _load_source_tree(source_files: List[str]) -> Dict[str, _SubSig]:
     for fpath in source_files:
         with open(fpath) as fh:
             src = fh.read()
-        for name, sig in _parse_subroutines(src).items():
+        for name, sig in _parse_subroutines(src, filename=fpath).items():
             if name not in merged:
                 merged[name] = sig
     return merged

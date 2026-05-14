@@ -129,8 +129,8 @@ class TestGenerateSuiteDataScalar(unittest.TestCase):
     """Suite var that is a scalar (no dimensions)."""
 
     def setUp(self):
-        sv = _make_sv('flag_var', 'flag', 'logical', '', '1', dims=[])
-        self.lines = _generate_suite_data('s', {'flag_var': sv})
+        suite_var = _make_sv('flag_var', 'flag', 'logical', '', '1', dims=[])
+        self.lines = _generate_suite_data('s', {'flag_var': suite_var})
         self.text  = '\n'.join(self.lines)
 
     def test_no_allocatable_for_scalar(self):
@@ -200,9 +200,9 @@ class TestGenerateSuiteDataDDT(unittest.TestCase):
 
     def test_no_ddt_no_use(self):
         # When suite vars are all intrinsic, no DDT USE lines are emitted.
-        sv = _make_sv('temp', 't', 'real', 'kind_phys', 'K', dims=[])
+        suite_var = _make_sv('temp', 't', 'real', 'kind_phys', 'K', dims=[])
         lines = _generate_suite_data(
-            'ds', {'temp': sv}, ddt_module_map=None,
+            'ds', {'temp': suite_var}, ddt_module_map=None,
         )
         text = '\n'.join(lines)
         self.assertNotIn('use make_ddt', text)

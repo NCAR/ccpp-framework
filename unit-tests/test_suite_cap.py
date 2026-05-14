@@ -31,28 +31,28 @@ def _resolve():
 
 
 def _generate():
-    sr, store = _resolve()
-    return _generate_suite_cap('test_simple', sr, store)
+    suite_resolution, store = _resolve()
+    return _generate_suite_cap('test_simple', suite_resolution, store)
 
 
 class TestAllSuiteSchemeNames(unittest.TestCase):
 
     def test_single_scheme(self):
-        sr, _ = _resolve()
-        names = _all_suite_scheme_names(sr)
+        suite_resolution, _ = _resolve()
+        names = _all_suite_scheme_names(suite_resolution)
         self.assertIn('temp_calc_adjust', names)
 
     def test_no_duplicates(self):
-        sr, _ = _resolve()
-        names = _all_suite_scheme_names(sr)
+        suite_resolution, _ = _resolve()
+        names = _all_suite_scheme_names(suite_resolution)
         self.assertEqual(len(names), len(set(names)))
 
 
 class TestSchemesWithRegister(unittest.TestCase):
 
     def test_none_have_register(self):
-        sr, store = _resolve()
-        names = _all_suite_scheme_names(sr)
+        suite_resolution, store = _resolve()
+        names = _all_suite_scheme_names(suite_resolution)
         reg = _schemes_with_register(names, store)
         # temp_calc_adjust has no register phase.
         self.assertEqual(reg, [])
@@ -69,15 +69,15 @@ class TestSchemesWithRegister(unittest.TestCase):
 class TestSuiteCtrlArgsForPhase(unittest.TestCase):
 
     def test_only_error_ctrl_args_in_test_case(self):
-        sr, _ = _resolve()
+        suite_resolution, _ = _resolve()
         # temp_calc_adjust uses errmsg/errflg which are now control vars.
-        args = _suite_ctrl_args_for_phase(sr, 'run')
+        args = _suite_ctrl_args_for_phase(suite_resolution, 'run')
         std_names = {a.standard_name for a in args}
         self.assertEqual(std_names, {'ccpp_error_message', 'ccpp_error_code'})
 
     def test_unknown_phase_returns_empty(self):
-        sr, _ = _resolve()
-        args = _suite_ctrl_args_for_phase(sr, 'register')
+        suite_resolution, _ = _resolve()
+        args = _suite_ctrl_args_for_phase(suite_resolution, 'register')
         self.assertEqual(args, [])
 
 
@@ -240,9 +240,9 @@ class TestGroupDispatchUnknownGroupError(unittest.TestCase):
     """
 
     def setUp(self):
-        sr, store = _resolve()
+        suite_resolution, store = _resolve()
         self.text = '\n'.join(
-            _generate_suite_cap('test_simple', sr, store, _load_full_host_dict())
+            _generate_suite_cap('test_simple', suite_resolution, store, _load_full_host_dict())
         )
 
     def _phase_block(self, phase):
@@ -288,16 +288,16 @@ class TestGroupDispatchUnknownGroupError(unittest.TestCase):
 class TestWriteSuiteCap(unittest.TestCase):
 
     def test_writes_file(self):
-        sr, store = _resolve()
+        suite_resolution, store = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_suite_cap('test_simple', sr, store, tmpdir)
+            path = write_suite_cap('test_simple', suite_resolution, store, tmpdir)
             self.assertTrue(os.path.isfile(path))
             self.assertEqual(os.path.basename(path), 'ccpp_test_simple_cap.F90')
 
     def test_file_content(self):
-        sr, store = _resolve()
+        suite_resolution, store = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_suite_cap('test_simple', sr, store, tmpdir)
+            path = write_suite_cap('test_simple', suite_resolution, store, tmpdir)
             with open(path) as fh:
                 content = fh.read()
             self.assertIn('module ccpp_test_simple_cap', content)
@@ -306,10 +306,10 @@ class TestWriteSuiteCap(unittest.TestCase):
             self.assertTrue(content.endswith('\n'))
 
     def test_creates_output_dir(self):
-        sr, store = _resolve()
+        suite_resolution, store = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
             subdir = os.path.join(tmpdir, 'caps')
-            write_suite_cap('test_simple', sr, store, subdir)
+            write_suite_cap('test_simple', suite_resolution, store, subdir)
             self.assertTrue(os.path.isdir(subdir))
 
 
@@ -355,9 +355,9 @@ class TestSuiteCapNoConstituentDeclarations(unittest.TestCase):
         self.hd    = _load_constituent_host_dict()
         self.store = _load_constituent_consumer_store()
         self.suite = _parse_suite('suite_consume_constituent.xml')
-        self.sr    = resolve_suite(self.suite, self.store, self.hd)
+        self.suite_resolution    = resolve_suite(self.suite, self.store, self.hd)
         self.text  = '\n'.join(
-            _generate_suite_cap('consume_consts', self.sr, self.store, self.hd)
+            _generate_suite_cap('consume_consts', self.suite_resolution, self.store, self.hd)
         )
 
     def test_no_kind_phys_import(self):
@@ -404,8 +404,8 @@ class TestSuiteCapNoConstituentEmissionWhenAbsent(unittest.TestCase):
 
 
 def load_tests(loader, tests, ignore):
-    import generator.suite_cap as sc
-    tests.addTests(doctest.DocTestSuite(sc))
+    import generator.suite_cap as subcycle
+    tests.addTests(doctest.DocTestSuite(subcycle))
     return tests
 
 
