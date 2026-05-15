@@ -566,6 +566,224 @@ class TestBuildMergedSubscript(unittest.TestCase):
                 'run', hd,
             )
 
+    def test_explicit_index_substitutes_scalar_idx_placeholder(self):
+        """Regression: an explicit subscript token like
+        ``index_of_water_vapor_specific_humidity`` whose ``access_path``
+        carries a baked ``(instance_number)`` DDT-instance placeholder
+        must have that placeholder resolved to the host's local name
+        before being spliced into the subscript.  Without the
+        substitution the generator emits Fortran like
+        ``qgrs(lb:ub, 1:nlev, GFS_Control(instance_number)%ntqv)`` and
+        the compiler rejects ``instance_number`` as untyped.  Found
+        2026-05-15 in the NEPTUNE phys_ps cap.
+        """
+        from metadata.metadata_table import _parse_lines
+        ddt_src = (
+            "[ccpp-table-properties]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ ntqv ]\n"
+            "  standard_name = index_of_water_vapor_specific_humidity\n"
+            "  units = index\n  dimensions = ()\n  type = integer\n"
+        )
+        host_src = (
+            "[ccpp-table-properties]\n  name = scm_type_defs\n  type = host\n"
+            "[ccpp-arg-table]\n  name = scm_type_defs\n  type = host\n"
+            "[ GFS_Control ]\n  standard_name = GFS_control_type_instance\n"
+            "  units = DDT\n  dimensions = (number_of_instances)\n"
+            "  type = GFS_control_type\n"
+            "[ ncols ]\n  standard_name = horizontal_dimension\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+            "[ nlev ]\n  standard_name = vertical_layer_dimension\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+        )
+        ctrl_src = (
+            "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
+            "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
+            "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ instance ]\n  standard_name = instance_number\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ninstances ]\n  standard_name = number_of_instances\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+        )
+        hd = build_flat_host_dict(
+            _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
+            _parse_lines(ctrl_src.splitlines(keepends=True), 'ctrl.meta'),
+            _parse_lines(ddt_src.splitlines(keepends=True), 'ddt.meta'),
+        )
+        # Pre-condition: the inner ntqv entry's access path carries the
+        # baked ``(instance_number)`` placeholder.
+        self.assertEqual(
+            hd['index_of_water_vapor_specific_humidity'].access_path,
+            'GFS_Control(instance_number)%ntqv',
+        )
+        sub, _used = _build_merged_subscript(
+            ['horizontal_dimension', 'vertical_layer_dimension'],
+            [':', ':', 'index_of_water_vapor_specific_humidity'],
+            'run', hd,
+        )
+        # The emitted subscript must substitute the placeholder to the
+        # host's local name (``instance``).
+        self.assertEqual(
+            sub, '(lb:ub, 1:nlev, GFS_Control(instance)%ntqv)',
+        )
+        self.assertNotIn('instance_number', sub)
+
+    def test_explicit_index_nested_ddt_two_placeholder_levels(self):
+        """Recursive variant: the index token's access_path crosses TWO
+        DDT levels, each with its own registered scalar-index dim.  The
+        baked path contains two distinct placeholders
+        (``(instance_number)`` outer + ``(thread_number)`` inner) plus
+        a third occurrence of one of them; ``_substitute_scalar_idx``
+        must rewrite all of them in a single pass."""
+        from metadata.metadata_table import _parse_lines
+        ddt_src = (
+            # Innermost DDT — defines the leaf index variable.
+            "[ccpp-table-properties]\n  name = scratch_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = scratch_type\n  type = ddt\n"
+            "[ idx_qv ]\n"
+            "  standard_name = index_of_water_vapor_specific_humidity\n"
+            "  units = index\n  dimensions = ()\n  type = integer\n"
+            "\n"
+            # Middle DDT — sliced per OpenMP thread.
+            "[ccpp-table-properties]\n  name = GFS_interstitial_type\n"
+            "  type = ddt\n"
+            "[ccpp-arg-table]\n  name = GFS_interstitial_type\n"
+            "  type = ddt\n"
+            "[ scratch ]\n"
+            "  standard_name = scratch_type_instance\n  units = DDT\n"
+            "  dimensions = ()\n  type = scratch_type\n"
+            "\n"
+            # Outer DDT — sliced per model instance and itself carrying
+            # a per-thread Interstitial sub-DDT.
+            "[ccpp-table-properties]\n  name = GFS_phys_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = GFS_phys_type\n  type = ddt\n"
+            "[ Interstitial ]\n"
+            "  standard_name = GFS_interstitial_type_instance\n"
+            "  units = DDT\n  dimensions = (number_of_threads)\n"
+            "  type = GFS_interstitial_type\n"
+        )
+        host_src = (
+            "[ccpp-table-properties]\n  name = scm_type_defs\n  type = host\n"
+            "[ccpp-arg-table]\n  name = scm_type_defs\n  type = host\n"
+            "[ GFS_Phys ]\n  standard_name = GFS_phys_type_instance\n"
+            "  units = DDT\n  dimensions = (number_of_instances)\n"
+            "  type = GFS_phys_type\n"
+            "[ ncols ]\n  standard_name = horizontal_dimension\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+            "[ nlev ]\n  standard_name = vertical_layer_dimension\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+        )
+        ctrl_src = (
+            "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
+            "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
+            "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ mythread ]\n  standard_name = thread_number\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ nthreads ]\n  standard_name = number_of_threads\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ instance ]\n  standard_name = instance_number\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ninstances ]\n  standard_name = number_of_instances\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+        )
+        hd = build_flat_host_dict(
+            _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
+            _parse_lines(ctrl_src.splitlines(keepends=True), 'ctrl.meta'),
+            _parse_lines(ddt_src.splitlines(keepends=True), 'ddt.meta'),
+        )
+        # Pre-condition: the leaf entry's access path carries BOTH
+        # registered-scalar-index placeholders, one per DDT level.
+        self.assertEqual(
+            hd['index_of_water_vapor_specific_humidity'].access_path,
+            'GFS_Phys(instance_number)%Interstitial(thread_number)%scratch%idx_qv',
+        )
+        sub, _used = _build_merged_subscript(
+            ['horizontal_dimension', 'vertical_layer_dimension'],
+            [':', ':', 'index_of_water_vapor_specific_humidity'],
+            'run', hd,
+        )
+        # All placeholders must be resolved in one pass.
+        self.assertEqual(
+            sub,
+            '(lb:ub, 1:nlev, '
+            'GFS_Phys(instance)%Interstitial(mythread)%scratch%idx_qv)',
+        )
+        self.assertNotIn('instance_number', sub)
+        self.assertNotIn('thread_number',   sub)
+
+    def test_multiple_explicit_index_tokens_each_with_placeholder(self):
+        """Two distinct scheme-arg subscript tokens, each resolving to a
+        DDT-walked access path with its own ``(instance_number)``
+        placeholder.  Both must be substituted independently."""
+        from metadata.metadata_table import _parse_lines
+        ddt_src = (
+            "[ccpp-table-properties]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ ntqv ]\n"
+            "  standard_name = index_of_water_vapor_specific_humidity\n"
+            "  units = index\n  dimensions = ()\n  type = integer\n"
+            "[ ntcw ]\n"
+            "  standard_name = index_of_cloud_liquid_water_mixing_ratio\n"
+            "  units = index\n  dimensions = ()\n  type = integer\n"
+        )
+        host_src = (
+            "[ccpp-table-properties]\n  name = scm_type_defs\n  type = host\n"
+            "[ccpp-arg-table]\n  name = scm_type_defs\n  type = host\n"
+            "[ GFS_Control ]\n  standard_name = GFS_control_type_instance\n"
+            "  units = DDT\n  dimensions = (number_of_instances)\n"
+            "  type = GFS_control_type\n"
+            "[ ncols ]\n  standard_name = horizontal_dimension\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+            "[ nlev ]\n  standard_name = vertical_layer_dimension\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+        )
+        ctrl_src = (
+            "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
+            "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
+            "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ instance ]\n  standard_name = instance_number\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ninstances ]\n  standard_name = number_of_instances\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+        )
+        hd = build_flat_host_dict(
+            _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
+            _parse_lines(ctrl_src.splitlines(keepends=True), 'ctrl.meta'),
+            _parse_lines(ddt_src.splitlines(keepends=True), 'ddt.meta'),
+        )
+        # Both index entries should carry the (instance_number) placeholder.
+        self.assertEqual(
+            hd['index_of_water_vapor_specific_humidity'].access_path,
+            'GFS_Control(instance_number)%ntqv',
+        )
+        self.assertEqual(
+            hd['index_of_cloud_liquid_water_mixing_ratio'].access_path,
+            'GFS_Control(instance_number)%ntcw',
+        )
+        # A subscript with TWO explicit index tokens — both placeholders
+        # must be rewritten.
+        sub, _used = _build_merged_subscript(
+            ['horizontal_dimension', 'vertical_layer_dimension'],
+            [':', ':', 'index_of_water_vapor_specific_humidity',
+             'index_of_cloud_liquid_water_mixing_ratio'],
+            'run', hd,
+        )
+        self.assertEqual(
+            sub,
+            '(lb:ub, 1:nlev, '
+            'GFS_Control(instance)%ntqv, GFS_Control(instance)%ntcw)',
+        )
+        self.assertNotIn('instance_number', sub)
+
 
 ########################################################################
 # Tests: _translate_active_expr

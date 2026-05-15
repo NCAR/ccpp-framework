@@ -8,8 +8,7 @@
 set(SCHEME_FILES "effr_calc" "effrs_calc" "effr_diag" "effr_pre" "effr_post" "rad_lw" "rad_sw")
 set(HOST_FILES   "module_rad_ddt" "test_host_data" "test_host_mod" "test_host")
 set(SUITE_FILES  "var_compatibility_suite.xml")
-set(HOST "test_host")
-
+set(HOST         "test_host")
 # By default, generated caps go in ccpp subdir
 set(OUTPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 

@@ -66,7 +66,7 @@ class TestOutputFilesExist(unittest.TestCase):
         return os.path.join(self._tmpdir, name)
 
     def test_static_api_exists(self):
-        self.assertTrue(os.path.isfile(self._path('ccpp_static_api.F90')))
+        self.assertTrue(os.path.isfile(self._path('test_host_ccpp_cap.F90')))
 
     def test_suite_cap_exists(self):
         self.assertTrue(os.path.isfile(self._path('ccpp_test_simple_cap.F90')))
@@ -227,7 +227,7 @@ class TestMetadataKindSpec(unittest.TestCase):
 def _run_with_constituents(tmpdir, suite_xml='suite_consume_constituent.xml'):
     """Run capgen with a constituent-using fixture and return tmpdir."""
     capgen(
-        host_name='host_consts',
+        host_name='test_host',
         host_files=[_sf('host_with_constituents.meta'),
                     _sf('control_full.meta')],
         scheme_files=[_sf('scheme_consume_constituent.meta')],
@@ -381,7 +381,7 @@ class TestStaticApiContent(unittest.TestCase):
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
         _run_simple(self._tmpdir)
-        with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
+        with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             self.text = fh.read()
 
     def tearDown(self):
@@ -389,7 +389,7 @@ class TestStaticApiContent(unittest.TestCase):
         shutil.rmtree(self._tmpdir)
 
     def test_module_declaration(self):
-        self.assertIn('module ccpp_static_api', self.text)
+        self.assertIn('module test_host_ccpp_cap', self.text)
 
     def test_ccpp_register_always_present(self):
         # ccpp_register is mandatory in the new design and always emitted,
@@ -525,7 +525,7 @@ class TestDatatableContent(unittest.TestCase):
         host_files = self._root.find('capgen_files').find('host_files')
         self.assertIsNotNone(host_files)
         names = [os.path.basename(f.text) for f in host_files.findall('file')]
-        self.assertIn('ccpp_static_api.F90', names)
+        self.assertIn('test_host_ccpp_cap.F90', names)
 
     def test_ccpp_kinds_in_utilities(self):
         # ccpp_kinds.F90 is always generated and must be discoverable by
@@ -659,7 +659,7 @@ class TestMultipleSuites(unittest.TestCase):
         )
 
     def test_static_api_dispatches_both(self):
-        with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
+        with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         self.assertIn("case('test_simple')", text)
         self.assertIn("case('test_subcycle')", text)
@@ -697,7 +697,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
     def test_ccpp_init_minimal_signature(self):
         # Lifecycle signature for a multi-instance host carries the
         # paired (inst_num, ninstances) control vars.
-        with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
+        with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
             'subroutine ccpp_init(suite_name, errflg, errmsg, inst_num, ninstances)',
@@ -806,7 +806,7 @@ class TestSingleInstanceIntegration(unittest.TestCase):
         shutil.rmtree(self._tmpdir)
 
     def test_static_api_ccpp_init_omits_inst_num(self):
-        with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
+        with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         # ``suite_name_var`` is the local name declared by
         # ``control_no_instance.meta`` for the suite_name control var.
@@ -818,7 +818,7 @@ class TestSingleInstanceIntegration(unittest.TestCase):
         self.assertNotIn('inst_num', text)
 
     def test_static_api_ccpp_register_omits_inst_num(self):
-        with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
+        with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
             'subroutine ccpp_register(suite_name_var, errflg, errmsg)',
@@ -826,7 +826,7 @@ class TestSingleInstanceIntegration(unittest.TestCase):
         )
 
     def test_static_api_ccpp_final_omits_inst_num(self):
-        with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
+        with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
             'subroutine ccpp_final(suite_name_var, errflg, errmsg)',
@@ -922,7 +922,7 @@ class TestInstancePairingErrors(unittest.TestCase):
 
 def _run_opt_arg(tmpdir):
     capgen(
-        host_name='host',
+        host_name='test_host',
         host_files=[_sf('host_opt_arg.meta'), _sf('control_opt_arg.meta')],
         scheme_files=[_sf('scheme_opt_arg.meta')],
         suite_files=[_suite_file('suite_opt_arg.xml')],
@@ -934,7 +934,7 @@ def _run_opt_arg(tmpdir):
 
 def _run_unit_conv(tmpdir):
     capgen(
-        host_name='host',
+        host_name='test_host',
         host_files=[_sf('host_unit_conv.meta'), _sf('control_unit_conv.meta')],
         scheme_files=[
             _sf('scheme_unit_conv_1.meta'),
@@ -949,7 +949,7 @@ def _run_unit_conv(tmpdir):
 
 def _run_chunked_data(tmpdir):
     capgen(
-        host_name='host',
+        host_name='test_host',
         host_files=[
             _sf('host_chunked_data.meta'),
             _sf('ddt_chunked_data.meta'),
@@ -2110,7 +2110,7 @@ class TestInterstitialSuiteData(unittest.TestCase):
 
     def test_static_api_physics_run_has_inst_num(self):
         """Static API ccpp_physics_run must include inst_num when groups need it."""
-        with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
+        with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         physics_run = text.split('subroutine ccpp_physics_run')[1]
         physics_run = physics_run.split('end subroutine')[0]

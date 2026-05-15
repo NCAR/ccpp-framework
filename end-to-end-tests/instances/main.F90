@@ -9,7 +9,7 @@ program test_unit_conv
       nspecies, ninstances
   use data, only: instance_data
 
-  use ccpp_static_api, only: ccpp_register, &
+  use test_host_ccpp_cap, only: ccpp_register, &
       ccpp_init, &
       ccpp_physics_init, &
       ccpp_physics_timestep_init, &

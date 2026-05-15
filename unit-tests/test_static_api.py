@@ -37,7 +37,7 @@ def _resolve():
 
 def _generate():
     suite_resolution = _resolve()
-    return _generate_static_api(['test_simple'], [suite_resolution])
+    return _generate_static_api('test_host', ['test_simple'], [suite_resolution])
 
 
 class TestAllCtrlArgsForPhase(unittest.TestCase):
@@ -52,7 +52,7 @@ class TestAllCtrlArgsForPhase(unittest.TestCase):
     def test_mismatched_lengths_raises(self):
         from metadata.parse_tools import CCPPError
         with self.assertRaises(CCPPError):
-            _generate_static_api(['a', 'b'], [_resolve()])
+            _generate_static_api('test_host', ['a', 'b'], [_resolve()])
 
 
 class TestGenerateStaticApiModule(unittest.TestCase):
@@ -65,11 +65,11 @@ class TestGenerateStaticApiModule(unittest.TestCase):
 
     def test_module_header_comment(self):
         self.assertTrue(self.lines[0].startswith('!'))
-        self.assertIn('ccpp_static_api', self.lines[0])
+        self.assertIn('test_host_ccpp_cap', self.lines[0])
 
     def test_module_declaration(self):
-        self.assertIn('module ccpp_static_api', self.text)
-        self.assertIn('end module ccpp_static_api', self.text)
+        self.assertIn('module test_host_ccpp_cap', self.text)
+        self.assertIn('end module test_host_ccpp_cap', self.text)
 
     def test_does_not_use_constituent_mod(self):
         # Constituent merging is now opt-in via type=host (Task #6 follow-up).
@@ -126,7 +126,7 @@ class TestStaticApiConstituentReexport(unittest.TestCase):
         suite = _parse_suite('suite_consume_constituent.xml')
         suite_resolution    = resolve_suite(suite, store, hd)
         self.text = '\n'.join(
-            _generate_static_api(['consume_consts'], [suite_resolution], host_dict=hd,
+            _generate_static_api('test_host', ['consume_consts'], [suite_resolution], host_dict=hd,
                                  scheme_store=store),
         )
 
@@ -254,7 +254,7 @@ class TestCcppPhysicsUnknownSuiteErrors(unittest.TestCase):
     def setUp(self):
         hd  = _load_full_host_dict()
         suite_resolution  = _resolve()
-        self.text = '\n'.join(_generate_static_api(['test_simple'], [suite_resolution], hd))
+        self.text = '\n'.join(_generate_static_api('test_host', ['test_simple'], [suite_resolution], hd))
 
     def test_physics_run_has_default_case_with_errflg(self):
         run_block_start = self.text.index('subroutine ccpp_physics_run')
@@ -282,7 +282,7 @@ class TestMultipleSuites(unittest.TestCase):
         from copy import deepcopy
         sr2 = deepcopy(suite_resolution)
         sr2.suite_name = 'suite_b'
-        lines = _generate_static_api(['test_simple', 'suite_b'], [suite_resolution, sr2])
+        lines = _generate_static_api('test_host', ['test_simple', 'suite_b'], [suite_resolution, sr2])
         self.text = '\n'.join(lines)
 
     def test_both_suites_in_register(self):
@@ -300,17 +300,17 @@ class TestWriteStaticApi(unittest.TestCase):
     def test_writes_file(self):
         suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_static_api(['test_simple'], [suite_resolution], tmpdir)
+            path = write_static_api('test_host', ['test_simple'], [suite_resolution], tmpdir)
             self.assertTrue(os.path.isfile(path))
-            self.assertEqual(os.path.basename(path), 'ccpp_static_api.F90')
+            self.assertEqual(os.path.basename(path), 'test_host_ccpp_cap.F90')
 
     def test_file_content(self):
         suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_static_api(['test_simple'], [suite_resolution], tmpdir)
+            path = write_static_api('test_host', ['test_simple'], [suite_resolution], tmpdir)
             with open(path) as fh:
                 content = fh.read()
-            self.assertIn('module ccpp_static_api', content)
+            self.assertIn('module test_host_ccpp_cap', content)
             # ccpp_register is now mandatory and always emitted.
             self.assertIn('subroutine ccpp_register', content)
             self.assertTrue(content.endswith('\n'))
@@ -319,13 +319,13 @@ class TestWriteStaticApi(unittest.TestCase):
         suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
             subdir = os.path.join(tmpdir, 'api')
-            write_static_api(['test_simple'], [suite_resolution], subdir)
+            write_static_api('test_host', ['test_simple'], [suite_resolution], subdir)
             self.assertTrue(os.path.isdir(subdir))
 
     def test_returns_absolute_path(self):
         suite_resolution = _resolve()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = write_static_api(['test_simple'], [suite_resolution], tmpdir)
+            path = write_static_api('test_host', ['test_simple'], [suite_resolution], tmpdir)
             self.assertTrue(os.path.isabs(path))
 
 
@@ -336,7 +336,7 @@ class TestCcppInitMultiInstance(unittest.TestCase):
     def setUp(self):
         hd = _load_full_host_dict()
         suite_resolution = _resolve()
-        lines = _generate_static_api(['test_simple'], [suite_resolution], hd)
+        lines = _generate_static_api('test_host', ['test_simple'], [suite_resolution], hd)
         self.text = '\n'.join(lines)
 
     def test_init_signature_has_instance_pair(self):
@@ -382,7 +382,7 @@ class TestCcppInitSingleInstance(unittest.TestCase):
         hd = {k: v for k, v in _load_full_host_dict().items()
               if k not in ('number_of_instances', 'instance_number')}
         suite_resolution = _resolve()
-        lines = _generate_static_api(['test_simple'], [suite_resolution], hd)
+        lines = _generate_static_api('test_host', ['test_simple'], [suite_resolution], hd)
         self.text = '\n'.join(lines)
 
     def test_init_signature_no_instance_args(self):
@@ -1205,6 +1205,7 @@ class TestNoHostIntrospectionStubBodies(unittest.TestCase):
         # Stub-on and stub-off both include the same USE.
         for stub in (True, False):
             text = '\n'.join(_generate_static_api(
+                'test_host',
                 ['test_simple'], [self.suite_resolution], self.hd,
                 no_host_introspection=stub,
             ))
@@ -1218,6 +1219,7 @@ class TestNoHostIntrospectionStubBodies(unittest.TestCase):
         # All five introspection routines remain public — callers must
         # still link against them.
         text = '\n'.join(_generate_static_api(
+            'test_host',
             ['test_simple'], [self.suite_resolution], self.hd,
             no_host_introspection=True,
         ))
@@ -1236,9 +1238,9 @@ class TestNoHostIntrospectionStubBodies(unittest.TestCase):
         """The motivating case: 33k+ lines → ~800. We don't have 80
         suites in unit-test fixtures, but even with one suite the
         stubbed module must be strictly shorter than the full one."""
-        full  = _generate_static_api(['test_simple'], [self.suite_resolution],
+        full  = _generate_static_api('test_host', ['test_simple'], [self.suite_resolution],
                                      self.hd, no_host_introspection=False)
-        stub  = _generate_static_api(['test_simple'], [self.suite_resolution],
+        stub  = _generate_static_api('test_host', ['test_simple'], [self.suite_resolution],
                                      self.hd, no_host_introspection=True)
         self.assertLess(len(stub), len(full),
                         'stubbed module should be shorter than the full one '
@@ -1249,6 +1251,7 @@ class TestNoHostIntrospectionStubBodies(unittest.TestCase):
         produce a file containing stub bodies, not full ones."""
         with tempfile.TemporaryDirectory() as tmpdir:
             out_path = write_static_api(
+                'test_host',
                 ['test_simple'], [self.suite_resolution], tmpdir, self.hd,
                 no_host_introspection=True,
             )
@@ -1274,6 +1277,7 @@ class TestTraceEmission(unittest.TestCase):
 
     def test_module_gate_default_off(self):
         text = '\n'.join(_generate_static_api(
+            'test_host',
             ['test_simple'], [self.suite_resolution], self.hd,
         ))
         self.assertIn('logical, parameter :: trace = .false.', text)
@@ -1281,6 +1285,7 @@ class TestTraceEmission(unittest.TestCase):
 
     def test_module_gate_default_on(self):
         text = '\n'.join(_generate_static_api(
+            'test_host',
             ['test_simple'], [self.suite_resolution], self.hd,
             trace=True,
         ))
@@ -1289,6 +1294,7 @@ class TestTraceEmission(unittest.TestCase):
 
     def test_trace_block_present_in_physics_phases(self):
         text = '\n'.join(_generate_static_api(
+            'test_host',
             ['test_simple'], [self.suite_resolution], self.hd,
         ))
         # Every ccpp_physics_<phase> dispatch has a gated write.
@@ -1302,6 +1308,7 @@ class TestTraceEmission(unittest.TestCase):
 
     def test_trace_block_present_in_lifecycle_routines(self):
         text = '\n'.join(_generate_static_api(
+            'test_host',
             ['test_simple'], [self.suite_resolution], self.hd,
         ))
         for sub in ('ccpp_register', 'ccpp_init', 'ccpp_final'):
@@ -1313,6 +1320,7 @@ class TestTraceEmission(unittest.TestCase):
     def test_write_static_api_threads_trace_flag(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             out_path = write_static_api(
+                'test_host',
                 ['test_simple'], [self.suite_resolution], tmpdir, self.hd,
                 trace=True,
             )

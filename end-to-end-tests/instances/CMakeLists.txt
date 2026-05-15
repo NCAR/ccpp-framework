@@ -9,7 +9,6 @@ set(SCHEME_FILES "unit_conv_scheme_1" "unit_conv_scheme_2")
 set(HOST_FILES   "data" "main")
 set(SUITE_FILES  "suite_unit_conv_suite.xml")
 set(HOST         "test_host")
-
 # By default, generated caps go in ccpp subdir
 set(OUTPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 

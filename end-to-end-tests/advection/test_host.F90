@@ -49,8 +49,8 @@ contains
   end subroutine check_errflg
 
   logical function check_suite(test_suite)
-    use ccpp_static_api, only: ccpp_physics_suite_part_list
-    use ccpp_static_api, only: ccpp_physics_suite_variables
+    use test_host_ccpp_cap, only: ccpp_physics_suite_part_list
+    use test_host_ccpp_cap, only: ccpp_physics_suite_variables
     use test_utils, only: check_list
 
     ! Dummy argument
@@ -148,23 +148,23 @@ contains
         std_name_array, &
         const_std_name
     use test_host_data, only: check_constituent_indices
-    use ccpp_static_api, only: ccpp_deallocate_dynamic_constituents
-    use ccpp_static_api, only: ccpp_register_constituents
-    use ccpp_static_api, only: ccpp_is_scheme_constituent
-    use ccpp_static_api, only: ccpp_initialize_constituents
-    use ccpp_static_api, only: ccpp_number_constituents
-    use ccpp_static_api, only: ccpp_constituents_array
-    use ccpp_static_api, only: ccpp_register
-    use ccpp_static_api, only: ccpp_init
-    use ccpp_static_api, only: ccpp_physics_init
-    use ccpp_static_api, only: ccpp_physics_timestep_init
-    use ccpp_static_api, only: ccpp_physics_run
-    use ccpp_static_api, only: ccpp_physics_timestep_final
-    use ccpp_static_api, only: ccpp_physics_final
-    use ccpp_static_api, only: ccpp_final
-    use ccpp_static_api, only: ccpp_physics_suite_list
-    use ccpp_static_api, only: ccpp_const_get_index
-    use ccpp_static_api, only: ccpp_model_const_properties
+    use test_host_ccpp_cap, only: ccpp_deallocate_dynamic_constituents
+    use test_host_ccpp_cap, only: ccpp_register_constituents
+    use test_host_ccpp_cap, only: ccpp_is_scheme_constituent
+    use test_host_ccpp_cap, only: ccpp_initialize_constituents
+    use test_host_ccpp_cap, only: ccpp_number_constituents
+    use test_host_ccpp_cap, only: ccpp_constituents_array
+    use test_host_ccpp_cap, only: ccpp_register
+    use test_host_ccpp_cap, only: ccpp_init
+    use test_host_ccpp_cap, only: ccpp_physics_init
+    use test_host_ccpp_cap, only: ccpp_physics_timestep_init
+    use test_host_ccpp_cap, only: ccpp_physics_run
+    use test_host_ccpp_cap, only: ccpp_physics_timestep_final
+    use test_host_ccpp_cap, only: ccpp_physics_final
+    use test_host_ccpp_cap, only: ccpp_final
+    use test_host_ccpp_cap, only: ccpp_physics_suite_list
+    use test_host_ccpp_cap, only: ccpp_const_get_index
+    use test_host_ccpp_cap, only: ccpp_model_const_properties
     use test_utils, only: check_list
 
     type(suite_info), intent(in) :: test_suites(:)

@@ -595,11 +595,19 @@ def _build_merged_subscript(
                 # (e.g. ``q(:,:,index_of_<X>)`` where index_of_X lives
                 # on a DDT) resolve to the full DDT walk, not the bare
                 # leaf name.  Identical to ``local_name`` for plain
-                # module-level host vars.
-                parts.append(entry.access_path)
+                # module-level host vars.  The DDT walk bakes registered
+                # scalar-index std-name placeholders (e.g.
+                # ``GFS_Control(instance_number)%ntqv``) into the
+                # access path; rewrite them to host local names here so
+                # the inner ``(instance_number)`` doesn't leak through
+                # to the emitted Fortran when this access path is itself
+                # used as a subscript token.
+                parts.append(_substitute_scalar_idx(entry.access_path, host_dict))
                 used.add(key)
             elif suite_vars and key in suite_vars:
-                parts.append(suite_vars[key].access_path)
+                parts.append(
+                    _substitute_scalar_idx(suite_vars[key].access_path, host_dict)
+                )
                 used.add(key)
             else:
                 raise CCPPError(

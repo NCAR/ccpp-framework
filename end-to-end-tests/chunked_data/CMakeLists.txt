@@ -9,7 +9,6 @@ set(SCHEME_FILES "chunked_data_scheme")
 set(HOST_FILES   "data" "main")
 set(SUITE_FILES  "suite_chunked_data_suite.xml")
 set(HOST         "test_host")
-
 # By default, generated caps go in ccpp subdir
 set(OUTPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 

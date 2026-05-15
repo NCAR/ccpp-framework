@@ -9,7 +9,6 @@ set(SCHEME_FILES "opt_arg_scheme")
 set(HOST_FILES   "data" "main")
 set(SUITE_FILES  "suite_opt_arg_suite.xml")
 set(HOST         "test_host")
-
 # By default, generated caps go in ccpp subdir
 set(OUTPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 
@@ -27,12 +26,14 @@ ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                SOURCE_FILES ${HOST_FORTRAN_FILES}
                METADATA_FILES ${HOST_METADATA_FILES})
 
-# Run ccpp_capgen_ng
+# Run ccpp_capgen_ng.  Override kind_phys to REAL32 so the whole test
+# runs in single precision; exercises the --kind-type plumbing.
 ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_METADATA_FILES}
             SUITES ${SUITE_FILES}
             HOST_NAME ${HOST}
+            KIND_SPECS "kind_phys=REAL32"
             OUTPUT_ROOT "${OUTPUT_ROOT}")
 
 # Retrieve the list of Fortran files required for test host from datatable.xml;

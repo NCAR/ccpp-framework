@@ -183,7 +183,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         '--host-name',
         required=True,
         metavar='NAME',
-        help='Host model identifier (used in generated subroutine names)',
+        help=(
+            'Host model identifier.  Drives the file and module name '
+            'of the generated static-API cap (``<host>_ccpp_cap.F90`` / '
+            '``module <host>_ccpp_cap``) so multiple host integrations '
+            'can co-exist in one executable, and is written into '
+            '``datatable.xml`` as the host var-dictionary name.'
+        ),
     )
     parser.add_argument(
         '--host-files',
@@ -669,7 +675,9 @@ def _validate_required_control_vars(
     Parameters
     ----------
     host_name : str
-        Host model identifier, used in error messages.
+        Host model identifier, used in error messages so the developer
+        can tell which host the failure refers to when more than one
+        capgen invocation is in flight.
     host_dict : dict
         Flat host variable dictionary built by :func:`build_flat_host_dict`.
 
@@ -691,15 +699,15 @@ def _validate_required_control_vars(
                     "Required control variable '{}' not found in host '{}' "
                     "type=control metadata.\n"
                     "  This variable {}. Add it to a "
-                    "[ccpp-table-properties] / type=control block in your "
+                    "[ccpp-table-properties] / type=control block in the "
                     "host metadata files.".format(std_name, host_name, description)
                 )
             return
 
         if not entry.is_control:
             errors.append(
-                "Variable '{}' must be declared in a type=control table for "
-                "host '{}', but it was found in a type=host table.\n"
+                "Variable '{}' must be declared in a type=control table "
+                "for host '{}', but it was found in a type=host table.\n"
                 "  Move it to a [ccpp-table-properties] / type=control "
                 "block.".format(std_name, host_name)
             )
@@ -751,9 +759,7 @@ def _validate_required_control_vars(
             "missing the paired variable '{}' (which must also be in a "
             "type=control table).\n"
             "  Declare both for a multi-instance API, or neither for a "
-            "single-instance API.".format(
-                host_name, present, missing,
-            )
+            "single-instance API.".format(host_name, present, missing)
         )
 
     if errors:
@@ -788,7 +794,9 @@ def capgen(
     Parameters
     ----------
     host_name : str
-        Host model identifier.
+        Host model identifier.  Drives the file and module name of the
+        generated static-API cap (``<host>_ccpp_cap.F90`` / ``module
+        <host>_ccpp_cap``) and is written into ``datatable.xml``.
     host_files : list of str
         Host metadata (``.meta``) file paths.
     scheme_files : list of str
@@ -936,7 +944,8 @@ def capgen(
 
     # ---- static API (one file for all suites) ------------------------------
     write_static_api(
-        suite_names, suite_resolutions, output_root, host_dict, scheme_store,
+        host_name, suite_names, suite_resolutions, output_root,
+        host_dict, scheme_store,
         logger=log,
         no_host_introspection=no_host_introspection,
         trace=trace,
@@ -961,7 +970,7 @@ def capgen(
         # framework F90 dependencies so the host build picks them up.
         utility_paths.extend(_resolve_framework_f90_files())
     host_file_paths = [
-        os.path.join(abs_root, 'ccpp_static_api.F90'),
+        os.path.join(abs_root, '{}_ccpp_cap.F90'.format(host_name)),
     ]
     suite_file_paths = []
     suite_meta_paths = []

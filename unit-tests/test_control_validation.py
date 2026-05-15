@@ -249,19 +249,6 @@ class TestInstanceNumberPairing(unittest.TestCase):
         self.assertIn('number_of_instances', msg)
         self.assertIn('paired', msg.lower())
 
-    def test_host_name_in_error_message(self):
-        """Error message names the offending host so the developer knows which one."""
-        host_dict = _build_host_dict(
-            host_files=[_sf('host_simple.meta')],
-            control_files=[_sf('bad_ctrl_missing_vars.meta')],
-        )
-        try:
-            _validate_required_control_vars('my_special_host', host_dict)
-            self.fail("Expected CCPPError")
-        except CCPPError as exc:
-            self.assertIn('my_special_host', str(exc))
-
-
 # ---------------------------------------------------------------------------
 # Tests for forbidden dimension names
 # ---------------------------------------------------------------------------

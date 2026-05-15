@@ -24,8 +24,7 @@ def _resolve(suite_xml='suite_test_simple.xml'):
 
 
 def _write(tmpdir, suite_xml='suite_test_simple.xml', utility_paths=None,
-           suite_file_paths=None, host_file_paths=None, host_dict=None,
-           host_name='test_host', suite_meta_paths=None,
+           suite_file_paths=None, host_file_paths=None, host_dict=None, suite_meta_paths=None,
            expanded_sdf_paths=None):
     suite_resolution, store = _resolve(suite_xml)
     return (
@@ -39,7 +38,6 @@ def _write(tmpdir, suite_xml='suite_test_simple.xml', utility_paths=None,
             suite_meta_paths=suite_meta_paths,
             expanded_sdf_paths=expanded_sdf_paths,
             host_dict=host_dict,
-            host_name=host_name,
         ),
         suite_resolution,
         store,
@@ -489,7 +487,6 @@ class TestVarDictionariesSection(unittest.TestCase):
         self._path, self._sr, _ = _write(
             self._tmpdir,
             host_dict=self._hd,
-            host_name='test_host',
         )
         self._root = ET.parse(self._path).getroot()
 
@@ -516,7 +513,7 @@ class TestVarDictionariesSection(unittest.TestCase):
             None,
         )
         self.assertIsNotNone(host_d)
-        self.assertEqual(host_d.get('name'), 'test_host')
+        self.assertEqual(host_d.get('name'), 'host')
 
     def test_host_dictionary_has_vars(self):
         host_d = next(vd for vd in self._vd().findall('var_dictionary')
@@ -524,10 +521,12 @@ class TestVarDictionariesSection(unittest.TestCase):
         names = {v.get('name') for v in host_d.find('variables').findall('var')}
         self.assertIn('air_temperature', names)
 
-    def test_api_dict_parent_is_host_name(self):
+    def test_api_dict_parent_is_host(self):
         api_d = next(vd for vd in self._vd().findall('var_dictionary')
                      if vd.get('type') == 'api')
-        self.assertEqual(api_d.get('parent'), 'test_host')
+        # The 'host' string is a fixed internal label written by the
+        # generator; ccpp_datafile.py uses it only for the api->host walk.
+        self.assertEqual(api_d.get('parent'), 'host')
 
     def test_suite_dict_parent_is_api(self):
         suite_d = next(vd for vd in self._vd().findall('var_dictionary')

@@ -35,7 +35,7 @@ from test_suite_resolver import (
 from generator.suite_resolver import resolve_suite
 
 
-def _build_datatable(tmpdir, host_name='test_host',
+def _build_datatable(tmpdir,
                     host_file_paths=None, utility_paths=None,
                     suite_file_paths=None, scheme_file_paths=None,
                     dependency_paths=None,
@@ -62,7 +62,6 @@ def _build_datatable(tmpdir, host_name='test_host',
         suite_meta_paths=suite_meta_paths,
         expanded_sdf_paths=expanded_sdf_paths,
         host_dict=hd,
-        host_name=host_name,
     )
 
 

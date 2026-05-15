@@ -9,7 +9,6 @@ set(SCHEME_FILES "effr_calc" "effrs_calc" "effr_diag" "effr_pre" "effr_post" "ra
 set(HOST_FILES   "module_rad_ddt" "test_host_data" "test_host_mod" "test_host")
 set(SUITE_FILES  "main_suite.xml")
 set(HOST         "test_host")
-
 # By default, generated caps go in ccpp subdir
 set(OUTPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 
@@ -33,7 +32,6 @@ ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
             SCHEMEFILES ${SCHEME_METADATA_FILES}
             SUITES ${SUITE_FILES}
             HOST_NAME ${HOST}
-            KIND_TYPES ${KIND_TYPES}
             OUTPUT_ROOT "${OUTPUT_ROOT}")
 
 # Retrieve the list of Fortran files required for test host from datatable.xml;

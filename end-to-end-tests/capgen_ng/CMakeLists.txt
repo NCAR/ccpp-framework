@@ -8,9 +8,8 @@
 set(SCHEME_FILES "setup_coeffs" "temp_set" "temp_adjust" "temp_calc_adjust" "make_ddt" "environ_conditions")
 set(HOST_FILES   "test_host_data" "test_host_mod" "test_host")
 set(SUITE_FILES  "ddt_suite.xml" "temp_suite.xml")
-set(KIND_TYPE    "kind_phys=REAL64")
 set(HOST         "test_host")
-
+set(KIND_TYPE    "kind_phys=REAL64")
 # By default, generated caps go in ccpp subdir
 set(OUTPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 
@@ -44,7 +43,6 @@ ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
             SCHEMEFILES ${SCHEME_METADATA_FILES}
             SUITES ${SUITE_FILES}
             HOST_NAME ${HOST}
-            KIND_TYPES ${KIND_TYPES}
             OUTPUT_ROOT "${OUTPUT_ROOT}")
 
 # Retrieve the list of Fortran files required for test host from datatable.xml;

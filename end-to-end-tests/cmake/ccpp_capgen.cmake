@@ -56,12 +56,18 @@ endfunction()
 # CMake wrapper for ccpp_capgen_ng.py
 #
 # TRACE          - ON/OFF (Default: OFF) - Add --trace flag to capgen call
-# HOST_NAME      - String name of host
+# HOST_NAME      - String name of host (drives <host>_ccpp_cap.F90 filename
+#                  and module name; required)
 # OUTPUT_ROOT    - String path to put generated caps
 # VERBOSITY      - Number of --verbose flags to pass to capgen
 # HOSTFILES      - CMake list of host metadata filenames
 # SCHEMEFILES    - CMake list of scheme metadata files
 # SUITES         - CMake list of suite xml files
+# KIND_SPECS     - Comma-separated kind mappings, e.g. "kind_phys=REAL32" or
+#                  "kind_phys=my_mod:kind_r4,kind_dyn=REAL64".  Each pair is
+#                  forwarded as `--kind-type <pair>` to capgen-ng (see the
+#                  capgen-ng docstring for the `<name>=[<module>:]<spec>`
+#                  grammar; bare ISO specs default to iso_fortran_env).
 function(ccpp_capgen)
   set(optionalArgs TRACE)
   set(oneValueArgs HOST_NAME OUTPUT_ROOT VERBOSITY KIND_SPECS)
@@ -95,7 +101,7 @@ function(ccpp_capgen)
   list(APPEND CCPP_CAPGEN_CMD_LIST "--suites" "${SUITES_SEPARATED}")
 
   if(NOT DEFINED arg_HOST_NAME)
-    message(FATAL_ERROR "function(ccpp_capgen): HOSTNAME not set.")
+    message(FATAL_ERROR "function(ccpp_capgen): HOST_NAME not set.")
   endif()
   list(APPEND CCPP_CAPGEN_CMD_LIST "--host-name" "${arg_HOST_NAME}")
 
@@ -112,16 +118,14 @@ function(ccpp_capgen)
   endif()
 
   if(DEFINED arg_KIND_SPECS)
+    # Accept either a comma-separated string ("kind_phys=REAL64,kind_dyn=REAL32")
+    # or a CMake list of pairs.  Each pair becomes a separate
+    # `--kind-type <pair>` argv pair so capgen-ng's argparse sees one
+    # `--kind-type` per pair (the flag is `action='append'`).
     string(REPLACE "," ";" KIND_SPEC_LIST "${arg_KIND_SPECS}")
-    set(KIND_ARGS "")               # start empty
     foreach(pair IN LISTS KIND_SPEC_LIST)
-      # Append each pair prefixed with --kind-type and quoted.
-      # The surrounding double‑quotes are added explicitly so the
-      # resulting string contains them.
-      set(KIND_ARGS "${KIND_ARGS}--kind-type \"${pair}\"")
-      string(STRIP "${KIND_ARGS}" KIND_ARGS)
+      list(APPEND CCPP_CAPGEN_CMD_LIST "--kind-type" "${pair}")
     endforeach()
-    list(APPEND CCPP_CAPGEN_CMD_LIST ${KIND_SPEC_PARAMS})
   endif()
 
   if(arg_TRACE)

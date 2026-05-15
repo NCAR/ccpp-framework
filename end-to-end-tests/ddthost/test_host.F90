@@ -25,8 +25,8 @@ module test_prog
 contains
 
   logical function check_suite(test_suite)
-    use ccpp_static_api, only: ccpp_physics_suite_part_list
-    use ccpp_static_api, only: ccpp_physics_suite_variables
+    use test_host_ccpp_cap, only: ccpp_physics_suite_part_list
+    use test_host_ccpp_cap, only: ccpp_physics_suite_variables
     use test_utils, only: check_list
 
     ! Dummy argument
@@ -105,15 +105,15 @@ contains
 
     use test_host_mod, only: ncols, &
         num_time_steps
-    use ccpp_static_api, only: ccpp_register
-    use ccpp_static_api, only: ccpp_init
-    use ccpp_static_api, only: ccpp_physics_init
-    use ccpp_static_api, only: ccpp_physics_timestep_init
-    use ccpp_static_api, only: ccpp_physics_run
-    use ccpp_static_api, only: ccpp_physics_timestep_final
-    use ccpp_static_api, only: ccpp_physics_final
-    use ccpp_static_api, only: ccpp_final
-    use ccpp_static_api, only: ccpp_physics_suite_list
+    use test_host_ccpp_cap, only: ccpp_register
+    use test_host_ccpp_cap, only: ccpp_init
+    use test_host_ccpp_cap, only: ccpp_physics_init
+    use test_host_ccpp_cap, only: ccpp_physics_timestep_init
+    use test_host_ccpp_cap, only: ccpp_physics_run
+    use test_host_ccpp_cap, only: ccpp_physics_timestep_final
+    use test_host_ccpp_cap, only: ccpp_physics_final
+    use test_host_ccpp_cap, only: ccpp_final
+    use test_host_ccpp_cap, only: ccpp_physics_suite_list
     use test_host_mod, only: init_data, &
         compare_data, &
         check_model_times

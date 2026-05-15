@@ -8,8 +8,7 @@
 set(SCHEME_FILES "cld_liq" "cld_ice" "apply_constituent_tendencies" "const_indices")
 set(HOST_FILES   "test_host_data" "test_host_mod" "test_host")
 set(SUITE_FILES  "cld_suite.xml")
-set(HOST "test_host")
-
+set(HOST         "test_host")
 # By default, generated caps go in ccpp subdir
 set(OUTPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/ccpp")
 
