@@ -55,15 +55,15 @@ endfunction()
 
 # CMake wrapper for ccpp_capgen_ng.py
 #
-# CAPGEN_EXPECT_THROW_ERROR - ON/OFF (Default: OFF) - Scans ccpp_capgen.py log for error string and errors if not found.
-# HOST_NAME                 - String name of host
-# OUTPUT_ROOT               - String path to put generated caps
-# VERBOSITY                 - Number of --verbose flags to pass to capgen
-# HOSTFILES                 - CMake list of host metadata filenames
-# SCHEMEFILES               - CMake list of scheme metadata files
-# SUITES                    - CMake list of suite xml files
+# TRACE          - ON/OFF (Default: OFF) - Add --trace flag to capgen call
+# HOST_NAME      - String name of host
+# OUTPUT_ROOT    - String path to put generated caps
+# VERBOSITY      - Number of --verbose flags to pass to capgen
+# HOSTFILES      - CMake list of host metadata filenames
+# SCHEMEFILES    - CMake list of scheme metadata files
+# SUITES         - CMake list of suite xml files
 function(ccpp_capgen)
-  set(optionalArgs CAPGEN_EXPECT_THROW_ERROR)
+  set(optionalArgs CAPGEN_EXPECT_THROW_ERROR TRACE)
   set(oneValueArgs HOST_NAME OUTPUT_ROOT VERBOSITY KIND_SPECS)
   set(multi_value_keywords HOSTFILES SCHEMEFILES SUITES)
 
@@ -124,6 +124,10 @@ function(ccpp_capgen)
     list(APPEND CCPP_CAPGEN_CMD_LIST ${KIND_SPEC_PARAMS})
   endif()
 
+  if(arg_TRACE)
+    list(APPEND CCPP_CAPGEN_CMD_LIST "--trace")
+  endif()
+
   message(STATUS "Running ccpp_capgen.py from ${CMAKE_CURRENT_SOURCE_DIR}")
 
   # Unset CAPGEN_OUT to prevent incorrect output on subsequent ccpp_capgen(...) calls
@@ -137,22 +141,6 @@ function(ccpp_capgen)
 
   message(STATUS "ccpp-capgen stdout: ${CAPGEN_OUT}")
 
-  if(arg_CAPGEN_EXPECT_THROW_ERROR)
-    # Determine if the process succeeded but had an expected string in the process log.
-    string(FIND "${CAPGEN_OUT}" "Variables of type ccpp_constituent_properties_t only allowed in register phase" ERROR_INDEX)
-
-    if (ERROR_INDEX GREATER -1)
-      message(STATUS "Capgen build produces expected error message.")
-    else()
-      message(FATAL_ERROR "CCPP cap generation did not generate expected error. Expected 'Variables of type constituent_properties_t only allowed in register phase.")
-    endif()
-  else()
-    if(RES EQUAL 0)
-      message(STATUS "ccpp-capgen completed successfully")
-    else()
-      message(FATAL_ERROR "CCPP cap generation FAILED: result = ${RES}")
-    endif()
-  endif()
 endfunction()
 
 

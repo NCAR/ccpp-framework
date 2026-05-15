@@ -37,6 +37,11 @@ from generator.suite_resolver import (
     iter_phase_calls,
     iter_phase_subcycles,
 )
+from generator.trace import (
+    emit_module_gate,
+    emit_trace_block,
+    ensure_error_unit_use,
+)
 
 _INDENT = '  '
 _CONT   = ' &'
@@ -876,6 +881,15 @@ def _generate_phase_subroutine(
     errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message')
     sub_label = '{}_{}_{}'.format(suite_name, group_name, phase)
 
+    # ---- trace block (always emitted; gated by the module ``trace``
+    # parameter so the I/O is dead-code-eliminated when trace=.false.).
+    # Placed before errmsg/errflg init so the write references no
+    # intent(out) dummy and fires even when a state guard then bails.
+    trace_lines = emit_trace_block(sub_name, ctrl_entries, call_indent)
+    if trace_lines:
+        lines.extend(trace_lines)
+        lines.append('')
+
     # ---- initialize error reporting vars -------------------------------
     if errflg_local and errmsg_local:
         lines.append("{}{} = ''".format(call_indent, errmsg_local))
@@ -1031,6 +1045,7 @@ def _generate_group_cap(
     group_name: str,
     resolved_group: ResolvedGroup,
     host_dict,
+    trace: bool = False,
 ) -> List[str]:
     """Generate the full group cap module source lines.
 
@@ -1087,6 +1102,8 @@ def _generate_group_cap(
 
     use_lines = _use_statements(uses)
     use_lines.extend(_scheme_use_statements(resolved_group))
+    # Trace block writes to error_unit; ensure the USE is present.
+    ensure_error_unit_use(use_lines, _INDENT)
     lines.extend(use_lines)
     if use_lines:
         lines.append('')
@@ -1112,6 +1129,14 @@ def _generate_group_cap(
     lines.append('{}integer, private, parameter :: CCPP_GROUP_INITIALIZED   = 1'.format(_INDENT))
     lines.append('{}integer, private, parameter :: CCPP_GROUP_IN_TIMESTEP   = 2'.format(_INDENT))
     lines.append('{}integer, private, allocatable :: ccpp_group_state(:)'.format(_INDENT))
+
+    # ---- trace gate -------------------------------------------------------
+    # Module-level compile-time toggle; flip to .true. (or pass --trace at
+    # generation time) to enable the per-subroutine trace writes.  When
+    # .false., the gated writes are dead-code-eliminated by the compiler
+    # but the control dummies remain syntactically referenced, which
+    # silences strict unused-dummy warnings (Intel oneAPI in particular).
+    lines.extend(emit_module_gate(trace, _INDENT))
 
     lines.append('')
     lines.append('contains')
@@ -1162,6 +1187,7 @@ def write_group_cap(
     host_dict,
     output_root: str,
     logger: Optional[logging.Logger] = None,
+    trace: bool = False,
 ) -> str:
     """Write the group cap Fortran module to *output_root*.
 
@@ -1185,7 +1211,9 @@ def write_group_cap(
     filename = 'ccpp_{}_{}_cap.F90'.format(suite_name, group_name)
     out_path = os.path.join(output_root, filename)
 
-    lines = _generate_group_cap(suite_name, group_name, resolved_group, host_dict)
+    lines = _generate_group_cap(
+        suite_name, group_name, resolved_group, host_dict, trace=trace,
+    )
     with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path

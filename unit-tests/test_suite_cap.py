@@ -403,6 +403,61 @@ class TestSuiteCapNoConstituentEmissionWhenAbsent(unittest.TestCase):
         self.assertNotIn('ccpp_constituent_prop_ptr_t', self.text)
 
 
+class TestTraceEmission(unittest.TestCase):
+    """The generated suite cap always carries a module-level ``trace``
+    parameter (default .false.) and a gated ``write(error_unit,*)`` in
+    every physics-dispatch subroutine; ``trace=True`` flips the default.
+    """
+
+    def setUp(self):
+        self.suite_resolution, self.store = _resolve()
+        self.hd = _load_full_host_dict()
+
+    def test_module_gate_default_off(self):
+        text = '\n'.join(_generate_suite_cap(
+            'test_simple', self.suite_resolution, self.store, self.hd,
+        ))
+        self.assertIn('logical, parameter :: trace = .false.', text)
+
+    def test_module_gate_default_on(self):
+        text = '\n'.join(_generate_suite_cap(
+            'test_simple', self.suite_resolution, self.store, self.hd,
+            trace=True,
+        ))
+        self.assertIn('logical, parameter :: trace = .true.', text)
+        self.assertNotIn('logical, parameter :: trace = .false.', text)
+
+    def test_error_unit_use_unconditional(self):
+        text = '\n'.join(_generate_suite_cap(
+            'test_simple', self.suite_resolution, self.store, self.hd,
+        ))
+        self.assertIn(
+            'use, intrinsic :: iso_fortran_env, only: error_unit', text,
+        )
+
+    def test_trace_block_present_in_physics_phases(self):
+        text = '\n'.join(_generate_suite_cap(
+            'test_simple', self.suite_resolution, self.store, self.hd,
+        ))
+        for phase in ('init', 'timestep_init', 'run',
+                      'timestep_final', 'final'):
+            self.assertIn(
+                "'CCPP TRACE test_simple_physics_{}:'".format(phase),
+                text,
+                msg='trace string missing for phase {}'.format(phase),
+            )
+
+    def test_write_suite_cap_threads_trace_flag(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = write_suite_cap(
+                'test_simple', self.suite_resolution, self.store, tmpdir,
+                self.hd, trace=True,
+            )
+            with open(out_path) as fh:
+                text = fh.read()
+        self.assertIn('logical, parameter :: trace = .true.', text)
+
+
 def load_tests(loader, tests, ignore):
     import generator.suite_cap as subcycle
     tests.addTests(doctest.DocTestSuite(subcycle))

@@ -53,6 +53,11 @@ from generator.suite_resolver import (
     iter_phase_subcycles,
 )
 from metadata.variable_resolver import HostVarEntry
+from generator.trace import (
+    emit_module_gate,
+    emit_trace_block,
+    ensure_error_unit_use,
+)
 from generator.suite_cap import (
     _all_suite_scheme_names,
     _schemes_with_register,
@@ -380,6 +385,13 @@ def _register_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     lines.append('{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    trace_entries = [suite_name_entry] if suite_name_entry else []
+    trace_lines = emit_trace_block(
+        'ccpp_register', trace_entries, i2, instance_local=inst_local,
+    )
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
     lines += [
         '',
         "{}{} = ''".format(i2, errmsg_local),
@@ -439,6 +451,13 @@ def _init_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     lines.append('{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    trace_entries = [suite_name_entry] if suite_name_entry else []
+    trace_lines = emit_trace_block(
+        'ccpp_init', trace_entries, i2, instance_local=inst_local,
+    )
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
     lines += [
         '',
         "{}{} = ''".format(i2, errmsg_local),
@@ -497,6 +516,13 @@ def _final_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     lines.append('{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    trace_entries = [suite_name_entry] if suite_name_entry else []
+    trace_lines = emit_trace_block(
+        'ccpp_final', trace_entries, i2, instance_local=inst_local,
+    )
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
     lines += [
         '',
         "{}{} = ''".format(i2, errmsg_local),
@@ -576,6 +602,13 @@ def _physics_subroutine(
         lines.append(
             '{}{}{}{}  :: {}'.format(i2, t, intent, dim, entry.local_name)
         )
+
+    # Trace block: every intent(in)/inout control dummy is referenced so
+    # strict compilers don't flag any of them as unused.
+    trace_lines = emit_trace_block(sub_name, ctrl_entries, i2)
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
 
     lines.append('')
 
@@ -910,6 +943,7 @@ def _generate_static_api(
     host_dict=None,
     scheme_store: Optional[SchemeStore] = None,
     no_host_introspection: bool = False,
+    trace: bool = False,
 ) -> List[str]:
     """Generate the full ``ccpp_static_api.F90`` module source lines.
 
@@ -945,17 +979,12 @@ def _generate_static_api(
     lines.append('module ccpp_static_api')
     lines.append('')
 
-    # Pull in ``error_unit`` for the stubbed ``ccpp_physics_suite_list``
-    # body (which has no errflg/errmsg arg, so error_unit is the only
-    # available channel).  Only emitted when --no-host-introspection is
-    # on, to keep the module imports minimal in the normal case.
-    if no_host_introspection:
-        lines.append(
-            '{}use iso_fortran_env, only: error_unit'.format(_INDENT)
-        )
-
-    # USE each suite cap module.  ``<suite>_register`` is now mandatory and
-    # always emitted in the suite cap, so always import it here too.
+    # Collect USE lines into a list so the trace helper can guarantee
+    # ``error_unit`` is present.  The trace block writes to error_unit
+    # and is emitted in every cap subroutine (gated by the module
+    # ``trace`` parameter), so the USE is now unconditional.  Replaces
+    # an earlier --no-host-introspection-only emission.
+    use_lines: List[str] = []
     for sname in suite_names:
         suite_cap_mod = 'ccpp_{}_cap'.format(sname)
         suite_subs = []
@@ -965,7 +994,9 @@ def _generate_static_api(
             suite_subs.append('{}_physics_{}'.format(sname, phase))
         suite_subs.append('{}_final'.format(sname))
         syms = ', '.join(suite_subs)
-        lines.append('{}use {}, only: {}'.format(_INDENT, suite_cap_mod, syms))
+        use_lines.append('{}use {}, only: {}'.format(_INDENT, suite_cap_mod, syms))
+    ensure_error_unit_use(use_lines, _INDENT)
+    lines.extend(use_lines)
 
     # Re-export the host-facing constituent API + the constituent object so
     # host code can do ``use ccpp_static_api, only: ...`` for *everything*
@@ -1020,6 +1051,8 @@ def _generate_static_api(
         lines.append('{}public :: {}'.format(_INDENT, sub))
 
     lines.append('')
+    lines.extend(emit_module_gate(trace, _INDENT))
+    lines.append('')
     lines.append('contains')
 
     # Subroutines.
@@ -1068,6 +1101,7 @@ def write_static_api(
     scheme_store: Optional[SchemeStore] = None,
     logger: Optional[logging.Logger] = None,
     no_host_introspection: bool = False,
+    trace: bool = False,
 ) -> str:
     """Write ``ccpp_static_api.F90`` to *output_root*.
 
@@ -1109,6 +1143,7 @@ def write_static_api(
     lines = _generate_static_api(
         suite_names, suite_resolutions, host_dict, scheme_store,
         no_host_introspection=no_host_introspection,
+        trace=trace,
     )
     with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')

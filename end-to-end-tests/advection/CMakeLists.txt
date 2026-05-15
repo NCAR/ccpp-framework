@@ -27,8 +27,12 @@ ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                SOURCE_FILES ${HOST_FORTRAN_FILES}
                METADATA_FILES ${HOST_METADATA_FILES})
 
+# Enable trace output in auto-generated caps
+set(CCPP_TRACE ON)
+
 # Run ccpp_capgen
-ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
+ccpp_capgen(TRACE ${CCPP_TRACE}
+            VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_METADATA_FILES}
             SUITES ${SUITE_FILES}

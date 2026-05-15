@@ -1200,19 +1200,20 @@ class TestNoHostIntrospectionStubBodies(unittest.TestCase):
         self.assertIn('allocate(variable_list(0))', text)
         self.assertNotIn('select case (trim(suite_name))', text)
 
-    def test_module_imports_error_unit_only_when_stubbed(self):
-        # With stub on: iso_fortran_env appears for error_unit.
-        text_on = '\n'.join(_generate_static_api(
-            ['test_simple'], [self.suite_resolution], self.hd,
-            no_host_introspection=True,
-        ))
-        self.assertIn('use iso_fortran_env, only: error_unit', text_on)
-        # With stub off: no such import.
-        text_off = '\n'.join(_generate_static_api(
-            ['test_simple'], [self.suite_resolution], self.hd,
-            no_host_introspection=False,
-        ))
-        self.assertNotIn('use iso_fortran_env', text_off)
+    def test_module_imports_error_unit_unconditionally(self):
+        # error_unit is always imported because every cap subroutine
+        # emits a gated ``if (trace) write(error_unit, *) ...`` line.
+        # Stub-on and stub-off both include the same USE.
+        for stub in (True, False):
+            text = '\n'.join(_generate_static_api(
+                ['test_simple'], [self.suite_resolution], self.hd,
+                no_host_introspection=stub,
+            ))
+            self.assertIn(
+                'use, intrinsic :: iso_fortran_env, only: error_unit',
+                text,
+                msg='no_host_introspection={}'.format(stub),
+            )
 
     def test_public_declarations_unchanged_when_stubbed(self):
         # All five introspection routines remain public — callers must
@@ -1256,7 +1257,69 @@ class TestNoHostIntrospectionStubBodies(unittest.TestCase):
                 text = fh.read()
         self.assertIn('ccpp_physics_suite_variables: ' + self._DISABLED_MSG,
                       text)
-        self.assertIn('use iso_fortran_env, only: error_unit', text)
+        self.assertIn(
+            'use, intrinsic :: iso_fortran_env, only: error_unit', text,
+        )
+
+
+class TestTraceEmission(unittest.TestCase):
+    """The generated static API always carries a module-level ``trace``
+    parameter (default .false.) and a gated ``write(error_unit,*)`` in
+    every cap subroutine that has at least one intent(in) control dummy.
+    ``--trace`` flips the parameter default to .true.
+    """
+
+    def setUp(self):
+        self.hd = _load_full_host_dict()
+        self.suite_resolution = _resolve()
+
+    def test_module_gate_default_off(self):
+        text = '\n'.join(_generate_static_api(
+            ['test_simple'], [self.suite_resolution], self.hd,
+        ))
+        self.assertIn('logical, parameter :: trace = .false.', text)
+        self.assertNotIn('logical, parameter :: trace = .true.', text)
+
+    def test_module_gate_default_on(self):
+        text = '\n'.join(_generate_static_api(
+            ['test_simple'], [self.suite_resolution], self.hd,
+            trace=True,
+        ))
+        self.assertIn('logical, parameter :: trace = .true.', text)
+        self.assertNotIn('logical, parameter :: trace = .false.', text)
+
+    def test_trace_block_present_in_physics_phases(self):
+        text = '\n'.join(_generate_static_api(
+            ['test_simple'], [self.suite_resolution], self.hd,
+        ))
+        # Every ccpp_physics_<phase> dispatch has a gated write.
+        for phase in ('init', 'timestep_init', 'run',
+                      'timestep_final', 'final'):
+            self.assertIn(
+                "'CCPP TRACE ccpp_physics_{}:'".format(phase),
+                text,
+                msg='trace string missing for phase {}'.format(phase),
+            )
+
+    def test_trace_block_present_in_lifecycle_routines(self):
+        text = '\n'.join(_generate_static_api(
+            ['test_simple'], [self.suite_resolution], self.hd,
+        ))
+        for sub in ('ccpp_register', 'ccpp_init', 'ccpp_final'):
+            self.assertIn(
+                "'CCPP TRACE {}:'".format(sub), text,
+                msg='trace string missing for {}'.format(sub),
+            )
+
+    def test_write_static_api_threads_trace_flag(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = write_static_api(
+                ['test_simple'], [self.suite_resolution], tmpdir, self.hd,
+                trace=True,
+            )
+            with open(out_path) as fh:
+                text = fh.read()
+        self.assertIn('logical, parameter :: trace = .true.', text)
 
 
 def load_tests(loader, tests, ignore):

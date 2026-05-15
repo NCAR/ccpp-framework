@@ -31,6 +31,11 @@ from generator.suite_resolver import (
     SuiteResolution,
     iter_phase_calls,
 )
+from generator.trace import (
+    emit_module_gate,
+    emit_trace_block,
+    ensure_error_unit_use,
+)
 from generator.group_cap import (
     _ctrl_args_for_phase,
     _ctrl_intent_for,
@@ -337,6 +342,13 @@ def _register_lines(
         )
         lines.append('{}integer :: num_consts, i'.format(i2))
 
+    # Trace block: dummies referenced inside the gated write so strict
+    # compilers don't flag instance_number as unused when the gate is off.
+    trace_lines = emit_trace_block(sub_name, [], i2, instance_local=inst_local)
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
+
     lines += [
         '',
         "{}{} = ''".format(i2, errmsg_local),
@@ -497,6 +509,12 @@ def _init_lines(
     lines += [
         '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
         '{}integer, intent(out) :: {}'.format(i2, errflg_local),
+    ]
+    trace_lines = emit_trace_block(sub_name, [], i2, instance_local=inst_local)
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
+    lines += [
         '',
         "{}{} = ''".format(i2, errmsg_local),
         '{}{} = 0'.format(i2, errflg_local),
@@ -635,6 +653,12 @@ def _final_lines(
     lines += [
         '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
         '{}integer, intent(out) :: {}'.format(i2, errflg_local),
+    ]
+    trace_lines = emit_trace_block(sub_name, [], i2, instance_local=inst_local)
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
+    lines += [
         '',
         "{}{} = ''".format(i2, errmsg_local),
         '{}{} = 0'.format(i2, errflg_local),
@@ -773,6 +797,13 @@ def _physics_dispatch_lines(
         lines.append(
             '{}{}{}{}  :: {}'.format(i2, t, intent, dim, entry.local_name)
         )
+
+    # Trace block: references every intent(in)/inout control dummy so that
+    # strict compilers don't flag any of them as unused.
+    trace_lines = emit_trace_block(sub_name, ctrl_entries, i2)
+    if trace_lines:
+        lines.append('')
+        lines.extend(trace_lines)
 
     lines.append('')
 
@@ -949,6 +980,7 @@ def _generate_suite_cap(
     suite_res: SuiteResolution,
     scheme_store: SchemeStore,
     host_dict=None,
+    trace: bool = False,
 ) -> List[str]:
     """Generate the full ``ccpp_<suite>_cap.F90`` module source lines.
 
@@ -979,6 +1011,7 @@ def _generate_suite_cap(
     lines.append('')
 
     # USE statements: one per group cap (all phase + state subroutines).
+    use_lines: List[str] = []
     for resolved_group in suite_res.groups:
         group_cap_mod = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'cap')
         syms_list = [
@@ -987,9 +1020,13 @@ def _generate_suite_cap(
         ]
         syms_list.append('ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_alloc'))
         syms_list.append('ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_dealloc'))
-        lines.append('{}use {}, only: {}'.format(
+        use_lines.append('{}use {}, only: {}'.format(
             _INDENT, group_cap_mod, ', '.join(syms_list)
         ))
+
+    # Trace block writes to error_unit; ensure the USE is present.
+    ensure_error_unit_use(use_lines, _INDENT)
+    lines.extend(use_lines)
 
     lines.append('')
     lines.append('{}implicit none'.format(_INDENT))
@@ -1016,6 +1053,7 @@ def _generate_suite_cap(
     lines.append('{}integer, private, parameter :: CCPP_SUITE_REGISTERED           = 1'.format(_INDENT))
     lines.append('{}integer, private, parameter :: CCPP_SUITE_FRAMEWORK_INITIALIZED = 2'.format(_INDENT))
     lines.append('{}integer, private, allocatable :: ccpp_suite_state(:)'.format(_INDENT))
+    lines.extend(emit_module_gate(trace, _INDENT))
     lines.append('')
     lines.append('contains')
 
@@ -1046,6 +1084,7 @@ def write_suite_cap(
     output_root: str,
     host_dict=None,
     logger: Optional[logging.Logger] = None,
+    trace: bool = False,
 ) -> str:
     """Write ``ccpp_<suite>_cap.F90`` to *output_root*.
 
@@ -1068,7 +1107,9 @@ def write_suite_cap(
     filename = 'ccpp_{}_cap.F90'.format(suite_name)
     out_path  = os.path.join(output_root, filename)
 
-    lines = _generate_suite_cap(suite_name, suite_res, scheme_store, host_dict)
+    lines = _generate_suite_cap(
+        suite_name, suite_res, scheme_store, host_dict, trace=trace,
+    )
     with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
     return out_path

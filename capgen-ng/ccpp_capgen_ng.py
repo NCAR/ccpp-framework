@@ -264,6 +264,23 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "the introspection case-blocks."
         ),
     )
+    parser.add_argument(
+        '--trace',
+        action='store_true',
+        help=(
+            "Set the default value of the per-module ``trace`` "
+            "parameter to ``.true.`` in every generated cap.  The "
+            "gated ``if (trace) write(error_unit,*) ...`` lines are "
+            "ALWAYS emitted (one per cap subroutine that has "
+            "intent(in)/inout control dummies) so that strict "
+            "unused-variable warnings -- such as Intel oneAPI's -- "
+            "are silenced even when tracing is off.  This flag only "
+            "flips the compile-time default; a developer can also "
+            "hand-edit ``logical, parameter :: trace`` in any "
+            "generated cap to ``.true.`` to enable tracing for that "
+            "module and rebuild."
+        ),
+    )
     return parser
 
 
@@ -796,6 +813,7 @@ def capgen(
     kind_types: Dict[str, Tuple[str, str]],
     logger: Optional[logging.Logger] = None,
     no_host_introspection: bool = False,
+    trace: bool = False,
 ) -> None:
     """Programmatic entry point for the cap generator.
 
@@ -924,6 +942,7 @@ def capgen(
             write_group_cap(
                 suite.name, resolved_group.group_name, resolved_group, host_dict, output_root,
                 logger=log,
+                trace=trace,
             )
 
         # Suite data module
@@ -947,6 +966,7 @@ def capgen(
         write_suite_cap(
             suite.name, suite_res, scheme_store, output_root, host_dict,
             logger=log,
+            trace=trace,
         )
 
     # ---- static API (one file for all suites) ------------------------------
@@ -954,6 +974,7 @@ def capgen(
         suite_names, suite_resolutions, output_root, host_dict, scheme_store,
         logger=log,
         no_host_introspection=no_host_introspection,
+        trace=trace,
     )
 
     # ---- host-wide constituent module (only when any suite touches
@@ -1136,6 +1157,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             output_root=args.output_root,
             kind_types=kind_types,
             no_host_introspection=args.no_host_introspection,
+            trace=args.trace,
         )
     except CCPPError as exc:
         _LOGGER.error("%s", exc)
