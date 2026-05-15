@@ -717,6 +717,55 @@ class TestBuildMergedSubscript(unittest.TestCase):
         self.assertNotIn('instance_number', sub)
         self.assertNotIn('thread_number',   sub)
 
+    def test_explicit_index_with_literal_local_subscript(self):
+        """Regression 2026-05-15: a subscript-token entry whose declared
+        local_name carries a literal subscript (e.g. ``nstf_name(1)``)
+        must render the full ``<access>(1)`` form, not bare ``<access>``.
+        Companion to the active-expression bug for the same root cause.
+        """
+        from metadata.metadata_table import _parse_lines
+        ddt_src = (
+            "[ccpp-table-properties]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ nstf_name(1) ]\n"
+            "  standard_name = control_for_nsstm\n"
+            "  units = flag\n  dimensions = ()\n  type = integer\n"
+        )
+        host_src = (
+            "[ccpp-table-properties]\n  name = scm_type_defs\n  type = host\n"
+            "[ccpp-arg-table]\n  name = scm_type_defs\n  type = host\n"
+            "[ GFS_Control ]\n  standard_name = GFS_control_type_instance\n"
+            "  units = DDT\n  dimensions = (number_of_instances)\n"
+            "  type = GFS_control_type\n"
+            "[ ncols ]\n  standard_name = horizontal_dimension\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
+        )
+        ctrl_src = (
+            "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
+            "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
+            "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ instance ]\n  standard_name = instance_number\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ninstances ]\n  standard_name = number_of_instances\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+        )
+        hd = build_flat_host_dict(
+            _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
+            _parse_lines(ctrl_src.splitlines(keepends=True), 'ctrl.meta'),
+            _parse_lines(ddt_src.splitlines(keepends=True), 'ddt.meta'),
+        )
+        sub, _used = _build_merged_subscript(
+            ['horizontal_dimension'],
+            [':', 'control_for_nsstm'],
+            'run', hd,
+        )
+        self.assertEqual(
+            sub, '(lb:ub, GFS_Control(instance)%nstf_name(1))',
+        )
+
     def test_multiple_explicit_index_tokens_each_with_placeholder(self):
         """Two distinct scheme-arg subscript tokens, each resolving to a
         DDT-walked access path with its own ``(instance_number)``
@@ -871,6 +920,57 @@ class TestTranslateActiveExpr(unittest.TestCase):
         result = _translate_active_expr('(flag_for_opt_array)', hd)
         # No instance_number declared in this fixture → falls back to (1).
         self.assertEqual(result, '(instance_data(1)%opt_array_flag)')
+
+    def test_literal_subscript_in_local_name_preserved(self):
+        """Regression 2026-05-15: a DDT-component variable declared with a
+        literal subscript in its local_name (e.g. ``nstf_name(1)``) must
+        translate to ``<access_path>(1)`` in an active expression — the
+        ``(1)`` carries semantic information (selects element 1 of an
+        integer array) and must not be dropped.  Found in NEPTUNE
+        GFS_Statein metadata where ``tref`` had
+        ``active = (control_for_nsstm > 0)`` and ``control_for_nsstm``
+        was declared as ``local_name = nstf_name(1)`` on GFS_Control;
+        the cap emitted ``GFS_Control(instance)%nstf_name > 0`` (rank
+        mismatch) instead of ``GFS_Control(instance)%nstf_name(1) > 0``.
+        """
+        from metadata.metadata_table import _parse_lines
+        ddt_src = (
+            "[ccpp-table-properties]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ccpp-arg-table]\n  name = GFS_control_type\n  type = ddt\n"
+            "[ nstf_name(1) ]\n"
+            "  standard_name = control_for_nsstm\n"
+            "  units = flag\n  dimensions = ()\n  type = integer\n"
+        )
+        host_src = (
+            "[ccpp-table-properties]\n  name = scm_type_defs\n  type = host\n"
+            "[ccpp-arg-table]\n  name = scm_type_defs\n  type = host\n"
+            "[ GFS_Control ]\n  standard_name = GFS_control_type_instance\n"
+            "  units = DDT\n  dimensions = (number_of_instances)\n"
+            "  type = GFS_control_type\n"
+        )
+        ctrl_src = (
+            "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
+            "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
+            "[ instance ]\n  standard_name = instance_number\n  units = index\n"
+            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "[ ninstances ]\n  standard_name = number_of_instances\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+        )
+        hd = build_flat_host_dict(
+            _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
+            _parse_lines(ctrl_src.splitlines(keepends=True), 'ctrl.meta'),
+            _parse_lines(ddt_src.splitlines(keepends=True), 'ddt.meta'),
+        )
+        # Pre-conditions: access_path strips the literal subscript;
+        # local_subscript captures it for re-attachment at render time.
+        self.assertEqual(
+            hd['control_for_nsstm'].access_path,
+            'GFS_Control(instance_number)%nstf_name',
+        )
+        self.assertEqual(hd['control_for_nsstm'].local_subscript, ['1'])
+        # Active expression must emit the full ``(1)`` subscript.
+        result = _translate_active_expr('(control_for_nsstm > 0)', hd)
+        self.assertEqual(result, '(GFS_Control(instance)%nstf_name(1) > 0)')
 
 
 ########################################################################

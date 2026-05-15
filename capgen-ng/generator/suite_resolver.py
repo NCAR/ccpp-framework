@@ -68,7 +68,7 @@ from metadata.registered_dimensions import (
     scalar_index_for,
     is_scalar_index_dim,
 )
-from metadata.variable_resolver import HostVarEntry
+from metadata.variable_resolver import HostVarEntry, _resolve_subscript
 
 # Dimension standard names that map to horizontal loop bounds.
 _HORIZ_LOOP_DIMS: frozenset = frozenset({
@@ -344,14 +344,11 @@ def _resolve_single_bound(
         # so the emitted subscript references the actual storage and
         # the USE statement (which walks back to the root via
         # ``_root_symbol``) imports the right top-level symbol.
-        # The DDT-instance walk bakes registered scalar-index std
-        # names (e.g. ``(thread_number)``, ``(instance_number)``) into
-        # the access path as placeholders; resolve them to the host's
-        # local Fortran names here so a bound that turns into a
-        # subscript on a per-thread/per-instance DDT field doesn't
-        # leak the std-name placeholder through to the emitted cap
-        # code (Fortran rejects it as "no IMPLICIT type").
-        return _substitute_scalar_idx(entry.access_path, host_dict)
+        # ``_render_value_expr`` (a) resolves baked
+        # ``(instance_number)`` / ``(thread_number)`` placeholders and
+        # (b) re-attaches any literal subscript stripped from a
+        # ``local_name = foo(1)``-style declaration.
+        return _render_value_expr(entry, host_dict)
     if suite_vars:
         suite_var = suite_vars.get(bound)
         if suite_var is not None:
@@ -594,15 +591,11 @@ def _build_merged_subscript(
                 # Use ``access_path`` so DDT-component subscript indices
                 # (e.g. ``q(:,:,index_of_<X>)`` where index_of_X lives
                 # on a DDT) resolve to the full DDT walk, not the bare
-                # leaf name.  Identical to ``local_name`` for plain
-                # module-level host vars.  The DDT walk bakes registered
-                # scalar-index std-name placeholders (e.g.
-                # ``GFS_Control(instance_number)%ntqv``) into the
-                # access path; rewrite them to host local names here so
-                # the inner ``(instance_number)`` doesn't leak through
-                # to the emitted Fortran when this access path is itself
-                # used as a subscript token.
-                parts.append(_substitute_scalar_idx(entry.access_path, host_dict))
+                # leaf name.  ``_render_value_expr`` (a) resolves baked
+                # ``(instance_number)``/``(thread_number)`` placeholders
+                # and (b) re-attaches any literal subscript stripped
+                # from a ``local_name = foo(1)``-style declaration.
+                parts.append(_render_value_expr(entry, host_dict))
                 used.add(key)
             elif suite_vars and key in suite_vars:
                 parts.append(
@@ -683,6 +676,40 @@ def _substitute_scalar_idx(
 _substitute_instance_idx = _substitute_scalar_idx
 
 
+def _render_value_expr(
+    entry: HostVarEntry,
+    host_dict: Dict[str, HostVarEntry],
+) -> str:
+    """Render *entry*'s full Fortran value-read expression.
+
+    Combines two steps that callers usually need together:
+
+    1. Resolve any baked registered scalar-index placeholders in the
+       access path (``(instance_number)``, ``(thread_number)``) to the
+       host's local Fortran names via :func:`_substitute_scalar_idx`.
+    2. Re-attach any literal subscript that was stripped from the
+       declared ``local_name`` at parse time (e.g. host metadata
+       declaring ``local_name = nstf_name(1)`` parses into
+       ``base='nstf_name'`` + ``local_subscript=['1']``; reading the
+       value requires re-appending ``(1)``).  Std-name tokens inside
+       the subscript are themselves resolved to host local names via
+       :func:`metadata.variable_resolver._resolve_subscript`.
+
+    Use this helper anywhere a host entry is rendered as a Fortran
+    expression in generator output (active-expression translation,
+    dimension-bound resolution, subscript-index tokens, subcycle
+    loop-count expressions, etc.).  The scheme-arg base_expr +
+    _build_merged_subscript path is the exception — that path consumes
+    *entry.local_subscript* directly and interleaves it with scheme
+    dimensions, so it must not be pre-joined here.
+    """
+    expr = _substitute_scalar_idx(entry.access_path, host_dict)
+    if entry.local_subscript:
+        sub = _resolve_subscript(', '.join(entry.local_subscript), host_dict)
+        expr = '{}({})'.format(expr, sub)
+    return expr
+
+
 def _translate_active_expr(active: str, host_dict: Dict[str, HostVarEntry]) -> str:
     """Translate standard names in an ``active`` expression to local Fortran.
 
@@ -701,7 +728,7 @@ def _translate_active_expr(active: str, host_dict: Dict[str, HostVarEntry]) -> s
         entry = host_dict.get(word)
         if entry is None:
             return word
-        return _substitute_instance_idx(entry.access_path, host_dict)
+        return _render_value_expr(entry, host_dict)
 
     return FORTRAN_CONDITIONAL_REGEX.sub(_replace, active)
 
@@ -970,8 +997,10 @@ def _resolve_subcycle_loop_bound(
         # just the local name, but for a DDT-component the access path is
         # ``<instance>%<component>`` (or
         # ``<instance>(instance_number)%<component>`` when the parent is
-        # in an instance-dimensioned array; resolve that template here).
-        return _substitute_instance_idx(entry.access_path, host_dict), key
+        # in an instance-dimensioned array; resolve that template here,
+        # and re-attach any literal local_subscript from a
+        # ``local_name = foo(1)``-style declaration).
+        return _render_value_expr(entry, host_dict), key
     if suite_vars and key in suite_vars:
         suite_var = suite_vars[key]
         return suite_var.access_path, key
