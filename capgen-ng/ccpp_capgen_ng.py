@@ -721,73 +721,38 @@ def _validate_required_control_vars(
                 )
             )
 
-    def _check_host_module_var(std_name, expected_type, description) -> None:
-        """Validate a variable that must live in a ``type=host`` table.
-
-        Used for symbols the generator emits via ``use <module>, only:
-        <local>`` rather than as call-arg control vars.
-        """
-        entry = host_dict.get(std_name)
-        if entry is None:
-            return
-
-        if entry.is_control:
-            errors.append(
-                "Variable '{}' must be declared in a type=host table for "
-                "host '{}' (it is USE'd from the host module), but it was "
-                "found in a type=control table.\n"
-                "  Move it to a [ccpp-table-properties] / type=host "
-                "block.".format(std_name, host_name)
-            )
-            return
-
-        if entry.type.lower() != expected_type.lower():
-            errors.append(
-                "Host variable '{}' in host '{}' has Fortran type '{}' but "
-                "'{}' is required.".format(
-                    std_name, host_name, entry.type, expected_type
-                )
-            )
-
-        if entry.dimensions:
-            errors.append(
-                "Host variable '{}' in host '{}' must be a scalar (rank-0) "
-                "but has dimensions {}.".format(
-                    std_name, host_name, entry.dimensions
-                )
-            )
-
     for std_name, expected_type, description in _REQUIRED_CTRL_VARS:
         _check_control_var(std_name, expected_type, description, required=True)
 
-    # Paired optional: instance_number lives in type=control (call-arg);
-    # number_of_instances lives in type=host (USE'd by the suite cap for
-    # state-array sizing).  Either both declared or neither.
+    # Paired optional: both ``instance_number`` (the per-call index) and
+    # ``number_of_instances`` (the bound, used at register time to size
+    # the per-instance state arrays) live in ``type=control``.  Symmetric
+    # with the (thread_number, number_of_threads) pair.  Either both
+    # declared or neither.
     _check_control_var(
         'instance_number', 'integer',
         'current model instance index', required=False,
     )
-    _check_host_module_var(
+    _check_control_var(
         'number_of_instances', 'integer',
-        'total number of model instances',
+        'total number of model instances', required=False,
     )
 
     inst_present  = host_dict.get('instance_number')  is not None
     ninst_present = host_dict.get('number_of_instances') is not None
     if inst_present ^ ninst_present:
-        present, missing, present_table, missing_table = (
-            ('instance_number', 'number_of_instances', 'control', 'host')
+        present, missing = (
+            ('instance_number', 'number_of_instances')
             if inst_present
-            else ('number_of_instances', 'instance_number', 'host', 'control')
+            else ('number_of_instances', 'instance_number')
         )
         errors.append(
-            "Host '{}' declares '{}' (in a type={} table) but is missing "
-            "the paired variable '{}' (which must be declared in a "
-            "type={} table).\n"
+            "Host '{}' declares '{}' (in a type=control table) but is "
+            "missing the paired variable '{}' (which must also be in a "
+            "type=control table).\n"
             "  Declare both for a multi-instance API, or neither for a "
             "single-instance API.".format(
-                host_name, present, present_table,
-                missing, missing_table,
+                host_name, present, missing,
             )
         )
 

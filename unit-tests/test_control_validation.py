@@ -219,15 +219,15 @@ class TestValidControlVars(unittest.TestCase):
 
 
 class TestInstanceNumberPairing(unittest.TestCase):
-    """instance_number (control) and number_of_instances (host) are
-    paired-optional: declaring exactly one is an error.
+    """instance_number and number_of_instances both live in type=control
+    and are paired-optional: declaring exactly one is an error.
     """
 
     def test_instance_alone_raises(self):
-        """control declares instance_number, host omits number_of_instances."""
+        """control declares instance_number but not number_of_instances."""
         host_dict = _build_host_dict(
             host_files=[_sf('host_no_instance.meta')],
-            control_files=[_sf('control_simple.meta')],
+            control_files=[_sf('control_inst_only.meta')],
         )
         with self.assertRaises(CCPPError) as ctx:
             _validate_required_control_vars('test_host', host_dict)
@@ -237,10 +237,10 @@ class TestInstanceNumberPairing(unittest.TestCase):
         self.assertIn('paired', msg.lower())
 
     def test_ninstances_alone_raises(self):
-        """host declares number_of_instances, control omits instance_number."""
+        """control declares number_of_instances but not instance_number."""
         host_dict = _build_host_dict(
-            host_files=[_sf('host_simple.meta')],
-            control_files=[_sf('control_no_instance.meta')],
+            host_files=[_sf('host_no_instance.meta')],
+            control_files=[_sf('control_ninst_only.meta')],
         )
         with self.assertRaises(CCPPError) as ctx:
             _validate_required_control_vars('test_host', host_dict)

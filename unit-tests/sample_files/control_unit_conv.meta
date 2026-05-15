@@ -64,3 +64,9 @@
   units = 1
   dimensions = ()
   type = integer
+[ ninstances ]
+  standard_name = number_of_instances
+  long_name = total number of model instances
+  units = count
+  dimensions = ()
+  type = integer

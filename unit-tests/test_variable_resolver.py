@@ -558,12 +558,13 @@ class TestBuildFlatHostDict(unittest.TestCase):
         d = build_flat_host_dict(host_tables, [], [])
         self.assertIn('horizontal_dimension', d)
         self.assertIn('vertical_layer_dimension', d)
-        # number_of_instances is a host-table var (USE'd by the suite cap)
-        self.assertIn('number_of_instances', d)
+        # number_of_instances is now a control-table var (paired with
+        # instance_number), so it is NOT in a host-only dictionary.
+        self.assertNotIn('number_of_instances', d)
         # loop bounds and error vars live in the control table, not the host table
         self.assertNotIn('horizontal_loop_begin', d)
         self.assertNotIn('horizontal_loop_end', d)
-        self.assertEqual(len(d), 3)
+        self.assertEqual(len(d), 2)
 
     def test_plain_host_access_paths(self):
         host_tables = _parse_file('host_simple.meta')

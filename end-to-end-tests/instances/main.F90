@@ -7,10 +7,6 @@ program test_unit_conv
 
   use data, only: ncols, &
       nspecies, ninstances
-  !use data, only: cdata, &
-  !    data_array, &
-  !    data_array2, &
-  !    opt_array_flag
   use data, only: instance_data
 
   use ccpp_static_api, only: ccpp_register, &
@@ -55,7 +51,9 @@ program test_unit_conv
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   do ins=1,ninstances
-    call ccpp_register(suite_name=ccpp_suite, instance=ins, errmsg=errmsg, errflg=errflg)
+    call ccpp_register(suite_name=ccpp_suite, &
+        instance=ins, ninstances=ninstances, &
+        errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
       write(error_unit, '(a)') "An error occurred in ccpp_register:"
       write(error_unit, '(a)') trim(errmsg)
@@ -68,7 +66,9 @@ program test_unit_conv
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   do ins=1,ninstances
-    call ccpp_init(suite_name=ccpp_suite, instance=ins, errmsg=errmsg, errflg=errflg)
+    call ccpp_init(suite_name=ccpp_suite, &
+        instance=ins, ninstances=ninstances, &
+        errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
       write(error_unit, '(a)') "An error occurred in ccpp_init:"
       write(error_unit, '(a)') trim(errmsg)
@@ -83,7 +83,8 @@ program test_unit_conv
 
   do ins=1,ninstances
     call ccpp_physics_init( &
-        suite_name=ccpp_suite, group_name='all', instance=ins, &
+        suite_name=ccpp_suite, group_name='all', &
+        instance=ins, ninstances=ninstances, &
         thread_num=1, nthreads=1, nphys_threads=nphys_threads, &
         lb=1, ub=ncols, errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
@@ -100,7 +101,8 @@ program test_unit_conv
 
   do ins=1,ninstances
     call ccpp_physics_timestep_init( &
-        suite_name=ccpp_suite, group_name='all', instance=ins, &
+        suite_name=ccpp_suite, group_name='all', &
+        instance=ins, ninstances=ninstances, &
         thread_num=1, nthreads=1, nphys_threads=nphys_threads, &
         lb=1, ub=ncols, errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
@@ -116,7 +118,8 @@ program test_unit_conv
 
   do ins=1,ninstances
     call ccpp_physics_run( &
-        suite_name=ccpp_suite, group_name='all', instance=ins, &
+        suite_name=ccpp_suite, group_name='all', &
+        instance=ins, ninstances=ninstances, &
         thread_num=1, nthreads=1, nphys_threads=nphys_threads, &
         lb=1, ub=ncols, errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
@@ -133,7 +136,8 @@ program test_unit_conv
 
   do ins=1,ninstances
     call ccpp_physics_timestep_final( &
-        suite_name=ccpp_suite, group_name='all', instance=ins, &
+        suite_name=ccpp_suite, group_name='all', &
+        instance=ins, ninstances=ninstances, &
         thread_num=1, nthreads=1, nphys_threads=nphys_threads, &
         lb=1, ub=ncols, errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
@@ -150,7 +154,8 @@ program test_unit_conv
 
   do ins=1,ninstances
     call ccpp_physics_final( &
-        suite_name=ccpp_suite, group_name='all', instance=ins, &
+        suite_name=ccpp_suite, group_name='all', &
+        instance=ins, ninstances=ninstances, &
         thread_num=1, nthreads=1, nphys_threads=nphys_threads, &
         lb=1, ub=ncols, errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
@@ -165,7 +170,9 @@ program test_unit_conv
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   do ins=1,ninstances
-    call ccpp_final(suite_name=ccpp_suite, instance=ins, errmsg=errmsg, errflg=errflg)
+    call ccpp_final(suite_name=ccpp_suite, &
+        instance=ins, ninstances=ninstances, &
+        errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
       write(error_unit, '(a)') "An error occurred in ccpp_final:"
       write(error_unit, '(a)') trim(errmsg)

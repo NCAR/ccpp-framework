@@ -339,34 +339,38 @@ class TestCcppInitMultiInstance(unittest.TestCase):
         lines = _generate_static_api(['test_simple'], [suite_resolution], hd)
         self.text = '\n'.join(lines)
 
-    def test_init_signature_has_instance_number(self):
-        # host_full.meta declares inst_num as instance_number; ninstances is
-        # NOT in the lifecycle signature any more.
+    def test_init_signature_has_instance_pair(self):
+        # host_full.meta declares the multi-instance pair (inst_num,
+        # ninstances).  Both must appear in the lifecycle signature.
         self.assertIn(
-            'subroutine ccpp_init(suite_name, errflg, errmsg, inst_num)',
+            'subroutine ccpp_init(suite_name, errflg, errmsg, inst_num, ninstances)',
             self.text,
         )
 
-    def test_init_signature_no_ninstances(self):
+    def test_init_signature_has_ninstances(self):
         init_block = self.text.split('subroutine ccpp_init')[1].split(
             'end subroutine ccpp_init'
         )[0]
-        self.assertNotIn('ninstances', init_block)
+        self.assertIn('ninstances', init_block)
 
-    def test_init_passes_inst_to_suite(self):
+    def test_init_passes_inst_pair_to_suite(self):
         self.assertIn(
-            'call test_simple_init(inst_num, errmsg, errflg)', self.text,
-        )
-
-    def test_register_signature_has_instance_number(self):
-        self.assertIn(
-            'subroutine ccpp_register(suite_name, errflg, errmsg, inst_num)',
+            'call test_simple_init(inst_num, ninstances, errmsg, errflg)',
             self.text,
         )
 
-    def test_final_signature_has_instance_number(self):
+    def test_register_signature_has_instance_pair(self):
         self.assertIn(
-            'subroutine ccpp_final(suite_name, errflg, errmsg, inst_num)',
+            'subroutine ccpp_register(suite_name, errflg, errmsg, inst_num, ninstances)',
+            self.text,
+        )
+
+    def test_final_signature_has_instance_pair(self):
+        # Final carries (inst_num, ninstances) for API symmetry with
+        # register/init even though the framework doesn't read
+        # ninstances at final time.
+        self.assertIn(
+            'subroutine ccpp_final(suite_name, errflg, errmsg, inst_num, ninstances)',
             self.text,
         )
 
@@ -796,11 +800,6 @@ class TestCollectHostIoIncludesActiveExpr(unittest.TestCase):
   type = integer
 [ im ]
   standard_name = horizontal_loop_extent
-  units = count
-  dimensions = ()
-  type = integer
-[ ninstances ]
-  standard_name = number_of_instances
   units = count
   dimensions = ()
   type = integer

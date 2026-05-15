@@ -43,9 +43,3 @@
   units = flag
   dimensions = ()
   type = logical
-[ ninstances ]
-  standard_name = number_of_instances
-  long_name = number of model instances
-  units = count
-  dimensions = ()
-  type = integer

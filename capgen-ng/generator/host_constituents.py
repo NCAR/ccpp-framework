@@ -3,7 +3,8 @@
 """Generate ``ccpp_host_constituents.F90`` — the host-wide constituent module.
 
 In capgen-ng's per-instance design, the constituent state is sized to
-``number_of_instances`` (declared by the host's ``type=host`` table).
+``number_of_instances`` (declared by the host's ``type=control`` table,
+paired with ``instance_number``).
 This module owns:
 
 * ``ccpp_model_constituents_obj(:)`` — one DDT instance per host
@@ -97,11 +98,15 @@ def _host_lookup(host_dict, std_name: str) -> Tuple[Optional[str], Optional[str]
 def _instance_signature(
     base_args: List[str],
     inst_local: Optional[str],
+    ninst_local: Optional[str] = None,
 ) -> List[str]:
-    """Return signature args with *inst_local* inserted before err args."""
+    """Return signature args with *inst_local* and (optionally)
+    *ninst_local* inserted before err args."""
     sig = list(base_args)
     if inst_local:
         sig.append(inst_local)
+    if ninst_local:
+        sig.append(ninst_local)
     sig += ['errflg', 'errmsg']
     return sig
 
@@ -116,17 +121,20 @@ def _register_constituents_lines(
     i3 = _INDENT * 3
     register_suites = _suites_with_register_consts(suite_results)
     inst_local, _ = _host_lookup(host_dict, 'instance_number')
-    ninst_local, ninst_mod = _host_lookup(host_dict, 'number_of_instances')
+    # ``number_of_instances`` is now a paired control variable; it arrives
+    # as a dummy argument rather than via ``use <host_mod>``.  Its module
+    # is ``None`` (control vars carry no module), so ninst_mod is ignored.
+    ninst_local, _ = _host_lookup(host_dict, 'number_of_instances')
     inst_idx     = inst_local if inst_local else '1'
     ninst_arg    = ninst_local if ninst_local else '1'
 
-    sig = _instance_signature(['host_constituents'], inst_local)
+    sig = _instance_signature(
+        ['host_constituents'], inst_local, ninst_local=ninst_local,
+    )
     lines: List[str] = ['']
     lines.append('{}subroutine ccpp_register_constituents({})'.format(
         i1, ', '.join(sig),
     ))
-    if ninst_local and ninst_mod:
-        lines.append('{}use {}, only: {}'.format(i2, ninst_mod, ninst_local))
     lines.append('')
     lines.append(
         '{}type({}), target, intent(in) :: host_constituents(:)'.format(
@@ -135,6 +143,8 @@ def _register_constituents_lines(
     )
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    if ninst_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, ninst_local))
     lines.append('{}integer, intent(out) :: errflg'.format(i2))
     lines.append('{}character(len=*), intent(out) :: errmsg'.format(i2))
     lines.append('')

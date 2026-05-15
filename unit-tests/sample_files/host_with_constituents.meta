@@ -22,12 +22,6 @@
   units = count
   dimensions = ()
   type = integer
-[ ninstances ]
-  standard_name = number_of_instances
-  long_name = number of model instances
-  units = count
-  dimensions = ()
-  type = integer
 [ host_consts_obj ]
   standard_name = ccpp_model_constituents_object
   long_name = host-owned model constituent object

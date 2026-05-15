@@ -695,11 +695,12 @@ class TestMultiInstanceIntegration(unittest.TestCase):
         shutil.rmtree(self._tmpdir)
 
     def test_ccpp_init_minimal_signature(self):
-        # New minimal lifecycle signature: drops ninstances entirely.
+        # Lifecycle signature for a multi-instance host carries the
+        # paired (inst_num, ninstances) control vars.
         with open(os.path.join(self._tmpdir, 'ccpp_static_api.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'subroutine ccpp_init(suite_name, errflg, errmsg, inst_num)',
+            'subroutine ccpp_init(suite_name, errflg, errmsg, inst_num, ninstances)',
             text,
         )
 
@@ -707,7 +708,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'subroutine test_simple_init(inst_num, errmsg, errflg)',
+            'subroutine test_simple_init(inst_num, ninstances, errmsg, errflg)',
             text,
         )
 
@@ -882,8 +883,8 @@ class TestInstancePairingErrors(unittest.TestCase):
             capgen(
                 host_name='test_host',
                 host_files=[
-                    _sf('host_no_instance.meta'),   # no number_of_instances
-                    _sf('control_full.meta'),       # has instance_number
+                    _sf('host_no_instance.meta'),
+                    _sf('control_inst_only.meta'),  # has instance_number only
                 ],
                 scheme_files=[_sf('scheme_multipart.meta')],
                 suite_files=[_suite_file('suite_test_simple.xml')],
@@ -901,8 +902,8 @@ class TestInstancePairingErrors(unittest.TestCase):
             capgen(
                 host_name='test_host',
                 host_files=[
-                    _sf('host_full.meta'),          # has number_of_instances
-                    _sf('control_no_instance.meta'),# no instance_number
+                    _sf('host_no_instance.meta'),
+                    _sf('control_ninst_only.meta'), # has ninstances only
                 ],
                 scheme_files=[_sf('scheme_multipart.meta')],
                 suite_files=[_suite_file('suite_test_simple.xml')],

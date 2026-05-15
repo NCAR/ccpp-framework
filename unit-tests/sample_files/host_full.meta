@@ -48,9 +48,3 @@
   dimensions = (horizontal_dimension, vertical_layer_dimension)
   type = real
   kind = kind_phys
-[ ninstances ]
-  standard_name = number_of_instances
-  long_name = number of model instances (ensemble members)
-  units = count
-  dimensions = ()
-  type = integer

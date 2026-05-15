@@ -1,27 +1,40 @@
-# Full control metadata for generator tests.
-
+# Half-paired multi-instance host: control table declares instance_number
+# but NOT its mandatory pair partner number_of_instances.  Used to
+# exercise the paired-validation error path (declaring one of the pair
+# without the other must raise).
 [ccpp-table-properties]
-  name = host_ctrl
+  name = ccpp_control
   type = control
 
 [ccpp-arg-table]
-  name = host_ctrl
+  name = ccpp_control
   type = control
-
-[ suite_name ]
+[ suite_name_var ]
   standard_name = suite_name
-  long_name = name of the CCPP suite to dispatch to
+  long_name = name of the CCPP suite
   units = none
   dimensions = ()
   type = character
   kind = len=256
 [ grp_name ]
   standard_name = group_name
-  long_name = name of the CCPP group to dispatch to
+  long_name = name of the CCPP group
   units = none
   dimensions = ()
   type = character
   kind = len=256
+[ thread_num ]
+  standard_name = thread_number
+  long_name = current thread number
+  units = 1
+  dimensions = ()
+  type = integer
+[ nphys_threads ]
+  standard_name = number_of_physics_threads
+  long_name = total number of physics threads
+  units = 1
+  dimensions = ()
+  type = integer
 [ lb ]
   standard_name = horizontal_loop_begin
   long_name = start of horizontal range for this phase
@@ -34,21 +47,9 @@
   units = index
   dimensions = ()
   type = integer
-[ thread_num ]
-  standard_name = thread_number
-  long_name = current thread number
-  units = 1
-  dimensions = ()
-  type = integer
 [ nthreads ]
   standard_name = number_of_threads
-  long_name = total number of OpenMP threads
-  units = 1
-  dimensions = ()
-  type = integer
-[ nphys_threads ]
-  standard_name = number_of_physics_threads
-  long_name = thread budget for physics-internal OpenMP
+  long_name = total number of threads
   units = 1
   dimensions = ()
   type = integer
@@ -69,11 +70,5 @@
   standard_name = instance_number
   long_name = current model instance number
   units = 1
-  dimensions = ()
-  type = integer
-[ ninstances ]
-  standard_name = number_of_instances
-  long_name = total number of model instances
-  units = count
   dimensions = ()
   type = integer

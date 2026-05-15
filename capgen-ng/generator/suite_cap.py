@@ -286,8 +286,8 @@ def _register_lines(
     register-phase scheme call across all groups in suite-XML order, and
     transitions the suite state for this instance to ``CCPP_SUITE_REGISTERED``.
 
-    Minimal signature: ``(instance_number, errmsg, errflg)`` (instance_number
-    is included only when the host declares it).
+    Minimal signature: ``(instance_number, number_of_instances, errmsg,
+    errflg)`` (the instance pair is included only when the host declares it).
     """
     sub_name = '{}_register'.format(suite_name)
     i1 = _INDENT
@@ -296,6 +296,12 @@ def _register_lines(
     inst_local = _instance_local(host_dict)
     inst_idx   = _instance_idx(host_dict)
 
+    # ``number_of_instances`` is now a paired control variable (see
+    # ccpp_capgen_ng._PAIRED_OPTIONAL_CTRL_VARS).  When present it enters
+    # the suite-cap signature as a dummy alongside ``instance_number``;
+    # the framework consumes it at register-time to size the per-instance
+    # state arrays.  When absent we fall back to the literal ``1``
+    # (single-instance API).
     ninstances_entry = host_dict.get('number_of_instances') if host_dict else None
     ninstances_local = ninstances_entry.local_name if ninstances_entry else None
     ninstances_arg   = ninstances_local if ninstances_local else '1'
@@ -306,6 +312,8 @@ def _register_lines(
     sig_args: List[str] = []
     if inst_local:
         sig_args.append(inst_local)
+    if ninstances_local:
+        sig_args.append(ninstances_local)
     sig_args += [errmsg_local, errflg_local]
 
     lines: List[str] = []
@@ -313,12 +321,9 @@ def _register_lines(
     lines.append('{}subroutine {}({})'.format(i1, sub_name, ', '.join(sig_args)))
 
     # USE statements: scheme modules + host/suite-data modules referenced by
-    # register-phase scheme args.
+    # register-phase scheme args.  (``number_of_instances`` used to be USE'd
+    # from the host module here; now it arrives as a dummy argument.)
     reg_uses = _register_uses(suite_res, suite_name, host_dict)
-    if ninstances_local and ninstances_entry is not None and ninstances_entry.module_name:
-        reg_uses.setdefault(ninstances_entry.module_name, set()).add(
-            ninstances_local
-        )
     for mod in sorted(reg_uses):
         syms = ', '.join(sorted(reg_uses[mod]))
         lines.append('{}use {}, only: {}'.format(i2, mod, syms))
@@ -326,6 +331,8 @@ def _register_lines(
     lines.append('')
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    if ninstances_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, ninstances_local))
     lines += [
         '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
         '{}integer, intent(out) :: {}'.format(i2, errflg_local),
@@ -343,8 +350,12 @@ def _register_lines(
         lines.append('{}integer :: num_consts, i'.format(i2))
 
     # Trace block: dummies referenced inside the gated write so strict
-    # compilers don't flag instance_number as unused when the gate is off.
-    trace_lines = emit_trace_block(sub_name, [], i2, instance_local=inst_local)
+    # compilers don't flag intent(in) args as unused when the gate is off.
+    extra_in = [ninstances_local] if ninstances_local else None
+    trace_lines = emit_trace_block(
+        sub_name, [], i2,
+        instance_local=inst_local, extra_in_names=extra_in,
+    )
     if trace_lines:
         lines.append('')
         lines.extend(trace_lines)
@@ -460,12 +471,15 @@ def _init_lines(
        been written during the register phase.
     4. Sets ``ccpp_suite_state(instance_number) = CCPP_SUITE_FRAMEWORK_INITIALIZED``.
 
-    Minimal signature: ``(instance_number, errmsg, errflg)``.
+    Minimal signature: ``(instance_number, number_of_instances, errmsg,
+    errflg)`` -- the instance pair is included only when the host declares it.
     """
     sub_name = '{}_init'.format(suite_name)
     i1 = _INDENT
     i2 = _INDENT * 2
 
+    # ``number_of_instances`` is now a paired control variable; it arrives
+    # as a dummy argument rather than via ``use <host_mod>``.
     ninstances_entry = host_dict.get('number_of_instances') if host_dict else None
     ninstances_local = ninstances_entry.local_name if ninstances_entry else None
     ninstances_arg   = ninstances_local if ninstances_local else '1'
@@ -479,20 +493,18 @@ def _init_lines(
     sig_args: List[str] = []
     if inst_local:
         sig_args.append(inst_local)
+    if ninstances_local:
+        sig_args.append(ninstances_local)
     sig_args += [errmsg_local, errflg_local]
 
     lines: List[str] = ['']
     lines.append('{}subroutine {}({})'.format(i1, sub_name, ', '.join(sig_args)))
 
-    # USE: number_of_instances (from host module) for group state alloc;
-    # suite_data init_fields routine when this suite owns any vars;
+    # USE: suite_data init_fields routine when this suite owns any vars;
     # constituent object (from host module) for pointer binding;
     # suite-level <init> scheme module + per-arg host modules.
+    # (``number_of_instances`` used to be USE'd here; now it's a dummy arg.)
     extra_uses: Dict[str, Set[str]] = {}
-    if ninstances_local and ninstances_entry is not None and ninstances_entry.module_name:
-        extra_uses.setdefault(ninstances_entry.module_name, set()).add(
-            ninstances_local
-        )
     if suite_res.suite_vars:
         data_mod    = 'ccpp_{}_data'.format(suite_name)
         init_fields = 'suite_data_init_fields'
@@ -506,11 +518,17 @@ def _init_lines(
     lines.append('')
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    if ninstances_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, ninstances_local))
     lines += [
         '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
         '{}integer, intent(out) :: {}'.format(i2, errflg_local),
     ]
-    trace_lines = emit_trace_block(sub_name, [], i2, instance_local=inst_local)
+    extra_in = [ninstances_local] if ninstances_local else None
+    trace_lines = emit_trace_block(
+        sub_name, [], i2,
+        instance_local=inst_local, extra_in_names=extra_in,
+    )
     if trace_lines:
         lines.append('')
         lines.extend(trace_lines)
@@ -606,7 +624,11 @@ def _final_lines(
        flip, calls each group ``state_dealloc`` and the suite ``state_dealloc``
        (which also tears down the suite_data DDT array).
 
-    Minimal signature: ``(instance_number, errmsg, errflg)``.
+    Signature: ``(instance_number, number_of_instances, errmsg, errflg)``
+    when the host declares the multi-instance pair, else
+    ``(errmsg, errflg)``.  ``number_of_instances`` is carried for API
+    symmetry with ``<suite>_register`` / ``<suite>_init``; the framework
+    does not consume it at final time.
     """
     sub_name = '{}_final'.format(suite_name)
     i1 = _INDENT
@@ -614,6 +636,8 @@ def _final_lines(
 
     inst_local = _instance_local(host_dict)
     inst_idx   = _instance_idx(host_dict)
+    ninstances_entry = host_dict.get('number_of_instances') if host_dict else None
+    ninstances_local = ninstances_entry.local_name if ninstances_entry else None
 
     errflg_local = _ctrl_local(host_dict, 'ccpp_error_code') or 'errflg'
     errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message') or 'errmsg'
@@ -621,6 +645,8 @@ def _final_lines(
     sig_args: List[str] = []
     if inst_local:
         sig_args.append(inst_local)
+    if ninstances_local:
+        sig_args.append(ninstances_local)
     sig_args += [errmsg_local, errflg_local]
 
     lines: List[str] = ['']
@@ -650,11 +676,17 @@ def _final_lines(
     lines.append('')
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    if ninstances_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, ninstances_local))
     lines += [
         '{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local),
         '{}integer, intent(out) :: {}'.format(i2, errflg_local),
     ]
-    trace_lines = emit_trace_block(sub_name, [], i2, instance_local=inst_local)
+    extra_in = [ninstances_local] if ninstances_local else None
+    trace_lines = emit_trace_block(
+        sub_name, [], i2,
+        instance_local=inst_local, extra_in_names=extra_in,
+    )
     if trace_lines:
         lines.append('')
         lines.extend(trace_lines)

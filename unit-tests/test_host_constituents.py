@@ -200,10 +200,11 @@ class TestRegisterConstituentsRoutine(unittest.TestCase):
         self.text = _render_register()
 
     def test_takes_host_constituents_and_instance(self):
-        # instance_number is in the signature when the host declares it.
+        # instance_number AND number_of_instances are both in the signature
+        # when the host declares the multi-instance pair.
         self.assertIn(
             'subroutine ccpp_register_constituents(host_constituents, '
-            'inst_num, errflg, errmsg)',
+            'inst_num, ninstances, errflg, errmsg)',
             self.text,
         )
         self.assertIn(

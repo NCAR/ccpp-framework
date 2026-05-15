@@ -141,6 +141,10 @@ function(ccpp_capgen)
 
   message(STATUS "ccpp-capgen stdout: ${CAPGEN_OUT}")
 
+  if(NOT RES EQUAL 0)
+    message(FATAL_ERROR "CCPP cap generation FAILED: result = ${RES}")
+  endif()
+
 endfunction()
 
 
@@ -179,15 +183,15 @@ function(ccpp_datafile)
                   OUTPUT_STRIP_TRAILING_WHITESPACE
                   ERROR_STRIP_TRAILING_WHITESPACE
                   COMMAND_ECHO STDOUT)
-  #message(STATUS "CCPP_FILES = ${CCPP_FILES}")
-  if(RES EQUAL 0)
-    message(STATUS "CCPP files retrieved")
-  else()
+
+  if(NOT RES EQUAL 0)
     message(FATAL_ERROR "CCPP file retrieval FAILED: result = ${RES}")
   endif()
+
   if(CCPP_FILES)
     # Convert "," separated list from python back to ";" separated list for CMake
     string(REPLACE "," ";" CCPP_FILES ${CCPP_FILES})
   endif()
   set(CCPP_FILES "${CCPP_FILES}" PARENT_SCOPE)
+
 endfunction()

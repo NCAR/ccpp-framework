@@ -350,7 +350,9 @@ def _register_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     """Generate ``ccpp_register`` (mandatory entry point).
 
     Always emitted with the minimal lifecycle signature
-    ``(suite_name, ccpp_error_code, ccpp_error_message, instance_number)``.
+    ``(suite_name, ccpp_error_code, ccpp_error_message,
+    [instance_number, number_of_instances])``.  The instance pair is
+    forwarded to ``<suite>_register`` only when the host declares it.
     The body dispatches to ``<suite>_register`` for every known suite.  Each
     suite's register routine is responsible for allocating its state array
     and DDT instance array, calling its register-phase scheme entrypoints,
@@ -362,6 +364,8 @@ def _register_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     i3 = _INDENT * 3
 
     inst_local = _instance_local(host_dict)
+    ninst_entry = host_dict.get('number_of_instances') if host_dict else None
+    ninst_local = ninst_entry.local_name if ninst_entry else None
 
     errflg_local = _ctrl_local(host_dict, 'ccpp_error_code') or 'errflg'
     errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message') or 'errmsg'
@@ -375,6 +379,9 @@ def _register_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     if inst_local:
         sig_args.append(inst_local)
         suite_call_args.append(inst_local)
+    if ninst_local:
+        sig_args.append(ninst_local)
+        suite_call_args.append(ninst_local)
     suite_call_args += [errmsg_local, errflg_local]
 
     lines: List[str] = ['']
@@ -385,9 +392,13 @@ def _register_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     lines.append('{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    if ninst_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, ninst_local))
     trace_entries = [suite_name_entry] if suite_name_entry else []
+    extra_in = [ninst_local] if ninst_local else None
     trace_lines = emit_trace_block(
-        'ccpp_register', trace_entries, i2, instance_local=inst_local,
+        'ccpp_register', trace_entries, i2,
+        instance_local=inst_local, extra_in_names=extra_in,
     )
     if trace_lines:
         lines.append('')
@@ -420,14 +431,17 @@ def _register_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
 def _init_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     """Generate ``ccpp_init`` (minimal lifecycle signature).
 
-    Signature: ``(suite_name, ccpp_error_code, ccpp_error_message, instance_number)``.
-    Forwards ``instance_number`` (when host-declared) to ``<suite>_init``.
+    Signature: ``(suite_name, ccpp_error_code, ccpp_error_message,
+    [instance_number, number_of_instances])``.  The instance pair is
+    forwarded to ``<suite>_init`` only when the host declares it.
     """
     i1 = _INDENT
     i2 = _INDENT * 2
     i3 = _INDENT * 3
 
     inst_local = _instance_local(host_dict)
+    ninst_entry = host_dict.get('number_of_instances') if host_dict else None
+    ninst_local = ninst_entry.local_name if ninst_entry else None
 
     errflg_local = _ctrl_local(host_dict, 'ccpp_error_code') or 'errflg'
     errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message') or 'errmsg'
@@ -441,6 +455,9 @@ def _init_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     if inst_local:
         sig_args.append(inst_local)
         suite_call_args.append(inst_local)
+    if ninst_local:
+        sig_args.append(ninst_local)
+        suite_call_args.append(ninst_local)
     suite_call_args += [errmsg_local, errflg_local]
 
     lines: List[str] = ['']
@@ -451,9 +468,13 @@ def _init_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     lines.append('{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    if ninst_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, ninst_local))
     trace_entries = [suite_name_entry] if suite_name_entry else []
+    extra_in = [ninst_local] if ninst_local else None
     trace_lines = emit_trace_block(
-        'ccpp_init', trace_entries, i2, instance_local=inst_local,
+        'ccpp_init', trace_entries, i2,
+        instance_local=inst_local, extra_in_names=extra_in,
     )
     if trace_lines:
         lines.append('')
@@ -484,15 +505,20 @@ def _init_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
 
 
 def _final_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
-    """Generate ``ccpp_final`` (minimal lifecycle signature).
+    """Generate ``ccpp_final`` (lifecycle signature).
 
-    Signature: ``(suite_name, ccpp_error_code, ccpp_error_message, instance_number)``.
+    Signature: ``(suite_name, ccpp_error_code, ccpp_error_message,
+    [instance_number, number_of_instances])``.  ``number_of_instances``
+    is carried for API symmetry with ``ccpp_register`` / ``ccpp_init``
+    even though the framework does not need it at final time.
     """
     i1 = _INDENT
     i2 = _INDENT * 2
     i3 = _INDENT * 3
 
     inst_local = _instance_local(host_dict)
+    ninst_entry = host_dict.get('number_of_instances') if host_dict else None
+    ninst_local = ninst_entry.local_name if ninst_entry else None
 
     errflg_local = _ctrl_local(host_dict, 'ccpp_error_code') or 'errflg'
     errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message') or 'errmsg'
@@ -506,6 +532,9 @@ def _final_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     if inst_local:
         sig_args.append(inst_local)
         suite_call_args.append(inst_local)
+    if ninst_local:
+        sig_args.append(ninst_local)
+        suite_call_args.append(ninst_local)
     suite_call_args += [errmsg_local, errflg_local]
 
     lines: List[str] = ['']
@@ -516,9 +545,13 @@ def _final_subroutine(suite_names: List[str], host_dict=None) -> List[str]:
     lines.append('{}character(len=*), intent(out) :: {}'.format(i2, errmsg_local))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
+    if ninst_local:
+        lines.append('{}integer, intent(in) :: {}'.format(i2, ninst_local))
     trace_entries = [suite_name_entry] if suite_name_entry else []
+    extra_in = [ninst_local] if ninst_local else None
     trace_lines = emit_trace_block(
-        'ccpp_final', trace_entries, i2, instance_local=inst_local,
+        'ccpp_final', trace_entries, i2,
+        instance_local=inst_local, extra_in_names=extra_in,
     )
     if trace_lines:
         lines.append('')

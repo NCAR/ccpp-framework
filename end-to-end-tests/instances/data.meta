@@ -63,12 +63,6 @@
   units = count
   dimensions = ()
   type = integer
-[ninstances]
-  standard_name = number_of_instances
-  long_name = number of instances for multi-instance test
-  units = count
-  dimensions = ()
-  type = integer
 [instance_data]
   standard_name = instance_data
   long_name = instance data for multi-instance test

@@ -23,9 +23,3 @@
   units = DDT
   dimensions = ()
   type = chunked_data_type
-[ ninstances ]
-  standard_name = number_of_instances
-  long_name = number of model instances
-  units = count
-  dimensions = ()
-  type = integer
