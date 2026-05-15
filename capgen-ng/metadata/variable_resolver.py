@@ -777,6 +777,11 @@ class SchemeStore:
         # falls back to the scheme name (the common case where the .meta
         # file shares its base name with the Fortran module).
         self._modules: Dict[str, str] = {}
+        # _source_paths[scheme_name][phase] = .meta file that first
+        # registered this (scheme, phase) pair.  Consulted only on the
+        # duplicate-phase error path so the message can name both the
+        # original registration site and the duplicate.
+        self._source_paths: Dict[str, Dict[str, str]] = {}
 
     @classmethod
     def build_from(cls, scheme_tables: List[MetadataTable]) -> 'SchemeStore':
@@ -801,6 +806,7 @@ class SchemeStore:
             name = tbl.table_name
             if name not in store._data:
                 store._data[name] = {}
+                store._source_paths[name] = {}
             # Resolve module: explicit ``module_name`` from the table
             # properties overrides the implicit "module name equals scheme
             # name" convention.  See doc/scheme metadata format.
@@ -810,13 +816,29 @@ class SchemeStore:
                 if sec.phase is None:
                     continue
                 if sec.phase in store._data[name]:
+                    first_path = store._source_paths[name].get(sec.phase, '<unknown>')
+                    dup_path = tbl.file_path or '<unknown>'
+                    # Same-path duplicate is the common case (a .meta
+                    # file listed twice in the host's --scheme-files
+                    # input, often a stray CMake list entry); call it
+                    # out so the user knows to look in the build glue
+                    # rather than in the metadata content.
+                    if first_path == dup_path:
+                        hint = (' (both paths are identical — likely a '
+                                'duplicate entry in the --scheme-files '
+                                'list passed to capgen-ng)')
+                    else:
+                        hint = ''
                     raise CCPPError(
-                        "Duplicate phase '{}' for scheme '{}'; "
-                        "check that the same scheme metadata is not loaded twice".format(
-                            sec.phase, name
+                        "Duplicate phase '{}' for scheme '{}': "
+                        "first registered from '{}', then again from "
+                        "'{}'.{}  Check that the same scheme metadata "
+                        "is not loaded twice.".format(
+                            sec.phase, name, first_path, dup_path, hint,
                         )
                     )
                 store._data[name][sec.phase] = list(sec.variables)
+                store._source_paths[name][sec.phase] = tbl.file_path or '<unknown>'
         return store
 
     def scheme_names(self) -> List[str]:

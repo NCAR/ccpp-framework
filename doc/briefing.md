@@ -329,7 +329,7 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1220 passing on `main`.
+- **Unit tests**: 1229 passing on `main`.
 - **End-to-end tests passing**: `advection`, `unit_conv`,
   `nested_suite`, `variable_transform`, `instances`, `ddt`.
 - **CCPP-SCM**: actively driving development — every build / runtime

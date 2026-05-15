@@ -6,7 +6,7 @@ Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
 **capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
-*Last revised: 2026-05-14.*  Current unit-test suite: 1220 passing.
+*Last revised: 2026-05-14 (end-of-day).*  Current unit-test suite: 1229 passing.
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
 `capgen-ng/` (top-level of this repo).  Unit tests live at the top

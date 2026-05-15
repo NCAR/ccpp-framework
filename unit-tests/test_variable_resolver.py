@@ -1175,6 +1175,57 @@ class TestSchemeStore(unittest.TestCase):
         self.assertIn('run', str(cm.exception))
         self.assertIn('my_scheme', str(cm.exception))
 
+    def test_duplicate_phase_names_both_source_files(self):
+        """When two distinct ``.meta`` files declare the same
+        (scheme, phase) pair, the error must name both file paths so
+        the user can locate the conflict instead of grepping the
+        ``--scheme-files`` list."""
+        tables_a = _parse_lines(
+            _SIMPLE_SCHEME_SRC.splitlines(keepends=True),
+            '/projA/my_scheme.meta',
+        )
+        tables_b = _parse_lines(
+            _SIMPLE_SCHEME_SRC.splitlines(keepends=True),
+            '/projB/my_scheme.meta',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            SchemeStore.build_from(tables_a + tables_b)
+        msg = str(cm.exception)
+        self.assertIn('my_scheme', msg)
+        # Both paths appear, in order: original then duplicate.
+        idx_a = msg.find('/projA/my_scheme.meta')
+        idx_b = msg.find('/projB/my_scheme.meta')
+        self.assertGreaterEqual(idx_a, 0, 'original path not in error: ' + msg)
+        self.assertGreaterEqual(idx_b, 0, 'duplicate path not in error: ' + msg)
+        self.assertLess(idx_a, idx_b,
+                        'expected original (A) before duplicate (B)')
+        # Different paths → no CMake-list hint.
+        self.assertNotIn('--scheme-files', msg)
+
+    def test_duplicate_phase_same_path_hints_at_cmake_list(self):
+        """The motivating SCM case: a single ``.meta`` path listed
+        twice in the host's ``--scheme-files`` argument (typically a
+        stray CMake list entry).  Both reported paths are byte-equal,
+        and the message appends an explicit ``--scheme-files`` hint so
+        the user knows to look in the build glue, not in the
+        metadata."""
+        path = '/host/ccpp/physics/GWD/ugwpv1_gsldrag.meta'
+        tables_first = _parse_lines(
+            _SIMPLE_SCHEME_SRC.splitlines(keepends=True), path,
+        )
+        tables_again = _parse_lines(
+            _SIMPLE_SCHEME_SRC.splitlines(keepends=True), path,
+        )
+        with self.assertRaises(CCPPError) as cm:
+            SchemeStore.build_from(tables_first + tables_again)
+        msg = str(cm.exception)
+        # The single path appears (at least once; same string both
+        # places, so a single substring search suffices).
+        self.assertIn(path, msg)
+        # CMake-list duplication hint fires when the paths are equal.
+        self.assertIn('--scheme-files', msg)
+        self.assertIn('identical', msg)
+
     def test_build_from_scheme_files(self):
         """Integration: build SchemeStore from the multipart scheme sample file."""
         from metadata.metadata_table import parse_metadata_file

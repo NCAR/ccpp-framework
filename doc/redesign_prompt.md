@@ -1256,7 +1256,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 
 ### Test status
 
-- **Unit tests**: 1220 passing (`python -m pytest unit-tests/`).
+- **Unit tests**: 1229 passing (`python -m pytest unit-tests/`).
 - **End-to-end tests**: `advection`, `unit_conv`, `nested_suite`,
   `variable_transform`, `instances`, `ddt` covered.  SCM running
   against ccpp-physics is the active driver right now — most of the
