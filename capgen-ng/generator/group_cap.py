@@ -799,7 +799,12 @@ def _generate_phase_subroutine(
 
     Returns a list of Fortran source lines (no trailing newlines).
     """
-    sub_name = 'ccpp_{}_{}_{}'.format(suite_name, group_name, phase)
+    # Short Fortran symbol; module name already namespaces ``<group>_<phase>``
+    # as ``ccpp_<suite>_<group>_cap_mp_<group>_<phase>`` at link time, keeping
+    # the mangled global name under Intel's ~90-char threshold.  The long
+    # form ``<suite>_<group>_<phase>`` is kept in ``sub_label`` below for
+    # trace strings and error messages (string literals have no length cap).
+    sub_name = '{}_{}'.format(group_name, phase)
     lines: List[str] = []
 
     # ---- subroutine declaration ------------------------------------------
@@ -879,13 +884,15 @@ def _generate_phase_subroutine(
     inst_idx = _instance_idx(host_dict)
     errflg_local = _ctrl_local(host_dict, 'ccpp_error_code')
     errmsg_local = _ctrl_local(host_dict, 'ccpp_error_message')
+    # Long form used as the trace-message label and in runtime error
+    # strings so grep against logs still finds the suite + group context.
     sub_label = '{}_{}_{}'.format(suite_name, group_name, phase)
 
     # ---- trace block (always emitted; gated by the module ``trace``
     # parameter so the I/O is dead-code-eliminated when trace=.false.).
     # Placed before errmsg/errflg init so the write references no
     # intent(out) dummy and fires even when a state guard then bails.
-    trace_lines = emit_trace_block(sub_name, ctrl_entries, call_indent)
+    trace_lines = emit_trace_block(sub_label, ctrl_entries, call_indent)
     if trace_lines:
         lines.extend(trace_lines)
         lines.append('')
@@ -998,7 +1005,9 @@ def _generate_state_alloc(suite_name: str, group_name: str) -> List[str]:
     avoid clobbering peer-instance state slots.  Matches the
     ``<suite>_suite_state_alloc`` pattern.
     """
-    sub_name = 'ccpp_{}_{}_{}'.format(suite_name, group_name, 'state_alloc')
+    # Short Fortran symbol; the module ``ccpp_<suite>_<group>_cap``
+    # already namespaces this routine at link time.
+    sub_name = '{}_state_alloc'.format(group_name)
     i1 = _INDENT
     i2 = _INDENT * 2
     lines = [
@@ -1021,8 +1030,13 @@ def _generate_state_alloc(suite_name: str, group_name: str) -> List[str]:
 
 
 def _generate_state_dealloc(suite_name: str, group_name: str) -> List[str]:
-    """Generate the ``ccpp_<suite>_<group>_state_dealloc`` subroutine."""
-    sub_name = 'ccpp_{}_{}_{}'.format(suite_name, group_name, 'state_dealloc')
+    """Generate the ``<group>_state_dealloc`` subroutine (Fortran symbol).
+
+    The module name ``ccpp_<suite>_<group>_cap`` already namespaces this
+    routine, so the short Fortran name keeps the mangled global symbol
+    under Intel's ~90-char limit.
+    """
+    sub_name = '{}_state_dealloc'.format(group_name)
     i1 = _INDENT
     i2 = _INDENT * 2
     return [
@@ -1062,8 +1076,11 @@ def _generate_group_cap(
     list of str (without trailing newlines)
     """
     mod_name = 'ccpp_{}_{}_{}'.format(suite_name, group_name, 'cap')
-    alloc_sub   = 'ccpp_{}_{}_{}'.format(suite_name, group_name, 'state_alloc')
-    dealloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, group_name, 'state_dealloc')
+    # Short Fortran symbols for the state-management subroutines; the
+    # module name carries ``ccpp_<suite>_<group>_`` and keeps the mangled
+    # global symbol (``<mod>_mp_<sub>``) under Intel's ~90-char limit.
+    alloc_sub   = '{}_state_alloc'.format(group_name)
+    dealloc_sub = '{}_state_dealloc'.format(group_name)
     lines: List[str] = []
 
     # ---- module header --------------------------------------------------
@@ -1116,7 +1133,7 @@ def _generate_group_cap(
     # transitioning through every phase, even when a group has no scheme
     # routine for a particular phase.
     for phase in _GROUP_PHASE_ORDER:
-        sub_name = 'ccpp_{}_{}_{}'.format(suite_name, group_name, phase)
+        sub_name = '{}_{}'.format(group_name, phase)
         lines.append('{}public :: {}'.format(_INDENT, sub_name))
 
     # Public state management subroutines.

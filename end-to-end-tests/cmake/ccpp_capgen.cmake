@@ -63,7 +63,7 @@ endfunction()
 # SCHEMEFILES    - CMake list of scheme metadata files
 # SUITES         - CMake list of suite xml files
 function(ccpp_capgen)
-  set(optionalArgs CAPGEN_EXPECT_THROW_ERROR TRACE)
+  set(optionalArgs TRACE)
   set(oneValueArgs HOST_NAME OUTPUT_ROOT VERBOSITY KIND_SPECS)
   set(multi_value_keywords HOSTFILES SCHEMEFILES SUITES)
 

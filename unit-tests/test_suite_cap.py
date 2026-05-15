@@ -178,7 +178,7 @@ class TestInitFinalSubroutines(unittest.TestCase):
     def test_init_calls_group_state_alloc(self):
         # No host_dict passed → single-instance → literal 1 for ninstances.
         self.assertIn(
-            'call ccpp_test_simple_physics_state_alloc(1, errmsg, errflg)',
+            'call physics_state_alloc(1, errmsg, errflg)',
             self.text,
         )
 
@@ -191,7 +191,7 @@ class TestInitFinalSubroutines(unittest.TestCase):
         )
 
     def test_final_calls_state_dealloc(self):
-        self.assertIn('call ccpp_test_simple_physics_state_dealloc(errmsg, errflg)', self.text)
+        self.assertIn('call physics_state_dealloc(errmsg, errflg)', self.text)
 
 
 class TestPhysicsDispatch(unittest.TestCase):
@@ -206,24 +206,24 @@ class TestPhysicsDispatch(unittest.TestCase):
 
     def test_run_dispatches_to_group_cap(self):
         # No group_name control var → unconditional call, no select case.
-        self.assertIn('call ccpp_test_simple_physics_run()', self.text)
+        self.assertIn('call physics_run()', self.text)
 
     def test_init_dispatches_to_group_cap(self):
-        self.assertIn('call ccpp_test_simple_physics_init()', self.text)
+        self.assertIn('call physics_init()', self.text)
 
     def test_final_dispatches_to_group_cap(self):
-        self.assertIn('call ccpp_test_simple_physics_final()', self.text)
+        self.assertIn('call physics_final()', self.text)
 
     def test_timestep_init_dispatches_to_group_cap(self):
         # Group phase subroutines are always emitted so the state machine
         # transitions through every phase, even when no scheme has a routine
         # for that phase — so the dispatch must always call into the group cap.
         self.assertIn('subroutine test_simple_physics_timestep_init()', self.text)
-        self.assertIn('call ccpp_test_simple_physics_timestep_init()', self.text)
+        self.assertIn('call physics_timestep_init()', self.text)
 
     def test_timestep_final_dispatches_to_group_cap(self):
         self.assertIn('subroutine test_simple_physics_timestep_final()', self.text)
-        self.assertIn('call ccpp_test_simple_physics_timestep_final()', self.text)
+        self.assertIn('call physics_timestep_final()', self.text)
 
     def test_no_select_case_without_group_name_ctrl(self):
         # No group_name control var in test setup → no select case dispatch.

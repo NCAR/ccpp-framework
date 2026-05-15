@@ -495,7 +495,7 @@ def _init_lines(
         )
     if suite_res.suite_vars:
         data_mod    = 'ccpp_{}_data'.format(suite_name)
-        init_fields = 'ccpp_{}_suite_data_init_fields'.format(suite_name)
+        init_fields = 'suite_data_init_fields'
         extra_uses.setdefault(data_mod, set()).add(init_fields)
     if suite_res.suite_init_call is not None:
         _add_call_uses(extra_uses, suite_res.suite_init_call)
@@ -548,7 +548,7 @@ def _init_lines(
 
     # Group state allocators (idempotent).
     for resolved_group in suite_res.groups:
-        alloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_alloc')
+        alloc_sub = '{}_state_alloc'.format(resolved_group.group_name)
         lines.append('{}call {}({}, {}, {})'.format(
             i2, alloc_sub, ninstances_arg, errmsg_local, errflg_local
         ))
@@ -556,7 +556,7 @@ def _init_lines(
 
     # Allocate inner suite-data allocatable fields for this instance.
     if suite_res.suite_vars:
-        init_fields = 'ccpp_{}_suite_data_init_fields'.format(suite_name)
+        init_fields = 'suite_data_init_fields'
         lines.append('{}call {}({}, {}, {})'.format(
             i2, init_fields, inst_idx, errmsg_local, errflg_local
         ))
@@ -629,7 +629,7 @@ def _final_lines(
     final_uses: Dict[str, Set[str]] = {}
     if suite_res.suite_vars:
         data_mod     = 'ccpp_{}_data'.format(suite_name)
-        final_fields = 'ccpp_{}_suite_data_final_fields'.format(suite_name)
+        final_fields = 'suite_data_final_fields'
         final_uses.setdefault(data_mod, set()).add(final_fields)
 
     # If we registered constituents, the per-suite buffer (owned by
@@ -679,7 +679,7 @@ def _final_lines(
 
     # Deallocate inner suite-data fields if this instance was past REGISTERED.
     if suite_res.suite_vars:
-        final_fields = 'ccpp_{}_suite_data_final_fields'.format(suite_name)
+        final_fields = 'suite_data_final_fields'
         lines.append(
             '{}if (ccpp_suite_state({}) == CCPP_SUITE_FRAMEWORK_INITIALIZED) then'.format(
                 i2, inst_idx
@@ -707,7 +707,7 @@ def _final_lines(
         '{}if (all(ccpp_suite_state == CCPP_SUITE_UNREGISTERED)) then'.format(i2)
     )
     for resolved_group in suite_res.groups:
-        dealloc_sub = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_dealloc')
+        dealloc_sub = '{}_state_dealloc'.format(resolved_group.group_name)
         lines.append('{}  call {}({}, {})'.format(
             i2, dealloc_sub, errmsg_local, errflg_local
         ))
@@ -841,7 +841,7 @@ def _physics_dispatch_lines(
     def _emit_group_call(resolved_group, indent):
         # Group phase subroutines are always emitted (so the per-group state
         # machine transitions through every phase), so we always dispatch.
-        cap_sub = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, phase)
+        cap_sub = '{}_{}'.format(resolved_group.group_name, phase)
         if group_ctrl_local:
             lines.append('{}call {}( &'.format(indent, cap_sub))
             for idx, lname in enumerate(group_ctrl_local):
@@ -900,7 +900,7 @@ def _suite_state_alloc_lines(
     any suite-owned scalar dimensions.
     """
     sub_name    = '{}_suite_state_alloc'.format(suite_name)
-    data_alloc  = 'ccpp_{}_suite_data_alloc'.format(suite_name)
+    data_alloc  = 'suite_data_alloc'
     data_mod    = 'ccpp_{}_data'.format(suite_name)
     i1 = _INDENT
     i2 = _INDENT * 2
@@ -940,7 +940,7 @@ def _suite_state_dealloc_lines(
 ) -> List[str]:
     """Generate the ``<suite>_suite_state_dealloc`` subroutine."""
     sub_name      = '{}_suite_state_dealloc'.format(suite_name)
-    data_dealloc  = 'ccpp_{}_suite_data_dealloc'.format(suite_name)
+    data_dealloc  = 'suite_data_dealloc'
     data_mod      = 'ccpp_{}_data'.format(suite_name)
     i1 = _INDENT
     i2 = _INDENT * 2
@@ -1011,15 +1011,18 @@ def _generate_suite_cap(
     lines.append('')
 
     # USE statements: one per group cap (all phase + state subroutines).
+    # Group cap subroutine names are short (``<group>_<phase>`` etc.) so
+    # the mangled global ``<mod>_mp_<sub>`` stays under Intel's ~90-char
+    # limit even for long suite/group name combinations.
     use_lines: List[str] = []
     for resolved_group in suite_res.groups:
         group_cap_mod = 'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'cap')
         syms_list = [
-            'ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, p)
+            '{}_{}'.format(resolved_group.group_name, p)
             for p in _PHYSICS_PHASES
         ]
-        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_alloc'))
-        syms_list.append('ccpp_{}_{}_{}'.format(suite_name, resolved_group.group_name, 'state_dealloc'))
+        syms_list.append('{}_state_alloc'.format(resolved_group.group_name))
+        syms_list.append('{}_state_dealloc'.format(resolved_group.group_name))
         use_lines.append('{}use {}, only: {}'.format(
             _INDENT, group_cap_mod, ', '.join(syms_list)
         ))

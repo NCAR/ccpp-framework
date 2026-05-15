@@ -1956,7 +1956,7 @@ class TestGenerateGroupCap(unittest.TestCase):
     def test_public_subroutines(self):
         lines = self._resolve_and_generate()
         text = '\n'.join(lines)
-        self.assertIn('public :: ccpp_test_simple_physics_run', text)
+        self.assertIn('public :: physics_run', text)
 
     def test_contains_block(self):
         lines = self._resolve_and_generate()
@@ -1965,8 +1965,8 @@ class TestGenerateGroupCap(unittest.TestCase):
     def test_run_subroutine(self):
         lines = self._resolve_and_generate()
         text = '\n'.join(lines)
-        self.assertIn('subroutine ccpp_test_simple_physics_run', text)
-        self.assertIn('end subroutine ccpp_test_simple_physics_run', text)
+        self.assertIn('subroutine physics_run', text)
+        self.assertIn('end subroutine physics_run', text)
 
     def test_scheme_call_present(self):
         lines = self._resolve_and_generate()
@@ -1990,7 +1990,7 @@ class TestGenerateGroupCap(unittest.TestCase):
     def test_init_subroutine(self):
         lines = self._resolve_and_generate()
         text = '\n'.join(lines)
-        self.assertIn('subroutine ccpp_test_simple_physics_init', text)
+        self.assertIn('subroutine physics_init', text)
         self.assertIn('call temp_calc_adjust_init', text)
 
     def test_write_group_cap(self):
@@ -2342,7 +2342,7 @@ class TestSubcycleGroupCapOutput(unittest.TestCase):
 
     def test_init_not_in_do_loop(self):
         """Init phase is flat — no do loop."""
-        self.assertNotIn('do ccpp_loop_counter', self.text.split('subroutine ccpp_test_subcycle_physics_init')[1].split('end subroutine')[0])
+        self.assertNotIn('do ccpp_loop_counter', self.text.split('subroutine physics_init')[1].split('end subroutine')[0])
 
 
 ########################################################################
@@ -2369,10 +2369,10 @@ class TestStateMachineGroupCap(unittest.TestCase):
         self.assertIn('integer, private, allocatable :: ccpp_group_state(:)', self.text)
 
     def test_state_alloc_public(self):
-        self.assertIn('public :: ccpp_test_simple_physics_state_alloc', self.text)
+        self.assertIn('public :: physics_state_alloc', self.text)
 
     def test_state_dealloc_public(self):
-        self.assertIn('public :: ccpp_test_simple_physics_state_dealloc', self.text)
+        self.assertIn('public :: physics_state_dealloc', self.text)
 
     def test_init_idempotent_skip(self):
         # init returns silently when already INITIALIZED.
@@ -2384,7 +2384,7 @@ class TestStateMachineGroupCap(unittest.TestCase):
     def test_init_errors_on_invalid_state(self):
         # init must error if the state is anything other than UNINITIALIZED
         # or INITIALIZED (idempotent skip).
-        init_sub = self.text.split('subroutine ccpp_test_simple_physics_init')[1]
+        init_sub = self.text.split('subroutine physics_init')[1]
         init_sub = init_sub.split('end subroutine')[0]
         self.assertIn(
             'ccpp_group_state(inst_num) /= CCPP_GROUP_UNINITIALIZED', init_sub
@@ -2399,7 +2399,7 @@ class TestStateMachineGroupCap(unittest.TestCase):
 
     def test_run_guards_on_in_timestep(self):
         # run requires IN_TIMESTEP; otherwise sets errflg and returns.
-        run_sub = self.text.split('subroutine ccpp_test_simple_physics_run')[1]
+        run_sub = self.text.split('subroutine physics_run')[1]
         run_sub = run_sub.split('end subroutine')[0]
         self.assertIn(
             'ccpp_group_state(inst_num) /= CCPP_GROUP_IN_TIMESTEP', run_sub
@@ -2409,7 +2409,7 @@ class TestStateMachineGroupCap(unittest.TestCase):
     def test_state_alloc_subroutine(self):
         # state_alloc always takes number_of_instances as explicit arg.
         self.assertIn(
-            'subroutine ccpp_test_simple_physics_state_alloc(number_of_instances, errmsg, errflg)',
+            'subroutine physics_state_alloc(number_of_instances, errmsg, errflg)',
             self.text,
         )
         self.assertIn('allocate(ccpp_group_state(number_of_instances))', self.text)
@@ -2421,17 +2421,17 @@ class TestStateMachineGroupCap(unittest.TestCase):
         self.assertNotIn('ninstances', preamble)
 
     def test_state_dealloc_subroutine(self):
-        self.assertIn('subroutine ccpp_test_simple_physics_state_dealloc(errmsg, errflg)', self.text)
+        self.assertIn('subroutine physics_state_dealloc(errmsg, errflg)', self.text)
         self.assertIn('if (allocated(ccpp_group_state)) deallocate(ccpp_group_state)', self.text)
 
     def test_inst_num_in_init_args(self):
         # inst_num (the local name for instance_number) must be a dummy arg of init.
-        init_sub = self.text.split('subroutine ccpp_test_simple_physics_init')[1]
+        init_sub = self.text.split('subroutine physics_init')[1]
         init_sub = init_sub.split('end subroutine')[0]
         self.assertIn('inst_num', init_sub)
 
     def test_inst_num_in_final_args(self):
-        final_sub = self.text.split('subroutine ccpp_test_simple_physics_final')[1]
+        final_sub = self.text.split('subroutine physics_final')[1]
         final_sub = final_sub.split('end subroutine')[0]
         self.assertIn('inst_num', final_sub)
 
@@ -2456,7 +2456,7 @@ class TestSuiteCapStateCalls(unittest.TestCase):
     def test_init_calls_state_alloc_with_ninstances(self):
         # host_full.meta has ninstances → number_of_instances.
         self.assertIn(
-            'call ccpp_test_simple_physics_state_alloc(ninstances, errmsg, errflg)', self.text
+            'call physics_state_alloc(ninstances, errmsg, errflg)', self.text
         )
 
     def test_init_subroutine_has_ninstances_arg(self):
@@ -2465,14 +2465,14 @@ class TestSuiteCapStateCalls(unittest.TestCase):
 
     def test_final_calls_state_dealloc(self):
         self.assertIn(
-            'call ccpp_test_simple_physics_state_dealloc(errmsg, errflg)', self.text
+            'call physics_state_dealloc(errmsg, errflg)', self.text
         )
 
     def test_state_alloc_imported_in_suite_cap(self):
-        self.assertIn('ccpp_test_simple_physics_state_alloc', self.text.split('contains')[0])
+        self.assertIn('physics_state_alloc', self.text.split('contains')[0])
 
     def test_state_dealloc_imported_in_suite_cap(self):
-        self.assertIn('ccpp_test_simple_physics_state_dealloc', self.text.split('contains')[0])
+        self.assertIn('physics_state_dealloc', self.text.split('contains')[0])
 
 
 class TestSuiteCapStateCallsSingleInstance(unittest.TestCase):
@@ -2492,7 +2492,7 @@ class TestSuiteCapStateCallsSingleInstance(unittest.TestCase):
 
     def test_init_calls_state_alloc_with_literal_1(self):
         self.assertIn(
-            'call ccpp_test_simple_physics_state_alloc(1, errmsg, errflg)', self.text
+            'call physics_state_alloc(1, errmsg, errflg)', self.text
         )
 
     def test_init_subroutine_has_no_ninstances_arg(self):

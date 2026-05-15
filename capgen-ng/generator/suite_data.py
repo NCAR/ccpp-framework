@@ -171,10 +171,13 @@ def _generate_suite_data(
     """
     mod_name           = 'ccpp_{}_data'.format(suite_name)
     type_name          = 'ccpp_{}_data_t'.format(suite_name)
-    alloc_sub          = 'ccpp_{}_suite_data_alloc'.format(suite_name)
-    dealloc_sub        = 'ccpp_{}_suite_data_dealloc'.format(suite_name)
-    init_fields_sub    = 'ccpp_{}_suite_data_init_fields'.format(suite_name)
-    final_fields_sub   = 'ccpp_{}_suite_data_final_fields'.format(suite_name)
+    # Short Fortran symbols; the module ``ccpp_<suite>_data`` already
+    # namespaces these routines at link time, keeping the mangled global
+    # symbol ``<mod>_mp_<sub>`` well under Intel's ~90-char limit.
+    alloc_sub          = 'suite_data_alloc'
+    dealloc_sub        = 'suite_data_dealloc'
+    init_fields_sub    = 'suite_data_init_fields'
+    final_fields_sub   = 'suite_data_final_fields'
     i1 = _INDENT
     i2 = _INDENT * 2
     lines: List[str] = []

@@ -486,10 +486,10 @@ class TestGroupCapContent(unittest.TestCase):
         self.assertIn('ccpp_group_state', self.text)
 
     def test_state_alloc_subroutine(self):
-        self.assertIn('subroutine ccpp_test_simple_physics_state_alloc', self.text)
+        self.assertIn('subroutine physics_state_alloc', self.text)
 
     def test_state_dealloc_subroutine(self):
-        self.assertIn('subroutine ccpp_test_simple_physics_state_dealloc', self.text)
+        self.assertIn('subroutine physics_state_dealloc', self.text)
 
     def test_ends_with_newline(self):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_physics_cap.F90')) as fh:
@@ -725,7 +725,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'call ccpp_test_simple_physics_state_alloc(ninstances, errmsg, errflg)',
+            'call physics_state_alloc(ninstances, errmsg, errflg)',
             text,
         )
 
@@ -733,7 +733,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_physics_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'subroutine ccpp_test_simple_physics_state_alloc(number_of_instances, errmsg, errflg)',
+            'subroutine physics_state_alloc(number_of_instances, errmsg, errflg)',
             text,
         )
 
@@ -767,7 +767,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
     def test_group_init_has_inst_num_arg(self):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_physics_cap.F90')) as fh:
             text = fh.read()
-        init_sub = text.split('subroutine ccpp_test_simple_physics_init')[1]
+        init_sub = text.split('subroutine physics_init')[1]
         init_sub = init_sub.split('end subroutine')[0]
         self.assertIn('inst_num', init_sub)
 
@@ -853,14 +853,14 @@ class TestSingleInstanceIntegration(unittest.TestCase):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'call ccpp_test_simple_physics_state_alloc(1, errmsg, errflg)',
+            'call physics_state_alloc(1, errmsg, errflg)',
             text,
         )
 
     def test_group_cap_init_omits_inst_num(self):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_physics_cap.F90')) as fh:
             text = fh.read()
-        init_sub = text.split('subroutine ccpp_test_simple_physics_init')[1]
+        init_sub = text.split('subroutine physics_init')[1]
         init_sub = init_sub.split('end subroutine')[0]
         self.assertNotIn('inst_num', init_sub)
 
@@ -1596,14 +1596,14 @@ class TestNestedSubcycleEmission(unittest.TestCase):
     def test_two_end_do_statements(self):
         """Each nesting level closes with an ``end do``."""
         # Find the run-phase body to scope the check.
-        run = self.text.split('subroutine ccpp_nested_subcycle_suite_physics_run')[1]
+        run = self.text.split('subroutine physics_run')[1]
         run = run.split('end subroutine')[0]
         self.assertEqual(run.count('end do'), 2)
 
     def test_inner_loop_inside_outer(self):
         """The inner ``do`` line appears AFTER the outer ``do`` line
         and BEFORE the first ``end do``."""
-        run = self.text.split('subroutine ccpp_nested_subcycle_suite_physics_run')[1]
+        run = self.text.split('subroutine physics_run')[1]
         run = run.split('end subroutine')[0]
         outer = run.index('do ccpp_loop_counter = 1, 3')
         inner = run.index('do ccpp_loop_counter_2 = 1, 2')
@@ -1614,7 +1614,7 @@ class TestNestedSubcycleEmission(unittest.TestCase):
     def test_scheme_call_inside_inner_loop(self):
         """The scheme call is nested inside the inner loop — not in
         between the loops."""
-        run = self.text.split('subroutine ccpp_nested_subcycle_suite_physics_run')[1]
+        run = self.text.split('subroutine physics_run')[1]
         run = run.split('end subroutine')[0]
         inner = run.index('do ccpp_loop_counter_2 = 1, 2')
         call = run.index('call temp_calc_adjust_run')
@@ -1962,7 +1962,7 @@ class TestChunkedDataIntegration(unittest.TestCase):
             '_state_alloc', '_state_dealloc',
         ]
         positions = [
-            text.index('public :: ccpp_chunked_data_chunked_data_group{}'.format(s))
+            text.index('public :: chunked_data_group{}'.format(s))
             for s in canonical
         ]
         self.assertEqual(positions, sorted(positions))
@@ -2027,12 +2027,12 @@ class TestInterstitialSuiteData(unittest.TestCase):
         self.assertIn('ccpp_suite_data(:)', text)
 
     def test_suite_data_alloc_subroutine_exists(self):
-        self.assertIn('ccpp_interstitial_suite_data_alloc', self._data())
+        self.assertIn('suite_data_alloc', self._data())
 
     def test_suite_data_init_fields_uses_host_dims(self):
         # init_fields now owns the inner allocations; it needs the host dims.
         text = self._data()
-        init_fields = text.split('subroutine ccpp_interstitial_suite_data_init_fields')[1].split('end subroutine')[0]
+        init_fields = text.split('subroutine suite_data_init_fields')[1].split('end subroutine')[0]
         self.assertIn('use host_phys', init_fields)
         self.assertIn('ncols', init_fields)
         self.assertIn('nlev', init_fields)
@@ -2045,14 +2045,14 @@ class TestInterstitialSuiteData(unittest.TestCase):
         # suite-owned dims (e.g. set during _register) can be picked up after
         # the register phase has run.
         text = self._data()
-        init_fields = text.split('subroutine ccpp_interstitial_suite_data_init_fields')[1].split('end subroutine')[0]
+        init_fields = text.split('subroutine suite_data_init_fields')[1].split('end subroutine')[0]
         self.assertIn('allocate(ccpp_suite_data(i)%diag_out(ncols, nlev))', init_fields)
 
     def test_suite_data_dealloc_subroutine_exists(self):
-        self.assertIn('ccpp_interstitial_suite_data_dealloc', self._data())
+        self.assertIn('suite_data_dealloc', self._data())
 
     def test_suite_data_final_fields_subroutine_exists(self):
-        self.assertIn('ccpp_interstitial_suite_data_final_fields', self._data())
+        self.assertIn('suite_data_final_fields', self._data())
 
     def test_suite_cap_has_suite_state_alloc(self):
         self.assertIn('interstitial_suite_state_alloc', self._suite_cap())
@@ -2067,13 +2067,13 @@ class TestInterstitialSuiteData(unittest.TestCase):
     def test_suite_state_alloc_calls_suite_data_alloc(self):
         text = self._suite_cap()
         alloc_body = text.split('subroutine interstitial_suite_state_alloc')[1].split('end subroutine')[0]
-        self.assertIn('ccpp_interstitial_suite_data_alloc', alloc_body)
+        self.assertIn('suite_data_alloc', alloc_body)
 
     def test_suite_init_calls_init_fields(self):
         # <suite>_init triggers per-instance inner allocations.
         text = self._suite_cap()
         init_body = text.split('subroutine interstitial_init')[1].split('end subroutine')[0]
-        self.assertIn('ccpp_interstitial_suite_data_init_fields', init_body)
+        self.assertIn('suite_data_init_fields', init_body)
 
     def test_suite_state_alloc_allocates_state_array(self):
         self.assertIn('allocate(ccpp_suite_state(number_of_instances))', self._suite_cap())
@@ -2094,7 +2094,7 @@ class TestInterstitialSuiteData(unittest.TestCase):
     def test_group_run_has_inst_num_dummy_arg(self):
         """Gap 3: instance_number must be a dummy arg when suite vars are referenced."""
         text = self._group_cap()
-        run_sub = text.split('subroutine ccpp_interstitial_diag_group_run')[1]
+        run_sub = text.split('subroutine diag_group_run')[1]
         run_sub = run_sub.split('end subroutine')[0]
         self.assertIn('inst_num', run_sub)
         self.assertIn('integer, intent(in)', run_sub)
@@ -2105,7 +2105,7 @@ class TestInterstitialSuiteData(unittest.TestCase):
         physics_run = text.split('subroutine interstitial_physics_run')[1]
         physics_run = physics_run.split('end subroutine')[0]
         self.assertIn('inst_num', physics_run)
-        self.assertIn('call ccpp_interstitial_diag_group_run', physics_run)
+        self.assertIn('call diag_group_run', physics_run)
 
     def test_static_api_physics_run_has_inst_num(self):
         """Static API ccpp_physics_run must include inst_num when groups need it."""
@@ -2248,7 +2248,7 @@ class TestTimestepStateGuards(unittest.TestCase):
     def test_timestep_init_entry_guard(self):
         """timestep_init subroutine must have IN_TIMESTEP entry guard."""
         ts_init = self.text.split(
-            'subroutine ccpp_opt_arg_opt_arg_group_timestep_init'
+            'subroutine opt_arg_group_timestep_init'
         )[1].split('end subroutine')[0]
         self.assertIn('CCPP_GROUP_IN_TIMESTEP', ts_init)
         self.assertIn('return', ts_init)
@@ -2256,7 +2256,7 @@ class TestTimestepStateGuards(unittest.TestCase):
     def test_timestep_init_sets_in_timestep(self):
         """timestep_init must set state to IN_TIMESTEP after scheme calls."""
         ts_init = self.text.split(
-            'subroutine ccpp_opt_arg_opt_arg_group_timestep_init'
+            'subroutine opt_arg_group_timestep_init'
         )[1].split('end subroutine')[0]
         self.assertIn('ccpp_group_state', ts_init)
         self.assertIn('CCPP_GROUP_IN_TIMESTEP', ts_init)
@@ -2264,7 +2264,7 @@ class TestTimestepStateGuards(unittest.TestCase):
     def test_timestep_final_resets_to_initialized(self):
         """timestep_final must reset state to INITIALIZED."""
         ts_final = self.text.split(
-            'subroutine ccpp_opt_arg_opt_arg_group_timestep_final'
+            'subroutine opt_arg_group_timestep_final'
         )[1].split('end subroutine')[0]
         self.assertIn('CCPP_GROUP_INITIALIZED', ts_final)
         self.assertIn('ccpp_group_state', ts_final)
