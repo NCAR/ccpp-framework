@@ -600,6 +600,16 @@ Per-instance integer state arrays:
 Single-instance hosts get length-1 arrays indexed with literal `1`.
 See `doc/redesign_prompt.md` §7.
 
+**Idempotent entry points.**  `ccpp_physics_init`, `ccpp_physics_final`, and
+`ccpp_final` are all silently idempotent — repeat calls return cleanly with
+`errflg=0` rather than erroring.  `ccpp_physics_final` additionally silent-skips
+when issued *after* `ccpp_final` has torn the suite down (state array
+deallocated on the last instance, or `== UNREGISTERED` on any other instance).
+The other physics phases (`timestep_init`, `run`, `timestep_final`) still
+hard-error on a state mismatch.  `ccpp_init` does *not* silent-skip when the
+state array is unallocated — there, "not allocated" really does mean
+"you forgot `ccpp_register`" and continues to be a hard error.
+
 ---
 
 ## 6. Framework changes (constituents)

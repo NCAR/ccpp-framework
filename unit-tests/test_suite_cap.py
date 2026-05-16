@@ -320,12 +320,6 @@ class TestFinalSubroutineStateMachine(unittest.TestCase):
     def setUp(self):
         self.text = '\n'.join(_generate())
 
-    def test_state_check_register_message(self):
-        # The not-allocated guard now refers to ccpp_register, not ccpp_init.
-        self.assertIn(
-            'ccpp_register has not been called', self.text,
-        )
-
     def test_idempotent_unregistered_skip(self):
         self.assertIn('== CCPP_SUITE_UNREGISTERED', self.text)
 

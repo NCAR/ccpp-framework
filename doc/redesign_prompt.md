@@ -493,8 +493,9 @@ integer, parameter :: CCPP_SUITE_FRAMEWORK_INITIALIZED = 2
 |---|---|---|
 | `ccpp_register` | `== UNREGISTERED` | `REGISTERED` |
 | `ccpp_init` | `== REGISTERED` | `FRAMEWORK_INITIALIZED` |
-| `ccpp_physics_*` | `== FRAMEWORK_INITIALIZED` | (unchanged) |
-| `ccpp_final` | `== FRAMEWORK_INITIALIZED` | `REGISTERED` |
+| `ccpp_physics_*` (non-final) | `== FRAMEWORK_INITIALIZED` | (unchanged) |
+| `ccpp_physics_final` | (idempotent: silent skip if state array unallocated or `== UNREGISTERED`); otherwise `== FRAMEWORK_INITIALIZED` | (unchanged) |
+| `ccpp_final` | (idempotent: silent skip if state array unallocated or `== UNREGISTERED`); otherwise any `>= REGISTERED` | `UNREGISTERED` (state array deallocated on last-to-leave) |
 
 ### 7.2 Group-level state (in each group cap)
 
@@ -506,16 +507,31 @@ integer, parameter :: CCPP_GROUP_IN_TIMESTEP   = 2
 
 | Entry point | Required state | State after |
 |---|---|---|
-| `ccpp_physics_init` | `< INITIALIZED` (idempotent if `== INITIALIZED`) | `INITIALIZED` |
+| `ccpp_physics_init` | `< INITIALIZED` (idempotent silent skip if `== INITIALIZED`) | `INITIALIZED` |
 | `ccpp_physics_timestep_init` | `== INITIALIZED` | `IN_TIMESTEP` |
 | `ccpp_physics_run` | `== IN_TIMESTEP` | `IN_TIMESTEP` |
 | `ccpp_physics_timestep_final` | `== IN_TIMESTEP` | `INITIALIZED` |
-| `ccpp_physics_final` | `>= INITIALIZED` | `UNINITIALIZED` |
+| `ccpp_physics_final` | `>= INITIALIZED` (idempotent silent skip if `== UNINITIALIZED`) | `UNINITIALIZED` |
 
 The idempotency rule for `ccpp_physics_init`: if the group is already in state
 `INITIALIZED`, return immediately without calling any scheme `_init` routines. This
 allows the host to call `ccpp_physics_init` multiple times safely. Any further call
 after the first must result in no change (idempotency is a scheme contract).
+
+The same rule applies to `ccpp_physics_final`: a repeat call (or a call issued
+after `ccpp_final` has torn the suite down) must return cleanly with `errflg=0`
+rather than erroring. This is enforced at both levels — the suite-cap dispatcher
+silent-returns when `ccpp_suite_state` is unallocated or `== UNREGISTERED`, and
+the group cap silent-returns when `ccpp_group_state(inst) == UNINITIALIZED`.
+
+`ccpp_final` itself is also silently idempotent for the same reason: the
+first call's last-to-leave block deallocates `ccpp_suite_state`, so on a
+single-instance host the unallocated state *is* the normal post-`ccpp_final`
+condition. Both checks (`.not. allocated(ccpp_suite_state)` and
+`ccpp_suite_state(inst) == CCPP_SUITE_UNREGISTERED`) silent-return rather
+than erroring. By contrast, `ccpp_init`'s "not allocated" branch keeps
+erroring with "ccpp_register has not been called" — there, the unallocated
+state really does indicate a missed `ccpp_register` call.
 
 #### 7.2.1 State array allocation and instance indexing
 

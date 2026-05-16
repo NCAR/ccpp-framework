@@ -1221,6 +1221,35 @@ and `horizontal_loop_end` are in scope for all phases — a `_init` scheme that 
 `horizontal_dimension` correctly receives `(lb:ub)` slicing just as a `_run` scheme
 would, with the host responsible for passing the right values.
 
+**Both `ccpp_physics_final` and `ccpp_final` are silently idempotent.**  
+Symmetric to `ccpp_physics_init`'s silent skip when already `INITIALIZED`,
+both final-path entry points return cleanly with `errflg=0` on every repeat
+invocation. Three cap levels participate:
+
+- The suite-cap `<suite>_physics_final` dispatcher silent-returns when
+  `ccpp_suite_state` is unallocated (last-instance post-`ccpp_final` deallocation)
+  or `ccpp_suite_state(inst_num) == CCPP_SUITE_UNREGISTERED` (any other
+  instance post-`ccpp_final`). The `state /= FRAMEWORK_INITIALIZED` error is
+  retained so calling `physics_final` after only `ccpp_register` (no `ccpp_init`)
+  still errors.
+- The group-cap `<group>_final` entry guard silent-returns when
+  `ccpp_group_state(inst_num) == CCPP_GROUP_UNINITIALIZED`. (Since `UNINITIALIZED`
+  is the only value `< INITIALIZED`, the previously generated error block became
+  unreachable and is no longer emitted.)
+- The suite-cap `<suite>_final` body itself silent-returns on the same two
+  conditions (unallocated state array, or `== UNREGISTERED` for this instance).
+  After the first call's last-to-leave block deallocates `ccpp_suite_state`,
+  the unallocated state *is* the normal post-final condition — so on a
+  single-instance host the second call would otherwise trip a misleading
+  "`ccpp_register` has not been called" error.
+
+`<suite>_init` is intentionally *not* made idempotent on unallocated — there,
+the unallocated state really does mean "you forgot `ccpp_register`", and
+emitting an error is the correct behavior.
+
+The other physics phases (`init`, `timestep_init`, `run`, `timestep_final`) are
+unchanged — they still hard-error with `errflg=1` on any state mismatch.
+
 ---
 
 ## 9. Real-world example: CCPP Single Column Model (SCM)
