@@ -695,14 +695,13 @@ def _final_lines(
         "{}{} = ''".format(i2, errmsg_local),
         '{}{} = 0'.format(i2, errflg_local),
         '',
-        '{}if (.not. allocated(ccpp_suite_state)) then'.format(i2),
-        "{}  {} = '{}_final: ccpp_register has not been called'".format(
-            i2, errmsg_local, suite_name
-        ),
-        '{}  {} = 1'.format(i2, errflg_local),
-        '{}  return'.format(i2),
-        '{}end if'.format(i2),
-        '',
+        # ``<suite>_final`` is silently idempotent: a repeat call must return
+        # cleanly with ``errflg=0``.  After the first call's last-to-leave
+        # teardown the state array is deallocated, so the unallocated path is
+        # the normal post-final state — silent-return rather than error.  The
+        # per-instance ``UNREGISTERED`` skip covers any other instance that
+        # was already finalized before the last-to-leave dealloc fired.
+        '{}if (.not. allocated(ccpp_suite_state)) return'.format(i2),
         '{}if (ccpp_suite_state({}) == CCPP_SUITE_UNREGISTERED) return'.format(
             i2, inst_idx
         ),
