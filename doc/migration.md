@@ -115,13 +115,18 @@ matches.
 
 ### 1.7 Optional `instance_number` / `number_of_instances` pair
 
-These two control variables are now **paired optional**:
+These two control variables are now **paired optional** and both live
+in the host's `type=control` table (symmetric with the
+`thread_number` / `number_of_threads` pair):
 
-- Declare **both** (`instance_number` in `type=control`,
-  `number_of_instances` in `type=host`) → multi-instance API.
+- Declare **both** in `type=control` → multi-instance API.  Both flow
+  as control dummies through every lifecycle and physics-phase
+  signature.
 - Declare **neither** → single-instance API.  Public entry points drop
-  `instance_number`; internal per-instance arrays size to length 1.
+  both args; internal per-instance arrays size to length 1.
 - Declare exactly one → hard error from the validator.
+- Declare `number_of_instances` in `type=host` → hard error
+  (must be `type=control`).
 
 Hosts that don't need multi-instance bookkeeping can drop both declarations.
 
@@ -332,14 +337,14 @@ Optional (paired — see §1.7):
 | Standard name           | Fortran type | Table type | Purpose                        |
 |-------------------------|--------------|------------|--------------------------------|
 | `instance_number`       | integer      | control    | Current instance index         |
-| `number_of_instances`   | integer      | host       | Total instance count           |
+| `number_of_instances`   | integer      | control    | Total instance count           |
 
 ### 3.2 Required entry-point call sequence
 
 ```
-ccpp_register(suite_name, errflg, errmsg, [instance_number])
+ccpp_register(suite_name, errflg, errmsg, [instance_number, number_of_instances])
   └── per scheme that declares a register phase
-ccpp_init(suite_name, errflg, errmsg, [instance_number])
+ccpp_init(suite_name, errflg, errmsg, [instance_number, number_of_instances])
   └── per scheme that declares an init phase
 ccpp_physics_init(...)
   └── physics phase routines per group:
@@ -348,11 +353,14 @@ ccpp_physics_init(...)
       ccpp_physics_run                    ← run-loop phase
       ccpp_physics_timestep_final
       ccpp_physics_final
-ccpp_final(suite_name, errflg, errmsg, [instance_number])
+ccpp_final(suite_name, errflg, errmsg, [instance_number, number_of_instances])
 ```
 
-`instance_number` appears in every signature only when the host
-declares the `instance_number` / `number_of_instances` pair (§1.7).
+The `(instance_number, number_of_instances)` pair appears in every
+signature only when the host declares it (§1.7).  Both flow uniformly
+through lifecycle and physics-phase calls; the framework consumes
+`number_of_instances` only at register/init time but carries it
+elsewhere for API symmetry with `(thread_number, number_of_threads)`.
 
 ### 3.3 Host module convention
 
@@ -513,7 +521,12 @@ file lives in the target's parent directory (always under
 Always generated:
 
 - `ccpp_kinds.F90` — kind parameters.  Listed under `<utilities>`.
-- `ccpp_static_api.F90` — public host-facing entry points + introspection routines.
+- `<host>_ccpp_cap.F90` — public host-facing entry points + introspection routines.
+  Filename and emitted `module <host>_ccpp_cap` name are both driven by the
+  required `--host-name <host>` CLI argument so multiple host integrations
+  can co-exist in one executable.  The public sub names inside
+  (`ccpp_register`, `ccpp_init`, `ccpp_physics_*`, `ccpp_final`) are
+  unchanged regardless of `<host>`.
 - `ccpp_<suite>_cap.F90` — per-suite dispatcher.
 - `ccpp_<suite>_<group>_cap.F90` — per-group phase implementations.
 - `ccpp_<suite>_data.F90` — suite-owned interstitial DDT + module-level array.

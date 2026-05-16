@@ -726,7 +726,7 @@ def _state_entry_guard(
     ``timestep_init``     ``== INITIALIZED``
     ``run``               ``== IN_TIMESTEP``
     ``timestep_final``    ``== IN_TIMESTEP``
-    ``final``             ``>= INITIALIZED``
+    ``final``             ``>= INITIALIZED`` (idempotent skip if ``UNINITIALIZED``)
     ===================== ============================================
 
     Invalid state sets ``errflg = 1``, populates ``errmsg``, and returns.
@@ -769,7 +769,13 @@ def _state_entry_guard(
     if phase == 'timestep_final':
         return _err_block('{} /= CCPP_GROUP_IN_TIMESTEP'.format(state_var))
     if phase == 'final':
-        return _err_block('{} < CCPP_GROUP_INITIALIZED'.format(state_var))
+        # Idempotent skip when already UNINITIALIZED; INITIALIZED and
+        # IN_TIMESTEP are both valid entry states (UNINITIALIZED is the only
+        # state value < INITIALIZED, so no error block is reachable here).
+        return [
+            '{}if ({} == CCPP_GROUP_UNINITIALIZED) return'.format(indent, state_var),
+            '',
+        ]
     return []
 
 

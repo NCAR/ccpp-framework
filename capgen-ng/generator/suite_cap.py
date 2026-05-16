@@ -850,14 +850,31 @@ def _physics_dispatch_lines(
 
         inst_idx = _instance_idx(host_dict)
         sub_label = '{}_physics_{}'.format(suite_name, phase)
+        if phase == 'final':
+            # ``physics_final`` is silently idempotent: a repeat call (or a
+            # call issued after ``ccpp_final``) must return cleanly with
+            # ``errflg=0`` rather than erroring.  The group-level guard
+            # handles the per-group skip when ``ccpp_final`` has not been
+            # called; the two checks below cover the post-``ccpp_final``
+            # cases (state array deallocated on the last instance, or set
+            # to ``UNREGISTERED`` on any other instance).
+            lines += [
+                '{}if (.not. allocated(ccpp_suite_state)) return'.format(i2),
+                '{}if (ccpp_suite_state({}) == CCPP_SUITE_UNREGISTERED) return'.format(
+                    i2, inst_idx
+                ),
+            ]
+        else:
+            lines += [
+                '{}if (.not. allocated(ccpp_suite_state)) then'.format(i2),
+                "{}  {} = '{}: ccpp_register has not been called'".format(
+                    i2, errmsg_local, sub_label
+                ),
+                '{}  {} = 1'.format(i2, errflg_local),
+                '{}  return'.format(i2),
+                '{}end if'.format(i2),
+            ]
         lines += [
-            '{}if (.not. allocated(ccpp_suite_state)) then'.format(i2),
-            "{}  {} = '{}: ccpp_register has not been called'".format(
-                i2, errmsg_local, sub_label
-            ),
-            '{}  {} = 1'.format(i2, errflg_local),
-            '{}  return'.format(i2),
-            '{}end if'.format(i2),
             '{}if (ccpp_suite_state({}) /= CCPP_SUITE_FRAMEWORK_INITIALIZED) then'.format(
                 i2, inst_idx
             ),
