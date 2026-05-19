@@ -63,13 +63,13 @@ can extend it safely (if at all - primary developer gone).
 **`capgen-ng`** (new, 2026-05).  Procedural Python (a few thousand
 lines; flat data classes); reads the same metadata format; passes
 arguments like prebuild; supports the features capgen pioneered
-(constituents, suite-owned variables, introspection); adds
+(constituents, suite-owned variables, introspection); supports
 multi-instance, an integer state machine, six explicit scheme
 phases, vertical-flip / unit / kind transforms, registered
 scalar-index dimensions for threading and ensembles, write-if-changed
 build integration, and a separate Fortran-vs-metadata validator
 tool.  Designed so the same generator works for prebuild-style hosts
-(UFS / NEPTUNE / SCM) and capgen-style hosts (CAM-SIMA, future).
+(UFS / NEPTUNE / SCM) and capgen-style hosts (CAM-SIMA).
 
 ---
 
@@ -97,7 +97,7 @@ Three pressures converged in 2025/26:
    reading several modules together.  Realistically, only one or two
    people on the framework team can change capgen without breaking
    something downstream.  One of them now lives overseas and rejects
-   simplification attempts from the others. This is a
+   simplification attempts from the others. This is an inacceptable
    **bus-factor risk** that the redesign retires.
 
 ---
@@ -117,14 +117,15 @@ CAM-SIMA's group caps pass **every individual variable as a separate
 argument** to the scheme dispatch routine.  At CAM-SIMA's roughly
 two-hundred-variable scale this works.  At UFS scale (~1200
 variables per group), the generated Fortran exceeds compiler limits
-under strict error-checking flags (`-check all`, `-fcheck=all`),
-fails to compile, and even when it does compile produces
-unmaintainably large source files.  **This is the technical reason
-capgen cannot drive UFS today**, independent of any other concern.
+prevents the use of strict error-checking flags (`-check all`,
+`-fcheck=all`) required for operational implementation, and even
+when it does compile produces unmaintainably large source files.
+**This is the technical reason capgen cannot drive UFS today**,
+independent of any other concern.
 
 `capgen-ng` reverts to prebuild's DDT-argument convention.  Host
 authors pass their physics DDTs by reference (one or a few arguments
-per scheme call); component access happens **inside the scheme**.
+per scheme call); component access happens **at the scheme call level**.
 This works at every scale we've measured.
 
 ### 3.2 Single-instance constituents are baked into the generated code
@@ -179,18 +180,20 @@ agenda for one of the next framework-team meetings.
 
 ### 3.5 Synthetic variable-resolution scopes are hard to extend
 
-capgen introduces a synthetic dictionary (`ConstituentVarDict`)
-between the suite and host scopes during variable matching.  The
-mechanism works for capgen's use cases but is a code path most
-contributors don't read.  Extending the resolver to handle
-multi-instance dimensions, scalar-index substitution, or
-constituent host-wins semantics required undoing parts of the
-synthetic scope.
+capgen introduces a five-layer deep synthetic dictionary
+(`ConstituentVarDict`) between the suite and host scopes during
+variable matching.  The mechanism works for capgen's use cases
+but is a code path most contributors don't read.  Extending the
+resolver to handle multi-instance dimensions, scalar-index
+substitution, or constituent host-wins semantics required
+undoing parts of the synthetic scope.
 
 `capgen-ng`'s resolver is flat: each scheme arg is classified into
 exactly one source (control / host / suite / constituent), recorded
 on a small data class (`ResolvedArg`), and used directly by the
-emitter.  No synthetic dictionary.
+emitter.  No synthetic dictionary. **This design inherits from
+`prebuild` and is the primary reason `capgen-ng` is comparable
+in performance to `prebuild`.
 
 ### 3.6 Code volume and team coverage
 
@@ -205,7 +208,9 @@ context".  capgen-ng comes with over a thousand docstring tests
 and unit tests, as well as a comprehensive end-to-end test suite
 that covers all of prebuild's and capgen's existing end to end
 tests.  capgen-ng adds additional end-to-end tests for new
-features such as the multi-instance constituents test.
+features such as the multi-instance constituents test. Including
+these tests and the rich inline comments makes capgen-ng comparable
+in size to capgen.
 
 ---
 
@@ -239,7 +244,8 @@ Features that exist only in capgen-ng (some exist in prebuild):
 | **Registered scalar-index dimensions** | When metadata says a variable is dimensioned by `number_of_threads` or `number_of_instances`, capgen-ng injects the right per-call subscript automatically; the host's OpenMP-thread-private DDT layout works unchanged |
 | **Subcycle loop-counter automation** | Schemes inside a `<subcycle loop="N">` element can access `ccpp_loop_counter` / `ccpp_loop_extent` directly; the generator emits the Fortran `do` loop and binds the locals |
 | **`--legacy-mode` migration shim** | One CLI flag enables silent rewrite of two known-good deprecated standard names (`horizontal_loop_extent` → `horizontal_dimension`, `number_of_openmp_threads` → `number_of_threads`) with a loud warning — buys time for host metadata to migrate |
-| **`--no-host-introspection` flag** | The five runtime introspection routines (`ccpp_physics_suite_list`, etc.) emit large `select case` blocks at SCM scale; this flag stubs the bodies, dropping the generated static API from ~33,000 lines to ~800 for the SCM build (the introspection routines were making `-O3` compilation effectively hang) |
+| **`--no-host-introspection` flag** | The five runtime introspection routines (`ccpp_physics_suite_list`, etc.) emit large `select case` blocks at SCM scale; this flag stubs the bodies, dropping the generated static API from ~33,000 lines to ~800 for the SCM build (the introspection routines were making `-O1` compilation effectively hang) |
+| **Consistent handling of external types** (MPI f08 communicator, ESMF clock) | Tabled in capgen because of the complexity of the solution |
 
 ---
 
@@ -260,10 +266,14 @@ Features that exist only in capgen-ng (some exist in prebuild):
   per-instance.  No coordination with CAM-SIMA / UFS / NEPTUNE
   required (host-facing API unchanged).
 - **NEPTUNE**: cleanup and acceptance testing in progress this week.
+  Regular/lower atmosphere physics builds and runs, and produces
+  results within the tolerance (i.e. similar to compiler changes).
+  High altitude atmosphere testing is next.
 - **UFS Weather Model**: not yet attempted; SCM is the proving
-  ground first.
+  ground first.  Expecting updates due to the "fast physics"
+  called directly from the FV3 dynamical core as separate group.
 - **CAM-SIMA**: not yet re-connected; the constituent overhaul
-  decision (see §7) and the availability of CAM-SIMA developer
+  decision (see §7) and the availability of CAM-SIMA developers
   are the gating items.
 
 ---
@@ -284,8 +294,8 @@ the table:
 - **Proposal B** (recommended for the next 4–6 weeks): relax the
   identity-equality check, formally classify properties as
   "scheme-intrinsic" (immutable) vs "host-configuration" (mutable
-  after registration).  Physics schemes become genuinely portable
-  across hosts.
+  after registration).  Physics schemes using constituents become
+  genuinely portable across hosts.
 - **Proposal C** (tabled): drop scheme-side constituent
   registration entirely; only the host registers.  Cleaner but
   requires coordinated PRs across the framework, both generators,
@@ -331,7 +341,7 @@ Three points worth raising explicitly:
    into capgen-ng.
 3. **The team owning capgen-ng can be larger than the team owning
    capgen.**  This is the most important practical point for
-   long-term programme health.  A framework that two organisations
+   long-term programme health.  A framework that three organisations
    can maintain is more resilient than a framework that one
    organisation (or one individual in that organisation) can maintain.
 
