@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-
-"""Shared logger utilities for parse processes.
-
-Copied from scripts/parse_tools/parse_log.py.
-"""
+"""Shared logger utilities for parse processes."""
 
 import logging
 
@@ -29,40 +24,19 @@ def init_log(name, level=None):
 
 
 def set_log_level(logger, level):
-    """Set *logger*'s level to *level*."""
     logger.setLevel(level)
 
 
-def remove_handlers(logger):
-    """Remove all handlers from *logger*."""
+def _remove_handlers(logger):
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
 
 
 def set_log_to_stdout(logger):
-    """Direct *logger* output to standard output."""
-    remove_handlers(logger)
+    _remove_handlers(logger)
     logger.addHandler(logging.StreamHandler())
 
 
 def set_log_to_null(logger):
-    """Suppress all *logger* output."""
-    remove_handlers(logger)
+    _remove_handlers(logger)
     logger.addHandler(logging.NullHandler())
-
-
-def set_log_to_file(logger, filename):
-    """Direct *logger* output to *filename*."""
-    remove_handlers(logger)
-    logger.addHandler(logging.FileHandler(filename))
-
-
-def flush_log(logger):
-    """Flush all pending output from *logger*."""
-    for handler in list(logger.handlers):
-        handler.flush()
-
-
-def verbose(logger):
-    """Return True if *logger* is at DEBUG level."""
-    return logger.isEnabledFor(logging.DEBUG)

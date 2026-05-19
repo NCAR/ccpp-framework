@@ -36,16 +36,13 @@ Notes specific to capgen-ng
   scheme entries.
 """
 
-# Python library imports
 import argparse
 import sys
 import xml.etree.ElementTree as ET
 from typing import List, Optional
 
-# Module-level indent string used by --show; overridden via --indent.
 _INDENT_STR = "  "
 
-## datatable_report must have an action for each report type
 _VALID_REPORTS = [
     {"report": "host_files", "type": bool,
      "help": "Return a list of host CAP Fortran files created by capgen"},
