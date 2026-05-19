@@ -4,7 +4,7 @@
 `doc/redesign_analysis.md` (the deep-dive technical comparison of
 prebuild and capgen).  This document targets project leadership and
 program managers; it summarises the case for `capgen-ng` in terms of
-product risk, schedule, and cross-organisation impact rather than
+product risk, schedule, and cross-organization impact rather than
 implementation detail.*
 
 *Last revised: 2026-05-18.*
@@ -97,7 +97,7 @@ Three pressures converged in 2025/26:
    reading several modules together.  Realistically, only one or two
    people on the framework team can change capgen without breaking
    something downstream.  One of them now lives overseas and rejects
-   simplification attempts from the others. This is an inacceptable
+   simplification attempts from the others. This is an unacceptable
    **bus-factor risk** that the redesign retires.
 
 ---
@@ -107,7 +107,7 @@ Three pressures converged in 2025/26:
 This section is for the project lead who came from the capgen side:
 none of these are critiques of capgen as a *product*.  They are
 specific architectural choices that worked for CAM-SIMA's
-single-instance design and don't generalise.  Each is sourced from
+single-instance design and don't generalize.  Each is sourced from
 the technical analysis in `doc/redesign_analysis.md` and validated
 by the SCM / multi-instance test work this month.
 
@@ -341,9 +341,9 @@ Three points worth raising explicitly:
    into capgen-ng.
 3. **The team owning capgen-ng can be larger than the team owning
    capgen.**  This is the most important practical point for
-   long-term programme health.  A framework that three organisations
+   long-term program health.  A framework that three organizations
    can maintain is more resilient than a framework that one
-   organisation (or one individual in that organisation) can maintain.
+   organization (or one individual in that organization) can maintain.
 
 ---
 

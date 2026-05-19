@@ -99,7 +99,7 @@ names resolved at codegen time and routinely exceed 63 chars).
 ### 1.5 Unit strings: bare vs explicit positive exponent
 
 `m2` and `m+2` (or any `<letter><positive_integer>` vs `<letter>+<integer>`
-combo) are normalised internally and treated as equivalent.  Pre-existing
+combo) are normalized internally and treated as equivalent.  Pre-existing
 unit-conversion entries don't need to be duplicated; either spelling
 matches.
 
@@ -508,7 +508,7 @@ is staged to a sibling temp file under the output root and atomically
 replaces the target only when the bytes actually differ.  Reruns with
 identical inputs therefore leave on-disk mtimes untouched, so CMake /
 Make / Ninja do not trigger a downstream rebuild cascade.  Matches the
-behaviour of legacy `ccpp-prebuild` / `ccpp-capgen`.  The staging temp
+behavior of legacy `ccpp-prebuild` / `ccpp-capgen`.  The staging temp
 file lives in the target's parent directory (always under
 `--output-root`), so no `/tmp` access is required.
 
@@ -571,7 +571,7 @@ host_var(lb:ub, nlev:1:-1) = 1.0E+3_kind_phys*temp_l  ! ... reverse ...
 ```
 
 Identity unit conversions (registered for dimensionally-equivalent
-spellings like `J kg-1 ↔ m2 s-2`, formula `'{var}'`) are not labelled
+spellings like `J kg-1 ↔ m2 s-2`, formula `'{var}'`) are not labeled
 "unit conversion" in the comment.
 
 ### 5.4 Subcycle emission
@@ -702,7 +702,7 @@ complete).  See `project_validator_host_check_deferred.md` (memory).
 | Item                                       | Status                                        |
 |--------------------------------------------|-----------------------------------------------|
 | `ccpp_loop_counter` standard name inside nested subcycles | Maps to OUTERMOST loop var.  None of cam-sima uses this; revisit if a scheme needs the innermost value. |
-| Validator host-metadata check              | Deferred; revisit after e2e tests stabilise.  |
+| Validator host-metadata check              | Deferred; revisit after e2e tests stabilize.  |
 | Constituents overhaul (Class A/B + setters) | Discussion doc at `doc/constituents_overhaul.md`. |
 | Framework setters: `set_advected`, `set_diagnostic_name`, `set_default_value` | Deferred; depends on constituents-overhaul decision. |
 | Codegen-time scheme-registration cross-check | Deferred; would require new `registers_std_names` metadata attr. |
@@ -713,7 +713,7 @@ complete).  See `project_validator_host_check_deferred.md` (memory).
 | `fortran_to_metadata` developer utility    | Deferred; bootstraps a `.meta` skeleton from an existing `.F90` subroutine. |
 | `--legacy-mode` shim removal               | Transient; remove `metadata/legacy_compat.py`, `unit-tests/test_legacy_compat.py`, and every `# legacy-compat:` touchpoint when scheme metadata has migrated. |
 | `ccpp_datafile.py` query CLI rework        | Deferred (2026-05-13); collapse `--host-files` / `--suite-files` / `--utility-files` into `--capgen-files`, then repurpose `--host-files` as a filtered list of **input** host metadata files (parallel to `--scheme-files`).  Most hosts pack all host data into a handful of shared files, so the filtering pay-off is small — the draw is API symmetry. |
-| Original capgen auto-clone path             | Intentionally dropped in favour of explicit registration; kept in memory as "Option B" fallback. |
+| Original capgen auto-clone path             | Intentionally dropped in favor of explicit registration; kept in memory as "Option B" fallback. |
 
 ---
 

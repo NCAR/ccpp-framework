@@ -508,7 +508,7 @@ attributes:
   `datatable.xml`; the `diagnostic_name` slot stays empty (no
   auto-default to `local_name`).
 
-The behavioural difference is purely *which attribute name* host
+The behavioral difference is purely *which attribute name* host
 tooling sees in `datatable.xml` — both attributes carry the same kind
 of value (a Fortran-identifier-shaped string), and both are passed
 through unmodified. `_fixed` is a signal to the host "use verbatim, do

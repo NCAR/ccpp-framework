@@ -1164,7 +1164,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 - **Multiple `dependencies = …` lines** per `[ccpp-table-properties]`.
 - **Sliced local names** with long subscript-token CCPP standard names
   no longer trip the 63-char Fortran-id limit.
-- **Unit normalisation** — `m2` ≡ `m+2` (and friends).
+- **Unit normalization** — `m2` ≡ `m+2` (and friends).
 - **Subcycle bound = CCPP std name** — including DDT-component access
   paths (`phys_state%num_subcycles`).
 - **Nested `<subcycle>`** — preserved end-to-end as nested `do` loops.

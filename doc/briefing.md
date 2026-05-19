@@ -16,9 +16,11 @@ The CCPP Framework runs two code generators today:
   variables.
 - **`ccpp-capgen`** — complex, deeply object-oriented Python; flat-field
   argument passing; in use by NCAR CAM-SIMA.  Many advanced features
-  designed but never implemented; flat-field passing infeasible at
-  UFS/NEPTUNE scale (1200+ variables, breaks under `-check all`);
-  nobody on the team fully understands it.
+  designed but never implemented; at UFS/NEPTUNE scale (1200+ variables)
+  flat-field passing prevents the use of strict error-checking flags
+  (`-check all`, `-fcheck=all`) required for operational implementation,
+  and even when it does compile it produces unmaintainably large source
+  files; nobody on the team fully understands it.
 
 **`capgen-ng`** starts fresh, drawing lessons from both.  Guiding
 principle: **simplicity of prebuild, feature set of capgen**.
@@ -118,7 +120,7 @@ Both share the same metadata-parsing library (`metadata/`).
 |-----------------------------|-----------------------------------|---------------------------------------------------|
 | Host metadata mechanism     | Hard-coded Python dict (`TYPEDEFS_NEW_METADATA`) | Regular `type = ddt` + `type = host` tables |
 | Framework-owned variables   | Not supported                     | First-class (suite-owned interstitial via Case 2) |
-| Constituents                | Hand-rolled, host-specific glue   | Standardised opt-in mechanism with auto-provision |
+| Constituents                | Hand-rolled, host-specific glue   | Standardized opt-in mechanism with auto-provision |
 | `register` phase            | Doesn't exist                     | First phase; schemes declare dynamic constituents |
 | Multi-instance API          | Implicit, ad-hoc                  | Paired-opt-in (`instance_number` / `number_of_instances`) |
 | Subcycle loop counter       | Host plumbs it manually           | Registered std names `ccpp_loop_counter` / `ccpp_loop_extent` resolve to the do-loop locals automatically inside `<subcycle>` |
@@ -131,7 +133,8 @@ Both share the same metadata-parsing library (`metadata/`).
 | Topic                       | capgen                            | capgen-ng                                         |
 |-----------------------------|-----------------------------------|---------------------------------------------------|
 | Group-cap arguments         | Flat fields (1200+ at UFS scale) | DDT arguments (as in prebuild)                    |
-| Variable matching algorithm | Scope-chain promotion             | Flat host+control dict + suite-owned discovery    |
+| Variable matching algorithm | Five-layer scope-chain promotion  | Flat host+control dict + suite-owned discovery (inherited from prebuild — primary reason runtime is comparable to prebuild) |
+| External types (MPI f08 comm, ESMF clock) | Tabled (solution complexity) | First-class via `type = external:<module>:<typename>` |
 | `type = module` in metadata | Yes                               | Renamed `type = host`                             |
 | `is_constituent` scheme args | Auto-cloned by generator         | Schemes register constituents explicitly in the `register` phase via `ccpp_constituent_properties_t(:)` |
 | `ConstituentVarDict`        | Synthetic scope between suite + host | Removed; constituents are one of four sources (`control`/`host`/`suite`/`constituent`) on `ResolvedArg` |
@@ -249,7 +252,7 @@ control-variable arguments to the public entry points.
   we error at parse time with a remediation pointing at
   `character(len=:)` deferred-length).
 - **Multiple registration sources for the same constituent** with
-  silent dedup.  Today's behaviour is to error on conflict; the
+  silent dedup.  Today's behavior is to error on conflict; the
   proposed reform sets a clear precedence rule (host-set Class B
   properties win) — pending the constituents-overhaul decision.
 - **`ConstituentVarDict`** synthetic scope between suite and host.
@@ -329,9 +332,10 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1229 passing on `main`.
+- **Unit tests**: 1316 passing on `feature/capgen-ng` (as of 2026-05-19).
 - **End-to-end tests passing**: `advection`, `unit_conv`,
-  `nested_suite`, `variable_transform`, `instances`, `ddt`.
+  `nested_suite`, `variable_transform`, `instances`,
+  `instances_advection`, `ddt`.
 - **CCPP-SCM**: actively driving development — every build / runtime
   failure surfaced this week landed as a fix in capgen-ng (rather than
   being patched around in the host).  Most of the `phys_ps` group now
@@ -339,13 +343,19 @@ don't rebuild downstream objects unless something actually moved.
 - **`--no-host-introspection`** (new, 2026-05-14): stubs the bodies of
   the five suite-introspection routines in `ccpp_static_api.F90`,
   shrinking the file from ~33k lines to ~800 for the 10-suite SCM
-  build (the introspection case-blocks were making `-O3` compilation
-  effectively hang).  Signatures stay so existing host callers still
-  link; stubbed bodies return `errflg = 1` with a clear `errmsg`.
+  build (the introspection case-blocks were making even `-O1`
+  compilation effectively hang).  Signatures stay so existing host
+  callers still link; stubbed bodies return `errflg = 1` with a clear
+  `errmsg`.
+- **NEPTUNE**: cleanup and acceptance testing in progress.
+  Regular/lower-atmosphere physics builds and runs and produces
+  results within tolerance (deviations similar to compiler changes).
+  High-altitude physics testing is next.
+- **UFS Weather Model**: not yet attempted; SCM is the proving
+  ground first.  An anticipated complication is the "fast physics"
+  called directly from the FV3 dynamical core as a separate group.
 - **CAM-SIMA**: not yet reconnected; pending the constituents
-  overhaul decision.
-- **UFS Weather Model / NEPTUNE**: not yet attempted; SCM is the
-  proving ground first.
+  overhaul decision and CAM-SIMA developer availability.
 
 ---
 
