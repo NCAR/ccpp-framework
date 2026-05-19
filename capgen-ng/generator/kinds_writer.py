@@ -168,7 +168,7 @@ def _generate_ccpp_kinds(kind_types: KindMap) -> List[str]:
 
     Empty mapping is an error:
 
-    >>> _generate_ccpp_kinds({})
+    >>> _generate_ccpp_kinds({})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
         ...
     metadata.parse_tools.parse_source.CCPPError: ccpp_kinds requires at least ...

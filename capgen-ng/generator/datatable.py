@@ -433,6 +433,8 @@ def write_datatable(
     >>> suite_resolution = MagicMock()
     >>> suite_resolution.suite_name = 'test'
     >>> suite_resolution.groups = []
+    >>> suite_resolution.suite_init_call  = None
+    >>> suite_resolution.suite_final_call = None
     >>> store = MagicMock()
     >>> with tempfile.TemporaryDirectory() as d:
     ...     path = write_datatable([suite_resolution], store, [], [], d)

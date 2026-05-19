@@ -88,7 +88,8 @@ class TestEmitTraceBlock(unittest.TestCase):
     def test_emits_for_intent_in_dummies(self):
         out = emit_trace_block('my_sub', self._ctrl_in(), '    ')
         self.assertEqual(out, [
-            '    if (trace) write(error_unit, *) &',
+            "    if (trace) write(error_unit, "
+            "'(a,a,1x,i0,a,1x,i0,a,1x,i0)') &",
             "        'CCPP TRACE my_sub:', &",
             "        ' lb=', lb, &",
             "        ' ub=', ub, &",
@@ -110,7 +111,7 @@ class TestEmitTraceBlock(unittest.TestCase):
         entries = [_FakeEntry('suite_name', 'suite_name', 'character')]
         out = emit_trace_block('my_sub', entries, '    ')
         self.assertEqual(out, [
-            '    if (trace) write(error_unit, *) &',
+            "    if (trace) write(error_unit, '(a,a,a)') &",
             "        'CCPP TRACE my_sub:', &",
             "        ' suite_name=', trim(suite_name)",
         ])
@@ -153,6 +154,22 @@ class TestEmitTraceBlock(unittest.TestCase):
         third  = out.index("        ' third=', third")
         self.assertLess(first, second)
         self.assertLess(second, third)
+
+    def test_format_string_mixes_a_and_i0(self):
+        entries = [
+            _FakeEntry('suite_name', 'suite_name', 'character'),
+            _FakeEntry('horizontal_loop_begin', 'lb', 'integer'),
+            _FakeEntry('horizontal_loop_end',   'ub', 'integer'),
+        ]
+        out = emit_trace_block('my_sub', entries, '    ')
+        # First line carries the format: ``a`` for trace name, then for
+        # each item ``a`` (label) followed by ``a`` (char) or
+        # ``1x,i0`` (integer).
+        self.assertEqual(
+            out[0],
+            "    if (trace) write(error_unit, "
+            "'(a,a,a,a,1x,i0,a,1x,i0)') &",
+        )
 
     def test_continuation_only_after_last_var_omitted(self):
         entries = [

@@ -9,11 +9,17 @@ and every cap subroutine that has at least one ``intent(in)``/
 ``intent(inout)`` control dummy emits a guarded write as the very first
 line of its body::
 
-    if (trace) write(error_unit, *) &
+    if (trace) write(error_unit, '(a,a,a,a,1x,i0)') &
         'CCPP TRACE <sub_name>:', &
-        ' <local1>=', <local1>, &
-        ' <local2>=', trim(<local2>), &
+        ' <local1>=', trim(<local1>), &
+        ' <local2>=', <local2>, &
         ...
+
+The format string is built per-call: each character item contributes an
+``a`` descriptor (the label literal and any ``trim()``-wrapped value),
+and each integer item contributes ``1x,i0`` so the value is printed
+flush against a single space separator rather than the wide default
+field of list-directed I/O.
 
 Two effects:
 
@@ -178,8 +184,17 @@ def emit_trace_block(
     if not items:
         return []
 
+    # Build a per-call format: one ``a`` for the trace name, then for each
+    # item one ``a`` for the ``' label='`` literal plus ``a`` (character)
+    # or ``1x,i0`` (integer) for the value.
+    fmt_parts: List[str] = ['a']
+    for (_, is_char) in items:
+        fmt_parts.append('a')
+        fmt_parts.append('a' if is_char else '1x,i0')
+    fmt = "'({})'".format(','.join(fmt_parts))
+
     lines: List[str] = []
-    lines.append('{}if (trace) write(error_unit, *) &'.format(indent))
+    lines.append('{}if (trace) write(error_unit, {}) &'.format(indent, fmt))
     lines.append("{}    'CCPP TRACE {}:', &".format(indent, sub_name))
     for i, (local_name, is_char) in enumerate(items):
         expr = 'trim({})'.format(local_name) if is_char else local_name

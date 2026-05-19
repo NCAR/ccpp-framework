@@ -215,7 +215,7 @@ def _parse_kind_spec_value(
     ('kind_r8', 'host_kinds', 'kind_r8')
     >>> _parse_kind_spec_value('  temp_kinds : kind_temp => temp_r8  ', ctx)
     ('kind_temp', 'temp_kinds', 'temp_r8')
-    >>> _parse_kind_spec_value('not_a_kind_spec', ctx)
+    >>> _parse_kind_spec_value('not_a_kind_spec', ctx)  # doctest: +ELLIPSIS
     Traceback (most recent call last):
         ...
     metadata.parse_tools.parse_source.CCPPError: Malformed kind_spec ...

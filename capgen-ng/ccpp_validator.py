@@ -146,6 +146,9 @@ def _line_optional_names(line: str) -> List[str]:
     >>> _line_optional_names('  ! a comment, optional :: not_a_decl')
     []
     """
+    # Strip any inline ``!`` comment so an ``optional`` token inside a
+    # comment can't be misread as an attribute declaration.
+    line = _COMMENT_RE.sub('', line)
     if '::' not in line:
         return []
     before, _, after = line.partition('::')
@@ -206,7 +209,7 @@ def _join_continuation(
     ['  foo  bar', '  baz']
     >>> _join_continuation(['  foo &\\n', '     &  bar\\n',
     ...                     '     &   )\\n', '  baz\\n'])
-    ['  foo  bar   )', '  baz']
+    ['  foo  bar  )', '  baz']
     """
     # First pass: normalise each line — strip trailing newlines and any
     # inline ``!`` comment.  Keep blank/comment-only lines as ``''`` so

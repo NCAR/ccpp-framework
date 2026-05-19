@@ -389,50 +389,62 @@ def _register_lines(
         # instance's ``ccpp_model_constituents_obj(inst)`` happens later
         # when the host calls ``ccpp_register_constituents`` per instance.
         #
-        # The buffer itself is shared across instances (registration is
-        # identical per instance) — gated by ``.not. allocated`` so that
-        # only the first instance to enter does the two-pass count+pack.
-        # Subsequent instances reuse the same buffer.  The state-array
-        # transition still runs per instance (after this block).
+        # Each instance owns its own slot ``<buf>(inst)%items(:)``: the
+        # property objects are independent across instances so that
+        # ``ccpp_register_constituents`` can ``set_const_index`` on each
+        # without conflicting with other instances.  The outer wrapper
+        # array is allocated once on first call (any instance); each
+        # instance then runs its own two-pass count+pack into its slot.
+        # The state-machine guard above this block ensures each instance
+        # runs the fill at most once.
         const_scheme_names = {scheme_name for scheme_name, _ in suite_res.constituent_register_calls}
         buf = '{}_dynamic_constituents'.format(suite_name)
 
+        # Allocate the outer wrapper array on first call (any instance).
         lines.append(
             '{}if (.not. allocated({})) then'.format(i2, buf)
         )
-        lines.append('{}num_consts = 0'.format(i2 + _INDENT))
-        lines.append('{}! First pass: count constituents'.format(i2 + _INDENT))
-        for _gname, resolved_call in _register_calls(suite_res):
-            if resolved_call.scheme_name in const_scheme_names:
-                _emit_register_call(resolved_call, i2 + _INDENT, errflg_local, lines)
-                lines.append(
-                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
-                        i2 + _INDENT,
-                    )
-                )
-                lines.append('{}deallocate(scheme_consts)'.format(i2 + _INDENT))
-        lines.append('')
-        lines.append('{}allocate({}(num_consts))'.format(i2 + _INDENT, buf))
-        lines.append('{}num_consts = 0'.format(i2 + _INDENT))
-        lines.append('')
-        lines.append('{}! Second pass: copy into per-suite buffer'.format(i2 + _INDENT))
-        for _gname, resolved_call in _register_calls(suite_res):
-            if resolved_call.scheme_name in const_scheme_names:
-                _emit_register_call(resolved_call, i2 + _INDENT, errflg_local, lines)
-                lines.append('{}do i = 1, size(scheme_consts, 1)'.format(i2 + _INDENT))
-                lines.append(
-                    '{}{}(num_consts + i) = scheme_consts(i)'.format(
-                        i2 + _INDENT * 2, buf,
-                    )
-                )
-                lines.append('{}end do'.format(i2 + _INDENT))
-                lines.append(
-                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
-                        i2 + _INDENT,
-                    )
-                )
-                lines.append('{}deallocate(scheme_consts)'.format(i2 + _INDENT))
+        lines.append('{}allocate({}({}))'.format(
+            i2 + _INDENT, buf, ninstances_arg,
+        ))
         lines.append('{}end if'.format(i2))
+        lines.append('')
+
+        # Per-instance two-pass count+pack into this instance's slot.
+        lines.append('{}num_consts = 0'.format(i2))
+        lines.append('{}! First pass: count constituents'.format(i2))
+        for _gname, resolved_call in _register_calls(suite_res):
+            if resolved_call.scheme_name in const_scheme_names:
+                _emit_register_call(resolved_call, i2, errflg_local, lines)
+                lines.append(
+                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
+                        i2,
+                    )
+                )
+                lines.append('{}deallocate(scheme_consts)'.format(i2))
+        lines.append('')
+        lines.append('{}allocate({}({})%items(num_consts))'.format(
+            i2, buf, inst_idx,
+        ))
+        lines.append('{}num_consts = 0'.format(i2))
+        lines.append('')
+        lines.append('{}! Second pass: copy into per-instance buffer'.format(i2))
+        for _gname, resolved_call in _register_calls(suite_res):
+            if resolved_call.scheme_name in const_scheme_names:
+                _emit_register_call(resolved_call, i2, errflg_local, lines)
+                lines.append('{}do i = 1, size(scheme_consts, 1)'.format(i2))
+                lines.append(
+                    '{}{}({})%items(num_consts + i) = scheme_consts(i)'.format(
+                        i2 + _INDENT, buf, inst_idx,
+                    )
+                )
+                lines.append('{}end do'.format(i2))
+                lines.append(
+                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
+                        i2,
+                    )
+                )
+                lines.append('{}deallocate(scheme_consts)'.format(i2))
         lines.append('')
         # Emit any non-constituent register calls in addition (always, per instance).
         for _gname, resolved_call in _register_calls(suite_res):

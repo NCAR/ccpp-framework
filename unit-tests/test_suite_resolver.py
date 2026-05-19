@@ -3039,20 +3039,28 @@ class TestRegisterConstituentsSuiteCap(unittest.TestCase):
             'end subroutine reg_consts_register'
         )[0]
         self.assertIn('First pass: count', register_body)
-        self.assertIn('Second pass: copy into per-suite buffer', register_body)
+        self.assertIn('Second pass: copy into per-instance buffer', register_body)
         # The constituent-providing scheme is called twice (one per pass).
         self.assertEqual(
             register_body.count('call register_constituents_register'), 2,
         )
 
     def test_buffer_allocate(self):
+        # Outer wrapper-DDT array is sized to number_of_instances on first
+        # call; each instance allocates its own ``%items(num_consts)`` slot.
         self.assertIn(
-            'allocate(reg_consts_dynamic_constituents(num_consts))', self.text,
+            'allocate(reg_consts_dynamic_constituents(',
+            self.text,
         )
+        self.assertIn(
+            'allocate(reg_consts_dynamic_constituents(',
+            self.text,
+        )
+        self.assertIn('%items(num_consts))', self.text)
 
     def test_buffer_populate_loop(self):
         self.assertIn(
-            'reg_consts_dynamic_constituents(num_consts + i) = scheme_consts(i)',
+            '%items(num_consts + i) = scheme_consts(i)',
             self.text,
         )
 

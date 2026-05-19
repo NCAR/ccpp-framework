@@ -2,14 +2,16 @@
 
 **Authors:** Dom Heinzeller (lead), Claude (assistant)
 **Date drafted:** 2026-05-12
-**Last revised:** 2026-05-13
+**Last revised:** 2026-05-18
 **Intended audience:** CCPP framework team, CAM-SIMA team
 **Status:** Discussion document — no decisions are final.  Proposals
 A/B/C below remain pending the upcoming meeting; the bug fix from
 Proposal A (the `ccpt_deallocate` ownership flag) and the capgen-ng
 internal cleanup from Proposal B (§4.8) have landed; the missing
 setters from Proposal A and the `is_match` relaxation from Proposal B
-have not.
+have not.  Independent of A/B/C, the per-suite dynamic_constituents
+buffer was made per-instance on 2026-05-18 to fix a multi-instance
+mutation conflict — see §4.13.
 
 ---
 
@@ -231,8 +233,9 @@ the standard-name catalog is identical across instances.
 ```
 ccpp_register(suite_name, instance_number, ...)
    └─ <suite>_register → packs scheme-dynamic constituents into
-                          <suite>_dynamic_constituents (shared buffer,
-                          first instance wins)
+                          <suite>_dynamic_constituents(instance)%items
+                          (per-instance wrapper-DDT array; each instance
+                          allocates and fills its own slot — see §4.13)
                           ↓
 ccpp_register_constituents(host_constituents, instance_number, ...)
    └─ initialize_table(num_host_consts + num_suite_consts)
@@ -547,6 +550,60 @@ added on the framework side. Hosts that want runtime override get
 `diagnostic_name` at parse time with a loud warning, identical in
 spirit to the existing `horizontal_loop_extent → horizontal_dimension`
 shim. Remove the rewrite once known consumers are migrated.
+
+### 4.13 Capgen-ng: per-suite `dynamic_constituents` buffer was shared across instances (FIXED 2026-05-18)
+
+- **Location**: `capgen-ng/generator/host_constituents.py` (buffer
+  declaration + `ccpp_register_constituents` iteration);
+  `capgen-ng/generator/suite_cap.py::_register_lines` (the two-pass
+  count→allocate→pack inside `<suite>_register`).
+- **Symptom**: with two or more instances and any register-phase
+  scheme that produces constituents, the second per-instance
+  `ccpp_register_constituents` call fails with `ccp_set_const_index
+  ccpp_constituent_properties_t const index is already set`.
+- **Root cause**: the per-suite buffer
+  `<suite>_dynamic_constituents(:)` was declared as a single shared
+  1-D array of `ccpp_constituent_properties_t`, filled exactly once on
+  first instance entry (`.not. allocated(buf)` gate).
+  `ccpp_register_constituents` then iterates that shared buffer per
+  instance and calls `%new_field(const_prop)` on each property
+  object.  `%new_field` calls `ccp_set_const_index`, which **mutates
+  the property object** by writing `const_ind`.  Instance 1 set
+  `const_ind` on every shared object; instance 2's call tripped the
+  "set exactly once" guard.
+- **Latent companion bug**: the same shared-mutation pattern means
+  that once Proposal B's class-B setters (`set_advected`,
+  `set_diagnostic_name`, `set_water_species` per-instance, etc.) are
+  exercised, instance 1's setter call would silently corrupt instance
+  2's view of the property.  No "already set" guard exists on those
+  setters today.
+- **Why it didn't surface earlier**: the advection end-to-end test is
+  single-instance; the instances end-to-end test has no constituents.
+  Surfaced by the new `instances_advection` combined test
+  (`end-to-end-tests/instances_advection/`) on first run.
+- **Fix landed 2026-05-18**: the per-suite buffer is now a wrapper-DDT
+  array indexed by `instance_number`:
+  ```fortran
+  type :: ccpp_dyn_const_buffer_t
+    type(ccpp_constituent_properties_t), allocatable :: items(:)
+  end type
+  type(ccpp_dyn_const_buffer_t), allocatable, target :: <suite>_dynamic_constituents(:)
+  ```
+  The outer array is allocated to `number_of_instances` on first call;
+  each instance independently runs the two-pass count+pack into its
+  own `%items` slot.  `ccpp_register_constituents` iterates
+  `<suite>_dynamic_constituents(instance)%items` so each instance's
+  `new_field` calls operate on **distinct** property objects.
+  Scheme `_register` routines are now called N times instead of once
+  (negligible cost — typical register bodies are a few `%instantiate`
+  calls), in exchange for clean per-instance isolation.
+- **Cost**: ~50 lines across the two generator emitters, plus updates
+  to six pinned unit tests.  No CAM-SIMA / NEPTUNE / SCM coordination
+  needed (host-facing API unchanged).
+- **Status**: framework tests pass; full unit-test suite (1319 tests)
+  is green; all 10 end-to-end tests pass.
+- **Position relative to Proposals A/B/C**: orthogonal — none of the
+  three proposed touching the buffer.  Independently adopted.
 
 ---
 

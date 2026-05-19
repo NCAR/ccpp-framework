@@ -166,7 +166,15 @@ def _register_constituents_lines(
     for sname in register_suites:
         buf = _dyn_const_array_name(sname)
         lines.append('{}if (allocated({})) then'.format(i2, buf))
-        lines.append('{}num_consts = num_consts + size({}, 1)'.format(i3, buf))
+        lines.append(
+            '{}if (allocated({}({})%items)) then'.format(i3, buf, inst_idx)
+        )
+        lines.append(
+            '{}num_consts = num_consts + size({}({})%items, 1)'.format(
+                i3 + _INDENT, buf, inst_idx,
+            )
+        )
+        lines.append('{}end if'.format(i3))
         lines.append('{}end if'.format(i2))
     lines.append('')
     lines.append('{}call {}({})%initialize_table(num_consts)'.format(
@@ -189,16 +197,28 @@ def _register_constituents_lines(
         lines.append('')
         lines.append("{}! Merge {} dynamic constituents".format(i2, sname))
         lines.append('{}if (allocated({})) then'.format(i2, buf))
-        lines.append('{}do index = 1, size({}, 1)'.format(i3, buf))
-        lines.append('{}const_prop => {}(index)'.format(i3 + _INDENT, buf))
         lines.append(
-            '{}call {}({})%new_field(const_prop, errcode=errflg, errmsg=errmsg)'.format(
-                i3 + _INDENT, _CONST_OBJ, inst_idx,
+            '{}if (allocated({}({})%items)) then'.format(i3, buf, inst_idx)
+        )
+        lines.append(
+            '{}do index = 1, size({}({})%items, 1)'.format(
+                i3 + _INDENT, buf, inst_idx,
             )
         )
-        lines.append('{}nullify(const_prop)'.format(i3 + _INDENT))
-        lines.append('{}if (errflg /= 0) return'.format(i3 + _INDENT))
-        lines.append('{}end do'.format(i3))
+        lines.append(
+            '{}const_prop => {}({})%items(index)'.format(
+                i3 + _INDENT * 2, buf, inst_idx,
+            )
+        )
+        lines.append(
+            '{}call {}({})%new_field(const_prop, errcode=errflg, errmsg=errmsg)'.format(
+                i3 + _INDENT * 2, _CONST_OBJ, inst_idx,
+            )
+        )
+        lines.append('{}nullify(const_prop)'.format(i3 + _INDENT * 2))
+        lines.append('{}if (errflg /= 0) return'.format(i3 + _INDENT * 2))
+        lines.append('{}end do'.format(i3 + _INDENT))
+        lines.append('{}end if'.format(i3))
         lines.append('{}end if'.format(i2))
     lines.append('')
     lines.append(
@@ -592,6 +612,26 @@ def _generate_host_constituents(
         lines.append('{}public :: {}'.format(_INDENT, p))
     lines.append('')
 
+    # Per-instance wrapper around the per-suite scheme-registered
+    # constituent buffer.  Each instance owns its own slot in the outer
+    # array; the inner ``items(:)`` array is filled independently by
+    # ``<suite>_register`` per instance so that the property objects
+    # (which acquire a const_ind during ``ccpp_register_constituents``)
+    # are not shared across instances.
+    if register_suites:
+        lines.append(
+            '{}type :: ccpp_dyn_const_buffer_t'.format(_INDENT)
+        )
+        lines.append(
+            '{}type({}), allocatable :: items(:)'.format(
+                _INDENT * 2, _CONST_PROP_TYPE,
+            )
+        )
+        lines.append(
+            '{}end type ccpp_dyn_const_buffer_t'.format(_INDENT)
+        )
+        lines.append('')
+
     # State declarations.
     lines.append(
         '{}type({}), target, allocatable :: {}(:)'.format(
@@ -602,8 +642,8 @@ def _generate_host_constituents(
     for sname in register_suites:
         buf = _dyn_const_array_name(sname)
         lines.append(
-            '{}type({}), allocatable, target :: {}(:)'.format(
-                _INDENT, _CONST_PROP_TYPE, buf,
+            '{}type(ccpp_dyn_const_buffer_t), allocatable, target :: {}(:)'.format(
+                _INDENT, buf,
             )
         )
     if register_suites:

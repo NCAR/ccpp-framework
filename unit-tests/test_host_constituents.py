@@ -172,8 +172,16 @@ class TestStateDeclarations(unittest.TestCase):
         )
 
     def test_per_suite_buffer_declared_for_producer(self):
+        # The per-suite buffer is a per-instance wrapper-DDT array so each
+        # instance owns its own scheme-registered constituent property
+        # objects (the wrapper type is emitted once at module scope).
+        self.assertIn('type :: ccpp_dyn_const_buffer_t', self.register_text)
         self.assertIn(
-            'type(ccpp_constituent_properties_t), allocatable, target :: '
+            'type(ccpp_constituent_properties_t), allocatable :: items(:)',
+            self.register_text,
+        )
+        self.assertIn(
+            'type(ccpp_dyn_const_buffer_t), allocatable, target :: '
             'reg_consts_dynamic_constituents(:)',
             self.register_text,
         )
@@ -230,8 +238,11 @@ class TestRegisterConstituentsRoutine(unittest.TestCase):
             'call ccpp_model_constituents_obj(inst_num)%initialize_table(num_consts)',
             self.text,
         )
+        # Count of scheme-registered constituents comes from THIS instance's
+        # slot in the wrapper-DDT array, not the (no-longer-shared) buffer.
         self.assertIn(
-            'num_consts = num_consts + size(reg_consts_dynamic_constituents, 1)',
+            'num_consts = num_consts + size('
+            'reg_consts_dynamic_constituents(inst_num)%items, 1)',
             self.text,
         )
 
@@ -240,7 +251,9 @@ class TestRegisterConstituentsRoutine(unittest.TestCase):
             'end subroutine ccpp_register_constituents'
         )[0]
         host_pos  = body.find('host_constituents(index)')
-        suite_pos = body.find('reg_consts_dynamic_constituents(index)')
+        suite_pos = body.find(
+            'reg_consts_dynamic_constituents(inst_num)%items(index)'
+        )
         self.assertGreater(host_pos, 0)
         self.assertGreater(suite_pos, host_pos)
         # All %new_field calls go through obj(inst_num).
