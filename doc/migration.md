@@ -675,24 +675,67 @@ classification, three reform proposals).
 ## 7. Validator
 
 `capgen-ng/ccpp_validator.py` — standalone Fortran-vs-metadata checker.
-Today validates **scheme** metadata against scheme Fortran files
-(subroutine signatures, optional args, paren-aware decl splitting).
+Validates **scheme** metadata against scheme Fortran files.
 
-Continuation-line handling covers both free-form (`&` at trailing end
-of prior line only) and fixed-form / dual-form (`&` at both ends, with
-the leading marker at column 6).  Comment-only and blank lines
-interleaved between continuation lines are skipped as Fortran 90+
-permits.
+### 7.1 What the validator checks
 
-When the signature parser finds a subroutine but extracts zero args
-while metadata declares many, the "Argument count mismatch" error
-appends a HINT pointing at the parser rather than masquerading as a
-real mismatch — common cause is an unsupported signature feature.
+For every `(scheme, phase)` declared in the supplied `.meta` files:
 
-**Known gap**: host-metadata validation is not yet implemented.  When
-invoked with non-scheme `.meta` files, the validator silently filters
-to zero schemes and reports "Validation passed."  Slated for revisit
-after the e2e test suite settles (`unit_conv` + `variable_transform`
+1. The Fortran subroutine `<scheme>_<phase>` **exists** in the source
+   tree (auto-discovered via `source_path` on the table, or supplied
+   explicitly with `--source-files`).
+2. **Argument count** — the number of dummy arguments matches the
+   metadata, after subtracting any optional-only-in-Fortran args (see
+   §7.2).
+3. **Argument names** — the set of metadata `local_name` values
+   matches the Fortran dummy-arg list (order-insensitive,
+   case-insensitive).
+4. For every argument present on **both sides**, per-attribute
+   consistency:
+
+   | Attribute  | Behavior |
+   |------------|----------|
+   | `intent`   | Strict match (`in` / `out` / `inout`).  Metadata declares it but Fortran omits → error. |
+   | `type`     | Case-insensitive match.  `double precision` / `doubleprecision` / `double  precision` are normalized to the same form.  DDT names match the Fortran `type(name)` / `class(name)` wrapper — metadata `type = ty_rad_lw` matches Fortran `type(ty_rad_lw)`.  External types match by typename — metadata `type = external:mpi_f08:mpi_comm` matches Fortran `type(mpi_comm)` (the module qualifier is metadata-only). |
+   | `kind`     | Case-insensitive match.  **Character `len=*` is a wildcard** on either side — matches any concrete `len=N` or `len=:`. |
+   | `rank`     | Number of dimensions only.  Reads both `dimension(...)` line attributes and var-attached `foo(:,:)` syntax.  Per-dimension bound comparison is NOT done. |
+
+### 7.2 Asymmetric `optional` rule
+
+| Metadata        | Fortran                  | Outcome  |
+|-----------------|--------------------------|----------|
+| (absent)        | `optional`               | warning  |
+| (absent)        | required (no `optional`) | error    |
+| `optional=False`| `optional`               | warning  |
+| `optional=False`| required (no `optional`) | OK       |
+| `optional=True` | `optional`               | OK       |
+| `optional=True` | required (no `optional`) | **error**|
+
+Reason for the asymmetry: a metadata-side `optional=True` is a promise
+to the cap that the value may be absent at the call site.  If Fortran
+requires the dummy, the cap's `present()` check is invalid.  The
+reverse direction (Fortran allows optional, metadata always passes it)
+is a valid subset of the Fortran contract — the arg is always present
+and any optional Fortran dummy can accept that — so we warn but don't
+fail the build.
+
+### 7.3 Continuation-line handling
+
+Covers both free-form (`&` at trailing end of prior line only) and
+fixed-form / dual-form (`&` at both ends, with the leading marker at
+column 6).  Comment-only and blank lines interleaved between
+continuation lines are skipped as Fortran 90+ permits.  When the
+signature parser finds a subroutine but extracts zero args while
+metadata declares many, the "Argument count mismatch" error appends a
+HINT pointing at the parser rather than masquerading as a real
+mismatch — common cause is an unsupported signature feature.
+
+### 7.4 Known gap
+
+Host-metadata validation is not yet implemented.  When invoked with
+non-scheme `.meta` files, the validator silently filters to zero
+schemes and reports "Validation passed."  Slated for revisit after
+the e2e test suite settles (`unit_conv` + `variable_transform`
 complete).  See `project_validator_host_check_deferred.md` (memory).
 
 ---

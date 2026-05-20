@@ -52,10 +52,11 @@ In capgen-ng, the constituent layer has three concerns:
 All constituent state lives in **one generated module**:
 `ccpp_host_constituents.F90` (one per generator run, emitted only when at
 least one suite touches constituent state).  Public symbols from this module
-are also re-exported by `ccpp_static_api`, so most host code only needs
+are also re-exported by `<host>_ccpp_cap` (the per-host static API; filename
+and module name derived from `--host-name`), so most host code only needs
 
 ```fortran
-use ccpp_static_api, only: ccpp_register_constituents, ccpp_initialize_constituents, &
+use <host>_ccpp_cap, only: ccpp_register_constituents, ccpp_initialize_constituents, &
                            ccpp_constituents_array, ccpp_const_get_index, ...
 ```
 
@@ -355,7 +356,7 @@ of its own.
 ## 5. Public API reference
 
 All routines below live in `ccpp_host_constituents` and are also
-re-exported from `ccpp_static_api` for convenience.  The dummy-argument
+re-exported from `<host>_ccpp_cap` for convenience.  The dummy-argument
 name `instance_number` is the **standard name**; the actual emitted
 dummy uses the host's local name for it (typically also
 `instance_number` or `inst_num`).
@@ -537,7 +538,7 @@ module ccpp_host_constituents
   public :: index_of_<X2>
   public :: ccpp_model_const_stdnames ! parameter array
 
-  ! ----- public routines (also re-exported from ccpp_static_api) --------
+  ! ----- public routines (also re-exported from <host>_ccpp_cap) --------
   public :: ccpp_register_constituents
   public :: ccpp_initialize_constituents
   public :: ccpp_is_scheme_constituent
@@ -982,10 +983,12 @@ end module ccpp_host_constituents
 
 ```fortran
 subroutine my_host_run()
-  use ccpp_static_api, only: ccpp_register, ccpp_register_constituents,    &
-                             ccpp_initialize_constituents, ccpp_init,      &
-                             ccpp_physics_run, ccpp_final,                 &
-                             ccpp_deallocate_dynamic_constituents
+  ! my_host_ccpp_cap is the per-host static API module
+  ! (filename and module name derived from --host-name).
+  use my_host_ccpp_cap, only: ccpp_register, ccpp_register_constituents,    &
+                              ccpp_initialize_constituents, ccpp_init,      &
+                              ccpp_physics_run, ccpp_final,                 &
+                              ccpp_deallocate_dynamic_constituents
   use ccpp_constituent_prop_mod, only: ccpp_constituent_properties_t
 
   type(ccpp_constituent_properties_t), allocatable :: host_consts(:)

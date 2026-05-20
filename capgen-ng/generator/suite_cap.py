@@ -15,7 +15,7 @@ The suite cap:
     ``<suite>_physics_final`` — dispatch by ``group_name`` to the
     appropriate group cap subroutine.
 
-The static API (``ccpp_static_api.F90``) dispatches by ``suite_name`` to
+The static API (``<host>_ccpp_cap.F90``) dispatches by ``suite_name`` to
 these subroutines.
 """
 

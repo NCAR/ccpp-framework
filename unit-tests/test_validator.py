@@ -1,6 +1,7 @@
 """Unit tests for ccpp_validator."""
 
 import doctest
+import logging
 import os
 import tempfile
 import textwrap
@@ -739,6 +740,311 @@ class TestFortranFileForTable(unittest.TestCase):
         t = self._make_table()
         result = val_mod._fortran_file_for_table(t)
         self.assertIsNone(result)
+
+
+class TestArgAttributeChecks(unittest.TestCase):
+    """Per-arg type/kind/intent/rank/optional mismatch detection.
+
+    Each test builds a tiny in-memory metadata + Fortran source pair and
+    runs ``validate`` end-to-end.  The Fortran source has the same arg
+    names as the metadata so the name-set check passes; we deliberately
+    perturb one attribute per test to exercise one check at a time.
+    """
+
+    _BASE_META = (
+        '[ccpp-table-properties]\n'
+        '  name = s\n'
+        '  type = scheme\n'
+        '[ccpp-arg-table]\n'
+        '  name = s_run\n'
+        '  type = scheme\n'
+        '[ a ]\n'
+        '  standard_name = a_std\n'
+        '  units = 1\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '  intent = {intent_a}\n'
+        '[ b ]\n'
+        '  standard_name = b_std\n'
+        '  units = K\n'
+        '  dimensions = {dims_b}\n'
+        '  type = {type_b}\n'
+        '  kind = {kind_b}\n'
+        '  intent = {intent_b}\n'
+        '  optional = {optional_b}\n'
+    )
+
+    def _run(self, meta_text, f90_text):
+        with tempfile.TemporaryDirectory() as d:
+            meta_path = os.path.join(d, 's.meta')
+            f90_path  = os.path.join(d, 's.F90')
+            with open(meta_path, 'w') as fh:
+                fh.write(meta_text)
+            with open(f90_path, 'w') as fh:
+                fh.write(f90_text)
+            return validate([meta_path], [f90_path])
+
+    def _meta(self, **overrides):
+        defaults = dict(intent_a='in', dims_b='()', type_b='real',
+                        kind_b='kind_phys', intent_b='in', optional_b='False')
+        defaults.update(overrides)
+        return self._BASE_META.format(**defaults)
+
+    _F90_TEMPLATE = (
+        'module m\n'
+        'contains\n'
+        '  subroutine s_run({sig})\n'
+        '    use ccpp_kinds, only: kind_phys\n'
+        '{decls}'
+        '  end subroutine s_run\n'
+        'end module m\n'
+    )
+
+    def _f90(self, sig, decls):
+        return self._F90_TEMPLATE.format(sig=sig, decls=decls)
+
+    def test_clean_match_no_errors(self):
+        errs = self._run(
+            self._meta(),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    real(kind=kind_phys), intent(in) :: b\n'
+            )),
+        )
+        self.assertEqual(errs, [])
+
+    def test_intent_mismatch(self):
+        errs = self._run(
+            self._meta(intent_b='in'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    real(kind=kind_phys), intent(out) :: b\n'
+            )),
+        )
+        self.assertTrue(any("intent mismatch" in e and "'b'" in e for e in errs),
+                        msg=errs)
+
+    def test_type_mismatch(self):
+        errs = self._run(
+            self._meta(type_b='real'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    integer, intent(in) :: b\n'
+            )),
+        )
+        self.assertTrue(any("type mismatch" in e and "'b'" in e for e in errs),
+                        msg=errs)
+
+    def test_kind_mismatch(self):
+        errs = self._run(
+            self._meta(kind_b='kind_phys'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    real, intent(in) :: b\n'   # missing kind
+            )),
+        )
+        self.assertTrue(any("kind mismatch" in e and "'b'" in e for e in errs),
+                        msg=errs)
+
+    def test_character_len_star_is_wildcard(self):
+        errs = self._run(
+            self._meta(type_b='character', kind_b='len=512'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    character(len=*), intent(in) :: b\n'
+            )),
+        )
+        char_errs = [e for e in errs if "'b'" in e and 'character' in e]
+        self.assertEqual(char_errs, [], msg=errs)
+
+    def test_rank_mismatch(self):
+        errs = self._run(
+            self._meta(dims_b='(d1, d2)'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    real(kind=kind_phys), intent(in) :: b\n'  # rank 0, metadata says rank 2
+            )),
+        )
+        self.assertTrue(any("rank mismatch" in e and "'b'" in e for e in errs),
+                        msg=errs)
+
+    def test_rank_via_var_attached_dims(self):
+        errs = self._run(
+            self._meta(dims_b='(d1, d2)'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    real(kind=kind_phys), intent(in) :: b(:,:)\n'
+            )),
+        )
+        self.assertEqual(errs, [])
+
+    def test_metadata_optional_but_fortran_required_is_error(self):
+        # Metadata says optional=True, Fortran doesn't carry the
+        # 'optional' attribute -> hard error (cap would emit invalid
+        # present() checks on a required dummy).
+        errs = self._run(
+            self._meta(optional_b='True'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    real(kind=kind_phys), intent(in) :: b\n'
+            )),
+        )
+        self.assertTrue(
+            any("optional=True" in e and "'b'" in e for e in errs),
+            msg=errs,
+        )
+
+    def test_ddt_metadata_bare_name_matches_fortran_type_wrapper(self):
+        # Metadata: type = ty_rad_lw  (bare DDT name).
+        # Fortran:  type(ty_rad_lw), intent(in) :: b
+        # These should compare equal after type-name normalisation.
+        errs = self._run(
+            self._meta(type_b='ty_rad_lw', kind_b=''),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    type(ty_rad_lw), intent(in) :: b\n'
+            )),
+        )
+        b_errs = [e for e in errs if "'b'" in e]
+        self.assertEqual(b_errs, [], msg=errs)
+
+    def test_ddt_class_wrapper_matches_metadata_bare_name(self):
+        # Fortran polymorphic wrapper: class(...) on the Fortran side
+        # still matches a bare DDT name in metadata.
+        errs = self._run(
+            self._meta(type_b='ty_rad_lw', kind_b=''),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    class(ty_rad_lw), intent(in) :: b\n'
+            )),
+        )
+        b_errs = [e for e in errs if "'b'" in e]
+        self.assertEqual(b_errs, [], msg=errs)
+
+    def test_ddt_name_mismatch_is_error(self):
+        # Different DDT names on each side -> error.
+        errs = self._run(
+            self._meta(type_b='ty_rad_lw', kind_b=''),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    type(ty_rad_sw), intent(in) :: b\n'
+            )),
+        )
+        self.assertTrue(
+            any("type mismatch" in e and "'b'" in e for e in errs),
+            msg=errs,
+        )
+
+    def test_external_type_matches_fortran_bare_typename(self):
+        # Metadata: type = external:mpi_f08:mpi_comm  (module + name).
+        # Fortran:  type(mpi_comm), intent(in) :: b
+        # The module is metadata-only; Fortran sees the bare typename.
+        errs = self._run(
+            self._meta(type_b='external:mpi_f08:mpi_comm', kind_b=''),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    type(mpi_comm), intent(in) :: b\n'
+            )),
+        )
+        b_errs = [e for e in errs if "'b'" in e]
+        self.assertEqual(b_errs, [], msg=errs)
+
+    def test_external_type_mismatched_typename_is_error(self):
+        errs = self._run(
+            self._meta(type_b='external:mpi_f08:mpi_comm', kind_b=''),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    type(mpi_request), intent(in) :: b\n'
+            )),
+        )
+        self.assertTrue(
+            any("type mismatch" in e and "'b'" in e for e in errs),
+            msg=errs,
+        )
+
+    def test_fortran_optional_but_metadata_required_is_warning(self):
+        # Reverse direction: metadata=False (default), Fortran=optional
+        # -> NOT an error.  The cap always passes the arg; that's a
+        # valid subset of the Fortran contract.  A warning is emitted.
+        import io
+        log_buf = io.StringIO()
+        handler = logging.StreamHandler(log_buf)
+        handler.setLevel(logging.WARNING)
+        log = logging.getLogger('test_validator_fopt_metareq')
+        log.addHandler(handler)
+        log.setLevel(logging.WARNING)
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                meta_path = os.path.join(d, 's.meta')
+                f90_path  = os.path.join(d, 's.F90')
+                with open(meta_path, 'w') as fh:
+                    fh.write(self._meta())
+                with open(f90_path, 'w') as fh:
+                    fh.write(self._f90('a, b', (
+                        '    integer, intent(in) :: a\n'
+                        '    real(kind=kind_phys), optional, intent(in) :: b\n'
+                    )))
+                errs = validate([meta_path], [f90_path], logger=log)
+        finally:
+            log.removeHandler(handler)
+        # No errors.
+        b_errs = [e for e in errs if "'b'" in e]
+        self.assertEqual(b_errs, [], msg=errs)
+        # But a warning for 'b'.
+        self.assertIn("Fortran argument 'b'", log_buf.getvalue())
+        self.assertIn("optional", log_buf.getvalue())
+
+
+class TestFortranOnlyOptionalWarning(unittest.TestCase):
+    """A Fortran-optional arg absent from metadata triggers a logger.warning
+    but no validation error."""
+
+    _META = (
+        '[ccpp-table-properties]\n'
+        '  name = s\n'
+        '  type = scheme\n'
+        '[ccpp-arg-table]\n'
+        '  name = s_run\n'
+        '  type = scheme\n'
+        '[ a ]\n'
+        '  standard_name = a_std\n'
+        '  units = 1\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '  intent = in\n'
+    )
+
+    _F90 = (
+        'module m\n'
+        'contains\n'
+        '  subroutine s_run(a, b)\n'
+        '    integer, intent(in) :: a\n'
+        '    integer, optional, intent(in) :: b\n'
+        '  end subroutine s_run\n'
+        'end module m\n'
+    )
+
+    def test_warning_and_no_error(self):
+        import io
+        with tempfile.TemporaryDirectory() as d:
+            meta_path = os.path.join(d, 's.meta')
+            f90_path  = os.path.join(d, 's.F90')
+            with open(meta_path, 'w') as fh:
+                fh.write(self._META)
+            with open(f90_path, 'w') as fh:
+                fh.write(self._F90)
+            stream = io.StringIO()
+            handler = logging.StreamHandler(stream)
+            handler.setLevel(logging.WARNING)
+            log = logging.getLogger('test_validator_optional_warn')
+            log.addHandler(handler)
+            log.setLevel(logging.WARNING)
+            try:
+                errs = validate([meta_path], [f90_path], logger=log)
+            finally:
+                log.removeHandler(handler)
+        self.assertEqual(errs, [])
+        self.assertIn("Optional Fortran argument 'b'", stream.getvalue())
 
 
 def load_tests(loader, tests, ignore):

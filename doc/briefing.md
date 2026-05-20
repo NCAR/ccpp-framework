@@ -65,8 +65,9 @@ to the right scheme.
 
 ### 3.2 Three layers of generated cap
 
-- **Static API** (`ccpp_static_api.F90`) — public entry points; one per
-  build.  Dispatches by `suite_name` → suite cap.
+- **Static API** (`<host>_ccpp_cap.F90`) — public entry points; one per
+  host build (filename and module name derived from `--host-name`).
+  Dispatches by `suite_name` → suite cap.
 - **Suite cap** (`ccpp_<suite>_cap.F90`) — per-suite state machine, plus
   dispatch by `group_name` → group cap.  Suite-owned interstitial data
   lives in a sibling `ccpp_<suite>_data.F90`.
@@ -108,7 +109,13 @@ For each scheme arg:
   Fortran parsing.
 - `ccpp_validator.py` — the standalone Fortran-vs-metadata checker.
   The ONE place capgen-ng parses Fortran.  Run by developers /
-  CMake before generation.
+  CMake before generation.  Checks per-arg `intent`, `type`, `kind`,
+  and dimension rank; `character len=*` is a wildcard; DDT and
+  `external:<module>:<typename>` types compare against the Fortran
+  `type(name)` wrapper.  `optional` is asymmetric: metadata
+  `optional=True` against a Fortran-required dummy is an error; the
+  reverse is a warning.  See `doc/migration.md` §7 for the full
+  rule table.
 
 Both share the same metadata-parsing library (`metadata/`).
 
@@ -341,7 +348,7 @@ don't rebuild downstream objects unless something actually moved.
   being patched around in the host).  Most of the `phys_ps` group now
   builds end-to-end via `--legacy-mode`.
 - **`--no-host-introspection`** (new, 2026-05-14): stubs the bodies of
-  the five suite-introspection routines in `ccpp_static_api.F90`,
+  the five suite-introspection routines in `<host>_ccpp_cap.F90`,
   shrinking the file from ~33k lines to ~800 for the 10-suite SCM
   build (the introspection case-blocks were making even `-O1`
   compilation effectively hang).  Signatures stay so existing host

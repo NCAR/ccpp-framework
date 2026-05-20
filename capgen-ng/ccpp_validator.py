@@ -9,10 +9,26 @@ corresponding Fortran subroutine:
 2. Has the **same number of dummy arguments** as declared in the metadata.
 3. The dummy-argument **names match** the ``local_name`` values in the metadata
    (order-insensitive).
+4. For every dummy argument present in both sides, the **per-arg attributes**
+   agree: ``intent``, ``type``, ``kind``, and number of dimensions (rank).
+   ``character`` arguments treat ``len=*`` on either side as a wildcard
+   against any concrete ``len=N`` / ``len=:``.
 
-The tool does *not* parse full Fortran type declarations — that level of
-verification is intentionally kept out of the code generator path (see design
-doc: toolchain structure).
+Asymmetric treatment of ``optional``:
+
+* Fortran-declared optional argument **absent** from metadata → silently
+  allowed (the cap never passes it); emits a ``logger.warning``.
+* Fortran-declared optional argument **present** in metadata as
+  ``optional=False`` → silently allowed (the cap always passes it, which
+  is a valid subset of the Fortran contract); emits a ``logger.warning``.
+* Metadata declares ``optional=True`` but Fortran does **not** carry the
+  ``optional`` attribute → **error** (the cap-side ``present()`` check
+  would be invalid on a Fortran-required dummy).
+
+The tool does *not* compare dimension *bounds* across sides — it only
+checks that rank matches.  Comparing standard-name dimension references
+against Fortran local-name dimensions would require loading host metadata
+too; that's a separate feature.
 
 Usage
 -----
@@ -35,7 +51,7 @@ import logging
 import os
 import re
 import sys
-from typing import Dict, List, NamedTuple, Optional, Set
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
 # Ensure the capgen-ng package is importable when invoked directly.
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -77,6 +93,43 @@ _LEAD_CONT_RE = re.compile(r'^\s*&\s?')
 _IDENT_CHAR_RE = re.compile(r'[A-Za-z_0-9]')
 
 
+class _ArgAttrs(NamedTuple):
+    """Per-dummy-argument attributes parsed from a Fortran type-decl line.
+
+    All string fields are lowercased and stripped.  Missing / unknown is
+    represented by an empty string (or ``False`` for ``optional``, ``0``
+    for ``rank``).
+
+    Attributes
+    ----------
+    type_ : str
+        Intrinsic type (``'real'``, ``'integer'``, ``'logical'``,
+        ``'complex'``, ``'character'``) or a derived-type spec
+        (``'type(my_type)'``, ``'class(other)'``).  Empty for args
+        not declared in the body (parser missed the decl).
+    kind_ : str
+        Kind selector.  For numeric types this is the kind name
+        (``'kind_phys'``, ``'8'``, ``'int64'``).  For character it is
+        the length selector (``'len=10'``, ``'len=*'``, ``'len=:'``).
+        Empty when no selector was present.
+    intent : str
+        ``'in'`` / ``'out'`` / ``'inout'``, or ``''`` when no intent was
+        declared (treated as INOUT by Fortran, but for validation we
+        prefer to flag the absence explicitly).
+    optional : bool
+        True iff the type-decl line carried the ``optional`` attribute.
+    rank : int
+        Number of dimensions.  Computed from ``dimension(...)`` on the
+        line, or from ``var(:,:,...)``-style trailing parens on the
+        variable token.  ``0`` for scalar.
+    """
+    type_:    str
+    kind_:    str
+    intent:   str
+    optional: bool
+    rank:     int
+
+
 class _SubSig(NamedTuple):
     """Parsed signature of one Fortran subroutine.
 
@@ -89,9 +142,15 @@ class _SubSig(NamedTuple):
         subroutine body.  These args may be absent from the metadata
         without producing a validation error — they will simply never be
         passed at the cap call site.
+    attrs : dict
+        Mapping of lowercase arg name to :class:`_ArgAttrs`.  Args
+        whose type-decl line couldn't be parsed are absent from the
+        dict; ``_validate_arg_attributes`` skips per-attribute checks
+        for those args (the name-set check still applies).
     """
-    args: List[str]
+    args:     List[str]
     optional: Set[str]
+    attrs:    Dict[str, '_ArgAttrs']
 
 
 def _paren_aware_split(s: str, sep: str) -> List[str]:
@@ -124,43 +183,164 @@ def _paren_aware_split(s: str, sep: str) -> List[str]:
     return result
 
 
-def _line_optional_names(line: str) -> List[str]:
-    """Return lowercase var names from a type-decl line carrying ``optional``.
+_INTENT_RE     = re.compile(r'(?i)^intent\s*\(\s*(in\s*out|inout|in|out)\s*\)\s*$')
+_DIM_ATTR_RE   = re.compile(r'(?i)^dimension\s*\(\s*(.*?)\s*\)\s*$')
+_TYPE_SPEC_RE  = re.compile(
+    r'(?i)^\s*(real|integer|logical|complex|character|double\s*precision'
+    r'|type\s*\([^)]*\)|class\s*\([^)]*\))\s*(\(.*\))?\s*$'
+)
+_KIND_SELECTOR_RE = re.compile(r'(?i)^\(\s*(.*?)\s*\)$')
 
-    Matches Fortran lines of the form
-    ``<type-spec> [, <attr>...] :: <var>[, <var>...]`` where one of the
-    comma-separated attributes (paren-aware) is the bare token
-    ``optional``.  Returns an empty list when ``::`` is absent or when no
-    ``optional`` attribute is present.
+
+def _split_type_spec(spec: str) -> "Tuple[str, str]":
+    """Split a Fortran type spec into ``(type, kind)``.
+
+    The type is lowercased; the kind selector is left in its raw form
+    (lowercased, whitespace stripped).  Returns ``('', '')`` if *spec*
+    isn't a recognised type spec.
 
     Examples
     --------
-    >>> _line_optional_names('integer, optional, intent(in) :: innie')
-    ['innie']
-    >>> _line_optional_names('real, intent(out), optional :: outie')
-    ['outie']
-    >>> _line_optional_names('real(kind=kind_phys), optional :: x, y(:,:)')
-    ['x', 'y']
-    >>> _line_optional_names('integer :: not_optional')
-    []
-    >>> _line_optional_names('  ! a comment, optional :: not_a_decl')
-    []
+    >>> _split_type_spec('real')
+    ('real', '')
+    >>> _split_type_spec('real(kind=kind_phys)')
+    ('real', 'kind_phys')
+    >>> _split_type_spec('real(kind_phys)')
+    ('real', 'kind_phys')
+    >>> _split_type_spec('real(8)')
+    ('real', '8')
+    >>> _split_type_spec('integer(int64)')
+    ('integer', 'int64')
+    >>> _split_type_spec('character(len=10)')
+    ('character', 'len=10')
+    >>> _split_type_spec('character(len=*)')
+    ('character', 'len=*')
+    >>> _split_type_spec('character(*)')
+    ('character', 'len=*')
+    >>> _split_type_spec('character')
+    ('character', '')
+    >>> _split_type_spec('type(my_t)')
+    ('type(my_t)', '')
+    >>> _split_type_spec('double precision')
+    ('double precision', '')
+    >>> _split_type_spec('not_a_type')
+    ('', '')
     """
-    # Strip any inline ``!`` comment so an ``optional`` token inside a
-    # comment can't be misread as an attribute declaration.
+    m = _TYPE_SPEC_RE.match(spec.strip())
+    if m is None:
+        return ('', '')
+    type_raw = m.group(1).lower()
+    kind_paren = m.group(2) or ''
+    # Normalise whitespace inside "double  precision".
+    type_ = re.sub(r'\s+', ' ', type_raw)
+    if type_.startswith('type(') or type_.startswith('class('):
+        # Strip whitespace inside the parens.
+        type_ = re.sub(r'\s+', '', type_)
+        return (type_, '')
+    if not kind_paren:
+        return (type_, '')
+    inner_match = _KIND_SELECTOR_RE.match(kind_paren.strip())
+    if inner_match is None:
+        return (type_, '')
+    inner = inner_match.group(1).strip()
+    if type_ == 'character':
+        # character has its own selector grammar.  Accept:
+        #   *           -> len=*
+        #   len=...     -> len=...
+        #   <int>       -> len=<int>
+        #   len=...,kind=...  -> use the len= portion
+        if inner == '*':
+            return ('character', 'len=*')
+        if inner.lower().startswith('len='):
+            # Strip trailing ",kind=..." if present.
+            len_part = inner.split(',')[0].strip()
+            return ('character', len_part.lower())
+        if re.match(r'^\d+$', inner) or inner == ':':
+            return ('character', 'len={}'.format(inner))
+        # Anything else: store raw, lowercased.
+        return ('character', inner.lower())
+    # Numeric types: accept ``kind=<x>`` or bare ``<x>``.
+    if inner.lower().startswith('kind='):
+        inner = inner[len('kind='):].strip()
+    return (type_, inner.lower())
+
+
+def _parse_decl_line(line: str) -> Dict[str, _ArgAttrs]:
+    """Parse a Fortran type-declaration line into per-name attributes.
+
+    Returns a (possibly empty) mapping ``{lower_name: _ArgAttrs}``.  Lines
+    that aren't type declarations (no ``::``) or whose type spec doesn't
+    parse return ``{}``.
+
+    Examples
+    --------
+    >>> attrs = _parse_decl_line('integer, intent(in) :: im')
+    >>> attrs['im']
+    _ArgAttrs(type_='integer', kind_='', intent='in', optional=False, rank=0)
+    >>> attrs = _parse_decl_line('real(kind=kind_phys), intent(inout) :: temp(:,:)')
+    >>> attrs['temp']
+    _ArgAttrs(type_='real', kind_='kind_phys', intent='inout', optional=False, rank=2)
+    >>> attrs = _parse_decl_line('character(len=*), intent(out) :: errmsg')
+    >>> attrs['errmsg']
+    _ArgAttrs(type_='character', kind_='len=*', intent='out', optional=False, rank=0)
+    >>> attrs = _parse_decl_line('real, optional, intent(in), dimension(:) :: a, b(:,:), c')
+    >>> sorted(attrs.items())
+    [('a', _ArgAttrs(type_='real', kind_='', intent='in', optional=True, rank=1)), ('b', _ArgAttrs(type_='real', kind_='', intent='in', optional=True, rank=2)), ('c', _ArgAttrs(type_='real', kind_='', intent='in', optional=True, rank=1))]
+    >>> _parse_decl_line('  ! comment :: not a decl')
+    {}
+    >>> _parse_decl_line('integer :: only_local')
+    {'only_local': _ArgAttrs(type_='integer', kind_='', intent='', optional=False, rank=0)}
+    """
     line = _COMMENT_RE.sub('', line)
     if '::' not in line:
-        return []
+        return {}
     before, _, after = line.partition('::')
-    attrs = [a.strip().lower() for a in _paren_aware_split(before, ',')]
-    if 'optional' not in attrs:
-        return []
-    names: List[str] = []
-    for tok in _paren_aware_split(after, ','):
-        m = re.match(r'\s*(\w+)', tok)
+    tokens = _paren_aware_split(before, ',')
+    if not tokens:
+        return {}
+    type_, kind_ = _split_type_spec(tokens[0])
+    if not type_:
+        return {}
+    intent = ''
+    optional = False
+    line_rank = 0
+    for tok in tokens[1:]:
+        t = tok.strip()
+        tl = t.lower()
+        if tl == 'optional':
+            optional = True
+            continue
+        m = _INTENT_RE.match(t)
         if m:
-            names.append(m.group(1).lower())
-    return names
+            iv = m.group(1).lower().replace(' ', '')
+            intent = iv  # 'in' / 'out' / 'inout'
+            continue
+        m = _DIM_ATTR_RE.match(t)
+        if m:
+            line_rank = len(_paren_aware_split(m.group(1), ','))
+            continue
+        # Anything else (allocatable, pointer, target, parameter, save,
+        # public, private, contiguous, asynchronous, volatile, value) is
+        # ignored — we only validate the attrs metadata declares.
+    result: Dict[str, _ArgAttrs] = {}
+    for var_tok in _paren_aware_split(after, ','):
+        var_tok = var_tok.strip()
+        if not var_tok:
+            continue
+        name_match = re.match(r'(\w+)\s*(\((.*)\))?\s*(=.*)?$', var_tok)
+        if name_match is None:
+            continue
+        name = name_match.group(1).lower()
+        inner = name_match.group(3)
+        if inner is not None:
+            rank = len(_paren_aware_split(inner, ','))
+        else:
+            rank = line_rank
+        result[name] = _ArgAttrs(
+            type_=type_, kind_=kind_, intent=intent,
+            optional=optional, rank=rank,
+        )
+    return result
 
 
 def _join_continuation(
@@ -349,16 +529,21 @@ def _parse_subroutines(
     ['x', 'y', 'z']
     >>> sorted(sig.optional)
     ['y', 'z']
+    >>> sig.attrs['x'].intent, sig.attrs['x'].type_
+    ('in', 'integer')
+    >>> sig.attrs['y'].optional
+    True
     """
     logical = _join_continuation(
         source.splitlines(keepends=True), filename=filename,
     )
-    args_by_name: Dict[str, List[str]] = {}
-    optional_by_name: Dict[str, Set[str]] = {}
+    args_by_name:     Dict[str, List[str]]            = {}
+    optional_by_name: Dict[str, Set[str]]             = {}
+    attrs_by_name:    Dict[str, Dict[str, _ArgAttrs]] = {}
     # Stack of names whose body we are currently scanning.  Each entry is
-    # the recorded name (for which we collect optionals) or ``None`` when
-    # this is a duplicate-name sub whose body should be skipped for the
-    # purpose of optional-attribution (its args were already discarded).
+    # the recorded name (for which we collect attrs) or ``None`` when
+    # this is a duplicate-name sub whose body should be skipped (its
+    # args were already discarded).
     stack: List[Optional[str]] = []
 
     for line in logical:
@@ -371,6 +556,7 @@ def _parse_subroutines(
             if name not in args_by_name:
                 args_by_name[name] = args
                 optional_by_name[name] = set()
+                attrs_by_name[name] = {}
                 stack.append(name)
             else:
                 stack.append(None)  # duplicate: ignore
@@ -382,13 +568,20 @@ def _parse_subroutines(
         if stack and stack[-1] is not None:
             tracked = stack[-1]
             arg_set = set(args_by_name[tracked])
-            for n in _line_optional_names(line):
-                if n in arg_set:
-                    optional_by_name[tracked].add(n)
+            for var_name, attrs in _parse_decl_line(line).items():
+                if var_name not in arg_set:
+                    continue
+                # First decl line wins (Fortran disallows redeclaration,
+                # so this only matters for malformed input).
+                if var_name not in attrs_by_name[tracked]:
+                    attrs_by_name[tracked][var_name] = attrs
+                if attrs.optional:
+                    optional_by_name[tracked].add(var_name)
 
     return {
         name: _SubSig(args=args_by_name[name],
-                      optional=optional_by_name[name])
+                      optional=optional_by_name[name],
+                      attrs=attrs_by_name[name])
         for name in args_by_name
     }
 
@@ -526,7 +719,192 @@ def _validate_scheme(
                     sub_name, sorted(only_fort_required)
                 )
             )
+        # Per-arg attribute checks for args present in BOTH sides.
+        meta_by_name = {v.local_name.lower(): v for v in meta_vars}
+        for name in sorted(meta_set & fort_set):
+            fattrs = sig.attrs.get(name)
+            if fattrs is None:
+                # Decl line failed to parse; skip attribute checks for
+                # this arg.  Name-set check already covered presence.
+                continue
+            mvar = meta_by_name[name]
+            errors.extend(
+                _check_arg_attributes(sub_name, name, mvar, fattrs)
+            )
+            # Optional flag — asymmetric:
+            #  - metadata says optional, Fortran doesn't → hard error
+            #    (cap may pass a missing arg, but Fortran requires it).
+            #  - Fortran says optional, metadata doesn't → warning
+            #    (cap always passes it; that's a valid subset of the
+            #    Fortran contract, but the metadata writer may have
+            #    intended to mark it optional).
+            if mvar.optional and not fattrs.optional:
+                errors.append(
+                    "Arg '{}' on '{}': metadata declares optional=True "
+                    "but Fortran does not carry the 'optional' attribute "
+                    "(cap-side present() checks would be invalid)".format(
+                        name, sub_name,
+                    )
+                )
+            elif fattrs.optional and not mvar.optional:
+                logger.warning(
+                    "Fortran argument '%s' on subroutine '%s' is "
+                    "declared optional but metadata does not mark it "
+                    "optional; cap will always pass it",
+                    name, sub_name,
+                )
+        # Fortran-only optional args (absent from metadata entirely):
+        # silently allowed but worth a heads-up — the host won't see
+        # them and the metadata writer may have meant to declare them.
+        for name in sorted(fort_only_optional):
+            logger.warning(
+                "Optional Fortran argument '%s' on subroutine '%s' is "
+                "absent from metadata; it will never be passed at the "
+                "call site",
+                name, sub_name,
+            )
     return errors
+
+
+_EXTERNAL_TYPE_PREFIX_RE = re.compile(r'(?i)^external\s*:\s*[^:]+\s*:\s*')
+_DDT_WRAPPER_RE          = re.compile(r'(?i)^(?:type|class)\s*\(\s*(.+?)\s*\)\s*$')
+
+
+def _normalize_type_for_comparison(type_str: str) -> str:
+    """Return a comparison-friendly form of a CCPP type string.
+
+    Rules:
+
+    * Lowercase, whitespace collapsed.
+    * ``type(name)`` / ``class(name)`` wrapper → bare ``name``.
+    * ``external:<module>:<typename>`` → bare ``typename`` (the module
+      part is metadata-only; Fortran uses the bare type name once the
+      module is brought in via a ``use`` clause).
+    * ``doubleprecision`` → ``double precision``.
+    * Anything else is returned as-is (intrinsics, DDT names, etc.).
+
+    With this normalisation, a metadata declaration ``type = ty_rad_lw``
+    matches a Fortran ``type(ty_rad_lw)`` dummy, and a metadata
+    ``type = external:mpi_f08:mpi_comm`` matches a Fortran
+    ``type(mpi_comm)`` dummy.  Intrinsic comparisons (``real`` vs
+    ``real``) are unaffected.
+
+    Examples
+    --------
+    >>> _normalize_type_for_comparison('real')
+    'real'
+    >>> _normalize_type_for_comparison('REAL')
+    'real'
+    >>> _normalize_type_for_comparison('double precision')
+    'double precision'
+    >>> _normalize_type_for_comparison('doubleprecision')
+    'double precision'
+    >>> _normalize_type_for_comparison('ty_rad_lw')
+    'ty_rad_lw'
+    >>> _normalize_type_for_comparison('type(ty_rad_lw)')
+    'ty_rad_lw'
+    >>> _normalize_type_for_comparison('Type( Ty_Rad_LW )')
+    'ty_rad_lw'
+    >>> _normalize_type_for_comparison('class(ty_rad_lw)')
+    'ty_rad_lw'
+    >>> _normalize_type_for_comparison('external:mpi_f08:mpi_comm')
+    'mpi_comm'
+    >>> _normalize_type_for_comparison('external : esmf_mod : esmf_clock')
+    'esmf_clock'
+    """
+    s = type_str.strip().lower()
+    s = re.sub(r'\s+', ' ', s)
+    s = _EXTERNAL_TYPE_PREFIX_RE.sub('', s)
+    m = _DDT_WRAPPER_RE.match(s)
+    if m:
+        s = m.group(1).strip()
+    if s == 'doubleprecision':
+        s = 'double precision'
+    return s
+
+
+def _check_arg_attributes(
+    sub_name:  str,
+    arg_name:  str,
+    meta_var,
+    fort:      _ArgAttrs,
+) -> List[str]:
+    """Compare per-attribute consistency for one dummy argument.
+
+    Compared attributes: ``intent``, ``type``, ``kind``, dimension
+    *rank* (number of dims).  ``character`` kinds treat ``len=*`` on
+    either side as a wildcard against any concrete ``len=N`` /
+    ``len=:``.  The ``optional`` attribute is checked at the call site
+    in :func:`_validate_scheme` because one direction emits a warning
+    (logger-dependent) rather than an error.
+
+    Returns a list of error message strings (empty on full match).
+    """
+    errs: List[str] = []
+    prefix = "Arg '{}' on '{}': ".format(arg_name, sub_name)
+
+    # intent — only check when the metadata actually declares one (it's
+    # required for scheme vars but we don't reach this helper for
+    # non-scheme tables anyway).
+    meta_intent = (meta_var.intent or '').lower()
+    if meta_intent and fort.intent and meta_intent != fort.intent:
+        errs.append(
+            prefix + "intent mismatch (metadata={!r}, Fortran={!r})".format(
+                meta_intent, fort.intent,
+            )
+        )
+    elif meta_intent and not fort.intent:
+        errs.append(
+            prefix + "intent declared as {!r} in metadata but absent "
+            "from Fortran declaration".format(meta_intent)
+        )
+
+    # type — case-insensitive, with normalisation that puts intrinsic,
+    # DDT, and external types on equal footing.  See
+    # :func:`_normalize_type_for_comparison` for the rules.
+    meta_type = (meta_var.type or '').strip()
+    if meta_type and fort.type_:
+        meta_norm = _normalize_type_for_comparison(meta_type)
+        fort_norm = _normalize_type_for_comparison(fort.type_)
+        if meta_norm != fort_norm:
+            errs.append(
+                prefix + "type mismatch (metadata={!r}, Fortran={!r})".format(
+                    meta_var.type, fort.type_,
+                )
+            )
+
+    # kind — case-insensitive.  Empty matches empty.  character has
+    # the ``len=*`` wildcard on either side.
+    meta_kind = (meta_var.kind or '').strip().lower()
+    fort_kind = fort.kind_
+    if meta_type == 'character' or fort.type_ == 'character':
+        if meta_kind == 'len=*' or fort_kind == 'len=*':
+            pass  # wildcard match
+        elif meta_kind != fort_kind:
+            errs.append(
+                prefix + "character length mismatch "
+                "(metadata={!r}, Fortran={!r})".format(meta_kind, fort_kind)
+            )
+    else:
+        if meta_kind != fort_kind:
+            errs.append(
+                prefix + "kind mismatch (metadata={!r}, Fortran={!r})".format(
+                    meta_kind or '<none>', fort_kind or '<none>',
+                )
+            )
+
+    # rank — number of dimensions.  Metadata stores them as a list of
+    # standard-name strings; Fortran rank is counted from the decl.
+    meta_rank = len(meta_var.dimensions or [])
+    if meta_rank != fort.rank:
+        errs.append(
+            prefix + "rank mismatch (metadata declares {} dimension(s) {}, "
+            "Fortran declares rank {})".format(
+                meta_rank, list(meta_var.dimensions or []), fort.rank,
+            )
+        )
+
+    return errs
 
 
 _FORTRAN_EXTENSIONS = ('.F90', '.f90', '.F', '.f')

@@ -7,7 +7,8 @@ legacy toolchain.  It reads host-model metadata files, scheme metadata files,
 and suite XML definition files, resolves all variable connections, and writes:
 
 * ``ccpp_kinds.F90``       — kind parameter definitions
-* ``ccpp_static_api.F90``  — static dispatch API
+* ``<host>_ccpp_cap.F90``  — static dispatch API (per-host; filename and module
+  name derived from ``--host-name``)
 * ``ccpp_<suite>_cap.F90`` — suite-level cap (state machine, group dispatch)
 * ``ccpp_<suite>_<group>_cap.F90`` — group-level cap (scheme call sites)
 * ``ccpp_<suite>_data.F90``        — suite-owned interstitial data module
@@ -259,15 +260,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         action='store_true',
         help=(
             "Stub the five suite-introspection routines in "
-            "ccpp_static_api.F90 (ccpp_physics_suite_list / "
+            "<host>_ccpp_cap.F90 (ccpp_physics_suite_list / "
             "suite_part_list / suite_schemes / suite_variables / "
             "suite_host_data).  Signatures remain so callers still "
             "link, but bodies set errflg=1 with a clear errmsg "
             "(suite_list, which has no errflg, writes to error_unit "
             "and returns an empty list).  Use this to shrink the "
-            "generated ccpp_static_api.F90 from ~33000 lines to ~800 "
-            "for multi-suite builds where -O3 cannot finish compiling "
-            "the introspection case-blocks."
+            "generated <host>_ccpp_cap.F90 from ~33000 lines to ~800 "
+            "for multi-suite builds where even -O1 cannot finish "
+            "compiling the introspection case-blocks."
         ),
     )
     parser.add_argument(

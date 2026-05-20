@@ -1104,7 +1104,7 @@ def _generate_static_api(
     # With --no-host-introspection, each routine retains its signature
     # but the body is replaced with an errflg=1 stub (or, for
     # suite_list, an error_unit write + empty allocation), shrinking
-    # ccpp_static_api.F90 dramatically for multi-suite builds.
+    # <host>_ccpp_cap.F90 dramatically for multi-suite builds.
     lines.extend(_suite_list_subroutine(
         suite_names, stub_body=no_host_introspection,
     ))

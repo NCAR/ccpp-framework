@@ -51,9 +51,20 @@ discrepancies. Run by developers before invoking the generator — e.g., during 
 development or in CI. Does **not** generate any Fortran output.
 
 For each scheme phase declared in a `.meta` file, the validator checks that the
-corresponding Fortran subroutine: (1) exists in the source tree, (2) has the same number
-of dummy arguments, and (3) the argument names match the `local_name` values in the
-metadata (order-insensitive).
+corresponding Fortran subroutine: (1) exists in the source tree, (2) has the same
+number of dummy arguments, (3) the argument names match the `local_name` values in
+the metadata (order-insensitive), and (4) for every argument present in both sides,
+the `intent`, `type`, `kind`, and dimension *rank* agree.  `character` arguments
+treat `len=*` on either side as a wildcard.  DDT names compare against the Fortran
+`type(name)` / `class(name)` wrapper; `external:<module>:<typename>` metadata
+compares against the Fortran `type(typename)` (the module qualifier is
+metadata-only).
+
+The `optional` attribute is asymmetric: metadata `optional=True` paired with a
+Fortran dummy that is *not* declared `optional` is a hard error (the cap's
+`present()` check would be invalid on a Fortran-required dummy); the reverse
+direction (Fortran-only `optional`) is a warning, since always passing the arg is
+a valid subset of the Fortran contract.
 
 Fortran source files can be supplied explicitly on the CLI (`--source-files`). When
 omitted, the validator auto-discovers the Fortran source for each scheme table using the
@@ -422,7 +433,7 @@ variables from `_host_data` since the host owns those.
 
 All three levels are fully auto-generated. No hand-written components in the cap layer.
 
-### 6.1 Static API (`ccpp_static_api.F90`)
+### 6.1 Static API (`<host>_ccpp_cap.F90`)
 
 - Imports all host DDTs and flat fields via `module use` (resolved from host metadata)
 - Does not USE `ccpp_kinds` directly: the static API has no kind-typed declarations of
@@ -1006,13 +1017,13 @@ All files are written to `--output-root`.
 | File | Contents |
 |---|---|
 | `ccpp_kinds.F90` | Kind parameter definitions. **Always generated.** Re-exports specs from `iso_fortran_env` (default) or host-supplied modules as `integer, parameter, public :: <name> = <spec>`. If no `--kind-type` is supplied, `kind_phys=iso_fortran_env:REAL64` is injected automatically (logged at INFO). |
-| `ccpp_static_api.F90` | Static API — host imports, suite_name dispatch |
+| `<host>_ccpp_cap.F90` | Static API — host imports, suite_name dispatch (filename and module name derived from `--host-name`) |
 | `ccpp_<suite>_cap.F90` | Suite cap — suite data import, state machine, group dispatch |
 | `ccpp_<suite>_<group>_cap.F90` | Group cap — scheme call sites, state array, optionals, transformations. USEs `ccpp_kinds` for any kind referenced in transformation temporaries. |
 | `ccpp_<suite>_data.F90` | Suite data module — framework-owned interstitial DDT. USEs `ccpp_kinds` for any kind referenced in suite-var declarations. |
 | `ccpp_<suite>_types.F90` | Shared cap types — optional pointer wrapper types, transformation locals. USEs `ccpp_kinds` for any kind referenced in pointer wrappers. |
 | `ccpp_<suite>_data.meta` | Generated `type = suite` metadata table — pairs with `ccpp_<suite>_data.F90` (output-only, for inspection) |
-| `datatable.xml` | Generator database for `ccpp_datafile.py` queries. `ccpp_kinds.F90` and `ccpp_static_api.F90` appear in `<ccpp_files><utilities>...` (matches original capgen). |
+| `datatable.xml` | Generator database for `ccpp_datafile.py` queries. `ccpp_kinds.F90` appears under `<ccpp_files><utilities>`; `<host>_ccpp_cap.F90` appears under `<ccpp_files><host_files>`. |
 
 `ccpp_kinds.F90` is a dependency of all generated Fortran files that reference any kind parameter (group cap, suite types, suite data). The static API and suite cap have no kind references and do not USE it.
 
@@ -1077,8 +1088,10 @@ The XML structure is:
   <ccpp_files>
     <utilities>
       <file>/abs/path/ccpp_kinds.F90</file>
-      <file>/abs/path/ccpp_static_api.F90</file>
     </utilities>
+    <host_files>
+      <file>/abs/path/<host>_ccpp_cap.F90</file>
+    </host_files>
     <suite_files>
       <file>/abs/path/ccpp_<suite>_cap.F90</file>
       ...

@@ -26,8 +26,8 @@ Exactly one report action is required per invocation.
 
 Notes specific to capgen-ng
 ---------------------------
-* ``--host-files`` returns ``ccpp_static_api.F90`` (capgen-ng emits the
-  static API in lieu of a per-host cap file).
+* ``--host-files`` returns ``<host>_ccpp_cap.F90`` (the per-host static API;
+  filename and module name derived from ``--host-name`` at generation time).
 * ``--capgen-files`` enumerates Fortran sources only.  Non-Fortran inspection
   artifacts (``ccpp_<suite>.meta``, ``ccpp_<suite>_expanded.xml``) are
   reported via ``--inspection-files``.

@@ -24,7 +24,7 @@ Two top-level file sections partition capgen-ng's outputs by language:
           <file>/abs/path/ccpp_kinds.F90</file>
         </utilities>
         <host_files>
-          <file>/abs/path/ccpp_static_api.F90</file>
+          <file>/abs/path/<host>_ccpp_cap.F90</file>
         </host_files>
         <suite_files>
           <file>/abs/path/ccpp_<suite>_cap.F90</file>
@@ -135,7 +135,7 @@ def _build_capgen_files(
     ``<inspection_files>`` and are emitted by :func:`_build_inspection_files`.
 
     ``host_file_paths`` lists files generated for the host-facing API.  In
-    capgen-ng this is the static API (``ccpp_static_api.F90``); the section is
+    capgen-ng this is the static API (``<host>_ccpp_cap.F90``); the section is
     emitted unconditionally (possibly empty) to keep the schema stable.
     """
     capgen_files = ET.SubElement(root, 'capgen_files')
@@ -401,7 +401,7 @@ def write_datatable(
         Output directory.
     host_file_paths : list of str, optional
         Absolute paths to host-facing API files (capgen-ng emits
-        ``ccpp_static_api.F90`` here).  The ``<host_files>`` section is
+        ``<host>_ccpp_cap.F90`` here).  The ``<host_files>`` section is
         always written (possibly empty).
     scheme_file_paths : list of str, optional
         Absolute paths to the Fortran source files (``.F90`` / ``.F`` / ...)
