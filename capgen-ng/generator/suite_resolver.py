@@ -1910,12 +1910,7 @@ def resolve_suite(
             "``[ccpp-table-properties] type = scheme`` table is available "
             "in the metadata files passed via ``--scheme-files``.  Add "
             "the missing scheme ``.meta`` files to the generator's "
-            "--scheme-files argument (CMake users: add them to the "
-            "scheme metadata list in the relevant ``CMakeLists.txt``).\n"
-            "\n"
-            "Without this check capgen-ng would silently emit an empty "
-            "group cap and the build would succeed with the wrong "
-            "runtime behaviour (schemes never run).".format(
+            "--scheme-files argument.".format(
                 suite=suite.name,
                 n=len(missing),
                 names='\n    '.join(missing),

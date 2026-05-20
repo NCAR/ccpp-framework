@@ -573,7 +573,12 @@ def parse_suite_xml(
 
     log.info("Reading suite XML: %s", suite_file)
     _, root = read_xml_file(suite_file, log)
-    version = find_schema_version(root)
+    try:
+        version = find_schema_version(root)
+    except CCPPError as verr:
+        raise CCPPError(
+            f"{verr} in suite XML file '{suite_file}'"
+        ) from verr
     log.debug("Suite XML schema version: %d.%d", *version)
 
     # ---- schema validation (pre-expansion) --------------------------------

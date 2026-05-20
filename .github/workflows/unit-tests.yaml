@@ -24,11 +24,6 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    #- name: Install dependencies
-    #  run: |
-    #    python -m pip install --upgrade pip
-    #    pip install pytest
-    #    which pytest
     - name: Update repos and install dependencies
       run: |
         sudo apt-get update
@@ -48,3 +43,6 @@ jobs:
     - name: Run capgen-ng unit tests
       run: |
         pytest -v unit-tests/
+    - name: Run capgen-ng module doctests
+      run: |
+        PYTHONPATH=capgen-ng pytest --doctest-modules capgen-ng

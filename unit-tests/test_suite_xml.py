@@ -594,8 +594,10 @@ class TestParseSuiteXmlErrors(unittest.TestCase):
                     self._parse(fname)
 
     def test_missing_version_raises(self):
-        with self.assertRaises(CCPPError):
+        with self.assertRaises(CCPPError) as cm:
             self._parse('suite_missing_version.xml')
+        self.assertIn('suite_missing_version.xml', str(cm.exception))
+        self.assertIn('Version attribute required', str(cm.exception))
 
     def test_infinite_group_recursion_detected(self):
         """Circular nested-suite references at group level are caught."""

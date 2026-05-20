@@ -208,7 +208,12 @@ def load_suite_by_name(suite_name, group_name, file, logger=None):
     >>> tmpdir.cleanup()
     """
     _, root = read_xml_file(file, logger)
-    schema_version = find_schema_version(root)
+    try:
+        schema_version = find_schema_version(root)
+    except CCPPError as verr:
+        raise CCPPError(
+            f"{verr} in nested suite XML file '{file}'"
+        ) from verr
     if not validate_xml_file(file, 'suite', schema_version, logger):
         raise CCPPError(f"Invalid suite definition file, '{file}'")
     if root.attrib.get("name") == suite_name:
