@@ -1212,7 +1212,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   `metadata/legacy_compat.py` and tagged `# legacy-compat:` for clean
   removal once scheme metadata has been migrated.
 - **`_FRAMEWORK_CONST_DIM_INPUTS` cleanup** — the hand-curated
-  frozenset in `generator/static_api.py` was removed; framework-
+  frozenset in `generator/host_cap.py` was removed; framework-
   constituent dimension references now ride on a dedicated
   `used_const_dim_std_names` field on `ResolvedArg`.
 - **`active` expression case-folding** — mixed-case standard names
@@ -1285,7 +1285,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 
 ### Test status
 
-- **Unit tests**: 1229 passing (`python -m pytest unit-tests/`).
+- **Unit tests**: 1335 passing (`python -m pytest unit-tests/`).
 - **End-to-end tests**: `advection`, `unit_conv`, `nested_suite`,
   `variable_transform`, `instances`, `ddt` covered.  SCM running
   against ccpp-physics is the active driver right now — most of the

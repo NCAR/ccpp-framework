@@ -251,7 +251,7 @@ Features that exist only in capgen-ng (some exist in prebuild):
 
 ## 6. Where things stand right now (2026-05-18)
 
-- **Unit tests**: 1319 passing.  No known failures.
+- **Unit tests**: 1335 passing.  No known failures.
 - **End-to-end tests**: 10 passing — `chunked_data`, `opt_arg`,
   `nested_suite`, `ddthost`, `instances`, `capgen_ng`,
   `var_compat`, `advection`, and the new `instances_advection`

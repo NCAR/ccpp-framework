@@ -3261,7 +3261,7 @@ class TestConstituentAutoResolution(unittest.TestCase):
     def test_constituent_args_excluded_from_introspection(self):
         # source != 'host' — constituent args do not appear in suite
         # input/output lists (validated indirectly via _collect_host_io
-        # in static_api tests; here we just confirm the source).
+        # in host_cap tests; here we just confirm the source).
         for arg in self.run_args.values():
             if arg.scheme_local_name in ('cldliq', 'tend_cldliq'):
                 self.assertNotEqual(arg.source, 'host')
@@ -3296,7 +3296,7 @@ class TestConstituentAutoResolution(unittest.TestCase):
 class TestUsedConstDimStdNames(unittest.TestCase):
     """``ResolvedArg.used_const_dim_std_names`` carries framework-
     constituent dim refs (notably ``number_of_ccpp_constituents``) so
-    the introspection routines in :mod:`generator.static_api` can list
+    the introspection routines in :mod:`generator.host_cap` can list
     them as inputs without polluting the host-side
     :attr:`used_dim_std_names` channel."""
 

@@ -339,14 +339,25 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1316 passing on `feature/capgen-ng` (as of 2026-05-19).
+- **Unit tests**: 1335 passing on `feature/capgen-ng` (as of 2026-05-20).
 - **End-to-end tests passing**: `advection`, `unit_conv`,
   `nested_suite`, `variable_transform`, `instances`,
   `instances_advection`, `ddt`.
 - **CCPP-SCM**: actively driving development — every build / runtime
   failure surfaced this week landed as a fix in capgen-ng (rather than
   being patched around in the host).  Most of the `phys_ps` group now
-  builds end-to-end via `--legacy-mode`.
+  builds end-to-end via `--legacy-mode`.  On 2026-05-20 the
+  per-arg-attribute validator caught **67 real metadata/Fortran
+  disagreements** in the SCM physics tree (12 missing `kind = kind_phys`
+  + 42 intent mismatches + a mix of optional-flag and bare-`real`
+  cases); all fixed.
+- **Validator** now checks per-argument `intent`, `type`, `kind`, and
+  dimension rank in addition to the original name/count check.
+  Asymmetric `optional` rule, DDT + `external:<module>:<typename>`
+  type normalisation, character `len=*` wildcard.  Resolver also
+  enforces an `active`-vs-`optional` coherence rule: a host variable
+  with `active = (...)` paired with a non-optional scheme arg is now
+  a parse-time error.  See `doc/migration.md` §7 + §1.3.1.
 - **`--no-host-introspection`** (new, 2026-05-14): stubs the bodies of
   the five suite-introspection routines in `<host>_ccpp_cap.F90`,
   shrinking the file from ~33k lines to ~800 for the 10-suite SCM

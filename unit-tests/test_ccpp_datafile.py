@@ -56,7 +56,7 @@ def _build_datatable(tmpdir,
         suite_file_paths or ['/out/ccpp_test_simple_cap.F90',
                              '/out/ccpp_test_simple_physics_cap.F90'],
         tmpdir,
-        host_file_paths=host_file_paths or ['/out/ccpp_static_api.F90'],
+        host_file_paths=host_file_paths or ['/out/test_host_ccpp_cap.F90'],
         scheme_file_paths=scheme_file_paths,
         dependency_paths=dependency_paths or [],
         suite_meta_paths=suite_meta_paths,
@@ -83,7 +83,7 @@ class TestDatatableReportFileActions(_DTBase):
     def test_host_files(self):
         out = datatable_report(self._datatable,
                                DatatableReport('host_files'), ',')
-        self.assertEqual(out, '/out/ccpp_static_api.F90')
+        self.assertEqual(out, '/out/test_host_ccpp_cap.F90')
 
     def test_suite_files(self):
         out = datatable_report(self._datatable,
@@ -102,7 +102,7 @@ class TestDatatableReportFileActions(_DTBase):
                                DatatableReport('capgen_files'), ',')
         items = out.split(',')
         self.assertIn('/out/ccpp_kinds.F90', items)
-        self.assertIn('/out/ccpp_static_api.F90', items)
+        self.assertIn('/out/test_host_ccpp_cap.F90', items)
         self.assertIn('/out/ccpp_test_simple_cap.F90', items)
 
     def test_separator_honored(self):

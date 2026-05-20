@@ -458,7 +458,7 @@ adds a code path that most contributors don't read. If we drop it
 
 ### 4.8 Capgen-ng: `_FRAMEWORK_CONST_DIM_INPUTS` cleanup (LANDED 2026-05-13)
 
-`generator/static_api.py` no longer carries the hand-curated frozenset of
+`generator/host_cap.py` no longer carries the hand-curated frozenset of
 standard names; framework-constituent dimension references now ride on a
 dedicated `used_const_dim_std_names` field on `ResolvedArg`.  Closes the
 "hand-curated → structured field" REVISIT note that was in the code.

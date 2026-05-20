@@ -701,7 +701,7 @@ def _suite_list_subroutine(
     ``error_unit`` and return an empty list.  ``ccpp_physics_suite_list``
     has no errflg/errmsg arguments, so ``error_unit`` is the only
     available error channel.  The module-level ``use iso_fortran_env``
-    that this references is added by ``_generate_static_api`` when
+    that this references is added by ``_generate_host_cap`` when
     ``no_host_introspection`` is on.
     """
     i1 = _INDENT
@@ -970,7 +970,7 @@ def _suite_io_subroutine(
 # Module generator
 ########################################################################
 
-def _generate_static_api(
+def _generate_host_cap(
     host_name: str,
     suite_names: List[str],
     suite_resolutions: List[SuiteResolution],
@@ -1132,7 +1132,7 @@ def _generate_static_api(
 # Public API
 ########################################################################
 
-def write_static_api(
+def write_host_cap(
     host_name: str,
     suite_names: List[str],
     suite_resolutions: List[SuiteResolution],
@@ -1173,7 +1173,7 @@ def write_static_api(
         Signatures remain so existing callers still link.  Use this to
         shrink ``<host>_ccpp_cap.F90`` from ~33k lines to ~800 for
         multi-suite builds where the introspection case-blocks make
-        ``-O3`` compilation impractical.
+        even ``-O1`` compilation impractical.
 
     Returns
     -------
@@ -1184,7 +1184,7 @@ def write_static_api(
     filename = '{}_ccpp_cap.F90'.format(host_name)
     out_path  = os.path.join(output_root, filename)
 
-    lines = _generate_static_api(
+    lines = _generate_host_cap(
         host_name, suite_names, suite_resolutions, host_dict, scheme_store,
         no_host_introspection=no_host_introspection,
         trace=trace,

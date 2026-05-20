@@ -900,7 +900,7 @@ class ResolvedArg:
     # ``ccpp_constituents``).  These are not USE'd from any module — the
     # value is reached via the per-instance constituent object — but
     # they're surfaced as inputs by the introspection routines in
-    # :mod:`generator.static_api`.  Replaces the older trick of stuffing
+    # :mod:`generator.host_cap`.  Replaces the older trick of stuffing
     # them into :attr:`used_dim_std_names`.
     used_const_dim_std_names: Set[str] = field(default_factory=set)
 
@@ -1632,7 +1632,7 @@ def _const_dim_part(
     The trailing dim ``number_of_ccpp_constituents`` is emitted as
     ``':'`` (whole-axis slice).  The std name is added to
     ``used_const_dim_std`` so the introspection routine
-    (:func:`generator.static_api._collect_host_io`) can include it in
+    (:func:`generator.host_cap._collect_host_io`) can include it in
     its inputs list — original capgen reports framework-constituent dim
     names there.  No USE statement is emitted for the name: it isn't in
     host_dict (the framework provides it via the per-instance
@@ -1812,7 +1812,7 @@ def _resolve_constituent_arg(
         # Framework-constituent dim refs (e.g. number_of_ccpp_constituents)
         # travel on the dedicated used_const_dim_std_names channel — no
         # USE statement, but surfaced as inputs by the introspection
-        # routines in generator.static_api.
+        # routines in generator.host_cap.
         return ResolvedArg(**_common_kwargs(
             base_expr=base_expr, subscript=subscript, call_expr=call_expr,
             used_host_std=used_host_std,

@@ -95,7 +95,7 @@ from generator.group_cap import write_group_cap
 from generator.suite_data import write_suite_data, write_suite_meta
 from generator.suite_cap import write_suite_cap
 from generator.suite_types import write_suite_types
-from generator.static_api import write_static_api
+from generator.host_cap import write_host_cap
 from generator.host_constituents import write_host_constituents
 from generator.datatable import write_datatable
 
@@ -943,8 +943,8 @@ def capgen(
             trace=trace,
         )
 
-    # ---- static API (one file for all suites) ------------------------------
-    write_static_api(
+    # ---- host cap (one file for all suites) --------------------------------
+    write_host_cap(
         host_name, suite_names, suite_resolutions, output_root,
         host_dict, scheme_store,
         logger=log,

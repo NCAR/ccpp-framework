@@ -65,7 +65,7 @@ class TestOutputFilesExist(unittest.TestCase):
     def _path(self, name):
         return os.path.join(self._tmpdir, name)
 
-    def test_static_api_exists(self):
+    def test_host_cap_exists(self):
         self.assertTrue(os.path.isfile(self._path('test_host_ccpp_cap.F90')))
 
     def test_suite_cap_exists(self):
@@ -376,7 +376,7 @@ class TestNoHostConstituentsWhenAbsent(unittest.TestCase):
 # Test: static API content
 # ---------------------------------------------------------------------------
 
-class TestStaticApiContent(unittest.TestCase):
+class TestHostCapContent(unittest.TestCase):
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -521,7 +521,7 @@ class TestDatatableContent(unittest.TestCase):
         self.assertIn('ccpp_test_simple_cap.F90', names)
         self.assertIn('ccpp_test_simple_physics_cap.F90', names)
 
-    def test_static_api_in_host_files(self):
+    def test_host_cap_in_host_files(self):
         host_files = self._root.find('capgen_files').find('host_files')
         self.assertIsNotNone(host_files)
         names = [os.path.basename(f.text) for f in host_files.findall('file')]
@@ -658,7 +658,7 @@ class TestMultipleSuites(unittest.TestCase):
             os.path.isfile(os.path.join(self._tmpdir, 'ccpp_test_subcycle_cap.F90'))
         )
 
-    def test_static_api_dispatches_both(self):
+    def test_host_cap_dispatches_both(self):
         with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         self.assertIn("case('test_simple')", text)
@@ -805,7 +805,7 @@ class TestSingleInstanceIntegration(unittest.TestCase):
         import shutil
         shutil.rmtree(self._tmpdir)
 
-    def test_static_api_ccpp_init_omits_inst_num(self):
+    def test_host_cap_ccpp_init_omits_inst_num(self):
         with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         # ``suite_name_var`` is the local name declared by
@@ -817,7 +817,7 @@ class TestSingleInstanceIntegration(unittest.TestCase):
         # And NOT the multi-instance shape.
         self.assertNotIn('inst_num', text)
 
-    def test_static_api_ccpp_register_omits_inst_num(self):
+    def test_host_cap_ccpp_register_omits_inst_num(self):
         with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
@@ -825,7 +825,7 @@ class TestSingleInstanceIntegration(unittest.TestCase):
             text,
         )
 
-    def test_static_api_ccpp_final_omits_inst_num(self):
+    def test_host_cap_ccpp_final_omits_inst_num(self):
         with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
@@ -2108,7 +2108,7 @@ class TestInterstitialSuiteData(unittest.TestCase):
         self.assertIn('inst_num', physics_run)
         self.assertIn('call diag_group_run', physics_run)
 
-    def test_static_api_physics_run_has_inst_num(self):
+    def test_host_cap_physics_run_has_inst_num(self):
         """Static API ccpp_physics_run must include inst_num when groups need it."""
         with open(os.path.join(self._tmpdir, 'test_host_ccpp_cap.F90')) as fh:
             text = fh.read()

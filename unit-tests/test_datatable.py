@@ -31,7 +31,7 @@ def _write(tmpdir, suite_xml='suite_test_simple.xml', utility_paths=None,
         write_datatable(
             [suite_resolution],
             store,
-            utility_paths or ['/out/ccpp_kinds.F90', '/out/ccpp_static_api.F90'],
+            utility_paths or ['/out/ccpp_kinds.F90', '/out/test_host_ccpp_cap.F90'],
             suite_file_paths or ['/out/ccpp_test_simple_cap.F90'],
             tmpdir,
             host_file_paths=host_file_paths,
@@ -85,7 +85,7 @@ class TestCcppFilesSection(unittest.TestCase):
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
-        utils = ['/out/ccpp_kinds.F90', '/out/ccpp_static_api.F90']
+        utils = ['/out/ccpp_kinds.F90', '/out/test_host_ccpp_cap.F90']
         sfiles = ['/out/ccpp_test_simple_cap.F90', '/out/ccpp_test_simple_data.F90']
         path, _, _ = _write(self._tmpdir, utility_paths=utils, suite_file_paths=sfiles)
         self._root = ET.parse(path).getroot()
@@ -105,7 +105,7 @@ class TestCcppFilesSection(unittest.TestCase):
         self.assertIsNotNone(utils)
         files = [f.text for f in utils.findall('file')]
         self.assertIn('/out/ccpp_kinds.F90', files)
-        self.assertIn('/out/ccpp_static_api.F90', files)
+        self.assertIn('/out/test_host_ccpp_cap.F90', files)
 
     def test_suite_files_subsection(self):
         sfiles_elem = self._capgen_files().find('suite_files')
@@ -464,7 +464,7 @@ class TestHostFilesPopulated(unittest.TestCase):
         self._tmpdir = tempfile.mkdtemp()
         self._path, _, _ = _write(
             self._tmpdir,
-            host_file_paths=['/out/ccpp_static_api.F90'],
+            host_file_paths=['/out/test_host_ccpp_cap.F90'],
         )
         self._root = ET.parse(self._path).getroot()
 
@@ -472,10 +472,10 @@ class TestHostFilesPopulated(unittest.TestCase):
         import shutil
         shutil.rmtree(self._tmpdir)
 
-    def test_host_files_contains_static_api(self):
+    def test_host_files_contains_host_cap(self):
         host_files = self._root.find('capgen_files').find('host_files')
         names = [f.text for f in host_files.findall('file')]
-        self.assertEqual(names, ['/out/ccpp_static_api.F90'])
+        self.assertEqual(names, ['/out/test_host_ccpp_cap.F90'])
 
 
 class TestVarDictionariesSection(unittest.TestCase):
