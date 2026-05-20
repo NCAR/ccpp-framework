@@ -770,9 +770,8 @@ class TestCollectHostIoIncludesActiveExpr(unittest.TestCase):
     are present."""
 
     def setUp(self):
-        from test_suite_resolver import _load_scheme_store
         from metadata.metadata_table import _parse_lines
-        from metadata.variable_resolver import build_flat_host_dict
+        from metadata.variable_resolver import build_flat_host_dict, SchemeStore
         from generator.suite_resolver import resolve_suite
         import tempfile, logging
         from generator.suite_xml import parse_suite_xml
@@ -781,6 +780,12 @@ class TestCollectHostIoIncludesActiveExpr(unittest.TestCase):
         # an active=() expression on another host var.  No scheme takes
         # the flag as a direct argument — without the active-expr walk
         # in _collect_host_io it would silently disappear.
+        #
+        # The matching scheme arg is declared optional, which the
+        # resolver's active+optional coherence check requires (host
+        # ``active`` means the host's variable is only valid when the
+        # condition holds; the cap honors that via the optional/
+        # pointer-association pattern).
         host_src = '''
 [ccpp-table-properties]
   name = active_helper
@@ -822,6 +827,43 @@ class TestCollectHostIoIncludesActiveExpr(unittest.TestCase):
   kind = kind_phys
   active = (flag_for_passive_check)
 '''
+        # Inline scheme whose ``temp`` arg is optional — paired with the
+        # host-side active above.
+        scheme_src = '''
+[ccpp-table-properties]
+  name = active_scheme
+  type = scheme
+[ccpp-arg-table]
+  name = active_scheme_run
+  type = scheme
+[ im ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ temp ]
+  standard_name = air_temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = True
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
         from test_suite_resolver import _SAMPLES_DIR
         from metadata.metadata_table import parse_metadata_file
         ctrl_tbls = parse_metadata_file(
@@ -831,11 +873,14 @@ class TestCollectHostIoIncludesActiveExpr(unittest.TestCase):
         ctrl_only = [t for t in ctrl_tbls if t.table_type == 'control']
         self.hd = build_flat_host_dict(host_tbls, ctrl_only, [])
 
-        store = _load_scheme_store()
+        scheme_tbls = _parse_lines(
+            scheme_src.splitlines(keepends=True), 's.meta',
+        )
+        store = SchemeStore.build_from(scheme_tbls)
         suite_xml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<suite name="s" version="1.0">\n'
-            '  <group name="g"><scheme>temp_calc_adjust</scheme></group>\n'
+            '  <group name="g"><scheme>active_scheme</scheme></group>\n'
             '</suite>\n'
         )
         with tempfile.TemporaryDirectory() as tmp:

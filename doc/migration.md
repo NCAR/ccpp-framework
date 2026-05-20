@@ -82,6 +82,38 @@ Inside a `[ var_name ]` section.  All optional.
 | `molar_mass`     | float | `0.0`  | Scheme metadata only. |
 | `diagnostic_name` | str | (defaults to `local_name`) | Host-tooling hint; mutually exclusive with `diagnostic_name_fixed`. |
 
+#### 1.3.1 `active` requires the scheme arg to be `optional`
+
+When a host variable carries `active = (<condition>)`, the host's
+contract with the cap is "this variable's storage is only valid when
+the condition holds".  capgen-ng honors that contract via the
+pointer-association pattern: at every call site that consumes the var,
+the cap emits
+
+```fortran
+if (<active_local>) then
+   ptr%ptr => <host_var>(<subscript>)
+else
+   nullify(ptr%ptr)
+end if
+call scheme(..., my_arg=ptr%ptr, ...)
+```
+
+The pointer-association path is only safe when the scheme's Fortran
+dummy declaration is itself `optional`.  Therefore: **every scheme arg
+whose host counterpart carries `active = (...)` MUST declare
+`optional = True` in its scheme metadata, and the matching Fortran
+dummy MUST carry the `optional` attribute.**
+
+The resolver enforces this at code-generation time with a clear error
+naming the scheme, the argument, and the host's `active` expression.
+If you hit it, two valid fixes:
+
+- Add `optional = True` to the scheme metadata entry and `optional`
+  to the Fortran dummy declaration; or
+- Remove the `active` attribute from the host metadata entry (only if
+  the host's variable really is always valid).
+
 ### 1.4 Sliced local names with long subscript indices
 
 Local names with array slices may carry CCPP standard names as subscript

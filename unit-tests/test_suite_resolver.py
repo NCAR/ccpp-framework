@@ -1236,6 +1236,93 @@ class TestResolveOneArg(unittest.TestCase):
 
 
 ########################################################################
+# Tests: active + optional coherence
+########################################################################
+
+class TestActiveRequiresOptional(unittest.TestCase):
+    """When the host declares ``active = (<flag>)`` on a variable, any
+    scheme arg matching that variable must declare ``optional = True``.
+    The cap honors the active condition via pointer-association, which
+    is only valid when the scheme's Fortran dummy is optional."""
+
+    _HOST_SRC = (
+        '[ccpp-table-properties]\n'
+        '  name = active_host\n'
+        '  type = host\n'
+        '[ccpp-arg-table]\n'
+        '  name = active_host\n'
+        '  type = host\n'
+        '[ ncols ]\n'
+        '  standard_name = horizontal_dimension\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '[ nlev ]\n'
+        '  standard_name = vertical_layer_dimension\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '[ flag_passive ]\n'
+        '  standard_name = flag_for_passive_check\n'
+        '  units = flag\n'
+        '  dimensions = ()\n'
+        '  type = logical\n'
+        '[ gt0 ]\n'
+        '  standard_name = air_temperature\n'
+        '  units = K\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+        '  type = real\n'
+        '  kind = kind_phys\n'
+        '  active = (flag_for_passive_check)\n'
+    )
+
+    def _host_dict(self):
+        from metadata.metadata_table import _parse_lines
+        ctrl_tbls = parse_metadata_file(_sf('control_full.meta'))
+        host_tbls = _parse_lines(
+            self._HOST_SRC.splitlines(keepends=True), 'h.meta',
+        )
+        ctrl_only = [t for t in ctrl_tbls if t.table_type == 'control']
+        return build_flat_host_dict(host_tbls, ctrl_only, [])
+
+    def _scheme_var(self, optional):
+        from metadata.metadata_table import MetaVar
+        ctx = _ctx()
+        v = MetaVar('temp', ctx)
+        v.set_attr('standard_name', 'air_temperature', ctx)
+        v.set_attr('units', 'K', ctx)
+        v.set_attr('dimensions',
+                   '(horizontal_dimension, vertical_layer_dimension)', ctx)
+        v.set_attr('type', 'real', ctx)
+        v.set_attr('kind', 'kind_phys', ctx)
+        v.set_attr('intent', 'inout', ctx)
+        if optional:
+            v.set_attr('optional', 'True', ctx)
+        return v
+
+    def test_optional_scheme_arg_passes(self):
+        hd = self._host_dict()
+        arg = _resolve_one_arg(self._scheme_var(optional=True), 'run', hd,
+                               {}, 'my_scheme', set())
+        self.assertEqual(arg.active, '(flag_for_passive_check)')
+        self.assertTrue(arg.is_optional)
+        # Cap uses pointer-association: transform_case 2 (or 4 with
+        # transform).  Both are pointer-pattern paths.
+        self.assertIn(arg.transform_case, (2, 4))
+
+    def test_required_scheme_arg_raises(self):
+        hd = self._host_dict()
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(self._scheme_var(optional=False), 'run', hd,
+                             {}, 'my_scheme', set())
+        msg = str(cm.exception)
+        self.assertIn("my_scheme", msg)
+        self.assertIn("air_temperature", msg)
+        self.assertIn("(flag_for_passive_check)", msg)
+        self.assertIn("optional", msg.lower())
+
+
+########################################################################
 # Tests: vertical-flip transform (top_at_one mismatch)
 ########################################################################
 

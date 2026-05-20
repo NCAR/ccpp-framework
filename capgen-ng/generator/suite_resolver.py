@@ -1348,6 +1348,30 @@ def _resolve_one_arg(
 
     # active is a host-model-only attribute; read it from the host entry only.
     active = host_entry.active if host_entry is not None else ''
+    # Coherence check: a host-declared active expression means the host's
+    # variable is only valid when the condition holds.  The generator's
+    # pointer-association pattern (transform_case 2 / 4) handles that —
+    # but only fires when the scheme arg is itself ``optional``.  A
+    # non-optional scheme arg would be passed unconditionally, reading
+    # host memory regardless of the active condition.  Reject the
+    # incoherent combination at resolution time.
+    if active and not optional:
+        raise CCPPError(
+            "Scheme '{scheme}', phase '{phase}', arg '{arg}' "
+            "(standard_name '{std}'): host metadata declares "
+            "active = ({active}) on the matching variable, but the "
+            "scheme metadata does not declare this argument as "
+            "optional.  An ``active`` condition means the host's "
+            "variable is only valid when the condition holds; the "
+            "generated cap can only honor that contract via the "
+            "optional/pointer-association pattern.  Add "
+            "``optional = True`` to the scheme metadata entry (and "
+            "``optional`` to the matching Fortran dummy declaration), "
+            "or remove the ``active`` attribute from the host entry.".format(
+                scheme=scheme_name, phase=phase, arg=local,
+                std=std_name, active=active,
+            )
+        )
     suite_var: Optional[SuiteVar]             = suite_vars.get(std_name)
 
     if host_entry is not None and suite_var is None:
