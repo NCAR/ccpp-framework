@@ -38,16 +38,11 @@ jobs:
         which xmllint
         xmllint --version
         which pytest
-
-    - name: Build the framework
+    - name: Run end-to-end tests
       run: |
         cmake --fresh -S./end-to-end-tests -B./build
         cd build
         make
-
-    - name: Run end-to-end tests
-      run: |
-        cd build
         ctest --rerun-failed --output-on-failure .
 
 #    - name: Run python tests
