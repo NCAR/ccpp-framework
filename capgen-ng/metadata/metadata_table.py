@@ -78,6 +78,10 @@ from typing import Dict, List, Optional, Tuple
 # legacy-compat: transient migration shim (delete with the rest of
 # the legacy_compat touchpoints — grep for ``legacy-compat``).
 from . import legacy_compat
+# auto-clone-constituents: transient shim (delete with the rest of
+# the auto-clone-constituents touchpoints — grep for
+# ``auto-clone-constituents``).
+from . import auto_clone_constituents
 from .parse_tools import (
     CCPPError,
     ParseContext,
@@ -91,6 +95,11 @@ from .parse_tools import (
     check_fortran_ref,
     check_fortran_intrinsic,
     check_molar_mass,
+    # auto-clone-constituents: legacy-shim checkers.
+    check_default_value,
+    check_min_value,
+    check_water_species,
+    check_mixing_ratio_type,
 )
 
 ########################################################################
@@ -488,6 +497,19 @@ class MetaVar:
         'top_at_one',
     })
 
+    # auto-clone-constituents: the legacy auto-clone shim extends the
+    # accepted set with four ``%instantiate``-kwarg-mapped attrs
+    # (default_value, min_value, water_species, mixing_ratio_type).
+    # ``_known_attrs()`` returns the union when the shim is enabled,
+    # the base set otherwise — strict mode keeps rejecting the legacy
+    # names with the original "Unknown variable attribute" error.
+    @classmethod
+    def _known_attrs(cls):
+        extra = auto_clone_constituents.extra_known_attrs()
+        if extra:
+            return cls._KNOWN_ATTRS | extra
+        return cls._KNOWN_ATTRS
+
     def __init__(self, local_name: str, context: ParseContext):
         """Initialise with *local_name* from the ``[ name ]`` section header.
 
@@ -552,6 +574,15 @@ class MetaVar:
         # substitutes the vertical index with ``<vdim_local> - k + 1`` on the
         # host-side access expression.
         self.top_at_one: bool    = False
+        # auto-clone-constituents: legacy attrs accepted only when the
+        # shim is enabled.  Backing fields use ``None`` as the
+        # "not set" sentinel so the emitter can distinguish an
+        # explicit value from a default (optional kwargs on
+        # %instantiate are only passed when explicitly set).
+        self.default_value: Optional[float]      = None
+        self.min_value: Optional[float]          = None
+        self.water_species: Optional[bool]       = None
+        self.mixing_ratio_type: Optional[str]    = None
         self.context: ParseContext = context
         # Track which attributes have been explicitly set (for validation).
         self._set_attrs: set   = set()
@@ -574,7 +605,10 @@ class MetaVar:
         CCPPError
             On unknown attribute names or invalid values.
         """
-        if key not in self._KNOWN_ATTRS:
+        # auto-clone-constituents: consult the dynamic union so the
+        # legacy attrs (default_value/min_value/water_species/
+        # mixing_ratio_type) are accepted only when the shim is on.
+        if key not in self._known_attrs():
             raise CCPPError(
                 "Unknown variable attribute '{}' for '{}', at {}".format(
                     key, self.local_name, context
@@ -650,6 +684,23 @@ class MetaVar:
                 self.molar_mass = check_molar_mass(value.strip(), None, error=True)
             elif key == 'top_at_one':
                 self.top_at_one = _parse_bool(value, context)
+            # auto-clone-constituents: BEGIN legacy-shim attr setters.
+            # Only reachable when ``_known_attrs()`` returned the
+            # union, so the strict-mode unknown-attr error fires
+            # before we get here when the shim is off.
+            elif key == 'default_value':
+                self.default_value = check_default_value(
+                    value.strip(), None, error=True)
+            elif key == 'min_value':
+                self.min_value = check_min_value(
+                    value.strip(), None, error=True)
+            elif key == 'water_species':
+                self.water_species = check_water_species(
+                    value.strip(), None, error=True)
+            elif key == 'mixing_ratio_type':
+                self.mixing_ratio_type = check_mixing_ratio_type(
+                    value.strip(), None, error=True)
+            # auto-clone-constituents: END legacy-shim attr setters.
         except CCPPError as exc:
             # Avoid double-wrapping if the inner check already carried
             # the location (some helpers do; most don't).
@@ -1357,6 +1408,21 @@ def _parse_lines(lines: List[str], file_path: str) -> List[MetadataTable]:
                         raise ParseSyntaxError(
                             "'{}' is a scheme-only constituent hint and cannot "
                             "appear in host, control, ddt, or suite metadata".format(key),
+                            token=key, context=ctx(lineno)
+                        )
+                    # auto-clone-constituents: the four legacy
+                    # instantiate-kwarg attrs are scheme-only when the
+                    # shim is enabled.  When the shim is off they get
+                    # rejected one layer down (unknown attribute), so
+                    # the guard only matters in shim-on builds.
+                    if (sec_type != SCHEME_TABLE_TYPE
+                            and auto_clone_constituents.is_enabled()
+                            and key in
+                            auto_clone_constituents.extra_known_attrs()):
+                        raise ParseSyntaxError(
+                            "'{}' is a scheme-only constituent property "
+                            "and cannot appear in host, control, ddt, or "
+                            "suite metadata".format(key),
                             token=key, context=ctx(lineno)
                         )
                 current_var.set_attr(key, val, ctx(lineno))

@@ -273,6 +273,27 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "startup.  Will be removed."
         ),
     )
+    # auto-clone-constituents: transient legacy shim (delete the
+    # argument, the enable() call below, and the rest of the
+    # auto_clone_constituents touchpoints when legacy hosts have
+    # migrated to explicit registration).
+    parser.add_argument(
+        '--legacy-auto-clone-constituents',
+        action='store_true',
+        help=(
+            "TRANSIENT LEGACY SHIM.  Replicate original capgen's "
+            "auto-clone-static-constituent path: every is_constituent "
+            "scheme arg (advected / constituent / molar_mass) without "
+            "an explicit register-phase source is auto-registered into "
+            "the per-suite dynamic-constituents buffer using values "
+            "lifted directly from its scheme metadata.  Accepts four "
+            "legacy attributes on scheme args (default_value, "
+            "min_value, water_species, mixing_ratio_type).  "
+            "SINGLE-INSTANCE ONLY — the host must not declare the "
+            "(instance_number, number_of_instances) multi-instance "
+            "pair.  Emits a loud warning at startup.  Will be removed."
+        ),
+    )
     parser.add_argument(
         '--no-host-introspection',
         action='store_true',
@@ -894,6 +915,11 @@ def capgen(
     # ---- Phase 1 validation: required control variables ---------------------
     _validate_required_control_vars(host_name, host_dict)
 
+    # auto-clone-constituents: enforce the single-instance constraint
+    # of the transient legacy shim.  No-op when the shim is disabled.
+    from metadata import auto_clone_constituents
+    auto_clone_constituents.require_single_instance_host(host_dict)
+
     # Signal which instance API the host opted into so users can tell which
     # branch the generator took.  Paired-presence has already been enforced.
     if host_dict.get('instance_number') is not None:
@@ -1138,6 +1164,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.gfs_dim_aliases:
         from metadata import dim_aliases
         dim_aliases.enable(_LOGGER)
+
+    # auto-clone-constituents: transient legacy shim.  Emit the loud
+    # banner before any parsing happens so the user has fair warning.
+    # The single-instance assertion (host MUST NOT declare the
+    # instance_number / number_of_instances pair) runs later, after
+    # host metadata has been parsed, in ``capgen()``.
+    if args.legacy_auto_clone_constituents:
+        from metadata import auto_clone_constituents
+        auto_clone_constituents.enable(_LOGGER)
 
     # ---- parse kind types --------------------------------------------------
     try:

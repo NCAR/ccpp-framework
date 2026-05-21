@@ -72,6 +72,10 @@ from metadata.variable_resolver import HostVarEntry, _resolve_subscript
 # dim-aliases: transient GFS-physics shim (delete this import and the
 # canonical() call in _canonical_dim when the shim is removed).
 from metadata import dim_aliases
+# auto-clone-constituents: transient legacy shim (delete this import
+# and the AutoCloneEntry / _collect_auto_clone_entries touchpoints
+# when the shim is removed).
+from metadata import auto_clone_constituents
 
 # Dimension standard names that map to horizontal loop bounds.  The
 # legacy spelling ``horizontal_loop_extent`` is rejected at parse time
@@ -1142,6 +1146,27 @@ class ResolvedGroup:
     dim_uses: Dict[str, Set[str]] = field(default_factory=dict)
 
 
+# auto-clone-constituents: snapshot of one consumer-side
+# ``is_constituent`` scheme arg whose ``std_name`` has no
+# register-phase source.  Carries everything the emitter needs to
+# synthesise a ``%instantiate(...)`` call in ``<suite>_register``.
+# Captured at resolve time so the emitter doesn't reach back into
+# raw scheme metadata.
+@dataclass
+class AutoCloneEntry:
+    std_name: str
+    long_name: str
+    diag_name: str          # diagnostic_name or local_name fallback
+    units: str
+    vertical_dim: str       # standard name of the vertical axis
+    advected: bool
+    molar_mass: float
+    default_value: Optional[float]
+    min_value: Optional[float]
+    water_species: Optional[bool]
+    mixing_ratio_type: Optional[str]
+
+
 @dataclass
 class SuiteResolution:
     """Complete resolution result for one suite.
@@ -1189,6 +1214,12 @@ class SuiteResolution:
     uses_constituents: bool = False
     suite_init_call:  Optional[ResolvedCall] = None
     suite_final_call: Optional[ResolvedCall] = None
+    # auto-clone-constituents: populated only when the legacy shim is
+    # enabled.  Each entry is one is_constituent consumer whose
+    # std_name has no register-phase source; the suite cap synthesises
+    # a ``%instantiate(...)`` call per entry into the per-suite
+    # dynamic-constituents buffer.  Empty when the shim is off.
+    auto_cloned_constituents: List[AutoCloneEntry] = field(default_factory=list)
 
 
 ########################################################################
@@ -2154,6 +2185,11 @@ def resolve_suite(
                 )
             )
 
+    # auto-clone-constituents: collect synthesised %instantiate
+    # snapshots when the legacy shim is enabled.  Returns [] when
+    # disabled (no-op for default builds).
+    auto_cloned = _collect_auto_clone_entries(resolved_groups, scheme_store)
+
     return SuiteResolution(
         suite_name=suite.name,
         groups=resolved_groups,
@@ -2164,7 +2200,174 @@ def resolve_suite(
         uses_constituents=uses_constituents,
         suite_init_call=suite_init_call,
         suite_final_call=suite_final_call,
+        # auto-clone-constituents: empty in default builds.
+        auto_cloned_constituents=auto_cloned,
     )
+
+
+# auto-clone-constituents: BEGIN legacy-shim helpers.  Delete this
+# block together with the rest of the auto-clone-constituents
+# touchpoints; nothing else in the resolver references these.
+
+def _vertical_dim_of(scheme_var) -> str:
+    """Extract the vertical-axis standard name from a constituent
+    consumer's ``dimensions`` list.
+
+    Returns the upper-bound std name of the first vertical-axis
+    dimension entry (matches :data:`_VDIM_STDS`).  Falls back to
+    ``'vertical_layer_dimension'`` when the scheme arg carries no
+    vertical dim (e.g. a 1-D horizontal-only consumer) — that's the
+    framework default and matches original capgen's behaviour.
+    """
+    for dim in getattr(scheme_var, 'dimensions', ()) or ():
+        upper = dim.split(':', 1)[-1].strip().lower() if ':' in dim else dim.strip().lower()
+        if upper in _VDIM_STDS:
+            return upper
+    return 'vertical_layer_dimension'
+
+
+def _synthesised_long_name_from_std(std_name: str) -> str:
+    """auto-clone-constituents: fall back to a human-readable long_name
+    derived from the std_name when the metadata doesn't supply one.
+
+    Mirrors original capgen's auto-clone behaviour: replace each
+    underscore with a space, then capitalise the first character.
+    ``cloud_liquid_dry_mixing_ratio`` → ``Cloud liquid dry mixing ratio``.
+
+    Keeps the auto-clone shim's emitted ``%instantiate(long_name=...)``
+    consistent with what original capgen produces so existing legacy
+    fixtures (e.g. CAM-SIMA's advection_test) don't need a metadata
+    edit just for the long_name property.
+    """
+    return std_name.replace('_', ' ').capitalize()
+
+
+def _make_auto_clone_entry(scheme_var) -> 'AutoCloneEntry':
+    """Snapshot one scheme MetaVar into an :class:`AutoCloneEntry`.
+
+    Captures every field the emitter needs to synthesise a
+    ``%instantiate(...)`` call: the required kwargs (std_name,
+    long_name, diag_name, units, vertical_dim) and the optional
+    kwargs (advected, molar_mass, default_value, min_value,
+    water_species, mixing_ratio_type) with ``None`` for any optional
+    the metadata didn't set so the emitter can omit it.
+    """
+    # ``diagnostic_name`` is a property that falls back to local_name
+    # when neither diagnostic_name nor diagnostic_name_fixed was set.
+    diag = scheme_var.diagnostic_name or scheme_var.local_name
+    # auto-clone-constituents: when the scheme metadata omits the
+    # long_name attribute, synthesise one from the std_name (matches
+    # original capgen's behaviour — see ``_synthesised_long_name_from_std``).
+    long_name = (
+        scheme_var.long_name
+        or _synthesised_long_name_from_std(scheme_var.standard_name)
+    )
+    return AutoCloneEntry(
+        std_name=scheme_var.standard_name,
+        long_name=long_name,
+        diag_name=diag,
+        units=scheme_var.units,
+        vertical_dim=_vertical_dim_of(scheme_var),
+        advected=bool(scheme_var.advected),
+        molar_mass=float(scheme_var.molar_mass or 0.0),
+        default_value=scheme_var.default_value,
+        min_value=scheme_var.min_value,
+        water_species=scheme_var.water_species,
+        mixing_ratio_type=scheme_var.mixing_ratio_type,
+    )
+
+
+def _lookup_scheme_var(scheme_store, scheme_name, phase, scheme_local_name):
+    """Return the scheme MetaVar matching *scheme_local_name* in
+    *scheme_name*'s *phase*, or ``None`` if not found.
+
+    Used by the auto-clone collector to recover the full scheme
+    MetaVar (which carries the constituent-property fields) from a
+    ResolvedArg, which only carries a slim subset.
+    """
+    vars_list = scheme_store.variables_for(scheme_name, phase)
+    if not vars_list:
+        return None
+    for mv in vars_list:
+        if mv.local_name == scheme_local_name:
+            return mv
+    return None
+
+
+def _collect_auto_clone_entries(resolved_groups, scheme_store):
+    """Walk every ``is_constituent`` consumer arg and produce one
+    :class:`AutoCloneEntry` per unique standard name.
+
+    Skips:
+
+    * register-phase ``ccpp_constituent_properties_t`` args
+      (``is_constituent_arg`` is True for those — the scheme handles
+      its own registration explicitly);
+    * ``tendency_of_*`` std names (tendencies consume a constituent
+      but are not themselves a constituent registration);
+    * framework-named std names (``ccpp_constituents``,
+      ``ccpp_constituent_tendencies``, ``ccpp_constituent_properties``,
+      ``number_of_ccpp_constituents``, and ``index_of_*``) — these
+      reference the framework-provided constituent ARRAYS or scalar
+      counts, not individual species, and are not registrations;
+    * duplicates within the suite (first-occurrence wins; the
+      framework's runtime ``is_match`` would dedupe across the
+      eventual ``%new_field`` calls anyway).
+
+    No-op when the auto-clone shim is disabled — returns an empty
+    list so :class:`SuiteResolution.auto_cloned_constituents` stays
+    empty in default builds.
+    """
+    if not auto_clone_constituents.is_enabled():
+        return []
+    out: List['AutoCloneEntry'] = []
+    seen: Set[str] = set()
+    for resolved_group in resolved_groups:
+        for items in resolved_group.phase_calls.values():
+            for resolved_call in iter_phase_calls(items):
+                for arg in resolved_call.args:
+                    if arg.source != 'constituent' or arg.is_constituent_arg:
+                        continue
+                    std = (arg.standard_name or '').strip().lower()
+                    if not std or std.startswith('tendency_of_'):
+                        continue
+                    # auto-clone-constituents: framework-named std
+                    # names (the whole constituent buffer / tendency
+                    # buffer / properties array / count, and
+                    # ``index_of_<X>`` integers) resolve through the
+                    # same ``source='constituent'`` channel but they
+                    # are NOT individual constituent registrations —
+                    # skip them so they don't get a spurious
+                    # synthesised %instantiate call.
+                    if (std in _FRAMEWORK_CONST_STDS
+                            or std.startswith(_INDEX_PREFIX)):
+                        continue
+                    if std in seen:
+                        continue
+                    seen.add(std)
+                    scheme_var = _lookup_scheme_var(
+                        scheme_store, resolved_call.scheme_name,
+                        resolved_call.phase, arg.scheme_local_name,
+                    )
+                    if scheme_var is None:
+                        # Should not happen — the resolver only
+                        # produces ResolvedArg from a real MetaVar —
+                        # but fail loudly rather than silently emit
+                        # a malformed %instantiate.
+                        raise CCPPError(
+                            "auto-clone-constituents: cannot locate "
+                            "scheme metadata for '{}' (scheme '{}', "
+                            "phase '{}') while collecting auto-clone "
+                            "entries".format(
+                                arg.scheme_local_name,
+                                resolved_call.scheme_name,
+                                resolved_call.phase,
+                            )
+                        )
+                    out.append(_make_auto_clone_entry(scheme_var))
+    return out
+
+# auto-clone-constituents: END legacy-shim helpers.
 
 
 def _collect_scheme_names(group) -> List[str]:

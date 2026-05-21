@@ -5,7 +5,7 @@
 function(ccpp_validator)
   set(optionalArgs)
   set(oneValueArgs VERBOSITY)
-  set(multi_value_keywords SOURCE_FILES METADATA_FILES)
+  set(multi_value_keywords SOURCE_FILES METADATA_FILES EXTRA_FLAGS)
   cmake_parse_arguments(arg "${optionalArgs}" "${oneValueArgs}" "${multi_value_keywords}" ${ARGN})
 
   # Error if script file not found.
@@ -31,6 +31,10 @@ function(ccpp_validator)
     string(REPEAT "--verbose " ${arg_VERBOSITY} VERBOSE_PARAMS_SEPARATED)
     separate_arguments(VERBOSE_PARAMS UNIX_COMMAND "${VERBOSE_PARAMS_SEPARATED}")
     list(APPEND CCPP_VALIDATOR_CMD_LIST ${VERBOSE_PARAMS})
+  endif()
+
+  if(DEFINED arg_EXTRA_FLAGS)
+    list(APPEND CCPP_VALIDATOR_CMD_LIST ${arg_EXTRA_FLAGS})
   endif()
 
   message(STATUS "Running ccpp_validator.py from ${CMAKE_CURRENT_SOURCE_DIR}")
@@ -71,7 +75,7 @@ endfunction()
 function(ccpp_capgen)
   set(optionalArgs TRACE)
   set(oneValueArgs HOST_NAME OUTPUT_ROOT VERBOSITY KIND_SPECS)
-  set(multi_value_keywords HOSTFILES SCHEMEFILES SUITES)
+  set(multi_value_keywords HOSTFILES SCHEMEFILES SUITES EXTRA_FLAGS)
 
   cmake_parse_arguments(arg "${optionalArgs}" "${oneValueArgs}" "${multi_value_keywords}" ${ARGN})
 
@@ -130,6 +134,10 @@ function(ccpp_capgen)
 
   if(arg_TRACE)
     list(APPEND CCPP_CAPGEN_CMD_LIST "--trace")
+  endif()
+
+  if(DEFINED arg_EXTRA_FLAGS)
+    list(APPEND CCPP_CAPGEN_CMD_LIST ${arg_EXTRA_FLAGS})
   endif()
 
   message(STATUS "Running ccpp_capgen.py from ${CMAKE_CURRENT_SOURCE_DIR}")

@@ -81,3 +81,6 @@ add_subdirectory(capgen_ng)
 add_subdirectory(var_compat)
 add_subdirectory(advection)
 add_subdirectory(instances_advection)
+# auto-clone-constituents: Remove this test when the legacy switch to support
+# auto-clone constituents is removed (i.e. after CAM-SIMA updated its physics)
+add_subdirectory(advection_auto_clone)

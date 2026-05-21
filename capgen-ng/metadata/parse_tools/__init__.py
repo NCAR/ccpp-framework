@@ -19,6 +19,13 @@ from .parse_checkers import (
     check_fortran_type,
     check_fortran_intrinsic,
     check_molar_mass,
+    # auto-clone-constituents: legacy-shim checkers exported here so
+    # ``MetaVar.set_attr`` can reach them; gated by the shim's flag at
+    # the call site, not the import.
+    check_default_value,
+    check_min_value,
+    check_water_species,
+    check_mixing_ratio_type,
     FORTRAN_SCALAR_REF_RE,
 )
 from .fortran_conditional import FORTRAN_CONDITIONAL_REGEX

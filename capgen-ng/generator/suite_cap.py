@@ -30,6 +30,8 @@ from generator.suite_resolver import (
     ResolvedGroup,
     SuiteResolution,
     iter_phase_calls,
+    # auto-clone-constituents: legacy-shim payload type.
+    AutoCloneEntry,
 )
 from generator.trace import (
     emit_module_gate,
@@ -223,10 +225,24 @@ def _register_uses(
     # Per-suite dynamic-constituent buffer is owned by ccpp_host_constituents
     # and written into here.  Pull in the constituent property type plus the
     # buffer symbol.
-    if suite_res.constituent_register_calls:
+    # auto-clone-constituents: the synthesised %instantiate calls
+    # also need the constituent property type and the buffer symbol,
+    # so include them when the auto-clone list is non-empty.
+    if suite_res.constituent_register_calls or suite_res.auto_cloned_constituents:
         uses.setdefault(_CONST_MOD, set()).add(_CONST_PROP_TYPE)
         buf = '{}_dynamic_constituents'.format(suite_name)
         uses.setdefault('ccpp_host_constituents', set()).add(buf)
+    # auto-clone-constituents: the synthesised %instantiate calls
+    # embed ``<value>_kind_phys`` literals when an entry sets any of
+    # molar_mass / default_value / min_value.  Pull in ``kind_phys``
+    # from ccpp_kinds in that case so the literal resolves.
+    if any(
+        e.default_value is not None
+        or e.min_value is not None
+        or (e.molar_mass and e.molar_mass != 0.0)
+        for e in suite_res.auto_cloned_constituents
+    ):
+        uses.setdefault('ccpp_kinds', set()).add('kind_phys')
     return uses
 
 
@@ -272,6 +288,90 @@ def _emit_register_call(resolved_call, indent: str, errflg_local: str, lines: Li
             ))
     if errflg_local:
         lines.append('{}if ({} /= 0) return'.format(indent, errflg_local))
+
+
+# auto-clone-constituents: BEGIN legacy-shim emission helpers.
+# Delete this block together with the rest of the
+# auto-clone-constituents touchpoints.
+
+def _esc_fortran_char(value: str) -> str:
+    """Escape a Python string for embedding in a Fortran character
+    literal — double every embedded single quote."""
+    return value.replace("'", "''")
+
+
+def _fmt_kind_phys_real(value) -> str:
+    """Format a Python float as a Fortran ``kind_phys`` real literal.
+
+    Always emits exponent notation so the result is unambiguously a
+    real (no risk of being parsed as an integer literal) and reuses
+    the same ``kind_phys`` suffix the framework's ``%instantiate``
+    declares for ``default_value`` / ``min_value`` / ``molar_mass``.
+    """
+    return '{:.17e}_kind_phys'.format(float(value))
+
+
+def _emit_auto_clone_instantiate(
+    entry: AutoCloneEntry,
+    buf: str,
+    inst_idx: str,
+    indent: str,
+    errflg_local: str,
+    errmsg_local: str,
+    lines: List[str],
+) -> None:
+    """auto-clone-constituents: emit one synthesised ``%instantiate``
+    call into the per-suite dynamic-constituents buffer for one
+    :class:`AutoCloneEntry`.
+
+    Required kwargs (std_name, long_name, diag_name, units,
+    vertical_dim) are always emitted.  Optional kwargs are emitted
+    only when the metadata explicitly set the value (``None`` on the
+    backing field means "unset" — let the framework default kick in).
+    ``errcode`` and ``errmsg`` are passed by keyword for clarity.
+    """
+    i = indent
+    lines.append('{}num_consts = num_consts + 1'.format(i))
+    lines.append(
+        '{}call {}({})%items(num_consts)%instantiate( &'.format(
+            i, buf, inst_idx,
+        )
+    )
+    lines.append("{}    std_name     = '{}', &".format(
+        i, _esc_fortran_char(entry.std_name)))
+    lines.append("{}    long_name    = '{}', &".format(
+        i, _esc_fortran_char(entry.long_name)))
+    lines.append("{}    diag_name    = '{}', &".format(
+        i, _esc_fortran_char(entry.diag_name)))
+    lines.append("{}    units        = '{}', &".format(
+        i, _esc_fortran_char(entry.units)))
+    lines.append("{}    vertical_dim = '{}', &".format(
+        i, _esc_fortran_char(entry.vertical_dim)))
+    # Optional kwargs — only emit when explicitly set.  ``advected``
+    # defaults to .false. in metadata; only emit when True so we
+    # don't pollute the call with a redundant kwarg.
+    if entry.advected:
+        lines.append("{}    advected     = .true., &".format(i))
+    if entry.molar_mass and entry.molar_mass != 0.0:
+        lines.append("{}    molar_mass   = {}, &".format(
+            i, _fmt_kind_phys_real(entry.molar_mass)))
+    if entry.default_value is not None:
+        lines.append("{}    default_value= {}, &".format(
+            i, _fmt_kind_phys_real(entry.default_value)))
+    if entry.min_value is not None:
+        lines.append("{}    min_value    = {}, &".format(
+            i, _fmt_kind_phys_real(entry.min_value)))
+    if entry.water_species is not None:
+        lines.append("{}    water_species= .{}., &".format(
+            i, 'true' if entry.water_species else 'false'))
+    if entry.mixing_ratio_type is not None:
+        lines.append("{}    mixing_ratio_type = '{}', &".format(
+            i, _esc_fortran_char(entry.mixing_ratio_type)))
+    lines.append("{}    errcode      = {}, &".format(i, errflg_local))
+    lines.append("{}    errmsg       = {})".format(i, errmsg_local))
+    lines.append('{}if ({} /= 0) return'.format(i, errflg_local))
+
+# auto-clone-constituents: END legacy-shim emission helpers.
 
 
 def _register_lines(
@@ -340,14 +440,26 @@ def _register_lines(
 
     # Constituent merge: declare a per-scheme array temporary and a counter.
     has_consts = bool(suite_res.constituent_register_calls)
-    if has_consts:
+    # auto-clone-constituents: the legacy shim contributes additional
+    # constituent registrations synthesised in capgen-ng from
+    # is_constituent consumer metadata; ``has_dyn_consts`` covers
+    # both sources so the buffer-allocation + counter machinery is
+    # set up whenever any synthesised constituent will be emitted.
+    has_auto_cloned = bool(suite_res.auto_cloned_constituents)
+    has_dyn_consts  = has_consts or has_auto_cloned
+    if has_dyn_consts:
         lines.append('')
-        lines.append(
-            '{}type({}), allocatable :: scheme_consts(:)'.format(
-                i2, _CONST_PROP_TYPE
+        if has_consts:
+            lines.append(
+                '{}type({}), allocatable :: scheme_consts(:)'.format(
+                    i2, _CONST_PROP_TYPE
+                )
             )
-        )
-        lines.append('{}integer :: num_consts, i'.format(i2))
+            lines.append('{}integer :: num_consts, i'.format(i2))
+        else:
+            # auto-clone-only path: no scheme-returned temp, no copy
+            # loop, so we don't need ``scheme_consts`` or ``i``.
+            lines.append('{}integer :: num_consts'.format(i2))
 
     # Trace block: dummies referenced inside the gated write so strict
     # compilers don't flag intent(in) args as unused when the gate is off.
@@ -383,7 +495,7 @@ def _register_lines(
     )
     lines.append('')
 
-    if has_consts:
+    if has_dyn_consts:
         # Pack constituent-producing schemes' arrays into the per-suite
         # buffer in ccpp_host_constituents.  The actual merge into each
         # instance's ``ccpp_model_constituents_obj(inst)`` happens later
@@ -397,8 +509,15 @@ def _register_lines(
         # instance then runs its own two-pass count+pack into its slot.
         # The state-machine guard above this block ensures each instance
         # runs the fill at most once.
+        #
+        # auto-clone-constituents: the legacy shim contributes one
+        # additional ``%instantiate`` per consumer-side
+        # ``is_constituent`` arg with no register-phase source.  Those
+        # synthesised entries participate in the same two-pass
+        # count+pack against the same per-instance buffer slot.
         const_scheme_names = {scheme_name for scheme_name, _ in suite_res.constituent_register_calls}
         buf = '{}_dynamic_constituents'.format(suite_name)
+        n_auto_clone = len(suite_res.auto_cloned_constituents)
 
         # Allocate the outer wrapper array on first call (any instance).
         lines.append(
@@ -422,6 +541,15 @@ def _register_lines(
                     )
                 )
                 lines.append('{}deallocate(scheme_consts)'.format(i2))
+        # auto-clone-constituents: synthesised entries contribute a
+        # static count; add a literal at the end of the count pass.
+        if n_auto_clone > 0:
+            lines.append(
+                '{}! auto-clone-constituents: legacy-shim synthesised entries'.format(
+                    i2,
+                )
+            )
+            lines.append('{}num_consts = num_consts + {}'.format(i2, n_auto_clone))
         lines.append('')
         lines.append('{}allocate({}({})%items(num_consts))'.format(
             i2, buf, inst_idx,
@@ -445,6 +573,19 @@ def _register_lines(
                     )
                 )
                 lines.append('{}deallocate(scheme_consts)'.format(i2))
+        # auto-clone-constituents: emit one synthesised %instantiate
+        # call per entry into the per-instance buffer slot.
+        if n_auto_clone > 0:
+            lines.append('')
+            lines.append(
+                '{}! auto-clone-constituents: legacy-shim synthesised %instantiate calls'.format(
+                    i2,
+                )
+            )
+            for entry in suite_res.auto_cloned_constituents:
+                _emit_auto_clone_instantiate(
+                    entry, buf, inst_idx, i2, errflg_local, errmsg_local, lines,
+                )
         lines.append('')
         # Emit any non-constituent register calls in addition (always, per instance).
         for _gname, resolved_call in _register_calls(suite_res):

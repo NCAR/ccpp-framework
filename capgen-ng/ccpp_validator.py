@@ -1072,6 +1072,27 @@ def _build_parser() -> argparse.ArgumentParser:
     # validator never invokes (the validator compares metadata against
     # Fortran source, not host metadata against scheme metadata), so
     # the flag would be a no-op.  See capgen-ng/ccpp_capgen_ng.py.
+    # auto-clone-constituents: transient legacy shim.  This one DOES
+    # belong on the validator because the shim extends the parser's
+    # ``_KNOWN_ATTRS`` set — without the flag the validator rejects
+    # the four legacy attrs (default_value/min_value/water_species/
+    # mixing_ratio_type) with "Unknown variable attribute", which
+    # blocks pre-flight validation runs.  The validator never builds
+    # a host_dict, so the shim's single-instance host guard is not
+    # called here (it's a no-op without a host metadata pass).
+    parser.add_argument(
+        '--legacy-auto-clone-constituents',
+        action='store_true',
+        help=(
+            "TRANSIENT LEGACY SHIM.  Accept four legacy constituent "
+            "attributes (default_value, min_value, water_species, "
+            "mixing_ratio_type) on scheme args.  Mirrors the same "
+            "flag on ccpp_capgen_ng so legacy scheme metadata that "
+            "needs auto-clone-static-constituent codegen can be "
+            "validated against its Fortran source.  Emits a loud "
+            "warning at startup.  Will be removed."
+        ),
+    )
     return parser
 
 
@@ -1091,6 +1112,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.legacy_mode:
         from metadata import legacy_compat
         legacy_compat.enable(_LOGGER)
+
+    # auto-clone-constituents: transient legacy shim.  Emit the loud
+    # banner before any parsing happens so user has fair warning.
+    # The single-instance host guard is intentionally NOT invoked
+    # here (no host metadata pass in the validator).
+    if args.legacy_auto_clone_constituents:
+        from metadata import auto_clone_constituents
+        auto_clone_constituents.enable(_LOGGER)
 
     scheme_files = [f.strip() for f in args.scheme_files.split(',') if f.strip()]
     source_files = [f.strip() for f in args.source_files.split(',') if f.strip()]

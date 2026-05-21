@@ -398,6 +398,211 @@ def check_molar_mass(test_val, prop_dict, error):
     return test_val
 
 
+# auto-clone-constituents: BEGIN legacy-shim checkers.
+# These four checkers validate the metadata attributes that the
+# ``--legacy-auto-clone-constituents`` shim accepts on scheme args
+# (default_value, min_value, water_species, mixing_ratio_type).
+# Delete this whole BEGIN..END block when the shim is removed; the
+# rest of the file is unchanged.
+
+# Whitelist of mixing_ratio_type values accepted by the framework.
+# Mirrors the canonical set used by original capgen / ccpp-physics
+# hosts.  Audit before extending — adding a name silently accepts it
+# everywhere.
+_MIXING_RATIO_TYPES = frozenset({'dry', 'wet', 'wrt_dry', 'wrt_moist'})
+
+
+# Anchored Fortran real-literal pattern.  Captures the numeric body;
+# anything that follows must be either empty or a kind suffix.
+# Forms accepted by the body:
+#   123     .5    1.   1.5   1.5e-3   1.5E+10   1.5d0   1.5D-12
+_FORTRAN_REAL_BODY_RE = re.compile(
+    r'^\s*([+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eEdD][+-]?\d+)?)'
+)
+# Kind suffix: ``_<identifier_or_digits>``.  Identifier may itself
+# contain underscores (``kind_phys``, ``kind_dyn``).
+_FORTRAN_KIND_SUFFIX_RE = re.compile(r'^_[A-Za-z0-9_]+$')
+
+
+def _parse_fortran_real_literal(value):
+    """Convert a Fortran real-literal string to a Python float.
+
+    Legacy CAM-SIMA metadata writes constituent property values in
+    Fortran source form, with a kind suffix (``0.0_kind_phys``,
+    ``1.0e-12_kind_dyn``, ``-3.14_8``) and/or a double-precision
+    exponent marker (``1.0d-5`` / ``1.0D-5``).  Python's :func:`float`
+    rejects both.  This helper isolates the numeric body via an
+    anchored regex (so identifiers like ``not_a_number`` never match),
+    verifies any trailing token is a valid kind suffix, rewrites
+    ``d/D`` exponent markers to ``e/E``, and hands the cleaned body
+    to :func:`float`.
+
+    Raises :class:`ValueError` (just like :func:`float`) on anything
+    that doesn't parse, so the calling check_X helper handles the
+    error path uniformly.
+
+    >>> _parse_fortran_real_literal('0.0')
+    0.0
+    >>> _parse_fortran_real_literal('0.0_kind_phys')
+    0.0
+    >>> _parse_fortran_real_literal('1.0e-12_kind_dyn')
+    1e-12
+    >>> _parse_fortran_real_literal('-3.14_8')
+    -3.14
+    >>> _parse_fortran_real_literal('1.0d-5')
+    1e-05
+    >>> _parse_fortran_real_literal('1.0D0')
+    1.0
+    >>> _parse_fortran_real_literal('garbage')  #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: ...
+    >>> _parse_fortran_real_literal('1.0_bad-kind')  #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: ...
+    """
+    s = str(value).strip()
+    m = _FORTRAN_REAL_BODY_RE.match(s)
+    if not m:
+        raise ValueError(
+            "{!r} does not start with a Fortran real literal".format(value)
+        )
+    body = m.group(1)
+    rest = s[m.end():]
+    if rest and not _FORTRAN_KIND_SUFFIX_RE.match(rest):
+        raise ValueError(
+            "{!r} has trailing junk after the numeric body".format(value)
+        )
+    # Rewrite double-precision exponent markers (d/D) -> (e/E).
+    body = body.replace('d', 'e').replace('D', 'E')
+    return float(body)
+
+
+def check_default_value(test_val, prop_dict, error):
+    """Return <test_val> as a float if a valid default_value, otherwise None.
+
+    Accepts any finite Fortran real literal: no positivity constraint
+    (some species use a negative sentinel as their "uninitialized"
+    placeholder, see CAM-SIMA cld_liq.F90).  The Fortran kind suffix
+    (e.g. ``0.0_kind_phys``) is stripped before conversion.
+
+    >>> check_default_value('0.0', None, True)
+    0.0
+    >>> check_default_value('0.0_kind_phys', None, True)
+    0.0
+    >>> check_default_value('-1.0e30', None, True)
+    -1e+30
+    >>> check_default_value('1.0d-5_kind_phys', None, True)
+    1e-05
+    >>> check_default_value('not a number', None, False)
+
+    >>> check_default_value('not a number', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'not a number' is not a valid default_value
+    """
+    try:
+        return _parse_fortran_real_literal(test_val)
+    except (TypeError, ValueError):
+        if error:
+            raise CCPPError("'{}' is not a valid default_value".format(test_val))
+        return None
+
+
+def check_min_value(test_val, prop_dict, error):
+    """Return <test_val> as a float if a valid min_value, otherwise None.
+
+    Same shape as :func:`check_default_value`; no constraint beyond
+    "finite float" since min_value is a host-runtime guardrail and the
+    sensible range is species-dependent.  Fortran kind suffix
+    accepted.
+
+    >>> check_min_value('0.0', None, True)
+    0.0
+    >>> check_min_value('1.0e-12', None, True)
+    1e-12
+    >>> check_min_value('1.0e-12_kind_phys', None, True)
+    1e-12
+    >>> check_min_value('garbage', None, False)
+
+    >>> check_min_value('garbage', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'garbage' is not a valid min_value
+    """
+    try:
+        return _parse_fortran_real_literal(test_val)
+    except (TypeError, ValueError):
+        if error:
+            raise CCPPError("'{}' is not a valid min_value".format(test_val))
+        return None
+
+
+def check_water_species(test_val, prop_dict, error):
+    """Return ``True`` / ``False`` for a valid water_species value,
+    otherwise None.
+
+    Accepts the same surface as the existing ``advected`` /
+    ``constituent`` flag parsing (``True``/``False``/``T``/``F``,
+    case-insensitive); rejects anything else.
+
+    >>> check_water_species('True', None, True)
+    True
+    >>> check_water_species('false', None, True)
+    False
+    >>> check_water_species('maybe', None, False)
+
+    >>> check_water_species('maybe', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'maybe' is not a valid water_species (expected True or False)
+    """
+    if isinstance(test_val, bool):
+        return test_val
+    tok = str(test_val).strip().lower()
+    if tok in ('true', 't', '.true.'):
+        return True
+    if tok in ('false', 'f', '.false.'):
+        return False
+    if error:
+        raise CCPPError(
+            "'{}' is not a valid water_species "
+            "(expected True or False)".format(test_val)
+        )
+    return None
+
+
+def check_mixing_ratio_type(test_val, prop_dict, error):
+    """Return <test_val> if a valid mixing_ratio_type, otherwise None.
+
+    Compared case-insensitively against the canonical whitelist
+    (``_MIXING_RATIO_TYPES``).  Returns the lowercased form on success.
+
+    >>> check_mixing_ratio_type('dry', None, True)
+    'dry'
+    >>> check_mixing_ratio_type('WRT_MOIST', None, True)
+    'wrt_moist'
+    >>> check_mixing_ratio_type('bogus', None, False)
+
+    >>> check_mixing_ratio_type('bogus', None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'bogus' is not a valid mixing_ratio_type
+    """
+    if test_val is None:
+        if error:
+            raise CCPPError("None is not a valid mixing_ratio_type")
+        return None
+    tok = str(test_val).strip().lower()
+    if tok in _MIXING_RATIO_TYPES:
+        return tok
+    if error:
+        raise CCPPError(
+            "'{}' is not a valid mixing_ratio_type "
+            "(expected one of: {})".format(
+                test_val, ', '.join(sorted(_MIXING_RATIO_TYPES))
+            )
+        )
+    return None
+
+# auto-clone-constituents: END legacy-shim checkers.
+
+
 def check_balanced_paren(string, start=0, error=False):
     """Return <string> indices delineating a balance set of parentheses.
     Parentheses in character context do not count.
