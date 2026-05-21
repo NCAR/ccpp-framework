@@ -6,7 +6,7 @@ Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
 **capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
-*Last revised: 2026-05-20 (end-of-day).*  Current unit-test suite: 1335 passing.
+*Last revised: 2026-05-20 (end-of-day).*  Current unit-test suite: 1353 passing (1365 with doctests).
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
 `capgen-ng/` (top-level of this repo).  Unit tests live at the top
@@ -133,6 +133,54 @@ errflg/errmsg returns.
 > legitimately require a host-conditional variable.  The current rule
 > defers the check to runtime and leaves the metadata honest.
 
+#### 1.3.2 Host/scheme metadata cross-checks
+
+The resolver enforces three cross-metadata checks per scheme arg
+against its defining source (host metadata or, for suite-owned
+variables, the first scheme to write the var with `intent=out`):
+
+| Aspect | Rule | Notes |
+|---|---|---|
+| **Type identity** | Strict string match after `strip().lower()`. | No coercion across `real` / `integer` / `logical` / DDT.  DDT names match identically; `external:m:t` matches `external:m:t`. |
+| **Rank** | `len(host.dimensions) == len(scheme.dimensions)`. | A scheme that asks for `(horizontal_dimension)` while the host declares `()` is rejected. |
+| **Per-position dimension identity** | Each entry is canonicalized to `lower:upper`; strict match per position. | See "default lower bound" below. |
+
+**Default lower bound — three equivalent spellings:**
+
+- bare `foo` (no explicit lower bound)
+- `1:foo` (integer literal one)
+- `ccpp_constant_one:foo` (the standard name)
+
+All three collapse to a single canonical representative, so the host
+declaring `(vertical_layer_dimension)` matches the scheme declaring
+`(1:vertical_layer_dimension)` and vice versa.
+
+**Every other lower bound is distinct.**  `2:nlev` is not the same
+axis as `1:nlev`; `start_idx:nlev` is not the same as
+`ccpp_constant_one:nlev`.  Different lower bound describes a
+different sub-range and must be spelled identically on both sides.
+
+**No upper-bound name aliasing.**  `horizontal_dimension` and
+`horizontal_loop_extent` are different names at the resolver layer.
+The `--legacy-mode` shim (see §3) rewrites legacy names at parse
+time when enabled; without that shim the legacy spellings should not
+appear in metadata at all.
+
+**Numeric kind is *not* checked here.**  Host `kind_phys` vs scheme
+`real32` silently triggers the transform-copy pipeline (§5.3).  This
+is deliberate: real CCPP-physics schemes legitimately mix precisions
+and rely on the cap to handle the copy.  Watch for unintended
+narrowing — there is no static guard.  **Character `len=`** has its
+own block: matching `len=N` values pass, mismatched specific lengths
+are an error unless the scheme uses `len=*` (wildcard).
+
+**Suite-owned variables.**  The first scheme to write a standard
+name with `intent=out` freezes the var's type/kind/dimensions/units
+on the SuiteVar; every later scheme that consumes it goes through
+the same checks against the frozen fields.  Error messages name the
+source as `host`, `control`, or `suite` so you know whose contract
+you're violating.
+
 ### 1.4 Sliced local names with long subscript indices
 
 Local names with array slices may carry CCPP standard names as subscript
@@ -221,6 +269,30 @@ Migration paths:
    every pair the shim is rewriting, so the substitution is never
    invisible.  This shim *will be removed*; treat it as a runway,
    not a destination.
+
+### 1.9 Inline comments
+
+`#` starts a comment **anywhere on a line**, not just at column 0.
+Everything from the `#` to end-of-line is discarded before the
+parser sees the rest of the line.  Trailing whitespace left behind
+by the strip is also removed, so section headers and key=value
+lines parse cleanly.
+
+```
+[ ap_indices ]   # legacy index slot
+  standard_name = ap_indices
+  units = count
+  dimensions = ()  # was (nap_indices) before the refactor
+  type = integer
+```
+
+No escape mechanism is provided — `#` is not a legitimate character
+in any metadata value (units, kinds, identifiers, dim lists,
+Fortran conditional expressions).  `;` is still accepted as a
+full-line comment marker (at column 0 after whitespace), matching
+the historic blank-line convention, but is *not* treated as an
+inline comment marker (`;` can plausibly appear inside a
+`long_name`).
 
 ---
 
@@ -611,6 +683,14 @@ The generator emits three kinds of transform on a per-arg basis:
 | Unit conversion  | `host.units != scheme.units` with a registered conversion entry. |
 | Kind conversion  | `host.kind != scheme.kind` (different strings).  |
 | Vertical flip    | `host.top_at_one != scheme.top_at_one` on a var with a vertical dim. |
+
+Transforms only smooth over *representation* differences.  Anything
+the cap cannot bridge with a per-call copy — type identity, rank,
+or per-position dimension identity — is rejected by the resolver as
+a hard error (see §1.3.2).  In particular, the kind-conversion entry
+above is *not* gated on convertibility: any kind-string difference
+triggers an implicit conversion copy.  Watch for unintended
+narrowing.
 
 These compose.  A scheme arg that needs unit + flip emits a single
 combined assignment through a transformation temp:

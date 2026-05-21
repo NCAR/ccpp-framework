@@ -339,7 +339,8 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1335 passing on `feature/capgen-ng` (as of 2026-05-20).
+- **Unit tests**: 1353 passing on `feature/capgen-ng` (1365 with
+  doctests; as of 2026-05-20).
 - **End-to-end tests passing**: `advection`, `unit_conv`,
   `nested_suite`, `variable_transform`, `instances`,
   `instances_advection`, `ddt`.
@@ -354,10 +355,19 @@ don't rebuild downstream objects unless something actually moved.
 - **Validator** now checks per-argument `intent`, `type`, `kind`, and
   dimension rank in addition to the original name/count check.
   Asymmetric `optional` rule, DDT + `external:<module>:<typename>`
-  type normalisation, character `len=*` wildcard.  Resolver also
-  enforces an `active`-vs-`optional` coherence rule: a host variable
-  with `active = (...)` paired with a non-optional scheme arg is now
-  a parse-time error.  See `doc/migration.md` §7 + §1.3.1.
+  type normalisation, character `len=*` wildcard.
+- **Resolver cross-metadata checks** (late 2026-05-20): host/scheme
+  (and suite-owned-var first-writer/follow-on) consistency on type,
+  rank, and per-position dimension entries.  Default lower bound has
+  three equivalent spellings (bare `X`, `1:X`, `ccpp_constant_one:X`);
+  other lower bounds stay distinct.  Numeric kind remains lenient
+  (transform path).  See `doc/migration.md` §1.3.2.
+- **Host `active` + scheme arg shape**: when the scheme arg is
+  optional, the cap uses pointer association (PRESENT()-aware); when
+  the scheme arg is non-optional, the cap emits a runtime guard
+  (`if (.not. (active)) errflg = 1; return`) before the call.
+  Replaces an earlier static rule that forced scheme metadata to lie
+  about optionality.  See `doc/migration.md` §1.3.1.
 - **`--no-host-introspection`** (new, 2026-05-14): stubs the bodies of
   the five suite-introspection routines in `<host>_ccpp_cap.F90`,
   shrinking the file from ~33k lines to ~800 for the 10-suite SCM
