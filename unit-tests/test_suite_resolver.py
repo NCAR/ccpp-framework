@@ -41,6 +41,7 @@ from generator.suite_resolver import (
     SuiteResolution,
 )
 from generator.group_cap import (
+    _active_required_guard_lines,
     _fortran_type_str,
     _dim_decl,
     _dim_decl_local,
@@ -1236,14 +1237,21 @@ class TestResolveOneArg(unittest.TestCase):
 
 
 ########################################################################
-# Tests: active + optional coherence
+# Tests: host active + scheme arg coherence
 ########################################################################
 
-class TestActiveRequiresOptional(unittest.TestCase):
-    """When the host declares ``active = (<flag>)`` on a variable, any
-    scheme arg matching that variable must declare ``optional = True``.
-    The cap honors the active condition via pointer-association, which
-    is only valid when the scheme's Fortran dummy is optional."""
+class TestActiveHostHandling(unittest.TestCase):
+    """When the host declares ``active = (<flag>)`` on a variable:
+
+    * Scheme arg ``optional = True`` -> the cap emits the pointer-
+      association pattern (transform_case 2 or 4); the scheme observes
+      PRESENT()=.false. when the condition is false.
+    * Scheme arg non-optional -> the resolver still succeeds (the
+      scheme is asserting the variable is mandatory); the group cap
+      emits a runtime guard that raises errflg/errmsg if the condition
+      is false at call time.  The asymmetric optional rule in the
+      validator covers the metadata/Fortran consistency check; this
+      class only exercises resolver-level behaviour."""
 
     _HOST_SRC = (
         '[ccpp-table-properties]\n'
@@ -1310,16 +1318,70 @@ class TestActiveRequiresOptional(unittest.TestCase):
         # transform).  Both are pointer-pattern paths.
         self.assertIn(arg.transform_case, (2, 4))
 
-    def test_required_scheme_arg_raises(self):
+    def test_required_scheme_arg_resolves_with_active(self):
+        """A non-optional scheme arg paired with a host ``active = (...)``
+        variable resolves cleanly: the resolver passes the active
+        condition through (so the group cap can emit a runtime guard)
+        and selects a non-pointer transform_case (1 or 3)."""
         hd = self._host_dict()
-        with self.assertRaises(CCPPError) as cm:
-            _resolve_one_arg(self._scheme_var(optional=False), 'run', hd,
-                             {}, 'my_scheme', set())
-        msg = str(cm.exception)
-        self.assertIn("my_scheme", msg)
-        self.assertIn("air_temperature", msg)
-        self.assertIn("(flag_for_passive_check)", msg)
-        self.assertIn("optional", msg.lower())
+        arg = _resolve_one_arg(self._scheme_var(optional=False), 'run', hd,
+                               {}, 'my_scheme', set())
+        self.assertEqual(arg.active, '(flag_for_passive_check)')
+        # active_local is the same string here since flag_for_passive_check
+        # is referenced via its standard name with no rename.
+        self.assertIn('flag_passive', arg.active_local)
+        self.assertFalse(arg.is_optional)
+        # No pointer wrapper for a required arg; case 1 (direct) or 3 (transform).
+        self.assertIn(arg.transform_case, (1, 3))
+        self.assertEqual(arg.ptr_name, '')
+
+    def test_required_scheme_arg_emits_runtime_guard(self):
+        """Group-cap emitter renders the guard block for a non-optional
+        arg whose host declares ``active = (...)`` — guard is emitted at
+        the call indent, raises errflg/errmsg with a clear message, and
+        does *not* wrap the arg in a pointer."""
+        hd = self._host_dict()
+        arg = _resolve_one_arg(self._scheme_var(optional=False), 'run', hd,
+                               {}, 'my_scheme', set())
+        guard = _active_required_guard_lines(
+            arg, scheme_name='my_scheme', phase='run',
+            errflg_local='errflg', errmsg_local='errmsg',
+            indent='    ',
+        )
+        self.assertTrue(guard, "expected a non-empty guard block")
+        body = '\n'.join(guard)
+        self.assertIn('if (.not. (', body)
+        self.assertIn('flag_passive', body)
+        self.assertIn("my_scheme", body)
+        self.assertIn("air_temperature", body)
+        self.assertIn('errflg = 1', body)
+        self.assertIn('return', body)
+
+    def test_optional_scheme_arg_skips_runtime_guard(self):
+        """The runtime guard is only for non-optional args — optional
+        args use the pointer-association pattern and need no guard."""
+        hd = self._host_dict()
+        arg = _resolve_one_arg(self._scheme_var(optional=True), 'run', hd,
+                               {}, 'my_scheme', set())
+        guard = _active_required_guard_lines(
+            arg, scheme_name='my_scheme', phase='run',
+            errflg_local='errflg', errmsg_local='errmsg',
+            indent='    ',
+        )
+        self.assertEqual(guard, [])
+
+    def test_guard_skipped_when_no_error_locals(self):
+        """If the host did not declare ccpp_error_code/ccpp_error_message,
+        the guard is suppressed — there is no way to report the violation."""
+        hd = self._host_dict()
+        arg = _resolve_one_arg(self._scheme_var(optional=False), 'run', hd,
+                               {}, 'my_scheme', set())
+        guard = _active_required_guard_lines(
+            arg, scheme_name='my_scheme', phase='run',
+            errflg_local=None, errmsg_local=None,
+            indent='    ',
+        )
+        self.assertEqual(guard, [])
 
 
 ########################################################################

@@ -532,6 +532,46 @@ def _transform_comment(arg: ResolvedArg, reverse: bool = False) -> str:
     return '! ' + '; '.join(bits)
 
 
+def _active_required_guard_lines(
+    arg: ResolvedArg,
+    scheme_name: str,
+    phase: str,
+    errflg_local: Optional[str],
+    errmsg_local: Optional[str],
+    indent: str,
+) -> List[str]:
+    """Runtime guard for a non-optional scheme arg whose host declares ``active``.
+
+    The host says the variable is only valid when ``active`` is true.
+    The scheme demands the variable unconditionally.  We emit a runtime
+    check at the call site so a violation surfaces as a clean errflg/errmsg
+    rather than as a silent read of unallocated/stale memory.
+
+    Emitted before any transform pre-emission and before the call itself.
+    If the host did not declare both ``ccpp_error_code`` and
+    ``ccpp_error_message`` (extremely unusual), the guard is omitted —
+    there is no way to report the violation.
+    """
+    if not arg.active_local or arg.is_optional:
+        return []
+    if not errflg_local or not errmsg_local:
+        return []
+    msg = (
+        "scheme '{scheme}' phase '{phase}' requires variable "
+        "'{std}' but host active condition ({active}) is false".format(
+            scheme=scheme_name, phase=phase,
+            std=arg.standard_name, active=arg.active,
+        )
+    )
+    return [
+        '{}if (.not. ({})) then'.format(indent, arg.active_local),
+        "{}  {} = \"{}\"".format(indent, errmsg_local, msg),
+        '{}  {} = 1'.format(indent, errflg_local),
+        '{}  return'.format(indent),
+        '{}end if'.format(indent),
+    ]
+
+
 def _pre_call_lines(arg: ResolvedArg) -> List[str]:
     """Generate pre-call Fortran lines for one argument."""
     lines = []
@@ -645,6 +685,9 @@ def _loop_counter_name(depth: int) -> str:
 
 def _emit_phase_items(
     items, indent: str, lines: List[str], depth: int,
+    phase: str = '',
+    errflg_local: Optional[str] = None,
+    errmsg_local: Optional[str] = None,
 ) -> None:
     """Recursively emit Fortran for a list of :data:`PhaseItem` objects.
 
@@ -655,7 +698,9 @@ def _emit_phase_items(
     """
     for item in items:
         if isinstance(item, ResolvedCall):
-            _emit_one_call(item, indent, lines)
+            _emit_one_call(
+                item, indent, lines, phase, errflg_local, errmsg_local,
+            )
         elif isinstance(item, ResolvedSubcycle):
             counter = _loop_counter_name(depth)
             lines.append(
@@ -663,6 +708,9 @@ def _emit_phase_items(
             )
             _emit_phase_items(
                 item.calls, indent + _INDENT, lines, depth=depth + 1,
+                phase=phase,
+                errflg_local=errflg_local,
+                errmsg_local=errmsg_local,
             )
             lines.append('{}end do'.format(indent))
             lines.append('')
@@ -672,8 +720,21 @@ def _emit_one_call(
     resolved_call: ResolvedCall,
     indent: str,
     lines: List[str],
+    phase: str = '',
+    errflg_local: Optional[str] = None,
+    errmsg_local: Optional[str] = None,
 ) -> None:
     """Append Fortran lines for a single scheme call (with transforms + errcheck)."""
+    # Pre-call: runtime guard for any non-optional arg whose host declares
+    # ``active = (...)``.  Emitted before transforms so an inactive-but-required
+    # var bails out with a clear error rather than reading host memory through
+    # the transform pipeline.
+    for arg in resolved_call.args:
+        lines.extend(_active_required_guard_lines(
+            arg, resolved_call.scheme_name, resolved_call.phase,
+            errflg_local, errmsg_local, indent,
+        ))
+
     # Pre-call transformations.
     for arg in resolved_call.args:
         lines.extend(_pre_call_lines(arg))
@@ -917,7 +978,12 @@ def _generate_phase_subroutine(
     )
 
     # ---- scheme calls ---------------------------------------------------
-    _emit_phase_items(phase_items, call_indent, lines, depth=1)
+    _emit_phase_items(
+        phase_items, call_indent, lines, depth=1,
+        phase=phase,
+        errflg_local=errflg_local,
+        errmsg_local=errmsg_local,
+    )
 
     # ---- post-call state transitions ------------------------------------
     if phase == 'init':

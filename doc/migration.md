@@ -82,13 +82,15 @@ Inside a `[ var_name ]` section.  All optional.
 | `molar_mass`     | float | `0.0`  | Scheme metadata only. |
 | `diagnostic_name` | str | (defaults to `local_name`) | Host-tooling hint; mutually exclusive with `diagnostic_name_fixed`. |
 
-#### 1.3.1 `active` requires the scheme arg to be `optional`
+#### 1.3.1 Host `active` + scheme arg shape
 
 When a host variable carries `active = (<condition>)`, the host's
 contract with the cap is "this variable's storage is only valid when
-the condition holds".  capgen-ng honors that contract via the
-pointer-association pattern: at every call site that consumes the var,
-the cap emits
+the condition holds".  capgen-ng honors that contract differently
+depending on the matching scheme arg's optionality:
+
+**Scheme arg is `optional = True`** — the cap uses pointer association
+so the scheme observes `PRESENT()` according to the active condition:
 
 ```fortran
 if (<active_local>) then
@@ -99,20 +101,37 @@ end if
 call scheme(..., my_arg=ptr%ptr, ...)
 ```
 
-The pointer-association path is only safe when the scheme's Fortran
-dummy declaration is itself `optional`.  Therefore: **every scheme arg
-whose host counterpart carries `active = (...)` MUST declare
-`optional = True` in its scheme metadata, and the matching Fortran
-dummy MUST carry the `optional` attribute.**
+**Scheme arg is non-optional** — the scheme is asserting the variable
+is mandatory.  The cap emits a runtime guard before the call so an
+inactive-but-required variable surfaces as a clean error rather than a
+silent read of unallocated memory:
 
-The resolver enforces this at code-generation time with a clear error
-naming the scheme, the argument, and the host's `active` expression.
-If you hit it, two valid fixes:
+```fortran
+if (.not. (<active_local>)) then
+   errmsg = "scheme 'X' phase 'Y' requires variable '<std>' but " &
+          // "host active condition (<expr>) is false"
+   errflg = 1
+   return
+end if
+call scheme(..., my_arg=<host_var>(<subscript>), ...)
+```
 
-- Add `optional = True` to the scheme metadata entry and `optional`
-  to the Fortran dummy declaration; or
-- Remove the `active` attribute from the host metadata entry (only if
-  the host's variable really is always valid).
+The guard runs before any unit/kind/vertical-flip transform pre-call
+code, so transforms never see invalid host memory.  Multiple required
+arguments with `active` conditions each get their own guard block — one
+per arg keeps the error messages targeted.
+
+It is the suite designer's responsibility to schedule the call so the
+host's active condition holds when a required-arg scheme runs.  The
+guard converts violations from latent runtime bugs into immediate
+errflg/errmsg returns.
+
+> **Earlier (relaxed 2026-05-20)**: a previous iteration of this rule
+> rejected `active` + non-optional pairings at resolution time and
+> required scheme metadata to declare `optional = True`.  That forced
+> scheme metadata to misrepresent the Fortran for schemes that
+> legitimately require a host-conditional variable.  The current rule
+> defers the check to runtime and leaves the metadata honest.
 
 ### 1.4 Sliced local names with long subscript indices
 
