@@ -1124,7 +1124,7 @@ class TestResolveOneArg(unittest.TestCase):
         """2D array in run phase → subscript applied."""
         hd = self._host_dict()
         suite_var = self._scheme_var('temp', 'air_temperature', 'inout', 'K',
-                              '(horizontal_loop_extent, vertical_layer_dimension)',
+                              '(horizontal_dimension, vertical_layer_dimension)',
                               'real', 'kind_phys')
         arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         # access_path = 'gt0', subscript = '(lb:ub, 1:nlev)'
@@ -1234,6 +1234,215 @@ class TestResolveOneArg(unittest.TestCase):
         self.assertTrue(arg.is_optional)
         self.assertTrue(arg.ptr_name)
         self.assertEqual(arg.transform_case, 2)
+
+
+########################################################################
+# Tests: host vs scheme metadata compatibility
+########################################################################
+
+class TestHostSchemeCompatibility(unittest.TestCase):
+    """Resolver-level cross-metadata checks: the scheme's metadata must
+    agree with the defining source (host or suite) on type, rank, and
+    dimension identity.  Units and character kind have their own existing
+    tests; numeric kind is intentionally lenient (triggers a transform
+    copy, see [[design_numeric_kind_silent_transform]]).
+    """
+
+    _HOST_SRC = (
+        '[ccpp-table-properties]\n'
+        '  name = host_mod\n'
+        '  type = host\n'
+        '[ccpp-arg-table]\n'
+        '  name = host_mod\n'
+        '  type = host\n'
+        '[ ncols ]\n'
+        '  standard_name = horizontal_dimension\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '[ nlev ]\n'
+        '  standard_name = vertical_layer_dimension\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '[ nap ]\n'
+        '  standard_name = nap_indices\n'
+        '  units = count\n'
+        '  dimensions = ()\n'
+        '  type = integer\n'
+        '[ tair ]\n'
+        '  standard_name = air_temperature\n'
+        '  units = K\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+        '  type = real\n'
+        '  kind = kind_phys\n'
+        '[ scalar_flag ]\n'
+        '  standard_name = a_scalar_flag\n'
+        '  units = 1\n'
+        '  dimensions = ()\n'
+        '  type = real\n'
+        '  kind = kind_phys\n'
+        '[ ap_arr ]\n'
+        '  standard_name = ap_indexed_array\n'
+        '  units = count\n'
+        '  dimensions = (nap_indices)\n'
+        '  type = integer\n'
+    )
+
+    def _host_dict(self):
+        from metadata.metadata_table import _parse_lines
+        ctrl_tbls = parse_metadata_file(_sf('control_full.meta'))
+        host_tbls = _parse_lines(
+            self._HOST_SRC.splitlines(keepends=True), 'h.meta',
+        )
+        ctrl_only = [t for t in ctrl_tbls if t.table_type == 'control']
+        return build_flat_host_dict(host_tbls, ctrl_only, [])
+
+    def _scheme_var(self, std_name, type_, dims, units='K', kind='kind_phys',
+                    intent='inout'):
+        from metadata.metadata_table import MetaVar
+        ctx = _ctx()
+        v = MetaVar('x', ctx)
+        v.set_attr('standard_name', std_name, ctx)
+        v.set_attr('units', units, ctx)
+        v.set_attr('dimensions', dims, ctx)
+        v.set_attr('type', type_, ctx)
+        if kind:
+            v.set_attr('kind', kind, ctx)
+        v.set_attr('intent', intent, ctx)
+        return v
+
+    def test_host_scalar_scheme_rank1_raises(self):
+        """Host scalar `()` with scheme `(horizontal_dimension)` is a rank
+        mismatch — user-reported gap that the resolver now catches."""
+        hd = self._host_dict()
+        sv = self._scheme_var(
+            'a_scalar_flag', 'real',
+            '(horizontal_dimension)', units='1',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        msg = str(cm.exception)
+        self.assertIn('rank', msg)
+        self.assertIn('a_scalar_flag', msg)
+
+    def test_host_dim_mismatch_raises(self):
+        """Host `(nap_indices)` with scheme `(horizontal_dimension)` —
+        same rank, different axis — is a metadata error."""
+        hd = self._host_dict()
+        sv = self._scheme_var(
+            'ap_indexed_array', 'integer',
+            '(horizontal_dimension)', units='count', kind='',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        msg = str(cm.exception)
+        self.assertIn('dimension', msg.lower())
+        self.assertIn('nap_indices', msg)
+        self.assertIn('horizontal_dimension', msg)
+
+    def test_type_mismatch_raises(self):
+        """Host `integer` with scheme `real` is a type-identity error
+        even when units and rank align."""
+        hd = self._host_dict()
+        sv = self._scheme_var(
+            'horizontal_dimension', 'real', '()', units='count', kind='',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        msg = str(cm.exception)
+        self.assertIn('type', msg.lower())
+
+    def test_default_lower_bound_spellings_equivalent(self):
+        """Three spellings of the default lower bound are equivalent:
+        bare ``X``, ``1:X``, and ``ccpp_constant_one:X``.  The host's
+        bare ``vertical_layer_dimension`` matches any of these forms
+        on the scheme side."""
+        hd = self._host_dict()
+        for sdim in (
+            'vertical_layer_dimension',
+            '1:vertical_layer_dimension',
+            'ccpp_constant_one:vertical_layer_dimension',
+        ):
+            with self.subTest(scheme_dim=sdim):
+                sv = self._scheme_var(
+                    'air_temperature', 'real',
+                    '(horizontal_dimension, {})'.format(sdim),
+                )
+                arg = _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+                self.assertEqual(arg.standard_name, 'air_temperature')
+
+    def test_nondefault_integer_lower_bound_mismatch_raises(self):
+        """``2:nlev`` and ``1:nlev`` are NOT the same axis — different
+        lower bound means different sub-range, even when both are
+        integer literals."""
+        hd = self._host_dict()
+        sv = self._scheme_var(
+            'air_temperature', 'real',
+            '(horizontal_dimension, 2:vertical_layer_dimension)',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        msg = str(cm.exception)
+        self.assertIn('dimension', msg.lower())
+        self.assertIn('vertical_layer_dimension', msg)
+        self.assertIn('2:', msg)
+
+    def test_nondefault_named_lower_bound_mismatch_raises(self):
+        """A non-default standard-name lower bound (``foo:nlev``) is
+        distinct from the default ``ccpp_constant_one:nlev``."""
+        hd = self._host_dict()
+        sv = self._scheme_var(
+            'air_temperature', 'real',
+            '(horizontal_dimension, '
+            'some_made_up_lower_bound:vertical_layer_dimension)',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        msg = str(cm.exception)
+        self.assertIn('dimension', msg.lower())
+        self.assertIn('vertical_layer_dimension', msg)
+        self.assertIn('some_made_up_lower_bound', msg)
+
+    def test_horizontal_loop_extent_in_scheme_dims_raises(self):
+        """No name aliasing in the compat check: a scheme that uses the
+        legacy ``horizontal_loop_extent`` in a dimension list while the
+        host declares ``horizontal_dimension`` is a mismatch.  The
+        legacy-compat shim is the only place such rewriting belongs."""
+        hd = self._host_dict()
+        sv = self._scheme_var(
+            'air_temperature', 'real',
+            '(horizontal_loop_extent, vertical_layer_dimension)',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(sv, 'run', hd, {}, 'sch', set())
+        msg = str(cm.exception)
+        self.assertIn('horizontal_dimension', msg)
+        self.assertIn('horizontal_loop_extent', msg)
+
+    def test_suite_var_second_reader_mismatch_raises(self):
+        """First scheme with intent=out fixes the SuiteVar's type/rank;
+        a later scheme that reads it with mismatched dims is rejected."""
+        hd = self._host_dict()
+        # First scheme creates the suite var.
+        writer = self._scheme_var(
+            'an_arbitrary_suite_quantity', 'real',
+            '(horizontal_dimension, vertical_layer_dimension)',
+            units='K', intent='out',
+        )
+        suite_vars = {}
+        _resolve_one_arg(writer, 'run', hd, suite_vars, 'sch_a', set())
+        self.assertIn('an_arbitrary_suite_quantity', suite_vars)
+        # Second scheme reads it — but with a wrong rank.
+        reader = self._scheme_var(
+            'an_arbitrary_suite_quantity', 'real',
+            '(horizontal_dimension)', units='K', intent='in',
+        )
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(reader, 'run', hd, suite_vars, 'sch_b', set())
+        msg = str(cm.exception)
+        self.assertIn('rank', msg)
+        self.assertIn('suite', msg)
 
 
 ########################################################################
@@ -1460,7 +1669,7 @@ class TestVerticalFlipTransform(unittest.TestCase):
         suite_var.set_attr('standard_name', 'air_temperature', ctx)
         suite_var.set_attr('units', scheme_units, ctx)
         suite_var.set_attr('dimensions',
-                    '(horizontal_loop_extent, vertical_layer_dimension)', ctx)
+                    '(horizontal_dimension, vertical_layer_dimension)', ctx)
         suite_var.set_attr('type', 'real', ctx)
         suite_var.set_attr('kind', 'kind_phys', ctx)
         suite_var.set_attr('intent', intent, ctx)
@@ -3489,7 +3698,7 @@ class TestConstituentResolverErrors(unittest.TestCase):
         '[ x ]\n'
         '  standard_name = {std}\n'
         '  units = kg kg-1\n'
-        '  dimensions = (horizontal_loop_extent, vertical_layer_dimension)\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
         '  type = real | kind = kind_phys\n'
         '  intent = {intent}\n'
         '  {flag} = .true.\n'

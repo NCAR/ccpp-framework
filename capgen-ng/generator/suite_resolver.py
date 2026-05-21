@@ -626,6 +626,44 @@ def _dim_has_vertical(dim: str) -> bool:
     return upper in _VDIM_STDS
 
 
+def _canonical_dim(dim: str) -> str:
+    """Return a dimension entry in canonical ``lower:upper`` form for
+    identity comparison.
+
+    Three spellings of the implicit/default lower bound all collapse
+    to a single representative:
+
+    * bare ``foo`` (no explicit lower bound)
+    * ``1:foo`` (the integer literal one)
+    * ``ccpp_constant_one:foo`` (the standard name)
+
+    Any *other* lower bound is distinct: ``2:foo`` is not the same
+    axis as ``1:foo``, ``bar:foo`` is not the same as ``1:foo``, etc.
+    Different lower bound describes a different sub-range and must
+    not compare equal.
+
+    No name aliasing on the upper bound happens here.
+    ``horizontal_loop_extent`` and ``horizontal_dimension`` are
+    different names — the :func:`metadata.legacy_compat` shim is the
+    canonical place that rewrites the legacy name to the new one at
+    parse time when ``--legacy-mode`` is enabled.  Without that shim
+    the two should never appear on opposite sides of a host/scheme
+    pairing.
+    """
+    if ':' in dim:
+        lower, upper = dim.split(':', 1)
+    else:
+        lower, upper = _CCPP_CONSTANT_ONE, dim
+    lower = lower.strip().lower()
+    upper = upper.strip().lower()
+    # Collapse the integer literal '1' and the standard name
+    # 'ccpp_constant_one' to a single representative so all three
+    # spellings of the default lower bound compare equal.
+    if lower == '1':
+        lower = _CCPP_CONSTANT_ONE
+    return '{}:{}'.format(lower, upper)
+
+
 def _substitute_scalar_idx(
     expr: str, host_dict: Dict[str, HostVarEntry],
 ) -> str:
@@ -1405,13 +1443,65 @@ def _resolve_one_arg(
         host_dims = host_entry.dimensions
         host_units = host_entry.units
         host_kind  = host_entry.kind
+        host_type  = host_entry.type
         host_allocatable = host_entry.allocatable
     else:
         base_expr  = suite_var.access_path
         host_dims  = suite_var.dimensions
         host_units = suite_var.units
         host_kind  = suite_var.kind
+        host_type  = suite_var.type_
         host_allocatable = suite_var.allocatable
+
+    # ---- type identity check ---------------------------------------------
+    # The defining source (host metadata or the first scheme to write a
+    # suite-owned var) sets the variable's type; every subsequent consumer
+    # must agree.  Numeric/kind coercion happens via the transform pipeline,
+    # but the *type kind* itself (real vs integer vs logical vs DDT) must
+    # match identically — there is no transform that crosses those.
+    if (host_type or '').strip().lower() != (scheme_var.type or '').strip().lower():
+        raise CCPPError(
+            "Variable '{}' (standard_name='{}'): {} declares type='{}' but "
+            "scheme '{}' declares type='{}'; cross-type assignment is not "
+            "supported, the scheme metadata must match the defining type".format(
+                local, std_name, source, host_type,
+                scheme_name, scheme_var.type,
+            )
+        )
+
+    # ---- rank check ------------------------------------------------------
+    if len(host_dims) != len(scheme_var.dimensions):
+        raise CCPPError(
+            "Variable '{}' (standard_name='{}'): {} declares rank {} "
+            "(dimensions={}) but scheme '{}' declares rank {} "
+            "(dimensions={}); the scheme metadata's dimension list must "
+            "match the defining rank".format(
+                local, std_name, source, len(host_dims),
+                list(host_dims), scheme_name, len(scheme_var.dimensions),
+                list(scheme_var.dimensions),
+            )
+        )
+
+    # ---- per-position dimension identity check ---------------------------
+    # Each dimension entry is canonicalized to ``lower:upper`` form (bare
+    # ``X`` -> ``ccpp_constant_one:X``) and compared for strict identity.
+    # No name aliasing: ``horizontal_loop_extent`` and ``horizontal_dimension``
+    # are distinct; the legacy-compat shim is the one place that rewrites
+    # legacy names at parse time.
+    for pos, (hdim, sdim) in enumerate(zip(host_dims, scheme_var.dimensions)):
+        if _canonical_dim(hdim) != _canonical_dim(sdim):
+            raise CCPPError(
+                "Variable '{}' (standard_name='{}'): {} declares "
+                "dimension {} as '{}' but scheme '{}' declares it as "
+                "'{}'; per-position dimension entries must match "
+                "(the scheme metadata's dimension list must name the "
+                "defining axes; bare names are equivalent to "
+                "ccpp_constant_one:<name>, all other lower bounds are "
+                "distinct)".format(
+                    local, std_name, source, pos, hdim,
+                    scheme_name, sdim,
+                )
+            )
 
     # ---- allocatable compatibility check ---------------------------------
     # An actual argument that is not allocatable cannot be passed to an
