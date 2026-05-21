@@ -45,6 +45,7 @@ from metadata.metadata_table import (
     _parse_dimensions,
     _check_var_type,
     _parse_config_line,
+    _strip_inline_comment,
 )
 from metadata.parse_tools.parse_source import ParseContext
 
@@ -94,6 +95,66 @@ class TestIsBlank(unittest.TestCase):
 
     def test_bracket_header(self):
         self.assertFalse(_is_blank('[ccpp-table-properties]'))
+
+
+class TestStripInlineComment(unittest.TestCase):
+    """Tests for :func:`_strip_inline_comment` — trailing ``# ...`` is
+    a comment that the parser must discard before any other handling.
+    """
+
+    def test_plain_line_unchanged(self):
+        self.assertEqual(
+            _strip_inline_comment('dimensions = (horizontal_dimension)'),
+            'dimensions = (horizontal_dimension)',
+        )
+
+    def test_strips_trailing_hash_comment(self):
+        self.assertEqual(
+            _strip_inline_comment('dimensions = () # (nap_indices)'),
+            'dimensions = ()',
+        )
+
+    def test_strips_section_header_comment(self):
+        self.assertEqual(
+            _strip_inline_comment('[ ap_indices ]   # legacy'),
+            '[ ap_indices ]',
+        )
+
+    def test_full_line_comment_collapses_to_empty(self):
+        self.assertEqual(_strip_inline_comment('# whole line'), '')
+
+    def test_hash_at_column_zero(self):
+        self.assertEqual(_strip_inline_comment('#x'), '')
+
+
+class TestInlineCommentInParser(unittest.TestCase):
+    """End-to-end check that the parser ignores trailing ``#`` comments
+    on any metadata line — the user-reported bug surfaced on a
+    ``dimensions =`` attribute value but the fix is universal."""
+
+    _SRC = (
+        '[ccpp-table-properties]\n'
+        '  name = mod   # the host module\n'
+        '  type = host\n'
+        '[ccpp-arg-table]\n'
+        '  name = mod\n'
+        '  type = host\n'
+        '[ ap_indices ]   # legacy index slot\n'
+        '  standard_name = ap_indices\n'
+        '  units = index\n'
+        '  dimensions = () # (nap_indices)\n'
+        '  type = integer\n'
+    )
+
+    def test_parses_cleanly(self):
+        tables = _parse_text(self._SRC)
+        self.assertEqual(len(tables), 1)
+        sec = tables[0].sections()[0]
+        var = sec.variables[0]
+        self.assertEqual(var.local_name, 'ap_indices')
+        self.assertEqual(var.dimensions, [])
+        self.assertEqual(var.type, 'integer')
+        self.assertEqual(tables[0].table_name, 'mod')
 
 
 class TestParseBool(unittest.TestCase):

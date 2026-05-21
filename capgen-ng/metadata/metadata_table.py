@@ -168,6 +168,37 @@ def _is_blank(line: str) -> bool:
     return _BLANK_RE.match(line) is not None
 
 
+def _strip_inline_comment(line: str) -> str:
+    """Drop a trailing ``# ...`` comment from a metadata line.
+
+    Metadata files use ``#`` (and ``;`` at column 0) as comment markers.
+    A ``#`` anywhere in a line — not just at column 0 — starts a comment
+    that runs to the end of the line; the parser discards it before any
+    further processing.  No escape mechanism: ``#`` is not a legitimate
+    character in any metadata value (units, kinds, identifiers, dim
+    lists, Fortran conditional expressions).
+
+    Trailing whitespace left behind by the strip is also removed so that
+    section/variable headers like ``[ name ]`` and key=value lines parse
+    cleanly with their existing regexes.
+
+    >>> _strip_inline_comment('dimensions = () # (nap_indices)')
+    'dimensions = ()'
+    >>> _strip_inline_comment('[ ap_indices ]   # legacy slot')
+    '[ ap_indices ]'
+    >>> _strip_inline_comment('# whole-line comment')
+    ''
+    >>> _strip_inline_comment('plain line with no comment')
+    'plain line with no comment'
+    >>> _strip_inline_comment('')
+    ''
+    """
+    idx = line.find('#')
+    if idx < 0:
+        return line
+    return line[:idx].rstrip()
+
+
 def _parse_bool(value: str, context: ParseContext) -> bool:
     """Parse a Fortran/Python boolean string to a Python bool.
 
@@ -1214,6 +1245,10 @@ def _parse_lines(lines: List[str], file_path: str) -> List[MetadataTable]:
 
     for lineno, raw_line in enumerate(lines):
         line = raw_line.rstrip('\n').rstrip('\r')
+        # Discard any inline ``# ...`` comment so headers, key=value lines,
+        # and the blank-line check all see the same content the user
+        # intended as data.
+        line = _strip_inline_comment(line)
 
         # ---- [ccpp-table-properties] ----------------------------------------
         if line.strip().lower() == _TABLE_PROPS_HDR:
