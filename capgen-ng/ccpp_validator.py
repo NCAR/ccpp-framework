@@ -1067,6 +1067,24 @@ def _build_parser() -> argparse.ArgumentParser:
             "loud warning at startup.  Will be removed."
         ),
     )
+    # dim-aliases: transient GFS-physics shim (delete the argument,
+    # the enable() call below, and the rest of the dim_aliases
+    # touchpoints when the workaround is removed).
+    parser.add_argument(
+        '--gfs-dim-aliases',
+        action='store_true',
+        help=(
+            "TRANSIENT GFS-PHYSICS SHIM.  Treat a small audited list of "
+            "physically-equivalent vertical-axis standard names as the "
+            "same dimension during the host/scheme dim-position "
+            "identity check only (e.g. "
+            "'adjusted_vertical_layer_dimension_for_radiation' and "
+            "'vertical_composition_dimension' both compare equal to "
+            "'vertical_layer_dimension').  Variables keep their "
+            "original names everywhere else.  Emits a loud warning at "
+            "startup.  Will be removed."
+        ),
+    )
     return parser
 
 
@@ -1086,6 +1104,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.legacy_mode:
         from metadata import legacy_compat
         legacy_compat.enable(_LOGGER)
+
+    # dim-aliases: transient GFS-physics shim.  Emit the loud banner
+    # before any parsing happens so user has fair warning.
+    if args.gfs_dim_aliases:
+        from metadata import dim_aliases
+        dim_aliases.enable(_LOGGER)
 
     scheme_files = [f.strip() for f in args.scheme_files.split(',') if f.strip()]
     source_files = [f.strip() for f in args.source_files.split(',') if f.strip()]

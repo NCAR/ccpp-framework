@@ -8,13 +8,13 @@
   name = dup_scheme_run
   type = scheme
 [ a_var ]
-  standard_name = horizontal_loop_extent
+  standard_name = horizontal_dimension
   units = count
   dimensions = ()
   type = integer
   intent = in
 [ b_var ]
-  standard_name = horizontal_loop_extent
+  standard_name = horizontal_dimension
   units = count
   dimensions = ()
   type = integer

@@ -459,13 +459,13 @@ class MetaVar:
     >>> from metadata.parse_tools import ParseContext
     >>> ctx = ParseContext(10, 'example.meta')
     >>> v = MetaVar('im', ctx)
-    >>> v.set_attr('standard_name', 'horizontal_loop_extent', ctx)
+    >>> v.set_attr('standard_name', 'horizontal_dimension', ctx)
     >>> v.set_attr('units', 'count', ctx)
     >>> v.set_attr('dimensions', '()', ctx)
     >>> v.set_attr('type', 'integer', ctx)
     >>> v.set_attr('intent', 'in', ctx)
     >>> v.standard_name
-    'horizontal_loop_extent'
+    'horizontal_dimension'
     >>> v.intent
     'in'
     >>> v.dimensions
@@ -1150,7 +1150,7 @@ def parse_metadata_file(file_path: str) -> List[MetadataTable]:
     ...   name = test_host
     ...   type = host
     ... [ im ]
-    ...   standard_name = horizontal_loop_extent
+    ...   standard_name = horizontal_dimension
     ...   units = count
     ...   dimensions = ()
     ...   type = integer
@@ -1168,7 +1168,7 @@ def parse_metadata_file(file_path: str) -> List[MetadataTable]:
     >>> tables[0].table_type
     'host'
     >>> tables[0].sections()[0].variables[0].standard_name
-    'horizontal_loop_extent'
+    'horizontal_dimension'
     """
     if not os.path.isfile(file_path):
         raise CCPPError("Metadata file '{}' does not exist".format(file_path))

@@ -5,7 +5,7 @@
   name = hello_scheme_run
   type = scheme
 [ ncol ]
-  standard_name = horizontal_loop_extent
+  standard_name = horizontal_dimension
   type = integer
   units = count
   dimensions = ()
@@ -33,14 +33,14 @@
 [ temp_level ]
   standard_name = potential_temperature_at_interface
   units = K
-  dimensions = (ccpp_constant_one:horizontal_loop_extent, vertical_interface_dimension)
+  dimensions = (ccpp_constant_one:horizontal_dimension, vertical_interface_dimension)
   type = real
   kind = kind_phys
   intent = inout
 [ temp_layer ]
   standard_name = potential_temperature
   units = K
-  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = out

@@ -313,8 +313,8 @@ class TestMetaVar(unittest.TestCase):
         """Standard names must be CF names (lowercased by the checker)."""
         ctx = _ctx()
         var = MetaVar('v', ctx)
-        var.set_attr('standard_name', 'Horizontal_Loop_Extent', ctx)
-        self.assertEqual(var.standard_name, 'horizontal_loop_extent')
+        var.set_attr('standard_name', 'Horizontal_Dimension', ctx)
+        self.assertEqual(var.standard_name, 'horizontal_dimension')
 
     def test_dimensions_scalar(self):
         var = self._make_var(dimensions='()')
@@ -729,7 +729,7 @@ class TestParseLines(unittest.TestCase):
               name = my_scheme_run
               type = scheme
             [ im ]
-              standard_name = horizontal_loop_extent
+              standard_name = horizontal_dimension
               units = count
               dimensions = ()
               type = integer
@@ -778,7 +778,7 @@ class TestParseLines(unittest.TestCase):
               name = my_scheme_run
               type = scheme
             [ im ]
-              standard_name = horizontal_loop_extent
+              standard_name = horizontal_dimension
               units = count
               dimensions = ()
               type = integer
@@ -931,13 +931,13 @@ class TestParseLines(unittest.TestCase):
               name = s_run
               type = scheme
             [ a ]
-              standard_name = horizontal_loop_extent
+              standard_name = horizontal_dimension
               units = count
               dimensions = ()
               type = integer
               intent = in
             [ b ]
-              standard_name = horizontal_loop_extent
+              standard_name = horizontal_dimension
               units = count
               dimensions = ()
               type = integer
@@ -957,7 +957,7 @@ class TestParseLines(unittest.TestCase):
               name = s_run
               type = scheme
             [ im ]
-              standard_name = horizontal_loop_extent
+              standard_name = horizontal_dimension
               units = count
               dimensions = ()
               type = integer
@@ -975,7 +975,7 @@ class TestParseLines(unittest.TestCase):
               name = s_run
               type = scheme
             [ im ]
-              standard_name = horizontal_loop_extent
+              standard_name = horizontal_dimension
               units = count
               dimensions = ()
               type = integer
@@ -1483,7 +1483,7 @@ class TestTableVariables(unittest.TestCase):
               type = character
               intent = out
             [ im ]
-              standard_name = horizontal_loop_extent
+              standard_name = horizontal_dimension
               units = count
               dimensions = ()
               type = integer
@@ -1494,7 +1494,7 @@ class TestTableVariables(unittest.TestCase):
         snames = [v.standard_name for v in all_vars]
         # ccpp_error_message appears in both phases but should be returned once
         self.assertEqual(snames.count('ccpp_error_message'), 1)
-        self.assertIn('horizontal_loop_extent', snames)
+        self.assertIn('horizontal_dimension', snames)
 
 
 ########################################################################

@@ -19,12 +19,6 @@
   units = count
   dimensions = ()
   type = integer
-[ im ]
-  standard_name = horizontal_loop_extent
-  long_name = horizontal loop extent
-  units = count
-  dimensions = ()
-  type = integer
 [ nlev ]
   standard_name = vertical_layer_dimension
   long_name = number of vertical layers

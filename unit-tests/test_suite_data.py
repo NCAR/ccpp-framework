@@ -68,11 +68,11 @@ class TestGenerateSuiteDataWithVars(unittest.TestCase):
         suite_vars = {
             'air_temp_adjusted': _make_sv(
                 'air_temp_adjusted', 'temp_adj', 'real', 'kind_phys', 'K',
-                dims=['horizontal_loop_extent', 'vertical_layer_dimension'],
+                dims=['horizontal_dimension', 'vertical_layer_dimension'],
             ),
             'humidity': _make_sv(
                 'humidity', 'q', 'real', 'kind_phys', 'kg kg-1',
-                dims=['horizontal_loop_extent'],
+                dims=['horizontal_dimension'],
             ),
         }
         self.lines = _generate_suite_data('suite_x', suite_vars)

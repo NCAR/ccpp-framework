@@ -38,7 +38,7 @@ After normalisation the upper-bound standard name drives dispatch:
   already in the access path for DDT-component fields, but needed here
   for a DDT instance variable itself when passed directly, and for any
   flat-array dim that hits the same registered name.
-- ``horizontal_dimension`` / ``horizontal_loop_extent`` →
+- ``horizontal_dimension`` →
   ``<lb_local>:<ub_local>`` (all phases).  The lower bound must resolve to
   ``1`` (i.e. be ``ccpp_constant_one`` or the integer literal ``1``).
 - Everything else → ``<lower_expr>:<upper_expr>`` where both bounds are
@@ -69,11 +69,16 @@ from metadata.registered_dimensions import (
     is_scalar_index_dim,
 )
 from metadata.variable_resolver import HostVarEntry, _resolve_subscript
+# dim-aliases: transient GFS-physics shim (delete this import and the
+# canonical() call in _canonical_dim when the shim is removed).
+from metadata import dim_aliases
 
-# Dimension standard names that map to horizontal loop bounds.
+# Dimension standard names that map to horizontal loop bounds.  The
+# legacy spelling ``horizontal_loop_extent`` is rejected at parse time
+# (see ``_FORBIDDEN_DIMENSION_NAMES`` in ccpp_capgen_ng.py) or rewritten
+# by the ``--legacy-mode`` shim, so it can never appear here.
 _HORIZ_LOOP_DIMS: frozenset = frozenset({
     'horizontal_dimension',
-    'horizontal_loop_extent',
 })
 
 # Standard names for horizontal loop bounds and full horizontal dimension.
@@ -642,13 +647,22 @@ def _canonical_dim(dim: str) -> str:
     Different lower bound describes a different sub-range and must
     not compare equal.
 
-    No name aliasing on the upper bound happens here.
+    No name aliasing on the upper bound happens here by default.
     ``horizontal_loop_extent`` and ``horizontal_dimension`` are
     different names — the :func:`metadata.legacy_compat` shim is the
     canonical place that rewrites the legacy name to the new one at
     parse time when ``--legacy-mode`` is enabled.  Without that shim
     the two should never appear on opposite sides of a host/scheme
     pairing.
+
+    The one *opt-in* exception is the GFS dim-aliases shim
+    (:mod:`metadata.dim_aliases`, ``--gfs-dim-aliases``): when enabled
+    it collapses a small audited list of physically-equivalent
+    standard names (e.g. ``adjusted_vertical_layer_dimension_for_radiation``
+    -> ``vertical_layer_dimension``) on the *upper bound only*, so
+    host and scheme metadata that use different historical spellings
+    of the same axis compare equal here.  Variables keep their
+    original standard names elsewhere.
     """
     if ':' in dim:
         lower, upper = dim.split(':', 1)
@@ -661,6 +675,11 @@ def _canonical_dim(dim: str) -> str:
     # spellings of the default lower bound compare equal.
     if lower == '1':
         lower = _CCPP_CONSTANT_ONE
+    # dim-aliases: transient GFS-physics shim.  No-op unless the
+    # ``--gfs-dim-aliases`` CLI flag has been passed.  Only the upper
+    # bound is rewritten; lower bounds (loop-begin control vars, etc.)
+    # never alias.
+    upper = dim_aliases.canonical(upper)
     return '{}:{}'.format(lower, upper)
 
 
@@ -1485,9 +1504,11 @@ def _resolve_one_arg(
     # ---- per-position dimension identity check ---------------------------
     # Each dimension entry is canonicalized to ``lower:upper`` form (bare
     # ``X`` -> ``ccpp_constant_one:X``) and compared for strict identity.
-    # No name aliasing: ``horizontal_loop_extent`` and ``horizontal_dimension``
-    # are distinct; the legacy-compat shim is the one place that rewrites
-    # legacy names at parse time.
+    # No name aliasing happens here by default; the legacy-compat shim
+    # rewrites deprecated names at parse time, and the opt-in GFS
+    # dim-aliases shim (--gfs-dim-aliases) collapses a small audited
+    # list of physically-equivalent upper-bound names inside
+    # ``_canonical_dim`` itself.
     for pos, (hdim, sdim) in enumerate(zip(host_dims, scheme_var.dimensions)):
         if _canonical_dim(hdim) != _canonical_dim(sdim):
             raise CCPPError(

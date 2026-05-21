@@ -681,8 +681,8 @@ The `.meta` file itself uses an INI-style format:
   name = scheme_name_run
   type = scheme
 [ im ]
-  standard_name = horizontal_loop_extent
-  long_name = horizontal loop extent
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
   units = count
   type = integer
   dimensions = ()
@@ -693,7 +693,7 @@ The `.meta` file itself uses an INI-style format:
   units = m
   type = real
   kind = kind_phys
-  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
   intent = in
 ```
 

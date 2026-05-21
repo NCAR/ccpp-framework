@@ -33,7 +33,7 @@ appear as dimensions in host variables:
     ``number_of_instances`` for the same role.  Both names are treated as
     instance dimensions here; see ``_INSTANCE_DIMS``.
 
-``horizontal_dimension``, ``horizontal_loop_extent``
+``horizontal_dimension``
     Horizontal slice — emitted as ``lb:ub`` (run phase) or
     ``1:<local_name>`` (non-run).  The code generator handles the slicing;
     the resolver only records the dimension standard name.

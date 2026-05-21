@@ -137,10 +137,10 @@ def _dim_decl(dimensions: List[str]) -> str:
 
     >>> _dim_decl([])
     ''
-    >>> _dim_decl(['horizontal_loop_extent'])
-    ', dimension(horizontal_loop_extent)'
-    >>> _dim_decl(['horizontal_loop_extent', 'vertical_layer_dimension'])
-    ', dimension(horizontal_loop_extent, vertical_layer_dimension)'
+    >>> _dim_decl(['horizontal_dimension'])
+    ', dimension(horizontal_dimension)'
+    >>> _dim_decl(['horizontal_dimension', 'vertical_layer_dimension'])
+    ', dimension(horizontal_dimension, vertical_layer_dimension)'
     """
     if not dimensions:
         return ''
@@ -154,9 +154,9 @@ def _dim_decl_local(dimensions: List[str], host_dict) -> str:
     Fortran variable name.  Falls back to the standard name when not found
     (should not happen with valid metadata).
 
-    Special case for ``horizontal_dimension`` / ``horizontal_loop_extent``:
-    the temp must match the chunk slice the scheme actually receives at
-    the call site (``host_var(lb:ub, …)`` via :func:`_one_dim_part`).
+    Special case for ``horizontal_dimension``: the temp must match the
+    chunk slice the scheme actually receives at the call site
+    (``host_var(lb:ub, …)`` via :func:`_one_dim_part`).
     Using the host's local name for ``horizontal_dimension`` (e.g. ``ncols``)
     would over-size the temp and break the unit-conversion assignment
     ``ps_l = factor * phys_state%ps(col_start:col_end)`` with a Fortran
@@ -171,7 +171,7 @@ def _dim_decl_local(dimensions: List[str], host_dict) -> str:
         return ''
     locals_ = []
     for std_name in dimensions:
-        if std_name in ('horizontal_dimension', 'horizontal_loop_extent'):
+        if std_name == 'horizontal_dimension':
             lb_entry = host_dict.get('horizontal_loop_begin') if host_dict else None
             ub_entry = host_dict.get('horizontal_loop_end')   if host_dict else None
             lb = lb_entry.local_name if lb_entry else 'horizontal_loop_begin'

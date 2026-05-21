@@ -1105,11 +1105,15 @@ class TestResolveOneArg(unittest.TestCase):
     def test_case1_direct_host(self):
         """Case 1: scalar host variable, no transform."""
         hd = self._host_dict()
-        suite_var = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count')
+        suite_var = self._scheme_var(
+            'im', 'horizontal_dimension', 'in', 'count')
         arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         self.assertEqual(arg.source, 'host')
         self.assertEqual(arg.transform_case, 1)
-        self.assertEqual(arg.call_expr, 'im')
+        # Scalar horizontal_dimension in run phase is synthesised from
+        # the chunk loop bounds (ub - lb + 1) rather than the host's
+        # full-domain ncols — see ``_HORIZ_DIM_STD`` in suite_resolver.
+        self.assertEqual(arg.call_expr, '(ub - lb + 1)')
         self.assertFalse(arg.needs_transform)
 
     def test_case1_control_var(self):
@@ -1199,7 +1203,8 @@ class TestResolveOneArg(unittest.TestCase):
     def test_no_transform_same_units(self):
         """Identical units → no transformation."""
         hd = self._host_dict()
-        suite_var = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count')
+        suite_var = self._scheme_var(
+            'im', 'horizontal_dimension', 'in', 'count')
         arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         self.assertFalse(arg.needs_transform)
 
@@ -1228,8 +1233,8 @@ class TestResolveOneArg(unittest.TestCase):
     def test_optional_sets_ptr_name(self):
         """Optional argument → ptr_name set."""
         hd = self._host_dict()
-        suite_var = self._scheme_var('im', 'horizontal_loop_extent', 'in', 'count',
-                              optional=True)
+        suite_var = self._scheme_var(
+            'im', 'horizontal_dimension', 'in', 'count', optional=True)
         arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
         self.assertTrue(arg.is_optional)
         self.assertTrue(arg.ptr_name)
@@ -1621,11 +1626,6 @@ class TestVerticalFlipTransform(unittest.TestCase):
   type = host
 [ ncols ]
   standard_name = horizontal_dimension
-  units = count
-  dimensions = ()
-  type = integer
-[ im ]
-  standard_name = horizontal_loop_extent
   units = count
   dimensions = ()
   type = integer
@@ -2397,13 +2397,6 @@ class TestDimDeclLocal(unittest.TestCase):
         # horizontal_loop_end → 'ub'.
         self.assertEqual(
             _dim_decl_local(['horizontal_dimension'], self.hd),
-            ', dimension(lb:ub)',
-        )
-
-    def test_horizontal_loop_extent_uses_chunk_bounds(self):
-        # Same special case for the alternative dim std name.
-        self.assertEqual(
-            _dim_decl_local(['horizontal_loop_extent'], self.hd),
             ', dimension(lb:ub)',
         )
 

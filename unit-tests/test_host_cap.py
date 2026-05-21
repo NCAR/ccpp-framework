@@ -803,11 +803,6 @@ class TestCollectHostIoIncludesActiveExpr(unittest.TestCase):
   units = count
   dimensions = ()
   type = integer
-[ im ]
-  standard_name = horizontal_loop_extent
-  units = count
-  dimensions = ()
-  type = integer
 [ flag_passive ]
   standard_name = flag_for_passive_check
   units = flag

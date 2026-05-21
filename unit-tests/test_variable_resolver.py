@@ -814,7 +814,7 @@ _SIMPLE_SCHEME_SRC = '''\
   name = my_scheme_run
   type = scheme
 [ im ]
-  standard_name = horizontal_loop_extent
+  standard_name = horizontal_dimension
   units = count
   dimensions = ()
   type = integer
@@ -822,7 +822,7 @@ _SIMPLE_SCHEME_SRC = '''\
 [ temp ]
   standard_name = air_temperature
   units = K
-  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = inout
@@ -1068,7 +1068,7 @@ class TestSchemeStore(unittest.TestCase):
         vars_ = store.variables_for('my_scheme', 'run')
         self.assertIsNotNone(vars_)
         std_names = [v.standard_name for v in vars_]
-        self.assertEqual(std_names, ['horizontal_loop_extent', 'air_temperature'])
+        self.assertEqual(std_names, ['horizontal_dimension', 'air_temperature'])
 
     def test_variables_for_init(self):
         store = self._build()
