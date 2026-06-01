@@ -495,7 +495,7 @@ class TestResolveSingleBoundSubstitutesScalarIdx(unittest.TestCase):
             "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
             "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
             "[ mythread ]\n  standard_name = thread_number\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
         )
         return build_flat_host_dict(
             _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
@@ -601,13 +601,13 @@ class TestBuildMergedSubscript(unittest.TestCase):
             "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
             "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
             "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ instance ]\n  standard_name = instance_number\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ninstances ]\n  standard_name = number_of_instances\n"
-            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
         )
         hd = build_flat_host_dict(
             _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
@@ -681,17 +681,17 @@ class TestBuildMergedSubscript(unittest.TestCase):
             "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
             "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
             "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ mythread ]\n  standard_name = thread_number\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ nthreads ]\n  standard_name = number_of_threads\n"
-            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
             "[ instance ]\n  standard_name = instance_number\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ninstances ]\n  standard_name = number_of_instances\n"
-            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
         )
         hd = build_flat_host_dict(
             _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
@@ -745,13 +745,13 @@ class TestBuildMergedSubscript(unittest.TestCase):
             "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
             "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
             "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ instance ]\n  standard_name = instance_number\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ninstances ]\n  standard_name = number_of_instances\n"
-            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
         )
         hd = build_flat_host_dict(
             _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
@@ -797,13 +797,13 @@ class TestBuildMergedSubscript(unittest.TestCase):
             "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
             "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
             "[ lb ]\n  standard_name = horizontal_loop_begin\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ub ]\n  standard_name = horizontal_loop_end\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ instance ]\n  standard_name = instance_number\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ninstances ]\n  standard_name = number_of_instances\n"
-            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
         )
         hd = build_flat_host_dict(
             _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
@@ -953,9 +953,9 @@ class TestTranslateActiveExpr(unittest.TestCase):
             "[ccpp-table-properties]\n  name = ctrl_mod\n  type = control\n"
             "[ccpp-arg-table]\n  name = ctrl_mod\n  type = control\n"
             "[ instance ]\n  standard_name = instance_number\n  units = index\n"
-            "  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  dimensions = ()\n  type = integer\n"
             "[ ninstances ]\n  standard_name = number_of_instances\n"
-            "  units = count\n  dimensions = ()\n  type = integer\n  intent = in\n"
+            "  units = count\n  dimensions = ()\n  type = integer\n"
         )
         hd = build_flat_host_dict(
             _parse_lines(host_src.splitlines(keepends=True), 'host.meta'),
@@ -1074,6 +1074,25 @@ class TestLocalNameConflict(unittest.TestCase):
     def test_conflict_adds_3(self):
         self.assertEqual(
             _local_name_conflict('phii_l', {'phii_l', 'phii_2_l'}), 'phii_3_l'
+        )
+
+    def test_case_insensitive_conflict(self):
+        """Fortran identifiers are case-insensitive: ``CP_l`` must be
+        treated as already-used when ``cp_l`` is in the existing set
+        (and vice versa).  Regression: a HAFS_v0_hwrf_phys_ts cap
+        emitted both ``cp_l`` and ``CP_l`` side-by-side because the
+        check was string-equal rather than case-insensitive."""
+        # Lower-then-upper.
+        self.assertEqual(
+            _local_name_conflict('CP_l', {'cp_l'}), 'CP_2_l',
+        )
+        # Upper-then-lower.
+        self.assertEqual(
+            _local_name_conflict('cp_l', {'cp_l'}), 'cp_2_l',
+        )
+        # Mixed-case existing entry too.
+        self.assertEqual(
+            _local_name_conflict('cp_l', {'Cp_L'.lower()}), 'cp_2_l',
         )
 
 
@@ -1858,6 +1877,95 @@ class TestCharacterKindResolution(unittest.TestCase):
         with self.assertRaises(CCPPError) as cm:
             _resolve_one_arg(suite_var, 'run', hd, {}, 'bad_scheme', set())
         self.assertIn('len=256', str(cm.exception))
+
+
+########################################################################
+# Tests: pure-kind transform (real-kind cast)
+########################################################################
+
+class TestPureKindTransform(unittest.TestCase):
+    """When host and scheme metadata differ in *kind* only (no unit
+    mismatch, no vertical flip), the resolver must emit a real/int kind
+    cast as ``unit_forward``.  Without this the cap declares the
+    transformation temporary but never assigns to it -- gfortran falls
+    back to implicit typing at the call site and the call sees garbage
+    / Inf.  Regression: SCM_GFS_v17_p8 / bomex started failing with
+    ``alon = -Infinity`` in ``setclimaer`` after the host changed
+    ``scm_physical_constants`` from ``kind = kind_phys`` to
+    ``kind = dp`` -- a pure-kind mismatch against the GFS_rrtmg_pre
+    scheme args, which expect ``kind_phys``."""
+
+    _HOST_SRC_TEMPLATE = '''
+[ccpp-table-properties]
+  name = phys_const
+  type = host
+[ccpp-arg-table]
+  name = phys_const
+  type = host
+[ con_pi ]
+  standard_name = pi
+  units = none
+  dimensions = ()
+  type = {type}
+  kind = {kind}
+'''
+
+    def _hd(self, kind='dp', type_='real'):
+        src = self._HOST_SRC_TEMPLATE.format(kind=kind, type=type_)
+        return build_flat_host_dict(_parse(src), [], [])
+
+    def _scheme_var_pi(self, intent='in', kind='kind_phys', type_='real'):
+        from metadata.metadata_table import MetaVar
+        ctx = _ctx()
+        v = MetaVar('con_pi', ctx)
+        v.set_attr('standard_name', 'pi', ctx)
+        v.set_attr('units', 'none', ctx)
+        v.set_attr('dimensions', '()', ctx)
+        v.set_attr('type', type_, ctx)
+        v.set_attr('kind', kind, ctx)
+        v.set_attr('intent', intent, ctx)
+        return v
+
+    def test_real_kind_mismatch_emits_real_cast_forward(self):
+        hd = self._hd(kind='dp')
+        scheme = self._scheme_var_pi(intent='in', kind='kind_phys')
+        arg = _resolve_one_arg(scheme, 'run', hd, {}, 'rrtmg', set())
+        self.assertTrue(arg.needs_kind_transform)
+        self.assertTrue(arg.needs_transform)
+        self.assertEqual(arg.transform_case, 3)
+        # Temp must be both NAMED and ASSIGNED (the bug was that the temp
+        # was named but unit_forward stayed empty, so no assignment was
+        # emitted by the cap).
+        self.assertEqual(arg.temp_name, 'con_pi_l')
+        self.assertEqual(arg.unit_forward, 'real(con_pi, kind=kind_phys)')
+
+    def test_real_kind_mismatch_emits_real_cast_backward_for_inout(self):
+        hd = self._hd(kind='dp')
+        scheme = self._scheme_var_pi(intent='inout', kind='kind_phys')
+        arg = _resolve_one_arg(scheme, 'run', hd, {}, 'rrtmg', set())
+        self.assertEqual(arg.unit_forward, 'real(con_pi, kind=kind_phys)')
+        self.assertEqual(arg.unit_backward, 'real(con_pi_l, kind=dp)')
+
+    def test_integer_kind_mismatch_emits_int_cast(self):
+        hd = self._hd(kind='int_8', type_='integer')
+        scheme = self._scheme_var_pi(intent='in', kind='int_4',
+                                     type_='integer')
+        arg = _resolve_one_arg(scheme, 'run', hd, {}, 'rrtmg', set())
+        self.assertEqual(arg.unit_forward, 'int(con_pi, kind=int_4)')
+
+    def test_unsupported_type_for_kind_cast_raises(self):
+        """A kind mismatch on a type without a kind-cast intrinsic (DDT,
+        logical) should raise a clear CCPPError pointing the user at
+        the metadata rather than silently emitting unassigned temps."""
+        # Use a logical with two different kind names.
+        hd = self._hd(kind='lk1', type_='logical')
+        scheme = self._scheme_var_pi(intent='in', kind='lk2',
+                                     type_='logical')
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(scheme, 'run', hd, {}, 'rrtmg', set())
+        msg = str(cm.exception)
+        self.assertIn("kind-cast intrinsic", msg)
+        self.assertIn("logical", msg)
 
 
 ########################################################################

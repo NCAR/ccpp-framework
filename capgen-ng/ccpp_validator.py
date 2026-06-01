@@ -327,7 +327,15 @@ def _parse_decl_line(line: str) -> Dict[str, _ArgAttrs]:
         var_tok = var_tok.strip()
         if not var_tok:
             continue
-        name_match = re.match(r'(\w+)\s*(\((.*)\))?\s*(=.*)?$', var_tok)
+        # Strip any ``= <init>`` (or ``=> <target>``) clause before the
+        # name regex.  A Fortran array initialiser may carry a full
+        # ``(/ ..., ..., ... /)`` constructor whose inner commas would
+        # otherwise be gobbled by the regex's greedy parens-matcher and
+        # miscounted as rank-N entries.  ``=`` characters inside other
+        # parenthesised sub-expressions (e.g. ``::x = (a==b)``) live at
+        # depth > 0 and are skipped.
+        var_tok = _strip_initialiser(var_tok).rstrip()
+        name_match = re.match(r'(\w+)\s*(\((.*)\))?\s*$', var_tok)
         if name_match is None:
             continue
         name = name_match.group(1).lower()
@@ -341,6 +349,40 @@ def _parse_decl_line(line: str) -> Dict[str, _ArgAttrs]:
             optional=optional, rank=rank,
         )
     return result
+
+
+def _strip_initialiser(var_tok: str) -> str:
+    """Return *var_tok* with any trailing ``= <init>`` removed.
+
+    Paren-aware: only an ``=`` (or the first ``=`` of ``=>``) at nesting
+    depth zero is treated as the start of an initialiser.  ``=``
+    characters inside parenthesised sub-expressions (such as array
+    initialisers ``(/ ... /)`` or default expressions ``(a == b)``)
+    are skipped.
+
+    Examples
+    --------
+    >>> _strip_initialiser('foo')
+    'foo'
+    >>> _strip_initialiser('foo(:)')
+    'foo(:)'
+    >>> _strip_initialiser('p => null()')
+    'p '
+    >>> _strip_initialiser('arr(n) = (/ 1, 2, 3 /)')
+    'arr(n) '
+    >>> _strip_initialiser('std_name_array(num_consts) = (/ '
+    ...                    "'a', 'b', 'c' /)")
+    'std_name_array(num_consts) '
+    """
+    depth = 0
+    for i, ch in enumerate(var_tok):
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+        elif ch == '=' and depth == 0:
+            return var_tok[:i]
+    return var_tok
 
 
 def _join_continuation(
@@ -608,6 +650,234 @@ def _load_source_tree(source_files: List[str]) -> Dict[str, _SubSig]:
             if name not in merged:
                 merged[name] = sig
     return merged
+
+
+# ---------------------------------------------------------------------------
+# Module-level and derived-type parsing (for host / DDT validation)
+# ---------------------------------------------------------------------------
+
+# Matches the start of a module definition (case-insensitive).  Excludes
+# ``module procedure`` so we don't mistake interface-block lines for
+# module headers.
+_MODULE_RE = re.compile(r'(?i)^\s*module\s+(?!procedure\b)(\w+)\s*$')
+_END_MODULE_RE = re.compile(r'(?i)^\s*end\s*module\b')
+
+# Matches the start of a derived-type definition.  Accepts the modern
+# ``type :: name`` form, the older ``type, <attrs> :: name`` form, and
+# the bare ``type name`` form.  Excludes ``type(x) ::`` declarations
+# (those are variable decls of a type) by requiring no opening paren
+# before the name on the type-defining form.
+_TYPE_DEF_RE = re.compile(
+    r'(?i)^\s*type(?:\s*,\s*[^:]+)?\s*::\s*(\w+)\s*$'
+)
+_TYPE_DEF_BARE_RE = re.compile(r'(?i)^\s*type\s+(\w+)\s*$')
+_END_TYPE_RE = re.compile(r'(?i)^\s*end\s*type\b')
+
+# Matches ``contains`` at module / type-block scope, used to recognise the
+# boundary between module-level decls and the module's subroutines (we
+# stop collecting module-level vars at the first ``contains``).  Also
+# applies inside a derived type with type-bound procedures.
+_CONTAINS_RE = re.compile(r'(?i)^\s*contains\s*$')
+
+
+class _ModuleSig(NamedTuple):
+    """Parsed module-level declarations from one Fortran module.
+
+    Attributes
+    ----------
+    vars : dict
+        ``{lower_name: _ArgAttrs}`` for every module-level variable
+        declaration above the ``contains`` line (or end of module).
+        Used to validate ``type = host`` table entries.
+    ddts : dict
+        ``{lower_type_name: {lower_component_name: _ArgAttrs}}`` for
+        every ``type :: X ... end type X`` block at module scope.
+        Used to validate ``type = ddt`` table entries.
+    """
+    vars: Dict[str, '_ArgAttrs']
+    ddts: Dict[str, Dict[str, '_ArgAttrs']]
+
+
+def _parse_modules(
+    source: str,
+    filename: Optional[str] = None,
+) -> Dict[str, _ModuleSig]:
+    """Extract module-level variable decls and derived-type definitions.
+
+    Walks *source* line by line tracking three nested contexts: module,
+    derived-type block, and subroutine body.  Module-level variable
+    declarations are collected only at module scope above ``contains``;
+    derived-type components are collected only inside a
+    ``type :: X ... end type X`` block; subroutine local decls are
+    ignored.
+
+    The first definition of each module / type wins (Fortran does not
+    permit redefinition; this only matters for malformed input).
+
+    Examples
+    --------
+    >>> src = ('module my_mod\\n'
+    ...        '  use kinds, only: kind_phys\\n'
+    ...        '  integer :: nlev\\n'
+    ...        '  real(kind=kind_phys) :: cp\\n'
+    ...        '  type :: phys_t\\n'
+    ...        '    real(kind=kind_phys) :: tk(:,:)\\n'
+    ...        '    integer :: nlay\\n'
+    ...        '  end type phys_t\\n'
+    ...        'contains\\n'
+    ...        '  subroutine helper(x)\\n'
+    ...        '    integer, intent(in) :: x\\n'
+    ...        '    real :: local\\n'
+    ...        '  end subroutine helper\\n'
+    ...        'end module my_mod\\n')
+    >>> mods = _parse_modules(src)
+    >>> sorted(mods.keys())
+    ['my_mod']
+    >>> sorted(mods['my_mod'].vars.keys())
+    ['cp', 'nlev']
+    >>> mods['my_mod'].vars['cp'].type_
+    'real'
+    >>> mods['my_mod'].vars['cp'].kind_
+    'kind_phys'
+    >>> sorted(mods['my_mod'].ddts.keys())
+    ['phys_t']
+    >>> sorted(mods['my_mod'].ddts['phys_t'].keys())
+    ['nlay', 'tk']
+    >>> mods['my_mod'].ddts['phys_t']['tk'].rank
+    2
+    >>> 'local' in mods['my_mod'].vars
+    False
+    """
+    logical = _join_continuation(
+        source.splitlines(keepends=True), filename=filename,
+    )
+
+    modules: Dict[str, _ModuleSig] = {}
+    # Active module context (None outside of any module).
+    cur_mod_name: Optional[str] = None
+    cur_mod_vars: Dict[str, _ArgAttrs] = {}
+    cur_mod_ddts: Dict[str, Dict[str, _ArgAttrs]] = {}
+    # Active derived-type block context inside the current module.
+    cur_type_name: Optional[str] = None
+    cur_type_comps: Dict[str, _ArgAttrs] = {}
+    # Depth of subroutine / function nesting inside the current module.
+    # Decls inside a subroutine are local variables, not module-level
+    # state, and must be skipped.
+    sub_depth: int = 0
+    # Once a ``contains`` is seen at module scope, module-level decls
+    # are done — the rest of the module is type-bound and subroutine
+    # bodies.  We still need to track sub_depth to find the matching
+    # ``end module``.
+    past_module_contains: bool = False
+
+    for line in logical:
+        # Module header / footer.
+        m = _MODULE_RE.match(line)
+        if m and cur_mod_name is None:
+            cur_mod_name = m.group(1).lower()
+            cur_mod_vars = {}
+            cur_mod_ddts = {}
+            cur_type_name = None
+            cur_type_comps = {}
+            sub_depth = 0
+            past_module_contains = False
+            continue
+        if _END_MODULE_RE.match(line) and cur_mod_name is not None:
+            if cur_mod_name not in modules:
+                modules[cur_mod_name] = _ModuleSig(
+                    vars=cur_mod_vars, ddts=cur_mod_ddts,
+                )
+            cur_mod_name = None
+            continue
+        if cur_mod_name is None:
+            # Free-floating decls outside any module are not part of the
+            # host-validation surface.  CCPP host code conventionally
+            # lives inside modules.
+            continue
+
+        # Track subroutine / function nesting so we can skip local
+        # declarations.  Use _SUB_RE for subroutines; functions are
+        # less common in CCPP host code but handled symmetrically.
+        if _SUB_RE.match(line) or re.match(r'(?i)\s*(?:(?:recursive|pure|elemental|impure)\s+)*(?:(?:real|integer|logical|complex|character|double\s*precision|type\s*\([^)]+\))\s+)?function\s+\w+', line):
+            sub_depth += 1
+            continue
+        if _END_SUB_RE.match(line) or re.match(r'(?i)^\s*end\s*function\b', line):
+            if sub_depth > 0:
+                sub_depth -= 1
+            continue
+        if sub_depth > 0:
+            continue
+
+        # Derived-type block boundaries (only honoured at module scope,
+        # never inside a subroutine body).
+        if cur_type_name is None:
+            m = _TYPE_DEF_RE.match(line) or _TYPE_DEF_BARE_RE.match(line)
+            if m:
+                cur_type_name = m.group(1).lower()
+                cur_type_comps = {}
+                continue
+        else:
+            if _END_TYPE_RE.match(line):
+                if cur_type_name not in cur_mod_ddts:
+                    cur_mod_ddts[cur_type_name] = cur_type_comps
+                cur_type_name = None
+                cur_type_comps = {}
+                continue
+            if _CONTAINS_RE.match(line):
+                # Type-bound procedures follow; no more components.
+                continue
+            # Inside a type block: every parsed decl is a component.
+            for name, attrs in _parse_decl_line(line).items():
+                if name not in cur_type_comps:
+                    cur_type_comps[name] = attrs
+            continue
+
+        # Module scope: check for ``contains`` boundary and otherwise
+        # collect module-level variable decls.
+        if _CONTAINS_RE.match(line):
+            past_module_contains = True
+            continue
+        if past_module_contains:
+            continue
+        for name, attrs in _parse_decl_line(line).items():
+            if name not in cur_mod_vars:
+                cur_mod_vars[name] = attrs
+
+    return modules
+
+
+def _load_modules_tree(
+    source_files: List[str],
+) -> Tuple[Dict[str, _ModuleSig], Dict[str, Dict[str, _ArgAttrs]]]:
+    """Read all Fortran source files and return module + global DDT dicts.
+
+    Returns a tuple ``(modules, ddt_index)``:
+
+    * ``modules`` — ``{module_name_lower: _ModuleSig}``.  First occurrence
+      wins if the same module name appears in multiple files.
+    * ``ddt_index`` — flat ``{type_name_lower: {component_name_lower:
+      _ArgAttrs}}`` mapping derived-type names to their component dicts,
+      collected across every parsed module.  Used to resolve
+      ``type(name) :: var`` declarations whose underlying type lives in
+      a different module than the variable.  First occurrence wins.
+
+    Parameters
+    ----------
+    source_files : list of str
+        Paths to ``.F90`` / ``.f90`` files.
+    """
+    modules: Dict[str, _ModuleSig] = {}
+    ddt_index: Dict[str, Dict[str, _ArgAttrs]] = {}
+    for fpath in source_files:
+        with open(fpath) as fh:
+            src = fh.read()
+        for name, sig in _parse_modules(src, filename=fpath).items():
+            if name not in modules:
+                modules[name] = sig
+            for ddt_name, comps in sig.ddts.items():
+                if ddt_name not in ddt_index:
+                    ddt_index[ddt_name] = comps
+    return modules, ddt_index
 
 
 # ---------------------------------------------------------------------------
@@ -893,18 +1163,195 @@ def _check_arg_attributes(
                 )
             )
 
-    # rank — number of dimensions.  Metadata stores them as a list of
-    # standard-name strings; Fortran rank is counted from the decl.
-    meta_rank = len(meta_var.dimensions or [])
-    if meta_rank != fort.rank:
+    # rank — number of dimensions.  When the metadata ``local_name``
+    # carries a subscript (sliced array entry such as
+    # ``q(:,:,index_of_water_vapor)``), the metadata's ``dimensions``
+    # list describes the *view* after slicing, not the underlying
+    # Fortran rank.  ``_expected_fort_rank`` resolves this: it returns
+    # the subscript width when a subscript is present, otherwise
+    # ``len(meta_var.dimensions)``.
+    meta_dims = list(meta_var.dimensions or [])
+    expected_rank = _expected_fort_rank(meta_var.local_name, meta_dims)
+    if expected_rank != fort.rank:
         errs.append(
-            prefix + "rank mismatch (metadata declares {} dimension(s) {}, "
-            "Fortran declares rank {})".format(
-                meta_rank, list(meta_var.dimensions or []), fort.rank,
+            prefix + "rank mismatch (metadata implies Fortran rank {} "
+            "from local_name '{}' and dimensions {}, Fortran declares "
+            "rank {})".format(
+                expected_rank, meta_var.local_name, meta_dims, fort.rank,
             )
         )
 
     return errs
+
+
+def _base_local_name(local_name: str) -> str:
+    """Return the bare Fortran identifier from a metadata ``local_name``.
+
+    Host / DDT metadata occasionally carries subscripted ``local_name``
+    values (sliced array entries) — the matching Fortran decl carries the
+    bare identifier, so strip the subscript before lookup.  Lowercase for
+    case-insensitive comparison.
+
+    Examples
+    --------
+    >>> _base_local_name('cp')
+    'cp'
+    >>> _base_local_name('Phys_State')
+    'phys_state'
+    >>> _base_local_name('tk(:,:)')
+    'tk'
+    >>> _base_local_name('dqdt(:,:,index_of_cloud)')
+    'dqdt'
+    """
+    name = local_name.strip()
+    if '(' in name:
+        name = name.split('(', 1)[0]
+    return name.lower()
+
+
+def _expected_fort_rank(local_name: str, meta_dims: List[str]) -> int:
+    """Return the Fortran rank implied by a metadata ``local_name``.
+
+    Sliced metadata local names (``q(:,:,index_of_X)``) express a
+    reduced-rank *view* of a higher-rank Fortran component: every
+    subscript entry consumes one dimension of the underlying Fortran
+    variable, but only ``:`` entries survive into the resulting view's
+    rank.  The metadata's ``dimensions =`` list describes the view, not
+    the underlying variable — so the expected Fortran rank equals the
+    total number of subscript entries, not ``len(meta_dims)``.
+
+    For bare local names (no subscript), Fortran rank simply equals the
+    metadata-declared dimension count.
+
+    Examples
+    --------
+    >>> _expected_fort_rank('cp', [])
+    0
+    >>> _expected_fort_rank('tk', ['horizontal_dimension',
+    ...                            'vertical_layer_dimension'])
+    2
+    >>> _expected_fort_rank('q(:,:,index_of_water_vapor)',
+    ...                     ['horizontal_dimension',
+    ...                      'vertical_layer_dimension'])
+    3
+    >>> _expected_fort_rank('q(:)', ['horizontal_dimension'])
+    1
+    >>> _expected_fort_rank('q(:,:,:)', ['horizontal_dimension',
+    ...                                  'vertical_layer_dimension',
+    ...                                  'number_of_tracers'])
+    3
+    """
+    name = local_name.strip()
+    if '(' not in name:
+        return len(meta_dims)
+    inner = name.split('(', 1)[1]
+    inner = inner.rsplit(')', 1)[0]
+    # Each subscript entry consumes one Fortran dimension; paren-aware
+    # split protects nested expressions like ``my(:,foo(a,b),:)`` from
+    # being miscounted (none of the in-tree fixtures use that today, but
+    # the parser permits it).
+    return len(_paren_aware_split(inner, ','))
+
+
+def _validate_host_table(
+    table,
+    modules_tree: Dict[str, _ModuleSig],
+    logger: logging.Logger,
+) -> List[str]:
+    """Validate a ``type = host`` metadata table against its Fortran module.
+
+    The Fortran module name is taken from ``table.module_name`` when set,
+    otherwise from ``table.table_name`` (the .meta convention).  For each
+    metadata variable, look up the matching module-level decl by base
+    local-name and reuse :func:`_check_arg_attributes` for the per-attr
+    checks (intent is silently ignored since host vars carry no intent).
+
+    Returns a list of error message strings (empty on full match).  When
+    the named module is missing entirely, a single "module not found"
+    error is returned and per-variable checks are skipped.
+    """
+    errors: List[str] = []
+    mod_name = (table.module_name or table.table_name).lower()
+    sig = modules_tree.get(mod_name)
+    if sig is None:
+        errors.append(
+            "Host module '{}' (from table '{}' in '{}') not found in any "
+            "source file.".format(mod_name, table.table_name, table.file_path)
+        )
+        return errors
+
+    logger.debug(
+        "Checking host table '%s' against module '%s' (%d module-level vars)",
+        table.table_name, mod_name, len(sig.vars),
+    )
+
+    for mvar in table.variables():
+        base = _base_local_name(mvar.local_name)
+        fattrs = sig.vars.get(base)
+        if fattrs is None:
+            errors.append(
+                "Host variable '{}' (standard_name '{}') declared in "
+                "metadata table '{}' not found as a module-level "
+                "declaration in Fortran module '{}'.".format(
+                    mvar.local_name, mvar.standard_name,
+                    table.table_name, mod_name,
+                )
+            )
+            continue
+        errors.extend(
+            _check_arg_attributes(mod_name, base, mvar, fattrs)
+        )
+    return errors
+
+
+def _validate_ddt_table(
+    table,
+    ddt_index: Dict[str, Dict[str, _ArgAttrs]],
+    logger: logging.Logger,
+) -> List[str]:
+    """Validate a ``type = ddt`` metadata table against its Fortran type.
+
+    The DDT name is ``table.table_name`` (the .meta convention: the table
+    name is the Fortran type name).  The matching ``type :: X ... end
+    type X`` block may live in any parsed module — looked up via the flat
+    *ddt_index* built by :func:`_load_modules_tree`.  For each metadata
+    component, match against the type block by base local-name and reuse
+    :func:`_check_arg_attributes` for per-attr checks.
+
+    Returns a list of error message strings (empty on full match).
+    """
+    errors: List[str] = []
+    ddt_name = table.table_name.lower()
+    comps = ddt_index.get(ddt_name)
+    if comps is None:
+        errors.append(
+            "DDT '{}' (table in '{}') not found as a derived-type definition "
+            "in any source file.".format(ddt_name, table.file_path)
+        )
+        return errors
+
+    logger.debug(
+        "Checking DDT table '%s' (%d components in Fortran)",
+        ddt_name, len(comps),
+    )
+
+    for mvar in table.variables():
+        base = _base_local_name(mvar.local_name)
+        fattrs = comps.get(base)
+        if fattrs is None:
+            errors.append(
+                "DDT component '{}' (standard_name '{}') declared in "
+                "metadata table '{}' not found as a component of Fortran "
+                "type '{}'.".format(
+                    mvar.local_name, mvar.standard_name,
+                    table.table_name, ddt_name,
+                )
+            )
+            continue
+        errors.extend(
+            _check_arg_attributes(ddt_name, base, mvar, fattrs)
+        )
+    return errors
 
 
 _FORTRAN_EXTENSIONS = ('.F90', '.f90', '.F', '.f')
@@ -956,14 +1403,26 @@ def _fortran_file_for_table(table) -> Optional[str]:
 def validate(
     scheme_files: List[str],
     source_files: Optional[List[str]] = None,
+    host_files: Optional[List[str]] = None,
     logger: Optional[logging.Logger] = None,
 ) -> List[str]:
-    """Validate scheme metadata against Fortran source files.
+    """Validate scheme + host metadata against Fortran source files.
+
+    Scheme tables in *scheme_files* are validated against the subroutine
+    signatures in *source_files* (the existing scheme-side check).
+    ``type = host`` and ``type = ddt`` tables in *host_files* are
+    additionally validated against module-level decls and derived-type
+    definitions in those same source files.  ``type = control`` tables
+    are silent-skipped (no Fortran source backs control vars — they are
+    framework-injected at the cap call sites).  A ``type = scheme`` table
+    appearing in *host_files* is a hard error: schemes must be passed via
+    *scheme_files* so the validator can find the per-phase subroutines.
 
     When *source_files* is ``None`` or empty, the validator resolves the
-    Fortran source for each scheme automatically using the ``source_path``
-    attribute from the metadata (defaulting to the ``.meta`` file's directory
-    if ``source_path`` is absent).  Pass an explicit list to override.
+    Fortran source for each scheme / host / ddt table automatically using
+    the ``source_path`` attribute from the metadata (defaulting to the
+    ``.meta`` file's directory if ``source_path`` is absent).  Pass an
+    explicit list to override.
 
     Parameters
     ----------
@@ -972,6 +1431,10 @@ def validate(
     source_files : list of str, optional
         Explicit Fortran source files to scan.  If omitted, auto-discovered
         via ``source_path`` in the metadata.
+    host_files : list of str, optional
+        Paths to host ``.meta`` files (``type = host`` / ``type = ddt`` /
+        ``type = control``).  Defaults to an empty list (scheme-only
+        validation).
     logger : Logger, optional
 
     Returns
@@ -986,21 +1449,88 @@ def validate(
     """
     log = logger or _LOGGER
 
+    scheme_files = list(scheme_files or [])
+    host_files   = list(host_files or [])
+
+    # At least one of --scheme-files / --host-files must be supplied;
+    # otherwise the validator has nothing to do and would silently report
+    # "Validation passed."  That was the old scheme-only behaviour with
+    # host metadata accidentally passed in; the new contract requires
+    # the caller to opt in to one side or the other (or both).
+    if not scheme_files and not host_files:
+        raise CCPPError(
+            "ccpp_validator requires at least one of --scheme-files or "
+            "--host-files; neither was supplied."
+        )
+
     log.info("Loading scheme metadata from %d file(s)", len(scheme_files))
-    all_tables = []
+    scheme_tables = []
     for fpath in scheme_files:
-        all_tables.extend(parse_metadata_file(fpath))
-    scheme_store = SchemeStore.build_from(all_tables)
+        scheme_tables.extend(parse_metadata_file(fpath))
+
+    # Reject host / control / suite tables passed via --scheme-files.
+    # ``type = ddt`` IS allowed alongside scheme tables — schemes
+    # routinely co-locate their own derived-type definitions in the
+    # same .meta file (e.g. radiation schemes defining their internal
+    # ty_rad_lw / ty_rad_sw DDTs).  Such DDTs go through the same
+    # ``_validate_ddt_table`` pass as host-side DDTs.  Symmetric to
+    # the rejection of scheme tables in --host-files (see below): each
+    # CLI flag has a single, narrow responsibility so misclassified
+    # host / control / suite .meta files fail fast with a clear pointer.
+    scheme_nonscheme_violations = [
+        t for t in scheme_tables
+        if t.table_type in ('host', 'control', 'suite')
+    ]
+    if scheme_nonscheme_violations:
+        details = sorted({
+            "{} (type = {})".format(t.table_name, t.table_type)
+            for t in scheme_nonscheme_violations
+        })
+        raise CCPPError(
+            "Only type = scheme and type = ddt tables may appear in "
+            "--scheme-files; host / control / suite tables must be "
+            "passed via --host-files instead.  Offending tables: {}".format(
+                details,
+            )
+        )
+
+    scheme_store = SchemeStore.build_from(scheme_tables)
     log.info("Found %d scheme(s): %s", len(scheme_store.scheme_names()), scheme_store.scheme_names())
+
+    # Collect DDT tables that travelled in via --scheme-files; they get
+    # the same per-component validation as host-side DDTs.
+    scheme_ddt_tables = [t for t in scheme_tables if t.table_type == 'ddt']
+
+    host_tables = []
+    if host_files:
+        log.info("Loading host metadata from %d file(s)", len(host_files))
+        for fpath in host_files:
+            host_tables.extend(parse_metadata_file(fpath))
+
+    # Reject scheme tables passed via --host-files: they wouldn't get
+    # phase-aware validation, and silent acceptance would hide a real
+    # mistake.  Fail fast before any per-table check runs.
+    host_scheme_violations = [
+        t for t in host_tables if t.is_scheme
+    ]
+    if host_scheme_violations:
+        names = sorted({t.table_name for t in host_scheme_violations})
+        raise CCPPError(
+            "type = scheme tables may not appear in --host-files; pass "
+            "them via --scheme-files instead.  Offending tables: {}".format(
+                names,
+            )
+        )
 
     if source_files:
         log.info("Scanning %d explicit Fortran source file(s)", len(source_files))
         resolved_sources = list(source_files)
     else:
-        # Auto-discover Fortran files via source_path in each scheme table.
+        # Auto-discover Fortran files via source_path in each scheme +
+        # host / ddt table (control tables have no Fortran source).
         resolved_sources = []
-        for tbl in all_tables:
-            if not tbl.is_scheme:
+        for tbl in scheme_tables:
+            if tbl.table_type == 'control':
                 continue
             fort = _fortran_file_for_table(tbl)
             if fort:
@@ -1008,16 +1538,59 @@ def validate(
                 log.debug("Resolved Fortran source for '%s': %s", tbl.table_name, fort)
             else:
                 log.warning(
-                    "No Fortran source found for scheme '%s' (source_path='%s')",
-                    tbl.table_name, tbl.source_path,
+                    "No Fortran source found for %s '%s' (source_path='%s')",
+                    tbl.table_type, tbl.table_name, tbl.source_path,
+                )
+        for tbl in host_tables:
+            if tbl.table_type == 'control':
+                continue
+            fort = _fortran_file_for_table(tbl)
+            if fort:
+                resolved_sources.append(fort)
+                log.debug(
+                    "Resolved Fortran source for host/ddt table '%s': %s",
+                    tbl.table_name, fort,
+                )
+            else:
+                log.warning(
+                    "No Fortran source found for %s table '%s' "
+                    "(source_path='%s')",
+                    tbl.table_type, tbl.table_name, tbl.source_path,
                 )
     subroutine_tree = _load_source_tree(resolved_sources)
     log.info("Found %d subroutine definitions", len(subroutine_tree))
 
+    modules_tree: Dict[str, _ModuleSig] = {}
+    ddt_index: Dict[str, Dict[str, _ArgAttrs]] = {}
+    # DDT validation needs the module/type parse whenever any DDT table is
+    # in play — scheme-co-located DDTs count too.
+    if host_tables or scheme_ddt_tables:
+        modules_tree, ddt_index = _load_modules_tree(resolved_sources)
+        log.info(
+            "Found %d module(s) and %d derived-type definition(s)",
+            len(modules_tree), len(ddt_index),
+        )
+
     all_errors: List[str] = []
     for sname in scheme_store.scheme_names():
-        errs = _validate_scheme(sname, scheme_store, subroutine_tree, log)
-        all_errors.extend(errs)
+        all_errors.extend(
+            _validate_scheme(sname, scheme_store, subroutine_tree, log)
+        )
+    # Scheme-co-located DDTs validate the same way as host-side DDTs.
+    for tbl in scheme_ddt_tables:
+        all_errors.extend(_validate_ddt_table(tbl, ddt_index, log))
+    for tbl in host_tables:
+        if tbl.table_type == 'host':
+            all_errors.extend(_validate_host_table(tbl, modules_tree, log))
+        elif tbl.table_type == 'ddt':
+            all_errors.extend(_validate_ddt_table(tbl, ddt_index, log))
+        elif tbl.table_type == 'control':
+            log.info(
+                "Skipping control table '%s' (no Fortran source backs "
+                "control variables)", tbl.table_name,
+            )
+        # scheme tables were already rejected above; suite tables aren't
+        # expected here but would be silent-skipped by omission.
 
     if all_errors:
         log.warning("%d validation error(s) found.", len(all_errors))
@@ -1037,9 +1610,31 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '--scheme-files',
-        required=True,
+        required=False,
+        default='',
         metavar='FILE[,FILE...]',
-        help='Comma-separated scheme metadata (.meta) files',
+        help=(
+            'Comma-separated scheme metadata (.meta) files.  May contain '
+            'type = scheme tables and type = ddt tables (schemes routinely '
+            "co-locate their own DDTs in the same .meta file); host / "
+            'control / suite tables are rejected (pass them via '
+            '--host-files instead).  At least one of --scheme-files or '
+            '--host-files must be supplied.'
+        ),
+    )
+    parser.add_argument(
+        '--host-files',
+        required=False,
+        default='',
+        metavar='FILE[,FILE...]',
+        help=(
+            'Comma-separated host metadata (.meta) files.  '
+            'type = host / type = ddt tables in these files are validated '
+            'against module-level decls and derived-type definitions in '
+            'the same --source-files.  type = control is silent-skipped '
+            '(no Fortran source backs control vars).  type = scheme is '
+            'rejected (pass via --scheme-files instead).'
+        ),
     )
     parser.add_argument(
         '--source-files',
@@ -1123,9 +1718,10 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     scheme_files = [f.strip() for f in args.scheme_files.split(',') if f.strip()]
     source_files = [f.strip() for f in args.source_files.split(',') if f.strip()]
+    host_files   = [f.strip() for f in args.host_files.split(',') if f.strip()]
 
     try:
-        errors = validate(scheme_files, source_files)
+        errors = validate(scheme_files, source_files, host_files=host_files)
     except CCPPError as exc:
         _LOGGER.error("%s", exc)
         return 2

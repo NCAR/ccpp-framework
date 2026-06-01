@@ -1377,9 +1377,13 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 - **Framework setter additions** — `set_advected`, `set_diagnostic_name`,
   `set_default_value`, possibly `set_mixing_ratio_type`.  Coordinated with
   the overhaul.
-- **Validator host-metadata check** — `ccpp_validator.py` is currently
-  scheme-only; revisit after the e2e test suite settles.  See
-  `project_validator_host_check_deferred.md` (memory).
+- ~~**Validator host-metadata check**~~ — **Landed 2026-06-01**:
+  `ccpp_validator.py --host-files` validates `type=host` and `type=ddt`
+  tables against module-level decls and derived-type definitions in
+  the same `--source-files` Fortran tree.  `type=control` is silent-
+  skipped; `type=scheme` in `--host-files` is a hard error.  Per-arg
+  type/kind/rank checks reuse `_check_arg_attributes`.  See
+  `doc/migration.md` §7.4.
 - **Codegen-time scheme-registration cross-check** — new metadata attr
   `registers_std_names = a, b, c` on register-phase tables; replaces
   current runtime `int_unassigned` check with codegen-time error.

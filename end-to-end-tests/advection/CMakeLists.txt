@@ -21,10 +21,12 @@ list(TRANSFORM HOST_FILES         APPEND ".meta" OUTPUT_VARIABLE HOST_METADATA_F
 # Run ccpp_validator
 ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                SOURCE_FILES ${SCHEME_FORTRAN_FILES}
-               METADATA_FILES ${SCHEME_METADATA_FILES})
+               METADATA_FILES ${SCHEME_METADATA_FILES}
+               TYPE "SCHEME")
 ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                SOURCE_FILES ${HOST_FORTRAN_FILES}
-               METADATA_FILES ${HOST_METADATA_FILES})
+               METADATA_FILES ${HOST_METADATA_FILES}
+               TYPE "HOST")
 
 # Enable trace output in auto-generated caps
 set(CCPP_TRACE ON)

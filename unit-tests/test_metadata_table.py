@@ -1219,6 +1219,114 @@ class TestAttributeOwnership(unittest.TestCase):
         )
         self.assertEqual(x_var.active, '(flag_for_aerosol_input_mg_radiation)')
 
+    def test_intent_in_host_raises(self):
+        """'intent' on a host table is now rejected (scheme-only)."""
+        text = """
+            [ccpp-table-properties]
+              name = my_host
+              type = host
+
+            [ccpp-arg-table]
+              name = my_host
+              type = host
+            [ x ]
+              standard_name = foo
+              units = m
+              dimensions = ()
+              type = real
+              intent = in
+        """
+        with self.assertRaises((CCPPError, ParseSyntaxError)):
+            _parse_text(text)
+
+    def test_intent_in_control_raises(self):
+        """'intent' on a control table is now rejected (scheme-only)."""
+        text = """
+            [ccpp-table-properties]
+              name = my_ctrl
+              type = control
+
+            [ccpp-arg-table]
+              name = my_ctrl
+              type = control
+            [ x ]
+              standard_name = foo
+              units = 1
+              dimensions = ()
+              type = integer
+              intent = in
+        """
+        with self.assertRaises((CCPPError, ParseSyntaxError)):
+            _parse_text(text)
+
+    def test_intent_in_ddt_raises(self):
+        """'intent' on a ddt table is rejected (scheme-only)."""
+        text = """
+            [ccpp-table-properties]
+              name = my_ddt_type
+              type = ddt
+
+            [ccpp-arg-table]
+              name = my_ddt_type
+              type = ddt
+            [ x ]
+              standard_name = foo
+              units = m
+              dimensions = ()
+              type = real
+              intent = inout
+        """
+        with self.assertRaises((CCPPError, ParseSyntaxError)):
+            _parse_text(text)
+
+    def test_active_in_control_raises(self):
+        """'active' on a control table is rejected — control vars are
+        unconditionally framework-injected, no active expression makes
+        sense for them."""
+        text = """
+            [ccpp-table-properties]
+              name = my_ctrl
+              type = control
+
+            [ccpp-arg-table]
+              name = my_ctrl
+              type = control
+            [ x ]
+              standard_name = foo
+              units = 1
+              dimensions = ()
+              type = integer
+              active = my_flag
+        """
+        with self.assertRaises((CCPPError, ParseSyntaxError)):
+            _parse_text(text)
+
+    def test_active_in_ddt_allowed(self):
+        """'active' on a ddt table is allowed — a host DDT component is a
+        valid origin for the active-conditional storage contract."""
+        text = """
+            [ccpp-table-properties]
+              name = my_ddt_type
+              type = ddt
+
+            [ccpp-arg-table]
+              name = my_ddt_type
+              type = ddt
+            [ flag ]
+              standard_name = my_flag
+              units = flag
+              dimensions = ()
+              type = logical
+            [ x ]
+              standard_name = foo
+              units = m
+              dimensions = ()
+              type = real
+              active = my_flag
+        """
+        tables = _parse_text(text)
+        self.assertEqual(len(tables), 1)
+
     def test_optional_in_scheme_allowed(self):
         """'optional' attribute in scheme metadata is valid."""
         text = """

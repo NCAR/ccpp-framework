@@ -9,7 +9,7 @@ module host_ccpp_ddt
   type, public :: ccpp_info_t
     integer :: col_start ! horizontal_loop_begin
     integer :: col_end ! horizontal_loop_end
-    character(len=512) :: errmsg ! ccpp_error_message
+    character(len=256) :: errmsg ! ccpp_error_message
     integer :: errflg ! ccpp_error_code
   end type ccpp_info_t
 

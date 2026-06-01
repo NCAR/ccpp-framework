@@ -934,7 +934,9 @@ Full reference: `doc/auto_clone_constituents.md`.  E2e fixture:
 ## 7. Validator
 
 `capgen-ng/ccpp_validator.py` — standalone Fortran-vs-metadata checker.
-Validates **scheme** metadata against scheme Fortran files.
+Validates **scheme** metadata against scheme Fortran files, and (since
+2026-06-01) **host** and **DDT** metadata against host module-level
+declarations and derived-type definitions.
 
 ### 7.1 What the validator checks
 
@@ -989,13 +991,39 @@ metadata declares many, the "Argument count mismatch" error appends a
 HINT pointing at the parser rather than masquerading as a real
 mismatch — common cause is an unsupported signature feature.
 
-### 7.4 Known gap
+### 7.4 Host and DDT metadata validation (2026-06-01)
 
-Host-metadata validation is not yet implemented.  When invoked with
-non-scheme `.meta` files, the validator silently filters to zero
-schemes and reports "Validation passed."  Slated for revisit after
-the e2e test suite settles (`unit_conv` + `variable_transform`
-complete).  See `project_validator_host_check_deferred.md` (memory).
+Pass `--host-files` to validate `type = host` and `type = ddt` tables
+against module-level declarations and derived-type definitions in the
+same `--source-files` Fortran tree:
+
+```
+ccpp_validator.py \
+    --scheme-files scheme1.meta,scheme2.meta \
+    --host-files   host.meta,physics_types.meta \
+    --source-files scheme1.F90,scheme2.F90,host.F90,physics_types.F90
+```
+
+Per-table behaviour:
+
+| Table type | Check |
+|---|---|
+| `type = host` | For each variable, find a module-level declaration of the same `local_name` (lowercased; subscripted spellings like `tk(:,:)` strip to `tk`) in the Fortran module named by `module_name` (or `table_name` when not overridden).  Compare type / kind / rank using the same rules as the scheme-side check (intent is silently ignored — host vars carry none).  Missing module or missing variable → clear error. |
+| `type = ddt` | For each component, find a matching member of the Fortran derived type whose name equals `table_name` (the DDT name).  The type definition may live in any parsed module (a flat cross-file index is built from `--source-files`).  Same type / kind / rank rules as host vars. |
+| `type = control` | Silent skip with an INFO log line — control vars are framework-injected at the cap call sites, no host Fortran backs them. |
+| `type = scheme` in `--host-files` | Hard error — schemes must be passed via `--scheme-files` so the validator can find the per-phase subroutines. |
+| `type = host` / `control` / `suite` in `--scheme-files` | Hard error — symmetric to the rule above.  Misclassified `.meta` files fail fast with a pointer at the correct flag.  **`type = ddt` is allowed in `--scheme-files`**: schemes routinely co-locate their own derived-type definitions (e.g. radiation schemes carrying `ty_rad_lw` / `ty_rad_sw` in the same `.meta` as the scheme phase blocks).  Scheme-co-located DDTs go through the same per-component validation as host-side DDTs. |
+
+**Inputs contract.**  At least one of `--scheme-files` or `--host-files`
+must be supplied.  Passing neither raises a clear error rather than
+the older silent "Validation passed."  Either flag alone is fine;
+both together is the common case.
+
+The same per-attribute rules apply that the scheme-side check uses,
+which is one rule fewer than the scheme side: there is no `optional`
+flag on module vars / DDT components, and host metadata carries no
+`intent`, so the asymmetric-optional rule (§7.2) does not apply here.
+Character `len=*` remains a wildcard against any concrete `len=N`.
 
 ---
 
@@ -1004,7 +1032,7 @@ complete).  See `project_validator_host_check_deferred.md` (memory).
 | Item                                       | Status                                        |
 |--------------------------------------------|-----------------------------------------------|
 | `ccpp_loop_counter` standard name inside nested subcycles | Maps to OUTERMOST loop var.  None of cam-sima uses this; revisit if a scheme needs the innermost value. |
-| Validator host-metadata check              | Deferred; revisit after e2e tests stabilize.  |
+| Validator host-metadata check              | **Landed 2026-06-01**: pass `--host-files`; see §7.4. |
 | Constituents overhaul (Class A/B + setters) | Discussion doc at `doc/constituents_overhaul.md`. |
 | Framework setters: `set_advected`, `set_diagnostic_name`, `set_default_value` | Deferred; depends on constituents-overhaul decision. |
 | Codegen-time scheme-registration cross-check | Deferred; would require new `registers_std_names` metadata attr. |

@@ -1,10 +1,22 @@
 # CMake wrapper for ccpp_validator.py
 #
 # SOURCE_FILES   - CMake list of Fortran source files
-# METADATA_FILES - CMake list of corresponding metadata files
+# METADATA_FILES - CMake list of scheme metadata files.
+# TYPE           - Type of metadata: SCHEME or HOST.
+#                  SCHEME metadata is validated against
+#                  the per-phase subroutine signatures
+#                  in SOURCE_FILES. type=scheme and
+#                  type=ddt tables are validated; types
+#                  control, host, suite are hard errors.
+#                  HOST metadata: type=host and type=ddt
+#                  tables get module-level/derived-type
+#                  validation against SOURCE_FILES;
+#                  type=control is silent-skipped;
+#                  type=scheme is rejected as a hard error.
+#
 function(ccpp_validator)
   set(optionalArgs)
-  set(oneValueArgs VERBOSITY)
+  set(oneValueArgs VERBOSITY TYPE)
   set(multi_value_keywords SOURCE_FILES METADATA_FILES EXTRA_FLAGS)
   cmake_parse_arguments(arg "${optionalArgs}" "${oneValueArgs}" "${multi_value_keywords}" ${ARGN})
 
@@ -22,10 +34,24 @@ function(ccpp_validator)
   list(APPEND CCPP_VALIDATOR_CMD_LIST "--source-files" "${SOURCE_FILES_SEPARATED}")
 
   if(NOT DEFINED arg_METADATA_FILES)
-    message(FATAL_ERROR "function(ccpp_capgen): METADATA_FILES not set.")
+    message(FATAL_ERROR "function(ccpp_validator): METADATA_FILES not set.")
   endif()
   list(JOIN arg_METADATA_FILES "," METADATA_FILES_SEPARATED)
-  list(APPEND CCPP_VALIDATOR_CMD_LIST "--scheme-files" "${METADATA_FILES_SEPARATED}")
+
+  if(NOT DEFINED arg_TYPE)
+    message(FATAL_ERROR "function(ccpp_validator): TYPE must be HOST or SCHEME")
+  endif()
+  string(TOUPPER "${arg_TYPE}" _type)
+  if(NOT (_type MATCHES "^(HOST|SCHEME)$"))
+    message(FATAL_ERROR "function(ccpp_validator): TYPE must be HOST or SCHEME")
+  endif()
+
+  if(_type MATCHES "^HOST$")
+    list(APPEND CCPP_VALIDATOR_CMD_LIST "--host-files" "${METADATA_FILES_SEPARATED}")
+  endif()
+  if(_type MATCHES "^SCHEME$")
+    list(APPEND CCPP_VALIDATOR_CMD_LIST "--scheme-files" "${METADATA_FILES_SEPARATED}")
+  endif()
 
   if(DEFINED arg_VERBOSITY)
     string(REPEAT "--verbose " ${arg_VERBOSITY} VERBOSE_PARAMS_SEPARATED)

@@ -254,6 +254,58 @@ def _apply_transform_formula(formula_fn, var_expr: str, kind: str) -> str:
     return formula_fn().format(kind=kind_suffix, var=var_expr)
 
 
+#: Map from CCPP metadata ``type =`` to the Fortran kind-cast intrinsic.
+#: Only the numeric types that legitimately carry distinct kinds in
+#: CCPP physics are mapped; everything else (logical, character, DDT)
+#: is rejected by :func:`_kind_cast_expr` because either the kind itself
+#: is dimensioned differently (character ``len=``) or kinds don't apply.
+_KIND_CAST_INTRINSIC = {
+    'real':    'real',
+    'integer': 'int',
+    'complex': 'cmplx',
+}
+
+
+def _kind_cast_expr(
+    var_type: str,
+    var_expr: str,
+    target_kind: str,
+    local: str,
+    std_name: str,
+    scheme_name: str,
+) -> str:
+    """Build a Fortran expression that casts *var_expr* to *target_kind*.
+
+    Used when host and scheme metadata differ in ``kind`` only -- no unit
+    conversion, no vertical flip -- so the transformation temporary
+    needs an explicit precision cast.  Without this the temp would be
+    declared but never assigned (see :func:`_resolve_one_arg`).
+
+    Returns a Fortran expression like ``real(con_pi, kind=kind_phys)``.
+
+    Raises
+    ------
+    CCPPError
+        When *var_type* is not one of the numeric types listed in
+        :data:`_KIND_CAST_INTRINSIC` (kinds on logical / character are
+        handled via separate metadata pathways, and DDT kinds don't
+        apply -- a kind mismatch on those types indicates the metadata
+        is wrong rather than something the cap should bridge).
+    """
+    intrinsic = _KIND_CAST_INTRINSIC.get(var_type.strip().lower())
+    if intrinsic is None:
+        raise CCPPError(
+            "Variable '{}' (standard_name='{}', scheme '{}'): host and "
+            "scheme metadata differ in 'kind' but the variable type "
+            "'{}' has no defined kind-cast intrinsic.  Kind differences "
+            "are supported for real / integer / complex only; fix the "
+            "metadata so the kinds match.".format(
+                local, std_name, scheme_name, var_type,
+            )
+        )
+    return '{}({}, kind={})'.format(intrinsic, var_expr, target_kind)
+
+
 ########################################################################
 # Dimension subscript helpers
 ########################################################################
@@ -1230,8 +1282,16 @@ def _local_name_conflict(
     name: str,
     existing_names: Set[str],
 ) -> str:
-    """Return *name* with a numeric suffix if it already exists in *existing_names*."""
-    if name not in existing_names:
+    """Return *name* with a numeric suffix if it already exists in *existing_names*.
+
+    Fortran identifiers are **case-insensitive**, so the collision check
+    is performed in lowercase: ``cp_l`` and ``CP_l`` are the same name
+    to the compiler and must not be emitted side-by-side as two locals.
+    The returned name preserves the input case (so generated source
+    keeps the metadata's spelling), but callers MUST add the lowercased
+    name to *existing_names* so subsequent calls see the collision.
+    """
+    if name.lower() not in existing_names:
         return name
     # Split on last '_' to find the suffix ('_l' or '_p').
     if '_' in name:
@@ -1242,7 +1302,7 @@ def _local_name_conflict(
     n = 2
     while True:
         candidate = '{}_{}{}' .format(base, n, suffix)
-        if candidate not in existing_names:
+        if candidate.lower() not in existing_names:
             return candidate
         n += 1
 
@@ -1673,9 +1733,20 @@ def _resolve_one_arg(
     # ``needs_vert_flip`` is True, so the unit-conversion formula naturally
     # composes the flip on the host-side RHS.  For a pure-flip case (no
     # unit conversion) we emit a plain copy ``temp = host(...flipped)``.
+    # For a pure-kind case (host.kind != scheme.kind, no unit conversion,
+    # no vertical flip), we emit an explicit ``TYPE(host, kind=K)`` cast
+    # so the temp is actually assigned; without this branch the temp was
+    # declared and the call site referenced it, but no assignment was
+    # emitted -- gfortran fell back to implicit typing and yielded a
+    # garbage / Inf value at runtime.
     unit_forward = ''
     if needs_unit and fwd_fn is not None and intent in ('in', 'inout'):
         unit_forward = _apply_transform_formula(fwd_fn, call_expr, scheme_kind)
+    elif needs_kind and intent in ('in', 'inout'):
+        unit_forward = _kind_cast_expr(
+            scheme_var.type, call_expr, scheme_kind,
+            local=local, std_name=std_name, scheme_name=scheme_name,
+        )
     elif needs_vert_flip and not needs_unit and intent in ('in', 'inout'):
         unit_forward = call_expr
 
@@ -1684,23 +1755,30 @@ def _resolve_one_arg(
     if needs_unit and bwd_fn is not None and intent in ('out', 'inout'):
         unit_backward_expr = '{}_l'.format(local)
         unit_backward = _apply_transform_formula(bwd_fn, unit_backward_expr, host_kind)
+    elif needs_kind and intent in ('out', 'inout'):
+        unit_backward = _kind_cast_expr(
+            scheme_var.type, '{}_l'.format(local), host_kind,
+            local=local, std_name=std_name, scheme_name=scheme_name,
+        )
     elif needs_vert_flip and not needs_unit and intent in ('out', 'inout'):
         unit_backward = '{}_l'.format(local)
 
     needs_transform = needs_unit or needs_kind or needs_vert_flip
 
     # ---- local variable names (transformation temp + pointer) ------------
+    # ``used_local_names`` stores the LOWERCASED names so collision
+    # detection is Fortran-case-insensitive (see _local_name_conflict).
     temp_name = ''
     ptr_name  = ''
     if needs_transform:
         candidate = '{}_l'.format(local)
         temp_name = _local_name_conflict(candidate, used_local_names)
-        used_local_names.add(temp_name)
+        used_local_names.add(temp_name.lower())
 
     if optional:
         candidate = '{}_p'.format(local)
         ptr_name = _local_name_conflict(candidate, used_local_names)
-        used_local_names.add(ptr_name)
+        used_local_names.add(ptr_name.lower())
 
     # ---- transform case --------------------------------------------------
     if optional and needs_transform:

@@ -28,10 +28,12 @@ set(EXTRA_FLAGS
 ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                SOURCE_FILES ${SCHEME_FORTRAN_FILES}
                METADATA_FILES ${SCHEME_METADATA_FILES}
+               TYPE "SCHEME"
                EXTRA_FLAGS ${EXTRA_FLAGS})
 ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                SOURCE_FILES ${HOST_FORTRAN_FILES}
                METADATA_FILES ${HOST_METADATA_FILES}
+               TYPE "HOST"
                EXTRA_FLAGS ${EXTRA_FLAGS})
 
 # Enable trace output in auto-generated caps

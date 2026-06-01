@@ -1391,16 +1391,27 @@ def _parse_lines(lines: List[str], file_path: str) -> List[MetadataTable]:
             for key, val in pairs:
                 if current_section is not None:
                     sec_type = current_section.section_type
-                    if sec_type == SCHEME_TABLE_TYPE and key == 'active':
+                    # ``active`` is a host-model attribute: it expresses a
+                    # condition (referencing host standard names) under
+                    # which a host-owned variable is valid storage.  It
+                    # belongs only on host and ddt tables.  control vars
+                    # are unconditionally framework-injected, suite tables
+                    # are generated wholesale, and scheme args are never
+                    # the originating storage — so all three reject it.
+                    if (sec_type not in ('host', 'ddt')
+                            and key == 'active'):
                         raise ParseSyntaxError(
-                            "'active' is a host-model-only attribute and cannot "
-                            "appear in scheme metadata",
+                            "'active' is a host-model attribute and may "
+                            "only appear in host or ddt metadata; not "
+                            "valid for {} tables".format(sec_type),
                             token=key, context=ctx(lineno)
                         )
-                    if sec_type in ('host', 'control', 'ddt') and key == 'optional':
+                    if (sec_type != SCHEME_TABLE_TYPE
+                            and key in ('intent', 'optional')):
                         raise ParseSyntaxError(
-                            "'optional' is a scheme-only attribute and cannot "
-                            "appear in host, control, or ddt metadata",
+                            "'{}' is a scheme-only attribute and cannot "
+                            "appear in host, control, ddt, or suite "
+                            "metadata".format(key),
                             token=key, context=ctx(lineno)
                         )
                     if (sec_type != SCHEME_TABLE_TYPE and
