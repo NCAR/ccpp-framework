@@ -6,7 +6,7 @@ Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
 **capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
-*Last revised: 2026-05-20 (end-of-day).*  Current unit-test suite: 1353 passing (1365 with doctests).
+*Last revised: 2026-06-01.*  Current unit-test suite: 1426 passing (1438 with doctests).
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
 `capgen-ng/` (top-level of this repo).  Unit tests live at the top
@@ -16,13 +16,15 @@ the unit suite from the repo root with `python -m pytest unit-tests/`.
 ## Table of contents
 
 1. [Metadata format changes](#1-metadata-format-changes)
-   1. [1.8 `horizontal_loop_extent` → `horizontal_dimension`](#18-horizontal_loop_extent--horizontal_dimension)
+   1. [1.8 `horizontal_loop_extent` → `horizontal_dimension`](#18-deprecated-standard-names-rewritten-by---legacy-mode)
+   2. [1.10 GFS-physics vertical-dim aliases (`--gfs-dim-aliases`)](#110-gfs-physics-vertical-dim-aliases---gfs-dim-aliases)
 2. [Suite definition file (SDF) changes](#2-suite-definition-file-sdf-changes)
 3. [Host Fortran requirements](#3-host-fortran-requirements)
 4. [Generator CLI and build integration](#4-generator-cli-and-build-integration)
 5. [Generated cap layout — what's new and what changed](#5-generated-cap-layout--whats-new-and-what-changed)
 6. [Framework changes (constituents)](#6-framework-changes-constituents)
    1. [6.3 Host metadata wins over auto-provisioning](#63-host-metadata-wins-over-auto-provisioning-2026-05-12)
+   2. [6.4 Legacy auto-clone registration (`--legacy-auto-clone-constituents`)](#64-legacy-auto-clone-registration---legacy-auto-clone-constituents)
 7. [Validator (`ccpp_validator.py`)](#7-validator)
 8. [Known gaps and deferred items](#8-known-gaps-and-deferred-items)
 
@@ -294,6 +296,40 @@ the historic blank-line convention, but is *not* treated as an
 inline comment marker (`;` can plausibly appear inside a
 `long_name`).
 
+### 1.10 GFS-physics vertical-dim aliases (`--gfs-dim-aliases`)
+
+GFS-physics scheme metadata uses two spellings for what is physically
+the vertical-layer axis:
+
+- `adjusted_vertical_layer_dimension_for_radiation` (radiation schemes)
+- `vertical_composition_dimension` (chemistry schemes)
+
+Both are the **same axis** as `vertical_layer_dimension` from the
+host's point of view, but legacy hosts (CCPP-SCM 17p8, GFS) carry the
+three names as **distinct host variables** (each addressable as its
+own scalar dim std name) — so a parse-time substitution like
+`--legacy-mode` would erase the variable behind the renamed token and
+break host metadata.
+
+`--gfs-dim-aliases` collapses the three names **only inside the
+resolver's per-position dimension-identity check** (upper bound only;
+lower bounds never alias).  The variables themselves stay distinct
+everywhere else — `[ adjusted_vertical_layer_dimension_for_radiation ]`
+remains its own host `type=control` entry; the access path in
+generated code is unchanged; only the resolver's
+"these dims describe the same axis" comparison treats the three names
+as equivalent.
+
+Single touchpoint in the generator
+(`generator/suite_resolver.py::_canonical_dim`); the validator does
+not carry the flag (it never reaches the resolver's canonicaliser).
+Self-contained module `metadata/dim_aliases.py`; every touchpoint
+tagged `# dim-aliases:` for clean removal.
+
+Like `--legacy-mode`, this is a transient migration shim with a loud
+startup banner — drop the GFS spellings from your scheme metadata in
+favour of `vertical_layer_dimension` and the flag becomes unnecessary.
+
 ---
 
 ## 2. Suite definition file (SDF) changes
@@ -563,6 +599,9 @@ python ccpp_capgen_ng.py \
     --output-root <build_dir>/ccpp \
     [--kind-type <name>=[<module>:]<spec>] \
     [--legacy-mode] \
+    [--gfs-dim-aliases] \
+    [--legacy-auto-clone-constituents] \
+    [--no-host-introspection] \
     [--verbose] [--verbose]
 ```
 
@@ -571,10 +610,15 @@ omitted, `<spec>` must be an ISO_FORTRAN_ENV constant (REAL32/REAL64/...)
 and the module defaults to `iso_fortran_env`.  `kind_phys` is
 auto-defaulted to `iso_fortran_env:REAL64` when not supplied.
 
-`--legacy-mode` (transient migration shim, will be removed): silently
-rewrites a small set of deprecated CCPP standard names to their
-capgen-ng equivalents at parse time — see §1.8 for the full table
-(`horizontal_loop_extent` → `horizontal_dimension`,
+#### Transient migration shims
+
+Three opt-in flags exist for migrating legacy hosts.  Each is
+self-contained and grep-tagged for clean removal:
+
+**`--legacy-mode`** (transient migration shim, will be removed):
+silently rewrites a small set of deprecated CCPP standard names to
+their capgen-ng equivalents at parse time — see §1.8 for the full
+table (`horizontal_loop_extent` → `horizontal_dimension`,
 `number_of_openmp_threads` → `number_of_threads`).  The rewrite fires
 for both standard-name attributes AND dimension tokens.  Prints a
 loud warning banner at startup, enumerating every pair the shim is
@@ -582,8 +626,36 @@ rewriting, so the substitution is never invisible.  Available on both
 `ccpp_capgen_ng.py` and `ccpp_validator.py` (keep the flag consistent
 between the two when both are invoked from CMake).  All translation
 logic is isolated in `metadata/legacy_compat.py` and tagged with
-`# legacy-compat:` comments at every touchpoint, so the shim can be
-cleanly removed when migration is complete.
+`# legacy-compat:` comments at every touchpoint.
+
+**`--gfs-dim-aliases`** (transient migration shim, see §1.10):
+treats GFS-physics names
+`adjusted_vertical_layer_dimension_for_radiation` and
+`vertical_composition_dimension` as equivalent to
+`vertical_layer_dimension` **inside the resolver's per-position
+dim-identity check only** (upper bound only).  The host variables
+themselves stay distinct.  Generator-only (the validator never
+reaches the dim canonicaliser).  Module `metadata/dim_aliases.py`;
+touchpoints tagged `# dim-aliases:`.
+
+**`--legacy-auto-clone-constituents`** (transient migration shim, see
+`doc/auto_clone_constituents.md` for the full reference):
+reinstates original ccpp-capgen's auto-clone-static-constituent
+registration path.  Every `is_constituent` consumer scheme arg
+(`advected = True`, `constituent = True`, or `molar_mass = …`) with
+no register-phase source is auto-registered into the per-suite
+dynamic-constituents buffer using values lifted straight from the
+scheme metadata (with sensible defaults: `long_name` synthesised from
+the standard name when missing, `diag_name` falls back to local_name,
+`vertical_dim` lifted from the arg's dim list).  Adds four legacy
+`%instantiate` kwargs to the parser (`default_value`, `min_value`,
+`water_species`, `mixing_ratio_type`).  Available on both
+`ccpp_capgen_ng.py` and `ccpp_validator.py` (the validator must
+accept the four extra attrs).  **Single-instance only** — declaring
+the `instance_number` + `number_of_instances` pair while the flag is
+on is a hard error before any suite is parsed.  Module
+`metadata/auto_clone_constituents.py`; touchpoints tagged
+`# auto-clone-constituents:`.
 
 ### 4.2 `ccpp_datafile.py` query CLI
 
@@ -759,6 +831,10 @@ state array is unallocated — there, "not allocated" really does mean
 
 Backward-compatible.  Original capgen's auto-clone path in
 `scripts/constituents.py` has been updated to call the setter.
+capgen-ng's `--legacy-auto-clone-constituents` shim (§6.4)
+synthesises `%instantiate(...)` directly on slots of the per-suite
+dynamic-constituents buffer, so the properties objects are owned by
+the buffer from creation — no ownership transfer call needed.
 
 ### 6.2 capgen-ng constituent API
 
@@ -800,6 +876,58 @@ would also blow Fortran's 63-char identifier limit).  See
 Active design review for the next constituents iteration:
 `doc/constituents_overhaul.md` (Class A vs Class B property
 classification, three reform proposals).
+
+### 6.4 Legacy auto-clone registration (`--legacy-auto-clone-constituents`)
+
+For hosts that ship metadata in original ccpp-capgen's shape — most
+notably CAM-SIMA's atmospheric_physics tree, where ~16 of the ~20
+constituent-touching schemes declare `advected = True` (or
+`constituent = True`, or `molar_mass = …`) in `_run` arg tables and
+rely on the framework to register the constituent — pass
+`--legacy-auto-clone-constituents` to both `ccpp_capgen_ng.py` and
+`ccpp_validator.py`.
+
+What changes:
+
+- The parser accepts four extra scheme-arg attributes
+  (`default_value`, `min_value`, `water_species`,
+  `mixing_ratio_type`).  Fortran-style literal suffixes
+  (`0.0_kind_phys`, `1.0d-5`, `-3.14_8`) are accepted on the real
+  fields, since legacy metadata writes the values in source form.
+- For every unique standard name that appears as an `is_constituent`
+  consumer with no register-phase source, the suite cap emits a
+  synthesised `%instantiate(...)` call into the per-suite
+  dynamic-constituents buffer.  The scheme author writes no Fortran
+  registration code.
+- `long_name` is auto-synthesised from the standard name when missing
+  (`cloud_liquid_dry_mixing_ratio` → `'Cloud liquid dry mixing
+  ratio'`); `diag_name` falls back to local_name; `vertical_dim` is
+  lifted from the arg's `dimensions = (...)` entry.
+- Schemes that pass the whole constituents buffer (e.g.
+  `apply_constituent_tendencies_run` with `ccpp_constituents` /
+  `ccpp_constituent_tendencies` / `index_of_*` args) are excluded
+  from auto-clone — those resolve through the framework
+  whole-buffer path, not as individual registrations.
+
+What capgen-ng's other rules still require (the shim does **not**
+relax them):
+
+- `intent = inout` on base constituents (`advected = True` on a
+  non-`tendency_of_*` std_name).  `intent = out` is reserved for
+  tendency args.
+- Metadata arg tables must match the Fortran subroutine signature.
+  Declaring a constituent in `<scheme>_init`'s arg table when
+  `<scheme>_init` doesn't take it as a Fortran dummy is rejected by
+  the validator.
+
+Single-instance only: declaring `instance_number` +
+`number_of_instances` while the flag is on aborts before any suite is
+parsed.  Legacy hosts predate multi-instance support, so this matches
+the use case.
+
+Full reference: `doc/auto_clone_constituents.md`.  E2e fixture:
+`end-to-end-tests/advection_auto_clone/` (a port of CAM-SIMA's
+`advection_test`).
 
 ---
 
@@ -886,8 +1014,9 @@ complete).  See `project_validator_host_check_deferred.md` (memory).
 | Generated Fortran ↔ Codee formatter idempotency | Deferred; emitted `.F90` must round-trip cleanly through the project's Codee Fortran formatter. |
 | `fortran_to_metadata` developer utility    | Deferred; bootstraps a `.meta` skeleton from an existing `.F90` subroutine. |
 | `--legacy-mode` shim removal               | Transient; remove `metadata/legacy_compat.py`, `unit-tests/test_legacy_compat.py`, and every `# legacy-compat:` touchpoint when scheme metadata has migrated. |
+| `--gfs-dim-aliases` shim removal           | Transient; remove `metadata/dim_aliases.py`, `unit-tests/test_dim_aliases.py`, and every `# dim-aliases:` touchpoint when GFS metadata stops spelling `vertical_layer_dimension` as `adjusted_vertical_layer_dimension_for_radiation` / `vertical_composition_dimension`. |
+| `--legacy-auto-clone-constituents` shim removal | Transient; remove `metadata/auto_clone_constituents.py`, `unit-tests/test_auto_clone_constituents.py`, sample files under `unit-tests/sample_files/scheme_auto_clone_consumer.meta` + `sample_suite_files/suite_auto_clone.xml`, and every `# auto-clone-constituents:` touchpoint when consumers have moved to explicit `host_constituents(:)` declaration or register-phase scheme registration. |
 | `ccpp_datafile.py` query CLI rework        | Deferred (2026-05-13); collapse `--host-files` / `--suite-files` / `--utility-files` into `--capgen-files`, then repurpose `--host-files` as a filtered list of **input** host metadata files (parallel to `--scheme-files`).  Most hosts pack all host data into a handful of shared files, so the filtering pay-off is small — the draw is API symmetry. |
-| Original capgen auto-clone path             | Intentionally dropped in favor of explicit registration; kept in memory as "Option B" fallback. |
 
 ---
 

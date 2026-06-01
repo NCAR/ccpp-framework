@@ -7,7 +7,7 @@ program managers; it summarises the case for `capgen-ng` in terms of
 product risk, schedule, and cross-organization impact rather than
 implementation detail.*
 
-*Last revised: 2026-05-18.*
+*Last revised: 2026-06-01.*
 
 ---
 
@@ -60,8 +60,9 @@ limits that make it impractical for UFS, NEPTUNE, or multi-instance
 hosts, and the implementation is concentrated enough that few people
 can extend it safely (if at all - primary developer gone).
 
-**`capgen-ng`** (new, 2026-05).  Procedural Python (a few thousand
-lines; flat data classes); reads the same metadata format; passes
+**`capgen-ng`** (new, 2026-05).  Procedural Python (~17.8k lines
+including inline comments and the three transient shim modules; flat
+data classes); reads the same metadata format; passes
 arguments like prebuild; supports the features capgen pioneered
 (constituents, suite-owned variables, introspection); supports
 multi-instance, an integer state machine, six explicit scheme
@@ -161,7 +162,16 @@ read, harder to port between hosts, and harder to debug when
 registrations collide.
 
 `capgen-ng` keeps only the first two (explicit) paths.  Auto-clone
-is deliberately gone — see `doc/constituents_overhaul.md` §2.3.
+is deliberately gone from the default behaviour — see
+`doc/constituents_overhaul.md` §2.3.  For legacy hosts that already
+ship metadata in the original-capgen shape (production CAM-SIMA's
+atmospheric_physics tree is the immediate consumer; ~16 of the ~20
+schemes that touch constituents rely on auto-clone today), an opt-in
+shim `--legacy-auto-clone-constituents` reinstates the original path
+behind a single CLI flag with a loud startup banner; see
+`doc/auto_clone_constituents.md`.  The shim is single-instance only
+and is marked for removal once consumers migrate to explicit
+registration.
 
 ### 3.4 Host-specific values baked into scheme metadata
 
@@ -201,16 +211,19 @@ capgen is roughly an order of magnitude larger than prebuild, with a
 deeply layered class hierarchy.  This is not a moral failing — it
 reflects the feature set — but the practical consequence is that
 the maintenance burden falls on a small subset of the framework
-team.  capgen-ng is comparable to prebuild in size (a few thousand
-lines of mostly procedural Python with small data classes), so the
-"who can fix this" pool is closer to "anyone with framework
-context".  capgen-ng comes with over a thousand docstring tests
-and unit tests, as well as a comprehensive end-to-end test suite
-that covers all of prebuild's and capgen's existing end to end
-tests.  capgen-ng adds additional end-to-end tests for new
-features such as the multi-instance constituents test. Including
-these tests and the rich inline comments makes capgen-ng comparable
-in size to capgen.
+team.  capgen-ng is comparable to prebuild in *shape* (procedural
+Python with small data classes — no deep class hierarchy), and the
+generator itself sits at ~17.8k lines (capgen is several times
+larger).  The "who can fix this" pool is closer to "anyone with
+framework context".  capgen-ng comes with ~1.4k docstring + unit
+tests (~18k lines of test code), plus an end-to-end test suite of
+10 fixtures that covers all of prebuild's and capgen's existing
+end-to-end tests and adds new ones for multi-instance + constituents
+(`instances_advection`) and the auto-clone-constituents shim
+(`advection_auto_clone`).  Including these tests and the rich inline
+comments puts capgen-ng's full tree on the same order of magnitude as
+capgen — almost all of which is test coverage and human-readable
+prose, not load-bearing logic.
 
 ---
 
@@ -229,7 +242,7 @@ even to CAM-SIMA-shape problems:
 | Generator code style | Deep class hierarchy | Flat data classes + procedural resolver |
 | Error reporting | Variable amount of context | "Loud, specific, actionable" enforced — every parse-time error names file, line, variable, attribute, value, and reason |
 | Constituent registration | Three sources (one invisible) | Two sources, both explicit |
-| `is_constituent` auto-clone | Yes (host-specific values baked into scheme metadata) | Removed |
+| `is_constituent` auto-clone | Yes (host-specific values baked into scheme metadata) | Removed by default; reinstated for legacy hosts behind opt-in `--legacy-auto-clone-constituents` shim (single-instance only) |
 | `_finalize` vs `_final` phase name | `_finalize` | `_final` (renamed to keep symmetry with init/timestep_init/timestep_final) |
 
 ---
@@ -244,37 +257,56 @@ Features that exist only in capgen-ng (some exist in prebuild):
 | **Registered scalar-index dimensions** | When metadata says a variable is dimensioned by `number_of_threads` or `number_of_instances`, capgen-ng injects the right per-call subscript automatically; the host's OpenMP-thread-private DDT layout works unchanged |
 | **Subcycle loop-counter automation** | Schemes inside a `<subcycle loop="N">` element can access `ccpp_loop_counter` / `ccpp_loop_extent` directly; the generator emits the Fortran `do` loop and binds the locals |
 | **`--legacy-mode` migration shim** | One CLI flag enables silent rewrite of two known-good deprecated standard names (`horizontal_loop_extent` → `horizontal_dimension`, `number_of_openmp_threads` → `number_of_threads`) with a loud warning — buys time for host metadata to migrate |
+| **`--gfs-dim-aliases` migration shim** (2026-05-21) | One CLI flag treats GFS-physics names (`adjusted_vertical_layer_dimension_for_radiation`, `vertical_composition_dimension`) as equivalent to `vertical_layer_dimension` in the dim-identity check only — variables remain distinct everywhere else.  Resolver-only; clean grep-revert.  Required for CCPP-SCM 17p8 to build under capgen-ng. |
+| **`--legacy-auto-clone-constituents` migration shim** (2026-05-21) | One CLI flag reinstates original ccpp-capgen's auto-clone-static-constituent registration path for the ~16 production-CAM-SIMA schemes that depend on it.  Single-instance only (predates multi-instance); fails fast if a multi-instance host is supplied.  This is the no-decision-needed bridge that lets capgen-ng accept CAM-SIMA's atmospheric_physics metadata before any constituent-overhaul work lands. |
 | **`--no-host-introspection` flag** | The five runtime introspection routines (`ccpp_physics_suite_list`, etc.) emit large `select case` blocks at SCM scale; this flag stubs the bodies, dropping the generated static API from ~33,000 lines to ~800 for the SCM build (the introspection routines were making `-O1` compilation effectively hang) |
 | **Consistent handling of external types** (MPI f08 communicator, ESMF clock) | Tabled in capgen because of the complexity of the solution |
 
 ---
 
-## 6. Where things stand right now (2026-05-20)
+## 6. Where things stand right now (2026-06-01)
 
-- **Unit tests**: 1353 passing (1365 with doctests).  No known failures.
-- **End-to-end tests**: 10 passing — `chunked_data`, `opt_arg`,
-  `nested_suite`, `ddthost`, `instances`, `capgen_ng`,
-  `var_compat`, `advection`, and the new `instances_advection`
-  (multi-instance + constituents).
+- **Unit tests**: 1426 passing (1438 with doctests).  No known failures.
+- **End-to-end tests**: 10 passing — `advection`,
+  `advection_auto_clone` (new 2026-05-21; CAM-SIMA advection_test
+  port exercising the auto-clone shim), `capgen_ng`, `chunked_data`,
+  `ddthost`, `instances`, `instances_advection`
+  (multi-instance + constituents), `nested_suite`, `opt_arg`,
+  `var_compat`.
+- **Code size**: ~17.8k lines of Python under `capgen-ng/` including
+  inline comments and the three transient shim modules; ~18k lines of
+  unit/doctest under `unit-tests/`.  Still procedural; still flat
+  data classes; still well below capgen.
 - **CCPP-SCM**: actively driving development.  Each build / runtime
-  issue surfaced this week landed as a fix in capgen-ng rather than
+  issue surfaced this month landed as a fix in capgen-ng rather than
   a host-side workaround.  All available suites in CCPP-SCM now
-  build and run end-to-end via `--legacy-mode`.
+  build and run end-to-end via `--legacy-mode` + `--gfs-dim-aliases`.
+- **Three transient migration shims in place** (see §5).  Each is
+  isolated in its own module with a single grep tag, so removal once
+  hosts migrate is a single cleanup pass.
+- **Auto-clone shim landed 2026-05-21**.  Reinstates original capgen's
+  auto-clone path behind `--legacy-auto-clone-constituents`.  This is
+  the no-decision-needed bridge for CAM-SIMA — the ~16 schemes that
+  declare `advected = True` in `_run` arg-tables and rely on the
+  framework to register the constituent will now work under capgen-ng
+  without metadata edits.
 - **Multi-instance + constituents fix landed 2026-05-18**.  The new
   combined end-to-end test surfaced a latent shared-buffer mutation
   bug; the fix moves the per-suite dynamic-constituents buffer
   per-instance.  No coordination with CAM-SIMA / UFS / NEPTUNE
   required (host-facing API unchanged).
-- **NEPTUNE**: cleanup and acceptance testing in progress this week.
+- **NEPTUNE**: cleanup and acceptance testing in progress.
   Regular/lower atmosphere physics builds and runs, and produces
   results within the tolerance (i.e. similar to compiler changes).
   High altitude atmosphere testing is next.
 - **UFS Weather Model**: not yet attempted; SCM is the proving
   ground first.  Expecting updates due to the "fast physics"
   called directly from the FV3 dynamical core as separate group.
-- **CAM-SIMA**: not yet re-connected; the constituent overhaul
-  decision (see §7) and the availability of CAM-SIMA developers
-  are the gating items.
+- **CAM-SIMA**: not yet re-connected; the availability of CAM-SIMA
+  developers is now the primary gating item.  The auto-clone shim
+  removes the metadata-edit blocker; the constituent overhaul
+  decision (see §7) is no longer on the critical path for getting
+  CAM-SIMA built.
 
 ---
 
@@ -312,9 +344,9 @@ proposals are implementable on top of it.
 | Risk | Status | Mitigation |
 |---|---|---|
 | capgen-ng diverges from capgen feature set | LOW | Cross-checked by `doc/redesign_analysis.md`; the feature comparison table in §4 / §5 is exhaustive |
-| Host metadata break for UFS / NEPTUNE / CAM-SIMA | MEDIUM | `--legacy-mode` shim covers the known incompatible standard-name pair; remaining required changes (e.g., `_finalize` → `_final`) are mechanical and listed in `doc/migration.md` §3 |
-| Constituent overhaul stalls | MEDIUM | Proposal A unblocks the immediate bug; capgen-ng works with the current framework today; the overhaul is a separate decision track |
-| Bus-factor on capgen-ng itself | MEDIUM | Procedural code style + flat data classes + 1319-test safety net; significantly lower than capgen's bus factor |
+| Host metadata break for UFS / NEPTUNE / CAM-SIMA | LOW | Three transient shims (`--legacy-mode`, `--gfs-dim-aliases`, `--legacy-auto-clone-constituents`) together cover the known-incompatible standard-name pair, the GFS radiation/composition vertical-dim spellings, and original capgen's auto-clone registration path.  Remaining required changes (e.g., `_finalize` → `_final`) are mechanical and listed in `doc/migration.md` §3 |
+| Constituent overhaul stalls | LOW | Proposal A unblocks the immediate bug; capgen-ng works with the current framework today; `--legacy-auto-clone-constituents` lets CAM-SIMA's atmospheric_physics build without an overhaul decision; the overhaul is a separate decision track |
+| Bus-factor on capgen-ng itself | MEDIUM | Procedural code style + flat data classes + 1426-test safety net; significantly lower than capgen's bus factor |
 | Two host call-shape conventions (prebuild-style vs capgen-style) coexist forever | LOW | capgen-ng emits one shape; downstream host conversions are tracked in `doc/migration.md` |
 | Regression discovered during NEPTUNE / UFS testing | EXPECTED | SCM proving ground catches most; remaining issues become capgen-ng tickets, not host-side patches |
 | ccpp-prebuild end-of-life requires a sunset plan | OPEN | Not yet scoped; both generators currently coexist in the framework repo |

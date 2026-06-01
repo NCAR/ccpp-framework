@@ -1,8 +1,8 @@
 # capgen-ng — Briefing for CCPP Framework Developers & Power Users
 
-*Prepared for the 2026-05-14 walk-through.  Companion document to
-`doc/migration.md` (the detailed migration guide) and
-`doc/redesign_prompt.md` (the implementation spec).*
+*Prepared for the 2026-05-14 walk-through; last revised 2026-06-01.
+Companion document to `doc/migration.md` (the detailed migration
+guide) and `doc/redesign_prompt.md` (the implementation spec).*
 
 ---
 
@@ -143,7 +143,7 @@ Both share the same metadata-parsing library (`metadata/`).
 | Variable matching algorithm | Five-layer scope-chain promotion  | Flat host+control dict + suite-owned discovery (inherited from prebuild — primary reason runtime is comparable to prebuild) |
 | External types (MPI f08 comm, ESMF clock) | Tabled (solution complexity) | First-class via `type = external:<module>:<typename>` |
 | `type = module` in metadata | Yes                               | Renamed `type = host`                             |
-| `is_constituent` scheme args | Auto-cloned by generator         | Schemes register constituents explicitly in the `register` phase via `ccpp_constituent_properties_t(:)` |
+| `is_constituent` scheme args | Auto-cloned by generator         | Schemes register constituents explicitly in the `register` phase via `ccpp_constituent_properties_t(:)`; original capgen's auto-clone path is available behind the opt-in `--legacy-auto-clone-constituents` shim for legacy hosts (single-instance only) |
 | `ConstituentVarDict`        | Synthetic scope between suite + host | Removed; constituents are one of four sources (`control`/`host`/`suite`/`constituent`) on `ResolvedArg` |
 | `<suite>_state` runtime check | String                          | Integer (named parameters)                        |
 | Fortran-vs-metadata check   | Inside the generator              | Separate tool (`ccpp_validator.py`)               |
@@ -176,6 +176,23 @@ Comprehensive list — see `doc/migration.md` for full detail.
 Both are rewritten on the fly by **`--legacy-mode`** for a transition
 period; the shim prints a banner listing every rewrite it performs
 and is marked for clean removal.
+
+### 6.3b Transient migration shims — full set
+
+Three opt-in CLI flags exist for migrating legacy hosts.  Each lives
+in its own self-contained module, prints a loud banner at startup, and
+every touchpoint is grep-tagged for clean removal:
+
+| Flag                                  | What it does                                                                                                                                                                                                 | Removal grep                              |
+|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------|
+| `--legacy-mode`                       | Parse-time substitution of two deprecated CCPP standard names (see §6.3 above).  Active on both `ccpp_capgen_ng.py` and `ccpp_validator.py`.                                                                  | `legacy-compat`                           |
+| `--gfs-dim-aliases`                   | Treats GFS-physics names `adjusted_vertical_layer_dimension_for_radiation` and `vertical_composition_dimension` as equivalent to `vertical_layer_dimension` **inside the upper-bound dim identity check only** (the variables themselves stay distinct).  Resolver-only, so `ccpp_capgen_ng.py` carries the flag; `ccpp_validator.py` does not (the validator never reaches the dim canonicaliser). | `dim-aliases`                              |
+| `--legacy-auto-clone-constituents`    | Reinstates original ccpp-capgen's auto-clone-static-constituent registration path: every `is_constituent` consumer (`advected = True` / `constituent = True` / `molar_mass = …`) with no register-phase source is auto-registered into the per-suite dynamic-constituents buffer using values lifted straight from the scheme metadata.  Adds four legacy `%instantiate` kwargs to the parser (`default_value`, `min_value`, `water_species`, `mixing_ratio_type`).  **Single-instance only** — declaring the `instance_number` + `number_of_instances` pair while the flag is on is a hard error.  Available on both `ccpp_capgen_ng.py` and `ccpp_validator.py`. | `auto-clone-constituents`                  |
+
+All three flags are listed as runways, not destinations: drop the
+underlying legacy spelling from host/scheme metadata and the flag can
+be retired.  See `doc/auto_clone_constituents.md` for the full
+auto-clone reference.
 
 ### 6.4 Required host `type = control` table
 
@@ -339,19 +356,32 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1353 passing on `feature/capgen-ng` (1365 with
-  doctests; as of 2026-05-20).
-- **End-to-end tests passing**: `advection`, `unit_conv`,
-  `nested_suite`, `variable_transform`, `instances`,
-  `instances_advection`, `ddt`.
+- **Unit tests**: 1426 passing on `feature/capgen-ng` (1438 with
+  doctests; as of 2026-06-01).
+- **End-to-end tests passing** (10): `advection`,
+  `advection_auto_clone`, `capgen_ng`, `chunked_data`, `ddthost`,
+  `instances`, `instances_advection`, `nested_suite`, `opt_arg`,
+  `var_compat`.  `advection_auto_clone` is the newest — a port of
+  CAM-SIMA's `advection_test` exercising the auto-clone legacy
+  registration path under `--legacy-auto-clone-constituents`.
+- **Code size**: ~17.8k LOC of Python under `capgen-ng/` (includes
+  docstrings, inline comments, and the three transient shim modules)
+  + ~18k LOC of unit/doctest under `unit-tests/`.  Still procedural,
+  still flat data classes.
+- **Three transient migration shims now live** (see §6.3b):
+  `--legacy-mode` (2026-05-13), `--gfs-dim-aliases` (2026-05-21),
+  and `--legacy-auto-clone-constituents` (2026-05-21).  Each is
+  isolated in its own module + grep-tag so removal is a single
+  cleanup pass once the underlying legacy spelling is gone from
+  host/scheme metadata.
 - **CCPP-SCM**: actively driving development — every build / runtime
-  failure surfaced this week landed as a fix in capgen-ng (rather than
-  being patched around in the host).  Most of the `phys_ps` group now
-  builds end-to-end via `--legacy-mode`.  On 2026-05-20 the
-  per-arg-attribute validator caught **67 real metadata/Fortran
-  disagreements** in the SCM physics tree (12 missing `kind = kind_phys`
-  + 42 intent mismatches + a mix of optional-flag and bare-`real`
-  cases); all fixed.
+  failure surfaced this month landed as a fix in capgen-ng (rather
+  than being patched around in the host).  Most of the `phys_ps` group
+  now builds end-to-end via `--legacy-mode` + `--gfs-dim-aliases`.
+  On 2026-05-20 the per-arg-attribute validator caught **67 real
+  metadata/Fortran disagreements** in the SCM physics tree (12 missing
+  `kind = kind_phys` + 42 intent mismatches + a mix of optional-flag
+  and bare-`real` cases); all fixed.
 - **Validator** now checks per-argument `intent`, `type`, `kind`, and
   dimension rank in addition to the original name/count check.
   Asymmetric `optional` rule, DDT + `external:<module>:<typename>`
@@ -368,7 +398,7 @@ don't rebuild downstream objects unless something actually moved.
   (`if (.not. (active)) errflg = 1; return`) before the call.
   Replaces an earlier static rule that forced scheme metadata to lie
   about optionality.  See `doc/migration.md` §1.3.1.
-- **`--no-host-introspection`** (new, 2026-05-14): stubs the bodies of
+- **`--no-host-introspection`** (2026-05-14): stubs the bodies of
   the five suite-introspection routines in `<host>_ccpp_cap.F90`,
   shrinking the file from ~33k lines to ~800 for the 10-suite SCM
   build (the introspection case-blocks were making even `-O1`
@@ -383,7 +413,11 @@ don't rebuild downstream objects unless something actually moved.
   ground first.  An anticipated complication is the "fast physics"
   called directly from the FV3 dynamical core as a separate group.
 - **CAM-SIMA**: not yet reconnected; pending the constituents
-  overhaul decision and CAM-SIMA developer availability.
+  overhaul decision and CAM-SIMA developer availability.  Note that
+  `--legacy-auto-clone-constituents` is the no-decision-needed bridge
+  that lets capgen-ng accept CAM-SIMA atmospheric_physics metadata
+  as-is — ~16 of the ~20 schemes that touch constituents rely on the
+  auto-clone path today.
 
 ---
 

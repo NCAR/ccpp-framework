@@ -195,10 +195,23 @@ The resolver classifies each scheme arg into exactly one source. A
   drained into `ccpp_model_constituents_obj(inst)` by
   `ccpp_register_constituents`.
 
-The auto-clone-from-metadata path is deliberately **gone**. If a scheme
-declares `advected=true` on an arg but no source registers that
-standard name, capgen-ng now emits a runtime check during
-`ccpp_initialize_constituents` that errors with the missing name.
+The auto-clone-from-metadata path is **gone from capgen-ng's default
+behaviour**.  If a scheme declares `advected=true` on an arg but no
+source registers that standard name, capgen-ng emits a runtime check
+during `ccpp_initialize_constituents` that errors with the missing
+name.
+
+**Legacy escape hatch** (added 2026-05-21): the opt-in CLI flag
+`--legacy-auto-clone-constituents` reinstates the original
+auto-clone path for hosts whose scheme metadata predates explicit
+registration (production CAM-SIMA's atmospheric_physics tree is the
+immediate consumer).  This is a transient migration shim — see
+`doc/auto_clone_constituents.md` for the full reference and
+removal procedure.  It is single-instance only and explicitly
+flagged so future capgen-ng work is *not* expected to keep it
+indefinitely.  The reform proposals in §6–§8 below are unchanged by
+the shim's existence: capgen-ng's chosen architecture is still
+explicit registration.
 
 ### 2.4 Per-instance state
 
@@ -600,8 +613,9 @@ shim. Remove the rewrite once known consumers are migrated.
 - **Cost**: ~50 lines across the two generator emitters, plus updates
   to six pinned unit tests.  No CAM-SIMA / NEPTUNE / SCM coordination
   needed (host-facing API unchanged).
-- **Status**: framework tests pass; full unit-test suite (1319 tests)
-  is green; all 10 end-to-end tests pass.
+- **Status**: framework tests pass; full unit-test suite
+  (1319 tests at fix landing, 1426 as of 2026-06-01) is green; all 10
+  end-to-end tests pass.
 - **Position relative to Proposals A/B/C**: orthogonal — none of the
   three proposed touching the buffer.  Independently adopted.
 

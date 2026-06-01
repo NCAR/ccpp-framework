@@ -852,15 +852,20 @@ message naming the offending token.
 | Module-level pointers | `<host>_constituents_array` etc. as functions returning pointers | Same idea, now per-instance via `instance_number` arg |
 | Scheme std-name set | `<host>_model_const_stdnames` parameter array | `ccpp_model_const_stdnames` parameter array (no host prefix) |
 | Host-facing API surface | `<host>_ccpp_register_constituents`, `<host>_ccpp_initialize_constituents`, `<host>_ccpp_number_constituents`, `<host>_ccpp_is_scheme_constituent`, `<host>_ccpp_gather_constituents`, `<host>_ccpp_update_constituents`, `<host>_ccpp_deallocate_dynamic_constituents`, `<host>_constituents_array`, `<host>_advected_constituents_array`, `<host>_model_const_properties`, `<host>_const_get_index` | Same surface, no `<host>_` prefix |
-| Dynamic constituent buffer dimensionality | 1D, per host | 1D, per generator run, **shared across instances** |
-| Static suite constituents | Auto-cloned by `ConstituentVarDict.find_variable` and registered via `<suite>_constituents_copy_const` accessors | Tracked at code-gen time via `is_constituent` flag; included in the constituent table only if a register-phase scheme produces them (rule 1).  Schemes that *consume* a base constituent (rule 2) don't trigger registration — the constituent must be registered by SOMEONE (host or another scheme's register) for the access to work at runtime. |
+| Dynamic constituent buffer dimensionality | 1D, per host | 1D **per instance** (wrapper-DDT array indexed by `instance_number`; was shared across instances pre-2026-05-18, until the combined multi-instance + constituents e2e test surfaced a latent set_const_index conflict) |
+| Static suite constituents | Auto-cloned by `ConstituentVarDict.find_variable` and registered via `<suite>_constituents_copy_const` accessors | Default behaviour: tracked at code-gen time via `is_constituent` flag; included in the constituent table only if a register-phase scheme produces them (rule 1).  Schemes that *consume* a base constituent (rule 2) don't trigger registration — the constituent must be registered by SOMEONE (host or another scheme's register) for the access to work at runtime.  **Opt-in shim** `--legacy-auto-clone-constituents` (2026-05-21, transient) reinstates original capgen's auto-clone path for legacy hosts; single-instance only.  See `doc/auto_clone_constituents.md`. |
 
 ### Migration notes for cam-sima hosts
 
-- **Scheme metadata**: no changes needed.  Cam-sima follows rules 2 and
-  3 already (audited 2026-05-11).  The 4 schemes that register
-  constituents via `ccpp_constituent_properties_t` (rule 1) work
-  unchanged.
+- **Scheme metadata**: no changes needed for the 4 schemes that
+  register constituents via `ccpp_constituent_properties_t` (rule 1) —
+  those work unchanged.  For the ~16 schemes that rely on original
+  capgen's auto-clone path (`advected = True` on a `_run` arg with no
+  matching register-phase source), pass
+  `--legacy-auto-clone-constituents` to `ccpp_capgen_ng.py` and
+  `ccpp_validator.py` — capgen-ng then auto-registers those
+  constituents into the per-suite dynamic-constituents buffer the same
+  way original capgen did.  See `doc/auto_clone_constituents.md`.
 - **Host metadata**: drop any explicit declaration of
   `ccpp_model_constituents_object` if you carried one over from a
   previous capgen-ng experiment — the generator owns it now.
