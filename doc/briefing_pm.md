@@ -40,7 +40,7 @@ stand.
 
 ## 1. The three generators in one paragraph each
 
-**`ccpp-prebuild`** (NOAA, in production for UFS, NEPTUNE, SCM).
+**`ccpp-prebuild`** (NOAA/NAVY/DTC, in production for UFS/NEPTUN/SCM).
 Procedural Python; reads metadata; emits Fortran caps; passes
 host-defined derived-type (DDT) arguments to scheme call sites.  In
 production for several years; bug rate is low; the team understands
@@ -97,7 +97,7 @@ Three pressures converged in 2025/26:
    `ConstituentVarDict` scope-chain or the auto-clone path requires
    reading several modules together.  Realistically, only one or two
    people on the framework team can change capgen without breaking
-   something downstream.  One of them now lives overseas and rejects
+   something downstream.  One of them now lives overseas and opposes
    simplification attempts from the others. This is an unacceptable
    **bus-factor risk** that the redesign retires.
 
@@ -117,11 +117,11 @@ by the SCM / multi-instance test work this month.
 CAM-SIMA's group caps pass **every individual variable as a separate
 argument** to the scheme dispatch routine.  At CAM-SIMA's roughly
 two-hundred-variable scale this works.  At UFS scale (~1200
-variables per group), the generated Fortran exceeds compiler limits
+variables per group), the generated Fortran exceeds compiler limits,
 prevents the use of strict error-checking flags (`-check all`,
 `-fcheck=all`) required for operational implementation, and even
 when it does compile produces unmaintainably large source files.
-**This is the technical reason capgen cannot drive UFS today**,
+**This is one technical reason capgen cannot drive UFS today**,
 independent of any other concern.
 
 `capgen-ng` reverts to prebuild's DDT-argument convention.  Host
@@ -213,8 +213,8 @@ reflects the feature set — but the practical consequence is that
 the maintenance burden falls on a small subset of the framework
 team.  capgen-ng is comparable to prebuild in *shape* (procedural
 Python with small data classes — no deep class hierarchy), and the
-generator itself sits at ~17.8k lines (capgen is several times
-larger).  The "who can fix this" pool is closer to "anyone with
+generator itself sits at ~17.8k lines.
+The "who can fix this" pool is closer to "anyone with
 framework context".  capgen-ng comes with ~1.4k docstring + unit
 tests (~18k lines of test code), plus an end-to-end test suite of
 10 fixtures that covers all of prebuild's and capgen's existing
@@ -222,7 +222,7 @@ end-to-end tests and adds new ones for multi-instance + constituents
 (`instances_advection`) and the auto-clone-constituents shim
 (`advection_auto_clone`).  Including these tests and the rich inline
 comments puts capgen-ng's full tree on the same order of magnitude as
-capgen — almost all of which is test coverage and human-readable
+capgen — about half of which is test coverage and human-readable
 prose, not load-bearing logic.
 
 ---
@@ -257,7 +257,7 @@ Features that exist only in capgen-ng (some exist in prebuild):
 | **Registered scalar-index dimensions** | When metadata says a variable is dimensioned by `number_of_threads` or `number_of_instances`, capgen-ng injects the right per-call subscript automatically; the host's OpenMP-thread-private DDT layout works unchanged |
 | **Subcycle loop-counter automation** | Schemes inside a `<subcycle loop="N">` element can access `ccpp_loop_counter` / `ccpp_loop_extent` directly; the generator emits the Fortran `do` loop and binds the locals |
 | **`--legacy-mode` migration shim** | One CLI flag enables silent rewrite of two known-good deprecated standard names (`horizontal_loop_extent` → `horizontal_dimension`, `number_of_openmp_threads` → `number_of_threads`) with a loud warning — buys time for host metadata to migrate |
-| **`--gfs-dim-aliases` migration shim** (2026-05-21) | One CLI flag treats GFS-physics names (`adjusted_vertical_layer_dimension_for_radiation`, `vertical_composition_dimension`) as equivalent to `vertical_layer_dimension` in the dim-identity check only — variables remain distinct everywhere else.  Resolver-only; clean grep-revert.  Required for CCPP-SCM 17p8 to build under capgen-ng. |
+| **`--gfs-dim-aliases` migration shim** (2026-05-21) | One CLI flag treats GFS-physics names (`adjusted_vertical_layer_dimension_for_radiation`, `vertical_composition_dimension`) as equivalent to `vertical_layer_dimension` in the dim-identity check only — variables remain distinct everywhere else.  Resolver-only; clean grep-revert.  Required for CCPP-SCM v17p8 to build under capgen-ng. |
 | **`--legacy-auto-clone-constituents` migration shim** (2026-05-21) | One CLI flag reinstates original ccpp-capgen's auto-clone-static-constituent registration path for the ~16 production-CAM-SIMA schemes that depend on it.  Single-instance only (predates multi-instance); fails fast if a multi-instance host is supplied.  This is the no-decision-needed bridge that lets capgen-ng accept CAM-SIMA's atmospheric_physics metadata before any constituent-overhaul work lands. |
 | **`--no-host-introspection` flag** | The five runtime introspection routines (`ccpp_physics_suite_list`, etc.) emit large `select case` blocks at SCM scale; this flag stubs the bodies, dropping the generated static API from ~33,000 lines to ~800 for the SCM build (the introspection routines were making `-O1` compilation effectively hang) |
 | **Consistent handling of external types** (MPI f08 communicator, ESMF clock) | Tabled in capgen because of the complexity of the solution |
@@ -295,10 +295,10 @@ Features that exist only in capgen-ng (some exist in prebuild):
   bug; the fix moves the per-suite dynamic-constituents buffer
   per-instance.  No coordination with CAM-SIMA / UFS / NEPTUNE
   required (host-facing API unchanged).
-- **NEPTUNE**: cleanup and acceptance testing in progress.
-  Regular/lower atmosphere physics builds and runs, and produces
-  results within the tolerance (i.e. similar to compiler changes).
-  High altitude atmosphere testing is next.
+- **NEPTUNE**: Final cleanup and acceptance testing in progress.
+  All regression tests (~300) pass with the three mandatory
+  compilers (Intel LLVM, GCC, LLVM native) for regular physics,
+  mid-altitude, and high-altitude physics (feature-complete).
 - **UFS Weather Model**: not yet attempted; SCM is the proving
   ground first.  Expecting updates due to the "fast physics"
   called directly from the FV3 dynamical core as separate group.
@@ -368,7 +368,7 @@ Three points worth raising explicitly:
    discarded.**  capgen-ng is genuinely the successor, not a
    parallel project.  The contributions made on the capgen side are
    what made the capgen-ng feature set possible.  A significant
-   portion of capgen's code, in particular metadata parsine,
+   portion of capgen's code, in particular metadata parsing,
    Fortran-metadata validation, and constituents, were imported
    into capgen-ng.
 3. **The team owning capgen-ng can be larger than the team owning
