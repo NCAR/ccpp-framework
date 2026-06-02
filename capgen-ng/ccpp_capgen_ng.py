@@ -825,7 +825,8 @@ def capgen(
     logger: Optional[logging.Logger] = None,
     no_host_introspection: bool = False,
     trace: bool = False,
-) -> None:
+    return_state: bool = False,
+):
     """Programmatic entry point for the cap generator.
 
     Mirrors the CLI behaviour.  Both the CLI and programmatic paths call
@@ -1127,6 +1128,16 @@ def capgen(
     )
 
     log.info("Cap generation complete.")
+
+    # When *return_state* is requested, hand the resolved state back
+    # to the caller so external tools (host-side compat adapters,
+    # debug utilities, downstream code generators) can consume the
+    # in-memory ``host_dict`` and ``suite_resolutions`` without
+    # re-running the load + resolve passes.  Returns ``None``
+    # otherwise: the canonical signature is "side effects only".
+    if return_state:
+        return host_dict, suite_resolutions
+    return None
 
 
 def main(argv: Optional[List[str]] = None) -> int:
