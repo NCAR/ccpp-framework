@@ -130,6 +130,7 @@ _CONST_BASE_ARRAY_STD = 'ccpp_constituents'
 _CONST_TEND_ARRAY_STD = 'ccpp_constituent_tendencies'
 _CONST_PROPS_ARRAY_STD = 'ccpp_constituent_properties'
 _CONST_NUM_STD         = 'number_of_ccpp_constituents'
+_CONST_MINVAL_STD      = 'ccpp_constituent_minimum_values'
 _TEND_PREFIX           = 'tendency_of_'
 _INDEX_PREFIX          = 'index_of_'
 
@@ -139,6 +140,7 @@ _FRAMEWORK_CONST_STDS = frozenset({
     _CONST_TEND_ARRAY_STD,
     _CONST_PROPS_ARRAY_STD,
     _CONST_NUM_STD,
+    _CONST_MINVAL_STD,
 })
 
 # Per-instance constituent object name in ccpp_host_constituents.  Schemes
@@ -153,6 +155,7 @@ _FRAMEWORK_NAME_TO_MEMBER = {
     _CONST_TEND_ARRAY_STD:  'vars_layer_tend',
     _CONST_PROPS_ARRAY_STD: 'const_metadata',
     _CONST_NUM_STD:         'num_layer_vars',
+    _CONST_MINVAL_STD:      'vars_minvalue',
 }
 
 

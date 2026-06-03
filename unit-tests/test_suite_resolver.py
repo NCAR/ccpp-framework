@@ -3611,6 +3611,7 @@ class TestConstituentAutoResolution(unittest.TestCase):
             '1:nlev, index_of_cloud_liquid_water_mixing_ratio)',
         )
 
+
     def test_instance_number_in_used_dim_std_names(self):
         # Drives the group cap to inject instance_number as a dummy arg.
         for name in ('cldliq', 'tend_cldliq'):
@@ -3728,6 +3729,41 @@ class TestUsedConstDimStdNames(unittest.TestCase):
         )
         self.assertIsNotNone(arg)
         self.assertEqual(arg.used_const_dim_std_names, set())
+
+    def test_minimum_values_routes_to_vars_minvalue(self):
+        # ``ccpp_constituent_minimum_values`` is a framework-named std
+        # whose value is per-constituent and lives on
+        # ``ccpp_model_constituents_t%vars_minvalue(:)``.  The resolver
+        # must route it through Path 1b (framework-name) — the
+        # ``vars_minvalue`` member, not Path 2 (constituent auto-
+        # provisioning).  Drives cam-sima's ``qneg`` scheme: under the
+        # original capgen contract this was a host-USE'd module array;
+        # capgen-ng exposes it through the per-instance object.
+        from generator.suite_resolver import _resolve_constituent_arg
+        hd = _load_full_host_dict()
+        suite_var = self._scheme_var(
+            'qmin', 'ccpp_constituent_minimum_values',
+            '(number_of_ccpp_constituents)',
+            intent='in',
+        )
+        arg = _resolve_constituent_arg(
+            suite_var, 'run', hd, {}, 'qneg', 'mysuite',
+        )
+        self.assertIsNotNone(arg)
+        self.assertEqual(arg.source, 'constituent')
+        inst_local = hd['instance_number'].local_name
+        self.assertEqual(
+            arg.call_expr,
+            'ccpp_model_constituents_obj({})%vars_minvalue(:)'.format(
+                inst_local),
+        )
+        # number_of_ccpp_constituents goes on the dedicated channel.
+        self.assertEqual(arg.used_const_dim_std_names,
+                         {'number_of_ccpp_constituents'})
+        self.assertNotIn('number_of_ccpp_constituents',
+                         arg.used_dim_std_names)
+        self.assertNotIn('number_of_ccpp_constituents',
+                         arg.constituent_extra_symbols)
 
 
 class TestConstSubscriptHelper(unittest.TestCase):
