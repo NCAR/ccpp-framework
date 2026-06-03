@@ -32,7 +32,7 @@ import os
 from typing import List, Optional, Set, Tuple
 
 from metadata.parse_tools import open_if_changed
-from generator.suite_resolver import SuiteResolution
+from generator.suite_resolver import SuiteResolution, _index_symbol_name
 
 _INDENT = '  '
 
@@ -282,10 +282,11 @@ def _initialize_constituents_lines(
     lines.append('{}nullify(const_obj_ptr)'.format(i2))
     lines.append('')
     for std_name in index_names:
+        index_sym = _index_symbol_name(std_name)
         lines.append(
-            "{}call {}({})%const_index(index_of_{}, '{}', "
+            "{}call {}({})%const_index({}, '{}', "
             "errcode=errflg, errmsg=errmsg)".format(
-                i2, _CONST_OBJ, inst_idx, std_name, std_name,
+                i2, _CONST_OBJ, inst_idx, index_sym, std_name,
             )
         )
         lines.append('{}if (errflg /= 0) return'.format(i2))
@@ -294,8 +295,8 @@ def _initialize_constituents_lines(
         # explicitly so the host sees the bad registration at init time
         # instead of crashing on a -huge(1) subscript later.
         lines.append(
-            '{}if (index_of_{} == int_unassigned) then'.format(
-                i2, std_name,
+            '{}if ({} == int_unassigned) then'.format(
+                i2, index_sym,
             )
         )
         lines.append('{}errflg = 1'.format(i2 + _INDENT))
@@ -543,7 +544,7 @@ def _deallocate_lines(
     # instead.
     lines.append('{}deallocate({})'.format(i3, _CONST_OBJ))
     for std_name in index_names:
-        lines.append('{}index_of_{} = 0'.format(i3, std_name))
+        lines.append('{}{} = 0'.format(i3, _index_symbol_name(std_name)))
     lines.append('{}end if'.format(i2))
     lines.append('')
     lines.append('{}end subroutine ccpp_deallocate_dynamic_constituents'.format(i1))
@@ -591,7 +592,7 @@ def _generate_host_constituents(
 
     # Publics: state + routines.
     publics = [_CONST_OBJ]
-    publics += ['index_of_{}'.format(n) for n in index_names]
+    publics += [_index_symbol_name(n) for n in index_names]
     publics += [
         'ccpp_register_constituents',
         'ccpp_initialize_constituents',
@@ -649,7 +650,8 @@ def _generate_host_constituents(
     if register_suites:
         lines.append('')
     for std_name in index_names:
-        lines.append('{}integer :: index_of_{} = 0'.format(_INDENT, std_name))
+        lines.append('{}integer :: {} = 0'.format(
+            _INDENT, _index_symbol_name(std_name)))
     if index_names:
         max_len = max(len(n) for n in index_names)
         lines.append('')

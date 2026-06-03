@@ -134,6 +134,60 @@ _CONST_MINVAL_STD      = 'ccpp_constituent_minimum_values'
 _TEND_PREFIX           = 'tendency_of_'
 _INDEX_PREFIX          = 'index_of_'
 
+# Fortran 2008 caps user-defined identifiers at 63 characters.  Several
+# CCPP standard-name conventions (notably CAM-SIMA's
+# ``_wrt_moist_air_and_condensed_water`` constituent suffix) produce
+# base names ≥55 chars, which blow the limit once the ``index_of_``
+# prefix is prepended.  The helper below mangles overlong names to a
+# deterministic 63-char form so every emitter and resolver call site
+# sees the same symbol; short names are returned unchanged.
+_FORTRAN_ID_LIMIT = 63
+
+
+def _index_symbol_name(base_std_name: str) -> str:
+    """Return the Fortran local name for ``index_of_<base_std_name>``.
+
+    Identity for inputs whose ``index_of_`` form fits Fortran's 63-char
+    identifier limit; otherwise truncates the base and appends a short
+    SHA-1 hash so distinct std-names map to distinct symbols.  The
+    chosen layout is::
+
+        index_of_<base[:max_base_len]>_<8-hex-sha1>
+
+    where ``max_base_len = 63 - len('index_of_') - 1 - 8 = 45``.  All
+    emit/reference sites (host_constituents.py public/declaration/
+    reset/const_index/init-guard, suite_resolver.py auto-provisioned
+    subscript, Path 1a call_expr) MUST route through this helper to
+    keep the symbol consistent within a single capgen-ng run.  The
+    underlying std_name is still passed to ``const_index`` as a
+    string literal, so the framework lookup keys remain unchanged --
+    only the Fortran-side mapping symbol is mangled.
+
+    Examples
+    --------
+    >>> _index_symbol_name('water_vapor')
+    'index_of_water_vapor'
+    >>> name = _index_symbol_name(
+    ...     'cloud_liquid_water_mixing_ratio_wrt_moist_air_and_condensed_water')
+    >>> len(name) <= 63
+    True
+    >>> name.startswith('index_of_')
+    True
+    >>> name == _index_symbol_name(
+    ...     'cloud_liquid_water_mixing_ratio_wrt_moist_air_and_condensed_water')
+    True
+    """
+    full = _INDEX_PREFIX + base_std_name
+    if len(full) <= _FORTRAN_ID_LIMIT:
+        return full
+    import hashlib
+    sha8 = hashlib.sha1(base_std_name.encode('utf-8')).hexdigest()[:8]
+    # 63 - len('index_of_') - 1 (sep) - 8 (sha) = 45
+    max_base_len = _FORTRAN_ID_LIMIT - len(_INDEX_PREFIX) - 1 - 8
+    return '{}{}_{}'.format(
+        _INDEX_PREFIX, base_std_name[:max_base_len], sha8,
+    )
+
 # Std names directly satisfied by host-constituents-module-owned symbols.
 _FRAMEWORK_CONST_STDS = frozenset({
     _CONST_BASE_ARRAY_STD,
@@ -2002,9 +2056,14 @@ def _resolve_constituent_arg(
 
     # ---- Path 1a: index_of_<X> — module-level integer, no per-instance --
     if is_index_name:
+        # Mangle long std_names down to a Fortran-legal 63-char symbol;
+        # identity for short names, so existing fixtures are unaffected.
+        # ``_INDEX_PREFIX`` is already part of std_name -- strip then
+        # re-add via the helper for uniform truncation.
+        index_sym = _index_symbol_name(std_name[len(_INDEX_PREFIX):])
         return ResolvedArg(**_common_kwargs(
-            base_expr=std_name, subscript='', call_expr=std_name,
-            used_host_std=set(), extra_symbols={std_name},
+            base_expr=index_sym, subscript='', call_expr=index_sym,
+            used_host_std=set(), extra_symbols={index_sym},
         ))
 
     # ---- Path 1b: framework-named std_name → DDT member -----------------
@@ -2058,7 +2117,7 @@ def _resolve_constituent_arg(
     leading_sub, used_host_std = _build_call_subscript(
         scheme_dims, phase, host_dict, suite_vars=suite_vars,
     )
-    index_sym = '{}{}'.format(_INDEX_PREFIX, base_std)
+    index_sym = _index_symbol_name(base_std)
     if leading_sub:
         subscript = leading_sub[:-1] + ', ' + index_sym + ')'
     else:

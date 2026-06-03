@@ -3766,6 +3766,82 @@ class TestUsedConstDimStdNames(unittest.TestCase):
                          arg.constituent_extra_symbols)
 
 
+class TestIndexSymbolNameMangling(unittest.TestCase):
+    """``_index_symbol_name`` keeps short ``index_of_<X>`` names
+    intact, but mangles overlong CAM-SIMA-style names down to the
+    Fortran 63-char identifier limit with a deterministic SHA hash so
+    every emit/reference site agrees on the symbol."""
+
+    def test_short_name_passes_through(self):
+        from generator.suite_resolver import _index_symbol_name
+        self.assertEqual(_index_symbol_name('water_vapor'),
+                         'index_of_water_vapor')
+
+    def test_overlong_name_truncated_and_hashed(self):
+        from generator.suite_resolver import _index_symbol_name
+        long_base = ('cloud_liquid_water_mixing_ratio_'
+                     'wrt_moist_air_and_condensed_water')
+        sym = _index_symbol_name(long_base)
+        # Must be a Fortran-legal identifier (≤ 63 chars), prefixed
+        # with index_of_, and stable across calls.
+        self.assertLessEqual(len(sym), 63)
+        self.assertTrue(sym.startswith('index_of_'))
+        self.assertEqual(sym, _index_symbol_name(long_base))
+
+    def test_distinct_bases_distinct_symbols(self):
+        # Two CAM-SIMA constituents share the same long suffix; the
+        # hash component must keep their symbols distinct so the
+        # framework's per-constituent integer storage doesn't alias.
+        from generator.suite_resolver import _index_symbol_name
+        a = _index_symbol_name(
+            'cloud_liquid_water_mixing_ratio_'
+            'wrt_moist_air_and_condensed_water')
+        b = _index_symbol_name(
+            'water_vapor_mixing_ratio_'
+            'wrt_moist_air_and_condensed_water')
+        self.assertNotEqual(a, b)
+
+    def test_used_in_auto_provisioned_call_expr(self):
+        # End-to-end check: the auto-provisioning subscript path
+        # (Path 2) routes the index_of_<X> token through the helper,
+        # so the call_expr that lands in the group cap is a legal
+        # Fortran symbol.
+        from generator.suite_resolver import (
+            _resolve_constituent_arg, _index_symbol_name,
+        )
+        long_base = ('cloud_liquid_water_mixing_ratio_'
+                     'wrt_moist_air_and_condensed_water')
+        hd = _load_full_host_dict()
+        scheme_var = self._scheme_var_for_mangling(
+            'cldliq', long_base,
+            '(horizontal_dimension, vertical_layer_dimension)',
+        )
+        scheme_var.set_attr('advected', 'True', _ctx())
+        arg = _resolve_constituent_arg(
+            scheme_var, 'run', hd, {}, 'consumer', 'mysuite',
+        )
+        self.assertIsNotNone(arg)
+        expected_index_sym = _index_symbol_name(long_base)
+        self.assertIn(expected_index_sym, arg.constituent_extra_symbols)
+        # The long raw form must NOT appear (would blow the Fortran limit).
+        self.assertNotIn('index_of_' + long_base,
+                         arg.constituent_extra_symbols)
+        self.assertIn(expected_index_sym, arg.call_expr)
+
+    @staticmethod
+    def _scheme_var_for_mangling(local, std_name, dims, intent='in'):
+        from metadata.metadata_table import MetaVar
+        ctx = _ctx()
+        v = MetaVar(local, ctx)
+        v.set_attr('standard_name', std_name, ctx)
+        v.set_attr('units', 'none', ctx)
+        v.set_attr('dimensions', dims, ctx)
+        v.set_attr('type', 'real', ctx)
+        v.set_attr('kind', 'kind_phys', ctx)
+        v.set_attr('intent', intent, ctx)
+        return v
+
+
 class TestConstSubscriptHelper(unittest.TestCase):
     """``_const_dim_part`` / ``_build_const_subscript``:
     ``number_of_ccpp_constituents`` becomes ``':'`` and is routed
