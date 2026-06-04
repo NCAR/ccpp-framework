@@ -3948,6 +3948,107 @@ class TestCrossGroupCrossPhaseProvision(unittest.TestCase):
 
 
 ########################################################################
+# Suite-var field-name uniqueness: two distinct suite vars whose
+# producing schemes share a local name must get distinct suite_data
+# component names (rrtmgp lw/sw `kdist`, `hrate`).
+########################################################################
+
+_SHARED_LOCALNAME_SCHEMES = '''
+[ccpp-table-properties]
+  name = prod_lw
+  type = scheme
+[ccpp-arg-table]
+  name = prod_lw_run
+  type = scheme
+[ obj ]
+  standard_name = longwave_optics_object
+  units = none
+  dimensions = ()
+  type = real | kind = kind_phys
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-table-properties]
+  name = prod_sw
+  type = scheme
+[ccpp-arg-table]
+  name = prod_sw_run
+  type = scheme
+[ obj ]
+  standard_name = shortwave_optics_object
+  units = none
+  dimensions = ()
+  type = real | kind = kind_phys
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
+
+_SHARED_LOCALNAME_SUITE = (
+    '<?xml version="1.0"?>\n'
+    '<suite name="sharedln" version="1.0">\n'
+    '  <group name="phys">\n'
+    '    <scheme>prod_lw</scheme>\n'
+    '    <scheme>prod_sw</scheme>\n'
+    '  </group>\n'
+    '</suite>\n'
+)
+
+
+class TestSuiteVarFieldNameUniqueness(unittest.TestCase):
+    """Two distinct suite-owned vars (different std names) first produced by
+    scheme args sharing a local name must get UNIQUE suite_data field names,
+    else the generated DDT has a duplicate component.  Regression for the
+    rrtmgp lw/sw ``kdist`` / ``hrate`` collision."""
+
+    @classmethod
+    def setUpClass(cls):
+        import logging
+        from generator.suite_xml import parse_suite_xml
+        from generator.suite_data import _generate_suite_data
+        hd = _load_constituent_host_dict()
+        store = SchemeStore.build_from(_parse(_SHARED_LOCALNAME_SCHEMES))
+        with tempfile.TemporaryDirectory() as tmp:
+            sx = os.path.join(tmp, 'suite_sharedln.xml')
+            with open(sx, 'w') as fh:
+                fh.write(_SHARED_LOCALNAME_SUITE)
+            suite = parse_suite_xml(sx, tmp, logging.getLogger('test'),
+                                    skip_validation=True)
+            cls.sr = resolve_suite(suite, store, hd)
+        run_calls = list(iter_phase_calls(cls.sr.groups[0].phase_calls['run']))
+        cls.svars = cls.sr.suite_vars
+        cls.data_lines = _generate_suite_data('sharedln', cls.svars)
+
+    def test_both_suite_vars_present(self):
+        self.assertIn('longwave_optics_object', self.svars)
+        self.assertIn('shortwave_optics_object', self.svars)
+
+    def test_field_names_distinct(self):
+        lw = self.svars['longwave_optics_object'].local_name
+        sw = self.svars['shortwave_optics_object'].local_name
+        self.assertNotEqual(lw, sw)
+        # One keeps the bare name; the other is disambiguated.
+        self.assertIn('obj', (lw, sw))
+
+    def test_no_duplicate_component_in_generated_type(self):
+        decls = [l for l in self.data_lines
+                 if 'allocatable ::' in l or l.strip().startswith('real')]
+        names = [l.split('::')[1].strip().split('(')[0].strip()
+                 for l in decls if '::' in l]
+        self.assertEqual(len(names), len(set(names)),
+                         'duplicate suite_data component: {}'.format(names))
+
+
+########################################################################
 # Constituent auto-resolution (cam-sima-style consumer schemes)
 ########################################################################
 

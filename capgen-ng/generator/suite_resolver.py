@@ -58,6 +58,7 @@ Case    optional?         transform?
 ======  ================  ============
 """
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple, Union
@@ -912,6 +913,36 @@ def _root_symbol(access_path: str) -> str:
     return re.split(r'[%(]', access_path)[0]
 
 
+_FORTRAN_ID_LIMIT_SV = 63
+
+
+def _unique_suite_field(desired: str, std_name: str,
+                        suite_vars: Dict[str, 'SuiteVar']) -> str:
+    """Return a suite-data field name unique across existing suite vars.
+
+    Two *distinct* suite-owned variables (different standard names) can be
+    first produced by scheme args that happen to share a local name -- e.g.
+    ``kdist`` for both ``longwave_gas_optics_object_for_RRTMGP`` and
+    ``shortwave_gas_optics_object_for_RRTMGP``, or ``hrate`` for the lw/sw
+    heating-rate tendencies.  The generated ``ccpp_<suite>_data`` DDT
+    declares one component per suite var named by this field, and the group
+    cap accesses it via the same name (``SuiteVar.access_path``), so the
+    field MUST be unique -- otherwise Fortran rejects the duplicate
+    component.
+
+    Keep the bare name for the first occurrence (readable common case);
+    disambiguate a later collision with a short, deterministic
+    std_name-derived suffix (stable regardless of resolution order, since it
+    keys on the standard name rather than a counter).
+    """
+    used = {sv.local_name for sv in suite_vars.values()}
+    if desired not in used:
+        return desired
+    suffix = hashlib.sha1(std_name.encode('utf-8')).hexdigest()[:8]
+    base = desired[:_FORTRAN_ID_LIMIT_SV - 1 - len(suffix)]
+    return '{}_{}'.format(base, suffix)
+
+
 ########################################################################
 # Data classes
 ########################################################################
@@ -1604,7 +1635,7 @@ def _resolve_one_arg(
             inst_access = '({})'.format(inst_entry.local_name) if inst_entry else '(1)'
             suite_var = SuiteVar(
                 standard_name=std_name,
-                local_name=local,
+                local_name=_unique_suite_field(local, std_name, suite_vars),
                 type_=scheme_var.type,
                 kind=scheme_var.kind,
                 units=scheme_var.units,

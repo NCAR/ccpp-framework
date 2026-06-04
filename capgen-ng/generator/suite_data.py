@@ -144,9 +144,12 @@ def _collect_ddt_uses(
         if ddt_module_map is None or t not in ddt_module_map:
             raise CCPPError(
                 "Suite-owned variable '{}' has DDT type '{}' but its "
-                "defining Fortran module is unknown; the DDT must appear "
-                "in a metadata file alongside a scheme/host/control "
-                "table".format(suite_var.standard_name, t)
+                "defining Fortran module is unknown. Declare it explicitly "
+                "with 'module_name = <module>' in the '{}' DDT's "
+                "[ccpp-table-properties], or co-locate the DDT table with a "
+                "scheme/host/control table in the same .meta file.".format(
+                    suite_var.standard_name, t, t,
+                )
             )
         mod = ddt_module_map[t]
         uses.setdefault(mod, [])

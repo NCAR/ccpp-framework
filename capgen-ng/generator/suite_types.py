@@ -371,10 +371,13 @@ def _collect_ddt_uses(
         # DDT — look up the defining Fortran module.
         if ddt_module_map is None or t not in ddt_module_map:
             raise CCPPError(
-                "Pointer wrapper needs DDT '{}' but no defining module "
-                "is known.  Declare the DDT via a 'type = ddt' metadata "
-                "table co-located with its scheme/host/control metadata "
-                "so build_ddt_module_map can pick it up.".format(t)
+                "Pointer wrapper needs DDT '{}' but its defining Fortran "
+                "module is unknown. Declare it explicitly with "
+                "'module_name = <module>' in the '{}' DDT's "
+                "[ccpp-table-properties], or co-locate the DDT table with a "
+                "scheme/host/control table in the same .meta file.".format(
+                    t, t,
+                )
             )
         uses.setdefault(ddt_module_map[t], set()).add(t)
     return uses

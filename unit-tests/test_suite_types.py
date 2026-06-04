@@ -271,7 +271,7 @@ class TestCollectDdtUses(unittest.TestCase):
 
     def test_missing_ddt_in_map_raises(self):
         combos = {('some_ddt', '', 1)}
-        with self.assertRaisesRegex(CCPPError, "no defining module"):
+        with self.assertRaisesRegex(CCPPError, "module_name"):
             _collect_ddt_uses(combos, {})
 
 
