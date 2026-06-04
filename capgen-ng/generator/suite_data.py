@@ -331,7 +331,15 @@ def _generate_suite_data(
             '{}errflg = 0'.format(i2),
         ]
         for suite_var in sorted_svs:
-            if suite_var.dimensions:
+            # Allocatable suite vars are owned-and-allocated by the producing
+            # scheme itself (its dummy is declared ``allocatable, intent(out)``,
+            # so the callee performs the allocation).  The suite must NOT
+            # pre-allocate them here -- doing so is at best redundant (the
+            # scheme's intent(out) auto-deallocates on entry) and at worst
+            # wrong (its extent may not be known until the scheme runs).  The
+            # suite still OWNS the storage, so final_fields below deallocates
+            # it regardless of who allocated it.
+            if suite_var.dimensions and not suite_var.allocatable:
                 dim_exprs = [
                     _dim_local_expr(d, suite_vars, host_dict)
                     for d in suite_var.dimensions
@@ -360,6 +368,11 @@ def _generate_suite_data(
             "{}errmsg = ''".format(i2),
             '{}errflg = 0'.format(i2),
         ]
+        # Deallocate ALL dimensioned fields here -- including allocatable
+        # ones that a scheme allocated itself.  The storage is a component of
+        # the suite-owned ``ccpp_suite_data`` DDT, so the suite owns its
+        # teardown; the ``if (allocated(...))`` guard makes this safe whether
+        # the scheme allocated it, never ran, or already freed it.
         for suite_var in sorted_svs:
             if suite_var.dimensions:
                 lines.append(
