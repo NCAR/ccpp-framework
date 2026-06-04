@@ -30,6 +30,7 @@ from generator.suite_resolver import (
     ResolvedGroup,
     SuiteResolution,
     iter_phase_calls,
+    _root_symbol,
     # auto-clone-constituents: legacy-shim payload type.
     AutoCloneEntry,
 )
@@ -222,6 +223,22 @@ def _register_uses(
             mod = arg.module_name
             if mod is not None:
                 uses.setdefault(mod, set()).add(arg.root_symbol)
+            # Dimension variables referenced in the arg's subscript (e.g.
+            # ``rad_climate(1:rad_climate_dimension)``) must also be in
+            # scope.  Mirror the group cap's _collect_dim_uses: a host dim
+            # USEs its access-path root from the declaring module; a
+            # suite-owned dim USEs ccpp_<suite>_data.  (Without this the
+            # register subroutine references the dimension symbol with no
+            # IMPLICIT type.)
+            for dim_std in arg.used_dim_std_names:
+                entry = host_dict.get(dim_std) if host_dict else None
+                if entry is not None and entry.module_name is not None:
+                    uses.setdefault(entry.module_name, set()).add(
+                        _root_symbol(entry.access_path)
+                    )
+                elif dim_std in suite_res.suite_vars:
+                    sv = suite_res.suite_vars[dim_std]
+                    uses.setdefault(sv.module_name, set()).add('ccpp_suite_data')
     # Per-suite dynamic-constituent buffer is owned by ccpp_host_constituents
     # and written into here.  Pull in the constituent property type plus the
     # buffer symbol.

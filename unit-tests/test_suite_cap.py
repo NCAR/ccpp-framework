@@ -20,6 +20,8 @@ from test_suite_resolver import (
     _load_full_host_dict,
     _load_scheme_store,
     _parse_suite,
+    _parse,
+    _sf,
 )
 
 
@@ -450,6 +452,110 @@ class TestTraceEmission(unittest.TestCase):
             with open(out_path) as fh:
                 text = fh.read()
         self.assertIn('logical, parameter :: trace = .true.', text)
+
+
+# A register-phase scheme that consumes a HOST array sliced by a HOST
+# dimension (gases(1:n_gases)) and produces a constituent (so the register
+# call body is emitted).  Mirrors rrtmgp_constituents_register, whose
+# rad_climate(1:rad_climate_dimension) arg triggered the bug.
+_REG_HOSTDIM_HOST = '''
+[ccpp-table-properties]
+  name = gasreg_host
+  type = host
+[ccpp-arg-table]
+  name = gasreg_host
+  type = host
+[ n_gases ]
+  standard_name = gas_list_dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ gases ]
+  standard_name = list_of_gases
+  units = none
+  type = character | kind = len=256
+  dimensions = (gas_list_dimension)
+'''
+
+_REG_HOSTDIM_SCHEME = '''
+[ccpp-table-properties]
+  name = gas_register
+  type = scheme
+[ccpp-arg-table]
+  name = gas_register_register
+  type = scheme
+[ gases ]
+  standard_name = list_of_gases
+  units = none
+  type = character | kind = len=256
+  dimensions = (gas_list_dimension)
+  intent = in
+[ dyn_consts ]
+  standard_name = gasreg_dyn_consts
+  units = none
+  type = ccpp_constituent_properties_t
+  allocatable = True
+  dimensions = (:)
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
+
+_REG_HOSTDIM_SUITE = (
+    '<?xml version="1.0"?>\n'
+    '<suite name="gasreg" version="1.0">\n'
+    '  <group name="phys">\n'
+    '    <scheme>gas_register</scheme>\n'
+    '  </group>\n'
+    '</suite>\n'
+)
+
+
+class TestRegisterHostDimensionImported(unittest.TestCase):
+    """A register-phase scheme arg that is a host array sliced by a host
+    dimension must import BOTH the array and its dimension symbol into
+    <suite>_register.  Regression for the rrtmgp
+    'rad_climate_dimension has no IMPLICIT type' suite-cap error."""
+
+    @classmethod
+    def setUpClass(cls):
+        import logging
+        from generator.suite_xml import parse_suite_xml
+        host_tbls = _parse(_REG_HOSTDIM_HOST, 'gasreg_host.meta')
+        ctrl_tbls = parse_metadata_file(_sf('control_full.meta'))
+        hd = build_flat_host_dict(host_tbls, ctrl_tbls, [])
+        store = SchemeStore.build_from(
+            _parse(_REG_HOSTDIM_SCHEME, 'gas_register.meta'))
+        with tempfile.TemporaryDirectory() as tmp:
+            sx = os.path.join(tmp, 'suite_gasreg.xml')
+            with open(sx, 'w') as fh:
+                fh.write(_REG_HOSTDIM_SUITE)
+            suite = parse_suite_xml(sx, tmp, logging.getLogger('test'),
+                                    skip_validation=True)
+            sr = resolve_suite(suite, store, hd)
+        cls.text = '\n'.join(_generate_suite_cap('gasreg', sr, store, hd))
+        cls.reg = cls.text.split('subroutine gasreg_register')[1].split(
+            'end subroutine gasreg_register')[0]
+
+    def test_call_slices_array_by_dimension(self):
+        # The call subscript references the host dimension's local name.
+        self.assertIn('gases(1:n_gases)', self.reg)
+
+    def test_dimension_symbol_imported(self):
+        # Both the array and the dimension must be USE'd from the host module.
+        self.assertRegex(self.reg, r'use gasreg_host, only:[^\n]*\bn_gases\b')
+        self.assertRegex(self.reg, r'use gasreg_host, only:[^\n]*\bgases\b')
 
 
 def load_tests(loader, tests, ignore):
