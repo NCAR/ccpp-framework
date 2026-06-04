@@ -2033,13 +2033,35 @@ def _resolve_constituent_arg(
     is_index_name     = std_name.startswith(_INDEX_PREFIX)
     is_framework_name = std_name in _FRAMEWORK_CONST_STDS or is_index_name
 
-    # Host metadata wins: if the host declares this std_name as a regular
-    # variable (e.g. a `protected integer` named `ntcw` with
-    # standard_name = index_of_..._tracer_concentration_array), defer to
-    # normal host-arg resolution so the scheme call uses the host's short
-    # local name.  Constituent auto-provisioning is reserved for
-    # framework-named std_names the host has not claimed.
-    if is_framework_name and host_dict and std_name in host_dict:
+    # Host/suite provides it -> not a framework auto-provision.  Defer to
+    # normal host/suite resolution when:
+    #
+    #   * the host declares this std_name as a regular variable (e.g. a
+    #     `protected integer` named `ntcw` with standard_name =
+    #     index_of_..._tracer_concentration_array), OR
+    #   * an earlier-phase scheme already produced it (it is in suite_vars).
+    #     ``suite_vars`` accumulates across phases in chronological order
+    #     (register, init, timestep_init, run, ...), so e.g. a band index
+    #     produced by ``rrtmgp_inputs_setup_init`` (intent=out) is visible
+    #     here when ``rrtmgp_sw_cloud_optics_run`` consumes it (intent=in).
+    #
+    # Constituent auto-provisioning is reserved for framework-named
+    # std_names that nothing else provides.
+    if is_framework_name and (
+        (host_dict and std_name in host_dict) or std_name in suite_vars
+    ):
+        return None
+
+    # A scheme that OUTPUTS ``index_of_<X>`` is producing an ordinary index
+    # variable (e.g. ``rrtmgp_inputs_setup`` computing the diagnostic
+    # shortwave band index), NOT a constituent index -- constituent indices
+    # are read-only module integers bound by ``%const_index`` and are never
+    # written by a scheme.  Defer so it becomes a suite var that later-phase
+    # consumers resolve via the gate above.  (Index names produced by some
+    # OTHER scheme but consumed here have already been caught by the
+    # suite_vars branch above; this handles the producing arg itself, whose
+    # name is not yet in suite_vars on first occurrence.)
+    if is_index_name and intent == 'out':
         return None
 
     constituent_module = _constituent_module_name(suite_name)
@@ -2279,12 +2301,30 @@ def resolve_suite(
     )
 
     suite_vars: Dict[str, SuiteVar] = {}
-    resolved_groups: List[ResolvedGroup] = []
+    # Pre-create one ResolvedGroup per SDF group so the phase-major loop below
+    # can append each phase's calls to the right group.
+    resolved_groups: List[ResolvedGroup] = [
+        ResolvedGroup(group_name=group.name) for group in suite.groups
+    ]
 
-    for group in suite.groups:
-        resolved_group = ResolvedGroup(group_name=group.name)
-
-        for phase in phases:
+    # Resolve PHASE-MAJOR, GROUP-MINOR (groups in SDF order within each phase),
+    # mirroring the runtime execution hierarchy: the host completes EVERY
+    # group's ``init`` before any group's ``run``, every group's
+    # ``timestep_init`` before any ``run``, and so on.  ``suite_vars``
+    # accumulates in that true execution order, so a variable produced in an
+    # earlier phase by ANY group is visible to a consumer in a later phase of
+    # ANY group (cross-group cross-phase provision).  Within a single phase,
+    # groups resolve in SDF order, so an earlier group may provide to a later
+    # one (e.g. ``physics_before_coupler`` -> ``physics_after_coupler``, which
+    # the host runs sequentially with coupling in between); a same-phase
+    # consumer that precedes its producer is still correctly rejected.
+    #
+    # (The previous nesting was group-major — each group through all its
+    # phases — which made a variable produced by a later group's ``init``
+    # invisible to an earlier group's ``run`` even though, at runtime, all
+    # inits precede all runs.)
+    for phase in phases:
+        for group, resolved_group in zip(suite.groups, resolved_groups):
             used_local_names_phase: Set[str] = set()
 
             if phase == 'run':
@@ -2313,9 +2353,13 @@ def resolve_suite(
             if items_for_phase:
                 resolved_group.phase_calls[phase] = items_for_phase
 
-        # Collect dimension variable USE info for this group.
-        resolved_group.dim_uses = _collect_dim_uses(resolved_group, host_dict, suite_vars=suite_vars)
-        resolved_groups.append(resolved_group)
+    # Collect dimension USE info once every phase/group is resolved, so
+    # ``suite_vars`` is complete (a dimension may reference a suite var
+    # produced by any group in any phase).
+    for resolved_group in resolved_groups:
+        resolved_group.dim_uses = _collect_dim_uses(
+            resolved_group, host_dict, suite_vars=suite_vars,
+        )
 
     # Constituent register calls: gather the (scheme_name, scheme_local_name)
     # pairs for every register-phase arg that was flagged as a constituent.

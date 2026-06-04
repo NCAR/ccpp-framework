@@ -3709,6 +3709,245 @@ class TestConstituentProviderGate(unittest.TestCase):
 
 
 ########################################################################
+# index_of_* disambiguation: a scheme-produced index (cross-phase) is a
+# suite var, NOT a constituent index (mirrors rrtmgp band indices).
+########################################################################
+
+_INDEX_OF_SCHEMES = '''
+[ccpp-table-properties]
+  name = band_setup
+  type = scheme
+[ccpp-arg-table]
+  name = band_setup_init
+  type = scheme
+[ idx_sw ]
+  standard_name = index_of_shortwave_band
+  units = index
+  dimensions = ()
+  type = integer
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-table-properties]
+  name = band_user
+  type = scheme
+[ccpp-arg-table]
+  name = band_user_run
+  type = scheme
+[ idx_sw ]
+  standard_name = index_of_shortwave_band
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[ idx_const ]
+  standard_name = index_of_test_constituent
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
+
+# Consumer scheme deliberately listed BEFORE the producer in the SDF, to
+# prove resolution is phase-driven (init before run) and NOT dependent on
+# scheme text order -- exactly the rrtmgp inputs_setup / sw_cloud_optics
+# arrangement.
+_INDEX_OF_SUITE = (
+    '<?xml version="1.0"?>\n'
+    '<suite name="bandtest" version="1.0">\n'
+    '  <group name="phys">\n'
+    '    <scheme>band_user</scheme>\n'
+    '    <scheme>band_setup</scheme>\n'
+    '  </group>\n'
+    '</suite>\n'
+)
+
+
+class TestIndexOfSchemeProducedVsConstituent(unittest.TestCase):
+    """``index_of_<X>`` produced by a scheme (intent=out, here in the init
+    phase) is an ordinary suite var; a later-phase consumer (run) resolves
+    it from suite_vars as ``source='suite'``.  A genuine ``index_of_<X>``
+    that no scheme produces stays a constituent index.  Regression for the
+    cam-sima rrtmgp ``index_of_shortwave_band`` 'missing host variable'
+    failure."""
+
+    @classmethod
+    def setUpClass(cls):
+        import logging
+        from generator.suite_xml import parse_suite_xml
+        hd = _load_constituent_host_dict()
+        store = SchemeStore.build_from(_parse(_INDEX_OF_SCHEMES))
+        with tempfile.TemporaryDirectory() as tmp:
+            sx = os.path.join(tmp, 'suite_bandtest.xml')
+            with open(sx, 'w') as fh:
+                fh.write(_INDEX_OF_SUITE)
+            suite = parse_suite_xml(sx, tmp, logging.getLogger('test'),
+                                    skip_validation=True)
+            cls.sr = resolve_suite(suite, store, hd)
+        init_calls = list(iter_phase_calls(cls.sr.groups[0].phase_calls['init']))
+        run_calls = list(iter_phase_calls(cls.sr.groups[0].phase_calls['run']))
+        cls.producer = {a.scheme_local_name: a for a in init_calls[0].args}
+        cls.consumer = {a.scheme_local_name: a for a in run_calls[0].args}
+
+    def test_init_producer_is_suite_var(self):
+        # The init-phase intent=out index is a regular suite var, not a
+        # constituent index written by a scheme.
+        idx = self.producer['idx_sw']
+        self.assertEqual(idx.source, 'suite')
+
+    def test_run_consumer_resolves_from_suite_vars(self):
+        # Cross-phase: produced in init, consumed in run -> source='suite'.
+        idx = self.consumer['idx_sw']
+        self.assertEqual(idx.source, 'suite')
+        self.assertNotEqual(idx.source, 'constituent')
+
+    def test_genuine_constituent_index_unchanged(self):
+        # index_of_test_constituent is produced by no scheme -> still a
+        # constituent index.
+        idx = self.consumer['idx_const']
+        self.assertEqual(idx.source, 'constituent')
+
+    def test_band_index_not_registered_as_constituent(self):
+        self.assertNotIn('shortwave_band', ' '.join(self.sr.constituent_index_names))
+        self.assertIn('test_constituent', self.sr.constituent_index_names)
+
+
+########################################################################
+# Cross-group cross-phase provision: a variable produced by a LATER
+# group's init phase must be visible to an EARLIER group's run phase,
+# because at runtime all groups' init complete before any group's run.
+########################################################################
+
+_XGROUP_SCHEMES = '''
+[ccpp-table-properties]
+  name = consumer_a
+  type = scheme
+[ccpp-arg-table]
+  name = consumer_a_run
+  type = scheme
+[ val ]
+  standard_name = some_setup_value
+  units = 1
+  dimensions = ()
+  type = real | kind = kind_phys
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-table-properties]
+  name = producer_b
+  type = scheme
+[ccpp-arg-table]
+  name = producer_b_init
+  type = scheme
+[ val ]
+  standard_name = some_setup_value
+  units = 1
+  dimensions = ()
+  type = real | kind = kind_phys
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
+
+# The CONSUMER's group is listed FIRST and the PRODUCER's group SECOND,
+# and the producer provides in the init phase while the consumer reads in
+# the run phase.  At runtime every group's init precedes every group's
+# run, so this is valid; the resolver must reflect that (phase-major).
+_XGROUP_SUITE = (
+    '<?xml version="1.0"?>\n'
+    '<suite name="xgroup" version="1.0">\n'
+    '  <group name="grpA">\n'
+    '    <scheme>consumer_a</scheme>\n'
+    '  </group>\n'
+    '  <group name="grpB">\n'
+    '    <scheme>producer_b</scheme>\n'
+    '  </group>\n'
+    '</suite>\n'
+)
+
+
+class TestCrossGroupCrossPhaseProvision(unittest.TestCase):
+    """A variable produced by a later group's init phase is visible to an
+    earlier group's run phase (all inits precede all runs at runtime).
+    Resolution is phase-major, group-minor.  Regression for the group-major
+    nesting that raised 'not provided by any prior scheme'."""
+
+    @classmethod
+    def setUpClass(cls):
+        import logging
+        from generator.suite_xml import parse_suite_xml
+        hd = _load_constituent_host_dict()
+        store = SchemeStore.build_from(_parse(_XGROUP_SCHEMES))
+        with tempfile.TemporaryDirectory() as tmp:
+            sx = os.path.join(tmp, 'suite_xgroup.xml')
+            with open(sx, 'w') as fh:
+                fh.write(_XGROUP_SUITE)
+            suite = parse_suite_xml(sx, tmp, logging.getLogger('test'),
+                                    skip_validation=True)
+            cls.sr = resolve_suite(suite, store, hd)
+
+    def test_consumer_resolves_producer_from_later_group(self):
+        grpA = self.sr.groups[0]
+        run_calls = list(iter_phase_calls(grpA.phase_calls['run']))
+        val = {a.scheme_local_name: a for a in run_calls[0].args}['val']
+        self.assertEqual(val.source, 'suite')
+
+    def test_producer_is_suite_var(self):
+        grpB = self.sr.groups[1]
+        init_calls = list(iter_phase_calls(grpB.phase_calls['init']))
+        val = {a.scheme_local_name: a for a in init_calls[0].args}['val']
+        self.assertEqual(val.source, 'suite')
+
+
+########################################################################
 # Constituent auto-resolution (cam-sima-style consumer schemes)
 ########################################################################
 
