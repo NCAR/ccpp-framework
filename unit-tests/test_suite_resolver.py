@@ -3555,6 +3555,160 @@ class TestRegisterConstituentsSuiteCap(unittest.TestCase):
 
 
 ########################################################################
+# Provider gate: a constituent-flagged consumer that is actually
+# provided by an earlier scheme's intent=out output is an interstitial,
+# not a constituent (mirrors original-capgen find_variable).
+########################################################################
+
+_PROVIDER_GATE_SCHEMES = '''
+[ccpp-table-properties]
+  name = make_dry
+  type = scheme
+[ccpp-arg-table]
+  name = make_dry_run
+  type = scheme
+[ ncol ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ nz ]
+  standard_name = vertical_layer_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ qv_dry ]
+  standard_name = water_vapor_mixing_ratio_wrt_dry_air
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-table-properties]
+  name = use_dry
+  type = scheme
+[ccpp-arg-table]
+  name = use_dry_run
+  type = scheme
+[ ncol ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ nz ]
+  standard_name = vertical_layer_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ qv ]
+  standard_name = water_vapor_mixing_ratio_wrt_moist_air_and_condensed_water
+  advected = .true.
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = in
+[ qv_dry ]
+  standard_name = water_vapor_mixing_ratio_wrt_dry_air
+  advected = .true.
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
+
+_PROVIDER_GATE_SUITE = (
+    '<?xml version="1.0"?>\n'
+    '<suite name="provgate" version="1.0">\n'
+    '  <group name="phys">\n'
+    '    <scheme>make_dry</scheme>\n'
+    '    <scheme>use_dry</scheme>\n'
+    '  </group>\n'
+    '</suite>\n'
+)
+
+
+class TestConstituentProviderGate(unittest.TestCase):
+    """A constituent-FLAGGED consumer arg whose standard name is produced by
+    an earlier scheme (intent=out, unflagged) must resolve as an ordinary
+    suite variable -- shared with the producer -- NOT as a constituent
+    column, and must not be registered as a constituent.  A constituent
+    with no provider stays a constituent.  Regression for the cam-sima
+    kessler dry/wet mixing-ratio over-registration."""
+
+    @classmethod
+    def setUpClass(cls):
+        import logging
+        from generator.suite_xml import parse_suite_xml
+        hd = _load_constituent_host_dict()
+        store = SchemeStore.build_from(_parse(_PROVIDER_GATE_SCHEMES))
+        with tempfile.TemporaryDirectory() as tmp:
+            sx = os.path.join(tmp, 'suite_provgate.xml')
+            with open(sx, 'w') as fh:
+                fh.write(_PROVIDER_GATE_SUITE)
+            suite = parse_suite_xml(sx, tmp, logging.getLogger('test'),
+                                    skip_validation=True)
+            cls.sr = resolve_suite(suite, store, hd)
+        run_calls = list(iter_phase_calls(cls.sr.groups[0].phase_calls['run']))
+        cls.producer = {a.scheme_local_name: a for a in run_calls[0].args}
+        cls.consumer = {a.scheme_local_name: a for a in run_calls[1].args}
+
+    def test_producer_output_is_suite_var(self):
+        self.assertEqual(self.producer['qv_dry'].source, 'suite')
+
+    def test_provided_consumer_resolves_as_suite_not_constituent(self):
+        # qv_dry is flagged advected on the consumer, but make_dry provides
+        # it -> must be the shared suite var, not a constituent column.
+        qv_dry = self.consumer['qv_dry']
+        self.assertEqual(qv_dry.source, 'suite')
+        self.assertNotIn('vars_layer', qv_dry.call_expr)
+
+    def test_unprovided_constituent_stays_constituent(self):
+        qv = self.consumer['qv']
+        self.assertEqual(qv.source, 'constituent')
+        self.assertIn('vars_layer', qv.call_expr)
+
+    def test_index_names_exclude_provided_dry_var(self):
+        self.assertEqual(
+            self.sr.constituent_index_names,
+            ['water_vapor_mixing_ratio_wrt_moist_air_and_condensed_water'],
+        )
+        self.assertNotIn(
+            'water_vapor_mixing_ratio_wrt_dry_air',
+            self.sr.constituent_index_names,
+        )
+
+
+########################################################################
 # Constituent auto-resolution (cam-sima-style consumer schemes)
 ########################################################################
 

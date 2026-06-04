@@ -2124,6 +2124,31 @@ def _resolve_constituent_arg(
     if not scheme_var.is_constituent:
         return None  # not constituent-related
 
+    # ---- Provider gate (mirrors original-capgen ConstituentVarDict.find_variable)
+    # A constituent-FLAGGED consumer whose standard name is actually
+    # PROVIDED elsewhere is an ordinary interstitial, not a constituent:
+    #
+    #   * the host declares it in metadata            -> host scope, or
+    #   * an earlier scheme produced it intent=out    -> already recorded
+    #     in ``suite_vars`` (the resolver walks calls in execution order,
+    #     so a producer that runs before this consumer is visible here).
+    #
+    # Original capgen only auto-creates a constituent when its
+    # ``find_variable`` returns None (nothing in host or suite scope
+    # provides the name).  Without this gate a dry mixing ratio that is
+    # PRODUCED by e.g. ``wet_to_dry_water_vapor`` (intent=out, unflagged)
+    # but CONSUMED by ``kessler`` (advected=True) gets split into a suite
+    # array (producer) and a constituent column (consumer) AND spuriously
+    # auto-registered as a constituent.  Defer to normal host/suite
+    # dispatch so producer and consumer share one storage location and the
+    # name is never registered as a constituent.  Tendencies (intent=out,
+    # ``tendency_of_*``) are genuine constituent-tendency OUTPUTS and are
+    # never gated.
+    if not is_tendency_name and (
+        std_name in suite_vars or std_name in host_dict
+    ):
+        return None
+
     # ---- Paths 2/3: is_constituent base or tendency ---------------------
     if intent == 'out':
         if not is_tendency_name:
