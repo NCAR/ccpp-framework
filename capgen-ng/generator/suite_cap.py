@@ -225,10 +225,9 @@ def _register_uses(
     # Per-suite dynamic-constituent buffer is owned by ccpp_host_constituents
     # and written into here.  Pull in the constituent property type plus the
     # buffer symbol.
-    # auto-clone-constituents: the synthesised %instantiate calls
-    # also need the constituent property type and the buffer symbol,
-    # so include them when the auto-clone list is non-empty.
-    if suite_res.constituent_register_calls or suite_res.auto_cloned_constituents:
+    # auto-clone-constituents: predicate centralised on SuiteResolution so
+    # this site does not read legacy-shim state directly.
+    if suite_res.needs_dynamic_constituents_buffer:
         uses.setdefault(_CONST_MOD, set()).add(_CONST_PROP_TYPE)
         buf = '{}_dynamic_constituents'.format(suite_name)
         uses.setdefault('ccpp_host_constituents', set()).add(buf)

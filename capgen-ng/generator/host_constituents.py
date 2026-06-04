@@ -70,8 +70,11 @@ def _all_index_names(suite_results: List[SuiteResolution]) -> List[str]:
 def _suites_with_register_consts(
     suite_results: List[SuiteResolution],
 ) -> List[str]:
-    return [suite_resolution.suite_name for suite_resolution in suite_results
-            if suite_resolution.constituent_register_calls]
+    # auto-clone-constituents: predicate is centralised on
+    # SuiteResolution so this module never reads legacy-shim state
+    # directly; see ``SuiteResolution.needs_dynamic_constituents_buffer``.
+    return [sr.suite_name for sr in suite_results
+            if sr.needs_dynamic_constituents_buffer]
 
 
 def _dyn_const_array_name(suite_name: str) -> str:

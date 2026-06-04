@@ -94,6 +94,41 @@ class TestAggregationHelpers(unittest.TestCase):
             ['reg_consts'],
         )
 
+    def test_register_suites_include_auto_cloned_only(self):
+        # auto-clone-constituents: the legacy shim populates
+        # ``SuiteResolution.auto_cloned_constituents`` but leaves
+        # ``constituent_register_calls`` empty (no real register
+        # scheme exists).  host_constituents.F90 still has to declare
+        # the per-suite ``<suite>_dynamic_constituents`` buffer
+        # because the suite cap emits a USE on it.  Regression for
+        # CAM-SIMA kessler_test build (2026-06-03).
+        from generator.suite_resolver import SuiteResolution, AutoCloneEntry
+        sr = SuiteResolution(
+            suite_name='kessler_test',
+            auto_cloned_constituents=[AutoCloneEntry(
+                std_name='water_vapor', long_name='', diag_name='qv',
+                units='kg kg-1', vertical_dim='vertical_layer_dimension',
+                advected=True, molar_mass=0.0, default_value=None,
+                min_value=None, water_species=None, mixing_ratio_type=None,
+            )],
+        )
+        self.assertEqual(
+            _suites_with_register_consts([sr]),
+            ['kessler_test'],
+        )
+
+    def test_register_suites_excludes_pure_consumer(self):
+        # auto-clone-constituents: no register calls AND no auto-cloned
+        # entries -> suite stays off the list so the buffer is not
+        # declared.  Companion to test_register_suites_include_auto_cloned_only;
+        # delete together when the shim retires.
+        from generator.suite_resolver import SuiteResolution
+        sr = SuiteResolution(suite_name='pure_consumer')
+        self.assertEqual(
+            _suites_with_register_consts([sr]),
+            [],
+        )
+
 
 class TestModuleSkippedWhenNoConstituents(unittest.TestCase):
     """``_generate_host_constituents`` returns ``None`` when nothing touches

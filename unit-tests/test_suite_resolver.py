@@ -3898,6 +3898,54 @@ class TestConstSubscriptHelper(unittest.TestCase):
         self.assertEqual(used_const_dim, {'number_of_ccpp_constituents'})
 
 
+# auto-clone-constituents: the entire class below exists because the
+# legacy auto-clone shim introduces a second source for "this suite
+# needs a per-suite ``<suite>_dynamic_constituents`` buffer".  When
+# the shim retires, this class can be deleted -- the property collapses
+# to ``bool(self.constituent_register_calls)`` and the existing
+# register-path tests elsewhere already cover that case.
+class TestNeedsDynamicConstituentsBufferProperty(unittest.TestCase):
+    """``SuiteResolution.needs_dynamic_constituents_buffer`` is the
+    single source of truth for "this suite needs a
+    ``<suite>_dynamic_constituents`` buffer".  Centralising the rule
+    here keeps legacy-shim state (``auto_cloned_constituents``) out of
+    every generator emitter; consumers reference the property instead
+    of OR-ing the two underlying fields.  When the legacy auto-clone
+    shim retires, only this property's body changes."""
+
+    def test_false_when_neither(self):
+        # auto-clone-constituents: empty-state baseline.
+        from generator.suite_resolver import SuiteResolution
+        sr = SuiteResolution(suite_name='s')
+        self.assertFalse(sr.needs_dynamic_constituents_buffer)
+
+    def test_true_for_register_calls(self):
+        # auto-clone-constituents: register-only path -- verifies the
+        # property still fires correctly for non-shim registrations
+        # after the OR-abstraction landed.
+        from generator.suite_resolver import SuiteResolution
+        sr = SuiteResolution(
+            suite_name='s',
+            constituent_register_calls=[('register_constituents', 'register')],
+        )
+        self.assertTrue(sr.needs_dynamic_constituents_buffer)
+
+    def test_true_for_auto_cloned_only(self):
+        # auto-clone-constituents: shim-only path -- regression for
+        # the CAM-SIMA kessler_test build (2026-06-03).
+        from generator.suite_resolver import SuiteResolution, AutoCloneEntry
+        sr = SuiteResolution(
+            suite_name='s',
+            auto_cloned_constituents=[AutoCloneEntry(
+                std_name='water_vapor', long_name='', diag_name='qv',
+                units='kg kg-1', vertical_dim='vertical_layer_dimension',
+                advected=True, molar_mass=0.0, default_value=None,
+                min_value=None, water_species=None, mixing_ratio_type=None,
+            )],
+        )
+        self.assertTrue(sr.needs_dynamic_constituents_buffer)
+
+
 class TestConstituentResolverErrors(unittest.TestCase):
     """Mismatched constituent-flag + intent + std-name combinations error."""
 

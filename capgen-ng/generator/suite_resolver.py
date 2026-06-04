@@ -1330,6 +1330,25 @@ class SuiteResolution:
     # dynamic-constituents buffer.  Empty when the shim is off.
     auto_cloned_constituents: List[AutoCloneEntry] = field(default_factory=list)
 
+    # auto-clone-constituents: this property exists so consumer
+    # emitters (host_constituents, suite_cap) never have to read
+    # ``auto_cloned_constituents`` themselves.  When the legacy
+    # auto-clone shim retires, drop the second clause below and the
+    # property collapses to ``bool(self.constituent_register_calls)``;
+    # every consumer keeps working without changes.
+    @property
+    def needs_dynamic_constituents_buffer(self) -> bool:
+        """True iff the per-suite ``<suite>_dynamic_constituents`` buffer
+        must be declared and populated for this suite.
+
+        Single source of truth for the predicate.
+        """
+        return bool(
+            self.constituent_register_calls
+            # auto-clone-constituents:
+            or self.auto_cloned_constituents
+        )
+
 
 ########################################################################
 # Argument resolution helpers
