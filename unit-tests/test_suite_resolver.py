@@ -11,6 +11,7 @@ import doctest
 import os
 import sys
 import tempfile
+import types
 import unittest
 
 from metadata.metadata_table import _parse_lines, parse_metadata_file
@@ -33,6 +34,7 @@ from generator.suite_resolver import (
     _dedup_scheme_names,
     resolve_suite,
     iter_phase_calls,
+    validate_init_dimensions,
     SuiteVar,
     ResolvedArg,
     ResolvedCall,
@@ -4966,6 +4968,72 @@ class TestDimDDTComponentResolution(unittest.TestCase):
 ########################################################################
 # Doctest loader
 ########################################################################
+
+########################################################################
+# validate_init_dimensions: a non-allocatable suite var dimensioned by a
+# scheme-updated-after-register quantity must be allocatable.
+########################################################################
+
+class TestValidateInitDimensions(unittest.TestCase):
+    """Reject a non-allocatable suite var whose dimension is written by a
+    scheme in a phase after register (capgen can't size it at init).
+    Regression for the rrtmgp pint_day OOM."""
+
+    @staticmethod
+    def _arg(std, intent):
+        return types.SimpleNamespace(standard_name=std, intent=intent)
+
+    @classmethod
+    def _sr(cls, phase_writes, suite_vars):
+        # phase_writes: {phase: [(std, intent), ...]}; suite_vars: [(std, alloc, dims)]
+        calls = []
+        pc = {}
+        for phase, writes in phase_writes.items():
+            pc[phase] = [ResolvedCall(scheme_name='s', phase=phase,
+                                      args=[cls._arg(s, i) for s, i in writes])]
+        grp = types.SimpleNamespace(phase_calls=pc)
+        svs = {s: types.SimpleNamespace(standard_name=s, allocatable=a, dimensions=d)
+               for s, a, d in suite_vars}
+        return types.SimpleNamespace(groups=[grp], suite_vars=svs)
+
+    def test_late_written_dim_nonalloc_raises(self):
+        sr = self._sr(
+            {'timestep_init': [('mydim', 'out')], 'run': [('myarr', 'out')]},
+            [('mydim', False, []), ('myarr', False, ['mydim'])],
+        )
+        with self.assertRaisesRegex(CCPPError, "myarr.*mydim|allocatable"):
+            validate_init_dimensions(sr)
+
+    def test_register_written_dim_ok(self):
+        sr = self._sr(
+            {'register': [('mydim', 'out')], 'run': [('myarr', 'out')]},
+            [('mydim', False, []), ('myarr', False, ['mydim'])],
+        )
+        validate_init_dimensions(sr)  # no raise
+
+    def test_allocatable_var_skipped(self):
+        sr = self._sr(
+            {'timestep_init': [('mydim', 'out')], 'run': [('myarr', 'out')]},
+            [('mydim', False, []), ('myarr', True, ['mydim'])],
+        )
+        validate_init_dimensions(sr)  # allocatable -> not capgen's to size
+
+    def test_host_static_dim_ok(self):
+        # 'hostdim' is never written by a scheme -> assumed available at init.
+        sr = self._sr(
+            {'run': [('myarr', 'out')]},
+            [('myarr', False, ['hostdim'])],
+        )
+        validate_init_dimensions(sr)  # no raise
+
+    def test_range_dimension_token_checked(self):
+        sr = self._sr(
+            {'timestep_init': [('mydim', 'inout')], 'run': [('myarr', 'out')]},
+            [('mydim', False, []), ('myarr', False, ['ccpp_constant_one:mydim'])],
+        )
+        with self.assertRaises(CCPPError):
+            validate_init_dimensions(sr)
+
 
 def load_tests(loader, tests, ignore):
     import generator.suite_resolver as suite_resolution

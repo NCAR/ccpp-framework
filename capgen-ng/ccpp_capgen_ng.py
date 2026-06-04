@@ -90,7 +90,9 @@ from metadata.variable_resolver import (
 )
 from generator.kinds_writer import write_ccpp_kinds
 from generator.suite_xml import parse_suite_xml_files
-from generator.suite_resolver import resolve_suite, iter_phase_calls
+from generator.suite_resolver import (
+    resolve_suite, iter_phase_calls, validate_init_dimensions,
+)
 from generator.group_cap import write_group_cap
 from generator.suite_data import write_suite_data, write_suite_meta
 from generator.suite_cap import write_suite_cap
@@ -954,6 +956,10 @@ def capgen(
     for suite in suites:
         log.info("Resolving suite '%s'", suite.name)
         suite_res = resolve_suite(suite, scheme_store, host_dict)
+        # Fail early (before any cap is written) if a non-allocatable
+        # suite-owned variable is dimensioned by a scheme-updated quantity
+        # that isn't known when suite_data_init_fields allocates it.
+        validate_init_dimensions(suite_res)
         suite_names.append(suite.name)
         suite_resolutions.append(suite_res)
 

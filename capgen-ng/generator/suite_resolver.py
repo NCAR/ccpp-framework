@@ -2485,6 +2485,63 @@ def resolve_suite(
     )
 
 
+def validate_init_dimensions(suite_res: SuiteResolution) -> None:
+    """Reject suite-owned vars whose suite-time allocation can't be sized.
+
+    capgen-ng allocates every non-allocatable, dimensioned suite-owned
+    variable once in ``suite_data_init_fields``, which runs at the very
+    start of ``<suite>_init`` -- before any ``init`` / ``timestep_init`` /
+    ``run`` scheme code.  Only the ``register`` phase completes earlier, so
+    a dimension whose value is written by a scheme in any later phase is not
+    yet set when the allocation happens (the size would be uninitialised
+    memory).  Such a variable must instead be declared ``allocatable``
+    (Fortran ``allocatable, intent(out)`` + metadata ``allocatable = True``)
+    so its producing scheme allocates it once the size is known.
+
+    This is sound (no false positives) but intentionally partial: it sees
+    only dimensions a *scheme* writes.  A host that recomputes a host-owned
+    dimension in its own driver each step is invisible here -- there is no
+    metadata signal for it.
+
+    Raises
+    ------
+    CCPPError
+        If a non-allocatable suite-owned variable is dimensioned by a
+        standard name written by a scheme in a phase after ``register``.
+    """
+    written_after_register: Set[str] = set()
+    for resolved_group in suite_res.groups:
+        for phase, items in resolved_group.phase_calls.items():
+            if phase == 'register':
+                continue
+            for resolved_call in iter_phase_calls(items):
+                for arg in resolved_call.args:
+                    if (arg.intent or 'in') in ('out', 'inout'):
+                        written_after_register.add(arg.standard_name)
+
+    for suite_var in suite_res.suite_vars.values():
+        if suite_var.allocatable or not suite_var.dimensions:
+            continue
+        for dim in suite_var.dimensions:
+            for token in dim.split(':'):
+                token = token.strip()
+                if token in written_after_register:
+                    raise CCPPError(
+                        "Suite-owned variable '{var}' is allocated by the "
+                        "suite at init time (in suite_data_init_fields), but "
+                        "its dimension '{dim}' is written by a scheme in a "
+                        "phase after 'register', so its size is not yet known "
+                        "when the allocation runs (the allocation would use "
+                        "uninitialised memory).\n"
+                        "  Declare '{var}' allocatable -- 'allocatable, "
+                        "intent(out)' in the producing scheme's Fortran and "
+                        "'allocatable = True' in its metadata -- so the scheme "
+                        "allocates it once '{dim}' is set.".format(
+                            var=suite_var.standard_name, dim=token,
+                        )
+                    )
+
+
 # auto-clone-constituents: BEGIN legacy-shim helpers.  Delete this
 # block together with the rest of the auto-clone-constituents
 # touchpoints; nothing else in the resolver references these.
