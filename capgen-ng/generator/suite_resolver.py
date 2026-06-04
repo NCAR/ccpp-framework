@@ -1073,6 +1073,15 @@ class ResolvedArg:
     # :mod:`generator.host_cap`.  Replaces the older trick of stuffing
     # them into :attr:`used_dim_std_names`.
     used_const_dim_std_names: Set[str] = field(default_factory=set)
+    # Real (un-mangled) constituent base standard names that this arg's
+    # subscript indexes via ``index_of_<X>``.  The Fortran symbol in
+    # :attr:`constituent_extra_symbols` is mangled to fit the 63-char
+    # identifier limit (see :func:`_index_symbol_name`), so its suffix is
+    # NOT a reliable source of the real standard name.  This set preserves
+    # the real names verbatim so ``ccpp_initialize_constituents`` can pass
+    # them to ``%const_index`` as the lookup key (and list them in
+    # ``ccpp_model_const_stdnames``).
+    constituent_index_std_names: Set[str] = field(default_factory=set)
 
     @property
     def needs_transform(self) -> bool:
@@ -1291,9 +1300,11 @@ class SuiteResolution:
         arrays.  Empty when no register-phase scheme produces constituents.
     constituent_index_names : list of str
         Sorted list of base-constituent standard names that need an
-        ``index_of_<X>`` integer emitted in the suite cap.  Collected by
-        scanning every ``source='constituent'`` ResolvedArg's
-        ``constituent_extra_symbols`` for ``index_of_*`` tokens.  Used by
+        ``index_of_<X>`` integer emitted in the suite cap.  These are the
+        REAL (un-mangled) standard names, collected from every
+        ``source='constituent'`` ResolvedArg's
+        ``constituent_index_std_names`` set -- NOT recovered from the
+        (possibly mangled) ``index_of_*`` Fortran symbols.  Used by
         :mod:`generator.suite_cap` to emit the index declarations and the
         ``ccpp_model_constituents_object%const_index`` population calls
         in ``<suite>_init``.
@@ -2038,7 +2049,8 @@ def _resolve_constituent_arg(
 
     def _common_kwargs(base_expr, subscript, call_expr,
                        used_host_std, extra_symbols,
-                       used_const_dim_std=None):
+                       used_const_dim_std=None,
+                       index_std_names=None):
         used_host_std = set(used_host_std)
         if inst_local:
             used_host_std.add(_INSTANCE_NUM_STD)
@@ -2071,6 +2083,8 @@ def _resolve_constituent_arg(
             constituent_extra_symbols=extra_symbols,
             used_const_dim_std_names=(set(used_const_dim_std)
                                       if used_const_dim_std else set()),
+            constituent_index_std_names=(set(index_std_names)
+                                         if index_std_names else set()),
         )
 
     # ---- Path 1a: index_of_<X> — module-level integer, no per-instance --
@@ -2079,10 +2093,12 @@ def _resolve_constituent_arg(
         # identity for short names, so existing fixtures are unaffected.
         # ``_INDEX_PREFIX`` is already part of std_name -- strip then
         # re-add via the helper for uniform truncation.
-        index_sym = _index_symbol_name(std_name[len(_INDEX_PREFIX):])
+        index_base = std_name[len(_INDEX_PREFIX):]
+        index_sym = _index_symbol_name(index_base)
         return ResolvedArg(**_common_kwargs(
             base_expr=index_sym, subscript='', call_expr=index_sym,
             used_host_std=set(), extra_symbols={index_sym},
+            index_std_names={index_base},
         ))
 
     # ---- Path 1b: framework-named std_name → DDT member -----------------
@@ -2148,6 +2164,7 @@ def _resolve_constituent_arg(
         base_expr=base_expr, subscript=subscript, call_expr=call_expr,
         used_host_std=used_host_std,
         extra_symbols={index_sym, _CONST_OBJ_VAR},
+        index_std_names={base_std},
     ))
 
 
@@ -2299,9 +2316,13 @@ def resolve_suite(
                     if arg.source != 'constituent' or arg.is_constituent_arg:
                         continue
                     uses_constituents = True
-                    for sym in arg.constituent_extra_symbols:
-                        if sym.startswith(_INDEX_PREFIX):
-                            index_names.add(sym[len(_INDEX_PREFIX):])
+                    # Collect the REAL (un-mangled) base standard names, not
+                    # the mangled symbol suffix.  ``ccpp_initialize_constituents``
+                    # passes these verbatim to ``%const_index``; a mangled key
+                    # would never match a registered constituent and leave the
+                    # ``index_of_<X>`` integer at its 0 default -> out-of-bounds
+                    # subscript at run time.
+                    index_names.update(arg.constituent_index_std_names)
     constituent_index_names = sorted(index_names)
 
     # Under option A the constituent object is generator-owned (lives in

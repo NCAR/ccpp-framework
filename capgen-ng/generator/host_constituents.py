@@ -546,8 +546,12 @@ def _deallocate_lines(
     # They are deallocated in ``<suite>_final``'s last-to-leave block
     # instead.
     lines.append('{}deallocate({})'.format(i3, _CONST_OBJ))
+    # Reset to the unbound sentinel (matches the declaration default) so a
+    # re-register / re-init cycle starts from int_unassigned and the guard
+    # stays effective on the second pass.
     for std_name in index_names:
-        lines.append('{}{} = 0'.format(i3, _index_symbol_name(std_name)))
+        lines.append('{}{} = int_unassigned'.format(
+            i3, _index_symbol_name(std_name)))
     lines.append('{}end if'.format(i2))
     lines.append('')
     lines.append('{}end subroutine ccpp_deallocate_dynamic_constituents'.format(i1))
@@ -652,8 +656,15 @@ def _generate_host_constituents(
         )
     if register_suites:
         lines.append('')
+    # Default to int_unassigned (NOT 0) so a constituent that is referenced
+    # by a scheme but never bound by ccpp_initialize_constituents (missing
+    # registration, or a host that never calls the init routine) is caught
+    # by the post-const_index guard below instead of silently surviving as
+    # an index of 0 and producing an out-of-bounds vars_layer subscript at
+    # run time.  This also keeps the guard correct for any framework whose
+    # %const_index leaves the output unchanged on a name miss.
     for std_name in index_names:
-        lines.append('{}integer :: {} = 0'.format(
+        lines.append('{}integer :: {} = int_unassigned'.format(
             _INDENT, _index_symbol_name(std_name)))
     if index_names:
         max_len = max(len(n) for n in index_names)

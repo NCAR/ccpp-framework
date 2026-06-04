@@ -198,7 +198,7 @@ class TestStateDeclarations(unittest.TestCase):
 
     def test_index_of_X_declared(self):
         self.assertIn(
-            'integer :: index_of_cloud_liquid_water_mixing_ratio = 0',
+            'integer :: index_of_cloud_liquid_water_mixing_ratio = int_unassigned',
             self.consumer_text,
         )
         self.assertIn(
@@ -400,6 +400,153 @@ class TestInitializeConstituentsRoutine(unittest.TestCase):
             "scheme but is not in the registered constituent table",
             body,
         )
+
+
+def _render_long_name_constituent():
+    """Resolve a single-suite scheme that consumes ONE advected base
+    constituent whose standard name is long enough to force
+    ``_index_symbol_name`` to mangle the Fortran symbol, then render the
+    host-constituents module.  Returns ``(text, long_std_name, symbol)``.
+
+    Regression guard for the lossy round-trip bug: the mangled
+    ``index_of_<X>`` Fortran symbol must NOT leak into the ``%const_index``
+    lookup string (the framework keys on the real standard name) nor into
+    ``ccpp_model_const_stdnames``.
+    """
+    import tempfile
+    import logging
+    from metadata.metadata_table import parse_metadata_file
+    from metadata.variable_resolver import build_flat_host_dict, SchemeStore
+    from generator.suite_xml import parse_suite_xml
+
+    # 57 chars -> index_of_<name> is 66 > 63 -> mangled (same family as the
+    # cam-sima kessler ``*_wrt_moist_air_and_condensed_water`` constituents).
+    long_std = 'water_vapor_mixing_ratio_wrt_moist_air_and_condensed_water'
+    from generator.suite_resolver import _index_symbol_name
+    symbol = _index_symbol_name(long_std)
+    assert symbol != 'index_of_' + long_std, 'fixture name must mangle'
+
+    scheme_meta = '''
+[ccpp-table-properties]
+  name = long_const_scheme
+  type = scheme
+[ccpp-arg-table]
+  name = long_const_scheme_run
+  type = scheme
+[ ncol ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ nz ]
+  standard_name = vertical_layer_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ qv ]
+  standard_name = %s
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = in
+  advected = .true.
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+''' % long_std
+    suite_xml = (
+        '<?xml version="1.0"?>\n'
+        '<suite name="longc" version="1.0">\n'
+        '  <group name="phys">\n'
+        '    <scheme>long_const_scheme</scheme>\n'
+        '  </group>\n'
+        '</suite>\n'
+    )
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    samples = os.path.join(here, 'sample_files')
+    host_tbls = parse_metadata_file(os.path.join(samples, 'host_with_constituents.meta'))
+    ctrl_tbls = parse_metadata_file(os.path.join(samples, 'control_full.meta'))
+    fw_meta = os.path.join(
+        os.path.dirname(here), 'capgen-ng', 'src', 'ccpp_constituent_prop_mod.meta',
+    )
+    ddt_tbls = parse_metadata_file(fw_meta) if os.path.isfile(fw_meta) else []
+    hd = build_flat_host_dict(host_tbls, ctrl_tbls, ddt_tbls)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        sm = os.path.join(tmp, 'long_const_scheme.meta')
+        with open(sm, 'w') as fh:
+            fh.write(scheme_meta)
+        sx = os.path.join(tmp, 'suite_longc.xml')
+        with open(sx, 'w') as fh:
+            fh.write(suite_xml)
+        store = SchemeStore.build_from(parse_metadata_file(sm))
+        suite = parse_suite_xml(sx, tmp, logging.getLogger('test'),
+                                skip_validation=True)
+        sr = resolve_suite(suite, store, hd)
+        text = '\n'.join(_generate_host_constituents([sr], host_dict=hd))
+    return text, long_std, symbol
+
+
+class TestLongConstituentNameRoundTrip(unittest.TestCase):
+    """Regression: a constituent std name long enough to mangle the Fortran
+    ``index_of_<X>`` symbol must still key ``%const_index`` (and the
+    ``ccpp_model_const_stdnames`` array) on the REAL standard name.  The old
+    code recovered the name from the mangled symbol suffix, so the lookup
+    string was corrupted, ``const_index`` never matched, and the index
+    integer stayed at its ``0`` default -> out-of-bounds constituent
+    subscript at run time (cam-sima kessler segfault)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text, cls.long_std, cls.symbol = _render_long_name_constituent()
+
+    def test_const_index_keys_on_real_std_name(self):
+        # Mangled symbol as the integer; REAL std name as the lookup string.
+        self.assertIn(
+            "%const_index({}, '{}', errcode=errcode, errmsg=errmsg)".format(
+                self.symbol, self.long_std,
+            ),
+            self.text,
+        )
+
+    def test_mangled_suffix_not_used_as_lookup_string(self):
+        # The mangled suffix must never appear as a quoted lookup key.
+        mangled_suffix = self.symbol[len('index_of_'):]
+        self.assertNotIn("'{}'".format(mangled_suffix), self.text)
+
+    def test_stdnames_array_lists_real_name(self):
+        self.assertIn("'{}'".format(self.long_std), self.text)
+
+    def test_subscript_symbol_declared_and_public(self):
+        # The (mangled) symbol must still be declared, public, and reset.
+        self.assertIn(
+            'integer :: {} = int_unassigned'.format(self.symbol), self.text)
+        self.assertIn('public :: {}'.format(self.symbol), self.text)
+
+    def test_index_defaults_and_resets_to_unassigned(self):
+        # Declaration default is the unbound sentinel (so a never-bound index
+        # trips the init guard instead of becoming a 0 subscript)...
+        self.assertIn(
+            'integer :: {} = int_unassigned'.format(self.symbol), self.text)
+        # ...and the deallocate routine resets it to the same sentinel.
+        dealloc = self.text.split(
+            'subroutine ccpp_deallocate_dynamic_constituents'
+        )[1].split('end subroutine ccpp_deallocate_dynamic_constituents')[0]
+        self.assertIn('{} = int_unassigned'.format(self.symbol), dealloc)
+        self.assertNotIn('{} = 0'.format(self.symbol), dealloc)
 
 
 class TestIsSchemeConstituent(unittest.TestCase):
