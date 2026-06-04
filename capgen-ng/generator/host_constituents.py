@@ -110,7 +110,7 @@ def _instance_signature(
         sig.append(inst_local)
     if ninst_local:
         sig.append(ninst_local)
-    sig += ['errflg', 'errmsg']
+    sig += ['errcode', 'errmsg']
     return sig
 
 
@@ -148,7 +148,7 @@ def _register_constituents_lines(
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
     if ninst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, ninst_local))
-    lines.append('{}integer, intent(out) :: errflg'.format(i2))
+    lines.append('{}integer, intent(out) :: errcode'.format(i2))
     lines.append('{}character(len=*), intent(out) :: errmsg'.format(i2))
     lines.append('')
     lines.append('{}integer :: num_consts, index'.format(i2))
@@ -157,7 +157,7 @@ def _register_constituents_lines(
     ))
     lines.append('')
     lines.append("{}errmsg = ''".format(i2))
-    lines.append('{}errflg = 0'.format(i2))
+    lines.append('{}errcode = 0'.format(i2))
     lines.append('')
     # Allocate the object array on first call (idempotent across instances).
     lines.append('{}if (.not. allocated({})) then'.format(i2, _CONST_OBJ))
@@ -188,12 +188,12 @@ def _register_constituents_lines(
     lines.append('{}do index = 1, size(host_constituents, 1)'.format(i2))
     lines.append('{}const_prop => host_constituents(index)'.format(i3))
     lines.append(
-        '{}call {}({})%new_field(const_prop, errcode=errflg, errmsg=errmsg)'.format(
+        '{}call {}({})%new_field(const_prop, errcode=errcode, errmsg=errmsg)'.format(
             i3, _CONST_OBJ, inst_idx,
         )
     )
     lines.append('{}nullify(const_prop)'.format(i3))
-    lines.append('{}if (errflg /= 0) return'.format(i3))
+    lines.append('{}if (errcode /= 0) return'.format(i3))
     lines.append('{}end do'.format(i2))
     for sname in register_suites:
         buf = _dyn_const_array_name(sname)
@@ -214,18 +214,18 @@ def _register_constituents_lines(
             )
         )
         lines.append(
-            '{}call {}({})%new_field(const_prop, errcode=errflg, errmsg=errmsg)'.format(
+            '{}call {}({})%new_field(const_prop, errcode=errcode, errmsg=errmsg)'.format(
                 i3 + _INDENT * 2, _CONST_OBJ, inst_idx,
             )
         )
         lines.append('{}nullify(const_prop)'.format(i3 + _INDENT * 2))
-        lines.append('{}if (errflg /= 0) return'.format(i3 + _INDENT * 2))
+        lines.append('{}if (errcode /= 0) return'.format(i3 + _INDENT * 2))
         lines.append('{}end do'.format(i3 + _INDENT))
         lines.append('{}end if'.format(i3))
         lines.append('{}end if'.format(i2))
     lines.append('')
     lines.append(
-        '{}call {}({})%lock_table(errcode=errflg, errmsg=errmsg)'.format(
+        '{}call {}({})%lock_table(errcode=errcode, errmsg=errmsg)'.format(
             i2, _CONST_OBJ, inst_idx,
         )
     )
@@ -257,7 +257,7 @@ def _initialize_constituents_lines(
     lines.append('{}integer, intent(in) :: ncols, num_layers'.format(i2))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
-    lines.append('{}integer, intent(out) :: errflg'.format(i2))
+    lines.append('{}integer, intent(out) :: errcode'.format(i2))
     lines.append('{}character(len=*), intent(out) :: errmsg'.format(i2))
     lines.append('')
     lines.append('{}type({}), pointer :: const_obj_ptr => null()'.format(
@@ -265,14 +265,14 @@ def _initialize_constituents_lines(
     ))
     lines.append('')
     lines.append("{}errmsg = ''".format(i2))
-    lines.append('{}errflg = 0'.format(i2))
+    lines.append('{}errcode = 0'.format(i2))
     lines.append('')
     lines.append(
-        '{}call {}({})%lock_data(ncols, num_layers, errcode=errflg, errmsg=errmsg)'.format(
+        '{}call {}({})%lock_data(ncols, num_layers, errcode=errcode, errmsg=errmsg)'.format(
             i2, _CONST_OBJ, inst_idx,
         )
     )
-    lines.append('{}if (errflg /= 0) return'.format(i2))
+    lines.append('{}if (errcode /= 0) return'.format(i2))
     # Cache the singleton pointer in ccpp_scheme_utils (cam-sima compat).
     # Only the FIRST call across instances actually sets it (the routine
     # is guarded internally); other instances see the first instance's
@@ -288,11 +288,11 @@ def _initialize_constituents_lines(
         index_sym = _index_symbol_name(std_name)
         lines.append(
             "{}call {}({})%const_index({}, '{}', "
-            "errcode=errflg, errmsg=errmsg)".format(
+            "errcode=errcode, errmsg=errmsg)".format(
                 i2, _CONST_OBJ, inst_idx, index_sym, std_name,
             )
         )
-        lines.append('{}if (errflg /= 0) return'.format(i2))
+        lines.append('{}if (errcode /= 0) return'.format(i2))
         # %const_index doesn't error on a miss — it sets the integer to
         # int_unassigned and leaves errcode unchanged.  Surface that case
         # explicitly so the host sees the bad registration at init time
@@ -302,7 +302,7 @@ def _initialize_constituents_lines(
                 i2, index_sym,
             )
         )
-        lines.append('{}errflg = 1'.format(i2 + _INDENT))
+        lines.append('{}errcode = 1'.format(i2 + _INDENT))
         lines.append(
             "{}errmsg = 'ccpp_initialize_constituents: constituent "
             "''{}'' is referenced by a scheme but is not in the "
@@ -327,16 +327,16 @@ def _is_scheme_constituent_lines(suite_results: List[SuiteResolution]) -> List[s
     lines: List[str] = ['']
     lines.append(
         '{}subroutine ccpp_is_scheme_constituent(var_name, '
-        'constituent_exists, errflg, errmsg)'.format(i1)
+        'constituent_exists, errcode, errmsg)'.format(i1)
     )
     lines.append('')
     lines.append('{}character(len=*), intent(in)  :: var_name'.format(i2))
     lines.append('{}logical,          intent(out) :: constituent_exists'.format(i2))
-    lines.append('{}integer,          intent(out) :: errflg'.format(i2))
+    lines.append('{}integer,          intent(out) :: errcode'.format(i2))
     lines.append('{}character(len=*), intent(out) :: errmsg'.format(i2))
     lines.append('')
     lines.append("{}errmsg = ''".format(i2))
-    lines.append('{}errflg = 0'.format(i2))
+    lines.append('{}errcode = 0'.format(i2))
     lines.append('')
     if index_names:
         lines.append(
@@ -363,7 +363,7 @@ def _wrap_method_sub(
     sig = [n for n, _, _ in extra_args]
     if inst_local:
         sig.append(inst_local)
-    sig += ['errflg', 'errmsg']
+    sig += ['errcode', 'errmsg']
     lines: List[str] = ['']
     lines.append('{}subroutine {}({})'.format(i1, sub_name, ', '.join(sig)))
     lines.append('')
@@ -371,15 +371,15 @@ def _wrap_method_sub(
         lines.append('{}{}'.format(i2, decl))
     if inst_local:
         lines.append('{}integer, intent(in) :: {}'.format(i2, inst_local))
-    lines.append('{}integer, intent(out) :: errflg'.format(i2))
+    lines.append('{}integer, intent(out) :: errcode'.format(i2))
     lines.append('{}character(len=*), intent(out) :: errmsg'.format(i2))
     lines.append('')
     lines.append("{}errmsg = ''".format(i2))
-    lines.append('{}errflg = 0'.format(i2))
+    lines.append('{}errcode = 0'.format(i2))
     lines.append('')
     call_args = [call for _, _, call in extra_args]
     if errcode_call:
-        call_args += ['errcode=errflg', 'errmsg=errmsg']
+        call_args += ['errcode=errcode', 'errmsg=errmsg']
     lines.append('{}call {}({})%{}({})'.format(
         i2, _CONST_OBJ, inst_idx, method, ', '.join(call_args),
     ))

@@ -82,7 +82,7 @@
   type = character
   kind = len=512
   intent = out
-[ errflg ]
+[ errcode ]
   standard_name = ccpp_error_code
   long_name = Error flag for error handling in CCPP
   units = 1
@@ -108,7 +108,7 @@
   type = character
   kind = len=512
   intent = out
-[ errflg ]
+[ errcode ]
   standard_name = ccpp_error_code
   long_name = Error flag for error handling in CCPP
   units = 1
@@ -127,7 +127,7 @@
   type = character
   kind = len=512
   intent = out
-[ errflg ]
+[ errcode ]
   standard_name = ccpp_error_code
   long_name = Error flag for error handling in CCPP
   units = 1

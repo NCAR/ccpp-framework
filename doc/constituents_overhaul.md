@@ -619,6 +619,77 @@ shim. Remove the rewrite once known consumers are migrated.
 - **Position relative to Proposals A/B/C**: orthogonal — none of the
   three proposed touching the buffer.  Independently adopted.
 
+### 4.14 Capgen-ng: error-output keyword inconsistency across emitted public API (OPEN — observation)
+
+- **Location**: `capgen-ng/generator/host_cap.py:370,446,*` (lifecycle
+  subs) vs `capgen-ng/generator/host_constituents.py` (the entire
+  constituent wrapper family).
+- **Symptom**: the public Fortran argument carrying the CCPP error
+  flag does not have a consistent name across the cap's surface area.
+  - **Lifecycle subs** (`ccpp_register`, `ccpp_init`, `ccpp_physics_*`,
+    `ccpp_final`, plus the five `ccpp_physics_suite_*` introspection
+    routines) read the host's `ccpp_error_code` control-var
+    `local_name` from `host_dict` and use *that* as the public arg
+    name.  A host that calls `[errflg]` `errflg` ends up with
+    `subroutine ccpp_register(suite_name, errflg, errmsg)`; a host
+    that calls `[errcode]` `errcode` ends up with
+    `subroutine ccpp_register(suite_name, errcode, errmsg)`.  This is
+    the host-controlled side.
+  - **Constituent wrappers** (`ccpp_register_constituents`,
+    `ccpp_initialize_constituents`, `ccpp_is_scheme_constituent`,
+    `ccpp_number_constituents`, `ccpp_gather_constituents`,
+    `ccpp_update_constituents`, `ccpp_const_get_index`) hard-code
+    `errcode` regardless of what the host declared.  As of
+    2026-06-03 the hard-code is `errcode` (renamed from `errflg` for
+    consistency with the framework methods on
+    `ccpp_constituent_properties_t` and `ccpp_model_constituents_t`,
+    which all expose `errcode=`).  Before 2026-06-03 it was `errflg`,
+    which broke any host whose control-var convention was
+    `errcode` -- including the CAM-SIMA build.
+- **Resulting cross-cutting hazard**: in a host where the
+  `ccpp_error_code` local name happens to be `errflg`, the caller
+  writes
+  ```fortran
+  call ccpp_register(suite_name, errflg=errflg, errmsg=errmsg)               ! host-name keyword
+  call ccpp_register_constituents(host_consts, errcode=errflg, errmsg=errmsg) ! hardcoded keyword
+  ```
+  Two different keyword names for the same conceptual argument on
+  adjacent calls.  Confusing but compiles; the host's local variable
+  is bound by name to whichever keyword the callee defines.
+- **Why the constituent wrappers are hardcoded**: the wrappers are
+  thin shims around framework methods
+  (`ccpp_model_constituents_t%new_field`, `%lock_table`,
+  `%num_constituents`, etc.) that all take `errcode=` per
+  `capgen-ng/src/ccpp_constituent_prop_mod.F90`.  Hardcoding `errcode`
+  on the wrapper means the wrapper body just forwards
+  `errcode=errcode` instead of `errcode=<host_local_name>` -- one
+  less host-dict lookup, but at the cost of breaking the
+  "host names what they want" contract.
+- **Options to resolve**:
+  - (a) Plumb the host's `ccpp_error_code` local name through
+    `host_constituents.py` the same way `host_cap.py` does (via
+    `_ctrl_local(host_dict, 'ccpp_error_code') or 'errcode'`).
+    The constituent wrappers' public arg then tracks the host's
+    convention.  Adds 1 dictionary lookup per emitted sub; no
+    other change.
+  - (b) Standardise the lifecycle subs on `errcode` too, ignoring
+    the host's `ccpp_error_code` local name.  Simpler internally
+    but breaks every existing host that ships
+    `[errflg] standard_name = ccpp_error_code`.
+  - (c) Status quo (the constituent wrappers' `errcode` hardcode):
+    document it loudly and live with the cross-API split.
+- **Status**: currently option (c).  The post-rename build of CAM-SIMA
+  works because CAM-SIMA's caller code uses `errcode=errflg` (passing
+  its local var `errflg` to the hardcoded keyword `errcode`).  Hosts
+  with the opposite convention (`[errcode] standard_name =
+  ccpp_error_code` -> lifecycle subs expose `errcode=`,
+  constituent wrappers also expose `errcode=`) coincidentally see
+  consistent keywords today; the hazard is invisible for them.
+- **Recommended fix**: option (a).  Lines up with the lifecycle
+  emitter's already-established host-driven pattern.  Trivial
+  implementation cost; eliminates the cross-cutting confusion for
+  any host whose `ccpp_error_code` local name is not `errcode`.
+
 ---
 
 ## 5. Property classification (Class A vs Class B)

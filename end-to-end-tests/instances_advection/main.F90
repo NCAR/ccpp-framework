@@ -26,7 +26,7 @@ program test_instances_advection
 
   character(len=*), parameter :: ccpp_suite = 'cld_suite'
   character(len=512) :: errmsg
-  integer :: errflg
+  integer :: errcode
   integer :: nphys_threads
   integer :: ins
   integer :: tstep
@@ -49,8 +49,8 @@ program test_instances_advection
   do ins = 1, ninstances
     call ccpp_register(suite_name=ccpp_suite, &
         instance=ins, ninstances=ninstances, &
-        errmsg=errmsg, errflg=errflg)
-    if (errflg /= 0) then
+        errmsg=errmsg, errcode=errcode)
+    if (errcode /= 0) then
       write(error_unit, '(2a)') 'ccpp_register failed: ', trim(errmsg)
       stop 1
     end if
@@ -71,15 +71,15 @@ program test_instances_advection
         diag_name='QV', units='kg kg-1', &
         vertical_dim='vertical_layer_dimension', advected=.true., &
         default_value=0.0_kind_phys, mixing_ratio_type='wet', &
-        errcode=errflg, errmsg=errmsg)
-    if (errflg /= 0) then
+        errcode=errcode, errmsg=errmsg)
+    if (errcode /= 0) then
       write(error_unit, '(2a)') 'instantiate failed: ', trim(errmsg)
       stop 1
     end if
     call ccpp_register_constituents(host_constituents=host_consts, &
         instance=ins, ninstances=ninstances, &
-        errmsg=errmsg, errflg=errflg)
-    if (errflg /= 0) then
+        errmsg=errmsg, errcode=errcode)
+    if (errcode /= 0) then
       write(error_unit, '(a,i0,2a)') &
           'ccpp_register_constituents failed for instance ', ins, &
           ': ', trim(errmsg)
@@ -93,8 +93,8 @@ program test_instances_advection
   !-----------------------------------------------------------------
   do ins = 1, ninstances
     call ccpp_initialize_constituents(ncols=ncols, num_layers=pver, &
-        instance=ins, errmsg=errmsg, errflg=errflg)
-    if (errflg /= 0) then
+        instance=ins, errmsg=errmsg, errcode=errcode)
+    if (errcode /= 0) then
       write(error_unit, '(a,i0,2a)') &
           'ccpp_initialize_constituents failed for instance ', ins, &
           ': ', trim(errmsg)
@@ -108,8 +108,8 @@ program test_instances_advection
   !-----------------------------------------------------------------
 
   call ccpp_const_get_index(stdname='water_vapor_specific_humidity', &
-      const_index=idx, instance=1, errflg=errflg, errmsg=errmsg)
-  if (errflg /= 0) then
+      const_index=idx, instance=1, errcode=errcode, errmsg=errmsg)
+  if (errcode /= 0) then
     write(error_unit, '(2a)') 'ccpp_const_get_index(qv) failed: ', &
         trim(errmsg)
     stop 1
@@ -117,8 +117,8 @@ program test_instances_advection
   call set_index_qv(idx)
 
   call ccpp_number_constituents(num_flds=num_consts, instance=1, &
-      errflg=errflg, errmsg=errmsg)
-  if (errflg /= 0) then
+      errcode=errcode, errmsg=errmsg)
+  if (errcode /= 0) then
     write(error_unit, '(2a)') 'ccpp_number_constituents failed: ', &
         trim(errmsg)
     stop 1
@@ -141,8 +141,8 @@ program test_instances_advection
   do ins = 1, ninstances
     call ccpp_init(suite_name=ccpp_suite, &
         instance=ins, ninstances=ninstances, &
-        errmsg=errmsg, errflg=errflg)
-    if (errflg /= 0) then
+        errmsg=errmsg, errcode=errcode)
+    if (errcode /= 0) then
       write(error_unit, '(a,i0,2a)') 'ccpp_init failed for instance ', &
           ins, ': ', trim(errmsg)
       stop 1
@@ -153,8 +153,8 @@ program test_instances_advection
         lb=1, ub=ncols, thread_num=1, nthreads=1, &
         nphys_threads=nphys_threads, &
         instance=ins, ninstances=ninstances, &
-        errmsg=errmsg, errflg=errflg)
-    if (errflg /= 0) then
+        errmsg=errmsg, errcode=errcode)
+    if (errcode /= 0) then
       write(error_unit, '(a,i0,2a)') &
           'ccpp_physics_init failed for instance ', ins, ': ', trim(errmsg)
       stop 1
@@ -170,8 +170,8 @@ program test_instances_advection
           group_name='physics', lb=1, ub=ncols, &
           thread_num=1, nthreads=1, nphys_threads=nphys_threads, &
           instance=ins, ninstances=ninstances, &
-          errmsg=errmsg, errflg=errflg)
-      if (errflg /= 0) then
+          errmsg=errmsg, errcode=errcode)
+      if (errcode /= 0) then
         write(error_unit, '(a,i0,2a)') &
             'ccpp_physics_timestep_init failed for instance ', ins, &
             ': ', trim(errmsg)
@@ -183,8 +183,8 @@ program test_instances_advection
           lb=1, ub=ncols, thread_num=1, nthreads=1, &
           nphys_threads=nphys_threads, &
           instance=ins, ninstances=ninstances, &
-          errmsg=errmsg, errflg=errflg)
-      if (errflg /= 0) then
+          errmsg=errmsg, errcode=errcode)
+      if (errcode /= 0) then
         write(error_unit, '(a,i0,2a)') &
             'ccpp_physics_run failed for instance ', ins, ': ', trim(errmsg)
         stop 1
@@ -195,8 +195,8 @@ program test_instances_advection
           group_name='physics', lb=1, ub=ncols, &
           thread_num=1, nthreads=1, nphys_threads=nphys_threads, &
           instance=ins, ninstances=ninstances, &
-          errmsg=errmsg, errflg=errflg)
-      if (errflg /= 0) then
+          errmsg=errmsg, errcode=errcode)
+      if (errcode /= 0) then
         write(error_unit, '(a,i0,2a)') &
             'ccpp_physics_timestep_final failed for instance ', ins, &
             ': ', trim(errmsg)
@@ -213,8 +213,8 @@ program test_instances_advection
         lb=1, ub=ncols, thread_num=1, nthreads=1, &
         nphys_threads=nphys_threads, &
         instance=ins, ninstances=ninstances, &
-        errmsg=errmsg, errflg=errflg)
-    if (errflg /= 0) then
+        errmsg=errmsg, errcode=errcode)
+    if (errcode /= 0) then
       write(error_unit, '(a,i0,2a)') &
           'ccpp_physics_final failed for instance ', ins, ': ', trim(errmsg)
       stop 1
@@ -238,8 +238,8 @@ program test_instances_advection
   do ins = 1, ninstances
     call ccpp_final(suite_name=ccpp_suite, &
         instance=ins, ninstances=ninstances, &
-        errmsg=errmsg, errflg=errflg)
-    if (errflg /= 0) then
+        errmsg=errmsg, errcode=errcode)
+    if (errcode /= 0) then
       write(error_unit, '(a,i0,2a)') 'ccpp_final failed for instance ', &
           ins, ': ', trim(errmsg)
       stop 1

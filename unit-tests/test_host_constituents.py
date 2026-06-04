@@ -247,7 +247,7 @@ class TestRegisterConstituentsRoutine(unittest.TestCase):
         # when the host declares the multi-instance pair.
         self.assertIn(
             'subroutine ccpp_register_constituents(host_constituents, '
-            'inst_num, ninstances, errflg, errmsg)',
+            'inst_num, ninstances, errcode, errmsg)',
             self.text,
         )
         self.assertIn(
@@ -300,7 +300,7 @@ class TestRegisterConstituentsRoutine(unittest.TestCase):
     def test_lock_table_called_per_instance(self):
         self.assertIn(
             'call ccpp_model_constituents_obj(inst_num)%lock_table('
-            'errcode=errflg, errmsg=errmsg)',
+            'errcode=errcode, errmsg=errmsg)',
             self.text,
         )
 
@@ -314,14 +314,14 @@ class TestInitializeConstituentsRoutine(unittest.TestCase):
     def test_takes_dimensions_and_instance(self):
         self.assertIn(
             'subroutine ccpp_initialize_constituents(ncols, num_layers, '
-            'inst_num, errflg, errmsg)',
+            'inst_num, errcode, errmsg)',
             self.text,
         )
 
     def test_calls_lock_data_per_instance(self):
         self.assertIn(
             'call ccpp_model_constituents_obj(inst_num)%lock_data('
-            'ncols, num_layers, errcode=errflg, errmsg=errmsg)',
+            'ncols, num_layers, errcode=errcode, errmsg=errmsg)',
             self.text,
         )
 
@@ -368,7 +368,7 @@ class TestInitializeConstituentsRoutine(unittest.TestCase):
         self.assertIn(
             "call ccpp_model_constituents_obj(inst_num)%const_index("
             "index_of_cloud_liquid_water_mixing_ratio, "
-            "'cloud_liquid_water_mixing_ratio', errcode=errflg, errmsg=errmsg)",
+            "'cloud_liquid_water_mixing_ratio', errcode=errcode, errmsg=errmsg)",
             self.text,
         )
 
@@ -393,7 +393,7 @@ class TestInitializeConstituentsRoutine(unittest.TestCase):
             'if (index_of_cloud_liquid_water_mixing_ratio == int_unassigned) then',
             body,
         )
-        self.assertIn('errflg = 1', body)
+        self.assertIn('errcode = 1', body)
         self.assertIn(
             "errmsg = 'ccpp_initialize_constituents: constituent "
             "''cloud_liquid_water_mixing_ratio'' is referenced by a "
@@ -411,7 +411,7 @@ class TestIsSchemeConstituent(unittest.TestCase):
     def test_subroutine_signature(self):
         self.assertIn(
             'subroutine ccpp_is_scheme_constituent(var_name, '
-            'constituent_exists, errflg, errmsg)',
+            'constituent_exists, errcode, errmsg)',
             self.text,
         )
 
@@ -456,26 +456,26 @@ class TestWrapperSubroutines(unittest.TestCase):
     def test_number_constituents(self):
         self.assertIn(
             'subroutine ccpp_number_constituents(num_flds, advected, '
-            'inst_num, errflg, errmsg)',
+            'inst_num, errcode, errmsg)',
             self.text,
         )
         self.assertIn(
             'call ccpp_model_constituents_obj(inst_num)%num_constituents('
-            'num_flds, advected=advected, errcode=errflg, errmsg=errmsg)',
+            'num_flds, advected=advected, errcode=errcode, errmsg=errmsg)',
             self.text,
         )
 
     def test_gather_constituents(self):
         self.assertIn(
             'call ccpp_model_constituents_obj(inst_num)%copy_in('
-            'const_array, errcode=errflg, errmsg=errmsg)',
+            'const_array, errcode=errcode, errmsg=errmsg)',
             self.text,
         )
 
     def test_update_constituents(self):
         self.assertIn(
             'call ccpp_model_constituents_obj(inst_num)%copy_out('
-            'const_array, errcode=errflg, errmsg=errmsg)',
+            'const_array, errcode=errcode, errmsg=errmsg)',
             self.text,
         )
 
@@ -485,7 +485,7 @@ class TestWrapperSubroutines(unittest.TestCase):
         self.assertIn(
             'call ccpp_model_constituents_obj(inst_num)%const_index('
             'standard_name=stdname, index=const_index, '
-            'errcode=errflg, errmsg=errmsg)',
+            'errcode=errcode, errmsg=errmsg)',
             self.text,
         )
 

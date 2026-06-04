@@ -81,8 +81,9 @@ class TestMissingControlVars(unittest.TestCase):
             _validate_required_control_vars('test_host', self._host_dict)
 
     def test_all_missing_vars_reported(self):
-        """All 7 missing required standard names appear in the error message."""
+        """All 8 missing required standard names appear in the error message."""
         missing = [
+            'group_name',
             'horizontal_loop_begin', 'horizontal_loop_end',
             'thread_number', 'number_of_threads', 'number_of_physics_threads',
             'ccpp_error_code', 'ccpp_error_message',

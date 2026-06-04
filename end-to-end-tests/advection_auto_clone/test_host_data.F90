@@ -29,26 +29,26 @@ module test_host_data
 
 contains
 
-  subroutine check_constituent_indices(test_index, test_indices, errmsg, errflg)
+  subroutine check_constituent_indices(test_index, test_indices, errmsg, errcode)
     ! Check constituent indices against what was found by suite
     ! indices are passed in rather than looked up to avoid a dependency loop
     ! Dummy arguments
     integer, intent(in) :: test_index ! scalar const index from host
     integer, intent(in) :: test_indices(:) ! array_test_indices from host
     character(len=*), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    integer, intent(out) :: errcode
 
     ! Local variable
     integer :: indx
     integer :: emstrt
 
-    errflg = 0
+    errcode = 0
     errmsg = ''
     if (test_index /= const_index) then
       emstrt = len_trim(errmsg) + 1
       write(errmsg(emstrt:), '(2a,i0,a,i0)') 'const_index_check for ', &
           const_std_name, test_index, ' /= ', const_index
-      errflg = errflg + 1
+      errcode = errcode + 1
     end if
     do indx = 1, num_consts
       if (test_indices(indx) /= const_inds(indx)) then
@@ -59,7 +59,7 @@ contains
         end if
         write(errmsg(emstrt:), '(2a,i0,a,i0)') 'const_indices_check for ', &
             std_name_array(indx), test_indices(indx), ' /= ', const_inds(indx)
-        errflg = errflg + 1
+        errcode = errcode + 1
       end if
     end do
 

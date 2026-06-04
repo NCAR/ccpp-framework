@@ -49,7 +49,7 @@ contains
   !! \htmlinclude arg_table_cld_ice_run.html
   !!
   subroutine cld_ice_run(ncol, timestep, temp, qv, ps, cld_ice_array, &
-      errmsg, errflg)
+      errmsg, errcode)
 
     integer, intent(in) :: ncol
     real(kind=kind_phys), intent(in) :: timestep
@@ -58,7 +58,7 @@ contains
     real(kind=kind_phys), intent(in) :: ps(:)
     real(kind=kind_phys), intent(inout) :: cld_ice_array(:, :)
     character(len=512), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    integer, intent(out) :: errcode
     !----------------------------------------------------------------
 
     integer :: icol
@@ -66,7 +66,7 @@ contains
     real(kind=kind_phys) :: frz
 
     errmsg = ''
-    errflg = 0
+    errcode = 0
 
     ! Apply state-of-the-art thermodynamics :)
     do icol = 1, ncol
@@ -87,14 +87,14 @@ contains
   !> \section arg_table_cld_ice_init  Argument Table
   !! \htmlinclude arg_table_cld_ice_init.html
   !!
-  subroutine cld_ice_init(tfreeze, errmsg, errflg)
+  subroutine cld_ice_init(tfreeze, errmsg, errcode)
 
     real(kind=kind_phys), intent(in) :: tfreeze
     character(len=512), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    integer, intent(out) :: errcode
 
     errmsg = ''
-    errflg = 0
+    errcode = 0
     tcld = tfreeze - 20.0_kind_phys
 
   end subroutine cld_ice_init
@@ -109,13 +109,13 @@ contains
   !! and the subroutine are parsed correctly.
   !! @{
 
-  subroutine cld_ice_final(errmsg, errflg)
+  subroutine cld_ice_final(errmsg, errcode)
 
     character(len=512), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    integer, intent(out) :: errcode
 
     errmsg = ''
-    errflg = 0
+    errcode = 0
 
   end subroutine cld_ice_final
 

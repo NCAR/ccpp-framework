@@ -684,6 +684,7 @@ def _load_metadata_files(
 # Required control variables: (standard_name, expected_fortran_type, description)
 _REQUIRED_CTRL_VARS = [
     ('suite_name',               'character', 'drives suite dispatch'),
+    ('group_name',               'character', 'drives per-group dispatch inside ccpp_physics_* (each suite_cap emits a select case on this name)'),
     ('horizontal_loop_begin',    'integer',   'lower horizontal slice bound at scheme call sites'),
     ('horizontal_loop_end',      'integer',   'upper horizontal slice bound at scheme call sites'),
     ('thread_number',            'integer',   'current thread number (pass 1 if single-threaded)'),

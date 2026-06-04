@@ -18,15 +18,15 @@ contains
   !> \section arg_table_cld_liq_register  Argument Table
   !! \htmlinclude arg_table_cld_liq_register.html
   !!
-  subroutine cld_liq_register(dyn_const, errmsg, errflg)
+  subroutine cld_liq_register(dyn_const, errmsg, errcode)
     type(ccpp_constituent_properties_t), allocatable, intent(out) :: dyn_const(:)
     character(len=512), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    integer, intent(out) :: errcode
 
     errmsg = ''
-    errflg = 0
-    allocate(dyn_const(1), stat=errflg)
-    if (errflg /= 0) then
+    errcode = 0
+    allocate(dyn_const(1), stat=errcode)
+    if (errcode /= 0) then
       errmsg = 'Error allocating dyn_const in cld_liq_register'
       return
     end if
@@ -34,7 +34,7 @@ contains
         diag_name='CLDLIQ', units='kg kg-1', default_value=0._kind_phys, &
         vertical_dim='vertical_layer_dimension', advected=.true., &
         mixing_ratio_type='dry', &
-        errcode=errflg, errmsg=errmsg)
+        errcode=errcode, errmsg=errmsg)
 
   end subroutine cld_liq_register
 
@@ -42,7 +42,7 @@ contains
   !! \htmlinclude arg_table_cld_liq_run.html
   !!
   subroutine cld_liq_run(ncol, timestep, tcld, temp, qv, ps, &
-      cld_liq_array, cld_liq_tend, errmsg, errflg)
+      cld_liq_array, cld_liq_tend, errmsg, errcode)
 
     integer, intent(in) :: ncol
     real(kind=kind_phys), intent(in) :: timestep
@@ -53,7 +53,7 @@ contains
     real(kind=kind_phys), intent(inout) :: cld_liq_array(:, :)
     real(kind=kind_phys), intent(out) :: cld_liq_tend(:, :)
     character(len=512), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    integer, intent(out) :: errcode
     !----------------------------------------------------------------
 
     integer :: icol
@@ -61,7 +61,7 @@ contains
     real(kind=kind_phys) :: cond
 
     errmsg = ''
-    errflg = 0
+    errcode = 0
 
     do icol = 1, ncol
       do ilev = 1, size(temp, 2)
@@ -83,15 +83,15 @@ contains
   !> \section arg_table_cld_liq_init  Argument Table
   !! \htmlinclude arg_table_cld_liq_init.html
   !!
-  subroutine cld_liq_init(tfreeze, tcld, errmsg, errflg)
+  subroutine cld_liq_init(tfreeze, tcld, errmsg, errcode)
 
     real(kind=kind_phys), intent(in) :: tfreeze
     real(kind=kind_phys), intent(out) :: tcld
     character(len=512), intent(out) :: errmsg
-    integer, intent(out) :: errflg
+    integer, intent(out) :: errcode
 
     errmsg = ''
-    errflg = 0
+    errcode = 0
     tcld = tfreeze - 20.0_kind_phys
 
   end subroutine cld_liq_init
