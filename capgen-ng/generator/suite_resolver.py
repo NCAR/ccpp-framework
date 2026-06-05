@@ -573,6 +573,19 @@ def _one_dim_part(
         lower_str = lower_str.strip()
         upper_str = upper_str.strip()
 
+    # Framework-provided constituent count dimension.  Any variable -- host,
+    # suite-owned, or scheme -- may be dimensioned by
+    # ``number_of_ccpp_constituents``.  The framework owns the extent via the
+    # per-instance constituent object, so a *call subscript* passes the whole
+    # constituent axis.  This mirrors :func:`_const_dim_part` (which only fires
+    # for framework-constituent args) and generalises the recognition to every
+    # other variable dimensioned by the count.  There is no host scalar to USE,
+    # so ``used`` is left untouched.  (Allocating a suite-owned var sized by
+    # this dim is handled separately in generator.suite_data, which resolves the
+    # extent to ``ccpp_model_constituents_obj(i)%num_layer_vars``.)
+    if upper_str == _CONST_NUM_STD:
+        return ':', used
+
     # Registered scalar-index dimension: collapse to the paired index
     # variable's local Fortran name regardless of lower bound.  See
     # capgen-ng/metadata/registered_dimensions.py for the contract.

@@ -72,6 +72,16 @@ Example with multi-line dependencies (real CCPP physics pattern):
   dependencies = Radiation/RRTMG/radlw_main.F90,Radiation/RRTMG/radsw_main.F90
 ```
 
+> **Standalone DDT files require `module_name`.**  A `type = ddt` table
+> in a `.meta` file with **no co-located** `scheme`/`host`/`control`
+> table (a "wrapper object" like `ccpp_optical_props.meta` defining
+> `ty_optical_props_1scl_ccpp`) cannot inherit its module from a sibling.
+> If the defining Fortran module name differs from the DDT table (type)
+> name — which it almost always does for these wrappers — you **must**
+> declare `module_name` explicitly.  capgen-ng does *not* guess (e.g.
+> from the file name); a DDT it can't resolve raises a clear error at
+> generation time naming the type and the `module_name` remedy.
+
 ### 1.3 New per-variable attributes
 
 Inside a `[ var_name ]` section.  All optional.
@@ -83,6 +93,7 @@ Inside a `[ var_name ]` section.  All optional.
 | `advected`       | bool | `False` | Scheme metadata only. |
 | `molar_mass`     | float | `0.0`  | Scheme metadata only. |
 | `diagnostic_name` | str | (defaults to `local_name`) | Host-tooling hint; mutually exclusive with `diagnostic_name_fixed`. |
+| `allocatable`    | bool | `False` | Must match the Fortran `allocatable` attribute on the dummy. Required for any array the *scheme* allocates (see §1.3.3). |
 
 #### 1.3.1 Host `active` + scheme arg shape
 
@@ -182,6 +193,54 @@ on the SuiteVar; every later scheme that consumes it goes through
 the same checks against the frozen fields.  Error messages name the
 source as `host`, `control`, or `suite` so you know whose contract
 you're violating.
+
+#### 1.3.3 `allocatable` and who owns suite-data allocation
+
+A **suite-owned variable** (an interstitial: first written by a scheme
+with `intent=out`, then consumed by another) is stored as a component
+of the generated `ccpp_<suite>_data` DDT.  capgen-ng allocates it for
+you — **once**, in `suite_data_init_fields`, which runs at the very
+start of `<suite>_init`.  That works only when every dimension is known
+that early, i.e. a **host variable** or a value set in the **`register`**
+phase.
+
+When the size is *not* known at init — the array is dimensioned by a
+quantity a scheme computes later (in `init` / `timestep_init` / `run`,
+e.g. a per-timestep daylight-column count) — the suite cannot size it.
+Such a variable must be declared **`allocatable`** and allocated by its
+**producing scheme**:
+
+- metadata: `allocatable = True` on the arg;
+- Fortran: `allocatable, intent(out)` on the dummy, and an explicit
+  `allocate(...)` in the scheme body (an `intent(out)` allocatable is
+  auto-deallocated on entry, so element assignment needs it allocated
+  first).
+
+For an `allocatable` arg capgen-ng then: (1) does **not** pre-allocate it
+in `init_fields`; (2) passes the **whole** component at call sites
+(`...%var`, no array section — an allocatable/assumed-shape mismatch is
+otherwise a compile error); and (3) still frees it in
+`suite_data_final_fields` under an `if (allocated(...))` guard.  So the
+**scheme allocates, the suite (or the scheme) deallocates** — the guard
+makes either order safe (no leak, no double-free).
+
+Size it with the **authoritative dimension variable** — the standard
+name in the arg's `dimensions` — not a look-alike local or a derived
+expression.  If that dimension is a scheme-set quantity, pass it in as a
+scalar `intent=in` arg and `allocate` with it.  (Real example: an array
+declared `number_of_vertical_interfaces_in_RRTMGP` must be sized with
+that value, **not** the host's `vertical_interface_dimension` nor
+`nlay+1`, which differ when the scheme runs on a reduced vertical grid.)
+
+**Generation-time guard.**  capgen-ng rejects a *non*-`allocatable`
+suite-owned array whose dimension is written by a scheme in any phase
+after `register` — it would otherwise be allocated from uninitialized
+memory.  The error names the variable, the offending dimension, and the
+fix (declare it `allocatable`).  The check is sound but partial: it sees
+only dimensions a *scheme* writes, not a host scalar the host driver
+re-computes each step — those remain the author's responsibility, and
+the rule "anything the scheme allocates must be `allocatable` in Fortran
+and metadata" is ultimately enforced by the compiler plus `ccpp_validator`.
 
 ### 1.4 Sliced local names with long subscript indices
 

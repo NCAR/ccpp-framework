@@ -15,6 +15,17 @@ _INTRINSICS = frozenset({
     'real', 'integer', 'character', 'logical', 'complex', 'double precision'
 })
 
+# Framework-provided constituent count dimension.  A suite-owned variable may be
+# dimensioned by number_of_ccpp_constituents; unlike host/suite dims its extent
+# is owned by the framework's per-instance constituent object
+# (``ccpp_model_constituents_obj(i)%num_layer_vars``) declared in module
+# ``ccpp_host_constituents``.  Mirrors the constants of the same name in
+# generator.suite_resolver.
+_CONST_NUM_STD    = 'number_of_ccpp_constituents'
+_CONST_OBJ_VAR    = 'ccpp_model_constituents_obj'
+_CONST_OBJ_MODULE = 'ccpp_host_constituents'
+_CONST_NUM_MEMBER = 'num_layer_vars'
+
 
 def _type_str(type_: str, kind: str) -> str:
     """Return the Fortran type clause for a SuiteVar field.
@@ -67,6 +78,14 @@ def _collect_dim_uses(
             # Suite-owned dim → no USE needed (same module access).
             if dim_std in suite_var_std_names:
                 continue
+            # Framework constituent count → extent comes from the per-instance
+            # constituent object, not the host or a suite scalar.  USE its
+            # module so init_fields can reference the count member.
+            if dim_std == _CONST_NUM_STD:
+                uses.setdefault(_CONST_OBJ_MODULE, [])
+                if _CONST_OBJ_VAR not in uses[_CONST_OBJ_MODULE]:
+                    uses[_CONST_OBJ_MODULE].append(_CONST_OBJ_VAR)
+                continue
             if host_dict is None:
                 raise CCPPError(
                     "Suite-owned variable '{}' has dimension '{}' but no host "
@@ -105,6 +124,10 @@ def _dim_local_expr(dim_std: str, suite_vars: Dict[str, SuiteVar], host_dict) ->
     """
     if dim_std in suite_vars:
         return 'ccpp_suite_data(i)%{}'.format(suite_vars[dim_std].local_name)
+    # Framework constituent count: extent from the per-instance constituent
+    # object (``i`` is the instance index in the init_fields alloc context).
+    if dim_std == _CONST_NUM_STD:
+        return '{}(i)%{}'.format(_CONST_OBJ_VAR, _CONST_NUM_MEMBER)
     entry = host_dict.get(dim_std) if host_dict else None
     if entry is None:
         raise CCPPError(

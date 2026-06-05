@@ -6,7 +6,12 @@ import tempfile
 import unittest
 
 from metadata.parse_tools import CCPPError
-from generator.suite_data import _generate_suite_data, write_suite_data
+from generator.suite_data import (
+    _generate_suite_data,
+    _collect_dim_uses,
+    _dim_local_expr,
+    write_suite_data,
+)
 from generator.suite_resolver import SuiteVar
 
 
@@ -207,6 +212,41 @@ class TestGenerateSuiteDataDDT(unittest.TestCase):
         text = '\n'.join(lines)
         self.assertNotIn('use make_ddt', text)
         self.assertIn('use ccpp_kinds, only: kind_phys', text)
+
+
+class TestConstituentCountDim(unittest.TestCase):
+    """Suite-owned var dimensioned by ``number_of_ccpp_constituents``.
+
+    The framework owns the extent, so ``init_fields`` must allocate the field
+    via the per-instance constituent object's ``num_layer_vars`` member and USE
+    the object's module (``ccpp_host_constituents``).  Regression for the
+    CAM-SIMA se_cslam allocate path (Fix B).
+    """
+
+    def test_dim_local_expr_resolves_to_constituent_count(self):
+        self.assertEqual(
+            _dim_local_expr('number_of_ccpp_constituents', {}, {}),
+            'ccpp_model_constituents_obj(i)%num_layer_vars',
+        )
+
+    def test_collect_dim_uses_adds_constituent_module(self):
+        sv = {'workspace': _make_sv(
+            'workspace', 'work', dims=['number_of_ccpp_constituents'])}
+        uses = _collect_dim_uses(sv, {})
+        self.assertEqual(uses.get('ccpp_host_constituents'),
+                         ['ccpp_model_constituents_obj'])
+
+    def test_init_fields_allocates_with_constituent_count(self):
+        sv = {'workspace': _make_sv(
+            'workspace', 'work', dims=['number_of_ccpp_constituents'])}
+        text = '\n'.join(_generate_suite_data('cdim', sv, host_dict={}))
+        self.assertIn(
+            'use ccpp_host_constituents, only: ccpp_model_constituents_obj',
+            text)
+        self.assertIn(
+            'allocate(ccpp_suite_data(i)%work('
+            'ccpp_model_constituents_obj(i)%num_layer_vars))',
+            text)
 
 
 class TestWriteSuiteData(unittest.TestCase):

@@ -25,6 +25,7 @@ from generator.suite_resolver import (
     _apply_transform_formula,
     _build_call_subscript,
     _build_merged_subscript,
+    _one_dim_part,
     _resolve_single_bound,
     _substitute_instance_idx,
     _translate_active_expr,
@@ -2531,6 +2532,28 @@ class TestDimDeclLocal(unittest.TestCase):
             _dim_decl_local(['some_unknown_dim'], self.hd),
             ', dimension(some_unknown_dim)',
         )
+
+
+class TestConstituentCountDimSubscript(unittest.TestCase):
+    """``number_of_ccpp_constituents`` as a *call subscript* axis.
+
+    Any variable (host, suite-owned, or scheme) may be dimensioned by the
+    framework constituent count; ``_one_dim_part`` must emit a whole-axis
+    ``:`` for it -- not only framework-constituent args (which go through
+    ``_const_dim_part``).  Regression for the CAM-SIMA se_cslam failure where
+    host vars (cflx/qbot/fracis) are dimensioned by number_of_ccpp_constituents.
+    """
+
+    def test_bare_count_is_whole_axis(self):
+        part, used = _one_dim_part('number_of_ccpp_constituents', 'run', {})
+        self.assertEqual(part, ':')
+        self.assertEqual(used, set())
+
+    def test_explicit_lower_bound_count_is_whole_axis(self):
+        part, used = _one_dim_part(
+            'ccpp_constant_one:number_of_ccpp_constituents', 'run', {})
+        self.assertEqual(part, ':')
+        self.assertEqual(used, set())
 
 
 class TestCollectKindsUsed(unittest.TestCase):

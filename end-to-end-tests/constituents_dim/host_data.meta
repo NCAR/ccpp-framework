@@ -1,0 +1,26 @@
+[ccpp-table-properties]
+  name = host_data
+  type = host
+  dependencies =
+[ccpp-arg-table]
+  name = host_data
+  type = host
+[ncols]
+  standard_name = horizontal_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[pver]
+  standard_name = vertical_layer_dimension
+  units = count
+  type = integer
+  protected = True
+  dimensions = ()
+[coupler_flux]
+  standard_name = surface_upward_test_constituent_flux
+  long_name = host-owned array dimensioned by the framework constituent count (Case 1)
+  units = kg m-2 s-1
+  dimensions = (horizontal_dimension, number_of_ccpp_constituents)
+  type = real
+  kind = kind_phys
