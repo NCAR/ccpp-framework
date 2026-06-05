@@ -4522,16 +4522,166 @@ class TestConstituentResolverErrors(unittest.TestCase):
             self._resolve('air_temperature_extra', 'out', 'advected')
         self.assertIn("'tendency_of_'", str(ctx.exception))
 
-    def test_tendency_intent_in_raises(self):
-        # constituent flag + intent=in on a tendency_of_* std name → reject.
-        with self.assertRaises(CCPPError) as ctx:
-            self._resolve('tendency_of_air_temperature', 'in', 'constituent')
-        self.assertIn('intent=out', str(ctx.exception))
+    def test_tendency_intent_in_resolves_to_tendency_array(self):
+        # Rule (b): a constituent tendency may be CONSUMED (e.g. a diagnostics
+        # scheme).  intent=in on a tendency_of_* std name now reads the framework
+        # tendency column instead of erroring.
+        res = self._resolve('tendency_of_air_temperature', 'in', 'constituent')
+        arg = list(iter_phase_calls(res.groups[0].phase_calls['run']))[0].args[0]
+        self.assertEqual(arg.source, 'constituent')
+        self.assertIn('vars_layer_tend', arg.call_expr)
 
-    def test_tendency_intent_inout_raises(self):
+    def test_tendency_intent_inout_resolves_to_tendency_array(self):
+        res = self._resolve('tendency_of_air_temperature', 'inout', 'constituent')
+        arg = list(iter_phase_calls(res.groups[0].phase_calls['run']))[0].args[0]
+        self.assertEqual(arg.source, 'constituent')
+        self.assertIn('vars_layer_tend', arg.call_expr)
+
+
+class TestConstituentConsumerInferenceRuleB(unittest.TestCase):
+    """Rule (b): an UNFLAGGED scheme may CONSUME a constituent that another
+    scheme flags -- a base constituent (``advected``) read via ``vars_layer``, or
+    a constituent tendency (``constituent`` on a ``tendency_of_*`` producer) read
+    via ``vars_layer_tend``.  The consumer infers it from the scheme-wide flag
+    set and never re-flags.  Whether a name is a constituent is the host's call,
+    so a name NO scheme flags stays an ordinary variable.
+    """
+
+    _PRODUCER_CONSUMER = (
+        '[ccpp-table-properties]\n'
+        '  name = tend_producer\n'
+        '  type = scheme\n'
+        '[ccpp-arg-table]\n'
+        '  name = tend_producer_run\n'
+        '  type = scheme\n'
+        '[ qt ]\n'
+        '  standard_name = tendency_of_air_temperature\n'
+        '  units = K s-1\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+        '  type = real | kind = kind_phys\n'
+        '  intent = out\n'
+        '  constituent = .true.\n'
+        '\n'
+        '[ccpp-table-properties]\n'
+        '  name = tend_consumer\n'
+        '  type = scheme\n'
+        '[ccpp-arg-table]\n'
+        '  name = tend_consumer_run\n'
+        '  type = scheme\n'
+        '[ qt ]\n'
+        '  standard_name = tendency_of_air_temperature\n'
+        '  units = K s-1\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+        '  type = real | kind = kind_phys\n'
+        '  intent = in\n'
+    )
+
+    # Consumer only (no scheme flags the tendency as a constituent).
+    _CONSUMER_ONLY = (
+        '[ccpp-table-properties]\n'
+        '  name = tend_consumer\n'
+        '  type = scheme\n'
+        '[ccpp-arg-table]\n'
+        '  name = tend_consumer_run\n'
+        '  type = scheme\n'
+        '[ qt ]\n'
+        '  standard_name = tendency_of_air_temperature\n'
+        '  units = K s-1\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+        '  type = real | kind = kind_phys\n'
+        '  intent = in\n'
+    )
+
+    # A base constituent (advected) flagged by one scheme and consumed unflagged
+    # by another; nothing else provides it.
+    _BASE_FLAGGED_AND_UNFLAGGED = (
+        '[ccpp-table-properties]\n'
+        '  name = base_flagged\n'
+        '  type = scheme\n'
+        '[ccpp-arg-table]\n'
+        '  name = base_flagged_run\n'
+        '  type = scheme\n'
+        '[ q ]\n'
+        '  standard_name = made_up_dry_mixing_ratio\n'
+        '  units = kg kg-1\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+        '  type = real | kind = kind_phys\n'
+        '  intent = in\n'
+        '  advected = .true.\n'
+        '\n'
+        '[ccpp-table-properties]\n'
+        '  name = base_unflagged\n'
+        '  type = scheme\n'
+        '[ccpp-arg-table]\n'
+        '  name = base_unflagged_run\n'
+        '  type = scheme\n'
+        '[ q ]\n'
+        '  standard_name = made_up_dry_mixing_ratio\n'
+        '  units = kg kg-1\n'
+        '  dimensions = (horizontal_dimension, vertical_layer_dimension)\n'
+        '  type = real | kind = kind_phys\n'
+        '  intent = in\n'
+    )
+
+    def _resolve(self, meta, schemes):
+        hd = _load_constituent_host_dict()
+        with tempfile.NamedTemporaryFile('w', suffix='.meta', delete=False) as fh:
+            fh.write(meta)
+            path = fh.name
+        try:
+            store = SchemeStore.build_from(parse_metadata_file(path))
+        finally:
+            os.unlink(path)
+        xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+               '<suite name="tendcs" version="1.0">\n'
+               '  <group name="g">\n'
+               + ''.join('    <scheme>{}</scheme>\n'.format(s) for s in schemes)
+               + '  </group>\n</suite>\n')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xpath = os.path.join(tmpdir, 's.xml')
+            with open(xpath, 'w') as f:
+                f.write(xml)
+            from generator.suite_xml import parse_suite_xml
+            import logging
+            suite = parse_suite_xml(xpath, tmpdir, logging.getLogger('t'),
+                                    skip_validation=True)
+        return resolve_suite(suite, store, hd)
+
+    def test_unflagged_consumer_reads_tendency_array(self):
+        res = self._resolve(self._PRODUCER_CONSUMER,
+                            ['tend_producer', 'tend_consumer'])
+        calls = list(iter_phase_calls(res.groups[0].phase_calls['run']))
+        producer_arg = calls[0].args[0]
+        consumer_arg = calls[1].args[0]
+        self.assertEqual(producer_arg.source, 'constituent')
+        self.assertIn('vars_layer_tend', producer_arg.call_expr)
+        # The consumer carries NO constituent flag, yet routes to the SAME
+        # framework tendency column (rule b inference from the producer).
+        self.assertEqual(consumer_arg.source, 'constituent')
+        self.assertIn('vars_layer_tend', consumer_arg.call_expr)
+
+    def test_unflagged_tendency_without_producer_is_not_constituent(self):
+        # Nothing flags the tendency, so it stays an ordinary variable: an
+        # unprovided consumer is a normal "not provided" error, never silently
+        # routed to the constituent tendency array.
         with self.assertRaises(CCPPError) as ctx:
-            self._resolve('tendency_of_air_temperature', 'inout', 'constituent')
-        self.assertIn('intent=out', str(ctx.exception))
+            self._resolve(self._CONSUMER_ONLY, ['tend_consumer'])
+        self.assertIn('not provided', str(ctx.exception))
+
+    def test_unflagged_base_consumer_reads_vars_layer(self):
+        # Symmetric to the tendency case: a base constituent flagged advected by
+        # one scheme is read by an unflagged consumer via the SAME base column
+        # (vars_layer, NOT the tendency array).
+        res = self._resolve(self._BASE_FLAGGED_AND_UNFLAGGED,
+                            ['base_flagged', 'base_unflagged'])
+        calls = list(iter_phase_calls(res.groups[0].phase_calls['run']))
+        flagged = calls[0].args[0]
+        unflagged = calls[1].args[0]
+        self.assertEqual(flagged.source, 'constituent')
+        self.assertIn('%vars_layer(', flagged.call_expr)
+        self.assertEqual(unflagged.source, 'constituent')
+        self.assertIn('%vars_layer(', unflagged.call_expr)
+        self.assertNotIn('vars_layer_tend', unflagged.call_expr)
 
 
 class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):

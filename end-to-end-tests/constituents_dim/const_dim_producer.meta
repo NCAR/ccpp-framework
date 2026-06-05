@@ -38,6 +38,24 @@
   kind = kind_phys
   intent = out
   allocatable = True
+[qbase]
+  standard_name = test_constituent_one
+  long_name = base constituent modified in place (rule b producer; advected)
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  advected = True
+[qtend]
+  standard_name = tendency_of_test_constituent_one
+  long_name = constituent tendency produced into the framework tendency array
+  units = kg kg-1 s-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  constituent = True
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP

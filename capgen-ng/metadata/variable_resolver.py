@@ -782,6 +782,9 @@ class SchemeStore:
         # duplicate-phase error path so the message can name both the
         # original registration site and the duplicate.
         self._source_paths: Dict[str, Dict[str, str]] = {}
+        # Memoised set of constituent standard names (base + tendency;
+        # see constituent_stdnames); None until first computed.
+        self._const_stds: Optional[frozenset] = None
 
     @classmethod
     def build_from(cls, scheme_tables: List[MetadataTable]) -> 'SchemeStore':
@@ -844,6 +847,36 @@ class SchemeStore:
     def scheme_names(self) -> List[str]:
         """Return sorted list of all known scheme names."""
         return sorted(self._data.keys())
+
+    def constituent_stdnames(self) -> frozenset:
+        """Standard names that some scheme declares as a CONSTITUENT.
+
+        A variable is a constituent when any scheme argument flags it
+        ``is_constituent`` (``advected`` / ``constituent`` / ``molar_mass``):
+
+        * a base constituent -- e.g. a mixing ratio flagged ``advected = true``
+          (read via ``vars_layer``), or
+        * a constituent tendency -- a ``tendency_of_*`` arg flagged
+          ``constituent = true`` (read via ``vars_layer_tend``).
+
+        A *consumer* of either (a scheme reading a mixing ratio, or a diagnostics
+        scheme reading a tendency) must NOT re-flag it: whether a given standard
+        name is a constituent or an ordinary variable is the host's decision
+        (CAM-SIMA registers it as a constituent; CCPP-SCM may expose the same
+        name as an ordinary host variable).  The suite resolver therefore infers
+        constituent-ness from this scheme-metadata-wide set rather than from the
+        consumer's own metadata.  Memoised; covers every loaded scheme because
+        standard-name semantics are global.
+        """
+        if self._const_stds is None:
+            result = set()
+            for phases in self._data.values():
+                for varlist in phases.values():
+                    for var in varlist:
+                        if getattr(var, 'is_constituent', False):
+                            result.add(var.standard_name)
+            self._const_stds = frozenset(result)
+        return self._const_stds
 
     def module_for(self, name: str) -> str:
         """Return the Fortran module name that exports scheme *name*.

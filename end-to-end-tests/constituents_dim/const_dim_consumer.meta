@@ -22,6 +22,22 @@
   type = real
   kind = kind_phys
   intent = in
+[qbase]
+  standard_name = test_constituent_one
+  long_name = base constituent read WITHOUT a constituent flag (rule b consumer)
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+[qtend]
+  standard_name = tendency_of_test_constituent_one
+  long_name = constituent tendency read WITHOUT a constituent flag (rule b consumer)
+  units = kg kg-1 s-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP

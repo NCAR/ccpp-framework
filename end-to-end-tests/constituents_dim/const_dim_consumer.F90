@@ -19,9 +19,11 @@ contains
   !! \section arg_table_const_dim_consumer_run Argument Table
   !! \htmlinclude const_dim_consumer_run.html
   !!
-  subroutine const_dim_consumer_run(cwork, awork, errmsg, errcode)
+  subroutine const_dim_consumer_run(cwork, awork, qbase, qtend, errmsg, errcode)
     real(kind=kind_phys), intent(in)  :: cwork(:)
     real(kind=kind_phys), intent(in)  :: awork(:)
+    real(kind=kind_phys), intent(in)  :: qbase(:, :)
+    real(kind=kind_phys), intent(in)  :: qtend(:, :)
     character(len=*),     intent(out) :: errmsg
     integer,              intent(out) :: errcode
 
@@ -47,6 +49,20 @@ contains
         return
       end if
     end do
+
+    ! Rule (b): qbase (base constituent) and qtend (constituent tendency) carry
+    ! NO constituent flag here; capgen infers them from the producer's flags and
+    ! reads the same framework columns (vars_layer / vars_layer_tend).
+    if (any(qbase /= 42.0_kind_phys)) then
+      errcode = 1
+      errmsg = 'rule b: unflagged base-constituent consumer read the wrong value'
+      return
+    end if
+    if (any(qtend /= 7.0_kind_phys)) then
+      errcode = 1
+      errmsg = 'rule b: unflagged constituent-tendency consumer read the wrong value'
+      return
+    end if
   end subroutine const_dim_consumer_run
 
 end module const_dim_consumer

@@ -22,13 +22,15 @@ contains
   !! \htmlinclude const_dim_producer_run.html
   !!
   subroutine const_dim_producer_run(coupler_flux, cwork, n_const, awork, &
-      errmsg, errcode)
-    real(kind=kind_phys),              intent(in)  :: coupler_flux(:, :)
-    real(kind=kind_phys),              intent(out) :: cwork(:)
-    integer,                           intent(in)  :: n_const
-    real(kind=kind_phys), allocatable, intent(out) :: awork(:)
-    character(len=*),                  intent(out) :: errmsg
-    integer,                           intent(out) :: errcode
+      qbase, qtend, errmsg, errcode)
+    real(kind=kind_phys),              intent(in)    :: coupler_flux(:, :)
+    real(kind=kind_phys),              intent(out)   :: cwork(:)
+    integer,                           intent(in)    :: n_const
+    real(kind=kind_phys), allocatable, intent(out)   :: awork(:)
+    real(kind=kind_phys),              intent(inout) :: qbase(:, :)
+    real(kind=kind_phys),              intent(out)   :: qtend(:, :)
+    character(len=*),                  intent(out)   :: errmsg
+    integer,                           intent(out)   :: errcode
 
     integer :: m, i
 
@@ -59,6 +61,12 @@ contains
     do m = 1, n_const
       awork(m) = real(100 * m, kind_phys)
     end do
+
+    ! Rule (b), producer side: flag a base constituent (advected) and a
+    ! constituent tendency (constituent=true) and write known values into their
+    ! framework columns.  const_dim_consumer reads both with NO flag (inference).
+    qbase = 42.0_kind_phys
+    qtend = 7.0_kind_phys
   end subroutine const_dim_producer_run
 
 end module const_dim_producer

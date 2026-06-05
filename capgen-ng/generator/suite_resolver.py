@@ -1455,6 +1455,7 @@ def _resolve_one_arg(
     used_local_names: Set[str],
     suite_name: str = '',
     loop_context: Optional[List[Tuple[str, Optional[str]]]] = None,
+    const_stds: Set[str] = frozenset(),
 ) -> ResolvedArg:
     """Resolve one scheme argument against host/control/suite dictionaries.
 
@@ -1618,6 +1619,7 @@ def _resolve_one_arg(
     # Returns ``None`` if the arg is not constituent-related.
     const_arg = _resolve_constituent_arg(
         scheme_var, phase, host_dict, suite_vars, scheme_name, suite_name,
+        const_stds=const_stds,
     )
     if const_arg is not None:
         return const_arg
@@ -2026,6 +2028,7 @@ def _resolve_constituent_arg(
     suite_vars: Dict[str, 'SuiteVar'],
     scheme_name: str,
     suite_name: str,
+    const_stds: Set[str] = frozenset(),
 ) -> Optional[ResolvedArg]:
     """Synthesise a ``source='constituent'`` ResolvedArg, or return ``None``.
 
@@ -2076,6 +2079,26 @@ def _resolve_constituent_arg(
     is_tendency_name  = std_name.startswith(_TEND_PREFIX)
     is_index_name     = std_name.startswith(_INDEX_PREFIX)
     is_framework_name = std_name in _FRAMEWORK_CONST_STDS or is_index_name
+
+    # Rule (b): an UNFLAGGED consumer of a name that some scheme declares as a
+    # constituent -- a base constituent (``advected``, read via vars_layer) or a
+    # constituent tendency (``constituent`` on a ``tendency_of_*`` producer, read
+    # via vars_layer_tend) -- resolves to the SAME framework column the
+    # producer/registration backs.  Consumers must not re-flag it: whether a
+    # given standard name is a constituent or an ordinary variable is the host's
+    # decision (CAM-SIMA vs CCPP-SCM), so we infer it from the
+    # scheme-metadata-wide set instead of the consumer's own metadata.
+    # Host/earlier-suite provision WINS: if this host declares the name, or a
+    # prior scheme already produced it as an ordinary variable, defer to normal
+    # resolution (a genuine constituent is in neither host_dict nor suite_vars).
+    is_known_constituent = std_name in const_stds
+    inferred_constituent_consumer = (
+        is_known_constituent
+        and not scheme_var.is_constituent
+        and intent in ('in', 'inout')
+        and not (host_dict and std_name in host_dict)
+        and std_name not in suite_vars
+    )
 
     # Host/suite provides it -> not a framework auto-provision.  Defer to
     # normal host/suite resolution when:
@@ -2187,7 +2210,7 @@ def _resolve_constituent_arg(
             used_const_dim_std=used_const_dim_std,
         ))
 
-    if not scheme_var.is_constituent:
+    if not (scheme_var.is_constituent or inferred_constituent_consumer):
         return None  # not constituent-related
 
     # ---- Provider gate (mirrors original-capgen ConstituentVarDict.find_variable)
@@ -2231,14 +2254,16 @@ def _resolve_constituent_arg(
         member   = 'vars_layer_tend'
     else:  # in / inout
         if is_tendency_name:
-            raise CCPPError(
-                "Constituent tendency arg '{}' (standard_name='{}', "
-                "scheme='{}', phase='{}') must be declared with intent=out; "
-                "physics phases only produce tendencies, never consume "
-                "them.".format(local, std_name, scheme_name, phase)
-            )
-        base_std = std_name
-        member   = 'vars_layer'
+            # Consumer of a constituent tendency (rule b): read the SAME column
+            # the producer wrote -- ccpp_constituent_tendencies(<slice>,
+            # index_of_<base>).  Reaching here means it is a recognised
+            # constituent tendency (flagged, or inferred via const_stds)
+            # that neither the host nor an earlier suite var provides.
+            base_std = std_name[len(_TEND_PREFIX):]
+            member   = 'vars_layer_tend'
+        else:
+            base_std = std_name
+            member   = 'vars_layer'
 
     leading_sub, used_host_std = _build_call_subscript(
         scheme_dims, phase, host_dict, suite_vars=suite_vars,
@@ -2772,6 +2797,7 @@ def _resolve_one_call(
     vars_list = scheme_store.variables_for(scheme_name, phase)
     if vars_list is None:
         return None
+    const_stds = scheme_store.constituent_stdnames()
     resolved_call = ResolvedCall(
         scheme_name=scheme_name, phase=phase,
         scheme_module=scheme_store.module_for(scheme_name),
@@ -2780,6 +2806,7 @@ def _resolve_one_call(
         arg = _resolve_one_arg(
             scheme_var, phase, host_dict, suite_vars, scheme_name, used_local_names,
             suite_name=suite_name, loop_context=loop_context,
+            const_stds=const_stds,
         )
         resolved_call.args.append(arg)
     return resolved_call
