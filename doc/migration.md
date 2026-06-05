@@ -6,7 +6,7 @@ Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
 **capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
-*Last revised: 2026-06-01.*  Current unit-test suite: 1426 passing (1438 with doctests).
+*Last revised: 2026-06-05.*  Current unit-test suite: 1516 passing.
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
 `capgen-ng/` (top-level of this repo).  Unit tests live at the top
@@ -580,11 +580,13 @@ through lifecycle and physics-phase calls; the framework consumes
 `number_of_instances` only at register/init time but carries it
 elsewhere for API symmetry with `(thread_number, number_of_threads)`.
 
-### 3.3 Host module convention
+### 3.3 Module-name convention (host, scheme, and DDT tables)
 
-The Fortran module that exports a host metadata table's variables is
-typically named after the table.  When that's not the case, use the
-`module_name` table-property override (§1.2):
+capgen-ng trusts metadata and does **not** parse Fortran, so it derives
+the Fortran module name from the metadata: by default `module name =
+table name`.  When the Fortran `module` statement does not match the
+`[ccpp-table-properties] name`, declare the real module name with the
+`module_name` override (§1.2).  This applies to **every** table type:
 
 ```
 [ccpp-table-properties]
@@ -592,6 +594,24 @@ typically named after the table.  When that's not the case, use the
   type = host
   module_name = mod_test_host_data
 ```
+
+The same rule bites **scheme** tables.  If a scheme file's table is named
+`gravity_wave_drag_common` but the Fortran is `module gw_common`, the
+generated cap emits `use gravity_wave_drag_common` and the build fails
+with `Cannot open module file 'gravity_wave_drag_common.mod'`.  Fix it in
+the scheme `.meta`:
+
+```
+[ccpp-table-properties]
+  name = gravity_wave_drag_common
+  type = scheme
+  module_name = gw_common
+```
+
+Standalone `type = ddt` tables **require** `module_name` explicitly
+(there is no basename fallback).  Porting a host like CAM-SIMA's
+`atmospheric_physics` tree, where many scheme/DDT table names differ from
+their module names, is largely a batch of `module_name` injections.
 
 ### 3.4 Registered scalar-index dimensions
 
@@ -766,6 +786,54 @@ behavior of legacy `ccpp-prebuild` / `ccpp-capgen`.  The staging temp
 file lives in the target's parent directory (always under
 `--output-root`), so no `/tmp` access is required.
 
+### 4.5 Driving an existing capgen-based build: the CAM-SIMA compatibility layer
+
+A host whose build system was written against **original ccpp-capgen's
+Python API** can adopt capgen-ng without rewriting that build system, by
+inserting a thin facade.  CAM-SIMA does exactly this with
+`cime_config/capgen_compat/` (in the CAM-SIMA tree, not in capgen-ng).
+CAM-SIMA's `cam_autogen.py`, `generate_registry_data.py`, and
+`write_init_files.py` are unmodified; they import the facade instead of
+original capgen and keep calling the same object surface
+(`cap_database.host_model_dict()`, `cap_database.call_list(phase)`,
+`Var.get_prop_value(...)`, `Var.source.ptype`, …).
+
+The facade re-implements that surface on top of capgen-ng's outputs:
+
+- `_runner.py` invokes `ccpp_capgen_ng.py` and returns the resolver
+  results plus the `datatable.xml`.
+- `_cap_database.py` (`CapDatabase`) exposes `host_model_dict()` over the
+  flat `host_dict` and `call_list(phase)` over the per-(scheme, phase)
+  `ResolvedArg` lists, mapping original-capgen phase spellings
+  (`initialize`/`finalize`) onto capgen-ng's (`init`/`final`).
+- `_var_wrapper.py` (`_VarWrapper`) reconstructs original capgen's
+  per-variable accessors over a `HostVarEntry` (host path) or a
+  `ResolvedArg` (call-list path).
+- `metadata_table.py` / `parse_*` shim the metadata-parsing entry points
+  the registry generator expects.
+
+Two contracts matter when writing or maintaining such an adapter, both
+learned from the CAM-SIMA bring-up:
+
+1. **Drop suite-internal args.** A `ResolvedArg` with
+   `source == 'suite'` is produced by one scheme and consumed by another
+   within the same suite (it lives in `<suite>_data`, never in the host
+   dict).  The adapter must NOT surface it on the call list, or the host's
+   init-file generator will mis-flag it as a "missing required host
+   variable".
+2. **Key constituent handling on the source.** Treat a `ResolvedArg`
+   with `source == 'constituent'` as supplied by the constituents object
+   (skip host USE-import and skip the initial-conditions read).  Do **not**
+   key on `ResolvedArg.is_constituent`: that flag reflects whether the
+   *scheme* flagged the arg, and an unflagged rule-b consumer (§6.5) of a
+   constituent or `tendency_of_<X>` carries `is_constituent = False` while
+   still being framework-supplied.  Getting this wrong was the `se_cslam`
+   "Missing required host variables: tendency_of_water_vapor_…" failure
+   (`doc/constituents_overhaul.md` §4.15).
+
+This facade is how capgen-ng currently drives the `kessler`, `rrtmgp`,
+and `se_cslam`/CSLAM (FCAM7 `cam7`) CAM-SIMA cases end-to-end on Derecho.
+
 ---
 
 ## 5. Generated cap layout — what's new and what changed
@@ -911,11 +979,13 @@ the buffer from creation — no ownership transfer call needed.
   - `ccpp_number_constituents(num_flds, advected, instance_number, ...)`
   - `ccpp_gather_constituents`, `ccpp_update_constituents`
   - `ccpp_is_scheme_constituent(var_name, ...)` (not per-instance)
-- Scheme-side registration: four rules — register-phase
-  `ccpp_constituent_properties_t(:)` arg, consume base via
-  `advected=true intent=in/inout`, produce tendency via
-  `constituent=true intent=out` + `tendency_of_<X>` std name, mismatches
-  are codegen errors.
+- Scheme-side registration rules — register-phase
+  `ccpp_constituent_properties_t(:)` arg declares new constituents;
+  flag a base species with `advected=true intent=in/inout`; produce a
+  tendency with `constituent=true intent=out` + `tendency_of_<X>` std
+  name; a constituent-flagged `intent=out` that is not a `tendency_of_*`
+  is a codegen error.  A scheme that only READS a constituent or a
+  `tendency_of_<X>` need not re-flag it — see §6.5.
 
 ### 6.3 Host metadata wins over auto-provisioning (2026-05-12)
 
@@ -987,6 +1057,50 @@ the use case.
 Full reference: `doc/auto_clone_constituents.md`.  E2e fixture:
 `end-to-end-tests/advection_auto_clone/` (a port of CAM-SIMA's
 `advection_test`).
+
+### 6.5 Reading constituents and tendencies without re-flagging (rule b, 2026-06-05)
+
+Whether a given standard name is a constituent or an ordinary variable
+is the **host's** decision: CAM-SIMA exposes water vapor as a
+constituent; CCPP-SCM may expose the same name as an ordinary host
+variable.  A scheme that merely **reads** such a name therefore must
+**not** repeat the `advected` / `constituent` flag — only the
+declaring/producing scheme (or the host) does.
+
+capgen-ng infers constituent-ness for an unflagged consumer from the
+scheme-metadata-wide set of names that *some* scheme flags
+(`VariableResolver.constituent_stdnames()`):
+
+- an unflagged `intent=in/inout` read of a flagged base name resolves to
+  `…%vars_layer(:, …, index_of_<X>)`;
+- an unflagged `intent=in` read of `tendency_of_<X>` resolves to
+  `…%vars_layer_tend(:, …, index_of_<X>)` — the same column a constituent
+  tendency *producer* wrote.
+
+**Host / earlier-suite provision wins**: if the host declares the name,
+or an earlier scheme already produced it as an ordinary variable, normal
+host/suite resolution takes over and no constituent column is used.
+
+This is what lets the CAM-SIMA `cam7` suite work unchanged: the
+convection/stratiform schemes write `tendency_of_water_vapor_…` as a
+flagged constituent tendency and the `sima_diagnostics` schemes read it
+back unflagged.  Host adapters that post-process the resolver output
+(e.g. CAM-SIMA's `write_init_files` via the compatibility layer, §4.5)
+must key constituent handling on `ResolvedArg.source == 'constituent'`,
+**not** on `ResolvedArg.is_constituent` — an inferred consumer carries
+`is_constituent = False` by design.
+
+### 6.6 `number_of_ccpp_constituents` as a dimension
+
+A scheme (or a suite-owned interstitial) may be dimensioned by the
+framework constituent count `number_of_ccpp_constituents`.  capgen-ng
+resolves that count for *any* variable: call-site subscripts emit `:`
+for the constituent axis, and `<suite>_data` allocations size the axis
+from the per-instance constituent object's `%num_layer_vars`.  This is
+what allows whole-buffer schemes (e.g. constituent advection) to declare
+`dimensions = (horizontal_dimension, vertical_layer_dimension,
+number_of_ccpp_constituents)`.  E2e fixture:
+`end-to-end-tests/constituents_dim/`.
 
 ---
 

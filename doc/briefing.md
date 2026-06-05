@@ -1,6 +1,6 @@
 # capgen-ng — Briefing for CCPP Framework Developers & Power Users
 
-*Prepared for the 2026-05-14 walk-through; last revised 2026-06-01.
+*Prepared for the 2026-05-14 walk-through; last revised 2026-06-05.
 Companion document to `doc/migration.md` (the detailed migration
 guide) and `doc/redesign_prompt.md` (the implementation spec).*
 
@@ -244,9 +244,9 @@ control-variable arguments to the public entry points.
   meeting.  Pieces involved: framework setter additions
   (`set_advected`, `set_diagnostic_name`, `set_default_value`),
   `is_match` relaxation, Class A vs Class B property classification.
-- **Validator host-metadata check.**  `ccpp_validator.py` currently
-  validates scheme metadata only; host-metadata-vs-Fortran is on
-  hold until the e2e test suite settles.
+- ~~**Validator host-metadata check.**~~  **Landed 2026-06-01**:
+  `ccpp_validator.py --host-files` validates `type = host` and
+  `type = ddt` tables against the Fortran (`doc/migration.md` §7.4).
 - **Codegen-time scheme-registration cross-check.**  Today's
   registration check is at runtime
   (`ccpp_initialize_constituents`).  Stronger options: new metadata
@@ -356,14 +356,16 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1426 passing on `feature/capgen-ng` (1438 with
-  doctests; as of 2026-06-01).
-- **End-to-end tests passing** (10): `advection`,
-  `advection_auto_clone`, `capgen_ng`, `chunked_data`, `ddthost`,
-  `instances`, `instances_advection`, `nested_suite`, `opt_arg`,
-  `var_compat`.  `advection_auto_clone` is the newest — a port of
-  CAM-SIMA's `advection_test` exercising the auto-clone legacy
-  registration path under `--legacy-auto-clone-constituents`.
+- **Unit tests**: 1516 passing on `feature/capgen-ng` (as of
+  2026-06-05).
+- **End-to-end tests passing** (12): `advection`,
+  `advection_auto_clone`, `capgen_ng`, `chunked_data`,
+  `constituents_dim`, `ddthost`, `instances`, `instances_advection`,
+  `nested_suite`, `opt_arg`, `suite_allocate`, `var_compat`.  The two
+  newest — `constituents_dim` (a variable dimensioned by
+  `number_of_ccpp_constituents`) and `suite_allocate` (suite-owned
+  allocatable interstitials sized by a scheme-written dimension) — were
+  added while hardening the CAM-SIMA HPC build.
 - **Code size**: ~17.8k LOC of Python under `capgen-ng/` (includes
   docstrings, inline comments, and the three transient shim modules)
   + ~18k LOC of unit/doctest under `unit-tests/`.  Still procedural,
@@ -412,12 +414,25 @@ don't rebuild downstream objects unless something actually moved.
 - **UFS Weather Model**: not yet attempted; SCM is the proving
   ground first.  An anticipated complication is the "fast physics"
   called directly from the FV3 dynamical core as a separate group.
-- **CAM-SIMA**: not yet reconnected; pending the constituents
-  overhaul decision and CAM-SIMA developer availability.  Note that
-  `--legacy-auto-clone-constituents` is the no-decision-needed bridge
-  that lets capgen-ng accept CAM-SIMA atmospheric_physics metadata
-  as-is — ~16 of the ~20 schemes that touch constituents rely on the
-  auto-clone path today.
+- **CAM-SIMA**: **reconnected (2026-06-03 → 06-05).**  capgen-ng now
+  drives the real CAM-SIMA build on Derecho via a thin compatibility
+  layer (`cime_config/capgen_compat/`, in the CAM-SIMA tree) that
+  re-implements original ccpp-capgen's Python API surface
+  (`cap_database`, `host_model_dict`, `call_list`, the per-variable
+  `Var` accessors) on top of capgen-ng's `datatable.xml` +
+  `ResolvedArg` / `HostVarEntry`.  CAM-SIMA's `cam_autogen.py`,
+  `generate_registry_data.py`, and `write_init_files.py` are unchanged.
+  Three cases build **and run to completion** on Derecho (gnu):
+  `kessler`, `rrtmgp`, and `se_cslam` / CSLAM (the FCAM7 `cam7` suite —
+  the full convection + stratiform + radiation + gravity-wave physics).
+  `--legacy-auto-clone-constituents` is still the no-decision-needed
+  bridge for the ~16 schemes that rely on auto-clone.  Bring-up this
+  week produced three reusable lessons baked into the docs: the
+  consume-without-re-flagging rule (`doc/migration.md` §6.5), the
+  adapter must key constituent handling on `ResolvedArg.source`
+  (`doc/constituents_overhaul.md` §4.15), and `module_name` overrides
+  are required wherever a Fortran module name differs from its
+  `.meta` table name (`doc/migration.md` §3.3).
 
 ---
 

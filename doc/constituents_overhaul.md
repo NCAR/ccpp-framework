@@ -2,7 +2,7 @@
 
 **Authors:** Dom Heinzeller (lead), Claude (assistant)
 **Date drafted:** 2026-05-12
-**Last revised:** 2026-05-18
+**Last revised:** 2026-06-05
 **Intended audience:** CCPP framework team, CAM-SIMA team
 **Status:** Discussion document — no decisions are final.  Proposals
 A/B/C below remain pending the upcoming meeting; the bug fix from
@@ -11,7 +11,13 @@ internal cleanup from Proposal B (§4.8) have landed; the missing
 setters from Proposal A and the `is_match` relaxation from Proposal B
 have not.  Independent of A/B/C, the per-suite dynamic_constituents
 buffer was made per-instance on 2026-05-18 to fix a multi-instance
-mutation conflict — see §4.13.
+mutation conflict — see §4.13.  Since 2026-06-03 capgen-ng drives the
+real CAM-SIMA build (via the `cime_config/capgen_compat/` facade): the
+`kessler`, `rrtmgp`, and `se_cslam`/CSLAM (FCAM7 `cam7`) cases all build
+and run on Derecho.  That integration added the **rule-b** consumer path
+(read a constituent or `tendency_of_<X>` without re-flagging — §2.2.3)
+and surfaced the host-adapter fix in §4.15; neither changes the A/B/C
+decision surface.
 
 ---
 
@@ -170,21 +176,43 @@ The resolver classifies each scheme arg into exactly one source. A
 `ccpp_model_constituents_obj(<inst>)%vars_layer(:, :, index_of_<X>)`
 (or `%vars_layer_tend(...)` for `tendency_of_<X>` outputs).
 
-### 2.2 The four scheme-author rules
+### 2.2 The scheme-author rules
 
 (See `doc/constituents.md` for full details; this is the summary.)
 
 1. **Register** — register-phase scheme args of type
    `ccpp_constituent_properties_t(:), intent=out, allocatable` declare
    new constituents the scheme contributes.
-2. **Consume** — physics-phase scheme args with `advected=true` (or
-   `molar_mass=...` or `constituent=true`) and `intent=in/inout`, with
-   the constituent's standard name, read the base species.
-3. **Produce a tendency** — physics-phase scheme args with
-   `constituent=true`, `intent=out`, and standard name
-   `tendency_of_<X>`, write the tendency.
-4. **Mismatched combinations are errors** — `intent=out` on a base
-   constituent, or `intent=in` on a tendency, are codegen-time errors.
+2. **Flag what you own** — a physics-phase arg flagged `advected=true`
+   (or `molar_mass=...` or `constituent=true`) marks its standard name as
+   a constituent: a base species read via `%vars_layer`
+   (`intent=in/inout`), or — when the name is `tendency_of_<X>` — a
+   constituent tendency *written* via `%vars_layer_tend` (`intent=out`).
+   A base constituent therefore uses `intent=inout` (read-modify-write the
+   shared column), never `intent=out`; `intent=out` is reserved for
+   tendencies. (This is why CAM-SIMA's `state_converters` dry→moist
+   converters declare the moist mixing ratios `intent=inout`.)
+3. **Consume without re-flagging (rule b)** — a scheme that merely READS a
+   name some *other* scheme flags as a constituent does **not** repeat the
+   flag. Whether a standard name is a constituent or an ordinary variable
+   is the **host's** decision (CAM-SIMA exposes water vapor as a
+   constituent; CCPP-SCM may expose the same name as an ordinary host
+   variable), so capgen-ng infers it from the scheme-metadata-wide set of
+   flagged names (`VariableResolver.constituent_stdnames()`) rather than
+   from the consumer's own metadata. An unflagged `intent=in` read of the
+   base name resolves to `%vars_layer(...)`; an unflagged `intent=in` read
+   of `tendency_of_<X>` resolves to `%vars_layer_tend(:, index_of_<X>)`
+   — the same column a tendency *producer* wrote. **Host/earlier-suite
+   provision wins**: if the host declares the name, or an earlier scheme
+   already produced it as an ordinary variable, normal host/suite
+   resolution takes over. (Worked example: in the CAM-SIMA `cam7` suite
+   the convection/stratiform schemes write `tendency_of_water_vapor_...`
+   as a flagged constituent tendency, and the unflagged `sima_diagnostics`
+   schemes read it back via this rule — see §4.15.)
+4. **Mismatched combinations are errors** — a constituent-FLAGGED
+   `intent=out` arg whose name is not a `tendency_of_*` is a codegen-time
+   error: physics phases may only PRODUCE tendencies; new base
+   constituents must be declared in the register phase.
 
 ### 2.3 Two registration sources (no auto-clone)
 
@@ -689,6 +717,46 @@ shim. Remove the rewrite once known consumers are migrated.
   emitter's already-established host-driven pattern.  Trivial
   implementation cost; eliminates the cross-cutting confusion for
   any host whose `ccpp_error_code` local name is not `errcode`.
+
+### 4.15 CAM-SIMA compat layer: `write_init_files` mis-flagged unflagged constituent-tendency consumers (FIXED 2026-06-05)
+
+- **Location**: `cime_config/capgen_compat/_var_wrapper.py` in CAM-SIMA
+  — the facade that lets capgen-ng drive CAM-SIMA's *unchanged*
+  `write_init_files.py` / `cam_autogen.py` — method
+  `_VarWrapper.from_resolved_arg`.
+- **Symptom**: the `se_cslam` (FCAM7 `cam7`) build failed AFTER cap
+  generation, inside CAM-SIMA's own init-file generator:
+  `Error: Missing required host variables:
+  tendency_of_water_vapor_mixing_ratio_wrt_moist_air_and_condensed_water`.
+- **Mechanism**: in `cam7` the convection/stratiform schemes (`dadadj`,
+  `zm_conv_evap`, `rk_stratiform`, `zm_convr`,
+  `cloud_particle_sedimentation`) write that tendency as a FLAGGED
+  constituent tendency (`constituent=true intent=out`) → capgen-ng routes
+  them to `%vars_layer_tend` (`source='constituent'`, NOT recorded in
+  `suite_vars`) and the name enters `const_stds`.  The four
+  `sima_diagnostics` schemes read it back `intent=in` UNFLAGGED → rule b
+  (§2.2.3) → `source='constituent'`, but `ResolvedArg.is_constituent` is
+  taken from the consumer's OWN flag = `False`.  The compat wrapper
+  derived `advected`/`constituent` only from
+  `is_constituent`/`is_constituent_arg` → both `False`, and
+  `source='constituent'` was not in its suite-internal drop set, so
+  `write_init_files.gather_ccpp_req_vars` saw intent=in + not-constituent
+  + not-in-host-dict → "missing host variable".
+- **Fix**: key the wrapper's `advected`/`constituent` on
+  `arg.source == 'constituent'` (a strict superset of the two old flags).
+  `write_init_files` skips constituents from BOTH USE-import and the
+  initial-conditions read — the constituents object supplies them at
+  runtime — so flagging the tendency consumer is correct, not a mask.
+  Verified 43/43 `capgen_compat` + 16/16 `test_write_init_files`, then
+  confirmed by a full `se_cslam` run to completion.
+- **Takeaway**: `ResolvedArg.is_constituent` answers "did the SCHEME flag
+  it"; `source == 'constituent'` answers "is this supplied by the
+  constituents framework".  Any host adapter (the CAM-SIMA compat layer
+  today, any future one) must key constituent handling on the *source*,
+  because rule-b inferred consumers legitimately carry
+  `is_constituent == False`.
+- **Position relative to Proposals A/B/C**: orthogonal — a host-adapter
+  bug exposed by rule b, not a framework constituent-model change.
 
 ---
 

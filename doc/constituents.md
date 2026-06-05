@@ -122,6 +122,24 @@ The resolver translates this scheme arg to
 in the generated group cap.  No host metadata declaration is needed for
 the variable.
 
+**Consumers need not re-flag (rule b, 2026-06-05).**  Whether a standard
+name is a constituent or an ordinary variable is the **host's** decision
+(CAM-SIMA exposes water vapor as a constituent; CCPP-SCM may expose the
+same name as an ordinary host variable), so a scheme that only **reads**
+a constituent — the base species, or a `tendency_of_<X>` — does **not**
+repeat the `advected` / `constituent` flag.  capgen-ng infers
+constituent-ness for an unflagged `intent=in/inout` consumer from the
+scheme-metadata-wide set of names *some* scheme flags
+(`VariableResolver.constituent_stdnames()`): an unflagged read of the
+base resolves to `%vars_layer(...)`, an unflagged read of
+`tendency_of_<X>` to `%vars_layer_tend(..., index_of_<X>)` — the same
+column a tendency producer (Rule 3) wrote.  **Host / earlier-suite
+provision wins**: if the host declares the name, or an earlier scheme
+already produced it as an ordinary variable, normal host/suite
+resolution takes over.  (This is what lets the CAM-SIMA `cam7`
+`sima_diagnostics` schemes read `tendency_of_water_vapor_…` that the
+convection schemes produce.)
+
 ### Rule 3 — Produce a tendency (any physics phase)
 
 A scheme that writes a constituent tendency declares the variable with
@@ -146,12 +164,18 @@ same name.
 
 ### Rule 4 — Mismatched combinations are hard errors
 
-Two combinations are explicitly rejected by the resolver at code-gen time:
+One combination is rejected by the resolver at code-gen time:
 
 | Mismatch | Error |
 |---|---|
 | `is_constituent=True` + `intent=out` + std_name does NOT start with `tendency_of_` | *"Physics phases may only produce constituent tendencies; new base constituents must be declared via a `ccpp_constituent_properties_t` argument in a register-phase scheme."* |
-| `is_constituent=True` + `intent in (in, inout)` + std_name starts with `tendency_of_` | *"Constituent tendency arg must be declared with intent=out; physics phases only produce tendencies, never consume them."* |
+
+> **Changed 2026-06-05:** consuming a constituent **tendency**
+> (`intent=in/inout` on a `tendency_of_*` standard name) is **no longer**
+> an error.  It resolves to `%vars_layer_tend(..., index_of_<X>)` — the
+> same column a tendency producer writes — so a diagnostics scheme can
+> read a tendency another scheme produced.  See "Consumers need not
+> re-flag (rule b)" under Rule 2.
 
 ### Direct framework-array access
 
@@ -810,12 +834,14 @@ This means:
 
 ### Forbidden patterns recap
 
-These are rejected at code-gen time (Rule 4 of [§2](#2-the-four-rules-scheme-author-conventions)):
+This is rejected at code-gen time (Rule 4 of [§2](#2-the-four-rules-scheme-author-conventions)):
 
 - `is_constituent + intent=out + non-tendency std_name` — physics phases
   may only produce tendencies, not new base constituents.
-- `is_constituent + intent=in/inout + tendency_of_*` — tendencies are
-  write-only.
+
+(As of 2026-06-05, `intent=in/inout + tendency_of_*` is **allowed** — a
+constituent tendency may be *consumed*, resolving to `%vars_layer_tend`.
+Only *producing* a tendency uses `intent=out`.)
 
 ### Subscript indices in sliced local_names must be standard names
 

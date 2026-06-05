@@ -7,7 +7,7 @@ program managers; it summarises the case for `capgen-ng` in terms of
 product risk, schedule, and cross-organization impact rather than
 implementation detail.*
 
-*Last revised: 2026-06-01.*
+*Last revised: 2026-06-05.*
 
 ---
 
@@ -217,10 +217,12 @@ generator itself sits at ~17.8k lines.
 The "who can fix this" pool is closer to "anyone with
 framework context".  capgen-ng comes with ~1.4k docstring + unit
 tests (~18k lines of test code), plus an end-to-end test suite of
-10 fixtures that covers all of prebuild's and capgen's existing
+12 fixtures that covers all of prebuild's and capgen's existing
 end-to-end tests and adds new ones for multi-instance + constituents
-(`instances_advection`) and the auto-clone-constituents shim
-(`advection_auto_clone`).  Including these tests and the rich inline
+(`instances_advection`), the auto-clone-constituents shim
+(`advection_auto_clone`), constituent-count dimensions
+(`constituents_dim`), and suite-owned allocatable interstitials
+(`suite_allocate`).  Including these tests and the rich inline
 comments puts capgen-ng's full tree on the same order of magnitude as
 capgen — about half of which is test coverage and human-readable
 prose, not load-bearing logic.
@@ -264,15 +266,16 @@ Features that exist only in capgen-ng (some exist in prebuild):
 
 ---
 
-## 6. Where things stand right now (2026-06-01)
+## 6. Where things stand right now (2026-06-05)
 
-- **Unit tests**: 1426 passing (1438 with doctests).  No known failures.
-- **End-to-end tests**: 10 passing — `advection`,
-  `advection_auto_clone` (new 2026-05-21; CAM-SIMA advection_test
-  port exercising the auto-clone shim), `capgen_ng`, `chunked_data`,
+- **Unit tests**: 1516 passing.  No known failures.
+- **End-to-end tests**: 12 passing — `advection`,
+  `advection_auto_clone` (CAM-SIMA advection_test port exercising the
+  auto-clone shim), `capgen_ng`, `chunked_data`, `constituents_dim`,
   `ddthost`, `instances`, `instances_advection`
   (multi-instance + constituents), `nested_suite`, `opt_arg`,
-  `var_compat`.
+  `suite_allocate`, `var_compat`.  The two newest (`constituents_dim`,
+  `suite_allocate`) were added while hardening the CAM-SIMA HPC build.
 - **Code size**: ~17.8k lines of Python under `capgen-ng/` including
   inline comments and the three transient shim modules; ~18k lines of
   unit/doctest under `unit-tests/`.  Still procedural; still flat
@@ -302,11 +305,18 @@ Features that exist only in capgen-ng (some exist in prebuild):
 - **UFS Weather Model**: not yet attempted; SCM is the proving
   ground first.  Expecting updates due to the "fast physics"
   called directly from the FV3 dynamical core as separate group.
-- **CAM-SIMA**: not yet re-connected; the availability of CAM-SIMA
-  developers is now the primary gating item.  The auto-clone shim
-  removes the metadata-edit blocker; the constituent overhaul
-  decision (see §7) is no longer on the critical path for getting
-  CAM-SIMA built.
+- **CAM-SIMA**: **re-connected (2026-06-03 → 06-05).**  capgen-ng now
+  drives the production CAM-SIMA build on the Derecho supercomputer
+  through a small compatibility layer that lets CAM-SIMA's existing
+  build scripts call capgen-ng without being rewritten.  Three
+  configurations build **and run to completion**: `kessler`, `rrtmgp`,
+  and `se_cslam`/CSLAM — the last being the full CAM7 physics suite
+  (deep + shallow convection, stratiform microphysics, RRTMGP
+  radiation, gravity-wave drag) on a cubed-sphere/CSLAM-advection
+  configuration.  This is the first time the redesigned generator has
+  produced a complete, running CAM-SIMA model.  The constituent
+  overhaul decision (see §7) remains a separate track and was not on
+  the critical path for this milestone.
 
 ---
 
