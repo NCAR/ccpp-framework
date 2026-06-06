@@ -422,9 +422,11 @@ don't rebuild downstream objects unless something actually moved.
   `Var` accessors) on top of capgen-ng's `datatable.xml` +
   `ResolvedArg` / `HostVarEntry`.  CAM-SIMA's `cam_autogen.py`,
   `generate_registry_data.py`, and `write_init_files.py` are unchanged.
-  Three cases build **and run to completion** on Derecho (gnu):
-  `kessler`, `rrtmgp`, and `se_cslam` / CSLAM (the FCAM7 `cam7` suite —
-  the full convection + stratiform + radiation + gravity-wave physics).
+  Three cases build **and run to completion** on Derecho under **both
+  gnu and intel** (bit-comparable results): `kessler`, `rrtmgp`, and
+  `se_cslam` / CSLAM (the FCAM7 `cam7` suite — the full convection +
+  stratiform + radiation + gravity-wave physics).  A short shareable
+  brief on the compatibility layer is `doc/capgen_compat_layer.md`.
   `--legacy-auto-clone-constituents` is still the no-decision-needed
   bridge for the ~16 schemes that rely on auto-clone.  Bring-up this
   week produced three reusable lessons baked into the docs: the

@@ -832,7 +832,11 @@ learned from the CAM-SIMA bring-up:
    (`doc/constituents_overhaul.md` §4.15).
 
 This facade is how capgen-ng currently drives the `kessler`, `rrtmgp`,
-and `se_cslam`/CSLAM (FCAM7 `cam7`) CAM-SIMA cases end-to-end on Derecho.
+and `se_cslam`/CSLAM (FCAM7 `cam7`) CAM-SIMA cases end-to-end on Derecho
+— building and running to completion under both **gnu and intel**, with
+bit-comparable results.  A short shareable brief (for the original
+ccpp-capgen author) is `doc/capgen_compat_layer.md`; the full developer
+reference is `cime_config/capgen_compat/README.md` in the CAM-SIMA tree.
 
 ---
 
@@ -1230,4 +1234,7 @@ Character `len=*` remains a wildcard against any concrete `len=N`.
 - `doc/constituents.md` — full constituents reference for capgen-ng.
 - `doc/constituents_overhaul.md` — architecture review and reform
   proposals for the next iteration.
+- `doc/capgen_compat_layer.md` — short brief on the CAM-SIMA ↔ capgen-ng
+  compatibility layer (§4.5); full reference is
+  `cime_config/capgen_compat/README.md` in the CAM-SIMA tree.
 

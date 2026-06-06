@@ -309,7 +309,8 @@ Features that exist only in capgen-ng (some exist in prebuild):
   drives the production CAM-SIMA build on the Derecho supercomputer
   through a small compatibility layer that lets CAM-SIMA's existing
   build scripts call capgen-ng without being rewritten.  Three
-  configurations build **and run to completion**: `kessler`, `rrtmgp`,
+  configurations build **and run to completion under both the Intel and
+  GNU compilers**, with bit-comparable results: `kessler`, `rrtmgp`,
   and `se_cslam`/CSLAM — the last being the full CAM7 physics suite
   (deep + shallow convection, stratiform microphysics, RRTMGP
   radiation, gravity-wave drag) on a cubed-sphere/CSLAM-advection
@@ -398,5 +399,7 @@ Three points worth raising explicitly:
 - `doc/migration.md` — host-author migration guide.
 - `doc/constituents_overhaul.md` — the constituent-reform discussion
   document.
+- `doc/capgen_compat_layer.md` — short brief on the CAM-SIMA ↔ capgen-ng
+  compatibility layer (for the original ccpp-capgen author).
 - `end-to-end-tests/` — the working examples (`instances_advection`
   is the newest, exercises everything end-to-end).

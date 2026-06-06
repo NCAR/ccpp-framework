@@ -748,7 +748,8 @@ shim. Remove the rewrite once known consumers are migrated.
   initial-conditions read — the constituents object supplies them at
   runtime — so flagging the tendency consumer is correct, not a mask.
   Verified 43/43 `capgen_compat` + 16/16 `test_write_init_files`, then
-  confirmed by a full `se_cslam` run to completion.
+  confirmed by full `se_cslam` runs to completion under both gnu and
+  intel (bit-comparable results).
 - **Takeaway**: `ResolvedArg.is_constituent` answers "did the SCHEME flag
   it"; `source == 'constituent'` answers "is this supplied by the
   constituents framework".  Any host adapter (the CAM-SIMA compat layer
