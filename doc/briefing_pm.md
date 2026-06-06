@@ -97,9 +97,8 @@ Three pressures converged in 2025/26:
    `ConstituentVarDict` scope-chain or the auto-clone path requires
    reading several modules together.  Realistically, only one or two
    people on the framework team can change capgen without breaking
-   something downstream.  One of them now lives overseas and opposes
-   simplification attempts from the others. This is an unacceptable
-   **bus-factor risk** that the redesign retires.
+   something downstream.  One of them now lives overseas. This is an
+   unacceptable **bus-factor risk** that the redesign retires.
 
 ---
 
