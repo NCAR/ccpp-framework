@@ -11,13 +11,14 @@ corresponding Fortran subroutine:
    (order-insensitive).
 4. For every dummy argument present in both sides, the **per-arg attributes**
    agree: ``intent``, ``type``, ``kind``, and number of dimensions (rank).
-   A *scheme* ``character`` argument treats ``len=*`` on either side as a
-   wildcard against any concrete ``len=N`` / ``len=:`` — the storage is
-   supplied by the caller.  In contrast, host / DDT metadata passed via
-   ``--host-files`` *defines* its character storage, so ``len=*`` is
-   rejected there (a concrete ``len=N`` is required); see
-   :func:`_check_definition_character_lengths`.  Control tables are exempt
-   (their character vars are pass-through dummy arguments too).
+   ``character`` length must be declared CONSISTENTLY — the metadata mirrors
+   the Fortran exactly, so ``len=*`` matches only ``len=*`` and ``len=N`` only
+   the identical ``len=N`` (no wildcarding).  Old-style F77 forms
+   (``character*64``, ``character*(*)``, ``c*5``) are normalised to the
+   ``len=`` form before comparison.  Additionally, host / DDT metadata passed
+   via ``--host-files`` *defines* its character storage, so ``len=*`` is
+   rejected there outright (a concrete ``len=N`` required); see
+   :func:`_check_definition_character_lengths`.  Control tables are exempt.
 
 Asymmetric treatment of ``optional``:
 
@@ -224,6 +225,12 @@ def _split_type_spec(spec: str) -> "Tuple[str, str]":
     ('character', 'len=*')
     >>> _split_type_spec('character')
     ('character', '')
+    >>> _split_type_spec('character*64')
+    ('character', 'len=64')
+    >>> _split_type_spec('character*(*)')
+    ('character', 'len=*')
+    >>> _split_type_spec('character*(80)')
+    ('character', 'len=80')
     >>> _split_type_spec('type(my_t)')
     ('type(my_t)', '')
     >>> _split_type_spec('double precision')
@@ -231,7 +238,21 @@ def _split_type_spec(spec: str) -> "Tuple[str, str]":
     >>> _split_type_spec('not_a_type')
     ('', '')
     """
-    m = _TYPE_SPEC_RE.match(spec.strip())
+    spec = spec.strip()
+    # Old-style (F77) character length given with ``*`` instead of a modern
+    # ``(len=...)`` selector:
+    #   character*64    -> len=64       character*(*)   -> len=*
+    #   character*(80)  -> len=80       character*(CL)  -> len=cl  (named)
+    m_old = re.match(r'(?i)^character\s*\*\s*(.+)$', spec)
+    if m_old is not None:
+        length = m_old.group(1).strip()
+        paren = re.match(r'^\(\s*(.*?)\s*\)$', length)   # peel one ( ) layer
+        if paren is not None:
+            length = paren.group(1).strip()
+        if length == '*':
+            return ('character', 'len=*')
+        return ('character', 'len={}'.format(length.lower()))
+    m = _TYPE_SPEC_RE.match(spec)
     if m is None:
         return ('', '')
     type_raw = m.group(1).lower()
@@ -295,6 +316,10 @@ def _parse_decl_line(line: str) -> Dict[str, _ArgAttrs]:
     {}
     >>> _parse_decl_line('integer :: only_local')
     {'only_local': _ArgAttrs(type_='integer', kind_='', intent='', optional=False, rank=0)}
+    >>> _parse_decl_line('character*256, intent(out) :: scheme_name')['scheme_name']
+    _ArgAttrs(type_='character', kind_='len=256', intent='out', optional=False, rank=0)
+    >>> sorted(_parse_decl_line('character :: c*5, d(10)*8').items())
+    [('c', _ArgAttrs(type_='character', kind_='len=5', intent='', optional=False, rank=0)), ('d', _ArgAttrs(type_='character', kind_='len=8', intent='', optional=False, rank=1))]
     """
     line = _COMMENT_RE.sub('', line)
     if '::' not in line:
@@ -340,6 +365,21 @@ def _parse_decl_line(line: str) -> Dict[str, _ArgAttrs]:
         # parenthesised sub-expressions (e.g. ``::x = (a==b)``) live at
         # depth > 0 and are skipped.
         var_tok = _strip_initialiser(var_tok).rstrip()
+        # Old-style (F77) per-entity character length: ``c*5`` / ``d(10)*8``
+        # / ``s*(*)``.  A trailing ``*<length>`` overrides the type-spec
+        # length for THIS entity only.
+        entity_kind = None
+        m_star = re.match(
+            r'(?i)^(.*?)\s*\*\s*(\(\s*\*\s*\)|\(\s*\w+\s*\)|\d+|\*|\w+)\s*$',
+            var_tok,
+        )
+        if m_star is not None:
+            var_tok = m_star.group(1).strip()
+            length = m_star.group(2).strip()
+            paren = re.match(r'^\(\s*(.*?)\s*\)$', length)
+            if paren is not None:
+                length = paren.group(1).strip()
+            entity_kind = 'len=*' if length == '*' else 'len={}'.format(length.lower())
         name_match = re.match(r'(\w+)\s*(\((.*)\))?\s*$', var_tok)
         if name_match is None:
             continue
@@ -350,8 +390,9 @@ def _parse_decl_line(line: str) -> Dict[str, _ArgAttrs]:
         else:
             rank = line_rank
         result[name] = _ArgAttrs(
-            type_=type_, kind_=kind_, intent=intent,
-            optional=optional, rank=rank,
+            type_=type_,
+            kind_=entity_kind if entity_kind is not None else kind_,
+            intent=intent, optional=optional, rank=rank,
         )
     return result
 
@@ -1107,9 +1148,10 @@ def _check_arg_attributes(
     """Compare per-attribute consistency for one dummy argument.
 
     Compared attributes: ``intent``, ``type``, ``kind``, dimension
-    *rank* (number of dims).  ``character`` kinds treat ``len=*`` on
-    either side as a wildcard against any concrete ``len=N`` /
-    ``len=:``.  The ``optional`` attribute is checked at the call site
+    *rank* (number of dims).  ``character`` length must be declared
+    CONSISTENTLY: the metadata mirrors the Fortran exactly -- ``len=*``
+    matches only ``len=*`` and ``len=N`` only the identical ``len=N`` (no
+    wildcarding).  The ``optional`` attribute is checked at the call site
     in :func:`_validate_scheme` because one direction emits a warning
     (logger-dependent) rather than an error.
 
@@ -1153,12 +1195,17 @@ def _check_arg_attributes(
     meta_kind = (meta_var.kind or '').strip().lower()
     fort_kind = fort.kind_
     if meta_type == 'character' or fort.type_ == 'character':
-        if meta_kind == 'len=*' or fort_kind == 'len=*':
-            pass  # wildcard match
-        elif meta_kind != fort_kind:
+        # Character length must be CONSISTENT between metadata and Fortran:
+        # the metadata mirrors the declaration, it does not loosely match it.
+        # ``len=*`` matches only ``len=*`` (assumed length on one side vs a
+        # concrete length on the other is a real inconsistency), and ``len=N``
+        # matches only the identical ``len=N``.
+        if meta_kind != fort_kind:
             errs.append(
                 prefix + "character length mismatch "
-                "(metadata={!r}, Fortran={!r})".format(meta_kind, fort_kind)
+                "(metadata={!r}, Fortran={!r}); the metadata kind must mirror "
+                "the Fortran declaration exactly -- len=* only matches len=*, "
+                "len=N only matches the same len=N".format(meta_kind, fort_kind)
             )
     else:
         if meta_kind != fort_kind:

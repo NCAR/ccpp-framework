@@ -44,7 +44,7 @@
   units = none
   dimensions = ()
   type = character
-  kind = len=512
+  kind = len=*
   intent = out
 [errcode]
   standard_name = ccpp_error_code

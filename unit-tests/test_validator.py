@@ -850,12 +850,53 @@ class TestArgAttributeChecks(unittest.TestCase):
         self.assertTrue(any("kind mismatch" in e and "'b'" in e for e in errs),
                         msg=errs)
 
-    def test_character_len_star_is_wildcard(self):
+    def test_character_len_star_consistent_passes(self):
+        # len=* on BOTH sides is consistent -> no error.
+        errs = self._run(
+            self._meta(type_b='character', kind_b='len=*'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    character(len=*), intent(in) :: b\n'
+            )),
+        )
+        char_errs = [e for e in errs if "'b'" in e and 'character' in e]
+        self.assertEqual(char_errs, [], msg=errs)
+
+    def test_character_len_star_vs_concrete_is_mismatch(self):
+        # len=* must NOT wildcard against a concrete len=N: the metadata must
+        # mirror the Fortran exactly.
         errs = self._run(
             self._meta(type_b='character', kind_b='len=512'),
             self._f90('a, b', (
                 '    integer, intent(in) :: a\n'
                 '    character(len=*), intent(in) :: b\n'
+            )),
+        )
+        self.assertTrue(
+            any("character length mismatch" in e and "'b'" in e for e in errs),
+            msg=errs,
+        )
+
+    def test_character_concrete_len_match_passes(self):
+        # Identical concrete lengths agree.
+        errs = self._run(
+            self._meta(type_b='character', kind_b='len=64'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    character(len=64), intent(in) :: b\n'
+            )),
+        )
+        char_errs = [e for e in errs if "'b'" in e and 'character' in e]
+        self.assertEqual(char_errs, [], msg=errs)
+
+    def test_character_old_style_len_parsed_and_matched(self):
+        # Old-style F77 character*64 in Fortran is normalised to len=64 and
+        # matched against the metadata.
+        errs = self._run(
+            self._meta(type_b='character', kind_b='len=64'),
+            self._f90('a, b', (
+                '    integer, intent(in) :: a\n'
+                '    character*64, intent(in) :: b\n'
             )),
         )
         char_errs = [e for e in errs if "'b'" in e and 'character' in e]
@@ -1302,10 +1343,14 @@ class TestValidateHostCharacterAssumedLength(_HostValidationFixture):
     """)
 
     def test_assumed_length_error(self):
+        # Two complementary errors now fire: the definition-site rejection of
+        # len=* in host/DDT metadata, plus the exact-match inconsistency vs the
+        # concrete Fortran (character(len=512)).  Both name scheme_name.
         errs = validate([], [self.f90_path], host_files=[self.meta_path])
-        self.assertEqual(len(errs), 1, errs)
-        self.assertIn("len=*", errs[0])
-        self.assertIn("scheme_name", errs[0])
+        self.assertTrue(
+            any("concrete length" in e and "len=*" in e for e in errs), errs
+        )
+        self.assertTrue(all("scheme_name" in e for e in errs), errs)
 
 
 class TestValidateHostCharacterConcreteLengthOK(_HostValidationFixture):
