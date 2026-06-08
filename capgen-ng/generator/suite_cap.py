@@ -1066,6 +1066,15 @@ def _physics_dispatch_lines(
                 lines.append('{}    {}{}'.format(indent, lname, sep))
         else:
             lines.append('{}call {}()'.format(indent, cap_sub))
+        # Stop and propagate on the first group error.  Each group phase
+        # subroutine resets ``errflg = 0`` on entry, so without this guard a
+        # ``group_name='all'`` dispatch would let a LATER group's success
+        # overwrite an EARLIER group's failure -- the error (and its message)
+        # would be silently masked and only resurface downstream as an
+        # "invalid group state" when ``run`` finds the failed group never
+        # reached ``IN_TIMESTEP``.  Mirrors the per-scheme call guards.
+        if errflg_local:
+            lines.append('{}if ({} /= 0) return'.format(indent, errflg_local))
 
     if has_group_name:
         grp_local = group_name_entry.local_name

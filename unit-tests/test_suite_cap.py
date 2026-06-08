@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 from metadata.metadata_table import parse_metadata_file
 from metadata.variable_resolver import build_flat_host_dict, SchemeStore
-from generator.suite_resolver import resolve_suite
+from generator.suite_resolver import resolve_suite, ResolvedGroup
 from generator.suite_cap import (
     _all_suite_scheme_names,
     _schemes_with_register,
@@ -285,6 +285,49 @@ class TestGroupDispatchUnknownGroupError(unittest.TestCase):
             block = self._phase_block(phase)
             self.assertIn('case default', block,
                           "phase '{}' missing case default".format(phase))
+
+
+class TestGroupDispatchErrorPropagation(unittest.TestCase):
+    """A ``group_name='all'`` dispatch must stop and return on the FIRST
+    group's error.  Each group phase subroutine resets ``errflg=0`` on entry,
+    so without a guard between group calls a later group's success would mask
+    an earlier group's failure -- which then resurfaces downstream only as an
+    "invalid group state" when ``run`` finds the failed group never reached
+    ``IN_TIMESTEP``.  (Regression: CAM-SIMA cam4 physics_before_coupler.)"""
+
+    def _two_group_run_all_block(self):
+        sr, store = _resolve()
+        g0 = sr.groups[0]
+        # Synthesize a second group that shares the first's phase calls so the
+        # case('', 'all') path emits two group calls.
+        sr.groups.append(ResolvedGroup(
+            group_name='physics_second',
+            phase_calls=g0.phase_calls,
+            dim_uses=g0.dim_uses,
+        ))
+        text = '\n'.join(
+            _generate_suite_cap('test_simple', sr, store, _load_full_host_dict())
+        )
+        sub = 'subroutine test_simple_physics_run'
+        s = text.index(sub)
+        e = text.index('end ' + sub, s)
+        block = text[s:e]
+        a   = block.index("case('', 'all')")
+        nxt = block.index("case('physics", a + 1)   # first individual group case
+        return block[a:nxt]
+
+    def test_guard_between_group_calls(self):
+        all_block = self._two_group_run_all_block()
+        # Each of the two group calls is followed by an errflg guard.
+        self.assertEqual(
+            all_block.count('if (errflg /= 0) return'), 2, all_block
+        )
+        # The guard after the first call must precede the second call so the
+        # second group is unreachable once the first has failed.
+        first_call  = all_block.index('call physics_run(')
+        guard       = all_block.index('if (errflg /= 0) return', first_call)
+        second_call = all_block.index('call physics_second_run(')
+        self.assertLess(guard, second_call, all_block)
 
 
 class TestWriteSuiteCap(unittest.TestCase):
