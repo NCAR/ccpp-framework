@@ -3544,33 +3544,33 @@ class TestRegisterConstituentsSuiteCap(unittest.TestCase):
         self.assertNotIn('%lock_table', self.text)
         self.assertNotIn('%new_field', self.text)
 
-    def test_two_pass_packs_into_buffer(self):
+    def test_register_called_once_per_scheme(self):
         register_body = self.text.split('subroutine reg_consts_register')[1].split(
             'end subroutine reg_consts_register'
         )[0]
-        self.assertIn('First pass: count', register_body)
-        self.assertIn('Second pass: copy into per-instance buffer', register_body)
-        # The constituent-providing scheme is called twice (one per pass).
+        # Single-pass append: each constituent scheme's _register is called
+        # EXACTLY ONCE (the old count+copy two-pass called it twice and broke
+        # non-idempotent schemes such as prescribed_aerosols_register).
         self.assertEqual(
-            register_body.count('call register_constituents_register'), 2,
+            register_body.count('call register_constituents_register'), 1,
         )
+        self.assertNotIn('First pass', register_body)
+        self.assertNotIn('Second pass', register_body)
 
     def test_buffer_allocate(self):
         # Outer wrapper-DDT array is sized to number_of_instances on first
-        # call; each instance allocates its own ``%items(num_consts)`` slot.
+        # call; each instance starts its own slot empty (``%items(0)``) and
+        # appends each scheme's constituents.
         self.assertIn(
             'allocate(reg_consts_dynamic_constituents(',
             self.text,
         )
-        self.assertIn(
-            'allocate(reg_consts_dynamic_constituents(',
-            self.text,
-        )
-        self.assertIn('%items(num_consts))', self.text)
+        self.assertIn('%items(0))', self.text)
 
-    def test_buffer_populate_loop(self):
+    def test_buffer_append(self):
+        # Each scheme's returned array is appended to the per-instance slot.
         self.assertIn(
-            '%items(num_consts + i) = scheme_consts(i)',
+            '%items = [reg_consts_dynamic_constituents(inst_num)%items, scheme_consts]',
             self.text,
         )
 

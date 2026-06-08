@@ -466,15 +466,16 @@ def _register_lines(
     if has_dyn_consts:
         lines.append('')
         if has_consts:
+            # Each constituent scheme's _register returns its array into this
+            # temp; it is appended to the buffer and reused for the next
+            # scheme, so _register is called EXACTLY ONCE per scheme.
             lines.append(
                 '{}type({}), allocatable :: scheme_consts(:)'.format(
                     i2, _CONST_PROP_TYPE
                 )
             )
-            lines.append('{}integer :: num_consts, i'.format(i2))
-        else:
-            # auto-clone-only path: no scheme-returned temp, no copy
-            # loop, so we don't need ``scheme_consts`` or ``i``.
+        if has_auto_cloned:
+            # Counter used only by the auto-clone-constituents buffer growth.
             lines.append('{}integer :: num_consts'.format(i2))
 
     # Trace block: dummies referenced inside the gated write so strict
@@ -522,15 +523,18 @@ def _register_lines(
         # ``ccpp_register_constituents`` can ``set_const_index`` on each
         # without conflicting with other instances.  The outer wrapper
         # array is allocated once on first call (any instance); each
-        # instance then runs its own two-pass count+pack into its slot.
-        # The state-machine guard above this block ensures each instance
-        # runs the fill at most once.
+        # instance then appends each scheme's constituents into its slot,
+        # calling every scheme's ``_register`` EXACTLY ONCE (register may
+        # allocate persistent module state, so the earlier two-pass
+        # count+copy that called it twice broke non-idempotent schemes such
+        # as ``prescribed_aerosols_register``).  The state-machine guard
+        # above this block ensures each instance runs the fill at most once.
         #
         # auto-clone-constituents: the legacy shim contributes one
         # additional ``%instantiate`` per consumer-side
         # ``is_constituent`` arg with no register-phase source.  Those
-        # synthesised entries participate in the same two-pass
-        # count+pack against the same per-instance buffer slot.
+        # synthesised entries are appended to the same per-instance buffer
+        # slot after the scheme-registered entries.
         const_scheme_names = {scheme_name for scheme_name, _ in suite_res.constituent_register_calls}
         buf = '{}_dynamic_constituents'.format(suite_name)
         n_auto_clone = len(suite_res.auto_cloned_constituents)
@@ -545,59 +549,63 @@ def _register_lines(
         lines.append('{}end if'.format(i2))
         lines.append('')
 
-        # Per-instance two-pass count+pack into this instance's slot.
-        lines.append('{}num_consts = 0'.format(i2))
-        lines.append('{}! First pass: count constituents'.format(i2))
+        # Single pass: call each constituent scheme's _register EXACTLY ONCE
+        # and append its returned array to this instance's slot.  Start from
+        # an empty slot and grow it; intrinsic assignment of the constituent
+        # array constructor deep-copies each entry (same assignment the old
+        # copy loop used element-wise).
+        lines.append(
+            "{}! Pack each scheme's constituents (register run once each).".format(i2)
+        )
+        lines.append('{}allocate({}({})%items(0))'.format(i2, buf, inst_idx))
         for _gname, resolved_call in _register_calls(suite_res):
             if resolved_call.scheme_name in const_scheme_names:
                 _emit_register_call(resolved_call, i2, errflg_local, lines)
                 lines.append(
-                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
-                        i2,
+                    '{0}{1}({2})%items = [{1}({2})%items, scheme_consts]'.format(
+                        i2, buf, inst_idx,
                     )
                 )
                 lines.append('{}deallocate(scheme_consts)'.format(i2))
-        # auto-clone-constituents: synthesised entries contribute a
-        # static count; add a literal at the end of the count pass.
-        if n_auto_clone > 0:
-            lines.append(
-                '{}! auto-clone-constituents: legacy-shim synthesised entries'.format(
-                    i2,
-                )
-            )
-            lines.append('{}num_consts = num_consts + {}'.format(i2, n_auto_clone))
-        lines.append('')
-        lines.append('{}allocate({}({})%items(num_consts))'.format(
-            i2, buf, inst_idx,
-        ))
-        lines.append('{}num_consts = 0'.format(i2))
-        lines.append('')
-        lines.append('{}! Second pass: copy into per-instance buffer'.format(i2))
-        for _gname, resolved_call in _register_calls(suite_res):
-            if resolved_call.scheme_name in const_scheme_names:
-                _emit_register_call(resolved_call, i2, errflg_local, lines)
-                lines.append('{}do i = 1, size(scheme_consts, 1)'.format(i2))
-                lines.append(
-                    '{}{}({})%items(num_consts + i) = scheme_consts(i)'.format(
-                        i2 + _INDENT, buf, inst_idx,
-                    )
-                )
-                lines.append('{}end do'.format(i2))
-                lines.append(
-                    '{}num_consts = num_consts + size(scheme_consts, 1)'.format(
-                        i2,
-                    )
-                )
-                lines.append('{}deallocate(scheme_consts)'.format(i2))
-        # auto-clone-constituents: emit one synthesised %instantiate
-        # call per entry into the per-instance buffer slot.
+        # auto-clone-constituents: reserve n_auto_clone trailing slots after
+        # the scheme-registered entries, then instantiate into them.
         if n_auto_clone > 0:
             lines.append('')
             lines.append(
-                '{}! auto-clone-constituents: legacy-shim synthesised %instantiate calls'.format(
+                '{}! auto-clone-constituents: reserve + instantiate synthesised entries'.format(
                     i2,
                 )
             )
+            lines.append(
+                '{}num_consts = size({}({})%items, 1)'.format(i2, buf, inst_idx)
+            )
+            if has_consts:
+                # Grow the existing scheme-registered slot by n_auto_clone.
+                lines.append(
+                    '{}call move_alloc({}({})%items, scheme_consts)'.format(
+                        i2, buf, inst_idx,
+                    )
+                )
+                lines.append(
+                    '{}allocate({}({})%items(num_consts + {}))'.format(
+                        i2, buf, inst_idx, n_auto_clone,
+                    )
+                )
+                lines.append(
+                    '{0}if (num_consts > 0) {1}({2})%items(1:num_consts) = '
+                    'scheme_consts(1:num_consts)'.format(i2, buf, inst_idx)
+                )
+                lines.append(
+                    '{}if (allocated(scheme_consts)) deallocate(scheme_consts)'.format(i2)
+                )
+            else:
+                # No scheme-registered entries: just size the slot directly.
+                lines.append('{}deallocate({}({})%items)'.format(i2, buf, inst_idx))
+                lines.append(
+                    '{}allocate({}({})%items({}))'.format(
+                        i2, buf, inst_idx, n_auto_clone,
+                    )
+                )
             for entry in suite_res.auto_cloned_constituents:
                 _emit_auto_clone_instantiate(
                     entry, buf, inst_idx, i2, errflg_local, errmsg_local, lines,
