@@ -1274,6 +1274,70 @@ class TestValidateHostKindMismatch(_HostValidationFixture):
         self.assertIn("kind mismatch", errs[0])
 
 
+class TestValidateHostCharacterAssumedLength(_HostValidationFixture):
+    """A host character variable declared ``kind = len=*`` is rejected even
+    when the Fortran side has a concrete length (the metadata defines the
+    storage there, so assumed length is illegal)."""
+
+    META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = my_host
+          type = host
+        [ccpp-arg-table]
+          name = my_host
+          type = host
+        [ scheme_name ]
+          standard_name = scheme_name
+          long_name = scheme name
+          units = none
+          dimensions = ()
+          type = character | kind = len=*
+    """)
+
+    F90 = textwrap.dedent("""\
+        module my_host
+          implicit none
+          character(len=512) :: scheme_name
+        end module my_host
+    """)
+
+    def test_assumed_length_error(self):
+        errs = validate([], [self.f90_path], host_files=[self.meta_path])
+        self.assertEqual(len(errs), 1, errs)
+        self.assertIn("len=*", errs[0])
+        self.assertIn("scheme_name", errs[0])
+
+
+class TestValidateHostCharacterConcreteLengthOK(_HostValidationFixture):
+    """A concrete host character length matching the Fortran passes."""
+
+    META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = my_host
+          type = host
+        [ccpp-arg-table]
+          name = my_host
+          type = host
+        [ scheme_name ]
+          standard_name = scheme_name
+          long_name = scheme name
+          units = none
+          dimensions = ()
+          type = character | kind = len=512
+    """)
+
+    F90 = textwrap.dedent("""\
+        module my_host
+          implicit none
+          character(len=512) :: scheme_name
+        end module my_host
+    """)
+
+    def test_concrete_length_ok(self):
+        errs = validate([], [self.f90_path], host_files=[self.meta_path])
+        self.assertEqual(errs, [])
+
+
 class TestValidateHostRankMismatch(_HostValidationFixture):
 
     META = textwrap.dedent("""\

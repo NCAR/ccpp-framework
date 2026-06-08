@@ -185,14 +185,26 @@ is deliberate: real CCPP-physics schemes legitimately mix precisions
 and rely on the cap to handle the copy.  Watch for unintended
 narrowing — there is no static guard.  **Character `len=`** has its
 own block: matching `len=N` values pass, mismatched specific lengths
-are an error unless the scheme uses `len=*` (wildcard).
+are an error unless the *consuming* scheme uses `len=*` (wildcard).
+`len=*` is only valid where a variable is *passed*, never where its
+storage is *defined*: host and DDT metadata must give every character
+variable a concrete length, and so must the first `intent=out` scheme
+that defines a suite-owned character variable (see below).  Both are
+rejected with a clear error rather than emitting an undeclarable
+`character(len=*)` component.  Control variables are exempt — they are
+pass-through dummy arguments (`suite_name`, `errmsg`, …) the caps
+legitimately declare `character(len=*)`.
 
 **Suite-owned variables.**  The first scheme to write a standard
-name with `intent=out` freezes the var's type/kind/dimensions/units
-on the SuiteVar; every later scheme that consumes it goes through
-the same checks against the frozen fields.  Error messages name the
-source as `host`, `control`, or `suite` so you know whose contract
-you're violating.
+name with `intent=out` (in phase→scheme order) freezes the var's
+type/kind/dimensions/units on the SuiteVar; every later scheme that
+consumes it goes through the same checks against the frozen fields.
+Because that first writer *defines* the storage the framework
+allocates in `ccpp_<suite>_data`, a character definer must declare a
+concrete length (`kind = len=N`); `len=*` there is an error.  Later
+consumers/writers of the same variable may use `len=*` as a wildcard.
+Error messages name the source as `host`, `control`, or `suite` so
+you know whose contract you're violating.
 
 #### 1.3.3 `allocatable` and who owns suite-data allocation
 

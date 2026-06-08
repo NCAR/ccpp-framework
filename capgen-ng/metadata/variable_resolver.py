@@ -649,6 +649,25 @@ def build_flat_host_dict(
     result: Dict[str, HostVarEntry] = {}
 
     def _add(entry: HostVarEntry, source_label: str) -> None:
+        # A character variable whose storage is DEFINED by host or DDT
+        # metadata must be concrete: ``len=*`` (assumed length) is illegal
+        # for a host module variable or a derived-type component.  Control
+        # variables are EXEMPT -- they are pass-through dummy arguments
+        # (suite_name, errmsg, ...) which the generated caps legitimately
+        # declare ``character(len=*)``.  Reject it here so the error names
+        # the table rather than surfacing downstream as undeclarable Fortran.
+        if (not entry.is_control
+                and (entry.type or '').strip().lower() == 'character'
+                and (entry.kind or '').strip() == 'len=*'):
+            raise CCPPError(
+                "Character variable '{}' (standard_name='{}') in table '{}' "
+                "declares kind='len=*'; host and DDT metadata must give "
+                "character variables a concrete length (e.g. kind=len=512) "
+                "-- assumed length is valid only for dummy arguments (scheme "
+                "args and control/lifecycle variables).".format(
+                    entry.local_name, entry.standard_name, source_label,
+                )
+            )
         prior = result.get(entry.standard_name)
         if prior is not None:
             prior_loc = (

@@ -1168,6 +1168,39 @@ class TestResolveOneArg(unittest.TestCase):
         self.assertIn('brand_new_standard_name', suite_vars)
         self.assertIsNotNone(arg.suite_var)
 
+    def test_case2_suite_owned_character_assumed_length_raises(self):
+        """A character variable first defined as intent(out) by a scheme with
+        kind=len=* is rejected: the defining scheme must give a concrete
+        length because the framework allocates suite-owned storage for it."""
+        hd = self._host_dict()
+        suite_var = self._scheme_var('name', 'scheme_name', 'out', 'none',
+                                     '()', 'character', 'len=*')
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(suite_var, 'run', hd, {}, 'def_scheme', set())
+        msg = str(cm.exception)
+        self.assertIn('scheme_name', msg)
+        self.assertIn('len=*', msg)
+        self.assertIn('def_scheme', msg)
+
+    def test_case2_suite_owned_character_concrete_then_assumed_ok(self):
+        """A concrete-length definer followed by a len=* consumer/writer is
+        accepted: the suite var inherits the defining concrete length and the
+        later assumed-length declaration acts as a wildcard."""
+        hd = self._host_dict()
+        definer = self._scheme_var('name', 'scheme_name', 'out', 'none',
+                                   '()', 'character', 'len=512')
+        suite_vars: dict = {}
+        _resolve_one_arg(definer, 'run', hd, suite_vars, 'def_scheme', set())
+        self.assertEqual(suite_vars['scheme_name'].kind, 'len=512')
+
+        consumer = self._scheme_var('nm', 'scheme_name', 'out', 'none',
+                                    '()', 'character', 'len=*')
+        arg = _resolve_one_arg(consumer, 'run', hd, suite_vars, 'use_scheme',
+                               set())
+        self.assertEqual(arg.source, 'suite')
+        # Storage length stays the defining concrete length.
+        self.assertEqual(suite_vars['scheme_name'].kind, 'len=512')
+
     def test_case3_not_found_intent_in_raises(self):
         """Case 3: not in host, intent(in) → CCPPError."""
         hd = self._host_dict()
@@ -1857,12 +1890,13 @@ class TestCharacterKindResolution(unittest.TestCase):
         arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_kind_transform)
 
-    def test_len_star_in_host_no_error(self):
-        """len=* in the host is also fine (assumed-length dummy everywhere)."""
-        hd = self._host_with_char('len=*')
-        suite_var = self._scheme_var_char('msg', 'my_message', 'len=*')
-        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
-        self.assertFalse(arg.needs_kind_transform)
+    def test_len_star_in_host_raises(self):
+        """len=* in the host is rejected at host-dict construction: a host
+        character variable defines storage and must have a concrete length
+        (assumed length is valid only for a scheme dummy argument)."""
+        with self.assertRaises(CCPPError) as cm:
+            self._host_with_char('len=*')
+        self.assertIn('len=*', str(cm.exception))
 
     def test_mismatched_specific_lengths_raises(self):
         """Specific len=128 vs len=512 is a metadata error."""
@@ -1872,14 +1906,6 @@ class TestCharacterKindResolution(unittest.TestCase):
             _resolve_one_arg(suite_var, 'run', hd, {}, 'bad_scheme', set())
         self.assertIn('len=512', str(cm.exception))
         self.assertIn('len=128', str(cm.exception))
-
-    def test_len_star_host_specific_scheme_raises(self):
-        """len=* in host but specific len=256 in scheme — error."""
-        hd = self._host_with_char('len=*')
-        suite_var = self._scheme_var_char('msg', 'my_message', 'len=256')
-        with self.assertRaises(CCPPError) as cm:
-            _resolve_one_arg(suite_var, 'run', hd, {}, 'bad_scheme', set())
-        self.assertIn('len=256', str(cm.exception))
 
 
 ########################################################################

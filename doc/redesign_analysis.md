@@ -1143,12 +1143,18 @@ the **host variable's** `active` attribute when the scheme itself specifies no `
 **Character length (`len=N` / `len=*`) rules.**  
 Character kind declarations follow specific compatibility rules enforced by the resolver:
 
-- `len=*` in a **scheme** is always compatible with any host `len=<N>` — assumed-length
-  dummy arguments accept any host-declared length. No transform is generated.
-- Matching specific `len=N` in both host and scheme requires no transform (naturally equal).
-- Mismatched specific lengths (`len=512` host vs `len=128` scheme) are a **metadata error**;
-  the scheme must declare `len=*` or match the defining metadata exactly.
-- `len=*` in the **host** with a specific `len=N` in the scheme is also an error.
+- `len=*` is valid only where a character variable is **passed**, never where its
+  storage is **defined**.  Host and DDT metadata must give every character variable
+  a concrete `len=N`; so must the first `intent=out` scheme that defines a
+  suite-owned character variable (it freezes the storage the framework allocates in
+  `ccpp_<suite>_data`).  `len=*` in any of those positions is a **metadata error**.
+  Control variables are exempt — they are pass-through dummy arguments the caps
+  declare `character(len=*)`.
+- `len=*` in a **consuming/later** scheme is always compatible with the defining
+  `len=<N>` — assumed-length dummy arguments accept any declared length. No transform.
+- Matching specific `len=N` on both sides requires no transform (naturally equal).
+- Mismatched specific lengths (`len=512` definer vs `len=128` consumer) are a
+  **metadata error**; the consuming scheme must declare `len=*` or match exactly.
 
 The resolver raises `CCPPError` for the illegal cases. No kind transform is ever generated
 for character variables — lengths are a Fortran compatibility constraint, not a unit conversion.

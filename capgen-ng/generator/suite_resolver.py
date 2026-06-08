@@ -1646,6 +1646,28 @@ def _resolve_one_arg(
     elif host_entry is None and suite_var is None:
         # Case 2 or 3.
         if intent == 'out':
+            # This scheme is the first (in phase->scheme order) to provide
+            # this variable, so it DEFINES the suite-owned storage that the
+            # framework allocates in ``ccpp_<suite>_data``.  A character
+            # definer must specify a concrete length: ``len=*`` (assumed
+            # length) is only valid for a dummy argument, never for stored
+            # data, and a later ``len=*`` consumer/writer has no concrete
+            # length to inherit.  Reject it here with a clear message rather
+            # than emitting an undeclarable ``character(len=*)`` component.
+            if ((scheme_var.type or '').strip().lower() == 'character'
+                    and (scheme_var.kind or '').strip() == 'len=*'):
+                raise CCPPError(
+                    "Suite-owned character variable '{}' (standard_name='{}') "
+                    "is first defined as intent(out) by scheme '{}' (phase "
+                    "'{}') with kind='len=*'; the defining scheme must declare "
+                    "a concrete length (e.g. kind=len=512) because the "
+                    "framework allocates storage for it in the suite data "
+                    "module.  Assumed length (len=*) is permitted only on "
+                    "later schemes that consume or re-write the "
+                    "variable.".format(
+                        local, std_name, scheme_name, phase,
+                    )
+                )
             inst_entry = host_dict.get('instance_number')
             inst_access = '({})'.format(inst_entry.local_name) if inst_entry else '(1)'
             suite_var = SuiteVar(

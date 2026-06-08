@@ -772,6 +772,73 @@ class TestBuildFlatHostDict(unittest.TestCase):
             build_flat_host_dict(host_tables, [], [])
         self.assertIn('gfs_statein_type', str(cm.exception))
 
+    def test_host_character_assumed_length_raises(self):
+        """A host character variable with kind=len=* is rejected: host
+        metadata must give a concrete length (len=* is only valid for a
+        scheme dummy argument)."""
+        src = '''
+[ccpp-table-properties]
+  name = host_data
+  type = host
+[ccpp-arg-table]
+  name = host_data
+  type = host
+[ scheme_name ]
+  standard_name = scheme_name
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+'''
+        tables = _parse_lines(src.splitlines(keepends=True), 'h.meta')
+        with self.assertRaises(CCPPError) as cm:
+            build_flat_host_dict(tables, [], [])
+        msg = str(cm.exception)
+        self.assertIn('scheme_name', msg)
+        self.assertIn('len=*', msg)
+
+    def test_control_character_assumed_length_ok(self):
+        """Control-table character variables are EXEMPT: they are pass-through
+        dummy arguments (suite_name, errmsg, ...) that the generated caps
+        declare ``character(len=*)``, so len=* is valid there."""
+        src = '''
+[ccpp-table-properties]
+  name = ccpp_control
+  type = control
+[ccpp-arg-table]
+  name = ccpp_control
+  type = control
+[ label ]
+  standard_name = some_label
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+'''
+        tables = _parse_lines(src.splitlines(keepends=True), 'c.meta')
+        d = build_flat_host_dict([], tables, [])
+        self.assertEqual(d['some_label'].kind, 'len=*')
+
+    def test_host_character_concrete_length_ok(self):
+        """A concrete host character length is accepted unchanged."""
+        src = '''
+[ccpp-table-properties]
+  name = host_data
+  type = host
+[ccpp-arg-table]
+  name = host_data
+  type = host
+[ scheme_name ]
+  standard_name = scheme_name
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+'''
+        tables = _parse_lines(src.splitlines(keepends=True), 'h.meta')
+        d = build_flat_host_dict(tables, [], [])
+        self.assertEqual(d['scheme_name'].kind, 'len=512')
+
     def test_host_vars_not_control(self):
         # Host vars are is_control=False; loop bounds are now control vars (control table).
         host_tables = _parse_file('host_simple.meta')

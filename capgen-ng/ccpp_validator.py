@@ -11,8 +11,13 @@ corresponding Fortran subroutine:
    (order-insensitive).
 4. For every dummy argument present in both sides, the **per-arg attributes**
    agree: ``intent``, ``type``, ``kind``, and number of dimensions (rank).
-   ``character`` arguments treat ``len=*`` on either side as a wildcard
-   against any concrete ``len=N`` / ``len=:``.
+   A *scheme* ``character`` argument treats ``len=*`` on either side as a
+   wildcard against any concrete ``len=N`` / ``len=:`` — the storage is
+   supplied by the caller.  In contrast, host / DDT metadata passed via
+   ``--host-files`` *defines* its character storage, so ``len=*`` is
+   rejected there (a concrete ``len=N`` is required); see
+   :func:`_check_definition_character_lengths`.  Control tables are exempt
+   (their character vars are pass-through dummy arguments too).
 
 Asymmetric treatment of ``optional``:
 
@@ -1354,6 +1359,38 @@ def _validate_ddt_table(
     return errors
 
 
+def _check_definition_character_lengths(table) -> List[str]:
+    """Reject ``character ... kind = len=*`` in a definition-site table.
+
+    Host and DDT metadata *define* the storage for their character
+    variables (a host module variable / a derived-type component), so an
+    assumed length (``len=*``) is illegal there: it is valid only on a
+    dummy argument (a scheme arg, or a control/lifecycle variable) where
+    the storage is supplied by the caller.  Apply this only to ``host`` /
+    ``ddt`` tables -- ``control`` tables are exempt.  This mirrors the
+    generator's ``build_flat_host_dict`` guard and is checked independently
+    of the Fortran-vs-metadata comparison (a ``character(len=*)`` host decl
+    is invalid Fortran in its own right and would never be found).
+
+    Returns a list of error message strings (empty when none offend).
+    """
+    errors: List[str] = []
+    for mvar in table.variables():
+        if ((mvar.type or '').strip().lower() == 'character'
+                and (mvar.kind or '').strip().lower() == 'len=*'):
+            errors.append(
+                "Character variable '{}' (standard_name '{}') in {} table "
+                "'{}' declares kind='len=*'; host and DDT metadata must give "
+                "character variables a concrete length (e.g. kind=len=512) "
+                "-- assumed length is valid only for dummy arguments (scheme "
+                "args and control/lifecycle variables).".format(
+                    mvar.local_name, mvar.standard_name,
+                    table.table_type, table.table_name,
+                )
+            )
+    return errors
+
+
 _FORTRAN_EXTENSIONS = ('.F90', '.f90', '.F', '.f')
 
 
@@ -1576,13 +1613,21 @@ def validate(
         all_errors.extend(
             _validate_scheme(sname, scheme_store, subroutine_tree, log)
         )
-    # Scheme-co-located DDTs validate the same way as host-side DDTs.
+    # Scheme-co-located DDTs validate the same way as host-side DDTs;
+    # their character components are definition sites too (a DDT component
+    # may not be assumed-length), so the len=* guard applies.
     for tbl in scheme_ddt_tables:
+        all_errors.extend(_check_definition_character_lengths(tbl))
         all_errors.extend(_validate_ddt_table(tbl, ddt_index, log))
     for tbl in host_tables:
+        # Host and DDT tables define their character storage: reject len=*
+        # regardless of the Fortran-comparison outcome.  Control tables are
+        # exempt -- their character vars are pass-through dummy arguments.
         if tbl.table_type == 'host':
+            all_errors.extend(_check_definition_character_lengths(tbl))
             all_errors.extend(_validate_host_table(tbl, modules_tree, log))
         elif tbl.table_type == 'ddt':
+            all_errors.extend(_check_definition_character_lengths(tbl))
             all_errors.extend(_validate_ddt_table(tbl, ddt_index, log))
         elif tbl.table_type == 'control':
             log.info(
