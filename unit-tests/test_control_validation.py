@@ -14,6 +14,7 @@ indicates a porting error from the legacy toolchain.
 import os
 import sys
 import tempfile
+import types
 import unittest
 
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
@@ -63,11 +64,11 @@ def _build_host_dict(host_files, control_files, ddt_files=None):
 # ---------------------------------------------------------------------------
 
 class TestMissingControlVars(unittest.TestCase):
-    """All required vars missing except suite_name → 7 errors collected.
+    """All required vars missing except suite_name → 6 errors collected.
 
-    ``instance_number`` is *not* in the required list (it pairs with
-    ``number_of_instances`` as an opt-in for multi-instance hosts), so
-    its absence does NOT raise here.
+    Neither pair member is in the required list: ``instance_number`` /
+    ``number_of_instances`` and ``thread_number`` / ``number_of_threads`` are
+    both paired-optional opt-ins, so their absence does NOT raise here.
     """
 
     def setUp(self):
@@ -81,11 +82,16 @@ class TestMissingControlVars(unittest.TestCase):
             _validate_required_control_vars('test_host', self._host_dict)
 
     def test_all_missing_vars_reported(self):
-        """All 8 missing required standard names appear in the error message."""
+        """All 6 missing required standard names appear in the error message.
+
+        ``thread_number`` and ``number_of_threads`` are intentionally absent
+        from this list: they form a paired-optional control pair (symmetric
+        with the instance pair), not required vars, so their omission is not
+        reported as a missing required var."""
         missing = [
             'group_name',
             'horizontal_loop_begin', 'horizontal_loop_end',
-            'thread_number', 'number_of_threads', 'number_of_physics_threads',
+            'number_of_physics_threads',
             'ccpp_error_code', 'ccpp_error_message',
         ]
         try:
@@ -218,6 +224,20 @@ class TestValidControlVars(unittest.TestCase):
         self.assertNotIn('instance_number', host_dict)
         self.assertNotIn('number_of_instances', host_dict)
 
+    def test_no_thread_pair_passes(self):
+        """Host omitting BOTH thread_number AND number_of_threads passes —
+        the multi-threading API is opt-in, symmetric with the instance pair."""
+        host_dict = _build_host_dict(
+            host_files=[_sf('host_simple.meta')],
+            control_files=[_sf('control_full.meta')],
+        )
+        host_dict.pop('thread_number', None)
+        host_dict.pop('number_of_threads', None)
+        # Must not raise even though the thread pair is absent.
+        _validate_required_control_vars('test_host', host_dict)
+        self.assertNotIn('thread_number', host_dict)
+        self.assertNotIn('number_of_threads', host_dict)
+
 
 class TestInstanceNumberPairing(unittest.TestCase):
     """instance_number and number_of_instances both live in type=control
@@ -249,6 +269,74 @@ class TestInstanceNumberPairing(unittest.TestCase):
         self.assertIn('instance_number', msg)
         self.assertIn('number_of_instances', msg)
         self.assertIn('paired', msg.lower())
+
+
+class TestThreadNumberPairing(unittest.TestCase):
+    """thread_number and number_of_threads are a paired-optional control pair,
+    fully symmetric with the instance pair: declaring exactly one is an error.
+
+    These manipulate a parsed host_dict directly (rather than carrying extra
+    sample .meta files) since the only thing under test is the XOR check.
+    """
+
+    def _full_host_dict(self):
+        return _build_host_dict(
+            host_files=[_sf('host_simple.meta')],
+            control_files=[_sf('control_full.meta')],
+        )
+
+    def test_thread_number_alone_raises(self):
+        """control declares thread_number but not number_of_threads."""
+        host_dict = self._full_host_dict()
+        host_dict.pop('number_of_threads', None)
+        with self.assertRaises(CCPPError) as ctx:
+            _validate_required_control_vars('test_host', host_dict)
+        msg = str(ctx.exception)
+        self.assertIn('thread_number', msg)
+        self.assertIn('number_of_threads', msg)
+        self.assertIn('paired', msg.lower())
+
+    def test_number_of_threads_alone_raises(self):
+        """control declares number_of_threads but not thread_number."""
+        host_dict = self._full_host_dict()
+        host_dict.pop('thread_number', None)
+        with self.assertRaises(CCPPError) as ctx:
+            _validate_required_control_vars('test_host', host_dict)
+        msg = str(ctx.exception)
+        self.assertIn('thread_number', msg)
+        self.assertIn('number_of_threads', msg)
+        self.assertIn('paired', msg.lower())
+
+
+class TestControlAllowlist(unittest.TestCase):
+    """A type=control table may declare ONLY the known framework control
+    variables (the required set plus the paired-optional pair members).
+    Any other variable in a type=control table is a hard error."""
+
+    def _full_host_dict(self):
+        return _build_host_dict(
+            host_files=[_sf('host_simple.meta')],
+            control_files=[_sf('control_full.meta')],
+        )
+
+    def test_unknown_control_var_rejected(self):
+        host_dict = self._full_host_dict()
+        host_dict['some_random_host_quantity'] = types.SimpleNamespace(
+            is_control=True)
+        with self.assertRaises(CCPPError) as ctx:
+            _validate_required_control_vars('test_host', host_dict)
+        msg = str(ctx.exception)
+        self.assertIn('some_random_host_quantity', msg)
+        self.assertIn('type=host', msg)
+
+    def test_unknown_host_table_var_not_flagged(self):
+        """A non-control (type=host) variable with an unknown name is fine —
+        the allowlist only governs type=control declarations."""
+        host_dict = self._full_host_dict()
+        host_dict['some_random_host_quantity'] = types.SimpleNamespace(
+            is_control=False)
+        # Must not raise.
+        _validate_required_control_vars('test_host', host_dict)
 
 # ---------------------------------------------------------------------------
 # Tests for forbidden dimension names

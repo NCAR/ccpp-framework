@@ -689,21 +689,44 @@ _REQUIRED_CTRL_VARS = [
     ('group_name',               'character', 'drives per-group dispatch inside ccpp_physics_* (each suite_cap emits a select case on this name)'),
     ('horizontal_loop_begin',    'integer',   'lower horizontal slice bound at scheme call sites'),
     ('horizontal_loop_end',      'integer',   'upper horizontal slice bound at scheme call sites'),
-    ('thread_number',            'integer',   'current thread number (pass 1 if single-threaded)'),
-    ('number_of_threads',        'integer',   'total thread count (pass 1 if single-threaded)'),
     ('number_of_physics_threads','integer',   'physics-internal thread budget (pass 1 if unused)'),
     ('ccpp_error_code',          'integer',   'CCPP error flag'),
     ('ccpp_error_message',       'character', 'CCPP error message'),
 ]
+# NOTE: the threading index/count (``thread_number`` / ``number_of_threads``)
+# is NOT required — it is a paired-optional control pair, fully symmetric with
+# (``instance_number`` / ``number_of_instances``); see
+# ``_PAIRED_OPTIONAL_CTRL_VARS`` below.  ``number_of_physics_threads`` is a
+# separate, unpaired scheme-facing scalar that stays unconditionally required.
 
-# Optional control variables that must be declared as a *pair*.  Hosts that
-# need a multi-instance API declare both ``instance_number`` (the index) and
-# ``number_of_instances`` (the bound).  Hosts that don't may omit both; the
-# generator will emit a single-instance API and dimension all per-instance
-# arrays to length 1.  Declaring exactly one is an error.
+# Paired-optional control variables.  Each entry is an (index, count) pair:
+# the host declares BOTH members (in ``type=control``) or NEITHER; declaring
+# exactly one is a hard error.  Declaring a pair opts the host into that
+# multi-<X> API — the index flows as a per-call control dummy and the count
+# gives the bound.  When a pair is absent the public API drops both args and
+# the framework uses literal ``1`` wherever the index would appear.  A host
+# variable may be dimensioned by the count standard name only when its pair is
+# declared (otherwise the resolver's scalar-index collapse raises — it needs
+# the index variable in scope).
+#
+# The two pairs are fully symmetric (decision 2026-06-09):
+#   * (instance_number, number_of_instances) — multi-instance API.  The
+#     framework reads ``number_of_instances`` at register/init to size its
+#     own per-instance state (``ccpp_suite_data(:)``, ``ccpp_group_state(:)``).
+#   * (thread_number, number_of_threads) — multi-threading API.
+#     ``thread_number`` indexes host-owned per-thread containers;
+#     ``number_of_threads`` is carried as a control dummy (the framework owns
+#     no per-thread state yet, so its value is not consumed — kept for symmetry
+#     with ``number_of_instances`` and future per-thread sizing).
+# (A chunk/block index is intentionally NOT a control pair: capgen-ng's
+# slice-based design passes the current chunk as a horizontal range via
+# horizontal_loop_begin/end, so no scheme ever indexes by chunk inside a call.)
+# Each entry: (index std_name, count std_name, index description, count description).
 _PAIRED_OPTIONAL_CTRL_VARS = [
-    ('instance_number',     'integer', 'current model instance index'),
-    ('number_of_instances', 'integer', 'total number of model instances'),
+    ('instance_number', 'number_of_instances',
+     'current model instance index', 'total number of model instances'),
+    ('thread_number',   'number_of_threads',
+     'current thread index', 'total thread count'),
 ]
 
 
@@ -775,39 +798,58 @@ def _validate_required_control_vars(
     for std_name, expected_type, description in _REQUIRED_CTRL_VARS:
         _check_control_var(std_name, expected_type, description, required=True)
 
-    # Paired optional: both ``instance_number`` (the per-call index) and
-    # ``number_of_instances`` (the bound, used at register time to size
-    # the per-instance state arrays) live in ``type=control``.  Symmetric
-    # with the (thread_number, number_of_threads) pair.  Either both
-    # declared or neither.
-    _check_control_var(
-        'instance_number', 'integer',
-        'current model instance index', required=False,
-    )
-    _check_control_var(
-        'number_of_instances', 'integer',
-        'total number of model instances', required=False,
-    )
+    # Paired-optional control pairs (see _PAIRED_OPTIONAL_CTRL_VARS): for each
+    # (index, count) pair the host declares both members in a type=control
+    # table or neither.  Declaring exactly one is an error.  Both pairs —
+    # (instance_number, number_of_instances) and (thread_number,
+    # number_of_threads) — are validated identically.
+    for idx_name, cnt_name, idx_desc, cnt_desc in _PAIRED_OPTIONAL_CTRL_VARS:
+        _check_control_var(idx_name, 'integer', idx_desc, required=False)
+        _check_control_var(cnt_name, 'integer', cnt_desc, required=False)
 
-    inst_present  = host_dict.get('instance_number')  is not None
-    ninst_present = host_dict.get('number_of_instances') is not None
-    if inst_present ^ ninst_present:
-        present, missing = (
-            ('instance_number', 'number_of_instances')
-            if inst_present
-            else ('number_of_instances', 'instance_number')
-        )
-        errors.append(
-            "Host '{}' declares '{}' (in a type=control table) but is "
-            "missing the paired variable '{}' (which must also be in a "
-            "type=control table).\n"
-            "  Declare both for a multi-instance API, or neither for a "
-            "single-instance API.".format(host_name, present, missing)
-        )
+        idx_present = host_dict.get(idx_name) is not None
+        cnt_present = host_dict.get(cnt_name) is not None
+        if idx_present ^ cnt_present:
+            present, missing = (
+                (idx_name, cnt_name) if idx_present else (cnt_name, idx_name)
+            )
+            errors.append(
+                "Host '{}' declares '{}' in a type=control table but is "
+                "missing its paired variable '{}' (which must also be in a "
+                "type=control table).\n"
+                "  '{}' and '{}' are a paired-optional control pair: declare "
+                "both members to opt into that API, or neither.".format(
+                    host_name, present, missing, idx_name, cnt_name,
+                )
+            )
+
+    # Control-table allowlist: a type=control table may declare ONLY the
+    # framework's known control variables — the unconditionally required set
+    # plus the members of the paired-optional pairs.  Anything else in a
+    # type=control table is a hard error.  Host-specific quantities that
+    # schemes consume belong in a type=host table; the subcycle loop variables
+    # (ccpp_loop_counter / ccpp_loop_extent) are generator-owned locals the
+    # host never declares.
+    allowed_control = {name for name, _type, _desc in _REQUIRED_CTRL_VARS}
+    for idx_name, cnt_name, _idesc, _cdesc in _PAIRED_OPTIONAL_CTRL_VARS:
+        allowed_control.add(idx_name)
+        allowed_control.add(cnt_name)
+    for std_name, entry in sorted(host_dict.items()):
+        if entry.is_control and std_name not in allowed_control:
+            errors.append(
+                "Variable '{}' is declared in a type=control table for host "
+                "'{}' but is not a recognized framework control variable.\n"
+                "  A type=control table may declare only: {}.\n"
+                "  If '{}' is a host quantity that schemes consume, declare it "
+                "in a type=host table instead.".format(
+                    std_name, host_name, ', '.join(sorted(allowed_control)),
+                    std_name,
+                )
+            )
 
     if errors:
         raise CCPPError(
-            "Host '{}' is missing required control variables:\n\n{}".format(
+            "Host '{}' has invalid control-variable metadata:\n\n{}".format(
                 host_name,
                 '\n\n'.join("ERROR: " + e for e in errors),
             )

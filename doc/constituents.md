@@ -600,28 +600,28 @@ constituent array into the suite's `<suite>_dynamic_constituents`
 buffer (USE'd from `ccpp_host_constituents`):
 
 ```fortran
+! Outer wrapper sized to number_of_instances on first call (any instance).
 if (.not. allocated(<suite>_dynamic_constituents)) then
-  ! First-instance-only two-pass count + populate.
-  num_consts = 0
-  call <scheme1>_register(scheme_consts=scheme_consts, ...)
-  num_consts = num_consts + size(scheme_consts, 1)
-  deallocate(scheme_consts)
-  ...
-  allocate(<suite>_dynamic_constituents(num_consts))
-  num_consts = 0
-  call <scheme1>_register(scheme_consts=scheme_consts, ...)
-  do i = 1, size(scheme_consts, 1)
-    <suite>_dynamic_constituents(num_consts + i) = scheme_consts(i)
-  end do
-  num_consts = num_consts + size(scheme_consts, 1)
-  deallocate(scheme_consts)
-  ...
+  allocate(<suite>_dynamic_constituents(number_of_instances))
 end if
+
+! Single pass: call each scheme's _register EXACTLY ONCE and append its
+! returned array to THIS instance's slot.
+allocate(<suite>_dynamic_constituents(inst)%items(0))
+call <scheme1>_register(dyn_const=scheme_consts, ...)
+if (errflg /= 0) return
+<suite>_dynamic_constituents(inst)%items = &
+    [<suite>_dynamic_constituents(inst)%items, scheme_consts]
+deallocate(scheme_consts)
+! ... one block like the above per constituent-registering scheme ...
 ```
 
-The buffer is **shared across instances** (registration is identical
-per instance); only the first instance to call `<suite>_register`
-populates it.  The host-wide merge happens in
+Each instance owns its own `%items` slot (the per-instance buffer, so
+`ccpp_register_constituents` can `set_const_index` independently per
+instance); the suite state-machine guard ensures each instance populates
+it exactly once.  Each scheme's `_register` is called **exactly once** —
+it may safely allocate persistent module state (the earlier two-pass
+count+copy called it twice).  The host-wide merge happens in
 `ccpp_register_constituents`.
 
 ### Group-cap call sites

@@ -76,20 +76,6 @@
   dimensions = ()
   type = integer
   intent = out
-[nchunk]
-  standard_name = ccpp_chunk_number
-  long_name = number of chunk for chunked arrays in CCPP
-  units = index
-  dimensions = ()
-  type = integer
-  intent = in
-[nchunks]
-  standard_name = ccpp_chunk_extent
-  long_name = number of chunks of array data used in run phase
-  units = count
-  dimensions = ()
-  type = integer
-  intent = in
 [data_array]
   standard_name = chunked_data_array
   long_name = chunked data array

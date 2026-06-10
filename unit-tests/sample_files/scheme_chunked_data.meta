@@ -80,13 +80,6 @@
   dimensions = ()
   type = integer
   intent = out
-[ nchunk ]
-  standard_name = ccpp_chunk_number
-  long_name = current chunk number
-  units = index
-  dimensions = ()
-  type = integer
-  intent = in
 [ data_array ]
   standard_name = chunked_data_array
   long_name = chunked data array

@@ -57,8 +57,8 @@ _CTRL_STDNAMES_ORDER = (
     'group_name',
     'horizontal_loop_begin',
     'horizontal_loop_end',
-    'thread_number',
-    'number_of_threads',
+    'thread_number',              # paired-optional (with number_of_threads); ordered here when declared
+    'number_of_threads',          # paired-optional; ordered here when declared
     'number_of_physics_threads',
     'ccpp_error_code',
     'ccpp_error_message',

@@ -108,13 +108,13 @@ def _split_local_name(local_name: str):
     """Split a local name into (base, subscript) tuple.
 
     For plain identifiers returns (local_name, '').
-    For slice expressions like ``chunk_begin(ccpp_chunk_number)`` returns
-    (``'chunk_begin'``, ``'ccpp_chunk_number'``).
+    For slice expressions like ``field(idx)`` returns
+    (``'field'``, ``'idx'``).
 
-    >>> _split_local_name('chunk_begin')
-    ('chunk_begin', '')
-    >>> _split_local_name('chunk_begin(ccpp_chunk_number)')
-    ('chunk_begin', 'ccpp_chunk_number')
+    >>> _split_local_name('field')
+    ('field', '')
+    >>> _split_local_name('field(idx)')
+    ('field', 'idx')
     >>> _split_local_name('q(:,:,index_of_water_vapor_specific_humidity)')
     ('q', ':,:,index_of_water_vapor_specific_humidity')
     """
@@ -134,11 +134,11 @@ def _resolve_subscript(subscript: str, host_dict: Dict[str, 'HostVarEntry']) -> 
 
     >>> from collections import namedtuple
     >>> E = namedtuple('E', ['local_name'])
-    >>> d = {'ccpp_chunk_number': E('inst_num')}
-    >>> _resolve_subscript('ccpp_chunk_number', d)
-    'inst_num'
-    >>> _resolve_subscript(':, ccpp_chunk_number', d)
-    ':, inst_num'
+    >>> d = {'thread_number': E('thrd_no')}
+    >>> _resolve_subscript('thread_number', d)
+    'thrd_no'
+    >>> _resolve_subscript(':, thread_number', d)
+    ':, thrd_no'
     >>> _resolve_subscript('1', d)
     '1'
     """

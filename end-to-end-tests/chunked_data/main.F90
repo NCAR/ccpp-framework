@@ -107,7 +107,7 @@ program test_chunked_data
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !cdata => ccpp_data_domain
-  call ccpp_physics_final(lb=1, ub=ncols, nthreads=1, nphys_threads=1, thread_num=1,  suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_final(lb=1, ub=ncols, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_finalize:"
     write(error_unit, '(a)') trim(errmsg)

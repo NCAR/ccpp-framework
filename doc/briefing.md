@@ -110,7 +110,9 @@ For each scheme arg:
 - `ccpp_validator.py` — the standalone Fortran-vs-metadata checker.
   The ONE place capgen-ng parses Fortran.  Run by developers /
   CMake before generation.  Checks per-arg `intent`, `type`, `kind`,
-  and dimension rank; `character len=*` is a wildcard; DDT and
+  and dimension rank; character length must match exactly
+  (`len=*`↔`len=*`, `len=N`↔`len=N`, no wildcard; old-style F77
+  `character*N` / `character*(*)` parsed); DDT and
   `external:<module>:<typename>` types compare against the Fortran
   `type(name)` wrapper.  `optional` is asymmetric: metadata
   `optional=True` against a Fortran-required dummy is an error; the
@@ -200,11 +202,23 @@ Every host MUST declare scalar integers (and one character) with
 these CCPP standard names:
 
 - `suite_name`, `horizontal_loop_begin`, `horizontal_loop_end`,
-  `thread_number`, `number_of_threads`, `number_of_physics_threads`,
-  `ccpp_error_code`, `ccpp_error_message`.
+  `number_of_physics_threads`, `ccpp_error_code`, `ccpp_error_message`.
 
-Optional (paired): `instance_number` (control) +
-`number_of_instances` (host).
+**Two paired-optional control pairs** — declare *both* members of a
+pair (in `type = control`) or *neither*; declaring exactly one is a
+hard error:
+
+- `instance_number` + `number_of_instances` → opt into the
+  multi-instance API.
+- `thread_number` + `number_of_threads` → opt into the multi-threading
+  API.
+
+The two pairs are fully symmetric.  Declaring a pair makes the index a
+per-call control argument; omitting it drops both args and the
+framework uses literal `1` where the index would go.  A host variable
+may be dimensioned by `number_of_instances` / `number_of_threads` only
+when its pair is declared (otherwise the scalar-index collapse can't
+find the index variable and errors).
 
 ### 6.5 DDT-instance variables with scalar-index dims
 
@@ -387,7 +401,8 @@ don't rebuild downstream objects unless something actually moved.
 - **Validator** now checks per-argument `intent`, `type`, `kind`, and
   dimension rank in addition to the original name/count check.
   Asymmetric `optional` rule, DDT + `external:<module>:<typename>`
-  type normalisation, character `len=*` wildcard.
+  type normalisation, exact character-length match (no `len=*`
+  wildcard; old-style F77 `character*N` parsed).
 - **Resolver cross-metadata checks** (late 2026-05-20): host/scheme
   (and suite-owned-var first-writer/follow-on) consistency on type,
   rank, and per-position dimension entries.  Default lower bound has

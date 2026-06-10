@@ -206,6 +206,17 @@ consumers/writers of the same variable may use `len=*` as a wildcard.
 Error messages name the source as `host`, `control`, or `suite` so
 you know whose contract you're violating.
 
+**Suite-owned storage is never default-initialized** — by design.
+capgen-ng emits the `ccpp_<suite>_data` components with no default value.
+An `intent(out)` argument is the scheme's contract to define that variable
+on *every* return path; the framework will not paper over an unset output
+the way original capgen's zero-initialized interstitials did.  A ported
+scheme that returns early (e.g. a `fixed_scon` branch) without assigning
+one of its `intent(out)` dummies leaves the suite-owned storage undefined,
+and a later consumer reads garbage (in a debug build, often a trap value).
+This is a common porting hazard original capgen used to mask — audit
+early-return paths for unset `intent(out)` args.
+
 #### 1.3.3 `allocatable` and who owns suite-data allocation
 
 A **suite-owned variable** (an interstitial: first written by a scheme
@@ -285,22 +296,34 @@ matches.
 - **Instance-dim used without `instance_number`**: error explains the
   paired-opt-in requirement (see §1.7).
 
-### 1.7 Optional `instance_number` / `number_of_instances` pair
+### 1.7 Paired-optional control pairs (instances and threads)
 
-These two control variables are now **paired optional** and both live
-in the host's `type=control` table (symmetric with the
-`thread_number` / `number_of_threads` pair):
+There are two symmetric `(index, count)` control pairs:
+`instance_number` / `number_of_instances` and `thread_number` /
+`number_of_threads`.  Both behave identically:
 
-- Declare **both** in `type=control` → multi-instance API.  Both flow
-  as control dummies through every lifecycle and physics-phase
-  signature.
-- Declare **neither** → single-instance API.  Public entry points drop
-  both args; internal per-instance arrays size to length 1.
-- Declare exactly one → hard error from the validator.
-- Declare `number_of_instances` in `type=host` → hard error
-  (must be `type=control`).
+- Declare **both** members in `type=control` → opt into that paired
+  (multi-instance / multi-threading) API.  Both flow as control dummies
+  through every lifecycle and physics-phase signature.
+- Declare **neither** → the single API.  Public entry points drop both
+  args; where the index would appear the framework uses literal `1`
+  (and, for instances, internal per-instance arrays size to length 1).
+- Declare exactly one of a pair → hard error from the validator.
+- Declare either count in `type=host` → hard error (must be
+  `type=control`).
+- Dimension a host variable by `number_of_instances` /
+  `number_of_threads` without declaring its pair → hard error (the
+  scalar-index collapse needs the index variable in scope; see §3.4).
 
-Hosts that don't need multi-instance bookkeeping can drop both declarations.
+Hosts that need neither multi-instance nor multi-threading can drop
+both pairs entirely.
+
+> Why symmetric: `instance_number` indexes framework-owned per-instance
+> state, so `number_of_instances` is read at register/init to size it.
+> `thread_number` indexes host-owned per-thread containers; the
+> framework doesn't yet read `number_of_threads`, but it's carried as a
+> control dummy so the framework can size per-thread state in future —
+> exactly as it does for instances today.
 
 ### 1.8 Deprecated standard names rewritten by `--legacy-mode`
 
@@ -556,18 +579,28 @@ Every host's `type=control` table must declare:
 | `suite_name`                      | character    | Drives suite dispatch             |
 | `horizontal_loop_begin`           | integer      | Lower chunk-bound                 |
 | `horizontal_loop_end`             | integer      | Upper chunk-bound                 |
-| `thread_number`                   | integer      | Current thread                    |
-| `number_of_threads`               | integer      | Total threads                     |
 | `number_of_physics_threads`       | integer      | Physics-internal budget           |
 | `ccpp_error_code`                 | integer      | Error flag                        |
 | `ccpp_error_message`              | character    | Error message                     |
 
-Optional (paired — see §1.7):
+Paired-optional — two symmetric `(index, count)` pairs (see §1.7).
+For each pair, declare **both** members in `type=control` or
+**neither**; declaring exactly one is a hard error:
 
 | Standard name           | Fortran type | Table type | Purpose                        |
 |-------------------------|--------------|------------|--------------------------------|
 | `instance_number`       | integer      | control    | Current instance index         |
 | `number_of_instances`   | integer      | control    | Total instance count           |
+| `thread_number`         | integer      | control    | Current thread / per-thread-container index |
+| `number_of_threads`     | integer      | control    | Total thread count             |
+
+**The `type=control` table is a closed set.**  It may contain *only*
+the variables in the two tables above (the 7 required plus the 4
+paired-optional pair members — 11 standard names total).  Any other
+variable in a `type=control` table is a hard error: a host quantity
+that schemes consume belongs in a `type=host` table, and the subcycle
+loop variables (`ccpp_loop_counter` / `ccpp_loop_extent`) are
+generator-owned locals you never declare.
 
 ### 3.2 Required entry-point call sequence
 
@@ -590,7 +623,7 @@ The `(instance_number, number_of_instances)` pair appears in every
 signature only when the host declares it (§1.7).  Both flow uniformly
 through lifecycle and physics-phase calls; the framework consumes
 `number_of_instances` only at register/init time but carries it
-elsewhere for API symmetry with `(thread_number, number_of_threads)`.
+elsewhere for API symmetry.
 
 ### 3.3 Module-name convention (host, scheme, and DDT tables)
 
@@ -1002,6 +1035,13 @@ the buffer from creation — no ownership transfer call needed.
   name; a constituent-flagged `intent=out` that is not a `tendency_of_*`
   is a codegen error.  A scheme that only READS a constituent or a
   `tendency_of_<X>` need not re-flag it — see §6.5.
+- **`_register` is called exactly once per scheme** (2026-06-08).
+  capgen-ng packs each constituent scheme's returned
+  `ccpp_constituent_properties_t(:)` array into the per-suite buffer in a
+  single append pass, so a register routine may safely allocate persistent
+  module state.  (An earlier two-pass count+copy called register twice and
+  broke any non-idempotent register, e.g. `prescribed_aerosols_register`
+  allocating a module-level map.)
 
 ### 6.3 Host metadata wins over auto-provisioning (2026-05-12)
 
@@ -1147,7 +1187,7 @@ For every `(scheme, phase)` declared in the supplied `.meta` files:
    |------------|----------|
    | `intent`   | Strict match (`in` / `out` / `inout`).  Metadata declares it but Fortran omits → error. |
    | `type`     | Case-insensitive match.  `double precision` / `doubleprecision` / `double  precision` are normalized to the same form.  DDT names match the Fortran `type(name)` / `class(name)` wrapper — metadata `type = ty_rad_lw` matches Fortran `type(ty_rad_lw)`.  External types match by typename — metadata `type = external:mpi_f08:mpi_comm` matches Fortran `type(mpi_comm)` (the module qualifier is metadata-only). |
-   | `kind`     | Case-insensitive match.  **Character `len=*` is a wildcard** on either side — matches any concrete `len=N` or `len=:`. |
+   | `kind`     | Case-insensitive match.  **Character length must be CONSISTENT** — the metadata mirrors the Fortran exactly: `len=*` matches only `len=*`, and `len=N` only the identical `len=N` (no wildcarding; changed 2026-06-08 — the validator runs first, so a Fortran `len=*` can only pair a metadata `len=*`, and vice versa).  Old-style F77 forms (`character*64`, `character*(*)`, per-entity `c*5` / `d(10)*8`) are normalized to the `len=` form before comparison. |
    | `rank`     | Number of dimensions only.  Reads both `dimension(...)` line attributes and var-attached `foo(:,:)` syntax.  Per-dimension bound comparison is NOT done. |
 
 ### 7.2 Asymmetric `optional` rule
@@ -1212,7 +1252,12 @@ The same per-attribute rules apply that the scheme-side check uses,
 which is one rule fewer than the scheme side: there is no `optional`
 flag on module vars / DDT components, and host metadata carries no
 `intent`, so the asymmetric-optional rule (§7.2) does not apply here.
-Character `len=*` remains a wildcard against any concrete `len=N`.
+Character length is matched exactly (§7.1).  Additionally, because
+host / DDT metadata *defines* its character storage (a module variable
+or a derived-type component, neither of which may be assumed-length),
+`len=*` is rejected there outright — host and DDT character variables
+must declare a concrete `len=N`.  Assumed length is valid only for
+dummy arguments (scheme args and control/lifecycle variables).
 
 ---
 

@@ -34,12 +34,6 @@
   units = index
   dimensions = ()
   type = integer
-[ nchunk ]
-  standard_name = ccpp_chunk_number
-  long_name = current chunk number
-  units = index
-  dimensions = ()
-  type = integer
 [ thrd_no ]
   standard_name = thread_number
   long_name = current thread number

@@ -1873,7 +1873,7 @@ class TestUnitConvIntegration(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestChunkedDataIntegration(unittest.TestCase):
-    """Suite with DDT-based host variable and ccpp_chunk_number control var."""
+    """Suite with a DDT-based host variable accessed by a scheme."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -1913,17 +1913,6 @@ class TestChunkedDataIntegration(unittest.TestCase):
             text = fh.read()
         # DDT field access should appear in the call expression.
         self.assertIn('chunked_data_instance%array_data', text)
-
-    def test_chunk_number_control_arg(self):
-        with open(
-            os.path.join(
-                self._tmpdir,
-                'ccpp_chunked_data_chunked_data_group_cap.F90',
-            )
-        ) as fh:
-            text = fh.read()
-        # ccpp_chunk_number → local name nchunk in the run subroutine.
-        self.assertIn('nchunk', text)
 
     def test_no_types_module_for_chunked_data(self):
         self.assertFalse(

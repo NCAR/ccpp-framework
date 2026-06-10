@@ -25,18 +25,6 @@
   units = count
   dimensions = ()
   type = integer
-[nchunk]
-  standard_name = ccpp_chunk_number
-  long_name = number of current chunk
-  units = index
-  dimensions = ()
-  type = integer
-[nchunks]
-  standard_name = ccpp_chunk_extent
-  long_name = number of chunks of array data used in run phase
-  units = count
-  dimensions = ()
-  type = integer
 [chunked_data_instance]
   standard_name = chunked_data_type_instance
   long_name = instance of derived data type chunked_data_type

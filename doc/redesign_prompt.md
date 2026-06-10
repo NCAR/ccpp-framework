@@ -248,17 +248,27 @@ character arguments.
 | `suite_name` | `character` | Suite name for runtime dispatch |
 | `horizontal_loop_begin` | `integer` | Start of horizontal slice (chunk bounds for `ccpp_physics_run`; `1` for all other phases) |
 | `horizontal_loop_end` | `integer` | End of horizontal slice (chunk bounds for `ccpp_physics_run`; `ncols` for all other phases) |
-| `thread_number` | `integer` | Current thread index (1..number_of_threads); pass `1` if single-threaded |
-| `number_of_threads` | `integer` | Host blocking loop thread count; pass `1` if single-threaded |
 | `number_of_physics_threads` | `integer` | Thread budget for physics-internal OpenMP; pass `1` if none |
 | `ccpp_error_message` | `character` | Error message string |
 | `ccpp_error_code` | `integer` | Integer error return code |
 
-`instance_number` is **paired-optional** with `number_of_instances` (host
-table, §3.6): declare both for a multi-instance API, declare neither for a
-single-instance API.  Declaring exactly one is a hard error.  When the pair
-is absent, the static API signatures drop the `instance_number` argument
-entirely and per-instance state arrays size to 1.
+**Two symmetric paired-optional `(index, count)` control pairs** —
+`instance_number` / `number_of_instances` and `thread_number` /
+`number_of_threads`.  For each pair, declare **both** members in
+`type=control` for the multi-instance / multi-threading API, or
+**neither** for the single API; declaring exactly one is a hard error.
+When a pair is absent, the static API drops the index argument and the
+framework uses literal `1` where it would appear (and, for instances,
+per-instance state arrays size to 1).  A host variable may be
+dimensioned by a count standard name only when its pair is declared —
+the `SCALAR_INDEX_DIMS` collapse substitutes the index local name
+(`instance_number` / `thread_number`) and errors if it isn't in scope.
+
+The asymmetry between the pairs is in *who reads the count*, not in the
+rules: the framework reads `number_of_instances` to size its own
+per-instance state; it does not yet read `number_of_threads`
+(per-thread containers are host-owned) but carries it for future
+symmetry.
 
 `group_name` is **not** in the required set. It is included in the static API signature
 only if the host declares it in their `type=control` table. When absent: the static API

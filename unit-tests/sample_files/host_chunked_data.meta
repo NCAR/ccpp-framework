@@ -1,7 +1,7 @@
 # Host metadata for the chunked_data integration test.
-# Tests a scheme that uses ccpp_chunk_number as a control variable and
-# accesses a DDT-based data array.  Chunk loop bounds are provided as
-# scalars (the host manages chunking externally).
+# Tests a scheme that accesses a DDT-based data array, called once per
+# chunk by a host that manages chunking externally (the current chunk is
+# passed as a horizontal range, not a control variable).
 
 [ccpp-table-properties]
   name = chunked_data_mod

@@ -140,9 +140,11 @@ SCALAR_INDEX_DIMS: Dict[str, str] = {
     'number_of_instances': 'instance_number',
 
     # Per-thread DDT containers (e.g. ``physics%Interstitial(thread_number)``)
-    # — the host's openmp-thread index.  ``thread_number`` is a required
-    # control variable (see doc/migration.md §3.1), so any host using
-    # this dim already has the paired index in scope.
+    # — the host's openmp-thread index.  (thread_number, number_of_threads) is
+    # a paired-optional control pair (see ccpp_capgen_ng._PAIRED_OPTIONAL_CTRL_VARS
+    # and doc/migration.md §3.1).  A host that dimensions a variable by
+    # ``number_of_threads`` MUST declare the pair — otherwise the collapse
+    # below cannot find ``thread_number`` and raises.
     'number_of_threads': 'thread_number',
 }
 
