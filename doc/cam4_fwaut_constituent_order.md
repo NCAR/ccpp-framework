@@ -140,7 +140,8 @@ directory of the `feature/capgen-ng` ccpp-framework branch):
                  index_const = index_const + 1
                  if (index_const > num_vars) then
 ```
-- **Run directories (Derecho):**
-  - Baseline (original capgen): `<FILL IN>`
-  - capgen-ng, unpatched (shows the FWAUT diff): `<FILL IN>`
-  - capgen-ng + reorder patch (**b4b**): `<FILL IN>`
+- **Run directories (Derecho):** Because the SIMA baselines change continuously, 
+  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng-reference): `<FILL IN>`
+    - capgen-ng differences to be evaluated against this baseline, because the official baseline changes frequently
+  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng), unpatched (shows the FWAUT diff): `<FILL IN>`
+  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng) + reorder patch (**b4b**): `<FILL IN>`
