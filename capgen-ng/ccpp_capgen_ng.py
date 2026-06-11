@@ -690,7 +690,7 @@ _REQUIRED_CTRL_VARS = [
     ('horizontal_loop_begin',    'integer',   'lower horizontal slice bound at scheme call sites'),
     ('horizontal_loop_end',      'integer',   'upper horizontal slice bound at scheme call sites'),
     ('number_of_physics_threads','integer',   'physics-internal thread budget (pass 1 if unused)'),
-    ('ccpp_error_code',          'integer',   'CCPP error flag'),
+    ('ccpp_error_code',          'integer',   'CCPP error code'),
     ('ccpp_error_message',       'character', 'CCPP error message'),
 ]
 # NOTE: the threading index/count (``thread_number`` / ``number_of_threads``)
