@@ -65,8 +65,32 @@ Forcing capgen-ng's advected water species into the baseline order
 `[cloud_liquid = 1, cloud_ice = 2, water_vapor = 3]` (a flag-guarded one-off
 patch in the framework's `ccp_model_const_table_lock`) makes QPC4 reproduce the
 ccpp-prebuild baseline **bit-for-bit** (cprnc: all fields identical). This
-isolates constituent ordering as the *sole* cause. Patch (file `ccpp_constituent_prop_mod.F90.patch` in the top-level directory of the `feature/capgen-ng` ccpp-framework branch):
+isolates constituent ordering as the *sole* cause. See section "Artifacts"
+below for the full patch.
 
+## Assessment — neither order is "wrong"
+
+Both builds register the same constituents with identical properties; the
+ordering is not physically meaningful, and the resulting solutions are
+roundoff-equivalent and both physically correct. The b4b failure reflects only
+that capgen-ng's (arbitrary) order differs from the (equally arbitrary) order
+the capgen baseline happened to produce.
+
+## Decision requested
+
+To resolve QPC4 (and any other case sensitive to constituent order), we propose:
+
+1. Give capgen-ng a **deterministic, documented** constituent-registration order
+   (e.g. water vapor first, with a clear rule for how constituents land in the
+   array) — replacing today's hash-bucket order.
+2. Adopt the new documented order and **re-baseline** the affected CAM-SIMA cases once.
+
+The temporary proof patch will be removed once the path is agreed.
+
+## Artifacts
+
+- **Patch:** Stored as `ccpp_constituent_prop_mod.F90.patch` in the top-level
+directory of the `feature/capgen-ng` ccpp-framework branch):
 ```
 --- capgen-ng/src/ccpp_constituent_prop_mod.F90
 +++ capgen-ng/src/ccpp_constituent_prop_mod.F90
@@ -116,36 +140,7 @@ isolates constituent ordering as the *sole* cause. Patch (file `ccpp_constituent
                  index_const = index_const + 1
                  if (index_const > num_vars) then
 ```
-
-## Assessment — neither order is "wrong"
-
-Both builds register the same constituents with identical properties; the
-ordering is not physically meaningful, and the resulting solutions are
-roundoff-equivalent and both physically correct. The b4b failure reflects only
-that capgen-ng's (arbitrary) order differs from the (equally arbitrary) order
-the capgen baseline happened to produce.
-
-## Decision requested
-
-To resolve QPC4 (and any other case sensitive to constituent order), we propose:
-
-1. Give capgen-ng a **deterministic, documented** constituent-registration order
-   (e.g. water vapor first, with a clear rule for how constituents land in the
-   array) — replacing today's hash-bucket order.
-2. Adopt the new documented order and **re-baseline** the affected CAM-SIMA cases once.
-
-The temporary proof patch will be removed once the path is agreed.
-
-## Artifacts
-
-- **Patch (git diff):** `<FILL IN: path to the .patch / repo+commit>` —
-  reproduce with
-  `git -C EXT/cam-sima-ng/ccpp_framework/capgen-ng diff src/ccpp_constituent_prop_mod.F90`.
 - **Run directories (Derecho):**
   - Baseline (original capgen): `<FILL IN>`
   - capgen-ng, unpatched (shows the FWAUT diff): `<FILL IN>`
   - capgen-ng + reorder patch (**b4b**): `<FILL IN>`
-- **cprnc summaries:**
-  - unpatched vs baseline: `<FILL IN: FWAUT RMS ≈ 4.24e-2, state fields ~15 digits>`
-  - patched vs baseline: `<FILL IN: all fields identical (b4b)>`
-- **Constituent lists (`debug_output = 2`, `atm.log`):** as tabulated above.
