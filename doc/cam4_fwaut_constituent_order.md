@@ -140,8 +140,41 @@ directory of the `feature/capgen-ng` ccpp-framework branch):
                  index_const = index_const + 1
                  if (index_const > num_vars) then
 ```
-- **Run directories (Derecho):** Because the SIMA baselines change continuously, 
-  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng-reference): `<FILL IN>`
+
+- **Run directories (Derecho) Intel:** Because the SIMA baselines change continuously, 
+  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng-reference):
+    - `/glade/derecho/scratch/heinzell/aux_sima_intel_20260614203021/`
     - capgen-ng differences to be evaluated against this baseline, because the official baseline changes frequently
-  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng), unpatched (shows the FWAUT diff): `<FILL IN>`
-  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng) + reorder patch (**b4b**): `<FILL IN>`
+    - Both the capgen baseline and the capgen-ng test fail for this test:
+```
+  SMS_Ln9.ne3pg3_ne3pg3_mg37.FKESSLER.derecho_intel.cam-outfrq_se_cslam_multitape (Overall: NLFAIL) details:
+    FAIL SMS_Ln9.ne3pg3_ne3pg3_mg37.FKESSLER.derecho_intel.cam-outfrq_se_cslam_multitape NLCOMP
+```
+  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng), unpatched (shows the FWAUT diff):
+    - `/glade/derecho/scratch/heinzell/aux_sima_intel_20260614202951/` with the following `mpasa120_mpasa120.QPC4` test dirs:
+      - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951.ORIGINAL_NO_PATCH`
+      - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951.ORIGINAL_NO_PATCH`
+  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng) + reorder patch (**b4b**):
+    - `/glade/derecho/scratch/heinzell/aux_sima_intel_20260614202951/` with the following `mpasa120_mpasa120.QPC4` test dirs:
+      - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951`
+      - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951`
+
+- **Run directories (Derecho) GNU:** Because the SIMA baselines change continuously, 
+  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng-reference):
+    - `/glade/derecho/scratch/heinzell/aux_sima_gnu_20260611123848/`
+    - capgen-ng differences to be evaluated against this baseline, because the official baseline changes frequently
+    - Both the capgen baseline and the capgen-ng test fail for this test:
+```
+  SMS_Ln2.ne3pg3_ne3pg3_mg37.FPHYStest.derecho_gnu.cam-outfrq_hb_vdiff_derecho (Overall: FAIL) details:
+    FAIL SMS_Ln2.ne3pg3_ne3pg3_mg37.FPHYStest.derecho_gnu.cam-outfrq_hb_vdiff_derecho RUN time=13
+  SMS_Ln9.ne3pg3_ne3pg3_mg37.FADIAB.derecho_gnu.cam-outfrq_se_cslam (Overall: FAIL) details:
+    FAIL SMS_Ln9.ne3pg3_ne3pg3_mg37.FADIAB.derecho_gnu.cam-outfrq_se_cslam RUN time=13
+```
+  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng), unpatched (shows the FWAUT diff):
+    - `/glade/derecho/scratch/heinzell/aux_sima_gnu_20260611123837/` with the following `mpasa120_mpasa120.QPC4` test dirs:
+      - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837.ORIGINAL_NO_PATCH`
+      - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837.ORIGINAL_NO_PATCH`
+  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng) + reorder patch (**b4b**):
+    - `/glade/derecho/scratch/heinzell/aux_sima_gnu_20260611123837/` with the following `mpasa120_mpasa120.QPC4` test dirs:
+      - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837`
+      - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837`
