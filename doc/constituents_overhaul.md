@@ -930,6 +930,56 @@ These are the calls we need to make in the meeting.
 - **Recommendation**: (b). It's a one-line doc note and zero code
   change.
 
+### Q7. The `_layer` suffix — was a parallel `_interfaces` storage ever intended? (raised 2026-06-25, walkthrough prep)
+
+- **Observation.** The per-instance constituent object stores values and
+  tendencies as `%vars_layer(:,:,:)` and `%vars_layer_tend(:,:,:)`
+  (`src/ccpp_constituent_prop_mod.F90:167-168`), both allocated over the full
+  constituent axis (`:1558`, `num_values()` = every registered constituent).
+  The `_layer` qualifier in the names implies an anticipated **parallel
+  interface storage** (`vars_interface` / `vars_interface_tend`) that was
+  never added.
+- **Evidence it was anticipated, not accidental.** The type carries
+  `is_layer_var` (`:637`, tests `vertical_layer_dimension`) **and**
+  `is_interface_var` (`:652`, tests `vertical_interface_dimension`)
+  predicates — so the design already distinguishes layer- vs
+  interface-located constituents, but only layer storage exists.
+- **Latent gap.** A constituent declared on `vertical_interface_dimension`
+  has no storage slot today; `is_interface_var` would return true but there
+  is nowhere to put it. Whether any host/scheme actually needs interface
+  constituents is unknown (CAM-SIMA audit in §3 did not surface one).
+- **Questions for discussion.** (a) Was `_interfaces` intended and dropped, or
+  is `_layer` just a (now-misleading) name? (b) Does any consumer need
+  interface-level constituents? (c) If **no** → drop the `_layer` suffix to
+  simplify; if **yes** → add the parallel `vars_interface` / `_tend` arrays and
+  route `is_interface_var` constituents to them.
+
+### Q8. Should a constituent always be a triplet — base + tendency + index? (raised 2026-06-25, walkthrough prep)
+
+- **Today (per `constituents.md` four rules):** a constituent is **not** a
+  forced triplet. It is *one registered base* (Rule 1, the only declaration
+  path), *zero-or-more optional* `tendency_of_<X>` references (Rule 3 — a
+  scheme emits one only if it has a tendency), and a *framework-derived*
+  `index_of_<X>` (never user-declared; filled at init via `%const_index`).
+- **But storage already half-implies the triplet.** `%vars_layer_tend` is
+  allocated over the **whole** constituent axis (`:1558`), so every
+  constituent has a tendency *column* whether or not any scheme writes it.
+  So the "triplet" is already true at the **storage** level, but optional at
+  the **metadata/registration** level.
+- **Question for discussion.** Should registration *force* the triplet
+  (declare base + tendency + index together, uniformly)?
+  - *For:* uniform mental model; matches the storage; removes the "did anyone
+    register a tendency?" ambiguity; could let the resolver validate
+    tendency producers against registered bases.
+  - *Against:* many constituents have no physics tendency (the column is
+    already there regardless, so forcing a declaration buys little); the
+    index is implicit by design and exposing it as a required member
+    re-introduces the index bookkeeping capgen-ng deliberately hid; the
+    base is the only thing that *must* be registered.
+  - *Open sub-question:* if not forced, should the resolver at least **warn**
+    when a `tendency_of_<X>` is produced for an `<X>` that no register scheme
+    declared? (relates to §4.9 — no codegen-time cross-check of registration.)
+
 ---
 
 ## 8. Three proposals — minimal / clean / deep
