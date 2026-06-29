@@ -1,4 +1,4 @@
-name: capgen-ng end-to-end tests
+name: capgen end-to-end tests
 
 on:
   workflow_dispatch:

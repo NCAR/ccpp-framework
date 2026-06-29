@@ -4,7 +4,7 @@ The original ``ccpp-prebuild`` and ``ccpp-capgen`` both avoided rewriting
 generated cap files when their content was unchanged — preserving each
 file's mtime so downstream build systems (CMake, Make, Ninja) don't
 trigger unnecessary recompilation cascades.  This module reproduces that
-behaviour for ``capgen-ng``.
+behaviour for ``capgen``.
 
 Staging strategy
 ----------------
@@ -51,7 +51,7 @@ def write_if_changed(
     encoding : str
         Encoding passed to :func:`open` for both the read-back comparison
         and the staged write.  Defaults to ``'utf-8'`` to match every
-        capgen-ng writer.
+        capgen writer.
     logger : logging.Logger, optional
         When supplied, the helper logs an ``info``-level message after
         each call: ``"Wrote <path>"`` if the file was newly written or

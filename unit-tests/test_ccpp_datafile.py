@@ -14,7 +14,7 @@ import tempfile
 import unittest
 
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
-_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen-ng')
+_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen')
 for _p in (_CAPGEN_DIR, _TESTS_DIR):
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -154,7 +154,7 @@ class TestDatatableReportInspectionFiles(unittest.TestCase):
 class TestDatatableReportSchemeActions(_DTBase):
 
     def test_process_list_empty(self):
-        # capgen-ng does not emit <scheme process="..."> attrs.
+        # capgen does not emit <scheme process="..."> attrs.
         out = datatable_report(self._datatable,
                                DatatableReport('process_list'), ',')
         self.assertEqual(out, '')

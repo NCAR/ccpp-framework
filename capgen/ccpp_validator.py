@@ -59,7 +59,7 @@ import re
 import sys
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
-# Ensure the capgen-ng package is importable when invoked directly.
+# Ensure the capgen package is importable when invoked directly.
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PACKAGE_DIR = os.path.dirname(_SCRIPT_DIR)
 if _PACKAGE_DIR not in sys.path:
@@ -1750,7 +1750,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "TRANSIENT MIGRATION SHIM.  Accept legacy CCPP standard "
             "names (currently 'horizontal_loop_extent') in scheme "
             "metadata and silently rewrite them to their canonical "
-            "capgen-ng equivalents ('horizontal_dimension').  Emits a "
+            "capgen equivalents ('horizontal_dimension').  Emits a "
             "loud warning at startup.  Will be removed."
         ),
     )
@@ -1758,7 +1758,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # effect inside generator.suite_resolver._canonical_dim, which the
     # validator never invokes (the validator compares metadata against
     # Fortran source, not host metadata against scheme metadata), so
-    # the flag would be a no-op.  See capgen-ng/ccpp_capgen_ng.py.
+    # the flag would be a no-op.  See capgen/ccpp_capgen.py.
     # auto-clone-constituents: transient legacy shim.  This one DOES
     # belong on the validator because the shim extends the parser's
     # ``_KNOWN_ATTRS`` set — without the flag the validator rejects
@@ -1774,7 +1774,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "TRANSIENT LEGACY SHIM.  Accept four legacy constituent "
             "attributes (default_value, min_value, water_species, "
             "mixing_ratio_type) on scheme args.  Mirrors the same "
-            "flag on ccpp_capgen_ng so legacy scheme metadata that "
+            "flag on ccpp_capgen so legacy scheme metadata that "
             "needs auto-clone-static-constituent codegen can be "
             "validated against its Fortran source.  Emits a loud "
             "warning at startup.  Will be removed."

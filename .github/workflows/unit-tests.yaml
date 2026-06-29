@@ -1,4 +1,4 @@
-name: capgen-ng unit tests
+name: capgen unit tests
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   
   unit-tests:
-    name: capgen-ng unit tests
+    name: capgen unit tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,9 +40,9 @@ jobs:
         which xmllint
         xmllint --version
         which pytest
-    - name: Run capgen-ng unit tests
+    - name: Run capgen unit tests
       run: |
         pytest -v unit-tests/
-    - name: Run capgen-ng module doctests
+    - name: Run capgen module doctests
       run: |
-        PYTHONPATH=capgen-ng pytest --doctest-modules capgen-ng
+        PYTHONPATH=capgen pytest --doctest-modules capgen

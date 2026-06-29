@@ -2,7 +2,7 @@
 !! Consumer scheme: reads the suite-owned scratch workspace allocated by
 !! make_workspace and reduces it into a host-owned scalar. Receiving the
 !! suite-owned allocatable component through a plain (non-allocatable) dummy
-!! exercises capgen-ng passing the whole allocated component to a consumer.
+!! exercises capgen passing the whole allocated component to a consumer.
 
 module use_workspace
 

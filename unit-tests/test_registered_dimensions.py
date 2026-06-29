@@ -1,6 +1,6 @@
 """Tests for :mod:`metadata.registered_dimensions`.
 
-This module is the single source of truth for capgen-ng's registered
+This module is the single source of truth for capgen's registered
 scalar-index dimension table.  Tests here cover:
 
   * Every entry in :data:`SCALAR_INDEX_DIMS` is present (regression
@@ -29,7 +29,7 @@ from metadata.registered_dimensions import (
 
 class TestSCalarIndexDimsContents(unittest.TestCase):
     """The registered table must contain at least the two pairings that
-    capgen-ng has committed to.  Removing or renaming either is a
+    capgen has committed to.  Removing or renaming either is a
     breaking change for hosts in production."""
 
     def test_number_of_instances_pair(self):

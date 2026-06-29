@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-"""Registered scalar-index dimensions for capgen-ng.
+"""Registered scalar-index dimensions for capgen.
 
 This module is the **single source of truth** for the small set of CCPP
-standard-name dimensions that capgen-ng treats specially: each one is a
+standard-name dimensions that capgen treats specially: each one is a
 *count* (e.g. ``number_of_instances``, ``number_of_threads``) whose access
 pattern collapses to a paired scalar *index* variable (e.g.
 ``instance_number``, ``thread_number``).
@@ -19,14 +19,14 @@ dimensions, e.g.::
       type          = GFS_interstitial_type
       dimensions    = (number_of_threads)        # <-- registered scalar dim
 
-When a scheme reaches into a field of that container, capgen-ng emits the
+When a scheme reaches into a field of that container, capgen emits the
 scalar index automatically::
 
     physics%Interstitial(thread_number)%alpha(lb:ub, 1:nlev)
                        ^^^^^^^^^^^^^^^
                        substituted from the registered scalar-index pair
 
-The same machinery applies anywhere capgen-ng needs to subscript a
+The same machinery applies anywhere capgen needs to subscript a
 container by an index variable that the host carries as a separate
 control/host variable.
 
@@ -35,7 +35,7 @@ The two rules
 
 **Rule 1 (generalized, NOT enforced as a hard gate)**:
 A container DDT-instance variable may carry registered scalar-index
-dimensions in its ``dimensions`` clause.  When it does, capgen-ng emits
+dimensions in its ``dimensions`` clause.  When it does, capgen emits
 the paired index variable's local Fortran name at every call site that
 reaches into the container.  Anything *not* in :data:`SCALAR_INDEX_DIMS`
 flows through the normal slice/bounds machinery
@@ -53,7 +53,7 @@ expected index variable, and points the user back to this file.
 Why both rules matter
 ---------------------
 
-* Rule 1 generalization lets capgen-ng support multi-instance
+* Rule 1 generalization lets capgen support multi-instance
   (``number_of_instances``) **and** per-thread (``number_of_threads``)
   container DDTs from one mechanism — no per-dimension code path.
 * Rule 2 keeps the substitution mechanism contained: the rule "leaves
@@ -88,7 +88,7 @@ If you see the error message::
     Variable '<name>' (standard_name='<std>') declares dimension '<dim>'
     on a leaf-data variable, but '<dim>' is a registered scalar-index
     dimension reserved for DDT-instance containers (see
-    capgen-ng/metadata/registered_dimensions.py).
+    capgen/metadata/registered_dimensions.py).
     [...]
 
 it means you wrote something like::
@@ -129,19 +129,19 @@ from typing import Dict, FrozenSet, Optional
 #: otherwise).
 #:
 #: Every entry here is treated as a hard convention across the entire
-#: CCPP ecosystem.  Adding an entry binds capgen-ng to a specific
+#: CCPP ecosystem.  Adding an entry binds capgen to a specific
 #: standard-name pairing; once an entry lands and hosts adopt it,
 #: removing or renaming it is a breaking change.
 SCALAR_INDEX_DIMS: Dict[str, str] = {
     # Multi-instance API: the framework's instance_number paired opt-in.
     # Hosts that declare instance_number + number_of_instances opt into
-    # the multi-instance API; capgen-ng auto-substitutes (instance_number)
+    # the multi-instance API; capgen auto-substitutes (instance_number)
     # wherever a container DDT carries this dimension.
     'number_of_instances': 'instance_number',
 
     # Per-thread DDT containers (e.g. ``physics%Interstitial(thread_number)``)
     # — the host's openmp-thread index.  (thread_number, number_of_threads) is
-    # a paired-optional control pair (see ccpp_capgen_ng._PAIRED_OPTIONAL_CTRL_VARS
+    # a paired-optional control pair (see ccpp_capgen._PAIRED_OPTIONAL_CTRL_VARS
     # and doc/migration.md §3.1).  A host that dimensions a variable by
     # ``number_of_threads`` MUST declare the pair — otherwise the collapse
     # below cannot find ``thread_number`` and raises.

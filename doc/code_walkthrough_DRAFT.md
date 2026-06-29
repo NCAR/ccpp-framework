@@ -1,10 +1,10 @@
-# capgen-ng — code walkthrough for prebuild/capgen developers (DRAFT)
+# capgen — code walkthrough for prebuild/capgen developers (DRAFT)
 
 > **Status: temporary draft for the developer walkthrough.** All `file → routine → line`
 > anchors were verified against the current tree; line numbers drift, so treat them as
 > “go here,” not gospel. Three running examples: a **simple** one
 > (`end-to-end-tests/instances/`) used to teach the whole pipeline, an **advanced**
-> one (`end-to-end-tests/capgen_ng/`) for the resolver’s harder features, and a
+> one (`end-to-end-tests/capgen/`) for the resolver’s harder features, and a
 > **constituents** one (`end-to-end-tests/advection/`) for the constituent subsystem.
 > Once reviewed, this folds into `doc/DevelopersGuide/`.
 
@@ -13,7 +13,7 @@
 ## 0. Orientation for prebuild/capgen developers
 
 If you come from **ccpp-prebuild**: there is no Python-templated giant cap and no
-`ccpp_prebuild_config.py`. capgen-ng parses metadata and the SDF, **resolves every scheme
+`ccpp_prebuild_config.py`. capgen parses metadata and the SDF, **resolves every scheme
 argument into an explicit Python object** that records *exactly* where the host data lives
 and what (if any) unit/kind/flip transform it needs, then emits Fortran from those objects.
 
@@ -32,7 +32,7 @@ The single sentence to keep in mind:
 
 ## 1. The pipeline at a glance
 
-Everything is orchestrated by `capgen()` in **`ccpp_capgen_ng.py:863`**.
+Everything is orchestrated by `capgen()` in **`ccpp_capgen.py:863`**.
 
 ```mermaid
 flowchart TD
@@ -147,10 +147,10 @@ flowchart TD
 - **Found in host** → `host_dict.get(std)` (`_resolve_single_bound`, `suite_resolver.py:429`).
 - **Not found, first use is `intent(out)`** → it’s an interstitial; **promote** it to a
   suite-owned variable: a `SuiteVar` (`:964`) is created and added to the running `suite_vars`
-  dict, so later schemes that read it bind via `source='suite'`. This is capgen-ng’s answer
+  dict, so later schemes that read it bind via `source='suite'`. This is capgen’s answer
   to prebuild’s “where do interstitials live” — they’re emitted into `ccpp_<suite>_data.F90`.
 - **Not found, first use is `in`/`inout`** → hard error (nobody ever writes it). See the
-  “undefined intent(out)” discipline — capgen-ng refuses to silently read an unproduced var.
+  “undefined intent(out)” discipline — capgen refuses to silently read an unproduced var.
 
 The two dictionaries in play during resolution:
 
@@ -272,7 +272,7 @@ That is the whole chain: **`.meta` → `host_dict`/scheme args → `ResolvedArg.
 `transform_case` → these emitted lines.**
 
 > Note the **scheme appears twice** in `instances/` (`unit_conv_scheme_1`, `_2`, `_1`).
-> Each appearance is its own `ResolvedCall`; capgen-ng dedups *init/finalize* phases by
+> Each appearance is its own `ResolvedCall`; capgen dedups *init/finalize* phases by
 > scheme name within a group, but **run** phases emit every appearance.
 
 ---
@@ -301,7 +301,7 @@ scalar-index dimensions, control vars, a unit transform (case 3), and an optiona
 
 ---
 
-## 7. Running example 2 (advanced) — `capgen_ng/` : what the resolver adds
+## 7. Running example 2 (advanced) — `capgen/` : what the resolver adds
 
 Same pipeline; this case exercises the features `instances/` doesn’t. Read it for:
 
@@ -356,7 +356,7 @@ Three questions prebuild developers always ask:
 - the arg’s **type** is `ccpp_constituent_properties_t` — the register-phase descriptor array
   (a separate flag, `is_constituent_arg`); **and**
 - constituent-ness is ultimately the **host’s** decision. A scheme that only *reads* a name
-  need not re-flag it — capgen-ng infers it from the set of names *some* scheme flags (“rule
+  need not re-flag it — capgen infers it from the set of names *some* scheme flags (“rule
   b”). If the host declares the name as an ordinary variable, that wins
   (`design_constituent_host_wins`).
 
@@ -496,7 +496,7 @@ to §8.1–8.4. Use it only when the audience needs the multi-instance constitue
 
 ## 9. How to follow along live
 
-- **Run it:** point `capgen()` / `ccpp_capgen_ng.py` at the example’s `.meta` + SDF and inspect
+- **Run it:** point `capgen()` / `ccpp_capgen.py` at the example’s `.meta` + SDF and inspect
   the generated `ccpp_*_cap.F90`, `ccpp_*_data.F90`, and `datatable.xml`.
 - **Read the resolution:** `write_suite_meta` (`suite_data.py:481`) emits the resolved suite as
   a `.meta` — the cleanest dump of `SuiteResolution`.
@@ -512,8 +512,8 @@ to §8.1–8.4. Use it only when the audience needs the multi-instance constitue
 
 | Concept | Routine | File:line |
 |---|---|---|
-| Orchestrator | `capgen` | `ccpp_capgen_ng.py:863` |
-| Load metadata | `_load_metadata_files` | `ccpp_capgen_ng.py:637` |
+| Orchestrator | `capgen` | `ccpp_capgen.py:863` |
+| Load metadata | `_load_metadata_files` | `ccpp_capgen.py:637` |
 | Parse `.meta` | `parse_metadata_file` | `metadata/metadata_table.py:1166` |
 | Parsed table / var | `MetadataTable` / `MetaVar` | `metadata/metadata_table.py:940` / `:414` |
 | Host dict entry | `HostVarEntry` | `metadata/variable_resolver.py:244` |

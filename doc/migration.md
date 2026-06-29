@@ -1,15 +1,15 @@
-# Migrating from ccpp-prebuild / ccpp-capgen to capgen-ng
+# Migrating from ccpp-prebuild / ccpp-capgen to capgen
 
 This document captures the **user-facing differences** a host model author
 or scheme author needs to know when moving metadata, suite XML, and host
 Fortran from the legacy ccpp-prebuild + ccpp-capgen toolchain to
-**capgen-ng**.  It complements `doc/redesign_prompt.md` (design spec) and
+**capgen**.  It complements `doc/redesign_prompt.md` (design spec) and
 `doc/redesign_analysis.md` (analysis of the old systems).
 
 *Last revised: 2026-06-05.*  Current unit-test suite: 1516 passing.
 
 **Repository layout** (post-2026-05-13 cleanup): tooling lives under
-`capgen-ng/` (top-level of this repo).  Unit tests live at the top
+`capgen/` (top-level of this repo).  Unit tests live at the top
 level in `unit-tests/`; end-to-end tests in `end-to-end-tests/`.  Run
 the unit suite from the repo root with `python -m pytest unit-tests/`.
 
@@ -78,7 +78,7 @@ Example with multi-line dependencies (real CCPP physics pattern):
 > `ty_optical_props_1scl_ccpp`) cannot inherit its module from a sibling.
 > If the defining Fortran module name differs from the DDT table (type)
 > name — which it almost always does for these wrappers — you **must**
-> declare `module_name` explicitly.  capgen-ng does *not* guess (e.g.
+> declare `module_name` explicitly.  capgen does *not* guess (e.g.
 > from the file name); a DDT it can't resolve raises a clear error at
 > generation time naming the type and the `module_name` remedy.
 
@@ -99,7 +99,7 @@ Inside a `[ var_name ]` section.  All optional.
 
 When a host variable carries `active = (<condition>)`, the host's
 contract with the cap is "this variable's storage is only valid when
-the condition holds".  capgen-ng honors that contract differently
+the condition holds".  capgen honors that contract differently
 depending on the matching scheme arg's optionality:
 
 **Scheme arg is `optional = True`** — the cap uses pointer association
@@ -207,7 +207,7 @@ Error messages name the source as `host`, `control`, or `suite` so
 you know whose contract you're violating.
 
 **Suite-owned storage is never default-initialized** — by design.
-capgen-ng emits the `ccpp_<suite>_data` components with no default value.
+capgen emits the `ccpp_<suite>_data` components with no default value.
 An `intent(out)` argument is the scheme's contract to define that variable
 on *every* return path; the framework will not paper over an unset output
 the way original capgen's zero-initialized interstitials did.  A ported
@@ -221,7 +221,7 @@ early-return paths for unset `intent(out)` args.
 
 A **suite-owned variable** (an interstitial: first written by a scheme
 with `intent=out`, then consumed by another) is stored as a component
-of the generated `ccpp_<suite>_data` DDT.  capgen-ng allocates it for
+of the generated `ccpp_<suite>_data` DDT.  capgen allocates it for
 you — **once**, in `suite_data_init_fields`, which runs at the very
 start of `<suite>_init`.  That works only when every dimension is known
 that early, i.e. a **host variable** or a value set in the **`register`**
@@ -239,7 +239,7 @@ Such a variable must be declared **`allocatable`** and allocated by its
   auto-deallocated on entry, so element assignment needs it allocated
   first).
 
-For an `allocatable` arg capgen-ng then: (1) does **not** pre-allocate it
+For an `allocatable` arg capgen then: (1) does **not** pre-allocate it
 in `init_fields`; (2) passes the **whole** component at call sites
 (`...%var`, no array section — an allocatable/assumed-shape mismatch is
 otherwise a compile error); and (3) still frees it in
@@ -255,7 +255,7 @@ declared `number_of_vertical_interfaces_in_RRTMGP` must be sized with
 that value, **not** the host's `vertical_interface_dimension` nor
 `nlay+1`, which differ when the scheme runs on a reduced vertical grid.)
 
-**Generation-time guard.**  capgen-ng rejects a *non*-`allocatable`
+**Generation-time guard.**  capgen rejects a *non*-`allocatable`
 suite-owned array whose dimension is written by a scheme in any phase
 after `register` — it would otherwise be allocated from uninitialized
 memory.  The error names the variable, the offending dimension, and the
@@ -328,10 +328,10 @@ both pairs entirely.
 ### 1.8 Deprecated standard names rewritten by `--legacy-mode`
 
 `--legacy-mode` is a transient migration shim that rewrites a small
-set of deprecated standard names to their canonical capgen-ng
+set of deprecated standard names to their canonical capgen
 equivalents at parse time.  The full table currently covers:
 
-| Deprecated (legacy)            | Canonical (capgen-ng)    |
+| Deprecated (legacy)            | Canonical (capgen)    |
 |--------------------------------|--------------------------|
 | `horizontal_loop_extent`       | `horizontal_dimension`   |
 | `number_of_openmp_threads`     | `number_of_threads`      |
@@ -339,14 +339,14 @@ equivalents at parse time.  The full table currently covers:
 Why each entry:
 
 * `horizontal_loop_extent` — ccpp-prebuild / original ccpp-capgen used
-  this for the horizontal-axis std name in scheme metadata.  capgen-ng
+  this for the horizontal-axis std name in scheme metadata.  capgen
   uses `horizontal_dimension` uniformly; the run-vs-non-run distinction
   isn't expressed in scheme metadata anymore (host passes
   `horizontal_loop_begin` / `horizontal_loop_end` as control vars and
   the generated cap slices accordingly).
 * `number_of_openmp_threads` — legacy CCPP-physics hosts (CCPP-SCM
   17p8 in particular) size per-thread DDT containers by
-  `number_of_openmp_threads` (e.g. `physics%Interstitial`).  capgen-ng
+  `number_of_openmp_threads` (e.g. `physics%Interstitial`).  capgen
   uses `number_of_threads`, which matches the `thread_number` control
   variable, so the registered scalar-index dim table can substitute
   `physics%Interstitial(thread_number)%…` automatically (see §3.4).
@@ -360,7 +360,7 @@ Migration paths:
 1. **Edit the metadata** (recommended) — search-and-replace the
    legacy names in every host / scheme `.meta` you maintain.
 2. **Use `--legacy-mode`** (transient) — pass `--legacy-mode` to both
-   `ccpp_capgen_ng.py` and `ccpp_validator.py` and the renames happen
+   `ccpp_capgen.py` and `ccpp_validator.py` and the renames happen
    at parse time.  A loud warning banner prints at startup, listing
    every pair the shim is rewriting, so the substitution is never
    invisible.  This shim *will be removed*; treat it as a runway,
@@ -430,7 +430,7 @@ favour of `vertical_layer_dimension` and the flag becomes unnecessary.
 
 ### 2.1 Schema v2.0 with nested-suite expansion
 
-Capgen-ng parses v2.0 SDFs and expands `<nested_suite>` references
+Capgen parses v2.0 SDFs and expands `<nested_suite>` references
 recursively at parse time.  See `doc/redesign_prompt.md` §3 and the
 `suite_v2_0.xsd` schema.
 
@@ -484,7 +484,7 @@ counter and the total iteration count via two CCPP standard names:
 | `ccpp_loop_extent`   | integer      | Total iterations — the `loop=` value on the `<subcycle>` |
 
 These are **loop-context control variables**: the host model does **not**
-declare them.  capgen-ng emits them automatically as locals in the
+declare them.  capgen emits them automatically as locals in the
 generated group cap (the `do` loop's induction variable for the counter,
 the loop bound for the extent), and resolves any scheme arg requesting
 them against those locals.
@@ -627,7 +627,7 @@ elsewhere for API symmetry.
 
 ### 3.3 Module-name convention (host, scheme, and DDT tables)
 
-capgen-ng trusts metadata and does **not** parse Fortran, so it derives
+capgen trusts metadata and does **not** parse Fortran, so it derives
 the Fortran module name from the metadata: by default `module name =
 table name`.  When the Fortran `module` statement does not match the
 `[ccpp-table-properties] name`, declare the real module name with the
@@ -661,10 +661,10 @@ their module names, is largely a batch of `module_name` injections.
 ### 3.4 Registered scalar-index dimensions
 
 A small set of CCPP standard-name dimensions are *registered*: each
-one is a count that capgen-ng auto-collapses to a paired scalar index
+one is a count that capgen auto-collapses to a paired scalar index
 variable at every access site.
 
-| Count dim (in `dimensions = (...)`) | Index var (capgen-ng substitutes) |
+| Count dim (in `dimensions = (...)`) | Index var (capgen substitutes) |
 |---|---|
 | `number_of_instances`               | `instance_number`                 |
 | `number_of_threads`                 | `thread_number`                   |
@@ -699,12 +699,12 @@ call site — no metadata work required on the scheme side.
          type       = real | kind = kind_phys
          dimensions = (number_of_threads, horizontal_dimension)   # ILLEGAL
 
-   capgen-ng will reject it at parse time with a message pointing
+   capgen will reject it at parse time with a message pointing
    at the wrap-in-DDT remediation pattern.  Wrap the leaf in a
    container DDT instead.
 
 The registered table lives in
-[`capgen-ng/metadata/registered_dimensions.py`](../capgen-ng/metadata/registered_dimensions.py).
+[`capgen/metadata/registered_dimensions.py`](../capgen/metadata/registered_dimensions.py).
 It carries a four-step recipe at the top of the file for adding new
 pairings.
 
@@ -712,10 +712,10 @@ pairings.
 
 ## 4. Generator CLI and build integration
 
-### 4.1 `ccpp_capgen_ng.py` invocation
+### 4.1 `ccpp_capgen.py` invocation
 
 ```
-python ccpp_capgen_ng.py \
+python ccpp_capgen.py \
     --host-files <host.meta>[,<ddt.meta>,...] \
     --scheme-files <scheme1.meta>[,<scheme2.meta>,...] \
     --suites <suite1.xml>[,<suite2.xml>,...] \
@@ -741,13 +741,13 @@ self-contained and grep-tagged for clean removal:
 
 **`--legacy-mode`** (transient migration shim, will be removed):
 silently rewrites a small set of deprecated CCPP standard names to
-their capgen-ng equivalents at parse time — see §1.8 for the full
+their capgen equivalents at parse time — see §1.8 for the full
 table (`horizontal_loop_extent` → `horizontal_dimension`,
 `number_of_openmp_threads` → `number_of_threads`).  The rewrite fires
 for both standard-name attributes AND dimension tokens.  Prints a
 loud warning banner at startup, enumerating every pair the shim is
 rewriting, so the substitution is never invisible.  Available on both
-`ccpp_capgen_ng.py` and `ccpp_validator.py` (keep the flag consistent
+`ccpp_capgen.py` and `ccpp_validator.py` (keep the flag consistent
 between the two when both are invoked from CMake).  All translation
 logic is isolated in `metadata/legacy_compat.py` and tagged with
 `# legacy-compat:` comments at every touchpoint.
@@ -774,7 +774,7 @@ the standard name when missing, `diag_name` falls back to local_name,
 `vertical_dim` lifted from the arg's dim list).  Adds four legacy
 `%instantiate` kwargs to the parser (`default_value`, `min_value`,
 `water_species`, `mixing_ratio_type`).  Available on both
-`ccpp_capgen_ng.py` and `ccpp_validator.py` (the validator must
+`ccpp_capgen.py` and `ccpp_validator.py` (the validator must
 accept the four extra attrs).  **Single-instance only** — declaring
 the `instance_number` + `number_of_instances` pair while the flag is
 on is a hard error before any suite is parsed.  Module
@@ -834,23 +834,23 @@ file lives in the target's parent directory (always under
 ### 4.5 Driving an existing capgen-based build: the CAM-SIMA compatibility layer
 
 A host whose build system was written against **original ccpp-capgen's
-Python API** can adopt capgen-ng without rewriting that build system, by
+Python API** can adopt capgen without rewriting that build system, by
 inserting a thin facade.  CAM-SIMA does exactly this with
-`cime_config/capgen_compat/` (in the CAM-SIMA tree, not in capgen-ng).
+`cime_config/capgen_compat/` (in the CAM-SIMA tree, not in capgen).
 CAM-SIMA's `cam_autogen.py`, `generate_registry_data.py`, and
 `write_init_files.py` are unmodified; they import the facade instead of
 original capgen and keep calling the same object surface
 (`cap_database.host_model_dict()`, `cap_database.call_list(phase)`,
 `Var.get_prop_value(...)`, `Var.source.ptype`, …).
 
-The facade re-implements that surface on top of capgen-ng's outputs:
+The facade re-implements that surface on top of capgen's outputs:
 
-- `_runner.py` invokes `ccpp_capgen_ng.py` and returns the resolver
+- `_runner.py` invokes `ccpp_capgen.py` and returns the resolver
   results plus the `datatable.xml`.
 - `_cap_database.py` (`CapDatabase`) exposes `host_model_dict()` over the
   flat `host_dict` and `call_list(phase)` over the per-(scheme, phase)
   `ResolvedArg` lists, mapping original-capgen phase spellings
-  (`initialize`/`finalize`) onto capgen-ng's (`init`/`final`).
+  (`initialize`/`finalize`) onto capgen's (`init`/`final`).
 - `_var_wrapper.py` (`_VarWrapper`) reconstructs original capgen's
   per-variable accessors over a `HostVarEntry` (host path) or a
   `ResolvedArg` (call-list path).
@@ -876,7 +876,7 @@ learned from the CAM-SIMA bring-up:
    "Missing required host variables: tendency_of_water_vapor_…" failure
    (`doc/constituents_overhaul.md` §4.15).
 
-This facade is how capgen-ng currently drives the `kessler`, `rrtmgp`,
+This facade is how capgen currently drives the `kessler`, `rrtmgp`,
 and `se_cslam`/CSLAM (FCAM7 `cam7`) CAM-SIMA cases end-to-end on Derecho
 — building and running to completion under both **gnu and intel**, with
 bit-comparable results.  A short shareable brief (for the original
@@ -1007,12 +1007,12 @@ state array is unallocated — there, "not allocated" really does mean
 
 Backward-compatible.  Original capgen's auto-clone path in
 `scripts/constituents.py` has been updated to call the setter.
-capgen-ng's `--legacy-auto-clone-constituents` shim (§6.4)
+capgen's `--legacy-auto-clone-constituents` shim (§6.4)
 synthesises `%instantiate(...)` directly on slots of the per-suite
 dynamic-constituents buffer, so the properties objects are owned by
 the buffer from creation — no ownership transfer call needed.
 
-### 6.2 capgen-ng constituent API
+### 6.2 capgen constituent API
 
 (See `doc/constituents.md` for the full reference.)  Highlights:
 
@@ -1036,7 +1036,7 @@ the buffer from creation — no ownership transfer call needed.
   is a codegen error.  A scheme that only READS a constituent or a
   `tendency_of_<X>` need not re-flag it — see §6.5.
 - **`_register` is called exactly once per scheme** (2026-06-08).
-  capgen-ng packs each constituent scheme's returned
+  capgen packs each constituent scheme's returned
   `ccpp_constituent_properties_t(:)` array into the per-suite buffer in a
   single append pass, so a register routine may safely allocate persistent
   module state.  (An earlier two-pass count+copy called register twice and
@@ -1049,7 +1049,7 @@ If the host declares a framework-named standard name
 (`ccpp_constituents` / `ccpp_constituent_tendencies` /
 `ccpp_constituent_properties` / `number_of_ccpp_constituents` /
 `index_of_<X>`) as a regular host variable, the resolver uses the
-host's declaration and skips capgen-ng auto-provisioning.  Matters
+host's declaration and skips capgen auto-provisioning.  Matters
 most for legacy hosts (GFS / SCM) that own their own tracer
 indices — e.g. `[ntcw]` with `standard_name =
 index_of_cloud_liquid_water_mixing_ratio_in_tracer_concentration_array`
@@ -1069,7 +1069,7 @@ notably CAM-SIMA's atmospheric_physics tree, where ~16 of the ~20
 constituent-touching schemes declare `advected = True` (or
 `constituent = True`, or `molar_mass = …`) in `_run` arg tables and
 rely on the framework to register the constituent — pass
-`--legacy-auto-clone-constituents` to both `ccpp_capgen_ng.py` and
+`--legacy-auto-clone-constituents` to both `ccpp_capgen.py` and
 `ccpp_validator.py`.
 
 What changes:
@@ -1094,7 +1094,7 @@ What changes:
   from auto-clone — those resolve through the framework
   whole-buffer path, not as individual registrations.
 
-What capgen-ng's other rules still require (the shim does **not**
+What capgen's other rules still require (the shim does **not**
 relax them):
 
 - `intent = inout` on base constituents (`advected = True` on a
@@ -1123,7 +1123,7 @@ variable.  A scheme that merely **reads** such a name therefore must
 **not** repeat the `advected` / `constituent` flag — only the
 declaring/producing scheme (or the host) does.
 
-capgen-ng infers constituent-ness for an unflagged consumer from the
+capgen infers constituent-ness for an unflagged consumer from the
 scheme-metadata-wide set of names that *some* scheme flags
 (`VariableResolver.constituent_stdnames()`):
 
@@ -1149,7 +1149,7 @@ must key constituent handling on `ResolvedArg.source == 'constituent'`,
 ### 6.6 `number_of_ccpp_constituents` as a dimension
 
 A scheme (or a suite-owned interstitial) may be dimensioned by the
-framework constituent count `number_of_ccpp_constituents`.  capgen-ng
+framework constituent count `number_of_ccpp_constituents`.  capgen
 resolves that count for *any* variable: call-site subscripts emit `:`
 for the constituent axis, and `<suite>_data` allocations size the axis
 from the per-instance constituent object's `%num_layer_vars`.  This is
@@ -1162,7 +1162,7 @@ number_of_ccpp_constituents)`.  E2e fixture:
 
 ## 7. Validator
 
-`capgen-ng/ccpp_validator.py` — standalone Fortran-vs-metadata checker.
+`capgen/ccpp_validator.py` — standalone Fortran-vs-metadata checker.
 Validates **scheme** metadata against scheme Fortran files, and (since
 2026-06-01) **host** and **DDT** metadata against host module-level
 declarations and derived-type definitions.
@@ -1272,7 +1272,7 @@ dummy arguments (scheme args and control/lifecycle variables).
 | Codegen-time scheme-registration cross-check | Deferred; would require new `registers_std_names` metadata attr. |
 | `_FRAMEWORK_CONST_DIM_INPUTS` cleanup       | **Done 2026-05-13**: hand-curated frozenset gone; framework-constituent dim refs ride on a dedicated `used_const_dim_std_names` field on `ResolvedArg`. |
 | Suppress `ccpp_host_constituents.F90` when unused | Deferred; currently emitted for every build even when no scheme/host actually exercises the constituent system.  Now *correct* (empty) for SCM-style hosts thanks to the host-wins rule, but still dead code.  See `design_constituent_host_wins.md`. |
-| Python linter / formatter pass              | Deferred; pick `ruff` and apply across `capgen-ng/`. |
+| Python linter / formatter pass              | Deferred; pick `ruff` and apply across `capgen/`. |
 | Generated Fortran ↔ Codee formatter idempotency | Deferred; emitted `.F90` must round-trip cleanly through the project's Codee Fortran formatter. |
 | `fortran_to_metadata` developer utility    | Deferred; bootstraps a `.meta` skeleton from an existing `.F90` subroutine. |
 | `--legacy-mode` shim removal               | Transient; remove `metadata/legacy_compat.py`, `unit-tests/test_legacy_compat.py`, and every `# legacy-compat:` touchpoint when scheme metadata has migrated. |
@@ -1288,10 +1288,10 @@ dummy arguments (scheme args and control/lifecycle variables).
   marked "historic" where the implementation has evolved).
 - `doc/redesign_analysis.md` — analysis of the legacy ccpp-prebuild +
   ccpp-capgen toolchains.
-- `doc/constituents.md` — full constituents reference for capgen-ng.
+- `doc/constituents.md` — full constituents reference for capgen.
 - `doc/constituents_overhaul.md` — architecture review and reform
   proposals for the next iteration.
-- `doc/capgen_compat_layer.md` — short brief on the CAM-SIMA ↔ capgen-ng
+- `doc/capgen_compat_layer.md` — short brief on the CAM-SIMA ↔ capgen
   compatibility layer (§4.5); full reference is
   `cime_config/capgen_compat/README.md` in the CAM-SIMA tree.
 

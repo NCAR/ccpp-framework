@@ -16,7 +16,7 @@ import sys
 import unittest
 
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
-_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen-ng')
+_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen')
 if _CAPGEN_DIR not in sys.path:
     sys.path.insert(0, _CAPGEN_DIR)
 
@@ -512,7 +512,7 @@ class TestMakeAutoCloneEntry(_AutoCloneFixture):
 
     def test_long_name_synthesised_when_missing(self):
         # The _scheme_var helper sets long_name='water vapor'; override
-        # to a no-op so the helper sees an empty long_name.  capgen-ng
+        # to a no-op so the helper sees an empty long_name.  capgen
         # then synthesises from std_name: 'water_vapor_specific_humidity'
         # → 'Water vapor specific humidity'.
         from metadata.metadata_table import MetaVar

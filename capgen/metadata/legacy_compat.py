@@ -1,9 +1,9 @@
 """TRANSIENT compatibility shim for legacy CCPP standard names.
 
 The original ccpp-prebuild + ccpp-capgen toolchain used the standard
-name ``horizontal_loop_extent`` where capgen-ng uses
+name ``horizontal_loop_extent`` where capgen uses
 ``horizontal_dimension``.  This module provides an opt-in shim
-(``--legacy-mode`` on the capgen-ng / ccpp_validator CLI) that
+(``--legacy-mode`` on the capgen / ccpp_validator CLI) that
 silently rewrites legacy names to their canonical equivalents at
 metadata parse time so the rest of the toolchain only ever sees the
 canonical names.
@@ -60,12 +60,12 @@ from typing import Dict, Optional, TextIO
 # ----------------------------------------------------------------------
 _LEGACY_NAME_MAP: Dict[str, str] = {
     # ccpp-prebuild / original ccpp-capgen used ``horizontal_loop_extent``
-    # in scheme metadata where capgen-ng uses ``horizontal_dimension``.
+    # in scheme metadata where capgen uses ``horizontal_dimension``.
     'horizontal_loop_extent': 'horizontal_dimension',
 
     # Legacy CCPP-physics hosts (and SCM 17p8 in particular) sized
     # per-thread DDT containers by ``number_of_openmp_threads``; the
-    # capgen-ng convention is ``number_of_threads`` (matching the
+    # capgen convention is ``number_of_threads`` (matching the
     # ``thread_number`` control variable name).  Aliasing here lets the
     # host metadata flow through unchanged; once hosts have migrated,
     # drop this entry.
@@ -137,7 +137,7 @@ def enable(logger=None, _stream: Optional[TextIO] = None) -> None:
         _pad(''),
         _pad('This is a TRANSIENT migration shim. Update your'),
         _pad('metadata to use the canonical names; legacy mode'),
-        _pad('WILL BE REMOVED in a future capgen-ng release.'),
+        _pad('WILL BE REMOVED in a future capgen release.'),
         border,
         '',
     ]
@@ -184,7 +184,7 @@ def translate(name: str) -> str:
 
     The function is tolerant of any input that lookup-by-string is
     valid for (``str``).  Callers may pre-lowercase the input — the
-    map keys are already lowercase to match capgen-ng's
+    map keys are already lowercase to match capgen's
     case-insensitive standard-name convention.
     """
     if not _ENABLED:

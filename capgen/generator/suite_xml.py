@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Suite Definition File (SDF) parser for ccpp-capgen-ng.
+"""Suite Definition File (SDF) parser for ccpp-capgen.
 
 A Suite Definition File is an XML document that describes which physics
 schemes to run, in which order, and how to group them.  This module:
@@ -58,7 +58,7 @@ generator runs.
 
 Schema location
 ---------------
-The XSD files live in ``capgen-ng/schema/``.  Their path is resolved relative
+The XSD files live in ``capgen/schema/``.  Their path is resolved relative
 to this source file at runtime, so no extra configuration is needed.
 """
 
@@ -87,17 +87,17 @@ _SCHEMA_DIR = os.path.join(
 )
 
 #: Accepted ``<init>`` element name.  The old ccpp-prebuild schema also
-#: tolerated ``<initalize>`` (typo) and ``<initialize>``; capgen-ng
+#: tolerated ``<initalize>`` (typo) and ``<initialize>``; capgen
 #: rejects both with a hard error so SDFs migrate to the canonical
 #: short name.
 _INIT_TAG = 'init'
 
 #: Accepted ``<final>`` element name.  The old ccpp-prebuild schema
-#: also tolerated ``<finalize>``; capgen-ng rejects it.
+#: also tolerated ``<finalize>``; capgen rejects it.
 _FINAL_TAG = 'final'
 
 #: Element names that were valid in the old schema but are rejected in
-#: capgen-ng's v2.0 SDF format.  Map to the canonical short form so the
+#: capgen's v2.0 SDF format.  Map to the canonical short form so the
 #: error message can point at the right replacement.
 _REJECTED_INIT_TAGS = frozenset({'initalize', 'initialize'})
 _REJECTED_FINAL_TAGS = frozenset({'finalize'})
@@ -540,7 +540,7 @@ def parse_suite_xml(
         Logger.  A module-level logger is used if ``None``.
     schema_path : str, optional
         Directory containing XSD files.  Defaults to the bundled
-        ``capgen-ng/schema/`` directory.
+        ``capgen/schema/`` directory.
     skip_validation : bool
         If ``True``, skip XML schema validation (useful in test environments
         where ``xmllint`` is not available).

@@ -28,6 +28,10 @@ program test_opt_arg
   flag_for_opt_arg = .true.
   allocate(opt_arg(nx))
   allocate(opt_arg_2(nx))
+  ! capgen does not default-initialize host data; the host must.  Zero these
+  ! so the post-ccpp_init checks below test real wiring, not stale memory.
+  opt_arg = 0
+  opt_arg_2 = 0
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! CCPP register step                             !
@@ -55,7 +59,7 @@ program test_opt_arg
   write(output_unit, '(a)') "After ccpp_init: check std_arg(:)==1, opt_arg(:)==0, opt_arg_2(:)==0"
   if (.not. all(std_arg == 1)) write(error_unit, '(a,3i3)') "Error after ccpp_init: std_arg=", std_arg
   if (.not. all(opt_arg == 0)) write(error_unit, '(a,3i3)') "Error after ccpp_init: opt_arg=", opt_arg
-  if (.not. all(opt_arg_2 == 0)) write(error_unit, '(a,3i3)') "Error after ccpp_init: opt_arg_2=", opt_arg_2
+  if (.not. all(opt_arg_2 == 0)) write(error_unit, '(a,3es13.5)') "Error after ccpp_init: opt_arg_2=", opt_arg_2
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! CCPP physics init step                         !

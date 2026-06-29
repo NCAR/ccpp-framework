@@ -19,11 +19,11 @@ import unittest
 
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT  = os.path.dirname(_TESTS_DIR)
-_CAPGEN_DIR = os.path.join(_REPO_ROOT, 'capgen-ng')
+_CAPGEN_DIR = os.path.join(_REPO_ROOT, 'capgen')
 if _CAPGEN_DIR not in sys.path:
     sys.path.insert(0, _CAPGEN_DIR)
 
-from ccpp_capgen_ng import _validate_required_control_vars, _check_no_loop_dimensions
+from ccpp_capgen import _validate_required_control_vars, _check_no_loop_dimensions
 from metadata.parse_tools import CCPPError
 from metadata.variable_resolver import build_flat_host_dict, HostVarEntry
 from metadata.metadata_table import parse_metadata_file
@@ -380,7 +380,7 @@ class TestForbiddenDimensions(unittest.TestCase):
 
     def test_all_three_forbidden_names_detected(self):
         """Verify all three names are in the forbidden set."""
-        from ccpp_capgen_ng import _FORBIDDEN_DIMENSION_NAMES
+        from ccpp_capgen import _FORBIDDEN_DIMENSION_NAMES
         self.assertIn('horizontal_loop_extent', _FORBIDDEN_DIMENSION_NAMES)
         self.assertIn('horizontal_loop_begin',  _FORBIDDEN_DIMENSION_NAMES)
         self.assertIn('horizontal_loop_end',    _FORBIDDEN_DIMENSION_NAMES)

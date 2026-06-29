@@ -16,7 +16,7 @@ import sys
 import unittest
 
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
-_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen-ng')
+_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen')
 if _CAPGEN_DIR not in sys.path:
     sys.path.insert(0, _CAPGEN_DIR)
 

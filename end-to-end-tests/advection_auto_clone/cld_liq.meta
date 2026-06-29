@@ -112,7 +112,7 @@
   dimensions = (horizontal_dimension, vertical_layer_dimension)
   type = real |  kind = kind_phys
   # Advected species that needs to be promoted from suite.
-  # Note that in capgen-ng, intent 'out' is no longer permitted
+  # Note that in capgen, intent 'out' is no longer permitted
   intent = inout
 [ tcld]
   standard_name = minimum_temperature_for_cloud_liquid

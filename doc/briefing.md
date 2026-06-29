@@ -1,4 +1,4 @@
-# capgen-ng — Briefing for CCPP Framework Developers & Power Users
+# capgen — Briefing for CCPP Framework Developers & Power Users
 
 *Prepared for the 2026-05-14 walk-through; last revised 2026-06-05.
 Companion document to `doc/migration.md` (the detailed migration
@@ -22,7 +22,7 @@ The CCPP Framework runs two code generators today:
   and even when it does compile it produces unmaintainably large source
   files; nobody on the team fully understands it.
 
-**`capgen-ng`** starts fresh, drawing lessons from both.  Guiding
+**`capgen`** starts fresh, drawing lessons from both.  Guiding
 principle: **simplicity of prebuild, feature set of capgen**.
 
 What we wanted to fix:
@@ -37,9 +37,9 @@ What we wanted to fix:
 
 ---
 
-## 2. What capgen-ng is (in one paragraph)
+## 2. What capgen is (in one paragraph)
 
-capgen-ng reads metadata for the **host model**, the **physics
+capgen reads metadata for the **host model**, the **physics
 schemes**, and the **suite definition files** (SDFs), produces a
 small set of Fortran cap modules that bridge them, and writes a
 `datatable.xml` describing the result for CMake / Make to consume.
@@ -105,10 +105,10 @@ For each scheme arg:
 
 ### 3.6 Two tools, one parser
 
-- `ccpp_capgen_ng.py` — the code generator.  Trusts metadata; no
+- `ccpp_capgen.py` — the code generator.  Trusts metadata; no
   Fortran parsing.
 - `ccpp_validator.py` — the standalone Fortran-vs-metadata checker.
-  The ONE place capgen-ng parses Fortran.  Run by developers /
+  The ONE place capgen parses Fortran.  Run by developers /
   CMake before generation.  Checks per-arg `intent`, `type`, `kind`,
   and dimension rank; character length must match exactly
   (`len=*`↔`len=*`, `len=N`↔`len=N`, no wildcard; old-style F77
@@ -123,9 +123,9 @@ Both share the same metadata-parsing library (`metadata/`).
 
 ---
 
-## 4. How capgen-ng differs from `ccpp-prebuild`
+## 4. How capgen differs from `ccpp-prebuild`
 
-| Topic                       | prebuild                          | capgen-ng                                         |
+| Topic                       | prebuild                          | capgen                                         |
 |-----------------------------|-----------------------------------|---------------------------------------------------|
 | Host metadata mechanism     | Hard-coded Python dict (`TYPEDEFS_NEW_METADATA`) | Regular `type = ddt` + `type = host` tables |
 | Framework-owned variables   | Not supported                     | First-class (suite-owned interstitial via Case 2) |
@@ -137,9 +137,9 @@ Both share the same metadata-parsing library (`metadata/`).
 
 ---
 
-## 5. How capgen-ng differs from `ccpp-capgen`
+## 5. How capgen differs from `ccpp-capgen`
 
-| Topic                       | capgen                            | capgen-ng                                         |
+| Topic                       | capgen                            | capgen                                         |
 |-----------------------------|-----------------------------------|---------------------------------------------------|
 | Group-cap arguments         | Flat fields (1200+ at UFS scale) | DDT arguments (as in prebuild)                    |
 | Variable matching algorithm | Five-layer scope-chain promotion  | Flat host+control dict + suite-owned discovery (inherited from prebuild — primary reason runtime is comparable to prebuild) |
@@ -187,9 +187,9 @@ every touchpoint is grep-tagged for clean removal:
 
 | Flag                                  | What it does                                                                                                                                                                                                 | Removal grep                              |
 |---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------|
-| `--legacy-mode`                       | Parse-time substitution of two deprecated CCPP standard names (see §6.3 above).  Active on both `ccpp_capgen_ng.py` and `ccpp_validator.py`.                                                                  | `legacy-compat`                           |
-| `--gfs-dim-aliases`                   | Treats GFS-physics names `adjusted_vertical_layer_dimension_for_radiation` and `vertical_composition_dimension` as equivalent to `vertical_layer_dimension` **inside the upper-bound dim identity check only** (the variables themselves stay distinct).  Resolver-only, so `ccpp_capgen_ng.py` carries the flag; `ccpp_validator.py` does not (the validator never reaches the dim canonicaliser). | `dim-aliases`                              |
-| `--legacy-auto-clone-constituents`    | Reinstates original ccpp-capgen's auto-clone-static-constituent registration path: every `is_constituent` consumer (`advected = True` / `constituent = True` / `molar_mass = …`) with no register-phase source is auto-registered into the per-suite dynamic-constituents buffer using values lifted straight from the scheme metadata.  Adds four legacy `%instantiate` kwargs to the parser (`default_value`, `min_value`, `water_species`, `mixing_ratio_type`).  **Single-instance only** — declaring the `instance_number` + `number_of_instances` pair while the flag is on is a hard error.  Available on both `ccpp_capgen_ng.py` and `ccpp_validator.py`. | `auto-clone-constituents`                  |
+| `--legacy-mode`                       | Parse-time substitution of two deprecated CCPP standard names (see §6.3 above).  Active on both `ccpp_capgen.py` and `ccpp_validator.py`.                                                                  | `legacy-compat`                           |
+| `--gfs-dim-aliases`                   | Treats GFS-physics names `adjusted_vertical_layer_dimension_for_radiation` and `vertical_composition_dimension` as equivalent to `vertical_layer_dimension` **inside the upper-bound dim identity check only** (the variables themselves stay distinct).  Resolver-only, so `ccpp_capgen.py` carries the flag; `ccpp_validator.py` does not (the validator never reaches the dim canonicaliser). | `dim-aliases`                              |
+| `--legacy-auto-clone-constituents`    | Reinstates original ccpp-capgen's auto-clone-static-constituent registration path: every `is_constituent` consumer (`advected = True` / `constituent = True` / `molar_mass = …`) with no register-phase source is auto-registered into the per-suite dynamic-constituents buffer using values lifted straight from the scheme metadata.  Adds four legacy `%instantiate` kwargs to the parser (`default_value`, `min_value`, `water_species`, `mixing_ratio_type`).  **Single-instance only** — declaring the `instance_number` + `number_of_instances` pair while the flag is on is a hard error.  Available on both `ccpp_capgen.py` and `ccpp_validator.py`. | `auto-clone-constituents`                  |
 
 All three flags are listed as runways, not destinations: drop the
 underlying legacy spelling from host/scheme metadata and the flag can
@@ -225,7 +225,7 @@ find the index variable and errors).
 Container DDT-instance variables (`physics%Interstitial`,
 `physics%Coupling`, ...) dimensioned by a count standard name
 (`number_of_threads`, `number_of_instances`) get their scalar index
-inserted **automatically** by capgen-ng.  The host metadata declares
+inserted **automatically** by capgen.  The host metadata declares
 the dim; the generator emits
 `physics%Interstitial(thread_number)%alpha(...)` at every call site.
 
@@ -249,7 +249,7 @@ control-variable arguments to the public entry points.
 
 ---
 
-## 7. What capgen-ng does NOT support (yet)
+## 7. What capgen does NOT support (yet)
 
 ### 7.1 Deferred — to be resolved in upcoming work
 
@@ -278,7 +278,7 @@ control-variable arguments to the public entry points.
   constituents (file is correct-but-empty under host-wins; should
   not be emitted at all).
 - **Python linter / formatter pass.**  Pick `ruff`, apply across
-  `capgen-ng/`.
+  `capgen/`.
 
 ### 7.2 Intentionally NOT supported
 
@@ -300,7 +300,7 @@ control-variable arguments to the public entry points.
 
 ## 8. Validation and error reporting
 
-A deliberate design choice across capgen-ng: **errors are loud,
+A deliberate design choice across capgen: **errors are loud,
 specific, and actionable**.  Examples surfaced during the SCM
 shake-down:
 
@@ -314,7 +314,7 @@ shake-down:
   `--scheme-files`.  Replaces silent empty-cap emission.
 - DDT-instance variable with a non-registered scalar-index dim AND
   flattenable fields → error shows the broken access pattern
-  capgen-ng WOULD have emitted and quotes the Fortran compiler
+  capgen WOULD have emitted and quotes the Fortran compiler
   error verbatim ("Component to the right of a part reference with
   nonzero rank must not have the POINTER attribute").
 - Generated `case default` on `select case(suite_name)` /
@@ -370,17 +370,17 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1516 passing on `feature/capgen-ng` (as of
+- **Unit tests**: 1516 passing on `feature/capgen` (as of
   2026-06-05).
 - **End-to-end tests passing** (12): `advection`,
-  `advection_auto_clone`, `capgen_ng`, `chunked_data`,
+  `advection_auto_clone`, `capgen`, `chunked_data`,
   `constituents_dim`, `ddthost`, `instances`, `instances_advection`,
   `nested_suite`, `opt_arg`, `suite_allocate`, `var_compat`.  The two
   newest — `constituents_dim` (a variable dimensioned by
   `number_of_ccpp_constituents`) and `suite_allocate` (suite-owned
   allocatable interstitials sized by a scheme-written dimension) — were
   added while hardening the CAM-SIMA HPC build.
-- **Code size**: ~17.8k LOC of Python under `capgen-ng/` (includes
+- **Code size**: ~17.8k LOC of Python under `capgen/` (includes
   docstrings, inline comments, and the three transient shim modules)
   + ~18k LOC of unit/doctest under `unit-tests/`.  Still procedural,
   still flat data classes.
@@ -391,7 +391,7 @@ don't rebuild downstream objects unless something actually moved.
   cleanup pass once the underlying legacy spelling is gone from
   host/scheme metadata.
 - **CCPP-SCM**: actively driving development — every build / runtime
-  failure surfaced this month landed as a fix in capgen-ng (rather
+  failure surfaced this month landed as a fix in capgen (rather
   than being patched around in the host).  Most of the `phys_ps` group
   now builds end-to-end via `--legacy-mode` + `--gfs-dim-aliases`.
   On 2026-05-20 the per-arg-attribute validator caught **67 real
@@ -429,12 +429,12 @@ don't rebuild downstream objects unless something actually moved.
 - **UFS Weather Model**: not yet attempted; SCM is the proving
   ground first.  An anticipated complication is the "fast physics"
   called directly from the FV3 dynamical core as a separate group.
-- **CAM-SIMA**: **reconnected (2026-06-03 → 06-05).**  capgen-ng now
+- **CAM-SIMA**: **reconnected (2026-06-03 → 06-05).**  capgen now
   drives the real CAM-SIMA build on Derecho via a thin compatibility
   layer (`cime_config/capgen_compat/`, in the CAM-SIMA tree) that
   re-implements original ccpp-capgen's Python API surface
   (`cap_database`, `host_model_dict`, `call_list`, the per-variable
-  `Var` accessors) on top of capgen-ng's `datatable.xml` +
+  `Var` accessors) on top of capgen's `datatable.xml` +
   `ResolvedArg` / `HostVarEntry`.  CAM-SIMA's `cam_autogen.py`,
   `generate_registry_data.py`, and `write_init_files.py` are unchanged.
   Three cases build **and run to completion** on Derecho under **both
@@ -455,7 +455,7 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 11. Walk-through outline (suggested order for the meeting)
 
-1. Live `ccpp_capgen_ng.py --help` (CLI shape).
+1. Live `ccpp_capgen.py --help` (CLI shape).
 2. Show one scheme's `.meta` + its generated group-cap fragment.
 3. Run the generator twice — note the `Unchanged: …` messages on the
    second pass (write-if-changed in action).

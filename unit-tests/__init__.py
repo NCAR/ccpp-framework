@@ -1,1 +1,1 @@
-"""Unit and integration tests for ccpp-capgen-ng."""
+"""Unit and integration tests for ccpp-capgen."""

@@ -1,5 +1,5 @@
 # Scheme metadata that declares ``module_name`` in [ccpp-table-properties]
-# distinct from the table ``name``.  Used to verify capgen-ng emits
+# distinct from the table ``name``.  Used to verify capgen emits
 # ``use mod_alt_name, only: ...`` (the explicit module name) rather than
 # ``use scheme_alt_name``.
 

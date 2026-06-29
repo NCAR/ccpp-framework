@@ -1,6 +1,6 @@
 # cam-sima-style scheme that consumes a base constituent and produces
 # a tendency.  No host or earlier-scheme provider for either — both
-# are auto-resolved by capgen-ng via the ccpp_constituents /
+# are auto-resolved by capgen via the ccpp_constituents /
 # ccpp_constituent_tendencies arrays owned by the suite cap.
 
 [ccpp-table-properties]

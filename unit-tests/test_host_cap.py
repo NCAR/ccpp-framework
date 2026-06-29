@@ -621,7 +621,7 @@ class TestCollectHostIoIncludesFrameworkDims(unittest.TestCase):
 
         # Use the host-only dict (no ccpp_model_constituents_t DDT
         # instance) so the host-wins rule doesn't fire and the scheme's
-        # ccpp_constituents arg routes through capgen-ng's
+        # ccpp_constituents arg routes through capgen's
         # auto-provisioning path — that's the code path that surfaces
         # number_of_ccpp_constituents as an input via used_const_dim_std_names.
         self.hd = _load_full_host_dict()
@@ -1044,7 +1044,7 @@ class TestSuiteVariablesSubroutine(unittest.TestCase):
         )
 
     def test_no_struct_elements_arg(self):
-        # struct_elements is intentionally dropped (was a no-op in capgen-ng).
+        # struct_elements is intentionally dropped (was a no-op in capgen).
         self.assertNotIn('struct_elements', self.text)
 
     def test_errmsg_is_assumed_length(self):

@@ -6,12 +6,12 @@
 **Intended audience:** CCPP framework team, CAM-SIMA team
 **Status:** Discussion document — no decisions are final.  Proposals
 A/B/C below remain pending the upcoming meeting; the bug fix from
-Proposal A (the `ccpt_deallocate` ownership flag) and the capgen-ng
+Proposal A (the `ccpt_deallocate` ownership flag) and the capgen
 internal cleanup from Proposal B (§4.8) have landed; the missing
 setters from Proposal A and the `is_match` relaxation from Proposal B
 have not.  Independent of A/B/C, the per-suite dynamic_constituents
 buffer was made per-instance on 2026-05-18 to fix a multi-instance
-mutation conflict — see §4.13.  Since 2026-06-03 capgen-ng drives the
+mutation conflict — see §4.13.  Since 2026-06-03 capgen drives the
 real CAM-SIMA build (via the `cime_config/capgen_compat/` facade): the
 `kessler`, `rrtmgp`, and `se_cslam`/CSLAM (FCAM7 `cam7`) cases all build
 and run on Derecho.  That integration added the **rule-b** consumer path
@@ -30,7 +30,7 @@ but it carries:
 
 - **A latent framework bug** in `ccpp_constituent_prop_mod` that crashes on
   teardown of explicitly-registered (target-passed) constituent property
-  arrays. Fixed in capgen-ng's framework copy 2026-05-12; needs to land
+  arrays. Fixed in capgen's framework copy 2026-05-12; needs to land
   upstream.
 - **Architectural confusion** about which properties are *physics-portable*
   (the scheme owns them) versus *host-configuration* (the host owns them).
@@ -41,8 +41,8 @@ but it carries:
   have no setters; `is_match` is overly strict about properties hosts
   should be free to change.
 - **Two registration models** coexist — original capgen's auto-clone of
-  is_constituent scheme args, and capgen's/capgen-ng's explicit register-phase +
-  host-side declaration. Capgen-ng deliberately dropped auto-clone.
+  is_constituent scheme args, and capgen's/capgen's explicit register-phase +
+  host-side declaration. Capgen deliberately dropped auto-clone.
 
 This document is a structured brief for a discussion this week. It does
 NOT pre-commit to any decision; it lays out what exists, what's broken,
@@ -53,7 +53,7 @@ what we audited, and what proposals are on the table.
 ## Table of contents
 
 1. [How original capgen handles constituents](#1-how-original-capgen-handles-constituents)
-2. [How capgen-ng handles constituents](#2-how-capgen-ng-handles-constituents)
+2. [How capgen handles constituents](#2-how-capgen-handles-constituents)
 3. [What CAM-SIMA actually needs (audit)](#3-what-cam-sima-actually-needs-audit)
 4. [Bugs and design flaws](#4-bugs-and-design-flaws)
 5. [Property classification (Class A vs Class B)](#5-property-classification-class-a-vs-class-b)
@@ -160,7 +160,7 @@ All three flow into one `%new_field` table.
 
 ---
 
-## 2. How capgen-ng handles constituents
+## 2. How capgen handles constituents
 
 ### 2.1 Mental model
 
@@ -197,7 +197,7 @@ The resolver classifies each scheme arg into exactly one source. A
    flag. Whether a standard name is a constituent or an ordinary variable
    is the **host's** decision (CAM-SIMA exposes water vapor as a
    constituent; CCPP-SCM may expose the same name as an ordinary host
-   variable), so capgen-ng infers it from the scheme-metadata-wide set of
+   variable), so capgen infers it from the scheme-metadata-wide set of
    flagged names (`VariableResolver.constituent_stdnames()`) rather than
    from the consumer's own metadata. An unflagged `intent=in` read of the
    base name resolves to `%vars_layer(...)`; an unflagged `intent=in` read
@@ -223,9 +223,9 @@ The resolver classifies each scheme arg into exactly one source. A
   drained into `ccpp_model_constituents_obj(inst)` by
   `ccpp_register_constituents`.
 
-The auto-clone-from-metadata path is **gone from capgen-ng's default
+The auto-clone-from-metadata path is **gone from capgen's default
 behaviour**.  If a scheme declares `advected=true` on an arg but no
-source registers that standard name, capgen-ng emits a runtime check
+source registers that standard name, capgen emits a runtime check
 during `ccpp_initialize_constituents` that errors with the missing
 name.
 
@@ -236,9 +236,9 @@ registration (production CAM-SIMA's atmospheric_physics tree is the
 immediate consumer).  This is a transient migration shim — see
 `doc/auto_clone_constituents.md` for the full reference and
 removal procedure.  It is single-instance only and explicitly
-flagged so future capgen-ng work is *not* expected to keep it
+flagged so future capgen work is *not* expected to keep it
 indefinitely.  The reform proposals in §6–§8 below are unchanged by
-the shim's existence: capgen-ng's chosen architecture is still
+the shim's existence: capgen's chosen architecture is still
 explicit registration.
 
 ### 2.4 Per-instance state
@@ -380,18 +380,18 @@ single-global limitation immediately.
 ## 4. Bugs and design flaws
 
 This section lists known issues across the three layers (framework,
-original capgen, capgen-ng). Items marked **(FIXED)** were resolved
+original capgen, capgen). Items marked **(FIXED)** were resolved
 2026-05-12 and either are or will be PRs; items marked **(OPEN)** are
 intentionally left for this discussion.
 
-### 4.1 Framework: `ccpt_deallocate` ownership bug (FIXED in capgen-ng tree, needs upstream PR)
+### 4.1 Framework: `ccpt_deallocate` ownership bug (FIXED in capgen tree, needs upstream PR)
 
 - **Location**: `src/ccpp_constituent_prop_mod.F90`, `ccpt_deallocate`
   + `ccpt_set`.
 - **Symptom**: `free(): invalid size` crash when
   `ccp_model_const_reset` is called on a properly-locked table whose
   entries came from pointer-assigned targets (the common pattern
-  under capgen-ng's explicit registration; also potentially under
+  under capgen's explicit registration; also potentially under
   original capgen's `host_constituents` path).
 - **Root cause**: `ccpt_set` does pointer assignment (`this%prop =>
   const_ptr`); `ccpt_deallocate` does an unconditional
@@ -400,7 +400,7 @@ intentionally left for this discussion.
 - **Why it didn't surface earlier**: original capgen's advection test
   only calls `deallocate` once between a *failing* register and a
   *successful* one — at that point `lock_table` has not populated
-  `const_metadata`, so the broken inner loop is skipped. Capgen-ng
+  `const_metadata`, so the broken inner loop is skipped. Capgen
   triggers it because its teardown calls `reset` after a successful
   lock.
 - **Fix landed 2026-05-12**: added `framework_owns_me` private flag on
@@ -409,9 +409,9 @@ intentionally left for this discussion.
   setter; `ccpt_deallocate` now only deallocates when the flag is set.
   Original capgen's auto-clone path in `scripts/constituents.py`
   updated to call `set_framework_owned(.true.)` after `allocate`.
-  Diffs in `src/ccpp_constituent_prop_mod.F90` (and capgen-ng's
+  Diffs in `src/ccpp_constituent_prop_mod.F90` (and capgen's
   parallel copy) + `scripts/constituents.py`.
-- **Status**: framework tests pass; capgen-ng unit-test suite (1127 passing
+- **Status**: framework tests pass; capgen unit-test suite (1127 passing
   as of 2026-05-13) is green.  Still needs upstream PR to ccpp-framework +
   original ccpp-capgen.
 
@@ -495,16 +495,16 @@ either generate one cap per instance or restructure.
 
 The synthetic scope between suite and host serves correctness but
 adds a code path that most contributors don't read. If we drop it
-(capgen-ng has), the variable-matching algorithm shrinks.
+(capgen has), the variable-matching algorithm shrinks.
 
-### 4.8 Capgen-ng: `_FRAMEWORK_CONST_DIM_INPUTS` cleanup (LANDED 2026-05-13)
+### 4.8 Capgen: `_FRAMEWORK_CONST_DIM_INPUTS` cleanup (LANDED 2026-05-13)
 
 `generator/host_cap.py` no longer carries the hand-curated frozenset of
 standard names; framework-constituent dimension references now ride on a
 dedicated `used_const_dim_std_names` field on `ResolvedArg`.  Closes the
 "hand-curated → structured field" REVISIT note that was in the code.
 
-### 4.9 Capgen-ng: no codegen-time cross-check of scheme registration (OPEN)
+### 4.9 Capgen: no codegen-time cross-check of scheme registration (OPEN)
 
 The resolver knows every `is_constituent` arg's standard name (in
 `SuiteResolution.constituent_index_names`) but doesn't know what each
@@ -518,15 +518,15 @@ added 2026-05-12). Stronger options:
   calls and cross-check.
 - (c) Keep runtime check as authoritative, document the gap.
 
-### 4.10 Capgen-ng: scheme-metadata `diagnostic_name` for is_constituent args is host-specific (OPEN)
+### 4.10 Capgen: scheme-metadata `diagnostic_name` for is_constituent args is host-specific (OPEN)
 
-Same issue as §4.4 but in capgen-ng's metadata layer. Today's
+Same issue as §4.4 but in capgen's metadata layer. Today's
 `diagnostic_name` attribute on a scheme metadata arg flows into
 `datatable.xml` and is then trusted as "the" diagnostic name. If we
 adopt setter-based class-B overrides, this attribute should either be
 dropped for constituent args or marked as a default-only hint.
 
-### 4.11 Capgen-ng: `ccpp_scheme_utils` singleton (OPEN — documented limit)
+### 4.11 Capgen: `ccpp_scheme_utils` singleton (OPEN — documented limit)
 
 `ccpp_initialize_constituent_ptr(const_obj)` stores a single module-level
 pointer. Schemes that use `ccpp_constituent_index(stdname)` get that
@@ -538,7 +538,7 @@ scheme-registering schemes don't rely on this; documented in
 `instance_number` through `ccpp_constituent_index` (interface
 change) or maintaining a per-instance pointer table.
 
-### 4.12 Capgen-ng: drop `diagnostic_name_fixed`, keep only `diagnostic_name` (OPEN — proposed simplification)
+### 4.12 Capgen: drop `diagnostic_name_fixed`, keep only `diagnostic_name` (OPEN — proposed simplification)
 
 Today the metadata layer carries two mutually-exclusive scheme-arg
 attributes:
@@ -592,11 +592,11 @@ added on the framework side. Hosts that want runtime override get
 spirit to the existing `horizontal_loop_extent → horizontal_dimension`
 shim. Remove the rewrite once known consumers are migrated.
 
-### 4.13 Capgen-ng: per-suite `dynamic_constituents` buffer was shared across instances (FIXED 2026-05-18)
+### 4.13 Capgen: per-suite `dynamic_constituents` buffer was shared across instances (FIXED 2026-05-18)
 
-- **Location**: `capgen-ng/generator/host_constituents.py` (buffer
+- **Location**: `capgen/generator/host_constituents.py` (buffer
   declaration + `ccpp_register_constituents` iteration);
-  `capgen-ng/generator/suite_cap.py::_register_lines` (the two-pass
+  `capgen/generator/suite_cap.py::_register_lines` (the two-pass
   count→allocate→pack inside `<suite>_register`).
 - **Symptom**: with two or more instances and any register-phase
   scheme that produces constituents, the second per-instance
@@ -647,10 +647,10 @@ shim. Remove the rewrite once known consumers are migrated.
 - **Position relative to Proposals A/B/C**: orthogonal — none of the
   three proposed touching the buffer.  Independently adopted.
 
-### 4.14 Capgen-ng: error-output keyword inconsistency across emitted public API (OPEN — observation)
+### 4.14 Capgen: error-output keyword inconsistency across emitted public API (OPEN — observation)
 
-- **Location**: `capgen-ng/generator/host_cap.py:370,446,*` (lifecycle
-  subs) vs `capgen-ng/generator/host_constituents.py` (the entire
+- **Location**: `capgen/generator/host_cap.py:370,446,*` (lifecycle
+  subs) vs `capgen/generator/host_constituents.py` (the entire
   constituent wrapper family).
 - **Symptom**: the public Fortran argument carrying the CCPP error
   flag does not have a consistent name across the cap's surface area.
@@ -688,7 +688,7 @@ shim. Remove the rewrite once known consumers are migrated.
   thin shims around framework methods
   (`ccpp_model_constituents_t%new_field`, `%lock_table`,
   `%num_constituents`, etc.) that all take `errcode=` per
-  `capgen-ng/src/ccpp_constituent_prop_mod.F90`.  Hardcoding `errcode`
+  `capgen/src/ccpp_constituent_prop_mod.F90`.  Hardcoding `errcode`
   on the wrapper means the wrapper body just forwards
   `errcode=errcode` instead of `errcode=<host_local_name>` -- one
   less host-dict lookup, but at the cost of breaking the
@@ -721,7 +721,7 @@ shim. Remove the rewrite once known consumers are migrated.
 ### 4.15 CAM-SIMA compat layer: `write_init_files` mis-flagged unflagged constituent-tendency consumers (FIXED 2026-06-05)
 
 - **Location**: `cime_config/capgen_compat/_var_wrapper.py` in CAM-SIMA
-  — the facade that lets capgen-ng drive CAM-SIMA's *unchanged*
+  — the facade that lets capgen drive CAM-SIMA's *unchanged*
   `write_init_files.py` / `cam_autogen.py` — method
   `_VarWrapper.from_resolved_arg`.
 - **Symptom**: the `se_cslam` (FCAM7 `cam7`) build failed AFTER cap
@@ -731,7 +731,7 @@ shim. Remove the rewrite once known consumers are migrated.
 - **Mechanism**: in `cam7` the convection/stratiform schemes (`dadadj`,
   `zm_conv_evap`, `rk_stratiform`, `zm_convr`,
   `cloud_particle_sedimentation`) write that tendency as a FLAGGED
-  constituent tendency (`constituent=true intent=out`) → capgen-ng routes
+  constituent tendency (`constituent=true intent=out`) → capgen routes
   them to `%vars_layer_tend` (`source='constituent'`, NOT recorded in
   `suite_vars`) and the name enters `const_stds`.  The four
   `sima_diagnostics` schemes read it back `intent=in` UNFLAGGED → rule b
@@ -815,15 +815,15 @@ constituent property is conceptually owned by either the scheme
 - **The `diag_name` requirement at `%instantiate`** — demote to
   optional with `''` default.
 - **(Not adopting)** Original capgen's auto-clone path. Already gone
-  in capgen-ng; this discussion does not propose bringing it back.
+  in capgen; this discussion does not propose bringing it back.
   Listed for completeness because the option is in memory.
 
 ### Replace
 
-- **`ConstituentVarDict`** as a concept — capgen-ng already runs
+- **`ConstituentVarDict`** as a concept — capgen already runs
   without it. If the framework or future generator code references
   it, dropping is fine.
-- **Single-global `ccpp_model_constituents_obj`** — capgen-ng's
+- **Single-global `ccpp_model_constituents_obj`** — capgen's
   per-instance array is the replacement. Original capgen could be
   retrofitted, but the priority depends on whether multi-instance
   enters the original capgen's roadmap.
@@ -843,7 +843,7 @@ constituent property is conceptually owned by either the scheme
 - **Document the lifecycle** clearly. `doc/constituents.md` is
   ~960 lines; targeted additions for "register-then-override"
   workflow once the new setters land.
-- **Capgen-ng-internal cleanup** (LANDED 2026-05-13): replaced
+- **Capgen-internal cleanup** (LANDED 2026-05-13): replaced
   `_FRAMEWORK_CONST_DIM_INPUTS` with a `used_const_dim_std_names`
   field on `ResolvedArg`.
 
@@ -925,7 +925,7 @@ These are the calls we need to make in the meeting.
   - (a) Maintain a per-instance pointer table; threading
     `instance_number` through `ccpp_constituent_index`.
   - (b) Document the limitation, route around it (no scheme uses
-    `ccpp_constituent_index` under multi-instance — capgen-ng
+    `ccpp_constituent_index` under multi-instance — capgen
     already enforces `index_of_<X>` everywhere).
 - **Recommendation**: (b). It's a one-line doc note and zero code
   change.
@@ -974,7 +974,7 @@ These are the calls we need to make in the meeting.
   - *Against:* many constituents have no physics tendency (the column is
     already there regardless, so forcing a declaration buys little); the
     index is implicit by design and exposing it as a required member
-    re-introduces the index bookkeeping capgen-ng deliberately hid; the
+    re-introduces the index bookkeeping capgen deliberately hid; the
     base is the only thing that *must* be registered.
   - *Open sub-question:* if not forced, should the resolver at least **warn**
     when a `tendency_of_<X>` is produced for an `<X>` that no register scheme
@@ -1016,12 +1016,12 @@ scheme on `advected` still hit the "incompatible constituent" error.
   override.
 - Update `doc/constituents.md` with the register-then-override
   workflow.
-- (capgen-ng) Reject `diagnostic_name` on `is_constituent=True`
+- (capgen) Reject `diagnostic_name` on `is_constituent=True`
   scheme args at parse time, or downgrade it to a default-only hint.
-- (capgen-ng) **DONE 2026-05-13**: replaced `_FRAMEWORK_CONST_DIM_INPUTS`
+- (capgen) **DONE 2026-05-13**: replaced `_FRAMEWORK_CONST_DIM_INPUTS`
   with a `ResolvedArg.used_const_dim_std_names` field.
 
-**Cost**: ~150 lines framework + ~50 lines capgen-ng + tests.
+**Cost**: ~150 lines framework + ~50 lines capgen + tests.
 CAM-SIMA host code can stay as-is (the 4 scheme-side registrations
 continue to work with their existing class-B values; they're just
 not enforced anymore). Optional: tidy the 4 schemes to pass class-A
@@ -1032,7 +1032,7 @@ hosts. The class-B override pattern that CAM-SIMA already uses for
 `thermo_active` and `water_species` generalizes.
 
 **Limit**: does not change the registration model (still
-explicit-only in capgen-ng, still auto-clone in original capgen).
+explicit-only in capgen, still auto-clone in original capgen).
 
 ### Proposal C — host-only registration
 
@@ -1040,7 +1040,7 @@ explicit-only in capgen-ng, still auto-clone in original capgen).
 - Move the 4 cam-sima scheme-side register calls into a CAM-SIMA
   helper module called from `cam_comp.F90`'s initialization.
 - Drop register-phase `ccpp_constituent_properties_t(:)` support
-  from capgen-ng (and possibly original capgen). Schemes only
+  from capgen (and possibly original capgen). Schemes only
   consume constituents; only the host registers.
 - Codegen-time enforcement: any `advected=true` scheme arg whose
   std_name is not in the host's enumeration → codegen error.
@@ -1048,7 +1048,7 @@ explicit-only in capgen-ng, still auto-clone in original capgen).
   entirely.
 
 **Cost**: ~300 lines code total; requires coordinated PRs across
-ccpp-framework, ccpp-capgen, ccpp-capgen-ng, atmospheric_physics, and
+ccpp-framework, ccpp-capgen, ccpp-capgen, atmospheric_physics, and
 CAM-SIMA. The 4 schemes need their `_register` routines deleted (or
 made no-ops); the host needs a new helper.
 
@@ -1065,7 +1065,7 @@ registration model.
 | Aspect | A | B | C |
 |---|---|---|---|
 | Lines changed | ~50 | ~200 | ~500+ |
-| Coordination needed | framework only | framework + capgen-ng | framework + both generators + cam-sima |
+| Coordination needed | framework only | framework + capgen | framework + both generators + cam-sima |
 | Fixes the crash | yes | yes | yes |
 | Fixes `diag_name` portability | yes (host overrides) | yes | yes |
 | Relaxes `is_match` | no | yes | yes |
@@ -1139,13 +1139,13 @@ setters that delegate to the underlying `ccpp_constituent_properties_t`.
 
 ## Cross-references
 
-- `doc/constituents.md` — capgen-ng's user-facing constituents reference.
-- `design_constituent_api.md` (memory) — capgen-ng's per-instance option-A design.
+- `doc/constituents.md` — capgen's user-facing constituents reference.
+- `design_constituent_api.md` (memory) — capgen's per-instance option-A design.
 - `design_constituents_mutability.md` (memory) — extended design notes incl. class A/B classification.
 - `project_implementation_status.md` (memory) — current implementation state and deferred items.
 - `scripts/constituents.py` — original capgen's host-cap generator.
 - `src/ccpp_constituent_prop_mod.F90` — framework.
-- `capgen-ng/generator/host_constituents.py` — capgen-ng's host-side module emitter.
-- `capgen-ng/generator/suite_resolver.py` (`_resolve_constituent_arg`) — capgen-ng's resolver routing.
+- `capgen/generator/host_constituents.py` — capgen's host-side module emitter.
+- `capgen/generator/suite_resolver.py` (`_resolve_constituent_arg`) — capgen's resolver routing.
 - `EXT/cam-sima/CAM-SIMA/src/physics/utils/cam_constituents.F90` — CAM-SIMA's host-side wrappers around framework setters.
 

@@ -28,7 +28,7 @@ ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                METADATA_FILES ${HOST_METADATA_FILES}
                TYPE "HOST")
 
-# Run ccpp_capgen_ng
+# Run ccpp_capgen
 ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_METADATA_FILES}

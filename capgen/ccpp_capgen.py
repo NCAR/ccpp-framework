@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""ccpp_capgen_ng — next-generation CCPP cap code generator.
+"""ccpp_capgen — next-generation CCPP cap code generator.
 
 This script replaces both ``ccpp_prebuild.py`` and ``ccpp_capgen.py`` from the
 legacy toolchain.  It reads host-model metadata files, scheme metadata files,
@@ -20,7 +20,7 @@ Usage
 -----
 ::
 
-    ccpp_capgen_ng.py \\
+    ccpp_capgen.py \\
         --host-name    <name> \\
         --host-files   <f1.meta,f2.meta,...> \\
         --scheme-files <f1.meta,f2.meta,...> \\
@@ -75,7 +75,7 @@ import os
 import sys
 from typing import Dict, List, Optional, Tuple
 
-# Ensure the capgen-ng package is importable when invoked directly.
+# Ensure the capgen package is importable when invoked directly.
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PACKAGE_DIR = os.path.dirname(_SCRIPT_DIR)
 if _PACKAGE_DIR not in sys.path:
@@ -106,7 +106,7 @@ from generator.datatable import write_datatable
 # Logging
 ########################################################################
 
-_LOGGER = init_log('ccpp_capgen_ng')
+_LOGGER = init_log('ccpp_capgen')
 
 
 ########################################################################
@@ -125,8 +125,8 @@ _FRAMEWORK_HOST_META = [
 # generated cap modules whenever any suite touches constituent state.
 # Listed in datatable.xml's <utilities> so host CMake projects pick them
 # up via ccpp_datafile.py --utility-files / --ccpp-files queries.  All
-# of these live in :data:`_FRAMEWORK_SRC_DIR` (capgen-ng's own ``src/``);
-# capgen-ng ships self-contained — no external src/ companion needed.
+# of these live in :data:`_FRAMEWORK_SRC_DIR` (capgen's own ``src/``);
+# capgen ships self-contained — no external src/ companion needed.
 _FRAMEWORK_F90_FILES = [
     'ccpp_constituent_prop_mod.F90',
     'ccpp_hashable.F90',
@@ -139,8 +139,8 @@ def _resolve_framework_f90_files() -> List[str]:
     """Return absolute paths for the framework F90 files.
 
     Each name in :data:`_FRAMEWORK_F90_FILES` is looked up under
-    :data:`_FRAMEWORK_SRC_DIR` (``capgen-ng/src/``).  A missing file is
-    a hard error: capgen-ng/src/ is the canonical (and only) location;
+    :data:`_FRAMEWORK_SRC_DIR` (``capgen/src/``).  A missing file is
+    a hard error: capgen/src/ is the canonical (and only) location;
     a missing file means the deployment is incomplete and the host
     build would fail later with an opaque "Cannot open module file"
     error.  Surface it now with a precise message instead.
@@ -155,10 +155,10 @@ def _resolve_framework_f90_files() -> List[str]:
             missing.append(p)
     if missing:
         raise CCPPError(
-            "capgen-ng deployment is incomplete: required framework "
+            "capgen deployment is incomplete: required framework "
             "Fortran source file(s) not found under {!r}:\n  {}\n"
-            "Vendor the missing file(s) into capgen-ng/src/ (the "
-            "canonical location for files capgen-ng emits a USE for).".format(
+            "Vendor the missing file(s) into capgen/src/ (the "
+            "canonical location for files capgen emits a USE for).".format(
                 _FRAMEWORK_SRC_DIR, '\n  '.join(missing),
             )
         )
@@ -177,7 +177,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     argparse.ArgumentParser
     """
     parser = argparse.ArgumentParser(
-        prog='ccpp_capgen_ng.py',
+        prog='ccpp_capgen.py',
         description='CCPP next-generation cap code generator',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
@@ -253,7 +253,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "TRANSIENT MIGRATION SHIM.  Accept legacy CCPP standard "
             "names (currently 'horizontal_loop_extent') in scheme "
             "metadata and silently rewrite them to their canonical "
-            "capgen-ng equivalents ('horizontal_dimension').  Emits a "
+            "capgen equivalents ('horizontal_dimension').  Emits a "
             "loud warning at startup.  Will be removed."
         ),
     )
@@ -718,7 +718,7 @@ _REQUIRED_CTRL_VARS = [
 #     ``number_of_threads`` is carried as a control dummy (the framework owns
 #     no per-thread state yet, so its value is not consumed — kept for symmetry
 #     with ``number_of_instances`` and future per-thread sizing).
-# (A chunk/block index is intentionally NOT a control pair: capgen-ng's
+# (A chunk/block index is intentionally NOT a control pair: capgen's
 # slice-based design passes the current chunk as a horizontal range via
 # horizontal_loop_begin/end, so no scheme ever indexes by chunk inside a call.)
 # Each entry: (index std_name, count std_name, index description, count description).

@@ -1,6 +1,6 @@
 !>\file register_consts.F90
 !! Register-phase scheme that registers three dynamic constituents. Declaring a
-!! ccpp_constituent_properties_t(:) argument is what activates capgen-ng's
+!! ccpp_constituent_properties_t(:) argument is what activates capgen's
 !! constituent machinery, giving the suite a meaningful
 !! number_of_ccpp_constituents (= 3 here) for the rest of this test.
 

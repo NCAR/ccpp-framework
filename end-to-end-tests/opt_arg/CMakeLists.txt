@@ -28,7 +28,7 @@ ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                METADATA_FILES ${HOST_METADATA_FILES}
                TYPE "HOST")
 
-# Run ccpp_capgen_ng.  Override kind_phys to REAL32 so the whole test
+# Run ccpp_capgen.  Override kind_phys to REAL32 so the whole test
 # runs in single precision; exercises the --kind-type plumbing.
 ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA_FILES}

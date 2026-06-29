@@ -18,18 +18,18 @@ The physics source, `suite_cam4.xml`, and `src/data/registry.xml` are
 **byte-identical** between the two builds. The difference is purely in the
 generated CCPP caps. We have traced it to a single cause and **proven** it:
 
-> **capgen-ng registers the advected constituents in a different order than the
+> **capgen registers the advected constituents in a different order than the
 > original capgen.** Specifically, `cloud_liquid` and `cloud_ice`
 > are swapped. This changes the floating-point summation order in the energy/water
 > thermodynamic diagnostics, which the energy fixer then spreads across all columns
 > as a tiny, pervasive heating — the source of the b4b difference.
 
-A one-off patch that forces capgen-ng's advected water species into the
+A one-off patch that forces capgen's advected water species into the
 original-capgen order makes **QPC4 bit-for-bit identical** to the baseline.
 
 ## The difference (runtime constituent list, `debug_output = 2`)
 
-| index | original capgen (baseline) | capgen-ng |
+| index | original capgen (baseline) | capgen |
 |------:|----------------------------|-----------|
 | 1 | **cloud_liquid** (advected) | **cloud_ice** (advected) |
 | 2 | **cloud_ice** (advected) | **cloud_liquid** (advected) |
@@ -45,7 +45,7 @@ both — the only advected difference is the **cloud_liquid ↔ cloud_ice swap**
 1. `air_composition` builds `thermodynamic_active_species_idx` by walking the
    advected constituents in **constituent-index order**.
 2. `get_hydrostatic_energy` (`cam_thermo`) sums the water species in that order.
-   Baseline sums `cloud_liquid + cloud_ice + water_vapor`; capgen-ng sums
+   Baseline sums `cloud_liquid + cloud_ice + water_vapor`; capgen sums
    `cloud_ice + cloud_liquid + water_vapor`. Same values, **different FP order**.
 3. The resulting machine-eps difference in total energy/water is picked up by the
    global energy fixer (`check_energy_fix`), which redistributes it as a uniform
@@ -61,7 +61,7 @@ physical ordering.
 
 ## Proof
 
-Forcing capgen-ng's advected water species into the baseline order
+Forcing capgen's advected water species into the baseline order
 `[cloud_liquid = 1, cloud_ice = 2, water_vapor = 3]` (a flag-guarded one-off
 patch in the framework's `ccp_model_const_table_lock`) makes QPC4 reproduce the
 ccpp-prebuild baseline **bit-for-bit** (cprnc: all fields identical). This
@@ -73,14 +73,14 @@ below for the full patch.
 Both builds register the same constituents with identical properties; the
 ordering is not physically meaningful, and the resulting solutions are
 roundoff-equivalent and both physically correct. The b4b failure reflects only
-that capgen-ng's (arbitrary) order differs from the (equally arbitrary) order
+that capgen's (arbitrary) order differs from the (equally arbitrary) order
 the capgen baseline happened to produce.
 
 ## Decision requested
 
 To resolve QPC4 (and any other case sensitive to constituent order), we propose:
 
-1. Give capgen-ng a **deterministic, documented** constituent-registration order
+1. Give capgen a **deterministic, documented** constituent-registration order
    (e.g. water vapor first, with a clear rule for how constituents land in the
    array) — replacing today's hash-bucket order.
 2. Adopt the new documented order and **re-baseline** the affected CAM-SIMA cases once.
@@ -90,10 +90,10 @@ The temporary proof patch will be removed once the path is agreed.
 ## Artifacts
 
 - **Patch:** Stored as `ccpp_constituent_prop_mod.F90.patch` in the top-level
-directory of the `feature/capgen-ng` ccpp-framework branch):
+directory of the `feature/capgen` ccpp-framework branch):
 ```
---- capgen-ng/src/ccpp_constituent_prop_mod.F90
-+++ capgen-ng/src/ccpp_constituent_prop_mod.F90
+--- capgen/src/ccpp_constituent_prop_mod.F90
++++ capgen/src/ccpp_constituent_prop_mod.F90
 @@ -1392,6 +1392,17 @@
      type(ccpp_constituent_properties_t), pointer :: cprop
      character(len=dimname_len) :: dimname
@@ -142,39 +142,39 @@ directory of the `feature/capgen-ng` ccpp-framework branch):
 ```
 
 - **Run directories (Derecho) Intel:** Because the SIMA baselines change continuously, 
-  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng-reference):
+  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-reference):
     - `/glade/derecho/scratch/heinzell/aux_sima_intel_20260614203021/`
-    - capgen-ng differences to be evaluated against this baseline, because the official baseline changes frequently
-    - Both the capgen baseline and the capgen-ng test fail for this test:
+    - capgen differences to be evaluated against this baseline, because the official baseline changes frequently
+    - Both the capgen baseline and the capgen test fail for this test:
 ```
   SMS_Ln9.ne3pg3_ne3pg3_mg37.FKESSLER.derecho_intel.cam-outfrq_se_cslam_multitape (Overall: NLFAIL) details:
     FAIL SMS_Ln9.ne3pg3_ne3pg3_mg37.FKESSLER.derecho_intel.cam-outfrq_se_cslam_multitape NLCOMP
 ```
-  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng), unpatched (shows the FWAUT diff):
+  - capgen (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen), unpatched (shows the FWAUT diff):
     - `/glade/derecho/scratch/heinzell/aux_sima_intel_20260614202951/` with the following `mpasa120_mpasa120.QPC4` test dirs:
       - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951.ORIGINAL_NO_PATCH`
       - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951.ORIGINAL_NO_PATCH`
-  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng) + reorder patch (**b4b**):
+  - capgen (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen) + reorder patch (**b4b**):
     - `/glade/derecho/scratch/heinzell/aux_sima_intel_20260614202951/` with the following `mpasa120_mpasa120.QPC4` test dirs:
       - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951`
       - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_intel.cam-outfrq_analy_ic_cam4.GC.aux_sima_intel_20260614202951`
 
 - **Run directories (Derecho) GNU:** Because the SIMA baselines change continuously, 
-  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng-reference):
+  - Baseline (original capgen, https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-reference):
     - `/glade/derecho/scratch/heinzell/aux_sima_gnu_20260611123848/`
-    - capgen-ng differences to be evaluated against this baseline, because the official baseline changes frequently
-    - Both the capgen baseline and the capgen-ng test fail for this test:
+    - capgen differences to be evaluated against this baseline, because the official baseline changes frequently
+    - Both the capgen baseline and the capgen test fail for this test:
 ```
   SMS_Ln2.ne3pg3_ne3pg3_mg37.FPHYStest.derecho_gnu.cam-outfrq_hb_vdiff_derecho (Overall: FAIL) details:
     FAIL SMS_Ln2.ne3pg3_ne3pg3_mg37.FPHYStest.derecho_gnu.cam-outfrq_hb_vdiff_derecho RUN time=13
   SMS_Ln9.ne3pg3_ne3pg3_mg37.FADIAB.derecho_gnu.cam-outfrq_se_cslam (Overall: FAIL) details:
     FAIL SMS_Ln9.ne3pg3_ne3pg3_mg37.FADIAB.derecho_gnu.cam-outfrq_se_cslam RUN time=13
 ```
-  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng), unpatched (shows the FWAUT diff):
+  - capgen (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen), unpatched (shows the FWAUT diff):
     - `/glade/derecho/scratch/heinzell/aux_sima_gnu_20260611123837/` with the following `mpasa120_mpasa120.QPC4` test dirs:
       - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837.ORIGINAL_NO_PATCH`
       - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837.ORIGINAL_NO_PATCH`
-  - capgen-ng (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen-ng) + reorder patch (**b4b**):
+  - capgen (https://github.com/climbfuji/CAM-SIMA/tree/feature/capgen) + reorder patch (**b4b**):
     - `/glade/derecho/scratch/heinzell/aux_sima_gnu_20260611123837/` with the following `mpasa120_mpasa120.QPC4` test dirs:
       - `SMS_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837`
       - `SMS_D_Ln9.mpasa120_mpasa120.QPC4.derecho_gnu.cam-outfrq_analy_ic_cam4.GC.aux_sima_gnu_20260611123837`

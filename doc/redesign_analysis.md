@@ -1102,7 +1102,7 @@ physics-internal variables actually need to be managed.
 
 ### 8.6 Implementation decisions made during redesign
 
-The following decisions were made during implementation of `capgen-ng` and are recorded
+The following decisions were made during implementation of `capgen` and are recorded
 here as amendments to the analysis above.
 
 **State machine parameters are local to each generated group cap module.**  

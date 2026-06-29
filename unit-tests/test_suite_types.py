@@ -116,7 +116,7 @@ class TestPtrTypeName(unittest.TestCase):
 
     def test_character_len_assumed_rejected(self):
         """``character(len=*)`` cannot appear as a DDT component, so
-        capgen-ng cannot synthesise a wrapper.  Error must explain that
+        capgen cannot synthesise a wrapper.  Error must explain that
         and suggest using a concrete length or deferred-length."""
         with self.assertRaisesRegex(CCPPError, 'cannot appear as a DDT component'):
             _ptr_type_name('character', 'len=*', 1)

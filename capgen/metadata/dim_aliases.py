@@ -17,7 +17,7 @@ the point where two metadata dimension entries (host side and scheme
 side) are compared for identity*.
 
 This module provides an opt-in shim (``--gfs-dim-aliases`` on the
-capgen-ng / ccpp_validator CLI) that collapses each member of an alias
+capgen / ccpp_validator CLI) that collapses each member of an alias
 group to a single canonical representative when ``_canonical_dim``
 prepares a dimension entry for the strict identity comparison in
 :func:`generator.suite_resolver._check_compat`.  Every other consumer
@@ -141,7 +141,7 @@ def enable(logger=None, _stream: Optional[TextIO] = None) -> None:
         _pad(''),
         _pad('Variables keep their original names everywhere'),
         _pad('else.  This is a TRANSIENT GFS-physics shim and'),
-        _pad('WILL BE REMOVED in a future capgen-ng release.'),
+        _pad('WILL BE REMOVED in a future capgen release.'),
         border,
         '',
     ]
@@ -183,7 +183,7 @@ def canonical(name: str) -> str:
 
     When the shim is **disabled** this is a strict identity — the
     aliased names compare distinct, just as they would in a default
-    capgen-ng workflow.  When the shim is **enabled** every entry in
+    capgen workflow.  When the shim is **enabled** every entry in
     :data:`_DIM_ALIAS_MAP` collapses to its representative; everything
     else passes through unchanged.
 

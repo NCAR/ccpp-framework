@@ -80,7 +80,7 @@ from metadata import auto_clone_constituents
 
 # Dimension standard names that map to horizontal loop bounds.  The
 # legacy spelling ``horizontal_loop_extent`` is rejected at parse time
-# (see ``_FORBIDDEN_DIMENSION_NAMES`` in ccpp_capgen_ng.py) or rewritten
+# (see ``_FORBIDDEN_DIMENSION_NAMES`` in ccpp_capgen.py) or rewritten
 # by the ``--legacy-mode`` shim, so it can never appear here.
 _HORIZ_LOOP_DIMS: frozenset = frozenset({
     'horizontal_dimension',
@@ -159,7 +159,7 @@ def _index_symbol_name(base_std_name: str) -> str:
     emit/reference sites (host_constituents.py public/declaration/
     reset/const_index/init-guard, suite_resolver.py auto-provisioned
     subscript, Path 1a call_expr) MUST route through this helper to
-    keep the symbol consistent within a single capgen-ng run.  The
+    keep the symbol consistent within a single capgen run.  The
     underlying std_name is still passed to ``const_index`` as a
     string literal, so the framework lookup keys remain unchanged --
     only the Fortran-side mapping symbol is mangled.
@@ -224,7 +224,7 @@ _HOST_CONST_MOD = 'ccpp_host_constituents'
 def _constituent_module_name(suite_name: str) -> str:
     """Return the module name that owns the host-wide constituent state.
 
-    Constant across suites: in capgen-ng (option A, matching original
+    Constant across suites: in capgen (option A, matching original
     capgen) the constituent object is host-wide, not suite-local.
     """
     return _HOST_CONST_MOD
@@ -588,7 +588,7 @@ def _one_dim_part(
 
     # Registered scalar-index dimension: collapse to the paired index
     # variable's local Fortran name regardless of lower bound.  See
-    # capgen-ng/metadata/registered_dimensions.py for the contract.
+    # capgen/metadata/registered_dimensions.py for the contract.
     idx_std = scalar_index_for(upper_str)
     if idx_std is not None:
         idx_entry = host_dict.get(idx_std)
@@ -600,7 +600,7 @@ def _one_dim_part(
                 "or type=host table.  Either declare '{idx}' as a scalar "
                 "integer in the host control/host metadata, or remove "
                 "the '{dim}' dimension from the affected metadata.  See "
-                "capgen-ng/metadata/registered_dimensions.py for the full "
+                "capgen/metadata/registered_dimensions.py for the full "
                 "table of registered scalar-index pairings.".format(
                     dim=upper_str, idx=idx_std,
                 )
@@ -2548,7 +2548,7 @@ def resolve_suite(
 def validate_init_dimensions(suite_res: SuiteResolution) -> None:
     """Reject suite-owned vars whose suite-time allocation can't be sized.
 
-    capgen-ng allocates every non-allocatable, dimensioned suite-owned
+    capgen allocates every non-allocatable, dimensioned suite-owned
     variable once in ``suite_data_init_fields``, which runs at the very
     start of ``<suite>_init`` -- before any ``init`` / ``timestep_init`` /
     ``run`` scheme code.  Only the ``register`` phase completes earlier, so

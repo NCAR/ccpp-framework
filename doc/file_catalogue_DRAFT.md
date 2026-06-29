@@ -1,9 +1,9 @@
-# capgen-ng repository — file catalogue (DRAFT)
+# capgen repository — file catalogue (DRAFT)
 
 > **Status: temporary draft for the code-walkthrough prep.** One row per file, except
 > the many test/example *input* fixtures, which are collapsed. Once reviewed, the
 > relevant sections will be folded into `README.md` / `doc/DevelopersGuide/`.
-> External checkouts under `EXT/` (UFS reference + capgen-ng integration trees) are
+> External checkouts under `EXT/` (UFS reference + capgen integration trees) are
 > intentionally excluded — they are not part of this repository.
 
 ## Top level
@@ -17,16 +17,16 @@
 | `CODEOWNERS`, `.codecov.yml`, `.codee-format`, `.gitignore` | Repo/CI configuration (code owners, coverage, formatter, ignore rules). |
 | `.github/` | GitHub Actions CI workflows (unit tests, end-to-end tests, doxygen). |
 
-## `capgen-ng/` — command-line entry points
+## `capgen/` — command-line entry points
 
 | File | Description |
 |------|-------------|
 | `__init__.py` | Package marker (“next-generation CCPP code generator”). |
-| `ccpp_capgen_ng.py` | **Main generator CLI.** Parses metadata + the SDF, resolves variables, and writes the caps, `ccpp_kinds.F90`, and `datatable.xml`. Hosts flags like `--kind-type`, `--trace`, `--no-host-introspection`, and the compat shims. |
+| `ccpp_capgen.py` | **Main generator CLI.** Parses metadata + the SDF, resolves variables, and writes the caps, `ccpp_kinds.F90`, and `datatable.xml`. Hosts flags like `--kind-type`, `--trace`, `--no-host-introspection`, and the compat shims. |
 | `ccpp_datafile.py` | CLI to query the generated `datatable.xml` (generated files, scheme files, dependencies) for build systems / CMake. |
 | `ccpp_validator.py` | **Standalone validator** — checks scheme Fortran source against its `.meta` (intent/type/kind/rank/dimensions). Separate tool from the generator; owns the one Fortran parser. |
 
-## `capgen-ng/generator/` — cap code generation
+## `capgen/generator/` — cap code generation
 
 | File | Description |
 |------|-------------|
@@ -43,7 +43,7 @@
 | `kinds_writer.py` | Writes `ccpp_kinds.F90` (kind definitions the caps `use`). |
 | `trace.py` | Shared helpers emitting the gated `if (trace) write(...) 'CCPP TRACE …'` lines in every cap (toggled by `--trace`). |
 
-## `capgen-ng/metadata/` — metadata parsing & variable resolution
+## `capgen/metadata/` — metadata parsing & variable resolution
 
 | File | Description |
 |------|-------------|
@@ -56,7 +56,7 @@
 | `dim_aliases.py` | **Transient shim** — collapses equivalent GFS-physics dimension names. |
 | `auto_clone_constituents.py` | **Transient shim** — reinstates original-capgen auto-cloning of static constituents. |
 
-## `capgen-ng/metadata/parse_tools/` — shared parse utilities
+## `capgen/metadata/parse_tools/` — shared parse utilities
 
 | File | Description |
 |------|-------------|
@@ -68,7 +68,7 @@
 | `fortran_conditional.py` | Builds Fortran conditional expressions (in local names) for active/optional-argument handling. |
 | `xml_tools.py` | XML helpers — entity expansion and pretty-printed writing (SDF / datatable). |
 
-## `capgen-ng/schema/` & `capgen-ng/src/` — schema + shipped runtime Fortran
+## `capgen/schema/` & `capgen/src/` — schema + shipped runtime Fortran
 
 | File | Description |
 |------|-------------|
@@ -114,7 +114,7 @@ comparison driver, and CMake glue. The fixtures are collapsed; the row describes
 
 | Case | What it exercises |
 |------|-------------------|
-| `capgen_ng/` | **Overall generator capabilities** — multiple suites & groups, DDT usage (incl. an undocumented DDT member), `ccpp_constant_one:N` and bare-`N` dimensions, non-standard/integer dimensions, variables promoted to suite level, dimensions set in the register phase and used to allocate module-level interstitials, and threading. |
+| `capgen/` | **Overall generator capabilities** — multiple suites & groups, DDT usage (incl. an undocumented DDT member), `ccpp_constant_one:N` and bare-`N` dimensions, non-standard/integer dimensions, variables promoted to suite level, dimensions set in the register phase and used to allocate module-level interstitials, and threading. |
 | `advection/` | Constituent advection — cloud liquid/ice constituents with tendency application (`apply_constituent_tendencies` invoked twice); includes a deliberate error suite (`cld_suite_error.xml`) to exercise diagnostics. |
 | `advection_auto_clone/` | Same fixtures as `advection/`, run through the `--legacy-auto-clone-constituents` shim path. |
 | `ddthost/` | A host whose CCPP data is carried in a derived type (`host_ccpp_ddt`); runs the temp + DDT suites against it. |
@@ -134,9 +134,9 @@ comparison driver, and CMake glue. The fixtures are collapsed; the row describes
 | File | Description |
 |------|-------------|
 | `README.md` | Documentation index. |
-| `redesign_prompt.md`, `redesign_analysis.md`, `redesign_analysis_original_*.md` | Original redesign brief and analysis that motivated capgen-ng. |
+| `redesign_prompt.md`, `redesign_analysis.md`, `redesign_analysis_original_*.md` | Original redesign brief and analysis that motivated capgen. |
 | `briefing.md`, `briefing_pm.md` | Design briefings. |
-| `migration.md` | Guide for migrating a host from ccpp-prebuild/original-capgen to capgen-ng. |
+| `migration.md` | Guide for migrating a host from ccpp-prebuild/original-capgen to capgen. |
 | `capgen_compat_layer.md` | Documents the transient compatibility shims (legacy names, dim aliases, auto-clone). |
 | `constituents.md` | Constituent-handling design. |
 | `constituents_overhaul.md` | Proposed constituent-model overhaul (proposals A/B/C). |

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Variable resolution and access-path construction for ccpp-capgen-ng.
+"""Variable resolution and access-path construction for ccpp-capgen.
 
 This module flattens the host/control/DDT metadata hierarchy into a single
 keyed dictionary and provides the ``SchemeStore`` lookup table that the code
@@ -60,7 +60,7 @@ from .parse_tools import CCPPError, check_fortran_intrinsic, FORTRAN_SCALAR_REF_
 # ``number_of_instances`` → ``instance_number``,
 # ``number_of_threads`` → ``thread_number``) lives in a single
 # documented module so the contract is easy for users and developers to
-# find and extend.  See ``capgen-ng/metadata/registered_dimensions.py``
+# find and extend.  See ``capgen/metadata/registered_dimensions.py``
 # for the full table and the two rules that govern it.
 from .registered_dimensions import (
     SCALAR_INDEX_DIMS,
@@ -194,7 +194,7 @@ def _validate_leaf_dims(var: 'MetaVar', source_label: str) -> None:
         "will emit '<container>({idx})%{name}(...)' at every scheme "
         "call site automatically.\n"
         "\n"
-        "See capgen-ng/metadata/registered_dimensions.py for the full "
+        "See capgen/metadata/registered_dimensions.py for the full "
         "table of registered scalar-index pairings and how to extend "
         "it.".format(
             name=var.local_name,
@@ -382,7 +382,7 @@ def build_ddt_module_map(
     2. **Co-located table's resolved module.**  Failing the DDT's own
        override, inherit from a co-located ``host``, ``control``, or
        ``scheme`` table in the same ``.meta`` file.  Its module is
-       resolved by the same rule used elsewhere in capgen-ng
+       resolved by the same rule used elsewhere in capgen
        (:func:`_resolve_module_name`): the co-located table's own
        ``module_name = …`` if declared, else its table name.
 
@@ -508,7 +508,7 @@ def _flatten_ddt_instance(
     ddt_table = ddt_index[ddt_name]
     subscript = _instance_subscript(var)
     # If the DDT instance has dimensions but NONE of them are a
-    # registered scalar-index dim, capgen-ng can't bake a meaningful
+    # registered scalar-index dim, capgen can't bake a meaningful
     # scalar subscript into field access paths.  Two outcomes are both
     # legitimate, depending on how schemes use this DDT:
     #
@@ -519,7 +519,7 @@ def _flatten_ddt_instance(
     #       Fortran the compiler rejects.
     #   (b) Schemes request individual inner fields by standard name,
     #       which would require ``parent%var(<idx>)%field(…)`` access
-    #       with a meaningful ``<idx>`` capgen-ng can't synthesize.
+    #       with a meaningful ``<idx>`` capgen can't synthesize.
     #
     # Skip the recursion either way: the DDT-instance's own entry is
     # still recorded (case (a) just works), and case (b) trips the
@@ -848,7 +848,7 @@ class SchemeStore:
                     if first_path == dup_path:
                         hint = (' (both paths are identical — likely a '
                                 'duplicate entry in the --scheme-files '
-                                'list passed to capgen-ng)')
+                                'list passed to capgen)')
                     else:
                         hint = ''
                     raise CCPPError(

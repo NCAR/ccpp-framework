@@ -39,7 +39,7 @@ ccpp_validator(VERBOSITY ${CCPP_VERBOSITY}
                METADATA_FILES ${HOST_METADATA_FILES}
                TYPE "HOST")
 
-# Run ccpp_capgen_ng
+# Run ccpp_capgen
 ccpp_capgen(VERBOSITY ${CCPP_VERBOSITY}
             HOSTFILES ${HOST_METADATA_FILES}
             SCHEMEFILES ${SCHEME_METADATA_FILES}
@@ -67,7 +67,7 @@ set(EXTRA_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/../utils/test_utils.F90
 )
 
-add_executable(test_capgen_ng.x
+add_executable(test_capgen.x
   ${EXTRA_FILES}
   ${CAPGEN_DEPENDENCIES}
   ${SCHEME_FORTRAN_FILES_FILTERED}
@@ -75,25 +75,25 @@ add_executable(test_capgen_ng.x
   ${CAPGEN_FILES}
   test_capgen_host_integration.F90
 )
-target_link_libraries(test_capgen_ng.x PRIVATE MPI::MPI_Fortran)
+target_link_libraries(test_capgen.x PRIVATE MPI::MPI_Fortran)
 if(OPENMP)
-  target_link_libraries(test_capgen_ng.x PRIVATE OpenMP::OpenMP_Fortran)
+  target_link_libraries(test_capgen.x PRIVATE OpenMP::OpenMP_Fortran)
 endif()
-set_target_properties(test_capgen_ng.x PROPERTIES LINKER_LANGUAGE Fortran)
+set_target_properties(test_capgen.x PROPERTIES LINKER_LANGUAGE Fortran)
 
 # Add executable to be called with ctest
-add_test(NAME test_capgen_ng_omp1
-         COMMAND test_capgen_ng.x)
+add_test(NAME test_capgen_omp1
+         COMMAND test_capgen.x)
 
-add_test(NAME test_capgen_ng_omp2
-         COMMAND test_capgen_ng.x)
+add_test(NAME test_capgen_omp2
+         COMMAND test_capgen.x)
 
-set_tests_properties(test_capgen_ng_omp1
+set_tests_properties(test_capgen_omp1
     PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1"
 )
 
-set_tests_properties(test_capgen_ng_omp2
+set_tests_properties(test_capgen_omp2
     PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=2"
 )

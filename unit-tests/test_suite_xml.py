@@ -19,9 +19,9 @@ for the new package layout.
 
 Run with::
 
-    python -m pytest capgen-ng/tests/test_suite_xml.py -v
+    python -m pytest capgen/tests/test_suite_xml.py -v
 
-or include ``--doctest-modules capgen-ng/generator/suite_xml.py``.
+or include ``--doctest-modules capgen/generator/suite_xml.py``.
 """
 
 import filecmp
@@ -36,7 +36,7 @@ import xml.etree.ElementTree as ET
 # ---- path setup ------------------------------------------------------------
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT  = os.path.dirname(_TESTS_DIR)
-_PKG_ROOT   = os.path.join(_REPO_ROOT, 'capgen-ng')
+_PKG_ROOT   = os.path.join(_REPO_ROOT, 'capgen')
 for _p in (_PKG_ROOT, _REPO_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)

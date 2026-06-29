@@ -5,7 +5,7 @@
 ## Purpose
 
 This document is a complete implementation specification for a new CCPP Framework code
-generator (`ccpp-capgen-ng`). It supersedes both `ccpp-prebuild` and `ccpp-capgen`. An
+generator (`ccpp-capgen`). It supersedes both `ccpp-prebuild` and `ccpp-capgen`. An
 implementer should be able to build the new generator from scratch using this document
 alone, supplemented by the real-world examples in `redesign_analysis.md`.
 
@@ -71,7 +71,7 @@ omitted, the validator auto-discovers the Fortran source for each scheme table u
 `source_path` table-level property (Section 3.5): it looks for a `.F90` file with the
 same base name as the `.meta` file, in the directory given by `source_path`.
 
-### 2.2 Code Generator (`ccpp_capgen_ng.py`)
+### 2.2 Code Generator (`ccpp_capgen.py`)
 
 Parses metadata only. Assumes metadata correctly describes the Fortran source — performs
 no Fortran parsing. Generates all cap files and supporting modules.
@@ -298,7 +298,7 @@ The generator has built-in semantic knowledge of these dimension standard names:
 
 | Standard name | Indexing semantic |
 |---|---|
-| Any key of `SCALAR_INDEX_DIMS` (currently `number_of_instances`, `number_of_threads`) | Scalar extraction: substitute the paired index variable's local Fortran name (currently `instance_number`, `thread_number`).  See `capgen-ng/metadata/registered_dimensions.py` for the full table and the contract. |
+| Any key of `SCALAR_INDEX_DIMS` (currently `number_of_instances`, `number_of_threads`) | Scalar extraction: substitute the paired index variable's local Fortran name (currently `instance_number`, `thread_number`).  See `capgen/metadata/registered_dimensions.py` for the full table and the contract. |
 | `horizontal_dimension` | **At scheme call sites**: always `horizontal_loop_begin:horizontal_loop_end` (using control variable local names), for all phases. **For suite-owned array allocation sizing**: local name of `horizontal_dimension` from the host `type=host` table (accessed via module USE, not the control variable). |
 | `vertical_*` | Slice: `1:<local name of vertical_* variable>` |
 
@@ -434,7 +434,7 @@ entrypoints. All inputs derive from generator-time data already held in
 `SuiteResolution` plus the host/scheme metadata; no new metadata is required.
 The `_variables` vs `_host_data` split distinguishes the flat-leaf view
 (every DDT field that is actually consumed) from the DDT-collapsed view
-(parent DDT instances), and excludes capgen-ng-generated control
+(parent DDT instances), and excludes capgen-generated control
 variables from `_host_data` since the host owns those.
 
 ---
@@ -719,7 +719,7 @@ dimension rules to each dimension in order:
    `number_of_threads` → `thread_number`) → scalar extraction using the
    paired index variable's local Fortran name.  Only permitted on
    container DDT-instance variables, never on leaves (Rule 2; see
-   `capgen-ng/metadata/registered_dimensions.py`).
+   `capgen/metadata/registered_dimensions.py`).
 2. **`horizontal_dimension`** → always substitute `horizontal_loop_begin:horizontal_loop_end`
    (using control variable local names) at scheme call sites. For suite-owned array
    allocation sizing, `horizontal_dimension` from the host `type=host` table is used directly.
@@ -963,7 +963,7 @@ subsequent runs.
 
 ## 14. Constituent API
 
-> **Status (2026-05-12).** The constituent API in capgen-ng has evolved past
+> **Status (2026-05-12).** The constituent API in capgen has evolved past
 > the sketch below.  The current implementation is:
 >
 > - One `ccpp_model_constituents_obj(:)` array (sized to
@@ -982,7 +982,7 @@ subsequent runs.
 >   API + examples).
 > - **Architecture review and proposed reforms**: `doc/constituents_overhaul.md`
 >   (2026-05-12, meeting-quality discussion of original capgen vs
->   capgen-ng vs cam-sima needs, bugs/flaws, class-A/B property
+>   capgen vs cam-sima needs, bugs/flaws, class-A/B property
 >   classification, three proposals A/B/C).
 >
 > The historic text below is retained for context but does not describe
@@ -1042,7 +1042,7 @@ All files are written to `--output-root`.
 ## 16. CLI Invocation
 
 ```
-ccpp_capgen_ng.py
+ccpp_capgen.py
   --host-name    <name>
   --host-files   <f1.meta,f2.meta,...>
   --scheme-files <f1.meta,f2.meta,...>
@@ -1197,7 +1197,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 - **Group-state alloc idempotency** (matches suite-state alloc).
 - **Framework PR**: `ccpt_deallocate` ownership tracking via
   `framework_owns_me` flag.  Backward-compatible.  Landed in
-  capgen-ng's vendored framework copy; still needs upstream merge
+  capgen's vendored framework copy; still needs upstream merge
   to ccpp-framework + original ccpp-capgen.
 - **Identity unit conversions** no longer emit misleading "unit
   conversion: kind_phys to kind_phys" comment.
@@ -1209,7 +1209,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   (`<initalize>`, `<initialize>`, `<finalize>`) rejected.
 - **Constituent resolver — host metadata wins**: hosts that declare
   framework-named std_names (`ccpp_constituents`, `index_of_<X>`, ...)
-  short-circuit capgen-ng's auto-provisioning so legacy hosts (GFS,
+  short-circuit capgen's auto-provisioning so legacy hosts (GFS,
   SCM) keep using their own short local names (e.g. `ntcw`) without
   blowing Fortran's 63-char identifier limit.
 
@@ -1217,7 +1217,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 
 - **`--legacy-mode` shim** — transient parse-time rewrite of legacy
   CCPP standard names (`horizontal_loop_extent` →
-  `horizontal_dimension`).  Available on `ccpp_capgen_ng.py` and
+  `horizontal_dimension`).  Available on `ccpp_capgen.py` and
   `ccpp_validator.py`; loud banner at startup.  Isolated in
   `metadata/legacy_compat.py` and tagged `# legacy-compat:` for clean
   removal once scheme metadata has been migrated.
@@ -1346,7 +1346,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   `metadata/dim_aliases.py`; touchpoints tagged `# dim-aliases:` for
   clean removal.  Generator-only (the validator never reaches the
   canonicaliser).  Required for CCPP-SCM 17p8 to build under
-  capgen-ng.
+  capgen.
 - **`--legacy-auto-clone-constituents` shim** — transient CLI flag
   that reinstates original ccpp-capgen's auto-clone-static-constituent
   registration path.  Every `is_constituent` consumer scheme arg
@@ -1357,7 +1357,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   parser (`default_value`, `min_value`, `water_species`,
   `mixing_ratio_type`).  Synthesises `long_name` from std_name when
   missing; falls back `diag_name` to local_name; lifts `vertical_dim`
-  from the arg's dim list.  Available on both `ccpp_capgen_ng.py` and
+  from the arg's dim list.  Available on both `ccpp_capgen.py` and
   `ccpp_validator.py`.  **Single-instance only** — aborts before
   parsing if the host declares `instance_number` +
   `number_of_instances`.  Module
@@ -1371,7 +1371,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 - **Unit tests**: 1426 passing (1438 with doctests; as of 2026-06-01).
   Run via `python unit-tests/run_tests.py [--doctest]`.
 - **End-to-end tests** (10 passing): `advection`,
-  `advection_auto_clone`, `capgen_ng`, `chunked_data`, `ddthost`,
+  `advection_auto_clone`, `capgen`, `chunked_data`, `ddthost`,
   `instances`, `instances_advection`, `nested_suite`, `opt_arg`,
   `var_compat`.  SCM running against ccpp-physics continues to be
   the active driver — most of the landings since 2026-05-13 were
@@ -1425,7 +1425,7 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
   OUTERMOST counter, not the innermost.  None of the cam-sima schemes
   use this — revisit if a real scheme needs the innermost.
 - **Python linter / formatter pass** — pick `ruff` and apply across
-  `capgen-ng/`.
+  `capgen/`.
 - **Generated Fortran ↔ Codee formatter idempotency** — emitted `.F90`
   must round-trip cleanly through the project's Codee formatter.
 - **`fortran_to_metadata` developer utility** — bootstrap a `.meta`

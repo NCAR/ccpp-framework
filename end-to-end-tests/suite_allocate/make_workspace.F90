@@ -1,6 +1,6 @@
 !>\file make_workspace.F90
 !! Producer scheme: allocates and fills a suite-owned scratch workspace.
-!! The workspace standard name is not provided by the host, so capgen-ng
+!! The workspace standard name is not provided by the host, so capgen
 !! promotes it to a suite-owned, scheme-allocated (allocatable=True) variable
 !! stored in ccpp_<suite>_data. suite_data_init_fields skips its allocation;
 !! this scheme owns it; final_fields frees it.

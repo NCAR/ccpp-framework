@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Query CLI for the ``datatable.xml`` produced by ``ccpp_capgen_ng.py``.
+"""Query CLI for the ``datatable.xml`` produced by ``ccpp_capgen.py``.
 
 This is the read-side companion to :mod:`generator.datatable`.  The writer
 half lives in the generator package; this module is a pure-Python,
@@ -24,7 +24,7 @@ The flag surface mirrors the original ``scripts/ccpp_datafile.py``:
 
 Exactly one report action is required per invocation.
 
-Notes specific to capgen-ng
+Notes specific to capgen
 ---------------------------
 * ``--host-files`` returns ``<host>_ccpp_cap.F90`` (the per-host static API;
   filename and module name derived from ``--host-name`` at generation time).
@@ -32,7 +32,7 @@ Notes specific to capgen-ng
   artifacts (``ccpp_<suite>.meta``, ``ccpp_<suite>_expanded.xml``) are
   reported via ``--inspection-files``.
 * ``--process-list`` is supported syntactically but will return an empty
-  string: capgen-ng does not currently record a ``process`` attribute on
+  string: capgen does not currently record a ``process`` attribute on
   scheme entries.
 """
 
@@ -167,7 +167,7 @@ class DatatableReport(object):
 def _command_line_parser():
     """Create and return an ArgumentParser for parsing the command line."""
     description = """
-    Retrieve information about a ccpp_capgen_ng run.
+    Retrieve information about a ccpp_capgen run.
     The returned information is controlled by selecting an action from
     the list of optional arguments below.
     Note that exactly one action is required.
@@ -297,7 +297,7 @@ def _retrieve_scheme_files(table):
     (or ``.F`` / ``.f90`` / ``.f``) sources for schemes that the loaded
     suites actually reference.  Build systems use this to compile exactly
     the scheme set the suites consume; unreferenced scheme metadata
-    files passed on the capgen-ng CLI for convenience are filtered out.
+    files passed on the capgen CLI for convenience are filtered out.
 
     # Test valid scheme files
     >>> table = ET.fromstring("<ccpp_datatable version='1.0'><scheme_files>"\
@@ -345,7 +345,7 @@ def _retrieve_scheme_files(table):
 def _retrieve_inspection_files(table, file_type=None):
     """Find and retrieve a list of inspection filenames from <table>.
 
-    Inspection files are non-Fortran artifacts emitted by capgen-ng for
+    Inspection files are non-Fortran artifacts emitted by capgen for
     debugging and downstream tooling: suite ``.meta`` files and expanded
     suite-definition XML.  Each kind lives in its own subsection of
     ``<inspection_files>``.
@@ -390,7 +390,7 @@ def _retrieve_inspection_files(table, file_type=None):
 def _retrieve_process_list(table):
     """Find and return a list of all physics scheme processes in <table>.
 
-    capgen-ng does not currently record a ``process`` attribute on
+    capgen does not currently record a ``process`` attribute on
     scheme entries, so this returns an empty list when no scheme carries
     one.  The flag is kept for CLI compatibility.
 

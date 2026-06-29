@@ -4,12 +4,12 @@ The legacy ccpp-prebuild / original-capgen toolchain auto-registered
 every ``is_constituent`` scheme arg by lifting its metadata properties
 (``long_name``, ``diagnostic_name``, ``units``, ``default_value``, …)
 into a synthetic ``%instantiate(...)`` call emitted into the generated
-host cap.  Capgen-ng deliberately dropped that path in favour of
+host cap.  Capgen deliberately dropped that path in favour of
 explicit registration (``host_constituents`` host arg + register-phase
 ``ccpp_constituent_properties_t(:)`` scheme args).
 
 This module re-enables the legacy auto-clone path as an opt-in shim
-(``--legacy-auto-clone-constituents`` on the capgen-ng CLI).  It exists
+(``--legacy-auto-clone-constituents`` on the capgen CLI).  It exists
 for legacy host models — notably CAM-SIMA — that drive original capgen
 heavily today and have not yet migrated to explicit registration.
 
@@ -31,10 +31,10 @@ When enabled, the shim:
 The legacy code paths these models came from never supported multiple
 in-memory host instances.  The shim follows the same restriction: when
 enabled, the host metadata MUST NOT declare both ``instance_number``
-and ``number_of_instances`` (the capgen-ng multi-instance opt-in pair
+and ``number_of_instances`` (the capgen multi-instance opt-in pair
 — see :data:`metadata.registered_dimensions.SCALAR_INDEX_DIMS`).  The
 gate is enforced in :func:`require_single_instance_host`, called from
-:mod:`ccpp_capgen_ng` after host metadata parse.  Code paths under the
+:mod:`ccpp_capgen` after host metadata parse.  Code paths under the
 shim assume ``instance_number`` is the literal ``1``.
 
 ## Self-contained for clean removal
@@ -51,7 +51,7 @@ Every touchpoint in the rest of the codebase is tagged
    marked with a ``# auto-clone-constituents:`` comment).
 
 Every hook is a no-op when the mode is not enabled — the shim has zero
-impact on default capgen-ng workflows.
+impact on default capgen workflows.
 
 Examples
 --------
@@ -94,7 +94,7 @@ from typing import FrozenSet, Optional, TextIO
 #
 # The remaining %instantiate kwargs (std_name, long_name, diag_name,
 # units, vertical_dim, advected, molar_mass) are already accepted by
-# the strict-mode parser, just under canonical capgen-ng names.
+# the strict-mode parser, just under canonical capgen names.
 # ----------------------------------------------------------------------
 _EXTRA_KNOWN_ATTRS: FrozenSet[str] = frozenset({
     'default_value',
@@ -157,7 +157,7 @@ def enable(logger=None, _stream: Optional[TextIO] = None) -> None:
         _pad(''),
         _pad('This is a TRANSIENT shim for legacy hosts that have'),
         _pad('not migrated to explicit registration. It WILL BE'),
-        _pad('REMOVED in a future capgen-ng release.'),
+        _pad('REMOVED in a future capgen release.'),
         border,
         '',
     ]
@@ -214,7 +214,7 @@ def require_single_instance_host(host_dict) -> None:
     for every per-instance subscript.  Multi-instance support is not in
     scope for this transient shim — legacy hosts that need this path
     were always single-instance.  Called from
-    :mod:`ccpp_capgen_ng` after the host metadata has been flattened.
+    :mod:`ccpp_capgen` after the host metadata has been flattened.
 
     No-op when the shim is disabled.  Accepts the resolved
     ``host_dict`` flat mapping (or any container with ``__contains__``)

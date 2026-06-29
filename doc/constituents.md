@@ -1,9 +1,9 @@
-# CCPP capgen-ng — Constituents Reference
+# CCPP capgen — Constituents Reference
 
 *Last revised: 2026-05-13.*
 
 This document is the authoritative reference for **constituent variables** in
-capgen-ng — what they are, how scheme authors declare them in metadata, what
+capgen — what they are, how scheme authors declare them in metadata, what
 the host model has to do to plumb them through, what the generator emits, and
 how the per-instance lifecycle works.
 
@@ -36,7 +36,7 @@ typically a tracer / mass mixing ratio (water vapor, cloud liquid, ozone,
 chemistry species) — together with its **tendency**, the rate of change that
 physics writes back so the dycore can advect/integrate it forward.
 
-In capgen-ng, the constituent layer has three concerns:
+In capgen, the constituent layer has three concerns:
 
 1. **Registration** — declaring at model startup which constituents exist
    (their standard name, units, vertical layout, advection flag, …).
@@ -127,7 +127,7 @@ name is a constituent or an ordinary variable is the **host's** decision
 (CAM-SIMA exposes water vapor as a constituent; CCPP-SCM may expose the
 same name as an ordinary host variable), so a scheme that only **reads**
 a constituent — the base species, or a `tendency_of_<X>` — does **not**
-repeat the `advected` / `constituent` flag.  capgen-ng infers
+repeat the `advected` / `constituent` flag.  capgen infers
 constituent-ness for an unflagged `intent=in/inout` consumer from the
 scheme-metadata-wide set of names *some* scheme flags
 (`VariableResolver.constituent_stdnames()`): an unflagged read of the
@@ -540,7 +540,7 @@ The host should call this for every instance that successfully called
 
 ## 6. Generated code structure
 
-When any suite touches constituent state, capgen-ng emits one extra
+When any suite touches constituent state, capgen emits one extra
 module per generator run: **`ccpp_host_constituents.F90`**.
 
 ### Module declarations
@@ -670,7 +670,7 @@ get the absolute paths to these files at the right output location.
 
 ## 7. Multi-instance design
 
-In capgen-ng, **per-instance state** means: each "instance" (typically
+In capgen, **per-instance state** means: each "instance" (typically
 an OpenMP team / chunk-domain partition) has its own copy of the
 state arrays, indexed by `instance_number ∈ [1, number_of_instances]`.
 
@@ -776,7 +776,7 @@ The framework's `ccpp_constituent_properties_t` now carries a private
 `ccpt_deallocate` only deallocates the underlying prop when the flag
 is `.true.`; otherwise it just nullifies its pointer.
 
-Under capgen-ng's explicit-registration model, all
+Under capgen's explicit-registration model, all
 `ccpp_constituent_properties_t` objects are **target-owned by the
 caller** (the host's `host_constituents(:)` array, or the per-suite
 `<suite>_dynamic_constituents(:)` buffer).  We never set the flag, so
@@ -858,7 +858,7 @@ message naming the offending token.
   build, even when no scheme or host actually uses the constituent
   system (no `ccpp_constituent_properties_t(:)` register-phase arg,
   no `is_constituent`-flagged scheme arg, no framework-named
-  `index_of_<X>` / `ccpp_constituents` / etc. claimed by capgen-ng).
+  `index_of_<X>` / `ccpp_constituents` / etc. claimed by capgen).
   When the host owns its own indices (SCM/GFS) and no scheme exercises
   the constituent path, the generated file is dead code that should be
   suppressed.  Tracked as a deferred item; the `host_dict` precedence
@@ -868,7 +868,7 @@ message naming the offending token.
 
 ## 9. Differences from original capgen
 
-| Aspect | Original capgen | capgen-ng |
+| Aspect | Original capgen | capgen |
 |---|---|---|
 | Constituent object location | Generated `<host>_ccpp_cap.F90` module | `ccpp_host_constituents.F90` (one per generator run) |
 | Per-instance | No (single instance) | Yes (`obj(:)` allocatable, sized to `number_of_instances`) |
@@ -888,13 +888,13 @@ message naming the offending token.
   those work unchanged.  For the ~16 schemes that rely on original
   capgen's auto-clone path (`advected = True` on a `_run` arg with no
   matching register-phase source), pass
-  `--legacy-auto-clone-constituents` to `ccpp_capgen_ng.py` and
-  `ccpp_validator.py` — capgen-ng then auto-registers those
+  `--legacy-auto-clone-constituents` to `ccpp_capgen.py` and
+  `ccpp_validator.py` — capgen then auto-registers those
   constituents into the per-suite dynamic-constituents buffer the same
   way original capgen did.  See `doc/auto_clone_constituents.md`.
 - **Host metadata**: drop any explicit declaration of
   `ccpp_model_constituents_object` if you carried one over from a
-  previous capgen-ng experiment — the generator owns it now.
+  previous capgen experiment — the generator owns it now.
 - **Host Fortran**: change all `<host>_ccpp_*_constituents` calls to
   the unprefixed names (`ccpp_register_constituents` etc.) and add
   `instance_number` to every call site.

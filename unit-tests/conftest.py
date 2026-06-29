@@ -1,12 +1,12 @@
-"""pytest configuration for capgen-ng unit tests.
+"""pytest configuration for capgen unit tests.
 
-Adds the capgen-ng package root to sys.path so that ``import metadata`` and
+Adds the capgen package root to sys.path so that ``import metadata`` and
 ``import generator`` work regardless of where pytest is invoked from.
 
 Layout assumed::
 
     <repo-root>/
-        capgen-ng/        <-- the package being tested
+        capgen/        <-- the package being tested
         unit-tests/       <-- this file's parent directory
             conftest.py
             test_*.py
@@ -22,8 +22,8 @@ import sys
 _TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 # repository root (parent of unit-tests/)
 _REPO_ROOT = os.path.dirname(_TESTS_DIR)
-# capgen-ng/ package directory (sibling of unit-tests/)
-_CAPGEN_DIR = os.path.join(_REPO_ROOT, 'capgen-ng')
+# capgen/ package directory (sibling of unit-tests/)
+_CAPGEN_DIR = os.path.join(_REPO_ROOT, 'capgen')
 
 for _path in (_TESTS_DIR, _CAPGEN_DIR, _REPO_ROOT):
     if _path not in sys.path:

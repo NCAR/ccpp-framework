@@ -915,7 +915,7 @@ _SIMPLE_SCHEME_SRC = '''\
 
 class TestRule2LeafScalarDimRejection(unittest.TestCase):
     """Rule 2 of the registered-scalar-index-dimension contract (see
-    capgen-ng/metadata/registered_dimensions.py): leaf data variables —
+    capgen/metadata/registered_dimensions.py): leaf data variables —
     intrinsic-typed or external-typed, the kind a scheme binds to —
     MUST NOT declare a registered scalar-index dim like
     ``number_of_threads``.  ``build_flat_host_dict`` is the validation
@@ -977,7 +977,7 @@ class TestRule2LeafScalarDimRejection(unittest.TestCase):
         legitimate pattern: schemes take the whole sliced DDT array as
         a single arg, not individual flattened inner fields.
 
-        capgen-ng must NOT flatten the inner fields in this case —
+        capgen must NOT flatten the inner fields in this case —
         attempting to bake a scalar subscript would emit invalid
         Fortran like ``parent%var%field(...)``.  Instead, only the
         DDT-instance's own entry is recorded; schemes that take it
@@ -1023,7 +1023,7 @@ class TestRule2LeafScalarDimRejection(unittest.TestCase):
         d = build_flat_host_dict(host_tbls, [], ddt_tbls)
         self.assertIn('longwave_radiation_fluxes', d)
         # Inner field is NOT flattened (would have required a scalar
-        # subscript capgen-ng can't synthesize).
+        # subscript capgen can't synthesize).
         self.assertNotIn('surface_upwelling_longwave_radiation_flux', d)
 
     def test_ddt_instance_with_non_registered_dim_no_fields_accepted(self):

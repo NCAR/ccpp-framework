@@ -77,7 +77,7 @@ add_subdirectory(instances)
 
 #------------------------------------------------------------------------------
 # Run most complex tests last
-add_subdirectory(capgen_ng)
+add_subdirectory(capgen)
 add_subdirectory(var_compat)
 add_subdirectory(suite_allocate)
 add_subdirectory(constituents_dim)

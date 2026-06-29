@@ -2226,7 +2226,7 @@ class TestResolveSuiteMissingSchemeFailsLoudly(unittest.TestCase):
     """An SDF that references a scheme whose ``.meta`` was not passed
     via ``--scheme-files`` MUST raise ``CCPPError`` at resolve time,
     listing every missing scheme.  Regression for the silent-empty-cap
-    bug: capgen-ng would otherwise emit a syntactically valid but
+    bug: capgen would otherwise emit a syntactically valid but
     semantically empty group cap and the build would succeed with the
     wrong runtime behaviour."""
 
@@ -3441,7 +3441,7 @@ def _load_constituent_host_dict():
     ddt_tbls = []
     fw_meta = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
-        'capgen-ng', 'src', 'ccpp_constituent_prop_mod.meta',
+        'capgen', 'src', 'ccpp_constituent_prop_mod.meta',
     )
     if os.path.isfile(fw_meta):
         ddt_tbls = parse_metadata_file(fw_meta)
@@ -4233,7 +4233,7 @@ class TestUsedConstDimStdNames(unittest.TestCase):
     def test_ccpp_constituents_dim_lands_on_dedicated_field(self):
         # Uses _load_full_host_dict (no ccpp_model_constituents_t DDT
         # instance), so the host-wins gate does NOT fire and the
-        # resolver routes through capgen-ng's auto-provisioning path.
+        # resolver routes through capgen's auto-provisioning path.
         from generator.suite_resolver import _resolve_constituent_arg
         hd = _load_full_host_dict()
         suite_var = self._scheme_var(
@@ -4283,7 +4283,7 @@ class TestUsedConstDimStdNames(unittest.TestCase):
         # ``vars_minvalue`` member, not Path 2 (constituent auto-
         # provisioning).  Drives cam-sima's ``qneg`` scheme: under the
         # original capgen contract this was a host-USE'd module array;
-        # capgen-ng exposes it through the per-instance object.
+        # capgen exposes it through the per-instance object.
         from generator.suite_resolver import _resolve_constituent_arg
         hd = _load_full_host_dict()
         suite_var = self._scheme_var(
@@ -4766,7 +4766,7 @@ class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):
     def test_unclaimed_index_of_still_routes_to_constituents(self):
         """The framework auto-provisioning path is preserved for
         ``index_of_<X>`` names the host does NOT declare — required for
-        capgen-ng-owned constituent flows (cf. the advection e2e test)."""
+        capgen-owned constituent flows (cf. the advection e2e test)."""
         hd = build_flat_host_dict(_parse(self._HOST_SRC), [], [])
         suite_var = self._scheme_var(
             'idx_other', 'index_of_some_other_constituent_not_in_host',
@@ -4792,7 +4792,7 @@ class TestDimDDTComponentResolution(unittest.TestCase):
        (``access_path == local_name``).
 
     Historical: this was a long-standing pain point in the original
-    capgen → SCM migration.  The pre-2026-05-13 capgen-ng emitted
+    capgen → SCM migration.  The pre-2026-05-13 capgen emitted
     ``use scm_type_defs, only: levs`` and similar bogus imports for
     every DDT-component dim, producing many ``Symbol referenced ...
     not found in module`` errors at compile time.

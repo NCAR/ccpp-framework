@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Metadata table parser for ccpp-capgen-ng.
+"""Metadata table parser for ccpp-capgen.
 
 Each ``.meta`` file contains one or more CCPP metadata tables.  Every table
 begins with a ``[ccpp-table-properties]`` header, followed by one or more
@@ -990,7 +990,7 @@ class MetadataTable:
         # lines targeting the actual module rather than the table name.
         self.module_name: str = ''
         # Each entry is ``(kind_name, module, spec)``; aggregated by
-        # ccpp_capgen_ng into the kind map for ccpp_kinds.F90.
+        # ccpp_capgen into the kind map for ccpp_kinds.F90.
         self.kind_specs: List[Tuple[str, str, str]] = []
 
     def apply_table_props(self, props: dict) -> None:

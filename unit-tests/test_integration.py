@@ -1,4 +1,4 @@
-"""End-to-end integration tests for capgen_ng.capgen().
+"""End-to-end integration tests for capgen.capgen().
 
 These tests invoke the full pipeline — metadata loading, variable resolution,
 and file generation — and verify that all expected output files are produced
@@ -12,7 +12,7 @@ import time
 import unittest
 import xml.etree.ElementTree as ET
 
-from ccpp_capgen_ng import capgen
+from ccpp_capgen import capgen
 
 _TESTS_DIR   = os.path.dirname(__file__)
 _SAMPLES_DIR = os.path.join(_TESTS_DIR, 'sample_files')
@@ -295,13 +295,13 @@ class TestHostConstituentsEmittedEndToEnd(unittest.TestCase):
                 self.assertTrue(os.path.isfile(path),
                                 'framework file missing: ' + path)
 
-    def test_framework_paths_resolve_under_capgen_ng_src(self):
-        """Every framework F90 listed must resolve under capgen-ng/src/.
-        Capgen-ng ships self-contained — no parent-dir fallback.  If any
-        framework file lands outside capgen-ng/src/ this test fails so
-        downstream consumers (vendoring just capgen-ng/) don't silently
+    def test_framework_paths_resolve_under_capgen_src(self):
+        """Every framework F90 listed must resolve under capgen/src/.
+        Capgen ships self-contained — no parent-dir fallback.  If any
+        framework file lands outside capgen/src/ this test fails so
+        downstream consumers (vendoring just capgen/) don't silently
         miss a required dependency."""
-        from ccpp_capgen_ng import _FRAMEWORK_SRC_DIR
+        from ccpp_capgen import _FRAMEWORK_SRC_DIR
         framework_names = {
             'ccpp_constituent_prop_mod.F90',
             'ccpp_hashable.F90',
@@ -314,34 +314,34 @@ class TestHostConstituentsEmittedEndToEnd(unittest.TestCase):
             if os.path.basename(path) in framework_names:
                 self.assertEqual(
                     os.path.abspath(os.path.dirname(path)), canonical,
-                    'framework F90 outside capgen-ng/src/: ' + path,
+                    'framework F90 outside capgen/src/: ' + path,
                 )
 
 
 class TestResolveFrameworkF90FilesMissingRaises(unittest.TestCase):
     """``_resolve_framework_f90_files`` raises CCPPError listing the
     missing file(s) when a required framework F90 is not present under
-    capgen-ng/src/.  Catches deployment errors immediately instead of
+    capgen/src/.  Catches deployment errors immediately instead of
     leaving the host build to fail with an opaque "Cannot open module
     file" message at compile time."""
 
     def test_missing_file_raises_with_actionable_message(self):
-        import ccpp_capgen_ng
+        import ccpp_capgen
         from metadata.parse_tools import CCPPError
         # Append a never-vendored sentinel to the framework-F90 list,
         # then restore on teardown via a try/finally so we don't leak
         # state into other tests.
-        original = list(ccpp_capgen_ng._FRAMEWORK_F90_FILES)
-        ccpp_capgen_ng._FRAMEWORK_F90_FILES.append('definitely_missing.F90')
+        original = list(ccpp_capgen._FRAMEWORK_F90_FILES)
+        ccpp_capgen._FRAMEWORK_F90_FILES.append('definitely_missing.F90')
         try:
             with self.assertRaises(CCPPError) as cm:
-                ccpp_capgen_ng._resolve_framework_f90_files()
+                ccpp_capgen._resolve_framework_f90_files()
         finally:
-            ccpp_capgen_ng._FRAMEWORK_F90_FILES[:] = original
+            ccpp_capgen._FRAMEWORK_F90_FILES[:] = original
         msg = str(cm.exception)
         # Names the missing file, the search dir, and what to do.
         self.assertIn('definitely_missing.F90',     msg)
-        self.assertIn(ccpp_capgen_ng._FRAMEWORK_SRC_DIR, msg)
+        self.assertIn(ccpp_capgen._FRAMEWORK_SRC_DIR, msg)
         self.assertIn('Vendor',                     msg)
 
 
@@ -1208,7 +1208,7 @@ class TestUnusedSchemeDependenciesFiltered(unittest.TestCase):
     """Scheme metadata files supplied on the CLI but not referenced by
     any loaded suite must not contribute to datatable.xml's
     <dependencies>.  Host build systems often pass the full physics
-    metadata catalog and rely on capgen-ng to narrow the compile set.
+    metadata catalog and rely on capgen to narrow the compile set.
     """
 
     _USED_DEP   = '/tmp/used_phys/used_dep.F90'
@@ -1408,7 +1408,7 @@ class TestDdtDependenciesInSchemeMetaPreserved(unittest.TestCase):
     The DDT block's ``dependencies = …`` must reach datatable.xml even
     though the table name ('vmr_type', not the scheme name) won't match
     the used-schemes set.  Regression for the bug that broke the
-    end-to-end-tests/capgen_ng test where ddt2.F90 went missing because
+    end-to-end-tests/capgen test where ddt2.F90 went missing because
     the DDT's deps were filtered out alongside actual scheme deps."""
 
     _DDT_DEP = '/tmp/ddt_phys/inner_ddt.F90'
@@ -1969,7 +1969,7 @@ class TestChunkedDataIntegration(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 def _run_interstitial(tmpdir):
-    from ccpp_capgen_ng import capgen
+    from ccpp_capgen import capgen
     capgen(
         host_name='test_host',
         host_files=[_sf('host_full.meta'), _sf('control_full.meta')],

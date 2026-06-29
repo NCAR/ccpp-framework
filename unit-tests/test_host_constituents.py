@@ -480,7 +480,7 @@ def _render_long_name_constituent():
     host_tbls = parse_metadata_file(os.path.join(samples, 'host_with_constituents.meta'))
     ctrl_tbls = parse_metadata_file(os.path.join(samples, 'control_full.meta'))
     fw_meta = os.path.join(
-        os.path.dirname(here), 'capgen-ng', 'src', 'ccpp_constituent_prop_mod.meta',
+        os.path.dirname(here), 'capgen', 'src', 'ccpp_constituent_prop_mod.meta',
     )
     ddt_tbls = parse_metadata_file(fw_meta) if os.path.isfile(fw_meta) else []
     hd = build_flat_host_dict(host_tbls, ctrl_tbls, ddt_tbls)

@@ -4,11 +4,11 @@
 
 Run with::
 
-    python -m pytest capgen-ng/tests/test_metadata_table.py -v
+    python -m pytest capgen/tests/test_metadata_table.py -v
 
 or::
 
-    python -m unittest capgen-ng.tests.test_metadata_table
+    python -m unittest capgen.tests.test_metadata_table
 
 All test methods follow the ``test_<topic>`` naming convention and are
 documented inline to explain both what is being tested and *why* it matters
@@ -23,7 +23,7 @@ import unittest
 
 # ---- locate the package root -----------------------------------------------
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
-_PKG_ROOT   = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen-ng')
+_PKG_ROOT   = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen')
 if _PKG_ROOT not in sys.path:
     sys.path.insert(0, _PKG_ROOT)
 
@@ -1610,13 +1610,13 @@ class TestTableVariables(unittest.TestCase):
 ########################################################################
 
 class TestCLIHelpers(unittest.TestCase):
-    """Tests for CLI utility functions in ccpp_capgen_ng."""
+    """Tests for CLI utility functions in ccpp_capgen."""
 
     def setUp(self):
         import importlib
         import importlib.util
-        script = os.path.join(_PKG_ROOT, 'ccpp_capgen_ng.py')
-        spec = importlib.util.spec_from_file_location('ccpp_capgen_ng', script)
+        script = os.path.join(_PKG_ROOT, 'ccpp_capgen.py')
+        spec = importlib.util.spec_from_file_location('ccpp_capgen', script)
         self.mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.mod)
 
@@ -1764,7 +1764,7 @@ class TestCLIHelpers(unittest.TestCase):
     def test_merge_then_default_kind_phys_injected_when_neither_provides(self):
         """Default kind_phys is injected after the merge when neither side declares it."""
         import logging
-        log = logging.getLogger('ccpp_capgen_ng_test')
+        log = logging.getLogger('ccpp_capgen_test')
         merged = self.mod._merge_cli_and_metadata_kinds({}, {})
         merged = self.mod._ensure_kind_phys_default(merged, log)
         self.assertEqual(
@@ -1774,7 +1774,7 @@ class TestCLIHelpers(unittest.TestCase):
     def test_metadata_kind_phys_suppresses_default(self):
         """Metadata declaring kind_phys keeps the default from being injected."""
         import logging
-        log    = logging.getLogger('ccpp_capgen_ng_test')
+        log    = logging.getLogger('ccpp_capgen_test')
         meta   = {'kind_phys': ('host_kinds', 'kind_r8')}
         merged = self.mod._merge_cli_and_metadata_kinds({}, meta)
         merged = self.mod._ensure_kind_phys_default(merged, log)

@@ -1,5 +1,5 @@
---- capgen-ng/src/ccpp_constituent_prop_mod.F90
-+++ capgen-ng/src/ccpp_constituent_prop_mod.F90
+--- capgen/src/ccpp_constituent_prop_mod.F90
++++ capgen/src/ccpp_constituent_prop_mod.F90
 @@ -1392,6 +1392,17 @@
      type(ccpp_constituent_properties_t), pointer :: cprop
      character(len=dimname_len) :: dimname

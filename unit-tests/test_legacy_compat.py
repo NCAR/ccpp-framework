@@ -15,7 +15,7 @@ import sys
 import unittest
 
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
-_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen-ng')
+_CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen')
 if _CAPGEN_DIR not in sys.path:
     sys.path.insert(0, _CAPGEN_DIR)
 
@@ -130,7 +130,7 @@ class TestTranslateOn(_LegacyModeFixture):
 
     def test_number_of_openmp_threads_rewritten(self):
         """Legacy CCPP-physics hosts (and SCM 17p8) size per-thread DDT
-        containers by ``number_of_openmp_threads``.  The capgen-ng
+        containers by ``number_of_openmp_threads``.  The capgen
         convention is ``number_of_threads`` (matching the
         ``thread_number`` control variable name).  Legacy mode rewrites
         both as a standard_name attribute AND as a dimension token."""

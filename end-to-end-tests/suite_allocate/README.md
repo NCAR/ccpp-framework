@@ -5,7 +5,7 @@ suite-owned, scheme-allocated variable (allocatable = True).
 
 scratch_workspace_field is produced by make_workspace (intent=out,
 allocatable = True) and consumed by use_workspace. No host table declares
-it, so capgen-ng promotes it to a suite-owned variable stored in
+it, so capgen promotes it to a suite-owned variable stored in
 ccpp_<suite>_data.
 
 Crucially, its dimension workspace_dimension is also suite-owned: it is set
@@ -28,6 +28,6 @@ use-after-free in the scheme-allocates / suite-frees ownership split fails the
 test.
 
 This is distinct from:
-- capgen_ng — suite-owned vars allocated at init from a register-set dim
+- capgen — suite-owned vars allocated at init from a register-set dim
   (non-allocatable path), and a host-owned allocatable var (model_times).
 - nested_suite / var_compat — standalone DDTs with module_name.

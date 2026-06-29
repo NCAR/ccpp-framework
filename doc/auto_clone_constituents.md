@@ -1,6 +1,6 @@
 # `--legacy-auto-clone-constituents` — transient shim
 
-A capgen-ng CLI flag that re-enables the **auto-clone-static-constituent**
+A capgen CLI flag that re-enables the **auto-clone-static-constituent**
 registration path the original ccpp-capgen toolchain provided to
 CAM-SIMA. Off by default; turned on with a single flag and a loud
 startup banner. Intended as a migration aid — every line of code it
@@ -9,17 +9,17 @@ legacy hosts have moved on.
 
 ## How to enable it
 
-Pass the flag to both `capgen-ng` and `ccpp_validator` (the
+Pass the flag to both `capgen` and `ccpp_validator` (the
 ccpp-physics build system already does this for
 `end-to-end-tests/advection_auto_clone/`):
 
 ```
-ccpp_capgen_ng.py     --legacy-auto-clone-constituents  ...
+ccpp_capgen.py     --legacy-auto-clone-constituents  ...
 ccpp_validator.py     --legacy-auto-clone-constituents  ...
 ```
 
 It is **single-instance only**. If the host metadata declares the
-`instance_number` + `number_of_instances` pair (capgen-ng's
+`instance_number` + `number_of_instances` pair (capgen's
 multi-instance opt-in), the run aborts with a clear error before
 parsing any suite. Legacy hosts predate multi-instance support, so
 this restriction matches the use case.
@@ -29,7 +29,7 @@ this restriction matches the use case.
 Same shape as original capgen's auto-clone:
 
 For every scheme argument flagged `advected = True`, `constituent = True`,
-or `molar_mass = <value>`, capgen-ng synthesises a `%instantiate(...)`
+or `molar_mass = <value>`, capgen synthesises a `%instantiate(...)`
 call into the generated host code, lifting field values straight from
 the scheme metadata. The constituent ends up registered in the
 per-suite dynamic-constituents buffer alongside any constituents the
@@ -52,13 +52,13 @@ legacy metadata writes the values in source form.
 
 The other `%instantiate` kwargs (`std_name`, `long_name`,
 `diag_name`, `units`, `vertical_dim`, `advected`, `molar_mass`)
-already had accepted spellings in capgen-ng; the shim just wires them
+already had accepted spellings in capgen; the shim just wires them
 into the synthesised call.
 
 ## Defaults that match original capgen
 
 - **`long_name` is synthesised when missing.** If the scheme metadata
-  has no `long_name` on a constituent arg, capgen-ng builds one from
+  has no `long_name` on a constituent arg, capgen builds one from
   the standard name by replacing underscores with spaces and
   capitalising the first character.
   Example: `cloud_liquid_dry_mixing_ratio` →
@@ -72,13 +72,13 @@ into the synthesised call.
 
 ## What's stricter than original capgen
 
-Capgen-ng's general rules apply even with the flag on. Two of them
+Capgen's general rules apply even with the flag on. Two of them
 trip up legacy fixtures:
 
 1. **Metadata args must match the Fortran subroutine signature.**
    Original capgen tolerated a metadata arg-table that listed a
    constituent in `<scheme>_init` even when the Fortran `_init`
-   didn't accept it as a dummy. Capgen-ng passes the metadata args
+   didn't accept it as a dummy. Capgen passes the metadata args
    at the call site as Fortran keyword arguments, and the validator
    catches divergence. Either include the constituent as a Fortran
    dummy, or remove it from the init's arg-table.
@@ -104,7 +104,7 @@ register constituents explicitly (`rrtmgp_constituents`,
 `state_converters`, `geopotential_temp`, `cloud_particle_sedimentation`,
 …) declare `advected = True intent = inout` on their `_run`
 arguments and let the framework register the constituent. Without
-the flag, capgen-ng's runtime check fires for every consumer
+the flag, capgen's runtime check fires for every consumer
 because no source actually registered the species. The flag closes
 that gap by re-creating the auto-clone behaviour from the metadata.
 
@@ -120,7 +120,7 @@ The fixture is a port of CAM-SIMA's `ccpp_framework/test/advection_test`.
 It exercises the full legacy attr surface (`default_value`,
 `diagnostic_name`, `advected`) and the unusual init-phase
 `intent = out`-on-base-constituent pattern. Three small edits were
-needed to make the port build under capgen-ng:
+needed to make the port build under capgen:
 
 1. **`cld_liq.meta`** — in `cld_liq_init`'s `[ cld_liq_array ]`
    block, change `intent = out` to `intent = inout`.
@@ -133,7 +133,7 @@ needed to make the port build under capgen-ng:
    `(tfreeze, errmsg, errflg)`; the run phase already triggers
    auto-clone registration of `cloud_ice_dry_mixing_ratio`.
 
-No `long_name` additions to the metadata were necessary — capgen-ng
+No `long_name` additions to the metadata were necessary — capgen
 synthesises the long_name from the standard name automatically
 (see the defaults section above).
 
@@ -141,7 +141,7 @@ The CTest target `test_advection_auto_clone` passes after these edits.
 
 ## When to retire the flag
 
-When all consumers have been moved to capgen-ng's explicit
+When all consumers have been moved to capgen's explicit
 registration model — either by declaring constituents in the host's
 `host_constituents(:)` array, or by writing a register-phase scheme
 with a `ccpp_constituent_properties_t(:), intent=out` argument that

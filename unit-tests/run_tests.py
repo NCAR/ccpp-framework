@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convenience script to run all capgen-ng unit tests.
+"""Convenience script to run all capgen unit tests.
 
 Usage::
 
@@ -18,7 +18,7 @@ import unittest
 # ---- path setup ------------------------------------------------------------
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT  = os.path.dirname(_TESTS_DIR)
-_CAPGEN_DIR = os.path.join(_REPO_ROOT, 'capgen-ng')
+_CAPGEN_DIR = os.path.join(_REPO_ROOT, 'capgen')
 
 for _p in (_CAPGEN_DIR, _REPO_ROOT):
     if _p not in sys.path:
