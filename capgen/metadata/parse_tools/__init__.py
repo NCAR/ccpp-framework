@@ -5,7 +5,7 @@ from .parse_source import (
     ParseSyntaxError,
     ParseContext,
 )
-from .parse_log import init_log, set_log_level, set_log_to_null, set_log_to_stdout
+from .parse_log import init_log, set_log_level, set_log_to_null
 from .parse_checkers import (
     check_units,
     check_dimensions,

@@ -4,20 +4,13 @@ import logging
 
 
 def init_log(name, level=None):
-    """Initialize and return a named logger.
+    """Initialize and return a named logger writing to stdout.
 
-    Defaults to WARNING level when *level* is not specified and the logger
-    has no existing level set.
-
-    >>> logger = init_log('test_logger')
-    >>> logger.name
-    'test_logger'
+    When *level* is given it is applied; otherwise the logger inherits the
+    root default (WARNING).
     """
     logger = logging.getLogger(name)
-    llevel = logger.getEffectiveLevel()
-    if level is None and llevel == logging.NOTSET:
-        logger.setLevel(logging.WARNING)
-    elif level:
+    if level:
         logger.setLevel(level)
     set_log_to_stdout(logger)
     return logger
