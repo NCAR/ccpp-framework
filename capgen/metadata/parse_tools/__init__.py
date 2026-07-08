@@ -3,9 +3,7 @@
 from .parse_source import (
     CCPPError,
     ParseSyntaxError,
-    ParseInternalError,
     ParseContext,
-    context_string,
 )
 from .parse_log import init_log, set_log_level, set_log_to_null, set_log_to_stdout
 from .parse_checkers import (
