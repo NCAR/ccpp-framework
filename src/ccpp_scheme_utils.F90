@@ -3,7 +3,7 @@ module ccpp_scheme_utils
   ! Module of utilities available to CCPP schemes
 
   use ccpp_constituent_prop_mod, only: ccpp_model_constituents_t, &
-      int_unassigned
+      int_unassigned, to_lower
 
   implicit none
   private
@@ -12,7 +12,6 @@ module ccpp_scheme_utils
   public :: ccpp_initialize_constituent_ptr ! Used by framework to initialize
   public :: ccpp_constituent_index ! Lookup index constituent by name
   public :: ccpp_constituent_indices ! Lookup indices of consitutents by name
-  public :: to_lower ! Convert string to lowercase
 
   !! Private module variables & interfaces
 
@@ -119,35 +118,5 @@ contains
       end if
     end if
   end subroutine ccpp_constituent_indices
-
-  function to_lower(str)
-
-    implicit none
-
-    ! !INPUT/OUTPUT PARAMETERS:
-    character(len=*), intent(in) :: str      ! String to convert to lower case
-    character(len=len(str))      :: to_lower
-
-    !----- local -----
-    integer :: i              ! Index
-    integer :: aseq           ! ascii collating sequence
-    integer :: upper_to_lower ! integer to convert case
-    character(len=1) :: ctmp  ! Character temporary
-
-    !-------------------------------------------------------------------------------
-    !
-    !-------------------------------------------------------------------------------
-
-    upper_to_lower = iachar("a") - iachar("A")
-
-    do i = 1, len(str)
-       ctmp = str(i:i)
-       aseq = iachar(ctmp)
-       if ( aseq >= iachar("A") .and. aseq <= iachar("Z") ) &
-            ctmp = achar(aseq + upper_to_lower)
-       to_lower(i:i) = ctmp
-    end do
-
-  end function to_lower
 
 end module ccpp_scheme_utils
