@@ -580,7 +580,7 @@ def _generate_host_constituents(
     lines.append('module {}'.format(_HOST_CONST_MOD))
     lines.append('')
     lines.append('{}use ccpp_kinds, only: kind_phys'.format(_INDENT))
-    lines.append('{}use ccpp_scheme_utils, only: to_lower'.format(_INDENT))
+    lines.append('{}use ccpp_constituent_prop_mod, only: to_lower'.format(_INDENT))
     lines.append('{}use {}, only: &'.format(_INDENT, _CONST_PROP_MOD))
     lines.append('{}{}, &'.format(_INDENT * 2, _CONST_DDT))
     lines.append('{}{}, &'.format(_INDENT * 2, _CONST_PROP_TYPE))
