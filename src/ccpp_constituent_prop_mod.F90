@@ -2641,7 +2641,7 @@ contains
   function to_lower(str)
 
     character(len=*), intent(in) :: str ! String to convert to lower case
-    character(len=len(str))      :: to_lower
+    character(len=len(str)) :: to_lower
 
     ! Local variables
     integer :: i ! Index
@@ -2654,8 +2654,8 @@ contains
     do i = 1, len(str)
       ctmp = str(i:i)
       aseq = iachar(ctmp)
-      if ( aseq >= iachar("A") .and. aseq <= iachar("Z") ) &
-           ctmp = achar(aseq + upper_to_lower)
+      if (aseq >= iachar("A") .and. aseq <= iachar("Z")) &
+          ctmp = achar(aseq + upper_to_lower)
       to_lower(i:i) = ctmp
     end do
 
