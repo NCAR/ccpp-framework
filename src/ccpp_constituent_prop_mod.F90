@@ -410,7 +410,7 @@ contains
     else
       errcode = 0
       errmsg = ''
-      this%var_std_name = trim(std_name)
+      this%var_std_name = trim(to_lower(std_name))
     end if
     if (errcode == 0) then
       this%var_long_name = trim(long_name)
