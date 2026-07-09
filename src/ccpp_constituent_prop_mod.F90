@@ -2640,30 +2640,23 @@ contains
 
   function to_lower(str)
 
-    implicit none
-
-    ! !INPUT/OUTPUT PARAMETERS:
-    character(len=*), intent(in) :: str      ! String to convert to lower case
+    character(len=*), intent(in) :: str ! String to convert to lower case
     character(len=len(str))      :: to_lower
 
-    !----- local -----
-    integer :: i              ! Index
-    integer :: aseq           ! ascii collating sequence
+    ! Local variables
+    integer :: i ! Index
+    integer :: aseq ! ascii collating sequence
     integer :: upper_to_lower ! integer to convert case
-    character(len=1) :: ctmp  ! Character temporary
-
-    !-------------------------------------------------------------------------------
-    !
-    !-------------------------------------------------------------------------------
+    character(len=1) :: ctmp ! Character temporary
 
     upper_to_lower = iachar("a") - iachar("A")
 
     do i = 1, len(str)
-       ctmp = str(i:i)
-       aseq = iachar(ctmp)
-       if ( aseq >= iachar("A") .and. aseq <= iachar("Z") ) &
-            ctmp = achar(aseq + upper_to_lower)
-       to_lower(i:i) = ctmp
+      ctmp = str(i:i)
+      aseq = iachar(ctmp)
+      if ( aseq >= iachar("A") .and. aseq <= iachar("Z") ) &
+           ctmp = achar(aseq + upper_to_lower)
+      to_lower(i:i) = ctmp
     end do
 
   end function to_lower
