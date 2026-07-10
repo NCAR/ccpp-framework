@@ -52,63 +52,39 @@ def check_units(test_val, prop_dict, error):
     return test_val
 
 
-def check_dimensions(test_val, prop_dict, error, max_len=0):
-    """Return <test_val> if a valid dimensions list, otherwise, None
-    If <max_len> > 0, each string in <test_val> must not be longer than
-    <max_len>.
-    if <error> is True, raise an Exception if <test_val> is not valid.
-    >>> check_dimensions(["dim1", "dim2name"], None, False)
-    ['dim1', 'dim2name']
-    >>> check_dimensions([":", ":"], None, False)
-    [':', ':']
-    >>> check_dimensions(["8", "::"], None, False)
-    ['8', '::']
-    >>> check_dimensions(['start1:end1', 'start2:end2'], None, False)
-    ['start1:end1', 'start2:end2']
-    >>> check_dimensions(['size(foo)'], None, False)
-    ['size(foo)']
-    >>> check_dimensions(['size(foo,1'], None, False) #doctest: +IGNORE_EXCEPTION_DETAIL
+def check_dimension(test_val):
+    """Return <test_val> if a valid single dimension entry, else raise CCPPError.
+
+    A dimension entry is a colon-separated range (``lower``, ``lower:upper``,
+    or ``lower:upper:stride``) whose non-empty bounds are each an integer
+    literal or a Fortran identifier.  Integer literals are valid in any bound
+    position; semantic restrictions (e.g. horizontal_dimension lower bound
+    must be 1) are enforced by the resolver, not here.
+    >>> check_dimension("dim2name")
+    'dim2name'
+    >>> check_dimension("8")
+    '8'
+    >>> check_dimension(":")
+    ':'
+    >>> check_dimension("start:end")
+    'start:end'
+    >>> check_dimension("ccpp_constant_one:1")
+    'ccpp_constant_one:1'
+    >>> check_dimension("a:b:c:d") #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    CCPPError: Invalid dimension component, size(foo,1
-    >>> check_dimensions(["dim1", "dim2name"], None, True, max_len=5) #doctest: +IGNORE_EXCEPTION_DETAIL
+    CCPPError: 'a:b:c:d' is an invalid dimension range
+    >>> check_dimension("hi mom") #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    CCPPError: 'dim2name' is too long (> 5 chars)
-    >>> check_dimensions("hi_mom", None, True) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    CCPPError: 'hi_mom' is invalid; not a list
-    >>> check_dimensions(["ccpp_constant_one:1", "dim2name"], None, True)
-    ['ccpp_constant_one:1', 'dim2name']
+    CCPPError: 'hi mom' is not a valid Fortran identifier
     """
-    if not isinstance(test_val, list):
-        if error:
-            raise CCPPError("'{}' is invalid; not a list".format(test_val))
-        return None
-    for item in test_val:
-        isplit = item.split(':')
-        if len(isplit) > 3:
-            if error:
-                raise CCPPError("'{}' is an invalid dimension range".format(item))
-            return None
-        # Integer literals are valid in any bound position; semantic
-        # restrictions (e.g. horizontal_dimension lower bound must be 1)
-        # are enforced by the resolver, not here.
-        tdims = [x.strip() for x in isplit if len(x) > 0]
-        for tdim in tdims:
-            try:
-                int(tdim)
-                valid = True
-            except ValueError:
-                valid = check_fortran_id(tdim, None, error,
-                                         max_len=max_len) is not None
-                if not valid and tdim.strip().lower()[0:4] == 'size':
-                    if -1 in check_balanced_paren(tdim[4:]):
-                        raise CCPPError(
-                            'Invalid dimension component, {}'.format(tdim))
-                    valid = True
-            if not valid:
-                if error:
-                    raise CCPPError(f"'{item}' is an invalid dimension name")
-                return None
+    isplit = test_val.split(':')
+    if len(isplit) > 3:
+        raise CCPPError("'{}' is an invalid dimension range".format(test_val))
+    for tdim in [x.strip() for x in isplit if len(x) > 0]:
+        try:
+            int(tdim)
+        except ValueError:
+            check_fortran_id(tdim, None, error=True)
     return test_val
 
 
@@ -116,27 +92,25 @@ CF_ID = r"(?i)[a-z][a-z0-9_]*"
 __CFID_RE = re.compile(CF_ID + r"$")
 
 
-def check_cf_standard_name(test_val, prop_dict, error):
-    """Return <test_val> if a valid CF Standard Name, otherwise, None.
+def check_cf_standard_name(test_val):
+    """Return the lowercased <test_val> if a valid CCPP Standard Name,
+    otherwise raise CCPPError.
     http://cfconventions.org/Data/cf-standard-names/docs/guidelines.html
-    if <error> is True, raise an Exception if <test_val> is not valid.
-    >>> check_cf_standard_name("hi_mom", None, False)
+    >>> check_cf_standard_name("hi_mom")
     'hi_mom'
-    >>> check_cf_standard_name("hi mom", None, False)
-
-    >>> check_cf_standard_name("", None, False) #doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> check_cf_standard_name("Agood4tranID")
+    'agood4tranid'
+    >>> check_cf_standard_name("") #doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     CCPPError: CCPP Standard Name cannot be blank
-    >>> check_cf_standard_name("Agood4tranID", None, False)
-    'agood4tranid'
+    >>> check_cf_standard_name("hi mom") #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: 'hi mom' is not a valid CCPP Standard Name
     """
     if len(test_val) == 0:
         raise CCPPError("CCPP Standard Name cannot be blank")
     if __CFID_RE.match(test_val) is None:
-        if error:
-            raise CCPPError(
-                "'{}' is not a valid CCPP Standard Name".format(test_val))
-        return None
+        raise CCPPError("'{}' is not a valid CCPP Standard Name".format(test_val))
     return test_val.lower()
 
 
@@ -155,8 +129,6 @@ FORTRAN_SCALAR_REF_RE = re.compile(
 FORTRAN_INTRINSIC_TYPES = ["integer", "real", "logical", "complex",
                            "double precision", "character"]
 FORTRAN_DP_RE = re.compile(r"(?i)double\s*precision")
-
-_REGISTERED_FORTRAN_DDT_NAMES = ["ccpp_constituent_prop_ptr_t"]
 
 
 def check_fortran_id(test_val, prop_dict, error, max_len=0):
@@ -257,31 +229,6 @@ def check_fortran_intrinsic(typestr, error=False):
     if not match:
         if error:
             raise CCPPError("'{}' is not a valid Fortran type".format(typestr))
-        return None
-    return typestr
-
-
-def check_fortran_type(typestr, prop_dict, error):
-    """Return <typestr> if a valid Fortran type, otherwise, None
-    if <error> is True, raise an Exception if <typestr> is not valid.
-    >>> check_fortran_type("real", None, False)
-    'real'
-    >>> check_fortran_type("char", {}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    CCPPError: 'char' is not a valid Fortran type
-    >>> check_fortran_type("type", {}, True) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    CCPPError: 'type' is not a valid derived Fortran type
-    """
-    dt = ""
-    match = check_fortran_intrinsic(typestr, error=False)
-    if match is None:
-        match = registered_fortran_ddt_name(typestr)
-        dt = " derived"
-    if match is None:
-        if error:
-            raise CCPPError(
-                "'{}' is not a valid{} Fortran type".format(typestr, dt))
         return None
     return typestr
 
@@ -601,62 +548,3 @@ def check_mixing_ratio_type(test_val, prop_dict, error):
     return None
 
 # auto-clone-constituents: END legacy-shim checkers.
-
-
-def check_balanced_paren(string, start=0, error=False):
-    """Return <string> indices delineating a balance set of parentheses.
-    Parentheses in character context do not count.
-    Left parenthesis search begins at <start>.
-    Return start and end indices if found
-    If no parentheses are found, return (-1, -1).
-    If a left parenthesis is found but no balancing right, return (begin, -1)
-    where begin is the index where the left parenthesis was found.
-    If error is True, raise a CCPPError.
-    >>> check_balanced_paren("foo")
-    (-1, -1)
-    >>> check_balanced_paren("(foo, bar)")
-    (0, 9)
-    >>> check_balanced_paren("(size(foo,1), qux)")
-    (0, 17)
-    >>> check_balanced_paren("(foo('bar()'))")
-    (0, 13)
-    >>> check_balanced_paren("(foo('bar()')")
-    (0, -1)
-    >>> check_balanced_paren("(foo('bar()')", error=True) #doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    CCPPError: ERROR: Unbalanced parenthesis in '(foo('bar()')'
-    """
-    index = start
-    begin = -1
-    end = -1
-    depth = 0
-    inchar = None
-    str_len = len(string)
-    while index < str_len:
-        c = string[index]
-        if c in ('"', "'"):
-            if inchar == c:
-                inchar = None
-            elif inchar is None:
-                inchar = c
-        elif inchar is not None:
-            pass
-        elif c == '(':
-            if depth == 0:
-                begin = index
-            depth += 1
-        elif c == ')':
-            depth -= 1
-            if depth == 0:
-                end = index
-                break
-        index += 1
-    if begin >= 0 and end < 0 and error:
-        raise CCPPError("ERROR: Unbalanced parenthesis in '{}'".format(string))
-    return begin, end
-
-
-def registered_fortran_ddt_name(name):
-    if name in _REGISTERED_FORTRAN_DDT_NAMES:
-        return name
-    return None

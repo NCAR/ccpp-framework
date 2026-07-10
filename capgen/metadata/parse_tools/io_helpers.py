@@ -1,25 +1,28 @@
 """File-write helpers with no-op-if-unchanged semantics.
 
-The original ``ccpp-prebuild`` and ``ccpp-capgen`` both avoided rewriting
-generated cap files when their content was unchanged — preserving each
-file's mtime so downstream build systems (CMake, Make, Ninja) don't
-trigger unnecessary recompilation cascades.  This module reproduces that
-behaviour for ``capgen``.
+This module implements the same no-op-if-unchanged semantics as the original
+``ccpp-prebuild`` and ``ccpp-capgen`` — avoiding rewriting generated cap files
+when their content was unchanged — preserving each file's mtime so downstream
+build systems (CMake, Make, Ninja) don't trigger unnecessary recompilation
+cascades.
 
-Staging strategy
-----------------
-A naive ``open(path, 'w')`` always touches the mtime, even when the
-content is identical.  Instead each writer builds the file's content in
-memory and calls :func:`write_if_changed`, which:
+Two separate concerns
+---------------------
+:func:`write_if_changed` handles *whether* to write and *how* to write
+independently — they are different problems and solved by different means:
 
-1. Reads the existing file at *file_path* (if any).
-2. If the existing content matches the new content byte-for-byte, returns
-   ``False`` without touching the filesystem.
-3. Otherwise writes the new content to a sibling temp file (in the same
-   directory, which sits **under the generator's output root** — never
-   ``/tmp``, so this works on systems that disallow ``/tmp`` writes) and
-   then ``os.replace``s it over the target.  Same-directory replace is
-   atomic on POSIX and Windows; no partial writes.
+- **Whether** — the new content is compared in memory against the existing
+  file.  If it is byte-for-byte identical the file is left untouched (mtime
+  preserved), so CMake/Make/Ninja don't see a spurious change and trigger a
+  needless recompilation cascade.  Because the comparison is in memory,
+  nothing is written to disk in the common unchanged case.
+
+- **How** — when the content *does* differ it is written to a sibling temp
+  file which is then ``os.replace``d over the target.  A same-directory
+  replace is atomic on POSIX and Windows, so an interrupted or failed write
+  can never leave a partially written / corrupt cap in place for the build
+  to compile.  The temp file lives in the target's parent directory (under
+  the generator's output root) and is written with the default umask.
 
 For writers that already produce content via a ``with open(...) as fh``
 pattern, use :func:`open_if_changed` as a drop-in replacement — it yields
@@ -50,31 +53,18 @@ def write_if_changed(
         Full file content to write.
     encoding : str
         Encoding passed to :func:`open` for both the read-back comparison
-        and the staged write.  Defaults to ``'utf-8'`` to match every
-        capgen writer.
+        and the staged write.  Defaults to ``'utf-8'``.
     logger : logging.Logger, optional
         When supplied, the helper logs an ``info``-level message after
         each call: ``"Wrote <path>"`` if the file was newly written or
         rewritten, or ``"Unchanged: <path>"`` if the existing content
-        matched and the filesystem was left untouched.  Callers want
-        this so end users can tell at a glance which generated files
-        actually changed on a rerun (the original ccpp-prebuild /
-        ccpp-capgen output distinguished the two cases too).
+        matched and the filesystem was left untouched.
 
     Returns
     -------
     bool
         ``True`` if the file was written or replaced; ``False`` if the
         existing content already matched.
-
-    Notes
-    -----
-    The temp file is created in the target's parent directory via
-    :func:`tempfile.mkstemp` (which generates a unique name and opens it
-    with ``O_EXCL`` semantics).  On any exception, the temp file is
-    removed so we never leak ``.capgen_tmp_*`` artifacts.  Crucially the
-    staging directory is the target's parent — which is under the
-    generator's output root — so no ``/tmp`` access is required.
     """
     parent = os.path.dirname(os.path.abspath(file_path)) or '.'
     os.makedirs(parent, exist_ok=True)
@@ -100,6 +90,10 @@ def write_if_changed(
     try:
         with os.fdopen(tmp_fd, 'w', encoding=encoding) as fh:
             fh.write(content)
+        # mkstemp opens the temp file 0600; restore the umask-based default
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(tmp_path, 0o666 & ~umask)
         os.replace(tmp_path, file_path)
     except BaseException:
         try:

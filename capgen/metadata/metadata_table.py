@@ -88,7 +88,7 @@ from .parse_tools import (
     ParseSyntaxError,
     check_cf_standard_name,
     check_units,
-    check_dimensions,
+    check_dimension,
     check_diagnostic_fixed,
     check_diagnostic_id,
     check_fortran_id,
@@ -317,7 +317,7 @@ def _parse_dimensions(value: str, context: ParseContext) -> List[str]:
                 "empty dimension entry in '{}'".format(value),
                 context=context
             )
-        check_dimensions([part], None, error=True)
+        check_dimension(part)
         # Lowercase every non-integer token so the resolver's
         # host_dict lookups succeed regardless of the user's metadata
         # casing.  Range form ``lower:upper`` lowercases each half;
@@ -636,7 +636,7 @@ class MetaVar:
                 # check_cf_standard_name (which lowercases) so mixed-case
                 # legacy spellings are captured.  No-op otherwise.
                 self.standard_name = legacy_compat.translate(
-                    check_cf_standard_name(value, None, error=True))
+                    check_cf_standard_name(value))
             elif key == 'long_name':
                 self.long_name = value
             elif key == 'units':
