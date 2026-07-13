@@ -628,10 +628,11 @@ class TestWrapperSubroutines(unittest.TestCase):
 
     def test_const_get_index(self):
         # Keyword args ensure unambiguous mapping to the DDT's signature
-        # (index, standard_name, errcode, errmsg).
+        # (index, standard_name, errcode, errmsg).  The query name is passed
+        # through to_lower() so constituent lookups are case-insensitive.
         self.assertIn(
             'call ccpp_model_constituents_obj(inst_num)%const_index('
-            'standard_name=stdname, index=const_index, '
+            'standard_name=to_lower(stdname), index=const_index, '
             'errcode=errcode, errmsg=errmsg)',
             self.text,
         )

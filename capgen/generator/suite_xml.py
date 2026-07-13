@@ -583,7 +583,7 @@ def parse_suite_xml(
 
     # ---- schema validation (pre-expansion) --------------------------------
     if not skip_validation:
-        validate_xml_file(suite_file, 'suite', version, log, schema_path=sdir)
+        validate_xml_file(suite_file, version, log, schema_path=sdir)
 
     # ---- expand nested suites (v2 only) -----------------------------------
     if version[0] >= 2:
@@ -605,7 +605,7 @@ def parse_suite_xml(
 
     # ---- re-validate the expanded XML (catches duplicate xs:ID errors) ----
     if not skip_validation:
-        validate_xml_file(expanded_path, 'suite', version, log, schema_path=sdir)
+        validate_xml_file(expanded_path, version, log, schema_path=sdir)
 
     return suite
 
