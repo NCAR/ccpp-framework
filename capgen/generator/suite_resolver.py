@@ -1059,6 +1059,10 @@ class ResolvedArg:
         Kind declared in the scheme metadata.
     kind_host : str
         Kind of the host/suite variable.
+    unit_scheme : str
+        Unit declared in the scheme metadata.
+    unit_host : str
+        Unit of the host/suite variable.
     temp_name : str
         Name for the transformation temporary (``local_name + '_l'``).
     ptr_name : str
@@ -1085,6 +1089,8 @@ class ResolvedArg:
     unit_backward: str
     kind_scheme: str
     kind_host: str
+    unit_scheme: str
+    unit_host: str
     temp_name: str
     ptr_name: str
     transform_case: int
@@ -1559,6 +1565,8 @@ def _resolve_one_arg(
             unit_backward='',
             kind_scheme=scheme_var.kind,
             kind_host='',
+            unit_scheme=scheme_var.units,
+            unit_host='',
             temp_name='',
             ptr_name='',
             transform_case=1,
@@ -1599,6 +1607,8 @@ def _resolve_one_arg(
             unit_backward='',
             kind_scheme=scheme_var.kind,
             kind_host='',
+            unit_scheme=scheme_var.units,
+            unit_host='',
             temp_name='',
             ptr_name='',
             transform_case=1,
@@ -1965,6 +1975,8 @@ def _resolve_one_arg(
         unit_backward=unit_backward,
         kind_scheme=scheme_kind,
         kind_host=host_kind,
+        unit_scheme=scheme_units,
+        unit_host=host_units,
         temp_name=temp_name,
         ptr_name=ptr_name,
         transform_case=transform_case,
