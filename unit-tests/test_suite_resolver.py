@@ -2644,9 +2644,21 @@ class TestCollectKindsUsed(unittest.TestCase):
 
 
 class TestTransformComment(unittest.TestCase):
-    """The trailing inline comment must list every active transform, but
-    must suppress "unit conversion" when the rendered formula is the
-    identity (formula ``'{var}'`` for dimensionally-equivalent units).
+    """The trailing inline comment must list every active transform with the
+    correct label and payload:
+
+    * a **unit conversion** reports the actual *units* (host → scheme), never
+      the Fortran kinds;
+    * a **type conversion** (kind change) is reported separately, using the
+      kinds;
+    * when both apply, both are listed (type first, then unit);
+    * an identity unit conversion (formula ``'{var}'`` for dimensionally-
+      equivalent spellings such as ``J kg-1`` ↔ ``m2 s-2``) is suppressed.
+
+    The exact-string assertions below are deliberate: the earlier bug printed
+    the *kinds* under a "unit conversion" label (e.g. ``kind_phys to
+    kind_phys``) and the old substring-only checks (``assertIn('unit
+    conversion', ...)``) could not see it.
     """
 
     def _arg(self, **kwargs):
@@ -2661,6 +2673,8 @@ class TestTransformComment(unittest.TestCase):
         a.temp_name            = kwargs.get('temp_name', '')
         a.kind_host            = kwargs.get('kind_host', '')
         a.kind_scheme          = kwargs.get('kind_scheme', '')
+        a.unit_host            = kwargs.get('unit_host', '')
+        a.unit_scheme          = kwargs.get('unit_scheme', '')
         return a
 
     def test_no_transforms_returns_empty(self):
@@ -2673,6 +2687,7 @@ class TestTransformComment(unittest.TestCase):
             unit_forward='gt0(lb:ub, 1:nlev)',
             call_expr='gt0(lb:ub, 1:nlev)',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m2 s-2', unit_scheme='J kg-1',
         )
         self.assertEqual(_transform_comment(a, reverse=False), '')
 
@@ -2683,28 +2698,93 @@ class TestTransformComment(unittest.TestCase):
             unit_backward='foo_l',
             temp_name='foo_l',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m2 s-2', unit_scheme='J kg-1',
         )
         self.assertEqual(_transform_comment(a, reverse=True), '')
 
-    def test_non_identity_forward_emitted(self):
-        """Forward formula scales the call_expr → comment lists the
-        unit conversion."""
+    def test_unit_conversion_forward_reports_units(self):
+        """Forward unit conversion (same kind) → the comment lists the
+        host→scheme *units*, and must NOT mention kinds."""
         a = self._arg(
             needs_unit_transform=True,
             unit_forward='1.0E-3_kind_phys*gt0(lb:ub)',
             call_expr='gt0(lb:ub)',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
         )
-        self.assertIn('unit conversion', _transform_comment(a, reverse=False))
+        self.assertEqual(_transform_comment(a, reverse=False),
+                         '! unit conversion: m to km')
 
-    def test_non_identity_backward_emitted(self):
+    def test_unit_conversion_backward_reports_reversed_units(self):
+        """Backward unit conversion → scheme→host units (reversed)."""
         a = self._arg(
             needs_unit_transform=True,
             unit_backward='1.0E+3_kind_phys*foo_l',
             temp_name='foo_l',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
         )
-        self.assertIn('unit conversion', _transform_comment(a, reverse=True))
+        self.assertEqual(_transform_comment(a, reverse=True),
+                         '! unit conversion: km to m')
+
+    def test_unit_conversion_never_reports_kinds(self):
+        """Regression guard for the original bug: a pure unit conversion with
+        equal kinds must never emit ``kind_phys to kind_phys`` (or any kind)
+        under the "unit conversion" label."""
+        a = self._arg(
+            needs_unit_transform=True,
+            unit_forward='1.0E-2_kind_phys*p(lb:ub)',
+            call_expr='p(lb:ub)',
+            kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='Pa', unit_scheme='hPa',
+        )
+        comment = _transform_comment(a, reverse=False)
+        self.assertEqual(comment, '! unit conversion: Pa to hPa')
+        self.assertNotIn('kind_phys', comment)
+        self.assertNotIn('type conversion', comment)
+
+    def test_type_conversion_forward_reports_kinds(self):
+        """Pure kind change (same units) → a *type* conversion listing the
+        host→scheme kinds, with no "unit conversion"."""
+        a = self._arg(
+            needs_kind_transform=True,
+            unit_forward='real(con_pi, kind=kind_phys)',
+            call_expr='con_pi',
+            kind_host='kind_dyn', kind_scheme='kind_phys',
+            unit_host='1', unit_scheme='1',
+        )
+        comment = _transform_comment(a, reverse=False)
+        self.assertEqual(comment, '! type conversion: kind_dyn to kind_phys')
+        self.assertNotIn('unit conversion', comment)
+
+    def test_type_conversion_backward_reports_reversed_kinds(self):
+        """Backward pure kind change → scheme→host kinds (reversed)."""
+        a = self._arg(
+            needs_kind_transform=True,
+            unit_backward='real(foo_l, kind=kind_dyn)',
+            temp_name='foo_l',
+            kind_host='kind_dyn', kind_scheme='kind_phys',
+            unit_host='1', unit_scheme='1',
+        )
+        comment = _transform_comment(a, reverse=True)
+        self.assertEqual(comment, '! type conversion: kind_phys to kind_dyn')
+        self.assertNotIn('unit conversion', comment)
+
+    def test_type_and_unit_both_listed(self):
+        """When kind AND units both differ, both conversions are listed,
+        type first then unit."""
+        a = self._arg(
+            needs_unit_transform=True,
+            needs_kind_transform=True,
+            unit_forward='1.0E-3_kind_phys*real(gt0(lb:ub), kind=kind_phys)',
+            call_expr='gt0(lb:ub)',
+            kind_host='kind_dyn', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
+        )
+        self.assertEqual(
+            _transform_comment(a, reverse=False),
+            '! type conversion: kind_dyn to kind_phys; unit conversion: m to km',
+        )
 
     def test_vert_flip_alone_emits_flip_only(self):
         """A pure vertical flip (identity unit conversion, no kind change)
@@ -2725,10 +2805,12 @@ class TestTransformComment(unittest.TestCase):
             unit_forward='1.0E-3_kind_phys*gt0(lb:ub, nlev:1:-1)',
             call_expr='gt0(lb:ub, nlev:1:-1)',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
         )
-        comment = _transform_comment(a, reverse=False)
-        self.assertIn('unit conversion', comment)
-        self.assertIn('vertical flip', comment)
+        self.assertEqual(
+            _transform_comment(a, reverse=False),
+            '! unit conversion: m to km; vertical flip (top_at_one mismatch)',
+        )
 
 
 class TestFortranTypeStr(unittest.TestCase):

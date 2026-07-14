@@ -3,7 +3,7 @@ name: capgen unit tests
 on:
   workflow_dispatch:
   pull_request:
-    branches: [develop]
+    branches: [develop, feature/capgen-v1]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

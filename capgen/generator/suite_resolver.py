@@ -2197,6 +2197,8 @@ def _resolve_constituent_arg(
             unit_backward='',
             kind_scheme=scheme_var.kind,
             kind_host='',
+            unit_scheme=scheme_var.units,
+            unit_host='',
             temp_name='',
             ptr_name='',
             transform_case=1,
