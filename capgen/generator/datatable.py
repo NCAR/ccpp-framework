@@ -340,7 +340,31 @@ def _build_var_dictionaries(
         suite_d.set('name', suite_resolution.suite_name)
         suite_d.set('type', 'suite')
         suite_d.set('parent', _API_DICT_NAME)
-        ET.SubElement(suite_d, 'variables')
+        s_vars = ET.SubElement(suite_d, 'variables')
+        # Suite-owned (interstitial) variables: promoted from a scheme's
+        # intent(out) that no host table declares, and stored in
+        # ccpp_<suite>_data.F90.  Recorded here so ccpp_datafile.py's
+        # --suite-variables report can enumerate them.
+        for std_name in sorted(suite_resolution.suite_vars):
+            svar = suite_resolution.suite_vars[std_name]
+            v = ET.SubElement(s_vars, 'var')
+            v.set('name', std_name)
+            if svar.local_name:
+                v.set('local_name', svar.local_name)
+            if svar.units:
+                v.set('units', svar.units)
+            if svar.type_:
+                v.set('type', svar.type_)
+            if svar.kind:
+                v.set('kind', svar.kind)
+            if svar.dimensions:
+                v.set('dimensions', ', '.join(svar.dimensions))
+            if svar.source_scheme:
+                v.set('source_scheme', svar.source_scheme)
+            if svar.source_phase:
+                v.set('source_phase', svar.source_phase)
+            if getattr(svar, 'allocatable', False):
+                v.set('allocatable', 'True')
 
         for resolved_group in suite_resolution.groups:
             group_d = ET.SubElement(dicts, 'var_dictionary')

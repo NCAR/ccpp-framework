@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from generator.suite_resolver import resolve_suite
+from generator.suite_resolver import resolve_suite, SuiteResolution, SuiteVar
 import generator.datatable as dt_mod
 from generator.datatable import write_datatable
 from test_suite_resolver import (
@@ -554,6 +554,58 @@ class TestVarDictionariesSection(unittest.TestCase):
             self.assertIsNotNone(v.get('name'))
             # intent absent for the rare control-only entry is OK
             # but every var must have a name
+
+
+class TestSuiteOwnedVarDictionary(unittest.TestCase):
+    """The per-suite <var_dictionary type='suite'> is populated from
+    SuiteResolution.suite_vars (promoted interstitials)."""
+
+    def _suite_dict(self, tmpdir, suite_vars):
+        sr = SuiteResolution(suite_name='test_simple', groups=[],
+                             suite_vars=suite_vars)
+        path = write_datatable(
+            [sr], _load_scheme_store(),
+            ['/out/ccpp_kinds.F90'], ['/out/ccpp_test_simple_cap.F90'],
+            tmpdir, host_dict=_load_full_host_dict(),
+        )
+        root = ET.parse(path).getroot()
+        return next(vd for vd in root.find('var_dictionaries')
+                    .findall('var_dictionary')
+                    if vd.get('type') == 'suite')
+
+    def test_suite_vars_recorded_with_attributes(self):
+        sv = SuiteVar(standard_name='promoted_interstitial', local_name='pi_l',
+                      type_='real', kind='kind_phys', units='K',
+                      dimensions=['horizontal_dimension'],
+                      source_scheme='scheme_a', source_phase='run')
+        with tempfile.TemporaryDirectory() as d:
+            suite_d = self._suite_dict(d, {'promoted_interstitial': sv})
+            vars_ = suite_d.find('variables').findall('var')
+            v = next(v for v in vars_
+                     if v.get('name') == 'promoted_interstitial')
+            self.assertEqual(v.get('local_name'), 'pi_l')
+            self.assertEqual(v.get('units'), 'K')
+            self.assertEqual(v.get('type'), 'real')
+            self.assertEqual(v.get('kind'), 'kind_phys')
+            self.assertEqual(v.get('dimensions'), 'horizontal_dimension')
+            self.assertEqual(v.get('source_scheme'), 'scheme_a')
+            self.assertEqual(v.get('source_phase'), 'run')
+
+    def test_suite_vars_sorted_by_standard_name(self):
+        svs = {n: SuiteVar(standard_name=n, local_name=n + '_l', type_='real',
+                           kind='', units='1', dimensions=[],
+                           source_scheme='s', source_phase='run')
+               for n in ('zeta', 'alpha', 'mu')}
+        with tempfile.TemporaryDirectory() as d:
+            suite_d = self._suite_dict(d, svs)
+            names = [v.get('name')
+                     for v in suite_d.find('variables').findall('var')]
+            self.assertEqual(names, ['alpha', 'mu', 'zeta'])
+
+    def test_empty_when_no_suite_vars(self):
+        with tempfile.TemporaryDirectory() as d:
+            suite_d = self._suite_dict(d, {})
+            self.assertEqual(len(suite_d.find('variables').findall('var')), 0)
 
 
 class TestVarDictionariesProtectedAttr(unittest.TestCase):
