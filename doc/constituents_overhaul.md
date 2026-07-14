@@ -518,6 +518,10 @@ added 2026-05-12). Stronger options:
   calls and cross-check.
 - (c) Keep runtime check as authoritative, document the gap.
 
+**See also §4.16** — the same blind spot (register-phase `%instantiate` names are
+invisible to codegen) seen from the *resolution* side; options (a)/(b) above close
+both.
+
 ### 4.10 Capgen: scheme-metadata `diagnostic_name` for is_constituent args is host-specific (OPEN)
 
 Same issue as §4.4 but in capgen's metadata layer. Today's
@@ -758,6 +762,77 @@ shim. Remove the rewrite once known consumers are migrated.
   `is_constituent == False`.
 - **Position relative to Proposals A/B/C**: orthogonal — a host-adapter
   bug exposed by rule b, not a framework constituent-model change.
+
+### 4.16 Capgen: register-phase constituents are invisible to codegen — the *accessing* scheme's flag is load-bearing, not the registration (OPEN)
+
+**The gap.** Intuitively, once a register-phase scheme (`cld_ice_register`)
+`%instantiate`s a constituent, *any* scheme that references that standard name
+should resolve to it. It does not — at code-generation time. capgen decides
+whether a scheme arg is a constituent solely from **run-phase metadata flags**
+and **host declarations**; the register-phase `%instantiate(std_name=…)` calls
+are Fortran that capgen never reads, so the registered names are unknown to the
+generator.
+
+**Code evidence.**
+
+- The constituent-name set is built *only* from `is_constituent` metadata flags
+  (`advected` / `constituent` / `molar_mass`): `SchemeStore.constituent_stdnames()`
+  (`metadata/variable_resolver.py:870`) scans scheme-arg metadata and adds
+  `var.standard_name` iff `var.is_constituent`. Register-phase args
+  (`type = ccpp_constituent_properties_t`) carry no per-constituent standard
+  names in metadata — the names live only in the Fortran `%instantiate` calls —
+  so registration contributes nothing to this set.
+- Consumer inference gates on that same set: `inferred_constituent_consumer`
+  requires `std_name in const_stds` (`generator/suite_resolver.py:2129`, with
+  `const_stds = scheme_store.constituent_stdnames()` at `:2834`).
+- With neither an explicit flag nor an inferred hit, `_resolve_constituent_arg`
+  returns `None` (`generator/suite_resolver.py:2247`); the arg then falls through
+  to ordinary host/suite resolution and — for an `intent=in/inout` name absent
+  from `host_dict` and `suite_vars` — becomes a **hard error** ("nobody produces
+  it").
+
+**Runtime vs. codegen.** The constituent *does* exist at runtime the moment
+`%instantiate` runs (it is in `ccpp_model_constituents_obj` with an index). The
+gap is purely at codegen: the generator has no compile-time list of registered
+names, so it cannot wire `%vars_layer(:,:, index_of_<X>)` accesses on the
+strength of registration alone.
+
+**Concrete failure.** A constituent registered by scheme A but read only through
+**unflagged** args, where no scheme anywhere flags the name and the host does not
+declare it → codegen error, despite being correctly registered. In practice this
+is masked because the registering scheme's run phase (e.g. `cld_ice_run`) usually
+reads it *with* `advected=.true.`, which is what actually seeds
+`constituent_stdnames()`. The **flag, not the registration, is load-bearing**.
+(Once *some* scheme flags the name, others may read it unflagged — the "rule b"
+inference in §2.2.)
+
+**Why it matters.** The scheme-author mental model is "register it, then use it by
+standard name." Today that holds only if at least one *accessing* scheme flags the
+name (or the host declares it). Registration is *necessary for existence* but *not
+sufficient for resolution* — a comprehension trap, and a portability hazard: a
+scheme that registers-and-reads-unflagged works only when co-loaded with some
+other scheme that flags the same name.
+
+**Fix options** (the positive framing of §4.9 — the same two mechanisms close
+both this gap and the missing cross-check):
+
+- **(a)** A register-phase metadata attribute enumerating the registered standard
+  names (e.g. `registers_std_names = a, b, c`), folded into
+  `constituent_stdnames()` so registration becomes codegen-visible and
+  authoritative.
+- **(b)** Parse each scheme's `_register` Fortran for `%instantiate(std_name=…)`
+  and feed the names into `constituent_stdnames()` (heavier; capgen otherwise
+  never parses scheme bodies).
+- **(c)** Keep the flag-on-consumer contract as-is and document the gap
+  (status quo).
+
+**Position relative to Proposals A/B/C.** Proposal A leaves the gap. Options
+(a)/(b) resolve it directly under the current scheme-register model. **Proposal C
+(host-only registration) dissolves it**: the host's constituent enumeration is
+already codegen-visible metadata, so "any `advected=true` scheme arg whose
+std_name is not in the host's enumeration → codegen error" (§8, Proposal C)
+becomes the single source of truth, and registration is authoritative by
+construction.
 
 ---
 
