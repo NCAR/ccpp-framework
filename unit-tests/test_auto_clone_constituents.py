@@ -592,6 +592,7 @@ class TestCollectAutoCloneEntriesSkips(_AutoCloneFixture):
             needs_kind_transform=False,
             unit_forward='', unit_backward='',
             kind_scheme='', kind_host='',
+            unit_scheme='', unit_host='',
             temp_name='', ptr_name='',
             transform_case=1,
             scheme_dimensions=[],

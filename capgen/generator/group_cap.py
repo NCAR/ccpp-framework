@@ -517,14 +517,24 @@ def _transform_comment(arg: ResolvedArg, reverse: bool = False) -> str:
         else:
             is_identity = (arg.unit_forward == arg.call_expr)
         if not is_identity:
-            if reverse:
-                bits.append('unit conversion: {} to {}'.format(
-                    arg.kind_scheme or '', arg.kind_host or '',
-                ))
-            else:
-                bits.append('unit conversion: {} to {}'.format(
-                    arg.kind_host or '', arg.kind_scheme or '',
-                ))
+            if (arg.kind_scheme != arg.kind_host):
+                if reverse:
+                    bits.append('type conversion: {} to {}'.format(
+                        arg.kind_scheme or '', arg.kind_host or '',
+                    ))
+                else:
+                    bits.append('type conversion: {} to {}'.format(
+                        arg.kind_host or '', arg.kind_scheme or '',
+                    ))
+            if (arg.unit_scheme != arg.unit_host):
+                if reverse:
+                    bits.append('unit conversion: {} to {}'.format(
+                        arg.unit_scheme or '', arg.unit_host or '',
+                    ))
+                else:
+                    bits.append('unit conversion: {} to {}'.format(
+                        arg.unit_host or '', arg.unit_scheme or '',
+                    ))
     if arg.needs_vert_flip:
         bits.append('vertical flip (top_at_one mismatch)')
     if not bits:
