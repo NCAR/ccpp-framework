@@ -741,6 +741,7 @@ class ConstituentVarDict(VarDictionary):
         substmt = f"subroutine {const_index_func}"
         cap.blank_line()
         cap.write(f"{substmt}(stdname, const_index, {err_dummy_str})", 1)
+        cap.write("use ccpp_constituent_prop_mod, only: to_lower", 2)
         cap.comment("Set <const_index> to the constituent array index " +     \
                     "for <stdname>.", 2)
         cap.comment("If <stdname> is not found, set <const_index> to -1 " +   \
@@ -755,7 +756,7 @@ class ConstituentVarDict(VarDictionary):
         # end for
         cap.blank_line()
         cap.write(f"call {const_obj_name}%const_index(const_index, " +        \
-                  f"stdname, {obj_err_callstr})", 2)
+                  f"to_lower(stdname), {obj_err_callstr})", 2)
         cap.write(f"end {substmt}", 1)
 
     @staticmethod

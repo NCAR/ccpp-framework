@@ -30,7 +30,7 @@ contains
       errmsg = 'Error allocating dyn_const in cld_liq_register'
       return
     end if
-    call dyn_const(1)%instantiate(std_name="dyn_const3_wrt_moist_air_and_condensed_water", long_name='dyn const3', &
+    call dyn_const(1)%instantiate(std_name="DYN_const3_wrt_moist_air_and_condensed_water", long_name='dyn const3', &
         diag_name='DYNCONST3', units='kg kg-1', default_value=1._kind_phys, &
         vertical_dim='vertical_layer_dimension', advected=.true., &
         water_species=.true., mixing_ratio_type='dry', &

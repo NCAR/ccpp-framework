@@ -16,7 +16,7 @@ module test_host_data
   !! \htmlinclude arg_table_test_host_data.html
   integer, public, parameter :: num_consts = 3
   character(len=32), public, parameter :: std_name_array(num_consts) = (/ &
-      'specific_humidity            ', &
+      'SPECIFIC_HUMIDITY            ', &
       'cloud_liquid_dry_mixing_ratio', &
       'cloud_ice_dry_mixing_ratio   ' /)
   character(len=32), public, parameter :: const_std_name = std_name_array(1)

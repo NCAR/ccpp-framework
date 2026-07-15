@@ -3,7 +3,7 @@ module ccpp_scheme_utils
   ! Module of utilities available to CCPP schemes
 
   use ccpp_constituent_prop_mod, only: ccpp_model_constituents_t, &
-      int_unassigned
+      int_unassigned, to_lower
 
   implicit none
   private
@@ -81,7 +81,7 @@ contains
 
     call check_initialization(caller=subname, errcode=errcode, errmsg=errmsg)
     if (status_ok(errcode)) then
-      call constituent_obj%const_index(const_index, standard_name, &
+      call constituent_obj%const_index(const_index, to_lower(standard_name), &
           errcode, errmsg)
     else
       const_index = int_unassigned
@@ -110,7 +110,7 @@ contains
         do indx = 1, size(standard_names)
           ! For each std name in <standard_names>, find the const. index
           call constituent_obj%const_index(const_inds(indx), &
-              standard_names(indx), errcode, errmsg)
+              to_lower(standard_names(indx)), errcode, errmsg)
           if (errcode /= 0) then
             exit
           end if

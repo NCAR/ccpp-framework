@@ -243,14 +243,6 @@ def constituent_model_const_props(host_model):
     return unique_local_name(hstr, host_model)
 
 ###############################################################################
-def constituent_model_const_index(host_model):
-###############################################################################
-    """Return the name of the interface that returns the array index of
-       a constituent array given its standard name"""
-    hstr = f"{host_model.name}_const_get_index"
-    return unique_local_name(hstr, host_model)
-
-###############################################################################
 def add_constituent_vars(cap, host_model, suite_list, run_env):
 ###############################################################################
     """Create a DDT library containing array reference variables
