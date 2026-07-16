@@ -633,6 +633,7 @@ def _init_lines(
     suite_name: str,
     suite_res: SuiteResolution,
     host_dict=None,
+    logger=None,
 ) -> List[str]:
     """Generate the ``<suite>_init`` framework-setup subroutine lines.
 
@@ -769,7 +770,9 @@ def _init_lines(
     if suite_res.suite_init_call is not None:
         lines.append('')
         from generator.group_cap import _emit_one_call
-        _emit_one_call(suite_res.suite_init_call, i2, lines)
+        _emit_one_call(suite_res.suite_init_call, i2, lines,
+                       logger=logger, suite_name=suite_name,
+                       group_name='(suite init)')
 
     lines += [
         '',
@@ -786,6 +789,7 @@ def _final_lines(
     suite_name: str,
     suite_res: SuiteResolution,
     host_dict=None,
+    logger=None,
 ) -> List[str]:
     """Generate the ``<suite>_final`` framework-teardown subroutine lines.
 
@@ -905,7 +909,9 @@ def _final_lines(
     # transition to UNREGISTERED.  Errflg check follows the call.
     if suite_res.suite_final_call is not None:
         from generator.group_cap import _emit_one_call
-        _emit_one_call(suite_res.suite_final_call, i2, lines)
+        _emit_one_call(suite_res.suite_final_call, i2, lines,
+                       logger=logger, suite_name=suite_name,
+                       group_name='(suite final)')
 
     lines.append(
         '{}ccpp_suite_state({}) = CCPP_SUITE_UNREGISTERED'.format(i2, inst_idx)
@@ -1215,6 +1221,7 @@ def _generate_suite_cap(
     scheme_store: SchemeStore,
     host_dict=None,
     trace: bool = False,
+    logger=None,
 ) -> List[str]:
     """Generate the full ``ccpp_<suite>_cap.F90`` module source lines.
 
@@ -1296,10 +1303,10 @@ def _generate_suite_cap(
 
     # Subroutines.  Order: register, init, physics_*, final, state_alloc/dealloc.
     lines.extend(_register_lines(suite_name, suite_res, host_dict))
-    lines.extend(_init_lines(suite_name, suite_res, host_dict))
+    lines.extend(_init_lines(suite_name, suite_res, host_dict, logger=logger))
     for phase in _PHYSICS_PHASES:
         lines.extend(_physics_dispatch_lines(suite_name, phase, suite_res, host_dict))
-    lines.extend(_final_lines(suite_name, suite_res, host_dict))
+    lines.extend(_final_lines(suite_name, suite_res, host_dict, logger=logger))
 
     has_suite_vars = bool(suite_res.suite_vars)
     lines.extend(_suite_state_alloc_lines(suite_name, has_suite_vars))
@@ -1346,6 +1353,7 @@ def write_suite_cap(
 
     lines = _generate_suite_cap(
         suite_name, suite_res, scheme_store, host_dict, trace=trace,
+        logger=logger,
     )
     with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')
