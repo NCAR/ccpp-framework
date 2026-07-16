@@ -19,6 +19,8 @@ The flag surface mirrors the original ``scripts/ccpp_datafile.py``:
   * ``--suite-list``
   * ``--required-variables`` / ``--input-variables`` /
     ``--output-variables`` / ``--host-variables``
+  * ``--suite-variables`` — the suite-owned (interstitial) variables
+    promoted into ``ccpp_<suite>_data.F90`` (a capgen addition)
   * ``--show`` (pretty-print)
   * ``--separator``, ``--exclude-protected``, ``--line-wrap``, ``--indent``
 
@@ -93,6 +95,10 @@ _VALID_REPORTS = [
     {"report": "host_variables", "type": bool,
      "help": ("Return a list of required host model variable "
               "standard names")},
+    {"report": "suite_variables", "type": str,
+     "help": ("Return a list of suite-owned (interstitial) variable "
+              "standard names for suite, <SUITE_NAME>"),
+     "metavar": "SUITE_NAME"},
     {"report": "show", "type": bool,
      "help":
      "Pretty print the database contents to the screen"},
@@ -724,6 +730,37 @@ def _retrieve_variable_list(table, suite_name,
     return sorted(var_set)
 
 
+def _retrieve_suite_variable_list(table, suite_name):
+    """Find and return the sorted standard names of the suite-owned
+    (interstitial) variables promoted for suite <suite_name>.
+
+    Suite-owned variables are those no host table declares: first written
+    by a scheme with ``intent(out)`` and stored in ``ccpp_<suite>_data.F90``.
+    Returns an empty list if <suite_name> has no suite dictionary.
+
+    >>> table = ET.fromstring("<ccpp_datatable version='1.0'><var_dictionaries>"\
+            "<var_dictionary name='fruit' type='suite'><variables>"\
+            "<var name='var_b' local_name='vb'></var>"\
+            "<var name='var_a' local_name='va'></var>"\
+            "</variables></var_dictionary></var_dictionaries></ccpp_datatable>")
+    >>> _retrieve_suite_variable_list(table, 'fruit')
+    ['var_a', 'var_b']
+    >>> _retrieve_suite_variable_list(table, 'veggie')
+    []
+    """
+    result = set()
+    suite_dict = _find_var_dictionary(table, dict_name=suite_name,
+                                      dict_type="suite")
+    if suite_dict is not None:
+        svars = suite_dict.find("variables")
+        if svars is not None:
+            for var in svars:
+                name = var.get("name")
+                if name:
+                    result.add(name)
+    return sorted(result)
+
+
 def datatable_report(datatable, action, sep, exclude_protected=False):
     """Perform a lookup <action> on <datatable> and return the result."""
     if not action:
@@ -770,6 +807,8 @@ def datatable_report(datatable, action, sep, exclude_protected=False):
         result = _retrieve_variable_list(table, "host",
                                          exclude_protected=exclude_protected,
                                          intent_type="host")
+    elif action.action_is("suite_variables"):
+        result = _retrieve_suite_variable_list(table, action.value)
     else:
         result = ''
     if isinstance(result, list):

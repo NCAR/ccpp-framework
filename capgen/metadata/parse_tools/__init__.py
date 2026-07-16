@@ -3,20 +3,17 @@
 from .parse_source import (
     CCPPError,
     ParseSyntaxError,
-    ParseInternalError,
     ParseContext,
-    context_string,
 )
-from .parse_log import init_log, set_log_level, set_log_to_null, set_log_to_stdout
+from .parse_log import init_log, set_log_level, set_log_to_null
 from .parse_checkers import (
     check_units,
-    check_dimensions,
+    check_dimension,
     check_cf_standard_name,
     check_diagnostic_fixed,
     check_diagnostic_id,
     check_fortran_id,
     check_fortran_ref,
-    check_fortran_type,
     check_fortran_intrinsic,
     check_molar_mass,
     # auto-clone-constituents: legacy-shim checkers exported here so

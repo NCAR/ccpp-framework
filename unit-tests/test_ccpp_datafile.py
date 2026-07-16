@@ -1,6 +1,6 @@
 """Tests for the ccpp_datafile query CLI.
 
-Covers each of the 17 CLI flags end-to-end by:
+Covers each of the 18 CLI flags end-to-end by:
   1. building a real datatable.xml via the writer in generator.datatable,
   2. invoking datatable_report / datatable_pretty_print on it,
   3. asserting the textual output.
@@ -12,6 +12,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 _TESTS_DIR  = os.path.dirname(os.path.abspath(__file__))
 _CAPGEN_DIR = os.path.join(os.path.dirname(_TESTS_DIR), 'capgen')
@@ -24,6 +25,7 @@ from ccpp_datafile import (
     DatatableReport,
     datatable_pretty_print,
     datatable_report,
+    _retrieve_suite_variable_list,
 )
 from generator.datatable import write_datatable
 
@@ -32,7 +34,7 @@ from test_suite_resolver import (
     _load_scheme_store,
     _parse_suite,
 )
-from generator.suite_resolver import resolve_suite
+from generator.suite_resolver import resolve_suite, SuiteResolution, SuiteVar
 
 
 def _build_datatable(tmpdir,
@@ -261,6 +263,70 @@ class TestDatatableReportVariableActions(_DTBase):
         out = datatable_report(
             self._datatable,
             DatatableReport('required_variables', 'no_such_suite'), ',')
+        self.assertEqual(out, '')
+
+
+class TestRetrieveSuiteVariableList(unittest.TestCase):
+    """_retrieve_suite_variable_list returns sorted suite-owned var names."""
+
+    def _table(self):
+        return ET.fromstring(
+            "<ccpp_datatable version='1.0'><var_dictionaries>"
+            "<var_dictionary name='fruit' type='suite'><variables>"
+            "<var name='beta' local_name='b'></var>"
+            "<var name='alpha' local_name='a'></var>"
+            "</variables></var_dictionary>"
+            "<var_dictionary name='veg' type='group'><variables>"
+            "<var name='should_not_appear'></var>"
+            "</variables></var_dictionary>"
+            "</var_dictionaries></ccpp_datatable>")
+
+    def test_returns_sorted_names(self):
+        self.assertEqual(
+            _retrieve_suite_variable_list(self._table(), 'fruit'),
+            ['alpha', 'beta'])
+
+    def test_unknown_suite_returns_empty(self):
+        self.assertEqual(
+            _retrieve_suite_variable_list(self._table(), 'kumquat'), [])
+
+    def test_non_suite_dict_not_matched(self):
+        # a dictionary of another type sharing the queried name is ignored
+        self.assertEqual(
+            _retrieve_suite_variable_list(self._table(), 'veg'), [])
+
+
+class TestDatatableReportSuiteVariables(unittest.TestCase):
+    """--suite-variables end-to-end via datatable_report."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmpdir = tempfile.mkdtemp()
+        sv = SuiteVar(standard_name='promoted_x', local_name='px',
+                      type_='real', kind='kind_phys', units='K',
+                      dimensions=['horizontal_dimension'],
+                      source_scheme='sch_a', source_phase='run')
+        sr = SuiteResolution(suite_name='test_simple', groups=[],
+                             suite_vars={'promoted_x': sv})
+        cls._datatable = write_datatable(
+            [sr], _load_scheme_store(),
+            ['/out/ccpp_kinds.F90'], ['/out/ccpp_test_simple_cap.F90'],
+            cls._tmpdir, host_dict=_load_full_host_dict())
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls._tmpdir)
+
+    def test_lists_the_interstitial(self):
+        out = datatable_report(
+            self._datatable,
+            DatatableReport('suite_variables', 'test_simple'), ',')
+        self.assertEqual(out, 'promoted_x')
+
+    def test_unknown_suite_returns_empty(self):
+        out = datatable_report(
+            self._datatable,
+            DatatableReport('suite_variables', 'no_such_suite'), ',')
         self.assertEqual(out, '')
 
 

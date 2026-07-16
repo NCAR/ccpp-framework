@@ -52,6 +52,8 @@ from generator.group_cap import (
     _generate_group_cap,
     _collect_kinds_used,
     _transform_comment,
+    _log_one_transform,
+    _emit_one_call,
     write_group_cap,
 )
 
@@ -2644,9 +2646,21 @@ class TestCollectKindsUsed(unittest.TestCase):
 
 
 class TestTransformComment(unittest.TestCase):
-    """The trailing inline comment must list every active transform, but
-    must suppress "unit conversion" when the rendered formula is the
-    identity (formula ``'{var}'`` for dimensionally-equivalent units).
+    """The trailing inline comment must list every active transform with the
+    correct label and payload:
+
+    * a **unit conversion** reports the actual *units* (host → scheme), never
+      the Fortran kinds;
+    * a **type conversion** (kind change) is reported separately, using the
+      kinds;
+    * when both apply, both are listed (type first, then unit);
+    * an identity unit conversion (formula ``'{var}'`` for dimensionally-
+      equivalent spellings such as ``J kg-1`` ↔ ``m2 s-2``) is suppressed.
+
+    The exact-string assertions below are deliberate: the earlier bug printed
+    the *kinds* under a "unit conversion" label (e.g. ``kind_phys to
+    kind_phys``) and the old substring-only checks (``assertIn('unit
+    conversion', ...)``) could not see it.
     """
 
     def _arg(self, **kwargs):
@@ -2661,6 +2675,8 @@ class TestTransformComment(unittest.TestCase):
         a.temp_name            = kwargs.get('temp_name', '')
         a.kind_host            = kwargs.get('kind_host', '')
         a.kind_scheme          = kwargs.get('kind_scheme', '')
+        a.unit_host            = kwargs.get('unit_host', '')
+        a.unit_scheme          = kwargs.get('unit_scheme', '')
         return a
 
     def test_no_transforms_returns_empty(self):
@@ -2673,6 +2689,7 @@ class TestTransformComment(unittest.TestCase):
             unit_forward='gt0(lb:ub, 1:nlev)',
             call_expr='gt0(lb:ub, 1:nlev)',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m2 s-2', unit_scheme='J kg-1',
         )
         self.assertEqual(_transform_comment(a, reverse=False), '')
 
@@ -2683,28 +2700,93 @@ class TestTransformComment(unittest.TestCase):
             unit_backward='foo_l',
             temp_name='foo_l',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m2 s-2', unit_scheme='J kg-1',
         )
         self.assertEqual(_transform_comment(a, reverse=True), '')
 
-    def test_non_identity_forward_emitted(self):
-        """Forward formula scales the call_expr → comment lists the
-        unit conversion."""
+    def test_unit_conversion_forward_reports_units(self):
+        """Forward unit conversion (same kind) → the comment lists the
+        host→scheme *units*, and must NOT mention kinds."""
         a = self._arg(
             needs_unit_transform=True,
             unit_forward='1.0E-3_kind_phys*gt0(lb:ub)',
             call_expr='gt0(lb:ub)',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
         )
-        self.assertIn('unit conversion', _transform_comment(a, reverse=False))
+        self.assertEqual(_transform_comment(a, reverse=False),
+                         '! unit conversion: m to km')
 
-    def test_non_identity_backward_emitted(self):
+    def test_unit_conversion_backward_reports_reversed_units(self):
+        """Backward unit conversion → scheme→host units (reversed)."""
         a = self._arg(
             needs_unit_transform=True,
             unit_backward='1.0E+3_kind_phys*foo_l',
             temp_name='foo_l',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
         )
-        self.assertIn('unit conversion', _transform_comment(a, reverse=True))
+        self.assertEqual(_transform_comment(a, reverse=True),
+                         '! unit conversion: km to m')
+
+    def test_unit_conversion_never_reports_kinds(self):
+        """Regression guard for the original bug: a pure unit conversion with
+        equal kinds must never emit ``kind_phys to kind_phys`` (or any kind)
+        under the "unit conversion" label."""
+        a = self._arg(
+            needs_unit_transform=True,
+            unit_forward='1.0E-2_kind_phys*p(lb:ub)',
+            call_expr='p(lb:ub)',
+            kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='Pa', unit_scheme='hPa',
+        )
+        comment = _transform_comment(a, reverse=False)
+        self.assertEqual(comment, '! unit conversion: Pa to hPa')
+        self.assertNotIn('kind_phys', comment)
+        self.assertNotIn('type conversion', comment)
+
+    def test_type_conversion_forward_reports_kinds(self):
+        """Pure kind change (same units) → a *type* conversion listing the
+        host→scheme kinds, with no "unit conversion"."""
+        a = self._arg(
+            needs_kind_transform=True,
+            unit_forward='real(con_pi, kind=kind_phys)',
+            call_expr='con_pi',
+            kind_host='kind_dyn', kind_scheme='kind_phys',
+            unit_host='1', unit_scheme='1',
+        )
+        comment = _transform_comment(a, reverse=False)
+        self.assertEqual(comment, '! type conversion: kind_dyn to kind_phys')
+        self.assertNotIn('unit conversion', comment)
+
+    def test_type_conversion_backward_reports_reversed_kinds(self):
+        """Backward pure kind change → scheme→host kinds (reversed)."""
+        a = self._arg(
+            needs_kind_transform=True,
+            unit_backward='real(foo_l, kind=kind_dyn)',
+            temp_name='foo_l',
+            kind_host='kind_dyn', kind_scheme='kind_phys',
+            unit_host='1', unit_scheme='1',
+        )
+        comment = _transform_comment(a, reverse=True)
+        self.assertEqual(comment, '! type conversion: kind_phys to kind_dyn')
+        self.assertNotIn('unit conversion', comment)
+
+    def test_type_and_unit_both_listed(self):
+        """When kind AND units both differ, both conversions are listed,
+        type first then unit."""
+        a = self._arg(
+            needs_unit_transform=True,
+            needs_kind_transform=True,
+            unit_forward='1.0E-3_kind_phys*real(gt0(lb:ub), kind=kind_phys)',
+            call_expr='gt0(lb:ub)',
+            kind_host='kind_dyn', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
+        )
+        self.assertEqual(
+            _transform_comment(a, reverse=False),
+            '! type conversion: kind_dyn to kind_phys; unit conversion: m to km',
+        )
 
     def test_vert_flip_alone_emits_flip_only(self):
         """A pure vertical flip (identity unit conversion, no kind change)
@@ -2725,10 +2807,125 @@ class TestTransformComment(unittest.TestCase):
             unit_forward='1.0E-3_kind_phys*gt0(lb:ub, nlev:1:-1)',
             call_expr='gt0(lb:ub, nlev:1:-1)',
             kind_host='kind_phys', kind_scheme='kind_phys',
+            unit_host='m', unit_scheme='km',
         )
-        comment = _transform_comment(a, reverse=False)
-        self.assertIn('unit conversion', comment)
-        self.assertIn('vertical flip', comment)
+        self.assertEqual(
+            _transform_comment(a, reverse=False),
+            '! unit conversion: m to km; vertical flip (top_at_one mismatch)',
+        )
+
+
+class TestTransformLogging(unittest.TestCase):
+    """capgen logs each value-changing transform to stdout/stderr (INFO),
+    with text identical to the inline cap comment (`_transform_comment`)."""
+
+    def _arg(self, **kw):
+        from unittest.mock import MagicMock
+        a = MagicMock()
+        a.needs_unit_transform = kw.get('needs_unit_transform', False)
+        a.needs_kind_transform = kw.get('needs_kind_transform', False)
+        a.needs_vert_flip      = kw.get('needs_vert_flip', False)
+        a.unit_forward  = kw.get('unit_forward', '')
+        a.unit_backward = kw.get('unit_backward', '')
+        a.call_expr     = kw.get('call_expr', '')
+        a.temp_name     = kw.get('temp_name', '')
+        a.kind_host     = kw.get('kind_host', '')
+        a.kind_scheme   = kw.get('kind_scheme', '')
+        a.unit_host     = kw.get('unit_host', '')
+        a.unit_scheme   = kw.get('unit_scheme', '')
+        a.scheme_local_name = kw.get('scheme_local_name', 'x')
+        a.standard_name = kw.get('standard_name', 'some_std_name')
+        return a
+
+    def _msg(self, logger):
+        # transforms are logged at WARNING (temporary — see group_cap comment)
+        call = logger.warning.call_args
+        return call.args[0] % call.args[1:]
+
+    def _resolved_transform_arg(self):
+        """Build a REAL transformed ResolvedArg via the resolver (or skip)."""
+        from generator.suite_resolver import (_resolve_one_arg,
+                                              find_unit_conversion)
+        from metadata.metadata_table import MetaVar
+        hd = _load_full_host_dict()
+        for std, e in hd.items():
+            if getattr(e, 'type', '') != 'real':
+                continue
+            for tgt in ('hPa', 'km', 'cm', 'mm', 'min', 'h', 'Pa', 'm'):
+                if tgt != e.units and find_unit_conversion(e.units, tgt):
+                    dims = '()' if not e.dimensions else \
+                        '(' + ','.join(e.dimensions) + ')'
+                    v = MetaVar('x', _ctx())
+                    v.set_attr('standard_name', std, _ctx())
+                    v.set_attr('units', tgt, _ctx())
+                    v.set_attr('dimensions', dims, _ctx())
+                    v.set_attr('type', 'real', _ctx())
+                    v.set_attr('intent', 'in', _ctx())
+                    if e.kind:
+                        v.set_attr('kind', e.kind, _ctx())
+                    arg = _resolve_one_arg(v, 'run', hd, {}, 'demo', set())
+                    if arg.unit_forward:
+                        return arg, std
+        self.skipTest("no convertible host var available in the fixture")
+
+    def test_forward_unit_conversion_logged_pre_call(self):
+        from unittest.mock import MagicMock
+        a = self._arg(needs_unit_transform=True,
+                      unit_forward='1.0E-2_kind_phys*p', call_expr='p',
+                      kind_host='kind_phys', kind_scheme='kind_phys',
+                      unit_host='Pa', unit_scheme='hPa',
+                      scheme_local_name='p', standard_name='air_pressure')
+        log = MagicMock()
+        _log_one_transform(log, 'sui', 'grp', 'run', 'radiation', a,
+                           reverse=False)
+        log.warning.assert_called_once()
+        msg = self._msg(log)
+        self.assertIn('unit conversion: Pa to hPa', msg)
+        self.assertIn('pre-call', msg)
+        self.assertIn('air_pressure', msg)
+        self.assertIn('radiation', msg)
+        # the logged text is exactly the inline cap comment (minus '! ')
+        self.assertIn(_transform_comment(a)[1:].strip(), msg)
+
+    def test_backward_is_post_call_and_direction_reversed(self):
+        from unittest.mock import MagicMock
+        a = self._arg(needs_unit_transform=True,
+                      unit_backward='1.0E+2_kind_phys*p_l', temp_name='p_l',
+                      kind_host='kind_phys', kind_scheme='kind_phys',
+                      unit_host='Pa', unit_scheme='hPa')
+        log = MagicMock()
+        _log_one_transform(log, 'sui', 'grp', 'run', 'radiation', a,
+                           reverse=True)
+        msg = self._msg(log)
+        self.assertIn('unit conversion: hPa to Pa', msg)
+        self.assertIn('post-call', msg)
+
+    def test_identity_transform_logs_nothing(self):
+        from unittest.mock import MagicMock
+        a = self._arg(needs_unit_transform=True,
+                      unit_forward='gt0(lb:ub)', call_expr='gt0(lb:ub)',
+                      kind_host='kind_phys', kind_scheme='kind_phys',
+                      unit_host='m2 s-2', unit_scheme='J kg-1')
+        log = MagicMock()
+        _log_one_transform(log, 'sui', 'grp', 'run', 'sch', a, reverse=False)
+        log.warning.assert_not_called()
+
+    def test_emit_one_call_logs_transform(self):
+        # End-to-end through the real emitter: a resolved transform is logged.
+        from unittest.mock import MagicMock
+        arg, std = self._resolved_transform_arg()
+        rc = ResolvedCall(scheme_name='demo', phase='run', args=[arg])
+        log = MagicMock()
+        _emit_one_call(rc, '    ', [], phase='run', logger=log,
+                       suite_name='sui', group_name='grp')
+        log.warning.assert_called()
+        self.assertIn('unit conversion', self._msg(log))
+        self.assertIn(std, self._msg(log))
+
+    def test_emit_one_call_none_logger_is_noop(self):
+        arg, _ = self._resolved_transform_arg()
+        rc = ResolvedCall(scheme_name='demo', phase='run', args=[arg])
+        _emit_one_call(rc, '    ', [], phase='run', logger=None)  # no raise
 
 
 class TestFortranTypeStr(unittest.TestCase):

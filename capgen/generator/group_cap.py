@@ -517,19 +517,52 @@ def _transform_comment(arg: ResolvedArg, reverse: bool = False) -> str:
         else:
             is_identity = (arg.unit_forward == arg.call_expr)
         if not is_identity:
-            if reverse:
-                bits.append('unit conversion: {} to {}'.format(
-                    arg.kind_scheme or '', arg.kind_host or '',
-                ))
-            else:
-                bits.append('unit conversion: {} to {}'.format(
-                    arg.kind_host or '', arg.kind_scheme or '',
-                ))
+            if (arg.kind_scheme != arg.kind_host):
+                if reverse:
+                    bits.append('type conversion: {} to {}'.format(
+                        arg.kind_scheme or '', arg.kind_host or '',
+                    ))
+                else:
+                    bits.append('type conversion: {} to {}'.format(
+                        arg.kind_host or '', arg.kind_scheme or '',
+                    ))
+            if (arg.unit_scheme != arg.unit_host):
+                if reverse:
+                    bits.append('unit conversion: {} to {}'.format(
+                        arg.unit_scheme or '', arg.unit_host or '',
+                    ))
+                else:
+                    bits.append('unit conversion: {} to {}'.format(
+                        arg.unit_host or '', arg.unit_scheme or '',
+                    ))
     if arg.needs_vert_flip:
         bits.append('vertical flip (top_at_one mismatch)')
     if not bits:
         return ''
     return '! ' + '; '.join(bits)
+
+
+def _log_one_transform(logger, suite_name, group_name, phase, scheme_name,
+                       arg: ResolvedArg, reverse: bool) -> None:
+    """Emit one log line for a value-changing transform on *arg*.
+
+    Reuses :func:`_transform_comment` so the log text is *identical* to the
+    inline comment written into the generated cap.  A suppressed/identity
+    transform (comment == '') logs nothing, matching the cap.
+
+    TEMPORARY level choice: logged at WARNING so transforms show up in a
+    default capgen run (capgen's default log level is WARNING).
+    """
+    comment = _transform_comment(arg, reverse=reverse)
+    if not comment:
+        return
+    desc = comment[1:].strip()  # drop the leading '! '
+    when = 'post-call' if reverse else 'pre-call'
+    logger.warning(
+        "CCPP transform: %s/%s/%s  %s: %s (%s) [%s]  %s",
+        suite_name, group_name, phase, scheme_name,
+        arg.standard_name, arg.scheme_local_name, when, desc,
+    )
 
 
 def _active_required_guard_lines(
@@ -688,6 +721,9 @@ def _emit_phase_items(
     phase: str = '',
     errflg_local: Optional[str] = None,
     errmsg_local: Optional[str] = None,
+    logger=None,
+    suite_name: str = '',
+    group_name: str = '',
 ) -> None:
     """Recursively emit Fortran for a list of :data:`PhaseItem` objects.
 
@@ -700,6 +736,7 @@ def _emit_phase_items(
         if isinstance(item, ResolvedCall):
             _emit_one_call(
                 item, indent, lines, phase, errflg_local, errmsg_local,
+                logger=logger, suite_name=suite_name, group_name=group_name,
             )
         elif isinstance(item, ResolvedSubcycle):
             counter = _loop_counter_name(depth)
@@ -711,6 +748,7 @@ def _emit_phase_items(
                 phase=phase,
                 errflg_local=errflg_local,
                 errmsg_local=errmsg_local,
+                logger=logger, suite_name=suite_name, group_name=group_name,
             )
             lines.append('{}end do'.format(indent))
             lines.append('')
@@ -723,8 +761,18 @@ def _emit_one_call(
     phase: str = '',
     errflg_local: Optional[str] = None,
     errmsg_local: Optional[str] = None,
+    logger=None,
+    suite_name: str = '',
+    group_name: str = '',
 ) -> None:
-    """Append Fortran lines for a single scheme call (with transforms + errcheck)."""
+    """Append Fortran lines for a single scheme call (with transforms + errcheck).
+
+    When *logger* is given, each emitted value-changing transform is also
+    logged (via :func:`_log_one_transform`) so a capgen run documents on
+    stdout/stderr the same conversions it writes as inline cap comments.
+    This covers group-cap calls AND the suite-level ``<init>``/``<final>``
+    hooks, which share this emitter (see ``suite_cap.py``).
+    """
     # Pre-call: runtime guard for any non-optional arg whose host declares
     # ``active = (...)``.  Emitted before transforms so an inactive-but-required
     # var bails out with a clear error rather than reading host memory through
@@ -735,9 +783,13 @@ def _emit_one_call(
             errflg_local, errmsg_local, indent,
         ))
 
-    # Pre-call transformations.
+    # Pre-call transformations (and log each on capgen's stdout/stderr).
     for arg in resolved_call.args:
         lines.extend(_pre_call_lines(arg))
+        if logger is not None and arg.unit_forward:
+            _log_one_transform(logger, suite_name, group_name,
+                               resolved_call.phase, resolved_call.scheme_name,
+                               arg, reverse=False)
 
     call_args_exprs = [
         '{}={}'.format(a.scheme_local_name, _call_arg_expr(a))
@@ -761,6 +813,10 @@ def _emit_one_call(
 
     for arg in resolved_call.args:
         lines.extend(_post_call_lines(arg))
+        if logger is not None and arg.unit_backward:
+            _log_one_transform(logger, suite_name, group_name,
+                               resolved_call.phase, resolved_call.scheme_name,
+                               arg, reverse=True)
     lines.append('')
 
 
@@ -851,6 +907,7 @@ def _generate_phase_subroutine(
     phase_items,
     ctrl_entries,
     host_dict,
+    logger=None,
 ) -> List[str]:
     """Generate one phase subroutine for a group cap.
 
@@ -978,11 +1035,15 @@ def _generate_phase_subroutine(
     )
 
     # ---- scheme calls ---------------------------------------------------
+    # Transforms are logged inside _emit_one_call (same text as the inline
+    # cap comments), so group caps and suite <init>/<final> hooks share one
+    # code path.
     _emit_phase_items(
         phase_items, call_indent, lines, depth=1,
         phase=phase,
         errflg_local=errflg_local,
         errmsg_local=errmsg_local,
+        logger=logger, suite_name=suite_name, group_name=group_name,
     )
 
     # ---- post-call state transitions ------------------------------------
@@ -1132,6 +1193,7 @@ def _generate_group_cap(
     resolved_group: ResolvedGroup,
     host_dict,
     trace: bool = False,
+    logger=None,
 ) -> List[str]:
     """Generate the full group cap module source lines.
 
@@ -1240,7 +1302,8 @@ def _generate_group_cap(
     for phase in _GROUP_PHASE_ORDER:
         phase_items = resolved_group.phase_calls.get(phase, [])
         sub_lines = _generate_phase_subroutine(
-            suite_name, group_name, phase, phase_items, ctrl_sig_entries, host_dict
+            suite_name, group_name, phase, phase_items, ctrl_sig_entries,
+            host_dict, logger=logger,
         )
         lines.extend(sub_lines)
         lines.append('')
@@ -1302,6 +1365,7 @@ def write_group_cap(
 
     lines = _generate_group_cap(
         suite_name, group_name, resolved_group, host_dict, trace=trace,
+        logger=logger,
     )
     with open_if_changed(out_path, logger=logger) as fh:
         fh.write('\n'.join(lines) + '\n')

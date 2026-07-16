@@ -651,7 +651,7 @@ class TestSchemaValidation(unittest.TestCase):
         _, root = read_xml_file(_sample('suite_good_v2_test01.xml'), self._log)
         version = find_schema_version(root)
         result = validate_xml_file(
-            _sample('suite_good_v2_test01.xml'), 'suite', version, self._log,
+            _sample('suite_good_v2_test01.xml'), version, self._log,
             schema_path=_SCHEMA_DIR
         )
         self.assertTrue(result)
@@ -662,7 +662,7 @@ class TestSchemaValidation(unittest.TestCase):
         version = find_schema_version(root)
         try:
             result = validate_xml_file(
-                _sample('suite_bad_v2_suite_tag.xml'), 'suite', version,
+                _sample('suite_bad_v2_suite_tag.xml'), version,
                 self._log, schema_path=_SCHEMA_DIR
             )
             # Some xmllint versions return True even on error
@@ -677,7 +677,7 @@ class TestSchemaValidation(unittest.TestCase):
         version = find_schema_version(root)
         with self.assertRaises(CCPPError) as cm:
             validate_xml_file(
-                _sample('suite_invalid_scheme_fortran_id.xml'), 'suite',
+                _sample('suite_invalid_scheme_fortran_id.xml'),
                 version, self._log, schema_path=_SCHEMA_DIR
             )
         self.assertIn("scheme-1", str(cm.exception))
@@ -689,7 +689,7 @@ class TestSchemaValidation(unittest.TestCase):
         version = find_schema_version(root)
         with self.assertRaises(CCPPError) as cm:
             validate_xml_file(
-                _sample('suite_invalid_group_fortran_id.xml'), 'suite',
+                _sample('suite_invalid_group_fortran_id.xml'),
                 version, self._log, schema_path=_SCHEMA_DIR
             )
         self.assertIn("group-1", str(cm.exception))
@@ -701,7 +701,7 @@ class TestSchemaValidation(unittest.TestCase):
         version = find_schema_version(root)
         with self.assertRaises(CCPPError) as cm:
             validate_xml_file(
-                _sample('suite_invalid_suite_fortran_id.xml'), 'suite',
+                _sample('suite_invalid_suite_fortran_id.xml'),
                 version, self._log, schema_path=_SCHEMA_DIR
             )
         self.assertIn("ver-test-suite", str(cm.exception))
@@ -712,7 +712,7 @@ class TestSchemaValidation(unittest.TestCase):
         version = find_schema_version(root)
         # Initial file validates OK
         result = validate_xml_file(
-            _sample('suite_bad_v2_duplicate_group.xml'), 'suite', version,
+            _sample('suite_bad_v2_duplicate_group.xml'), version,
             self._log, schema_path=_SCHEMA_DIR
         )
         self.assertTrue(result)
@@ -721,7 +721,7 @@ class TestSchemaValidation(unittest.TestCase):
         expanded_path = os.path.join(self._tmp, 'dup_group_expanded.xml')
         write_xml_file(root, expanded_path, self._log)
         with self.assertRaises(CCPPError) as cm:
-            validate_xml_file(expanded_path, 'suite', version, self._log,
+            validate_xml_file(expanded_path, version, self._log,
                               schema_path=_SCHEMA_DIR)
         self.assertIn('group1', str(cm.exception))
 

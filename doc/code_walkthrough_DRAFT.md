@@ -30,6 +30,36 @@ The single sentence to keep in mind:
 
 ---
 
+## 0a. Feature overview — the three generators side by side
+
+The one-slide summary a prebuild or original-capgen developer wants before reading further.
+**v1** is the redesign documented in this walkthrough (formerly `ccpp-capgen-ng`); **v0** is
+the original `ccpp-capgen` it replaces; **prebuild** is the legacy `ccpp-prebuild`. Fuller
+two-way detail lives in `doc/redesign_analysis.md` §5 (prebuild vs. v0) and
+`doc/briefing.md` §4/§5 (prebuild/v0 vs. v1).
+
+| Feature | `ccpp-prebuild` | `ccpp-capgen` v0 | `ccpp-capgen` v1 |
+|---|---|---|---|
+| **Cap generation model** | Python-templated monolithic cap (`ccpp_prebuild_config.py`) | metadata → OO scope-chain resolution → emit | metadata → flat `ResolvedArg` resolution → emit |
+| **Generator code style** | template-driven Python | deep OO class hierarchy | flat data classes + procedural resolver |
+| **Group-cap argument shape** | DDT references | flat fields (1200+ dummy args at UFS scale) | DDT references (restored) |
+| **Variable resolution** | flat metadata dict | five-layer scope-chain promotion | flat host+control dict + suite-owned discovery |
+| **Host metadata mechanism** | hard-coded Python dict (`TYPEDEFS_NEW_METADATA`) | `type = module` tables | `type = host` / `type = ddt` tables |
+| **Fortran ↔ metadata validation** | none (trusts metadata) | embedded in generator | standalone tool (`ccpp_validator.py`) |
+| **Multi-instance / ensemble** | logical `initialized(200)` array (ad-hoc) | not supported | first-class, paired opt-in (per-instance state + constituents) |
+| **Suite state runtime check** | logical `initialized` flag | string comparison | integer named-parameter state machine |
+| **Dispatch / API surface** | `ccpp_static_api.F90` (runtime `select case`) | host-cap model (no static API) | host cap, introspection folded in |
+| **Constituent handling** | hand-rolled, host-specific glue | generator auto-clone (`ConstituentVarDict`) | explicit `register`-phase opt-in (`ccpp_constituent_properties_t`) |
+| **Build file lists** | hand-maintained `*.cmake` snippets | queryable datatable XML | `ccpp_datafile.py` + datatable (derived, see §10) |
+| **Doc generation (HTML / LaTeX)** | yes | stub (unimplemented) | stub (unimplemented) |
+
+**Bottom line:** v1 keeps v0's metadata-driven pipeline but returns to prebuild's DDT
+call interface (v0's flat-field explosion at UFS scale was the primary reason it was
+abandoned), adds first-class multi-instance support, and splits Fortran↔metadata checking
+out into a standalone validator.
+
+---
+
 ## 1. The pipeline at a glance
 
 Everything is orchestrated by `capgen()` in **`ccpp_capgen.py:863`**.
@@ -55,6 +85,10 @@ flowchart TD
 | 5 | **Resolve** | `resolve_suite` (`suite_resolver.py:2313`) | `SuiteResolution` |
 | 6 | **Emit calls** | `write_group_cap` (`group_cap.py:1272`) | `ccpp_<suite>_<group>_cap.F90` |
 | 7 | Emit rest | `write_suite_data/_types/_cap`, `write_host_cap`, `write_datatable` | suite data module, host cap, datatable |
+
+> The seven stages above are **one invocation** of `ccpp_capgen.py`. For how a host's
+> build system *drives* that invocation — alongside the validator and the datatable
+> query — see **§10 (build-system integration)**.
 
 ---
 
@@ -505,6 +539,160 @@ to §8.1–8.4. Use it only when the audience needs the multi-instance constitue
   resolution produced.
 - **Unit tests as specs:** `unit-tests/test_suite_resolver.py`, `test_variable_resolver.py`,
   `test_group_cap.py` are small, readable assertions about exactly these structures.
+
+---
+
+## 10. Build-system integration — the three-utility contract in practice
+
+Sections 1–8 are the *inside* of a single `ccpp_capgen.py` run. This section is the
+**outside**: how a host model's build system drives capgen. The governing rule —
+
+> **capgen has exactly one public interface: three standalone command-line scripts.**
+> `ccpp_validator.py`, `ccpp_capgen.py`, and `ccpp_datafile.py`. A host build invokes
+> them as subprocesses and reads their stdout / exit code. **Nothing imports a capgen
+> module, and nothing depends on a capgen internal.** (A host may add its *own* tooling
+> — e.g. to post-process `datatable.xml` — but that lives in the host repo, not here.)
+
+Everything below uses **CCPP-SCM's CMake** as the worked example, but the workflow is
+build-system-agnostic: Make, Meson, or a shell script would wire up the same three steps.
+The SCM binding lives in two files:
+
+- `cmake/ccpp_capgen.cmake` — three thin wrapper functions, one per utility
+  (`ccpp_validator()`, `ccpp_capgen()`, `ccpp_datafile()`), each of which just marshals
+  arguments and `execute_process()`es the script.
+- `ccpp/CMakeLists.txt` — the driver: assembles the input file lists, calls the three
+  functions in order, and feeds the results into an `add_library()` target.
+
+### 10.1 The workflow — validate → generate → query
+
+```mermaid
+flowchart TD
+    subgraph inputs["Build-system inputs (host repo)"]
+      HM[".meta<br/>host files"]
+      SM[".meta<br/>scheme files"]
+      SDF["suite XML<br/>(SDFs)"]
+      SRC["Fortran<br/>sources"]
+    end
+
+    HM & SM & SRC --> V["ccpp_validator.py<br/>--host-files / --scheme-files<br/>+ --source-files<br/>(build gate: exit≠0 → stop)"]
+    V -->|pass| G
+
+    HM --> G["ccpp_capgen.py<br/>--host-files --scheme-files --suites<br/>--host-name --output-root --kind-type"]
+    SM --> G
+    SDF --> G
+
+    G --> OUT["generated caps (.F90)<br/>+ datatable.xml<br/>under --output-root"]
+
+    OUT --> Q["ccpp_datafile.py &lt;report&gt; datatable.xml"]
+    Q -->|--capgen-files| L1["generated caps"]
+    Q -->|--scheme-files| L2["used-only<br/>scheme sources"]
+    Q -->|--dependencies| L3["co-located deps"]
+
+    L1 & L2 & L3 --> LIB["compile target<br/>(add_library / Make rule)"]
+    HSRC["host sources"] --> LIB
+```
+
+| Step | Utility | Role | Key inputs | Output the build consumes |
+|------|---------|------|-----------|---------------------------|
+| 1 | `ccpp_validator.py` | **Gate** — check every `.meta` against its `.F90` (types, ranks, intents, kinds) | `--source-files` + either `--host-files` **or** `--scheme-files` (one run each) | exit code only (nonzero → build stops) |
+| 2 | `ccpp_capgen.py` | **Generate** the caps + `datatable.xml` | `--host-files`, `--scheme-files`, `--suites`, `--host-name`, `--output-root`, `--kind-type` | files under `--output-root` (incl. `datatable.xml`) |
+| 3 | `ccpp_datafile.py` | **Query** `datatable.xml` for the file lists the compile needs | positional `datatable.xml` + one report flag | comma-separated file list on stdout |
+
+The validator is a **gate**, not a producer: it writes nothing capgen consumes, it just
+fails the build early on a metadata↔Fortran mismatch. Steps 2 and 3 are the load-bearing
+pair — and the reason step 3 exists at all is the next point.
+
+### 10.2 Why the datatable query exists — closing the loop at *configure* time
+
+A build system has to know **which files to compile** before it can define a target. But
+capgen *decides* that set — it emits caps whose names depend on the host name and the
+suites, and it filters the scheme sources down to only those a loaded suite actually uses.
+So there is a genuine chicken-and-egg: the list of sources to compile is an **output** of
+capgen.
+
+`datatable.xml` + `ccpp_datafile.py` close that loop. capgen records everything it did in
+`datatable.xml`; the datatable query reads it back and hands the build system exactly the
+lists it needs. This is capgen's answer to prebuild's hand-maintained `*.cmake`/Makefile
+snippets — the file list is **derived**, never curated.
+
+The corollary for CMake: capgen must run at **configure time** (`execute_process()` inside
+`CMakeLists.txt`), not build time (`add_custom_command`), because its output *defines* the
+`add_library()` target. SCM assembles four query results plus the host sources into one
+static library (`ccpp/CMakeLists.txt`):
+
+```cmake
+ccpp_datafile(DATATABLE "${OUTPUT_ROOT}/datatable.xml" REPORT_NAME "--dependencies")
+set(CAPGEN_DEPENDENCIES ${CCPP_FILES})       # co-located deps from metadata 'dependencies ='
+ccpp_datafile(DATATABLE "${OUTPUT_ROOT}/datatable.xml" REPORT_NAME "--scheme-files")
+set(SCHEME_FORTRAN_FILES ${CCPP_FILES})      # scheme .F90s a loaded suite actually uses
+ccpp_datafile(DATATABLE "${OUTPUT_ROOT}/datatable.xml" REPORT_NAME "--capgen-files")
+set(CAPGEN_FILES ${CCPP_FILES})              # the generated caps themselves
+
+add_library(scm-ccpp STATIC
+  ${EXTRA_FILES}            # hand-added; do not survive the suite filter (see 10.4)
+  ${CAPGEN_DEPENDENCIES}
+  ${SCHEME_FORTRAN_FILES}
+  ${HOST_FORTRAN_FILES}     # host sources, gathered host-side (see 10.4)
+  ${CAPGEN_FILES})
+```
+
+The three relevant reports (of the full menu in `ccpp_datafile.py`):
+
+| Report | Returns | Why the build needs it |
+|--------|---------|------------------------|
+| `--capgen-files` | the generated caps (`.F90`) — union of host/suite/utility caps | these must be compiled |
+| `--scheme-files` | the **used-only** scheme sources (group phases + suite `<init>/<final>` hooks) | compile only schemes a suite references, not the whole superset handed to capgen |
+| `--dependencies` | co-located sources named by a metadata `dependencies =` attribute | pull in helper `.F90`s that have no metadata of their own |
+
+(Other reports — `--host-files`, `--suite-files`, `--utility-files`, `--module-list`,
+`--suite-list`, `--{required,input,output,host}-variables` — exist for host tooling and
+introspection but aren't needed to build.)
+
+### 10.3 The general shape (any build system)
+
+Strip away the CMake and the workflow is three subprocess calls with a file passed between
+the last two:
+
+```
+1. for each (metadata set, source set): ccpp_validator.py --{host,scheme}-files … --source-files …   # or fail
+2. ccpp_capgen.py --host-files … --scheme-files … --suites … --host-name H --output-root R --kind-type …
+3. for report in {--capgen-files, --scheme-files, --dependencies}: ccpp_datafile.py $report R/datatable.xml
+4. compile (host sources) + (the three lists from step 3) into the CCPP library
+```
+
+Make would express step 3 as `$(shell …)` and step 4 as a normal rule; the substance is
+identical. The only capgen-specific knowledge the build needs is **the argv of three
+scripts and the name `datatable.xml`** — nothing else crosses the boundary.
+
+### 10.4 Two things that legitimately live host-side
+
+The contract permits host-specific glue *around* the three utilities — SCM has two worth
+calling out, both in the host repo (not capgen):
+
+- **`.meta → .F90` mapping** (`ccpp_source_files()` in `cmake/ccpp_capgen.cmake`). The
+  *validator* needs Fortran source paths, but the build lists only metadata. This helper
+  reads each `.meta`'s optional `source_path` and probes for the sibling `.F90` by suffix.
+  It's a convenience for feeding `--source-files`; capgen itself never needs it.
+- **`EXTRA_FILES`.** A source that no loaded suite references won't appear in
+  `--scheme-files`, so if the host still needs it linked (e.g. `module_ccpp_suite_simulator.F90`)
+  it is added by hand. This is the escape hatch for "compile it anyway," kept explicit and
+  separate from the derived lists.
+
+### 10.5 Transient migration flags (not part of the stable contract)
+
+SCM's wrappers currently append a few flags that are **temporary shims**, each tracked for
+removal once the host metadata is cleaned up. They are on the `ccpp_capgen.py` /
+`ccpp_validator.py` command lines today but should *not* be read as part of the durable
+interface:
+
+| Flag | What it does | Status |
+|------|--------------|--------|
+| `--legacy-mode` | rewrites `horizontal_loop_extent → horizontal_dimension` and `number_of_openmp_threads → number_of_threads` at parse time (loud warning) | transient; drop when scheme metadata is updated |
+| `--gfs-dim-aliases` | treats a few GFS-specific dimension names as equal inside dimension canonicalisation only | transient; GFS-tree-specific |
+| `--no-host-introspection` | stubs the host cap's five introspection routines (shrinks the generated `<host>_ccpp_cap.F90` dramatically) | transient; pending the runtime-listing redesign |
+
+They're isolated by design so the day SCM's metadata no longer needs them, deleting the
+three `list(APPEND … )` lines in `ccpp_capgen.cmake` is the whole change.
 
 ---
 
