@@ -35,7 +35,8 @@ _UTILITY_FILES = [os.path.join(_BUILD_DIR, "ccpp", "ccpp_kinds.F90"),
 _CCPP_FILES = _UTILITY_FILES + _HOST_FILES + _SUITE_FILES
 _DEPENDENCIES = [""]
 _PROCESS_LIST = [""]
-_MODULE_LIST = ["cld_ice", "cld_liq", "const_indices", "apply_constituent_tendencies"]
+_MODULE_LIST = ["cld_ice", "cld_liq", "cld_shadow", "const_indices",
+                "apply_constituent_tendencies"]
 _SUITE_LIST = ["cld_suite"]
 _REQUIRED_VARS_CLD = ["ccpp_error_code", "ccpp_error_message",
                       "horizontal_loop_begin", "horizontal_loop_end",

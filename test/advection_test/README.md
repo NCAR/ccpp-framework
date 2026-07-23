@@ -8,6 +8,9 @@ Contains tests to exercise the capabilities of the constituents object, includin
 - Accessing and modifying a constituent tendency variable
 - Passing around the constituent tendency array
 - Dimensions are case-insensitive
+- Reuse of a constituent or host variable local name by a scheme
+  interstitial with a different standard name (cld_shadow); the group cap
+  must rename its local variables to avoid duplicate declarations
 
 ## Building/Running
 

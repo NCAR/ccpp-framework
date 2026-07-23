@@ -1863,6 +1863,12 @@ class VarDictionary(OrderedDict):
         # end if
         return pvar
 
+    def known_local_names(self):
+        """Return a list of the local names in use in this dictionary.
+        The returned names are lowercase because local name use is
+        case insensitive."""
+        return list(self.__local_names.keys())
+
     def find_error_variables(self, any_scope=False, clone_as_out=False):
         """Find and return a consistent set of error variables in this
         dictionary.
@@ -2098,11 +2104,14 @@ class VarDictionary(OrderedDict):
         """
         return var.call_string(self, loop_vars=loop_vars)
 
-    def new_internal_variable_name(self, prefix=None, max_len=63):
+    def new_internal_variable_name(self, prefix=None, max_len=63,
+                                   reserved=None):
         """Find a new local variable name for this dictionary.
         The new name begins with <prefix>_<self.name> or with <self.name>
         (where <self.name> is this VarDictionary's name) if <prefix> is None.
         The new variable name is kept to a maximum length of <max_len>.
+        If <reserved> is passed, it is a collection of local names (e.g.,
+        from a related dictionary) which the new name must also avoid.
         """
         index = 0
         if prefix is None:
@@ -2110,7 +2119,12 @@ class VarDictionary(OrderedDict):
         else:
             var_prefix = '{}'.format(prefix)
         # end if
-        varlist = [x for x in self.__local_names.keys() if var_prefix in x]
+        # Local names are used case insensitively, compare in lowercase
+        varlist = [x for x in self.__local_names.keys()
+                   if var_prefix.lower() in x]
+        if reserved:
+            varlist.extend([x.lower() for x in reserved])
+        # end if
         newvar = None
         while newvar is None:
             if index == 0:
@@ -2122,7 +2136,7 @@ class VarDictionary(OrderedDict):
             if len(newvar) > max_len:
                 var_prefix = var_prefix[:-1]
                 newvar = None
-            elif newvar in varlist:
+            elif newvar.lower() in varlist:
                 newvar = None
             # end if
         # end while
