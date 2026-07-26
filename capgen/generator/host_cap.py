@@ -244,10 +244,24 @@ def _collect_host_io(
     * ``source='host'`` — host metadata vars.
     * ``source='control'`` — control vars (errmsg, errflg, …) when they
       appear as scheme args (not when they're framework-injected dummies).
-    * ``source='constituent'`` — both auto-resolved base/tendency
-      constituents and direct framework-array references
-      (``ccpp_constituents`` / ``ccpp_constituent_tendencies`` / etc.) and
-      register-phase ``ccpp_constituent_properties_t`` args.
+    * ``source='constituent'`` — auto-resolved base/tendency constituents
+      and direct framework-array references (``ccpp_constituents`` /
+      ``ccpp_constituent_tendencies`` / etc.).
+
+    Register-phase ``ccpp_constituent_properties_t`` args
+    (:attr:`ResolvedArg.is_constituent_arg`) are excluded.  The scheme
+    allocates that array and the framework drains it into the per-suite
+    ``<suite>_dynamic_constituents`` buffer; the host never supplies,
+    reads, or checks it, and its standard name is chosen freely by each
+    scheme (``dynamic_constituents_for_<scheme>``,
+    ``prescribed_ozone_constituents``, …).  Original capgen never put
+    these on a group call list at all — ``SuiteObject.match_variable``
+    returns early for ``ccpp_constituent_properties_t`` in the register
+    phase without calling ``add_variable_to_call_tree`` — so they never
+    reached ``ccpp_physics_suite_variables``.  Emitting them makes a host
+    that validates the introspection list against its own registry (e.g.
+    CAM-SIMA's ``physics_check_data``) abort on a name it cannot possibly
+    know.
 
     *inputs*  : intent in ``('in', 'inout')`` and not protected (the
                 protected check is host-only; constituent / control args
@@ -306,6 +320,10 @@ def _collect_host_io(
                     # Suite-owned vars are internal scheme-to-scheme
                     # plumbing and not part of the host-facing surface.
                     if arg.source == 'suite':
+                        continue
+                    # Register-phase ccpp_constituent_properties_t arrays
+                    # are framework-internal too (see docstring).
+                    if arg.is_constituent_arg:
                         continue
                     name = (
                         _arg_top_level_name(arg, local_to_std)

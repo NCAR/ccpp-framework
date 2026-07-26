@@ -537,9 +537,9 @@ class TestCollectHostIo(unittest.TestCase):
 
 
 class TestCollectHostIoIncludesNonHostSources(unittest.TestCase):
-    """_collect_host_io includes constituent args + register-phase
-    ccpp_constituent_properties_t args + control vars in the introspection
-    lists (matches original capgen).  Only suite-owned vars are excluded."""
+    """_collect_host_io includes constituent args and control vars in the
+    introspection lists (matches original capgen).  Suite-owned vars and
+    register-phase ccpp_constituent_properties_t args are excluded."""
 
     def setUp(self):
         from test_suite_resolver import (
@@ -570,11 +570,15 @@ class TestCollectHostIoIncludesNonHostSources(unittest.TestCase):
             'tendency_of_cloud_liquid_water_mixing_ratio', outputs,
         )
 
-    def test_register_phase_properties_t_in_outputs(self):
+    def test_register_phase_properties_t_not_in_lists(self):
         # The register-phase scheme declares dyn_const as intent=out
-        # ccpp_constituent_properties_t — appears in the output list.
-        _, outputs = _collect_host_io(self.register_sr, self.hd)
-        self.assertIn('dynamic_constituents_for_register_test', outputs)
+        # ccpp_constituent_properties_t.  That array is framework-internal
+        # (drained into <suite>_dynamic_constituents); the host neither
+        # supplies nor checks it, and original capgen never put it on a
+        # call list.  It must appear in neither introspection list.
+        inputs, outputs = _collect_host_io(self.register_sr, self.hd)
+        self.assertNotIn('dynamic_constituents_for_register_test', outputs)
+        self.assertNotIn('dynamic_constituents_for_register_test', inputs)
 
     def test_control_vars_in_outputs(self):
         # The register scheme also declares errmsg/errflg with intent=out.
