@@ -875,19 +875,40 @@ construction.
   analytic-IC modules, and `to_be_ccppized/ccpp_const_utils.F90`.
 - **Why original capgen did not hit this**: `scripts/ccpp_datafile.py`
   (`_add_generated_files`) emitted all four unconditionally, on every run.
-  That masked the issue rather than solving it — the *framework* was
-  asserting a dependency it cannot see, on behalf of every host, and every
-  constituent-free host paid for it.
-- **Fix (host side, deliberately not the framework)**: new
-  `cime_config/host_framework_deps.py` in CAM-SIMA declares the framework
-  sources the host compiles unconditionally (globbing `capgen/src/*.F90`, so
-  a framework-side addition cannot silently break the build).
-  `cam_autogen.py` feeds them to the existing `_update_genccpp_dir` next to
-  the `<utilities>` copy. Same destination, so when a suite *does* use
-  constituents and capgen lists them too, both writes are identical and no
-  duplicate module results. Capgen is unchanged. 8 new unit tests in
-  `test/unit/python/test_host_framework_deps.py`, including a `use`-closure
-  check so a partial list fails in the test rather than at compile time.
+  The first fix attempt read that as masking the issue — the *framework*
+  asserting a dependency it cannot see, on behalf of every host — and moved
+  the declaration into CAM-SIMA. That reading was half wrong; see the fix
+  below.
+- **Fix, part 1 (framework, `e1f90d1`)**: `ccpp_host_constituents.F90` and
+  the four `capgen/src` modules are now emitted unconditionally — with a
+  zero-size constituent table when no suite touches constituent state. The
+  justification is *not* "hosts might need it" (capgen cannot know that) but
+  that the host cap re-exports the host-facing constituent API, so
+  `<host>_ccpp_cap`'s interface must not expand and contract with suite
+  content. That is capgen reasoning about its own generated interface,
+  which it can see. `_generate_host_constituents` no longer returns `None`;
+  `_any_constituent_state` is gone.
+- **Fix, part 2 (CAM-SIMA)**: `cime_config/host_framework_deps.py` declares
+  the framework modules CAM-SIMA host code compiles against unconditionally
+  and **checks** that capgen's `<utilities>` provides them, raising with the
+  consuming CAM-SIMA files named. It deliberately does not supply them: the
+  earlier copy-the-glob version would have silently papered over a framework
+  that stopped shipping them, and left two lists (a glob there, an explicit
+  list in `ccpp_capgen.py`) free to drift. 9 unit tests in
+  `test/unit/python/test_host_framework_deps.py`; the `use`-closure check
+  now runs against `capgen/src` directly, and a new test greps the named
+  CAM-SIMA files so a stale table entry fails the tests rather than
+  outliving its justification.
+- **Verified**: the failing aux test
+  `SMS_Ln2.ne3pg3_ne3pg3_mg37.FPHYStest.derecho_gnu.cam-outfrq_beljaars_derecho`
+  passes on Derecho (2026-07-27). Framework side: 1548 unit tests and 13/13
+  end-to-end tests, the latter re-run after deleting all generated caps so
+  every host — including the constituent-free ones (`ddthost`, `opt_arg`,
+  `var_compat`, `nested_suite`, `suite_allocate`) — regenerated and compiled
+  the zero-size module.
+- **Also found**: `ccpp_scheme_utils` is an unconditional *host* dependency
+  too — `src/cpl/nuopc/atm_import_export.F90` uses `ccpp_constituent_index`.
+  The original glob covered it by accident; the explicit table names it.
 - **Why not `cime_config/capgen_compat/`**: that directory is transient
   scaffolding with a phased removal plan (`capgen_compat/README.md`), and
   this dependency outlives it — CAM-SIMA host code will keep using
@@ -897,12 +918,47 @@ construction.
   which is all capgen can know from metadata. It does **not** answer "what
   does the host need" — a host that reaches the constituent API from its own
   Fortran must declare that itself. Worth stating explicitly if the
-  `<utilities>` contract is ever specified for other hosts.
+  `<utilities>` contract is ever specified for other hosts. Whether a host
+  should be reaching the API that way at all is §4.18.
 - **Position relative to Proposals A/B/C**: orthogonal — a build-inputs
   boundary question, not a constituent-model change. Note though that
   **Proposal C (host-only registration) would make it worse**, since more
   host code would touch the constituent API directly; the declaration in
   `host_framework_deps.py` is what keeps that tractable.
+
+---
+
+### 4.18 Capgen: the host cap re-exports constituent procedures but not their types (OPEN)
+
+- **Location**: `constituent_pub_syms` in `capgen/generator/host_cap.py`.
+- **Question raised** (2026-07-27, deferred — *not decided here*): is a host
+  model permitted to `use` framework modules directly, or is
+  `<host>_ccpp_cap` the whole of its contract with capgen? §4.17 assumes the
+  former is legitimate and merely undeclared; the host cap's re-export of
+  the constituent API (added because the host cap is the host's API surface)
+  points at the latter.
+- **What settles part of it regardless**: the contract "a host may `use`
+  only `<host>_ccpp_cap`" is **not satisfiable today**. The re-export list
+  carries 12 entities but no derived types, while
+  `ccpp_model_const_properties()` returns
+  `type(ccpp_constituent_prop_ptr_t), pointer :: (:)` and
+  `ccpp_model_constituents_obj` is `type(ccpp_model_constituents_t)`. A host
+  cannot declare the variable that receives what the re-exported function
+  returns without reaching into `ccpp_constituent_prop_mod` itself. Whatever
+  is decided about the contract, adding `ccpp_constituent_prop_ptr_t` and
+  `ccpp_constituent_properties_t` to `constituent_pub_syms` looks correct on
+  its own.
+- **Scale**: of CAM-SIMA's direct imports from `ccpp_constituent_prop_mod`
+  across `src/`, 51 are `ccpp_constituent_prop_ptr_t` and 21 are
+  `ccpp_constituent_properties_t` — i.e. the case above. Only 6 are
+  anything else (`to_lower` ×3, `int_unassigned` ×3, both generic
+  utilities), plus `ccpp_scheme_utils:ccpp_constituent_index` in
+  `src/cpl/nuopc/atm_import_export.F90`. So the contract argument is about
+  ~7 use statements, not ~78; fixing the type export dissolves the rest.
+- **If it is decided that hosts must go through the cap**:
+  `host_framework_deps.py` becomes a list of violations to migrate rather
+  than a dependency declaration, and its docstring already names that exit
+  condition.
 
 ---
 
