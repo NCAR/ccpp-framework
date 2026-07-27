@@ -1040,13 +1040,15 @@ def _generate_host_cap(
     # Re-export the host-facing constituent API + the constituent object so
     # host code can do ``use <host>_ccpp_cap, only: ...`` for *everything*
     # it needs from CCPP.  Mirrors original capgen, which put all of these
-    # on the generated host cap module.  Only emitted when any suite uses
-    # constituent state (the ccpp_host_constituents module is only emitted
-    # in that case too).
-    uses_consts = any(
-        suite_resolution.uses_constituents or suite_resolution.constituent_register_calls
-        for suite_resolution in suite_resolutions
-    )
+    # on the generated host cap module.
+    #
+    # Emitted unconditionally.  ccpp_host_constituents is now always
+    # generated (with a zero-size table when no suite touches constituent
+    # state), because the host cap is the host's API surface and an
+    # interface that expands and contracts with suite content cannot be
+    # called from host code: CAM-SIMA's cam_comp.F90 USEs six of these
+    # entry points in every configuration.  See host_constituents.py's
+    # _generate_host_constituents docstring.
     constituent_pub_syms = [
         'ccpp_model_constituents_obj',
         'ccpp_register_constituents',
@@ -1061,11 +1063,10 @@ def _generate_host_cap(
         'ccpp_model_const_properties',
         'ccpp_deallocate_dynamic_constituents',
     ]
-    if uses_consts:
-        lines.append('{}use ccpp_host_constituents, only: &'.format(_INDENT))
-        for i, sym in enumerate(constituent_pub_syms):
-            sep = ', &' if i < len(constituent_pub_syms) - 1 else ''
-            lines.append('{}{}{}'.format(_INDENT * 2, sym, sep))
+    lines.append('{}use ccpp_host_constituents, only: &'.format(_INDENT))
+    for i, sym in enumerate(constituent_pub_syms):
+        sep = ', &' if i < len(constituent_pub_syms) - 1 else ''
+        lines.append('{}{}{}'.format(_INDENT * 2, sym, sep))
 
     lines.append('')
     lines.append('{}implicit none'.format(_INDENT))
@@ -1084,8 +1085,7 @@ def _generate_host_cap(
     pub_subs.append('ccpp_physics_suite_schemes')
     pub_subs.append('ccpp_physics_suite_variables')
     pub_subs.append('ccpp_physics_suite_host_data')
-    if uses_consts:
-        pub_subs.extend(constituent_pub_syms)
+    pub_subs.extend(constituent_pub_syms)
     for sub in pub_subs:
         lines.append('{}public :: {}'.format(_INDENT, sub))
 

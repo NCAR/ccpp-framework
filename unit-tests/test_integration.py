@@ -345,9 +345,12 @@ class TestResolveFrameworkF90FilesMissingRaises(unittest.TestCase):
         self.assertIn('Vendor',                     msg)
 
 
-class TestNoHostConstituentsWhenAbsent(unittest.TestCase):
-    """The host-constituents module is NOT emitted (and the framework F90
-    files are NOT listed) when no suite touches constituent state."""
+class TestHostConstituentsWhenNoConstituentState(unittest.TestCase):
+    """The host-constituents module and its framework F90 dependencies are
+    emitted even when no suite touches constituent state.  The host cap
+    re-exports that API, so a host must be able to USE it unconditionally;
+    an interface that varies with suite content is not callable from
+    hand-written host code."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -357,19 +360,31 @@ class TestNoHostConstituentsWhenAbsent(unittest.TestCase):
         import shutil
         shutil.rmtree(self._tmpdir)
 
-    def test_host_constituents_file_absent(self):
-        self.assertFalse(os.path.isfile(
+    def test_host_constituents_file_present(self):
+        self.assertTrue(os.path.isfile(
             os.path.join(self._tmpdir, 'ccpp_host_constituents.F90')
         ))
 
-    def test_no_framework_dependencies_in_utilities(self):
+    def test_framework_dependencies_in_utilities(self):
         tree = ET.parse(os.path.join(self._tmpdir, 'datatable.xml'))
         utils = [e.text for e in tree.getroot().findall(
             './capgen_files/utilities/file'
         )]
         names = [os.path.basename(p) for p in utils]
-        # Only ccpp_kinds.F90 — no constituent framework files.
-        self.assertEqual(names, ['ccpp_kinds.F90'])
+        self.assertEqual(sorted(names), sorted([
+            'ccpp_kinds.F90',
+            'ccpp_host_constituents.F90',
+            'ccpp_constituent_prop_mod.F90',
+            'ccpp_hashable.F90',
+            'ccpp_hash_table.F90',
+            'ccpp_scheme_utils.F90',
+        ]))
+
+    def test_utility_paths_are_absolute_and_exist(self):
+        tree = ET.parse(os.path.join(self._tmpdir, 'datatable.xml'))
+        for entry in tree.getroot().findall('./capgen_files/utilities/file'):
+            self.assertTrue(os.path.isabs(entry.text), msg=entry.text)
+            self.assertTrue(os.path.isfile(entry.text), msg=entry.text)
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,6 @@ import unittest
 
 from generator.suite_resolver import resolve_suite
 from generator.host_constituents import (
-    _any_constituent_state,
     _all_index_names,
     _suites_with_register_consts,
     _generate_host_constituents,
@@ -63,19 +62,7 @@ def _render_register():
 
 
 class TestAggregationHelpers(unittest.TestCase):
-    """``_any_constituent_state`` / ``_all_index_names`` / ``_suites_with_register_consts``."""
-
-    def test_any_when_consumer_only(self):
-        suite_resolution, _hd = _resolve_consumer()
-        self.assertTrue(_any_constituent_state([suite_resolution]))
-
-    def test_any_when_register_only(self):
-        suite_resolution, _hd = _resolve_register()
-        self.assertTrue(_any_constituent_state([suite_resolution]))
-
-    def test_any_when_neither(self):
-        suite_resolution, _hd = _resolve_simple()
-        self.assertFalse(_any_constituent_state([suite_resolution]))
+    """``_all_index_names`` / ``_suites_with_register_consts``."""
 
     def test_index_names_aggregated(self):
         consumer, _ch  = _resolve_consumer()
@@ -130,13 +117,46 @@ class TestAggregationHelpers(unittest.TestCase):
         )
 
 
-class TestModuleSkippedWhenNoConstituents(unittest.TestCase):
-    """``_generate_host_constituents`` returns ``None`` when nothing touches
-    constituent state — the module is not emitted at all."""
+class TestModuleEmittedWhenNoConstituents(unittest.TestCase):
+    """``_generate_host_constituents`` emits the module even when nothing
+    touches constituent state, with a zero-size table.  The host cap
+    re-exports this API, so it must not vary with suite content."""
 
-    def test_returns_none(self):
+    def setUp(self):
         suite_resolution, _hd = _resolve_simple()
-        self.assertIsNone(_generate_host_constituents([suite_resolution]))
+        lines = _generate_host_constituents([suite_resolution])
+        self.assertIsNotNone(lines)
+        self.text = '\n'.join(lines)
+
+    def test_module_is_generated(self):
+        self.assertIn('module ccpp_host_constituents', self.text)
+        self.assertIn('end module ccpp_host_constituents', self.text)
+
+    def test_full_public_api_present(self):
+        # Every entry point a host may USE unconditionally.  CAM-SIMA's
+        # cam_comp.F90 alone uses six of these in every configuration.
+        for sym in ('ccpp_model_constituents_obj',
+                    'ccpp_register_constituents',
+                    'ccpp_initialize_constituents',
+                    'ccpp_is_scheme_constituent',
+                    'ccpp_number_constituents',
+                    'ccpp_gather_constituents',
+                    'ccpp_update_constituents',
+                    'ccpp_const_get_index',
+                    'ccpp_constituents_array',
+                    'ccpp_advected_constituents_array',
+                    'ccpp_model_const_properties',
+                    'ccpp_deallocate_dynamic_constituents'):
+            self.assertIn('public :: {}'.format(sym), self.text)
+
+    def test_no_index_symbols(self):
+        # Nothing registered, so there are no index_of_<X> integers.
+        self.assertNotIn('int_unassigned\n\n  integer, public :: index_of_',
+                         self.text)
+
+    def test_scheme_constituent_lookup_answers_false(self):
+        # With no constituents the query must answer "no", not fail to link.
+        self.assertIn('constituent_exists = .false.', self.text)
 
 
 class TestModuleHeaderAndUses(unittest.TestCase):

@@ -1046,24 +1046,27 @@ def capgen(
         trace=trace,
     )
 
-    # ---- host-wide constituent module (only when any suite touches
-    #      constituent state) ------------------------------------------------
+    # ---- host-wide constituent module ---------------------------------------
+    # Always generated -- with a zero-size table when no suite touches
+    # constituent state -- because the host cap re-exports its public API and
+    # that interface must not vary with suite content.  See
+    # generator/host_constituents.py.
     host_consts_path = write_host_constituents(
         suite_resolutions, output_root, host_dict=host_dict, logger=log,
     )
 
     # ---- datatable.xml ------------------------------------------------------
     abs_root = os.path.abspath(output_root)
+    # The generated ccpp_host_constituents.F90 USEs ccpp_constituent_prop_mod
+    # (and transitively ccpp_hashable / ccpp_hash_table); host code that
+    # calls ccpp_constituent_index pulls in ccpp_scheme_utils.  Add all
+    # framework F90 dependencies so the host build picks them up.  Since
+    # the module above is unconditional, so are these.
     utility_paths = [
         os.path.join(abs_root, 'ccpp_kinds.F90'),
+        host_consts_path,
     ]
-    if host_consts_path:
-        utility_paths.append(host_consts_path)
-        # The generated ccpp_host_constituents.F90 USEs ccpp_constituent_prop_mod
-        # (and transitively ccpp_hashable / ccpp_hash_table); host code that
-        # calls ccpp_constituent_index pulls in ccpp_scheme_utils.  Add all
-        # framework F90 dependencies so the host build picks them up.
-        utility_paths.extend(_resolve_framework_f90_files())
+    utility_paths.extend(_resolve_framework_f90_files())
     host_file_paths = [
         os.path.join(abs_root, '{}_ccpp_cap.F90'.format(host_name)),
     ]

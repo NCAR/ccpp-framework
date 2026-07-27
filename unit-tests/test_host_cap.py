@@ -101,12 +101,18 @@ class TestGenerateHostCapModule(unittest.TestCase):
     def test_contains_block(self):
         self.assertIn('contains', self.lines)
 
-    def test_no_constituent_reexport_when_absent(self):
-        # The test_simple fixture has no constituents — host_constituents
-        # module isn't emitted, so host_cap must not USE or re-export it.
-        self.assertNotIn('use ccpp_host_constituents', self.text)
-        self.assertNotIn('ccpp_register_constituents', self.text)
-        self.assertNotIn('ccpp_initialize_constituents', self.text)
+    def test_constituent_reexport_even_when_absent(self):
+        # The test_simple fixture has no constituents, but the host cap is
+        # the host's API surface: its interface must not expand and contract
+        # with suite content, or host code cannot USE it unconditionally.
+        # ccpp_host_constituents is always generated (zero-size table), so
+        # host_cap always USEs and re-exports it.  See
+        # generator/host_constituents.py:_generate_host_constituents.
+        self.assertIn('use ccpp_host_constituents', self.text)
+        self.assertIn('public :: ccpp_register_constituents', self.text)
+        self.assertIn('public :: ccpp_initialize_constituents', self.text)
+        self.assertIn('public :: ccpp_constituents_array', self.text)
+        self.assertIn('public :: ccpp_model_const_properties', self.text)
 
 
 class TestHostCapConstituentReexport(unittest.TestCase):

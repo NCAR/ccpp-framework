@@ -51,14 +51,6 @@ _CONST_OBJ = 'ccpp_model_constituents_obj'
 # Aggregation helpers
 ########################################################################
 
-def _any_constituent_state(suite_results: List[SuiteResolution]) -> bool:
-    """Return True iff any suite either uses or registers constituents."""
-    return any(
-        suite_resolution.uses_constituents or suite_resolution.constituent_register_calls
-        for suite_resolution in suite_results
-    )
-
-
 def _all_index_names(suite_results: List[SuiteResolution]) -> List[str]:
     """Return sorted unique base std-names that need an ``index_of_<X>``."""
     names: Set[str] = set()
@@ -565,11 +557,25 @@ def _deallocate_lines(
 def _generate_host_constituents(
     suite_results: List[SuiteResolution],
     host_dict=None,
-) -> Optional[List[str]]:
-    """Generate ``ccpp_host_constituents.F90`` source lines, or ``None``."""
-    if not _any_constituent_state(suite_results):
-        return None
+) -> List[str]:
+    """Generate ``ccpp_host_constituents.F90`` source lines.
 
+    Emitted unconditionally, including when no suite touches constituent
+    state -- in that case the module is still valid, with a zero-size
+    constituent table: ``ccpp_number_constituents`` answers 0,
+    ``ccpp_constituents_array`` returns a zero-size array, and host loops
+    over it are no-ops.
+
+    The host cap re-exports this module's public API, so gating it on
+    constituent use would make ``<host>_ccpp_cap``'s interface expand and
+    contract with suite content.  That is not a usable API: CAM-SIMA's
+    top-level driver (``cam_comp.F90``) USEs six of these entry points, and
+    its dycore coupling layers and analytic-IC modules use more, all in
+    code compiled for every configuration.  A host cannot ``#ifdef`` around
+    a generator decision it cannot see, so "no constituents" must be an
+    answer, not a missing symbol.  Original capgen took the same position:
+    it always generated the host-cap-owned ``ccpp_model_constituents_obj``.
+    """
     register_suites = _suites_with_register_consts(suite_results)
     index_names     = _all_index_names(suite_results)
 
@@ -699,11 +705,9 @@ def write_host_constituents(
     outdir: str,
     host_dict=None,
     logger: Optional[logging.Logger] = None,
-) -> Optional[str]:
-    """Write ``ccpp_host_constituents.F90`` if needed, return its path or ``None``."""
+) -> str:
+    """Write ``ccpp_host_constituents.F90`` and return its path."""
     lines = _generate_host_constituents(suite_results, host_dict)
-    if lines is None:
-        return None
     if not os.path.isdir(outdir):
         os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, 'ccpp_host_constituents.F90')
