@@ -666,6 +666,22 @@ framework files (listed under `<utilities>` in `datatable.xml`):
 The host's CMake should query `ccpp_datafile.py --utility-files` to
 get the absolute paths to these files at the right output location.
 
+> **These four are listed only when some suite touches constituent
+> state.** `<utilities>` answers "what do the generated caps need",
+> which is all capgen can determine from metadata. If the *host's own
+> Fortran* uses the constituent API — `use ccpp_constituent_prop_mod`
+> in host code rather than only through the generated caps — then the
+> host needs these modules compiled even for a suite with no
+> constituents, and capgen cannot see that. Such a host must add them
+> to its build itself; querying `--utility-files` alone will silently
+> produce a build that fails with `Cannot open module file
+> 'ccpp_constituent_prop_mod.mod'` the first time someone configures a
+> constituent-free suite.
+>
+> CAM-SIMA is exactly this case and declares them in
+> `cime_config/host_framework_deps.py`. See `constituents_overhaul.md`
+> §4.17 for the failure and the reasoning.
+
 ---
 
 ## 7. Multi-instance design

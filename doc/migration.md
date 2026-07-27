@@ -909,6 +909,17 @@ When any scheme registers constituents:
 
 - `ccpp_host_constituents.F90` — owns `ccpp_model_constituents_obj(:)`
   and the host-facing constituent API.
+- The framework's constituent sources (`ccpp_constituent_prop_mod.F90`,
+  `ccpp_hashable.F90`, `ccpp_hash_table.F90`, `ccpp_scheme_utils.F90`) are
+  added to `<utilities>`.  **Migration note:** original capgen listed these
+  four on *every* run, so a host that relied on `--utility-files` alone got
+  them unconditionally.  capgen scopes them to what the generated caps
+  actually need.  A host whose own Fortran does `use
+  ccpp_constituent_prop_mod` — outside the generated caps — must now add
+  them to its build itself, or a constituent-free suite will fail with
+  `Cannot open module file 'ccpp_constituent_prop_mod.mod'`.  See
+  `constituents.md` §6 "Framework F90 dependencies" and
+  `constituents_overhaul.md` §4.17.
 
 ### 5.2 Per-suite data: TARGET on the instance array
 

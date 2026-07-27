@@ -358,6 +358,16 @@ afterwards. This is direct evidence that the "post-instantiation
 override" pattern is real and used today, and that the framework's
 setter API is load-bearing.
 
+Note that this host-side use of the constituent API is **unconditional**:
+`cam_constituents.F90` lives in `src/physics/utils`, which is always in the
+build Filepath, and `src/control/cam_comp.F90` (the top-level driver), the
+dycore coupling layers, the analytic-IC modules and
+`to_be_ccppized/ccpp_const_utils.F90` all `use ccpp_constituent_prop_mod`
+regardless of which suite is configured. CAM-SIMA therefore needs the
+framework's constituent modules compiled even for a suite with no
+constituents at all — which is not something capgen can infer from
+metadata. See §4.17.
+
 ### 3.3 What CAM-SIMA does **not** do
 
 - It does not rely on auto-clone for `diag_name`. The scheme-side
@@ -834,6 +844,66 @@ std_name is not in the host's enumeration → codegen error" (§8, Proposal C)
 becomes the single source of truth, and registration is authoritative by
 construction.
 
+### 4.17 CAM-SIMA: framework constituent sources absent from constituent-free builds (FIXED 2026-07-27)
+
+- **Location**: the boundary between capgen's `<utilities>` list
+  (`capgen/ccpp_capgen.py`, `utility_paths`) and CAM-SIMA's
+  `cime_config/cam_autogen.py`.
+- **Symptom**: the Derecho aux test
+  `SMS_Ln2.ne3pg3_ne3pg3_mg37.FPHYStest.derecho_gnu.cam-outfrq_beljaars_derecho`
+  failed to compile:
+
+  ```
+  ccpp_const_utils.F90:13:9:
+     use ccpp_constituent_prop_mod, only: ccpp_constituent_prop_ptr_t
+  Fatal Error: Cannot open module file 'ccpp_constituent_prop_mod.mod'
+  ```
+
+  Only that one test in the suite — it builds `suite_beljaars_form_drag.xml`,
+  whose two schemes (`beljaars_drag`, `beljaars_drag_diagnostics`) contain
+  **zero** constituent metadata.
+- **Mechanism**: capgen lists the framework Fortran sources
+  (`ccpp_constituent_prop_mod.F90`, `ccpp_hashable.F90`, `ccpp_hash_table.F90`,
+  `ccpp_scheme_utils.F90`) in `datatable.xml`'s `<utilities>` only when
+  `write_host_constituents` produced a host-constituents module — i.e. only
+  when some *suite* touches constituent state. `cam_autogen.py` copies
+  `<utilities>` into the generated-code directory, so for a constituent-free
+  suite those four modules were never compiled. But CAM-SIMA's **host** code
+  `use`s `ccpp_constituent_prop_mod` unconditionally, in files present in
+  every configuration: `src/control/cam_comp.F90` (the top-level driver),
+  `src/physics/utils/cam_constituents.F90`, the dycore coupling layers, the
+  analytic-IC modules, and `to_be_ccppized/ccpp_const_utils.F90`.
+- **Why original capgen did not hit this**: `scripts/ccpp_datafile.py`
+  (`_add_generated_files`) emitted all four unconditionally, on every run.
+  That masked the issue rather than solving it — the *framework* was
+  asserting a dependency it cannot see, on behalf of every host, and every
+  constituent-free host paid for it.
+- **Fix (host side, deliberately not the framework)**: new
+  `cime_config/host_framework_deps.py` in CAM-SIMA declares the framework
+  sources the host compiles unconditionally (globbing `capgen/src/*.F90`, so
+  a framework-side addition cannot silently break the build).
+  `cam_autogen.py` feeds them to the existing `_update_genccpp_dir` next to
+  the `<utilities>` copy. Same destination, so when a suite *does* use
+  constituents and capgen lists them too, both writes are identical and no
+  duplicate module results. Capgen is unchanged. 8 new unit tests in
+  `test/unit/python/test_host_framework_deps.py`, including a `use`-closure
+  check so a partial list fails in the test rather than at compile time.
+- **Why not `cime_config/capgen_compat/`**: that directory is transient
+  scaffolding with a phased removal plan (`capgen_compat/README.md`), and
+  this dependency outlives it — CAM-SIMA host code will keep using
+  `ccpp_constituent_prop_mod` whichever generator produces the caps. Putting
+  it there would delete the fix along with the shim.
+- **Takeaway**: `<utilities>` answers "what do the generated caps need",
+  which is all capgen can know from metadata. It does **not** answer "what
+  does the host need" — a host that reaches the constituent API from its own
+  Fortran must declare that itself. Worth stating explicitly if the
+  `<utilities>` contract is ever specified for other hosts.
+- **Position relative to Proposals A/B/C**: orthogonal — a build-inputs
+  boundary question, not a constituent-model change. Note though that
+  **Proposal C (host-only registration) would make it worse**, since more
+  host code would touch the constituent API directly; the declaration in
+  `host_framework_deps.py` is what keeps that tractable.
+
 ---
 
 ## 5. Property classification (Class A vs Class B)
@@ -1223,4 +1293,6 @@ setters that delegate to the underlying `ccpp_constituent_properties_t`.
 - `capgen/generator/host_constituents.py` — capgen's host-side module emitter.
 - `capgen/generator/suite_resolver.py` (`_resolve_constituent_arg`) — capgen's resolver routing.
 - `EXT/cam-sima/CAM-SIMA/src/physics/utils/cam_constituents.F90` — CAM-SIMA's host-side wrappers around framework setters.
+- `EXT/cam-sima/CAM-SIMA/cime_config/host_framework_deps.py` — CAM-SIMA's declaration of the framework sources its host code compiles unconditionally (§4.17).
+- `doc/migration.md` §5.1 — the `<utilities>` scoping change vs original capgen, from a porting host's point of view.
 

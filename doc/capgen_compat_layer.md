@@ -60,6 +60,21 @@ back `(host_dict, suite_resolutions)` is scaffolding for this layer only.
 The README has a phased retirement plan (A–G) with a measurable LOC drop
 per phase.
 
+## What is deliberately *not* in this layer
+
+`cime_config/host_framework_deps.py` (CAM-SIMA) declares the framework
+Fortran sources — `ccpp_constituent_prop_mod.F90` and its dependency
+cluster — that CAM-SIMA's **host** code compiles in every configuration,
+whether or not the configured suite touches constituent state
+(`cam_comp.F90`, `cam_constituents.F90`, the dycore coupling layers, …).
+capgen lists these in `datatable.xml`'s `<utilities>` only when a suite
+needs them, which is the correct scope for a code generator reading
+metadata; the host's own `use` statements are invisible to it.
+
+That file sits outside `capgen_compat/` on purpose. It is not bridging an
+original-capgen-vs-capgen mismatch: the dependency is permanent and
+survives this directory's retirement. See `constituents_overhaul.md` §4.17.
+
 ## Status
 
 `kessler`, `rrtmgp`, and `se_cslam` (the full `cam7` suite) build **and
