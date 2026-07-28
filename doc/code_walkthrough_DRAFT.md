@@ -392,7 +392,7 @@ Three questions prebuild developers always ask:
 - constituent-ness is ultimately the **host’s** decision. A scheme that only *reads* a name
   need not re-flag it — capgen infers it from the set of names *some* scheme flags (“rule
   b”). If the host declares the name as an ordinary variable, that wins
-  (`design_constituent_host_wins`).
+  (the **host-wins** rule, §8.3).
 
 **2. Where/how are constituents registered?** Exactly one way to declare a *new* one (Rule 1):
 a **register-phase** scheme returns an `intent=out, allocatable` array of
@@ -495,7 +495,8 @@ a reliable source of the standard name. At init, the framework fills each index 
 
 > **Host-wins:** if the host itself declares the `index_of_*` / framework names, the resolver
 > short-circuits to ordinary host-arg resolution (the constituent path is skipped). That’s the
-> `design_constituent_host_wins` rule.
+> **host-wins** rule, implemented by the `host_dict` short-circuit in
+> `_resolve_constituent_arg` (`capgen/generator/suite_resolver.py`).
 
 ### 8.4 The whole constituent axis — `number_of_ccpp_constituents`
 

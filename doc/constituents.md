@@ -666,21 +666,22 @@ framework files (listed under `<utilities>` in `datatable.xml`):
 The host's CMake should query `ccpp_datafile.py --utility-files` to
 get the absolute paths to these files at the right output location.
 
-> **These four are listed only when some suite touches constituent
-> state.** `<utilities>` answers "what do the generated caps need",
-> which is all capgen can determine from metadata. If the *host's own
-> Fortran* uses the constituent API — `use ccpp_constituent_prop_mod`
-> in host code rather than only through the generated caps — then the
-> host needs these modules compiled even for a suite with no
-> constituents, and capgen cannot see that. Such a host must add them
-> to its build itself; querying `--utility-files` alone will silently
-> produce a build that fails with `Cannot open module file
-> 'ccpp_constituent_prop_mod.mod'` the first time someone configures a
-> constituent-free suite.
+> **These four are listed unconditionally** (since 2026-07-27, FU-009).
+> `ccpp_host_constituents.F90` is generated for every run — with a
+> zero-size table when no suite touches constituent state — and it
+> `use`s `ccpp_constituent_prop_mod`, so the framework sources are
+> always a dependency of the generated caps and always appear in
+> `<utilities>`.
 >
-> CAM-SIMA is exactly this case and declares them in
-> `cime_config/host_framework_deps.py`. See `constituents_overhaul.md`
-> §4.17 for the failure and the reasoning.
+> Before that change they were scoped to suites that actually used
+> constituents, on the reasoning that `<utilities>` answers "what do the
+> generated caps need".  That broke hosts whose *own* Fortran does `use
+> ccpp_constituent_prop_mod` outside the generated caps — something
+> capgen cannot see from metadata — with `Cannot open module file
+> 'ccpp_constituent_prop_mod.mod'` the first time someone configured a
+> constituent-free suite.  See `constituents_overhaul.md` §4.17, and
+> §4.18 for the unresolved question of whether a host may `use`
+> framework modules directly at all (FU-021).
 
 ---
 
@@ -869,16 +870,18 @@ message naming the offending token.
 
 ### Open work items
 
-- **Unconditional `ccpp_host_constituents.F90` emission.** The
-  generator currently emits `ccpp_host_constituents.F90` for every
-  build, even when no scheme or host actually uses the constituent
-  system (no `ccpp_constituent_properties_t(:)` register-phase arg,
-  no `is_constituent`-flagged scheme arg, no framework-named
-  `index_of_<X>` / `ccpp_constituents` / etc. claimed by capgen).
-  When the host owns its own indices (SCM/GFS) and no scheme exercises
-  the constituent path, the generated file is dead code that should be
-  suppressed.  Tracked as a deferred item; the `host_dict` precedence
-  rule above already keeps the file *correct* (empty) in that case.
+Tracked in `doc/followups.md`; constituent-specific items are indexed in
+its §2, which points into `doc/constituents_overhaul.md`.
+
+One correction to what this section used to say: **`ccpp_host_constituents.F90`
+is emitted unconditionally, and that is deliberate** (FU-009, decided
+2026-07-27).  It was previously listed here as dead code to be suppressed.
+The host cap re-exports this module's public API, so gating emission on
+suite content would make `<host>_ccpp_cap`'s interface expand and contract
+with the suite — not something host code can compile against.  With no
+constituent state the module is still valid: a zero-size table,
+`ccpp_number_constituents` answers 0, `ccpp_constituents_array` returns a
+zero-size array, and host loops over it are no-ops.
 
 ---
 

@@ -905,21 +905,28 @@ Always generated:
 - `ccpp_<suite>_data.meta` — inspection artifact; pairs with `ccpp_<suite>_data.F90` (`.meta` ↔ `.F90` filename convention).
 - `datatable.xml` — build-system + host-introspection metadata.
 
-When any scheme registers constituents:
+Unconditionally, on every run:
 
 - `ccpp_host_constituents.F90` — owns `ccpp_model_constituents_obj(:)`
-  and the host-facing constituent API.
+  and the host-facing constituent API.  When no suite touches constituent
+  state the module is still generated and still valid: the table has size
+  zero, `ccpp_number_constituents` answers 0, and
+  `ccpp_constituents_array` returns a zero-size array.
 - The framework's constituent sources (`ccpp_constituent_prop_mod.F90`,
   `ccpp_hashable.F90`, `ccpp_hash_table.F90`, `ccpp_scheme_utils.F90`) are
-  added to `<utilities>`.  **Migration note:** original capgen listed these
-  four on *every* run, so a host that relied on `--utility-files` alone got
-  them unconditionally.  capgen scopes them to what the generated caps
-  actually need.  A host whose own Fortran does `use
-  ccpp_constituent_prop_mod` — outside the generated caps — must now add
-  them to its build itself, or a constituent-free suite will fail with
-  `Cannot open module file 'ccpp_constituent_prop_mod.mod'`.  See
-  `constituents.md` §6 "Framework F90 dependencies" and
-  `constituents_overhaul.md` §4.17.
+  added to `<utilities>`, because the module above `use`s them.
+
+**Migration note (changed 2026-07-27, FU-009).**  Between the start of
+capgen v1 and that date, both were scoped to suites that actually used
+constituents; original capgen had always emitted them unconditionally.
+The scoped behaviour broke two things: a host whose own Fortran does `use
+ccpp_constituent_prop_mod` outside the generated caps got `Cannot open
+module file 'ccpp_constituent_prop_mod.mod'` on a constituent-free suite,
+and — more fundamentally — the host cap re-exports the constituent API,
+so `<host>_ccpp_cap`'s *interface* expanded and contracted with suite
+content.  Host code cannot `#ifdef` around a generator decision it cannot
+see.  Capgen now matches original capgen here.  See `constituents.md` §6
+"Framework F90 dependencies" and `constituents_overhaul.md` §4.17.
 
 ### 5.2 Per-suite data: TARGET on the instance array
 
@@ -1274,27 +1281,30 @@ dummy arguments (scheme args and control/lifecycle variables).
 
 ## 8. Known gaps and deferred items
 
-| Item                                       | Status                                        |
-|--------------------------------------------|-----------------------------------------------|
-| `ccpp_loop_counter` standard name inside nested subcycles | Maps to OUTERMOST loop var.  None of cam-sima uses this; revisit if a scheme needs the innermost value. |
-| Validator host-metadata check              | **Landed 2026-06-01**: pass `--host-files`; see §7.4. |
-| Constituents overhaul (Class A/B + setters) | Discussion doc at `doc/constituents_overhaul.md`. |
-| Framework setters: `set_advected`, `set_diagnostic_name`, `set_default_value` | Deferred; depends on constituents-overhaul decision. |
-| Codegen-time scheme-registration cross-check | Deferred; would require new `registers_std_names` metadata attr. |
-| `_FRAMEWORK_CONST_DIM_INPUTS` cleanup       | **Done 2026-05-13**: hand-curated frozenset gone; framework-constituent dim refs ride on a dedicated `used_const_dim_std_names` field on `ResolvedArg`. |
-| Suppress `ccpp_host_constituents.F90` when unused | Deferred; currently emitted for every build even when no scheme/host actually exercises the constituent system.  Now *correct* (empty) for SCM-style hosts thanks to the host-wins rule, but still dead code.  See `design_constituent_host_wins.md`. |
-| Python linter / formatter pass              | Deferred; pick `ruff` and apply across `capgen/`. |
-| Generated Fortran ↔ Codee formatter idempotency | Deferred; emitted `.F90` must round-trip cleanly through the project's Codee Fortran formatter. |
-| `fortran_to_metadata` developer utility    | Deferred; bootstraps a `.meta` skeleton from an existing `.F90` subroutine. |
-| `--legacy-mode` shim removal               | Transient; remove `metadata/legacy_compat.py`, `unit-tests/test_legacy_compat.py`, and every `# legacy-compat:` touchpoint when scheme metadata has migrated. |
-| `--gfs-dim-aliases` shim removal           | Transient; remove `metadata/dim_aliases.py`, `unit-tests/test_dim_aliases.py`, and every `# dim-aliases:` touchpoint when GFS metadata stops spelling `vertical_layer_dimension` as `adjusted_vertical_layer_dimension_for_radiation` / `vertical_composition_dimension`. |
-| `--legacy-auto-clone-constituents` shim removal | Transient; remove `metadata/auto_clone_constituents.py`, `unit-tests/test_auto_clone_constituents.py`, sample files under `unit-tests/sample_files/scheme_auto_clone_consumer.meta` + `sample_suite_files/suite_auto_clone.xml`, and every `# auto-clone-constituents:` touchpoint when consumers have moved to explicit `host_constituents(:)` declaration or register-phase scheme registration. |
-| `ccpp_datafile.py` query CLI rework        | Deferred (2026-05-13); collapse `--host-files` / `--suite-files` / `--utility-files` into `--capgen-files`, then repurpose `--host-files` as a filtered list of **input** host metadata files (parallel to `--scheme-files`).  Most hosts pack all host data into a handful of shared files, so the filtering pay-off is small — the draw is API symmetry. |
+Tracked in **`doc/followups.md`**, the single source of truth for deferred
+items, open questions and transient shims.  This section used to carry its
+own table; it drifted out of step with the parallel lists in
+`briefing.md` §7.1 and `redesign_prompt.md`, and all three were merged on
+2026-07-28.  Add new items there, not here.
+
+Orientation:
+
+- **§1 Open items** — FU-001 … FU-019.
+- **§2 Constituents overhaul** — index into `doc/constituents_overhaul.md`,
+  which remains the register of record for that area.
+- **§3 Transient shims awaiting removal** — `--legacy-mode` (FU-010),
+  `--gfs-dim-aliases` (FU-011), `--legacy-auto-clone-constituents` (FU-012),
+  CAM-SIMA's `capgen_compat/` layer (FU-013), each with its removal trigger.
+- **§4 Closed** — including the validator host-metadata check (FU-008,
+  landed 2026-06-01, see §7.4) and the decision *not* to suppress
+  `ccpp_host_constituents.F90` (FU-009).
 
 ---
 
 ## Cross-references
 
+- `doc/followups.md` — deferred items, open questions and shim-removal
+  triggers (single source of truth; see §8).
 - `doc/redesign_prompt.md` — original design specification (sections
   marked "historic" where the implementation has evolved).
 - `doc/redesign_analysis.md` — analysis of the legacy ccpp-prebuild +

@@ -964,7 +964,9 @@ construction.
 
 ## 5. Property classification (Class A vs Class B)
 
-Proposed in `design_constituents_mutability.md` 2026-05-12. Each
+Proposed 2026-05-12.  (The original write-up lived in an auto-memory
+design note that does not travel between machines and is no longer
+available; the classification below is now the record.)  Each
 constituent property is conceptually owned by either the scheme
 (physics-portable, immutable once instantiated) or the host
 (host-configuration, mutable post-instantiation).
@@ -1284,8 +1286,10 @@ keeping.**
 
 ## 9. Appendix: framework setter inventory
 
-(For reference during the meeting. Reproduced from
-`design_constituents_mutability.md`.)
+(For reference during the meeting. Originally reproduced from an
+auto-memory design note that does not travel between machines; this table
+is now the record. Verify against
+`src/ccpp_constituent_prop_mod.F90` before relying on it.)
 
 `ccpp_constituent_properties_t` methods (`src/ccpp_constituent_prop_mod.F90`):
 
@@ -1341,9 +1345,8 @@ setters that delegate to the underlying `ccpp_constituent_properties_t`.
 ## Cross-references
 
 - `doc/constituents.md` — capgen's user-facing constituents reference.
-- `design_constituent_api.md` (memory) — capgen's per-instance option-A design.
-- `design_constituents_mutability.md` (memory) — extended design notes incl. class A/B classification.
-- `project_implementation_status.md` (memory) — current implementation state and deferred items.
+- `doc/followups.md` — deferred items and open questions across the project;
+  §2 indexes this document's own §4 / §7 / §8.
 - `scripts/constituents.py` — original capgen's host-cap generator.
 - `src/ccpp_constituent_prop_mod.F90` — framework.
 - `capgen/generator/host_constituents.py` — capgen's host-side module emitter.
