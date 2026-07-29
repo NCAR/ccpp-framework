@@ -34,12 +34,13 @@ Status values: `open`, `in progress`, `blocked`, `closed`.
 | FU-005 | Generated Fortran ↔ Codee formatter idempotency | framework | 2026-05 | open | Emitted `.F90` must round-trip cleanly through the project's Codee Fortran formatter. |
 | FU-006 | `fortran_to_metadata` developer utility | framework | 2026-05 | open | Bootstrap a `.meta` skeleton from an existing `.F90` subroutine. |
 | FU-007 | `ccpp_datafile.py` query CLI rework | framework | 2026-05-13 | open | Collapse `--host-files` / `--suite-files` / `--utility-files` into `--capgen-files`, then repurpose `--host-files` as a filtered list of **input** host metadata files (parallel to `--scheme-files`).  Most hosts pack host data into a handful of files, so the filtering pay-off is small — the draw is API symmetry. |
-| FU-014 | Enforce `protected`: a scheme must not write a protected host variable | framework | 2026-07-28 | in progress | Two checks.  **A** — self-contradictory entry (`protected = True` with `intent` other than `in`) in `MetaVar.validate()`, `capgen/metadata/metadata_table.py:774`.  **B** — cross-entry (scheme declares `intent(out\|inout)` on a protected host var) in `_resolve_one_arg`, `capgen/generator/suite_resolver.py` just before the access-expression build.  Original capgen had both: `origin/develop:scripts/metavar.py:332` and `:415`.  capgen v1 has neither, though `metadata_table.py:442` documents the rule. |
+| FU-014 | Enforce `protected`: a scheme must not write a protected host variable | framework | 2026-07-28 | in progress | **Framework side implemented 2026-07-28, uncommitted.**  **A** — `protected = True` with `intent` other than `in` rejected in `MetaVar.validate()`, `capgen/metadata/metadata_table.py:793`.  **B** — scheme `intent(out\|inout)` on a protected host var rejected in `_resolve_one_arg`, `capgen/generator/suite_resolver.py:1712`.  Original capgen had both (`origin/develop:scripts/metavar.py:332`, `:415`); capgen v1 had neither, though `metadata_table.py:442` documented the rule.  7 tests added; 1555 unit tests and 13/13 end-to-end pass.  Check B immediately found a real fixture bug — `end-to-end-tests/{advection,advection_auto_clone}/test_host_data.meta` marked `test_banana_constituent_indices` protected while `test_host_data.F90:24` declares it with no `protected` attribute and `const_indices.F90:29` writes it; the stray attribute was removed.  Remaining work is CAM-SIMA-side: FU-023. |
 | FU-015 | Validator: capture `protected` and `allocatable` from Fortran declarations | framework | 2026-07-28 | open | `_ArgAttrs` (`ccpp_validator.py:135`) carries only type/kind/intent/optional/rank; `_parse_decl_line:352-354` explicitly discards `protected`, `parameter` and `allocatable`.  `allocatable` is the more consequential of the two — metadata declares it (`metadata_table.py:493`) and it *changes codegen* (subscript emission at call sites), so a mismatch is silently wrong output rather than a missing error.  A `protected` check must accept Fortran `parameter` as satisfying it: CAM-SIMA `create_readnl_files.py:422` writes `protected = True` for namelist array dimensions that `:523` declares `integer, public, parameter`.  Cost note: `_ArgAttrs` reprs appear in 7 doctests in `ccpp_validator.py`.  **Deprioritised 2026-07-28** — CAM-SIMA never invokes `ccpp_validator` (no call site in `cime_config/`), so this is CI/developer value only, and FU-014 catches the same class of error where it is load-bearing. |
 | FU-016 | Expose `advected` on `ResolvedArg` | framework | 2026-07-26 | open | `capgen_compat/_var_wrapper.py:~320` currently *infers* advectedness from the constituent standard-name shape (`_is_base_constituent_name`) because capgen does not surface the flag.  The inference is close but not exact; exposing the real flag would make it exact. |
 | FU-017 | `cime_config/host_framework_deps.py` may now be redundant | cam-sima | 2026-07-28 | open | It was added 2026-07-27 so CAM-SIMA's host code could compile `ccpp_constituent_prop_mod` in constituent-free builds.  Making `ccpp_host_constituents.F90` unconditional (FU-009) put the four framework `.F90` files back into `<utilities>` unconditionally, which likely covers the same ground.  ~90 lines plus 8 tests plus 4 documentation sections.  Verify end-to-end before the next Derecho run and remove if genuinely redundant.  See `constituents_overhaul.md` §4.17. |
 | FU-018 | MPAS 120km cam4 aux test fails on constituent ordering | cam-sima | 2026-07 | open | Known failure, distinct from `fadiab` (which also fails on `develop`).  Analysis in `doc/cam4_fwaut_constituent_order.md`. |
 | FU-019 | Delete pushed branch `bugfix/constituents_camsima_july2026` | framework | 2026-07-27 | open | Housekeeping.  The branch carried framework commit `501d1c0`, which was wrong and has been reverted; `feature/capgen-v1` is the live branch. |
+| FU-023 | Fix `test_protected_reg_write_init` fixture, which violates FU-014 Check B | cam-sima | 2026-07-28 | open | `test/unit/python/sample_files/write_init_files/protected_reg.xml` declares `theta` / `potential_temperature` `access="protected"`, while the shared `temp_adjust.meta` declares the same standard name `intent = inout`.  Host says read-only, scheme writes it — invalid Fortran that has gone unnoticed because the test compares generated text and never compiles a cap.  With FU-014 applied: 159 pass, this one fails.  **Decided approach:** move `access="protected"` from `theta` to `slp` / `air_pressure_at_sea_level`, which `temp_adjust.meta` reads `intent = in`.  Do *not* protect `eddy_len` — it is not CCPP-required (`phys_var_num = 2`), so the test would stop exercising the protected path.  `slp` keeps `<ic_file_input_names>`, so the "protected variable is skipped rather than read" behaviour is still covered.  Then regenerate the two golden files (see §6). |
 
 ---
 
@@ -96,7 +97,38 @@ its fixtures, and every marked touchpoint together.
 
 ---
 
-## 5. Reconciliation log
+## 5. Notes worth keeping
+
+**CAM-SIMA's registry does support `protected`.**  Via `access="protected"`
+on a `<variable>` (`src/data/generate_registry_data.py:567-570`), and via
+`allocatable="parameter"` — both emit `protected = True` into the generated
+`.meta` (`:694-695`).  The real registry has three: `fracis` /
+`fraction_of_water_insoluble_convectively_transported_species`,
+`do_lagrangian_vertical_coordinate`, and
+`dycore_calculates_geopotential_using_logarithms`.  Every in-tree scheme
+consuming them declares `intent = in`, so FU-014 Check B is not expected to
+fire in a production build — but the Derecho aux tests are what prove it.
+Namelist variables are protected too (`create_readnl_files.py:422, :440`),
+read-only by construction.
+
+## 6. Regenerating CAM-SIMA golden test files
+
+`test/unit/python/test_write_init_files.py` compares generated output
+byte-for-byte (`filecmp.cmp(..., shallow=False)`) against committed samples
+in `test/unit/python/sample_files/write_init_files/`.  There is no
+`--update-golden` flag.  Output is written to `test/unit/python/tmp/...`,
+which is gitignored (`.gitignore:12`), so:
+
+```bash
+python -m pytest test/unit/python/test_write_init_files.py -k <selector>
+# fails on the comparison, but still writes the output files
+cp test/unit/python/tmp/write_init_files/<name>.F90 \
+   test/unit/python/sample_files/write_init_files/
+git diff        # review this — it is the only safeguard
+python -m pytest test/unit/python/test_write_init_files.py -q
+```
+
+## 7. Reconciliation log
 
 Auto-memory, TODO lists and task lists are **per-machine** and do not travel.
 Each machine records here when its local stores were last swept into this

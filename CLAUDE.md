@@ -24,7 +24,7 @@ its own auto-memory, task list, and scratch notes.  None of that travels.
 1. The user asks for one.
 2. You are about to add a new item to `doc/followups.md`.
 3. This machine is missing from the reconciliation log in `doc/followups.md`
-   §5, or its entry is older than the newest commit touching that file.
+   §7, or its entry is older than the newest commit touching that file.
 
 **The sweep:**
 
@@ -50,7 +50,7 @@ its own auto-memory, task list, and scratch notes.  None of that travels.
    reproduction, a decision that was made — fold that detail in.
 4. If a local memory contradicts `doc/followups.md`, the *newer* evidence
    wins; correct the stale one and say which you changed.
-5. Update the reconciliation log (`doc/followups.md` §5) with this machine's
+5. Update the reconciliation log (`doc/followups.md` §7) with this machine's
    hostname and the date.
 6. Report what you added, folded in, or corrected.  Do not silently rewrite
    existing rows.

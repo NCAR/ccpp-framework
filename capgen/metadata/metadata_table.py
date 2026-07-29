@@ -772,7 +772,7 @@ class MetaVar:
 
     # ------------------------------------------------------------------
     def validate(self, require_intent: bool, context: ParseContext) -> None:
-        """Check that all required attributes are present.
+        """Check that all required attributes are present and consistent.
 
         Parameters
         ----------
@@ -784,7 +784,8 @@ class MetaVar:
         Raises
         ------
         CCPPError
-            If any required attribute is missing.
+            If a required attribute is missing, or the variable is
+            ``protected`` with an intent other than ``in``.
         """
         required = {'standard_name', 'dimensions', 'type'}
         if require_intent:
@@ -795,6 +796,11 @@ class MetaVar:
                 "Variable '{}' is missing required attributes: {}, at {}".format(
                     self.local_name, sorted(missing), context
                 )
+            )
+        if self.protected and self.intent not in (None, 'in'):
+            raise CCPPError(
+                "Variable '{}' is marked protected but is intent {}, "
+                "at {}".format(self.local_name, self.intent, context)
             )
 
     # ------------------------------------------------------------------
