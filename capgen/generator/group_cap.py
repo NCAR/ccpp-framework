@@ -25,7 +25,7 @@ import logging
 import os
 from typing import Dict, List, Optional, Set, Tuple
 
-from metadata.parse_tools import FORTRAN_CONDITIONAL_REGEX, open_if_changed
+from metadata.parse_tools import CCPPError, FORTRAN_CONDITIONAL_REGEX, open_if_changed
 from metadata.variable_resolver import HostVarEntry
 from generator.suite_types import _ptr_type_name_for_arg
 from generator.suite_resolver import (
@@ -1187,6 +1187,78 @@ def _generate_state_dealloc(suite_name: str, group_name: str) -> List[str]:
     ]
 
 
+def _check_host_control_local_collisions(
+    suite_name: str,
+    group_name: str,
+    resolved_group: ResolvedGroup,
+    host_dict,
+) -> None:
+    """Reject a host variable whose Fortran local name collides with a control variable.
+
+    In a generated group cap, host variables are use-associated at *module*
+    scope while every control variable is a *subroutine dummy argument* (the
+    uniform signature built by :func:`_ctrl_entries_for_signature`).  A dummy
+    argument host-associates over a use-associated name of the same spelling,
+    so when a host variable and a control variable share a Fortran local name
+    -- they necessarily carry different standard names -- the dummy silently
+    shadows the host import: a scheme requesting the host variable receives
+    the control value instead, and the code compiles without error (GitHub
+    issue #774).
+
+    Renaming a local here cannot be done safely for the author (both names
+    come from author-written metadata), so this is a hard error and the
+    modeler renames one ``local_name``.  Fortran identifiers are
+    case-insensitive, so the comparison is done in lower case.  Suite-owned
+    variables cannot collide this way -- they are always emitted DDT-qualified
+    (``ccpp_suite_data(:)%<name>``), never as a bare symbol -- and generator
+    locals (transformation temporaries, subcycle counters) are uniquified
+    separately.
+    """
+    if host_dict is None:
+        return
+    control_by_name: Dict[str, HostVarEntry] = {}
+    for entry in _ctrl_entries_for_signature(
+        host_dict, exclude={'suite_name', 'group_name'}
+    ):
+        control_by_name[entry.local_name.lower()] = entry
+    if not control_by_name:
+        return
+
+    def _raise(host_std: str, host_local: str) -> None:
+        ctrl = control_by_name[host_local.lower()]
+        raise CCPPError(
+            "Local name collision in group '{grp}' of suite '{suite}': host "
+            "variable '{hstd}' and control variable '{cstd}' both use the "
+            "Fortran local name '{ln}'.  In the generated group cap the "
+            "control variable is a subroutine dummy argument that silently "
+            "shadows the use-associated host variable, so a scheme requesting "
+            "'{hstd}' would receive '{cstd}' instead.  Rename the local_name "
+            "of one of them in the host metadata.".format(
+                grp=group_name, suite=suite_name,
+                hstd=host_std, cstd=ctrl.standard_name, ln=ctrl.local_name,
+            )
+        )
+
+    for items in resolved_group.phase_calls.values():
+        for call in iter_phase_calls(items):
+            for arg in call.args:
+                # Direct host argument (bare use-associated module symbol).
+                if (arg.source == 'host' and arg.module_name is not None
+                        and arg.root_symbol.lower() in control_by_name):
+                    _raise(arg.standard_name, arg.root_symbol)
+                # Dimension-helper and active-condition host variables are
+                # use-associated too, so they can shadow a control dummy.
+                dim_and_active = set(arg.used_dim_std_names)
+                dim_and_active.update(_active_std_names(arg.active))
+                for std in dim_and_active:
+                    entry = host_dict.get(std)
+                    if (entry is not None and not entry.is_control
+                            and entry.module_name is not None):
+                        root = _root_symbol(entry.access_path)
+                        if root.lower() in control_by_name:
+                            _raise(std, root)
+
+
 def _generate_group_cap(
     suite_name: str,
     group_name: str,
@@ -1209,6 +1281,12 @@ def _generate_group_cap(
     -------
     list of str (without trailing newlines)
     """
+    # Fail loudly on a host/control local-name collision before emitting a
+    # cap that would silently read the wrong variable (issue #774).
+    _check_host_control_local_collisions(
+        suite_name, group_name, resolved_group, host_dict
+    )
+
     mod_name = 'ccpp_{}_{}_{}'.format(suite_name, group_name, 'cap')
     # Short Fortran symbols for the state-management subroutines; the
     # module name carries ``ccpp_<suite>_<group>_`` and keeps the mangled

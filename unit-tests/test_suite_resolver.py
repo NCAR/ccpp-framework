@@ -5477,6 +5477,110 @@ class TestValidateInitDimensions(unittest.TestCase):
             validate_init_dimensions(sr)
 
 
+########################################################################
+# Host/control local-name collision detection (GitHub issue #774).
+# A host variable and a control variable that share a Fortran local name
+# (with different standard names) must be rejected: in the group cap the
+# host variable is use-associated at module scope while the control
+# variable is a subroutine dummy argument that silently shadows it, so a
+# scheme requesting the host variable would receive the control value.
+########################################################################
+
+_SHADOW_HOST = '''
+[ccpp-table-properties]
+  name = shadow_host
+  type = host
+[ccpp-arg-table]
+  name = shadow_host
+  type = host
+[ nthreads ]
+  standard_name = test_host_thread_count
+  long_name = a host quantity that happens to share the thread-count local name
+  units = count
+  type = integer
+  dimensions = ()
+'''
+
+# Same host table, but the colliding variable is renamed so there is no
+# clash with the control ``nthreads`` (number_of_threads).
+_NOSHADOW_HOST = _SHADOW_HOST.replace('[ nthreads ]', '[ nthr_host ]')
+
+_SHADOW_SCHEME = '''
+[ccpp-table-properties]
+  name = thr_use
+  type = scheme
+[ccpp-arg-table]
+  name = thr_use_run
+  type = scheme
+[ ni ]
+  standard_name = test_host_thread_count
+  units = count
+  type = integer
+  dimensions = ()
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+'''
+
+_SHADOW_SUITE = (
+    '<?xml version="1.0"?>\n'
+    '<suite name="shadow" version="1.0">\n'
+    '  <group name="phys">\n'
+    '    <scheme>thr_use</scheme>\n'
+    '  </group>\n'
+    '</suite>\n'
+)
+
+
+class TestHostControlLocalNameCollision(unittest.TestCase):
+    """A host var and a control var sharing a Fortran local name (different
+    standard names) must be rejected before a cap that silently reads the
+    wrong variable is written (GitHub issue #774).  ``control_full.meta``
+    already declares ``number_of_threads`` with local name ``nthreads``."""
+
+    def _resolve(self, host_src):
+        import logging
+        from generator.suite_xml import parse_suite_xml
+        host_tbls = _parse(host_src)
+        ctrl_tbls = parse_metadata_file(_sf('control_full.meta'))
+        hd = build_flat_host_dict(host_tbls, ctrl_tbls, [])
+        store = SchemeStore.build_from(_parse(_SHADOW_SCHEME))
+        with tempfile.TemporaryDirectory() as tmp:
+            sx = os.path.join(tmp, 'suite_shadow.xml')
+            with open(sx, 'w') as fh:
+                fh.write(_SHADOW_SUITE)
+            suite = parse_suite_xml(sx, tmp, logging.getLogger('test'),
+                                    skip_validation=True)
+            return resolve_suite(suite, store, hd), hd
+
+    def test_collision_raises(self):
+        sr, hd = self._resolve(_SHADOW_HOST)
+        with self.assertRaises(CCPPError) as cm:
+            _generate_group_cap('shadow', 'phys', sr.groups[0], hd)
+        msg = str(cm.exception)
+        self.assertIn('test_host_thread_count', msg)
+        self.assertIn('number_of_threads', msg)
+        self.assertIn('nthreads', msg)
+
+    def test_no_collision_when_local_names_differ(self):
+        # Same host quantity, but its local name no longer matches the
+        # control ``nthreads`` -- generation must succeed.
+        sr, hd = self._resolve(_NOSHADOW_HOST)
+        lines = _generate_group_cap('shadow', 'phys', sr.groups[0], hd)
+        self.assertTrue(any('thr_use_run' in ln for ln in lines))
+
+
 def load_tests(loader, tests, ignore):
     import generator.suite_resolver as suite_resolution
     import generator.group_cap as gc
