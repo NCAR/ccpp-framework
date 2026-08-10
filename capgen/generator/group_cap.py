@@ -1229,10 +1229,7 @@ def _check_host_control_local_collisions(
         raise CCPPError(
             "Local name collision in group '{grp}' of suite '{suite}': host "
             "variable '{hstd}' and control variable '{cstd}' both use the "
-            "Fortran local name '{ln}'.  In the generated group cap the "
-            "control variable is a subroutine dummy argument that silently "
-            "shadows the use-associated host variable, so a scheme requesting "
-            "'{hstd}' would receive '{cstd}' instead.  Rename the local_name "
+            "Fortran local name '{ln}'. Rename the local_name "
             "of one of them in the host metadata.".format(
                 grp=group_name, suite=suite_name,
                 hstd=host_std, cstd=ctrl.standard_name, ln=ctrl.local_name,
