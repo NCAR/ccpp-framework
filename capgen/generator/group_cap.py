@@ -1196,21 +1196,14 @@ def _check_host_control_local_collisions(
     """Reject a host variable whose Fortran local name collides with a control variable.
 
     In a generated group cap, host variables are use-associated at *module*
-    scope while every control variable is a *subroutine dummy argument* (the
-    uniform signature built by :func:`_ctrl_entries_for_signature`).  A dummy
-    argument host-associates over a use-associated name of the same spelling,
-    so when a host variable and a control variable share a Fortran local name
-    -- they necessarily carry different standard names -- the dummy silently
-    shadows the host import: a scheme requesting the host variable receives
-    the control value instead, and the code compiles without error (GitHub
-    issue #774).
+    scope while every control variable is a *subroutine argument*.  When a
+    host variable and a control variable share a Fortran local name, the dummy
+    silently shadows the host import, i.e. is used instead of the host import.
+    Since we cannot rename the variables (they are defined in metadata), an
+    error is thrown when two host variables have the same local name.
 
-    Renaming a local here cannot be done safely for the author (both names
-    come from author-written metadata), so this is a hard error and the
-    modeler renames one ``local_name``.  Fortran identifiers are
-    case-insensitive, so the comparison is done in lower case.  Suite-owned
-    variables cannot collide this way -- they are always emitted DDT-qualified
-    (``ccpp_suite_data(:)%<name>``), never as a bare symbol -- and generator
+    Suite-owned variables cannot collide this way -- they are always prefixed
+    with the suite-data DDT (``ccpp_suite_data(:)%<name>``), and generator
     locals (transformation temporaries, subcycle counters) are uniquified
     separately.
     """
