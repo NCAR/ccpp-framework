@@ -253,32 +253,31 @@ control-variable arguments to the public entry points.
 
 ### 7.1 Deferred — to be resolved in upcoming work
 
-- **Constituents overhaul.**  Three reform proposals on the table
-  (`doc/constituents_overhaul.md`); decision pending an upcoming
-  meeting.  Pieces involved: framework setter additions
-  (`set_advected`, `set_diagnostic_name`, `set_default_value`),
-  `is_match` relaxation, Class A vs Class B property classification.
-- ~~**Validator host-metadata check.**~~  **Landed 2026-06-01**:
-  `ccpp_validator.py --host-files` validates `type = host` and
-  `type = ddt` tables against the Fortran (`doc/migration.md` §7.4).
-- **Codegen-time scheme-registration cross-check.**  Today's
-  registration check is at runtime
-  (`ccpp_initialize_constituents`).  Stronger options: new metadata
-  attribute `registers_std_names = a, b, c` on register-phase
-  tables; cross-check at codegen.
-- **Nested-subcycle `ccpp_loop_counter` semantics.**  When a scheme
-  inside a deeply nested subcycle asks for `ccpp_loop_counter`, it
-  currently resolves to the **outermost** loop's counter.  None of
-  the in-tree physics catalogs uses the inner-counter case.
-- **`ccpp_datafile.py --host-files` repurpose.**  The current
-  `--host-files` returns the generated host-API file; should be a
-  filtered list of *input* host metadata files (parallel to the new
-  `--scheme-files`).  Deferred.
-- **`ccpp_host_constituents.F90` suppression** when no suite touches
-  constituents (file is correct-but-empty under host-wins; should
-  not be emitted at all).
-- **Python linter / formatter pass.**  Pick `ruff`, apply across
-  `capgen/`.
+Tracked in **`doc/followups.md`**, the single source of truth.  This
+section used to carry its own bullet list; it drifted out of step with the
+parallel lists in `migration.md` §8 and `redesign_prompt.md`, and all three
+were merged there on 2026-07-28.
+
+The headline items for a reader of this brief:
+
+- **Constituents overhaul** — three proposals on the table
+  (`doc/constituents_overhaul.md` §8); decision pending a meeting and
+  gating the framework setter additions.  `followups.md` FU-020, FU-003.
+- **Enforce `protected`** — a scheme can currently write a host variable
+  the host marked read-only; original capgen errored, capgen v1 does not.
+  FU-014.
+- **Codegen-time scheme-registration cross-check** — today's check is at
+  runtime.  FU-002.
+- **Nested-subcycle `ccpp_loop_counter` semantics** — resolves to the
+  outermost counter.  FU-001.
+- **Transient shims** — `--legacy-mode`, `--gfs-dim-aliases`,
+  `--legacy-auto-clone-constituents`, CAM-SIMA's `capgen_compat/`, each
+  with an explicit removal trigger.  FU-010 … FU-013.
+
+Landed since this section was first written: the validator host-metadata
+check (FU-008, 2026-06-01).  Closed as *decided against*: suppressing
+`ccpp_host_constituents.F90` when unused (FU-009) — see that row for why,
+and do not re-propose it.
 
 ### 7.2 Intentionally NOT supported
 

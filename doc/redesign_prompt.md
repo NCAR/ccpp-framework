@@ -1173,8 +1173,9 @@ The following patterns from prebuild or capgen are explicitly **not** carried fo
 
 ## 18. Outstanding Work
 
-See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
-(deferred items) for the canonical list.  Snapshot as of 2026-05-13:
+See `doc/followups.md` for the canonical list of outstanding work.
+(This previously pointed at `project_implementation_status.md` in
+auto-memory, which is per-machine and does not travel.)  Snapshot as of 2026-05-13:
 
 ### Landed in the 2026-05-12 session
 
@@ -1380,56 +1381,18 @@ See `MEMORY.md` (auto-memory index) and `project_implementation_status.md`
 
 ### Still deferred
 
-- **Constituents overhaul** — discussion doc at
-  `doc/constituents_overhaul.md` (2026-05-12).  Three proposals on the
-  table (A bugfix-only / B class-A/B split + setters / C host-only
-  registration).  Pending decision in upcoming meeting.
-- **Framework setter additions** — `set_advected`, `set_diagnostic_name`,
-  `set_default_value`, possibly `set_mixing_ratio_type`.  Coordinated with
-  the overhaul.
-- ~~**Validator host-metadata check**~~ — **Landed 2026-06-01**:
-  `ccpp_validator.py --host-files` validates `type=host` and `type=ddt`
-  tables against module-level decls and derived-type definitions in
-  the same `--source-files` Fortran tree.  `type=control` is silent-
-  skipped; `type=scheme` in `--host-files` is a hard error.  Per-arg
-  type/kind/rank checks reuse `_check_arg_attributes`.  See
-  `doc/migration.md` §7.4.
-- **Codegen-time scheme-registration cross-check** — new metadata attr
-  `registers_std_names = a, b, c` on register-phase tables; replaces
-  current runtime `int_unassigned` check with codegen-time error.
-- **Suppress `ccpp_host_constituents.F90` when unused** — currently
-  emitted for every build; now *correct* (empty) for SCM-style hosts
-  thanks to the host-wins rule, but still dead code.
-- **`--legacy-mode` shim removal** — transient; remove
-  `metadata/legacy_compat.py`, `unit-tests/test_legacy_compat.py`, and
-  every `# legacy-compat:` touchpoint when scheme metadata has
-  migrated.
-- **`--gfs-dim-aliases` shim removal** (added 2026-05-21) —
-  transient; remove `metadata/dim_aliases.py`,
-  `unit-tests/test_dim_aliases.py`, and every `# dim-aliases:`
-  touchpoint when GFS metadata stops spelling
-  `vertical_layer_dimension` as
-  `adjusted_vertical_layer_dimension_for_radiation` /
-  `vertical_composition_dimension`.
-- **`--legacy-auto-clone-constituents` shim removal** (added
-  2026-05-21) — transient; remove
-  `metadata/auto_clone_constituents.py`,
-  `unit-tests/test_auto_clone_constituents.py`, the sample fixtures
-  (`unit-tests/sample_files/scheme_auto_clone_consumer.meta`,
-  `unit-tests/sample_suite_files/suite_auto_clone.xml`), and every
-  `# auto-clone-constituents:` touchpoint when consumers have moved
-  to explicit `host_constituents(:)` declaration or register-phase
-  scheme registration.
-- **Nested subcycle `ccpp_loop_counter` semantics**: a scheme inside a
-  nested subcycle requesting `ccpp_loop_counter` would get the
-  OUTERMOST counter, not the innermost.  None of the cam-sima schemes
-  use this — revisit if a real scheme needs the innermost.
-- **Python linter / formatter pass** — pick `ruff` and apply across
-  `capgen/`.
-- **Generated Fortran ↔ Codee formatter idempotency** — emitted `.F90`
-  must round-trip cleanly through the project's Codee formatter.
-- **`fortran_to_metadata` developer utility** — bootstrap a `.meta`
-  skeleton from an existing `.F90` subroutine.
+Tracked in **`doc/followups.md`**, the single source of truth for deferred
+items, open questions and transient shims.  This section used to carry its
+own bullet list; it drifted out of step with the parallel lists in
+`migration.md` §8 and `briefing.md` §7.1, and all three were merged there
+on 2026-07-28.  Add new items to `doc/followups.md`, not here.
+
+Two entries that were listed here are now closed and should not be
+re-proposed: the validator host-metadata check landed 2026-06-01 (FU-008),
+and suppressing `ccpp_host_constituents.F90` when unused was **decided
+against** 2026-07-27 (FU-009 — the host cap re-exports that module's API,
+so gating it on suite content would make the host's interface expand and
+contract with the suite).
 
 ### Where to find the migration summary
 

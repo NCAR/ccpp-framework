@@ -57,7 +57,6 @@
   long_name = Array of constituent indices
   units = 1
   dimensions = (banana_array_dim)
-  protected = true
   type = integer
 [ const_index ]
   standard_name = test_banana_constituent_index

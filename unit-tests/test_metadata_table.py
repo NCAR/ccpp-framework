@@ -376,6 +376,25 @@ class TestMetaVar(unittest.TestCase):
         var = self._make_var(protected='True')
         self.assertTrue(var.protected)
 
+    def test_protected_with_write_intent_rejected(self):
+        for intent in ('out', 'inout'):
+            var = self._make_var(protected='True', intent=intent)
+            with self.assertRaises(CCPPError) as raised:
+                var.validate(require_intent=True, context=_ctx())
+            msg = str(raised.exception)
+            self.assertIn('my_var', msg)
+            self.assertIn('protected', msg)
+            self.assertIn(intent, msg)
+
+    def test_protected_with_intent_in_accepted(self):
+        var = self._make_var(protected='True', intent='in')
+        var.validate(require_intent=True, context=_ctx())
+
+    def test_protected_host_var_has_no_intent(self):
+        """Host vars carry no intent; protected must not trip the check."""
+        var = self._make_var(protected='True')
+        var.validate(require_intent=False, context=_ctx())
+
     def test_optional_bool(self):
         var = self._make_var(optional='False')
         self.assertFalse(var.optional)

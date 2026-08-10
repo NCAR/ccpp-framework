@@ -1159,6 +1159,52 @@ class TestResolveOneArg(unittest.TestCase):
         self.assertEqual(arg.call_expr, 'gt0(lb:ub, 1:nlev)')
         self.assertEqual(arg.transform_case, 1)
 
+    def _protected_host_dict(self, std_name='air_temperature'):
+        hd = self._host_dict()
+        hd[std_name].protected = True
+        return hd
+
+    def test_protected_host_var_write_intent_raises(self):
+        """A scheme may not write a host variable the host marks protected."""
+        for intent in ('out', 'inout'):
+            hd = self._protected_host_dict()
+            suite_var = self._scheme_var(
+                'temp', 'air_temperature', intent, 'K',
+                '(horizontal_dimension, vertical_layer_dimension)',
+                'real', 'kind_phys')
+            with self.assertRaises(CCPPError) as cm:
+                _resolve_one_arg(suite_var, 'run', hd, {}, 'writer', set())
+            msg = str(cm.exception)
+            self.assertIn('air_temperature', msg)
+            self.assertIn('protected', msg)
+            self.assertIn('writer', msg)
+
+    def test_protected_host_var_intent_in_ok(self):
+        hd = self._protected_host_dict()
+        suite_var = self._scheme_var(
+            'temp', 'air_temperature', 'in', 'K',
+            '(horizontal_dimension, vertical_layer_dimension)',
+            'real', 'kind_phys')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'reader', set())
+        self.assertEqual(arg.source, 'host')
+
+    def test_unprotected_host_var_write_intent_ok(self):
+        hd = self._host_dict()
+        suite_var = self._scheme_var(
+            'temp', 'air_temperature', 'inout', 'K',
+            '(horizontal_dimension, vertical_layer_dimension)',
+            'real', 'kind_phys')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'writer', set())
+        self.assertEqual(arg.source, 'host')
+
+    def test_suite_owned_var_unaffected_by_protected_check(self):
+        """Suite-owned vars have no host entry; intent(out) stays legal."""
+        hd = self._protected_host_dict()
+        suite_var = self._scheme_var('new_var', 'brand_new_standard_name',
+                                     'out', 'K', '()', 'real', 'kind_phys')
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'my_scheme', set())
+        self.assertEqual(arg.source, 'suite')
+
     def test_case2_suite_owned(self):
         """Case 2: not in host, first use intent(out) → creates SuiteVar."""
         hd = self._host_dict()

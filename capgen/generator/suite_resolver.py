@@ -1709,6 +1709,19 @@ def _resolve_one_arg(
         # Both found — host takes precedence (suite data shouldn't duplicate host).
         source = 'control' if host_entry.is_control else 'host'
 
+    # A protected host variable is read-only to physics.  Passing it to an
+    # intent(out)/intent(inout) dummy is also invalid Fortran, so without
+    # this the generated cap fails to compile instead.
+    if (host_entry is not None and host_entry.protected
+            and intent in ('out', 'inout')):
+        raise CCPPError(
+            "Variable '{}' (standard_name='{}') is declared intent({}) by "
+            "scheme '{}' phase '{}', but the host marks it protected; only "
+            "intent(in) is allowed for a protected variable".format(
+                local, std_name, intent, scheme_name, phase
+            )
+        )
+
     # ---- build access expression -----------------------------------------
     if host_entry is not None:
         # ``host_entry.access_path`` is the verbatim form from
