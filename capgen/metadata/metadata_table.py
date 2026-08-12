@@ -1296,9 +1296,24 @@ def _parse_lines(lines: List[str], file_path: str) -> List[MetadataTable]:
         current_section = None
 
     def flush_table_props() -> None:
-        """Apply any extra table-property keys to the current table."""
-        if current_table is not None and collecting_table_props:
-            current_table.apply_table_props(pending_props)
+        """Apply extra table-property keys, or reject an incomplete block.
+
+        A ``[ccpp-table-properties]`` that is missing the ``type`` and/or
+        ``name`` key is invalid; raise a clear error here. An unknown
+        ``type`` *value* is rejected separately when the table is
+        built (see :class:`MetadataTable`).
+        """
+        if not collecting_table_props:
+            return
+        if current_table is None:
+            missing = [k for k in ('name', 'type') if k not in pending_props]
+            raise CCPPError(
+                "[ccpp-table-properties] block at {} is missing required "
+                "attribute(s): {}".format(
+                    ctx(pending_start), ', '.join(missing)
+                )
+            )
+        current_table.apply_table_props(pending_props)
 
     for lineno, raw_line in enumerate(lines):
         line = raw_line.rstrip('\n').rstrip('\r')

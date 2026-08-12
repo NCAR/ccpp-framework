@@ -918,6 +918,91 @@ class TestParseLines(unittest.TestCase):
         with self.assertRaises(CCPPError):
             _parse_text(text)
 
+    def test_missing_type_in_table_properties_rejected(self):
+        """A [ccpp-table-properties] block with no ``type`` must raise, naming
+        the missing attribute -- not silently drop the table or fail later
+        with a misleading 'variable outside any section' error.
+        """
+        text = """
+            [ccpp-table-properties]
+              name = my_host
+
+            [ccpp-arg-table]
+              name = my_host
+              type = host
+            [ im ]
+              standard_name = horizontal_dimension
+              units = count
+              dimensions = ()
+              type = integer
+        """
+        with self.assertRaises(CCPPError) as cm:
+            _parse_text(text)
+        self.assertIn('type', str(cm.exception))
+
+    def test_mistyped_type_key_in_table_properties_rejected(self):
+        """A typo in the ``type`` key (``tpye``) leaves the block with no
+        recognised type; it must raise, not silently drop the table.
+        """
+        text = """
+            [ccpp-table-properties]
+              name = my_host
+              tpye = host
+
+            [ccpp-arg-table]
+              name = my_host
+              type = host
+            [ im ]
+              standard_name = horizontal_dimension
+              units = count
+              dimensions = ()
+              type = integer
+        """
+        with self.assertRaises(CCPPError) as cm:
+            _parse_text(text)
+        self.assertIn('type', str(cm.exception))
+
+    def test_missing_name_in_table_properties_rejected(self):
+        """A [ccpp-table-properties] block with no ``name`` must raise."""
+        text = """
+            [ccpp-table-properties]
+              type = host
+
+            [ccpp-arg-table]
+              name = my_host
+              type = host
+            [ im ]
+              standard_name = horizontal_dimension
+              units = count
+              dimensions = ()
+              type = integer
+        """
+        with self.assertRaises(CCPPError) as cm:
+            _parse_text(text)
+        self.assertIn('name', str(cm.exception))
+
+    def test_bare_table_properties_header_rejected(self):
+        """A [ccpp-table-properties] header with neither name nor type must
+        raise, listing both missing attributes.
+        """
+        text = """
+            [ccpp-table-properties]
+
+            [ccpp-arg-table]
+              name = my_host
+              type = host
+            [ im ]
+              standard_name = horizontal_dimension
+              units = count
+              dimensions = ()
+              type = integer
+        """
+        with self.assertRaises(CCPPError) as cm:
+            _parse_text(text)
+        m = str(cm.exception)
+        self.assertIn('name', m)
+        self.assertIn('type', m)
+
     def test_finalize_phase_rejected(self):
         """``_finalize`` phase name must raise CCPPError mentioning 'final'."""
         text = """
