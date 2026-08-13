@@ -1,5 +1,5 @@
 # Create list of SCHEME_FILES, HOST_FILES, and SUITE_FILES
-set(SCHEME_FILES       "cld_liq" "cld_ice" "apply_constituent_tendencies" "const_indices")
+set(SCHEME_FILES       "cld_liq" "cld_ice" "apply_constituent_tendencies" "const_indices" "cld_shadow")
 set(SCHEME_FILES_ERROR "cld_liq" "cld_ice" "dlc_liq")
 set(HOST_FILES         "test_host_data" "test_host_mod")
 set(SUITE_FILES        "cld_suite.xml")

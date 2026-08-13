@@ -7,5 +7,6 @@
     <scheme>apply_constituent_tendencies</scheme>
     <scheme>cld_ice</scheme>
     <scheme>apply_constituent_tendencies</scheme>
+    <scheme>cld_shadow</scheme>
   </group>
 </suite>

@@ -1632,6 +1632,38 @@ class Group(SuiteObject):
             raise CCPPError(emsg)
         # end if
 
+    def ensure_unique_local_names(self):
+        """Rename any group-local variable (this Group's dictionary) whose
+        local name is also the local name of one of this Group's dummy
+        arguments (call list) or of a suite module variable.
+        The group subroutine declares its dummy arguments and its local
+        variables in the same scope, so a shared name is a Fortran error
+        (e.g., a constituent dummy argument that keeps the local name of the
+        scheme which first requested it while another scheme uses the same
+        local name for a scheme-supplied interstitial). A group local would
+        also shadow a same-named suite module variable, silently redirecting
+        any reference to that suite variable in this group's subroutine.
+        Renaming a group local is safe because generated code looks
+        variables up by standard name at write time and group locals are
+        invisible outside the group subroutine."""
+        reserved = self.call_list.known_local_names()
+        reserved.extend(self.parent.known_local_names())
+        rset = set(reserved)
+        for var in list(self.variable_list()):
+            lname = var.get_prop_value('local_name')
+            if lname.lower() in rset:
+                stdname = var.get_prop_value('standard_name')
+                new_lname = self.new_internal_variable_name(prefix=lname,
+                                                            reserved=reserved)
+                self.remove_variable(stdname)
+                # Add directly to this Group's dictionary (bypassing the
+                # SuiteObject dummy-argument adjustments already applied to
+                # the original variable)
+                VarDictionary.add_variable(self, var.clone(new_lname),
+                                           self.run_env, exists_ok=True)
+            # end if
+        # end for
+
     def analyze(self, phase, suite_vars, scheme_library, ddt_library,
                 check_suite_state, set_suite_state):
         """Analyze the Group's interface to prepare for writing"""
@@ -1653,6 +1685,9 @@ class Group(SuiteObject):
         # end for
         self._phase_check_stmts = check_suite_state
         self._set_state = set_suite_state
+        # All of this Group's dummy arguments and local variables are now
+        # known; resolve any local name collisions between them
+        self.ensure_unique_local_names()
         if (self.run_env.logger and
             self.run_env.logger.isEnabledFor(logging.DEBUG)):
             self.run_env.logger.debug("{}".format(self))
@@ -1736,8 +1771,17 @@ class Group(SuiteObject):
             for var in item.declarations():
                 lname = var.get_prop_value('local_name')
                 sname = var.get_prop_value('standard_name')
-                if (lname in subpart_allocate_vars) or (lname in subpart_optional_vars) or (lname in subpart_scalar_vars):
-                    if subpart_allocate_vars[lname][0].compatible(var, self.run_env):
+                if lname in subpart_allocate_vars:
+                    prev_var = subpart_allocate_vars[lname][0]
+                elif lname in subpart_optional_vars:
+                    prev_var = subpart_optional_vars[lname][0]
+                elif lname in subpart_scalar_vars:
+                    prev_var = subpart_scalar_vars[lname][0]
+                else:
+                    prev_var = None
+                # end if
+                if prev_var is not None:
+                    if prev_var.compatible(var, self.run_env):
                         pass # We already are going to declare this variable
                     else:
                         errmsg = "Duplicate Group variable, {}"
