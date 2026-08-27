@@ -1824,6 +1824,21 @@ def _resolve_one_arg(
         and any(_dim_has_vertical(d) for d in host_dims)
     )
 
+    # A vertical flip is realised by a reverse-stride subscript on the host
+    # side.  An allocatable actual argument must omit explicit subscripts
+    # (handled just below), so the flip cannot be encoded.
+    if needs_vert_flip and host_allocatable:
+        raise CCPPError(
+            "Variable '{}' (standard_name='{}'): {} is allocatable and also "
+            "requires a vertical flip (top_at_one differs between the host and "
+            "scheme '{}'), but a vertical flip cannot be applied to an "
+            "allocatable actual argument -- its subscripts must be omitted.  "
+            "Make top_at_one agree between the host and scheme metadata, or "
+            "declare the host variable non-allocatable.".format(
+                local, std_name, source, scheme_name
+            )
+        )
+
     if host_allocatable:
         # Allocatable actual arguments must omit explicit dimension ranges:
         # the callee declares the dummy as allocatable too and assumes the
@@ -1906,6 +1921,25 @@ def _resolve_one_arg(
     else:
         needs_kind = bool(host_kind) and bool(scheme_kind) and host_kind != scheme_kind
 
+    needs_transform = needs_unit or needs_kind or needs_vert_flip
+
+    # ---- local variable names (transformation temp + pointer) ------------
+    # Resolve the temp/pointer local names BEFORE building the transform
+    # expressions below.  The backward expression references the temp by
+    # name, and ``_local_name_conflict`` may rename it away from a colliding
+    # scheme local (e.g. a scheme that declares its own ``<name>_l``).
+    temp_name = ''
+    ptr_name  = ''
+    if needs_transform:
+        candidate = '{}_l'.format(local)
+        temp_name = _local_name_conflict(candidate, used_local_names)
+        used_local_names.add(temp_name.lower())
+
+    if optional:
+        candidate = '{}_p'.format(local)
+        ptr_name = _local_name_conflict(candidate, used_local_names)
+        used_local_names.add(ptr_name.lower())
+
     # Forward transformation expression (host/suite → scheme local).
     # ``call_expr`` already carries the flipped vertical subscript when
     # ``needs_vert_flip`` is True, so the unit-conversion formula naturally
@@ -1931,32 +1965,14 @@ def _resolve_one_arg(
     # Backward transformation expression (scheme local → host/suite).
     unit_backward = ''
     if needs_unit and bwd_fn is not None and intent in ('out', 'inout'):
-        unit_backward_expr = '{}_l'.format(local)
-        unit_backward = _apply_transform_formula(bwd_fn, unit_backward_expr, host_kind)
+        unit_backward = _apply_transform_formula(bwd_fn, temp_name, host_kind)
     elif needs_kind and intent in ('out', 'inout'):
         unit_backward = _kind_cast_expr(
-            scheme_var.type, '{}_l'.format(local), host_kind,
+            scheme_var.type, temp_name, host_kind,
             local=local, std_name=std_name, scheme_name=scheme_name,
         )
     elif needs_vert_flip and not needs_unit and intent in ('out', 'inout'):
-        unit_backward = '{}_l'.format(local)
-
-    needs_transform = needs_unit or needs_kind or needs_vert_flip
-
-    # ---- local variable names (transformation temp + pointer) ------------
-    # ``used_local_names`` stores the LOWERCASED names so collision
-    # detection is Fortran-case-insensitive (see _local_name_conflict).
-    temp_name = ''
-    ptr_name  = ''
-    if needs_transform:
-        candidate = '{}_l'.format(local)
-        temp_name = _local_name_conflict(candidate, used_local_names)
-        used_local_names.add(temp_name.lower())
-
-    if optional:
-        candidate = '{}_p'.format(local)
-        ptr_name = _local_name_conflict(candidate, used_local_names)
-        used_local_names.add(ptr_name.lower())
+        unit_backward = temp_name
 
     # ---- transform case --------------------------------------------------
     if optional and needs_transform:

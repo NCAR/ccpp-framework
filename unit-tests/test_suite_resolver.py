@@ -1883,6 +1883,113 @@ class TestVerticalFlipTransform(unittest.TestCase):
         arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
         self.assertFalse(arg.needs_vert_flip)
 
+    def test_backward_expr_uses_conflict_resolved_temp(self):
+        """If a scheme local already occupies the natural temp name, the
+        transform temp is renamed by ``_local_name_conflict``.  The backward
+        (post-call) expression must reference the RENAMED temp, not the raw
+        ``<name>_l`` candidate -- otherwise it silently transforms the
+        scheme's own colliding local instead of the temp.
+        """
+        hd, suite_var = self._build_host_and_scheme(
+            host_units='Pa', scheme_units='hPa', intent='inout')
+        # Pretend the scheme already declared a local named 'temp_l', so the
+        # transform temp must be renamed away from it.
+        used = {'temp_l'}
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', used)
+        self.assertTrue(arg.needs_unit_transform)
+        self.assertNotEqual(arg.temp_name, 'temp_l')   # renamed
+        self.assertTrue(arg.temp_name)
+        # The backward expression references the renamed temp, never 'temp_l'.
+        self.assertIn(arg.temp_name, arg.unit_backward)
+
+    def test_backward_expr_uses_conflict_resolved_temp_when_optional(self):
+        """Same collision guard for the optional+transform path (case 4),
+        where the scheme dummy is passed as a pointer wrapping the temp.  The
+        post-call backward copy must reference the SAME renamed temp that the
+        pointer targets and the declaration declares -- not the raw
+        ``<name>_l`` candidate.
+        """
+        hd, suite_var = self._build_host_and_scheme(
+            host_units='Pa', scheme_units='hPa', intent='inout')
+        suite_var.set_attr('optional', 'True', _ctx())
+        used = {'temp_l'}
+        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', used)
+        self.assertEqual(arg.transform_case, 4)   # optional AND transform
+        self.assertTrue(arg.is_optional)
+        self.assertTrue(arg.needs_unit_transform)
+        self.assertNotEqual(arg.temp_name, 'temp_l')      # renamed
+        self.assertIn(arg.temp_name, arg.unit_backward)   # backward uses it
+
+    def test_allocatable_host_plus_flip_raises(self):
+        """An allocatable host array whose ``top_at_one`` disagrees with the
+        scheme cannot carry a reverse-stride subscript (allocatable actuals
+        must omit subscripts).  The resolver rejects the combination rather
+        than silently drop the flip and hand over vertically-reversed data.
+        """
+        host_src = '''
+[ccpp-table-properties]
+  name = mod
+  type = host
+[ccpp-arg-table]
+  name = mod
+  type = host
+[ ncols ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ nlev ]
+  standard_name = vertical_layer_dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ gt0 ]
+  standard_name = air_temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  top_at_one = True
+  allocatable = True
+'''
+        ctrl_src = '''
+[ccpp-table-properties]
+  name = ctrl
+  type = control
+[ccpp-arg-table]
+  name = ctrl
+  type = control
+[ lb ]
+  standard_name = horizontal_loop_begin
+  units = index
+  dimensions = ()
+  type = integer
+[ ub ]
+  standard_name = horizontal_loop_end
+  units = index
+  dimensions = ()
+  type = integer
+'''
+        hd = build_flat_host_dict(_parse(host_src), _parse(ctrl_src), [])
+        from metadata.metadata_table import MetaVar
+        ctx = _ctx()
+        # Scheme wants the same variable with the opposite top_at_one and a
+        # plain (non-allocatable) assumed-shape dummy -> flip required.
+        suite_var = MetaVar('temp', ctx)
+        suite_var.set_attr('standard_name', 'air_temperature', ctx)
+        suite_var.set_attr('units', 'K', ctx)
+        suite_var.set_attr('dimensions',
+                    '(horizontal_dimension, vertical_layer_dimension)', ctx)
+        suite_var.set_attr('type', 'real', ctx)
+        suite_var.set_attr('kind', 'kind_phys', ctx)
+        suite_var.set_attr('intent', 'inout', ctx)
+        with self.assertRaises(CCPPError) as cm:
+            _resolve_one_arg(suite_var, 'run', hd, {}, 'sch', set())
+        msg = str(cm.exception)
+        self.assertIn('air_temperature', msg)
+        self.assertIn('allocatable', msg)
+        self.assertIn('vertical flip', msg)
+
 
 ########################################################################
 # Tests: character kind (len=) validation
