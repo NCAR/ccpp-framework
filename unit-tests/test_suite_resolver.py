@@ -4153,6 +4153,13 @@ _INDEX_OF_SCHEMES = '''
   dimensions = ()
   type = integer
   intent = in
+[ q_const ]
+  standard_name = test_constituent
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = in
+  advected = .true.
 [ idx_const ]
   standard_name = index_of_test_constituent
   units = index
@@ -4228,8 +4235,8 @@ class TestIndexOfSchemeProducedVsConstituent(unittest.TestCase):
         self.assertNotEqual(idx.source, 'constituent')
 
     def test_genuine_constituent_index_unchanged(self):
-        # index_of_test_constituent is produced by no scheme -> still a
-        # constituent index.
+        # index_of_test_constituent is produced by no scheme and
+        # 'test_constituent' is flagged advected -> constituent index.
         idx = self.consumer['idx_const']
         self.assertEqual(idx.source, 'constituent')
 
@@ -5113,19 +5120,41 @@ class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):
         self.assertIsNotNone(arg.host_entry)
         self.assertEqual(arg.host_entry.local_name, 'ntcw')
 
-    def test_unclaimed_index_of_still_routes_to_constituents(self):
-        """The framework auto-provisioning path is preserved for
-        ``index_of_<X>`` names the host does NOT declare — required for
-        capgen-owned constituent flows (cf. the advection e2e test)."""
+    def test_unclaimed_index_of_routes_to_constituents_with_evidence(self):
+        """Auto-provisioning is preserved for ``index_of_<X>`` names the host
+        does NOT declare, when some scheme flags X as a constituent."""
         hd = build_flat_host_dict(_parse(self._HOST_SRC), [], [])
         suite_var = self._scheme_var(
             'idx_other', 'index_of_some_other_constituent_not_in_host',
             intent='in',
         )
-        arg = _resolve_one_arg(suite_var, 'run', hd, {}, 'some_scheme', set())
+        arg = _resolve_one_arg(
+            suite_var, 'run', hd, {}, 'some_scheme', set(),
+            const_stds={'some_other_constituent_not_in_host'},
+        )
         self.assertEqual(arg.source, 'constituent')
         self.assertEqual(arg.call_expr,
                          'index_of_some_other_constituent_not_in_host')
+
+    def test_unclaimed_index_of_without_evidence_is_an_error(self):
+        """Regression: without evidence that X is a constituent,
+        ``index_of_<X>`` is an ordinary variable that nobody provides and
+        must raise the missing-provider error rather than be auto-provisioned.
+        This is the shape a one-sided host/scheme rename produces."""
+        hd = build_flat_host_dict(_parse(self._HOST_SRC), [], [])
+        suite_var = self._scheme_var(
+            'idx_typo',
+            'index_of_deep_convection_process_in_cumulative_change_index',
+            intent='in',
+        )
+        with self.assertRaises(CCPPError) as ctx:
+            _resolve_one_arg(suite_var, 'run', hd, {}, 'some_scheme', set(),
+                             const_stds=set())
+        msg = str(ctx.exception)
+        self.assertIn('is not provided by the host metadata', msg)
+        self.assertIn(
+            'index_of_deep_convection_process_in_cumulative_change_index',
+            msg)
 
 
 class TestDimDDTComponentResolution(unittest.TestCase):
