@@ -1,6 +1,6 @@
 # capgen — Briefing for CCPP Framework Developers & Power Users
 
-*Prepared for the 2026-05-14 walk-through; last revised 2026-06-05.
+*Prepared for the 2026-05-14 walk-through; last revised 2026-09-01.
 Companion document to `doc/migration.md` (the detailed migration
 guide) and `doc/redesign_prompt.md` (the implementation spec).*
 
@@ -8,7 +8,16 @@ guide) and `doc/redesign_prompt.md` (the implementation spec).*
 
 ## 1. Why a new generator?
 
-The CCPP Framework runs two code generators today:
+*This section describes the situation that motivated the redesign.  It
+is half history as of 2026-09-01: **`ccpp-prebuild` no longer has a
+production consumer** — NEPTUNE, CCPP-SCM and UFS have all moved to
+capgen v1 (§10) — but **`ccpp-capgen` v0 still does**, because CAM-SIMA
+production still runs on it.  Both predecessors are slated for deletion
+from the tree in the same operation that merges `feature/capgen-v1` to
+`develop`, which happens when/after CAM-SIMA transitions (FU-034).  The
+reasoning is also the rationale for the design choices in §3–§6.*
+
+The CCPP Framework ran two code generators:
 
 - **`ccpp-prebuild`** — simple, procedural Python; fast; DDT-argument
   passing; in production use by NOAA UFS Weather Model, Navy NEPTUNE,
@@ -196,6 +205,21 @@ underlying legacy spelling from host/scheme metadata and the flag can
 be retired.  See `doc/auto_clone_constituents.md` for the full
 auto-clone reference.
 
+**Status note (2026-09-01).**  Two of the three runways are now
+load-bearing.  When NEPTUNE, CCPP-SCM and UFS transitioned to capgen v1
+(§10) they did so *with* the shims, not by migrating their metadata
+first.  So adoption did not bring `--legacy-mode` (FU-010) or
+`--gfs-dim-aliases` (FU-011) closer to removal — it gave them
+**production** consumers, and retiring either is now a coordinated
+host-metadata migration rather than a unilateral framework cleanup.
+`--legacy-auto-clone-constituents` (FU-012) is different: its consumer
+is CAM-SIMA, which is still on capgen v0, so it is pinned only by the
+v1 testing/review branches.  That makes it the one shim whose removal
+can still be folded into a migration that has not happened yet — and
+since CAM-SIMA's transition now gates the `develop` merge (FU-034), it
+sits on the critical path.  Decide it as part of that transition rather
+than inheriting it afterwards.
+
 ### 6.4 Required host `type = control` table
 
 Every host MUST declare scalar integers (and one character) with
@@ -263,21 +287,26 @@ The headline items for a reader of this brief:
 - **Constituents overhaul** — three proposals on the table
   (`doc/constituents_overhaul.md` §8); decision pending a meeting and
   gating the framework setter additions.  `followups.md` FU-020, FU-003.
-- **Enforce `protected`** — a scheme can currently write a host variable
-  the host marked read-only; original capgen errored, capgen v1 does not.
-  FU-014.
 - **Codegen-time scheme-registration cross-check** — today's check is at
   runtime.  FU-002.
 - **Nested-subcycle `ccpp_loop_counter` semantics** — resolves to the
   outermost counter.  FU-001.
 - **Transient shims** — `--legacy-mode`, `--gfs-dim-aliases`,
   `--legacy-auto-clone-constituents`, CAM-SIMA's `capgen_compat/`, each
-  with an explicit removal trigger.  FU-010 … FU-013.
+  with an explicit removal trigger.  FU-010 … FU-013.  `--legacy-mode`
+  and `--gfs-dim-aliases` are now pinned by production hosts — see the
+  status note in §6.3b before planning a removal.
+- **Merge `feature/capgen-v1` to `develop`, and delete capgen v0 +
+  `ccpp-prebuild`** — one operation, gated on CAM-SIMA's transition to
+  v1.  Three host models already build from the feature branch, so
+  until then it is a release branch in all but name.  FU-034.
 
 Landed since this section was first written: the validator host-metadata
-check (FU-008, 2026-06-01).  Closed as *decided against*: suppressing
-`ccpp_host_constituents.F90` when unused (FU-009) — see that row for why,
-and do not re-propose it.
+check (FU-008, 2026-06-01) and `protected` enforcement (FU-014,
+2026-07-29 — a scheme can no longer write a host variable the host marked
+read-only; both the metadata-level and resolver-level checks are in).
+Closed as *decided against*: suppressing `ccpp_host_constituents.F90`
+when unused (FU-009) — see that row for why, and do not re-propose it.
 
 ### 7.2 Intentionally NOT supported
 
@@ -369,15 +398,34 @@ don't rebuild downstream objects unless something actually moved.
 
 ## 10. Where things stand right now
 
-- **Unit tests**: 1516 passing on `feature/capgen` (as of
-  2026-06-05).
-- **End-to-end tests passing** (12): `advection`,
-  `advection_auto_clone`, `capgen`, `chunked_data`,
+- **NEPTUNE, CCPP-SCM and the UFS Weather Model have transitioned to
+  capgen v1** (2026-09-01).  All three came from `ccpp-prebuild`, and
+  all three now track the **`feature/capgen-v1` branch** of the NCAR
+  `ccpp-framework` repository directly.  That is the milestone the
+  redesign was aimed at, and it retires `ccpp-prebuild` as a
+  production generator: the whole prebuild-style host family now runs
+  on capgen.  **CAM-SIMA is the remaining transition** — see its
+  bullet below; it is still on capgen v0.  Two consequences worth
+  stating plainly:
+  - `feature/capgen-v1` now has **three production consumers**, so it
+    is a long-lived release branch until the merge: no force-push, no
+    breaking generated-API change without notice.  **The merge to
+    `develop` — and the deletion of both capgen v0 and `ccpp-prebuild`
+    from the tree — happens when/after CAM-SIMA transitions**
+    (`followups.md` FU-034).  That makes CAM-SIMA's transition the
+    critical path for the whole v1 rollout.
+  - The three incoming hosts **still rely on the transient migration
+    shims** (§6.3b).  Adoption did *not* retire them — it pinned
+    them.  See the note in that section and FU-010/FU-011.
+- **Unit tests**: 1564 passing on `feature/capgen-v1` (verified
+  2026-09-01, `python unit-tests/run_tests.py`).
+- **End-to-end tests passing** (13): `advection`,
+  `advection_auto_clone`, `capgen`, `capgen_ng`, `chunked_data`,
   `constituents_dim`, `ddthost`, `instances`, `instances_advection`,
-  `nested_suite`, `opt_arg`, `suite_allocate`, `var_compat`.  The two
-  newest — `constituents_dim` (a variable dimensioned by
+  `nested_suite`, `opt_arg`, `suite_allocate`, `var_compat`.
+  `constituents_dim` (a variable dimensioned by
   `number_of_ccpp_constituents`) and `suite_allocate` (suite-owned
-  allocatable interstitials sized by a scheme-written dimension) — were
+  allocatable interstitials sized by a scheme-written dimension) were
   added while hardening the CAM-SIMA HPC build.
 - **Code size**: ~17.8k LOC of Python under `capgen/` (includes
   docstrings, inline comments, and the three transient shim modules)
@@ -386,15 +434,18 @@ don't rebuild downstream objects unless something actually moved.
 - **Three transient migration shims now live** (see §6.3b):
   `--legacy-mode` (2026-05-13), `--gfs-dim-aliases` (2026-05-21),
   and `--legacy-auto-clone-constituents` (2026-05-21).  Each is
-  isolated in its own module + grep-tag so removal is a single
-  cleanup pass once the underlying legacy spelling is gone from
-  host/scheme metadata.
-- **CCPP-SCM**: actively driving development — every build / runtime
-  failure surfaced this month landed as a fix in capgen (rather
-  than being patched around in the host).  Most of the `phys_ps` group
-  now builds end-to-end via `--legacy-mode` + `--gfs-dim-aliases`.
-  On 2026-05-20 the per-arg-attribute validator caught **67 real
-  metadata/Fortran disagreements** in the SCM physics tree (12 missing
+  isolated in its own module + grep-tag so the *framework-side*
+  removal is a single cleanup pass.  The gating work is on the host
+  side: the legacy spelling has to be gone from host/scheme metadata
+  first, and as of 2026-09-01 it is not (§6.3b status note).
+- **CCPP-SCM**: **transitioned to capgen v1** (2026-09-01), on
+  `feature/capgen-v1`.  It drove most of the generator's hardening —
+  every build / runtime failure it surfaced landed as a fix in capgen
+  rather than a workaround in the host, which is why it was the
+  proving ground for the other prebuild hosts.  Still runs with
+  `--legacy-mode` + `--gfs-dim-aliases`.  On 2026-05-20 the
+  per-arg-attribute validator caught **67 real metadata/Fortran
+  disagreements** in the SCM physics tree (12 missing
   `kind = kind_phys` + 42 intent mismatches + a mix of optional-flag
   and bare-`real` cases); all fixed.
 - **Validator** now checks per-argument `intent`, `type`, `kind`, and
@@ -421,14 +472,32 @@ don't rebuild downstream objects unless something actually moved.
   compilation effectively hang).  Signatures stay so existing host
   callers still link; stubbed bodies return `errflg = 1` with a clear
   `errmsg`.
-- **NEPTUNE**: cleanup and acceptance testing in progress.
-  Regular/lower-atmosphere physics builds and runs and produces
-  results within tolerance (deviations similar to compiler changes).
-  High-altitude physics testing is next.
-- **UFS Weather Model**: not yet attempted; SCM is the proving
-  ground first.  An anticipated complication is the "fast physics"
-  called directly from the FV3 dynamical core as a separate group.
-- **CAM-SIMA**: **reconnected (2026-06-03 → 06-05).**  capgen now
+- **NEPTUNE**: **transitioned to capgen v1** (2026-09-01), on
+  `feature/capgen-v1`.  Regular/lower-atmosphere physics builds and
+  runs and produces results within tolerance (deviations similar to
+  compiler changes), and **high-altitude physics works with v1 as
+  expected** — the acceptance item that was outstanding at 2026-06-05
+  is closed.
+- **UFS Weather Model**: **transitioned to capgen v1** (2026-09-01),
+  on `feature/capgen-v1` — the largest of the prebuild hosts and the
+  one the flat-field argument passing of capgen v0 could never have
+  served (§1).  The anticipated complication was "fast physics"
+  called directly from the FV3 dynamical core as a separate group;
+  **that group works with v1 as expected**, so no special handling
+  was needed.
+- **CAM-SIMA**: **still on capgen v0 — the remaining transition, and
+  the critical path.**  As of 2026-09-01 CAM-SIMA production builds
+  with the original ccpp-capgen; capgen v1 support lives on
+  **branches maintained for testing and review**, not in the
+  production configuration.  It is therefore *not* a consumer of
+  `feature/capgen-v1` in the sense the other three now are.  Because
+  the `develop` merge and the deletion of capgen v0 + `ccpp-prebuild`
+  are gated on this transition (FU-034), its two gating items — the
+  constituent-ordering re-baseline (FU-018/FU-030) and the
+  compat-layer removal plan (FU-013) — are now blockers on the entire
+  v1 rollout, not just on CAM-SIMA.  What follows is the state of
+  that v1 branch work.
+  **Reconnected (2026-06-03 → 06-05):** capgen
   drives the real CAM-SIMA build on Derecho via a thin compatibility
   layer (`cime_config/capgen_compat/`, in the CAM-SIMA tree) that
   re-implements original ccpp-capgen's Python API surface
