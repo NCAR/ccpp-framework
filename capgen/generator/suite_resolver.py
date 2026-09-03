@@ -2259,11 +2259,22 @@ def _resolve_constituent_arg(
     ):
         return None
 
+    # A constituent index is a framework-owned module integer bound by
+    # ``%const_index``, so a scheme may only read it. Placed after the
+    # host/suite gate so a host-declared index stays an ordinary variable.
+    if is_constituent_index and intent in ('out', 'inout'):
+        raise CCPPError(
+            "Scheme arg '{}' (standard_name='{}', scheme='{}', phase='{}') "
+            "has intent={}, but '{}' indexes a constituent: schemes may "
+            "only read it".format(
+                local, std_name, scheme_name, phase, intent, index_base
+            )
+        )
+
     # A scheme that OUTPUTS ``index_of_<X>`` is producing an ordinary index
     # variable (e.g. ``rrtmgp_inputs_setup`` computing the diagnostic
-    # shortwave band index), NOT a constituent index -- constituent indices
-    # are read-only module integers bound by ``%const_index`` and are never
-    # written by a scheme.  Defer so it becomes a suite var that later-phase
+    # shortwave band index), NOT a constituent index -- those are rejected
+    # above.  Defer so it becomes a suite var that later-phase
     # consumers resolve via the gate above.  (Index names produced by some
     # OTHER scheme but consumed here have already been caught by the
     # suite_vars branch above; this handles the producing arg itself, whose
