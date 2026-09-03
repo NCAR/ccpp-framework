@@ -5175,7 +5175,7 @@ class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):
                                          'some_scheme', set(),
                                          const_stds=const_stds)
                     msg = str(ctx.exception)
-                    self.assertIn('%const_index', msg)
+                    self.assertIn('indexes a constituent', msg)
                     self.assertIn('intent=' + intent, msg)
 
     def test_host_declared_index_out_reports_the_host_error(self):
@@ -5193,7 +5193,7 @@ class TestHostDeclaredIndexOfWinsOverConstituents(unittest.TestCase):
                                  '_in_tracer_concentration_array'})
         msg = str(ctx.exception)
         self.assertIn('protected', msg)
-        self.assertNotIn('%const_index', msg)
+        self.assertNotIn('indexes a constituent', msg)
 
 
 class TestDimDDTComponentResolution(unittest.TestCase):
