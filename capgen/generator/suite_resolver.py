@@ -206,13 +206,9 @@ def _constituent_index_base(std_name: str) -> Optional[str]:
 def _is_known_constituent(std_name: str, const_stds: Set[str]) -> bool:
     """Is *std_name* known — positively — to name a constituent?
 
-    The single definition of "positive evidence" for this invariant.
-    Evidence is *const_stds*, the scheme-metadata-wide constituent set
-    (``SchemeStore.constituent_stdnames``) — the only constituent knowledge
-    available at codegen, since register-phase ``%instantiate(std_name=...)``
-    is not parsed.  ``tendency_of_<X>`` counts as evidence for *X*: a
-    scheme may flag only the tendency, and ``index_of_<X>`` subscripts both
-    ``vars_layer`` and ``vars_layer_tend``.
+    Possible 'positive evidence':
+    1. Constituent standard name exists
+    2. Constituent tendency standard name exists (tendency_of_X)
 
     >>> _is_known_constituent('water_vapor', {'water_vapor'})
     True
