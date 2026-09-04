@@ -189,6 +189,70 @@ def _index_symbol_name(base_std_name: str) -> str:
         _INDEX_PREFIX, base_std_name[:max_base_len], sha8,
     )
 
+
+def _constituent_index_base(std_name: str) -> Optional[str]:
+    """Return ``X`` for an ``index_of_<X>`` standard name, else ``None``.
+
+    >>> _constituent_index_base('index_of_water_vapor')
+    'water_vapor'
+    >>> _constituent_index_base('air_pressure') is None
+    True
+    """
+    if not std_name.startswith(_INDEX_PREFIX):
+        return None
+    return std_name[len(_INDEX_PREFIX):]
+
+
+def _is_known_constituent(std_name: str, const_stds: Set[str]) -> bool:
+    """Is *std_name* known — positively — to name a constituent?
+
+    Possible 'positive evidence':
+    1. Constituent standard name exists
+    2. Constituent tendency standard name exists (tendency_of_X)
+
+    >>> _is_known_constituent('water_vapor', {'water_vapor'})
+    True
+    >>> _is_known_constituent('air_temperature', {'tendency_of_air_temperature'})
+    True
+    >>> _is_known_constituent('air_temperature', {'water_vapor'})
+    False
+    """
+    return (std_name in const_stds
+            or (_TEND_PREFIX + std_name) in const_stds)
+
+
+def _check_constituent_index_evidence(
+    suite_name: str,
+    index_names: List[str],
+    const_stds: Set[str],
+) -> None:
+    """Assert the :func:`_is_known_constituent` invariant suite-wide.
+
+    Each resolution path enforces it individually; re-checking here guards
+    against future bugs of this class.
+
+    >>> _check_constituent_index_evidence('s', ['water_vapor'],
+    ...                                   {'water_vapor'})
+
+    >>> _check_constituent_index_evidence('s', ['shortwave_band'],
+    ...     {'water_vapor'}) #doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    CCPPError: Internal error: suite 's' allocated constituent index ...
+    """
+    unevidenced = [n for n in index_names
+                   if not _is_known_constituent(n, const_stds)]
+    if not unevidenced:
+        return
+    raise CCPPError(
+        "Internal error: suite '{}' allocated constituent index integers "
+        "for standard name(s) {} that no scheme flags as a constituent "
+        "(advected/constituent/molar_mass).  This indicates a resolver bug, "
+        "not a metadata error".format(
+            suite_name, ', '.join(repr(n) for n in unevidenced)
+        )
+    )
+
+
 # Std names directly satisfied by host-constituents-module-owned symbols.
 _FRAMEWORK_CONST_STDS = frozenset({
     _CONST_BASE_ARRAY_STD,
@@ -2140,8 +2204,17 @@ def _resolve_constituent_arg(
     scheme_dims = list(scheme_var.dimensions)
 
     is_tendency_name  = std_name.startswith(_TEND_PREFIX)
-    is_index_name     = std_name.startswith(_INDEX_PREFIX)
-    is_framework_name = std_name in _FRAMEWORK_CONST_STDS or is_index_name
+
+    # ``index_of_`` is an ordinary naming convention (band, column and level
+    # indices are spelled the same way), not a reserved framework namespace,
+    # so the prefix is a precondition and ``const_stds`` is the evidence.
+    # See :func:`_is_known_constituent`.
+    index_base           = _constituent_index_base(std_name)
+    has_index_prefix     = index_base is not None
+    is_constituent_index = (has_index_prefix
+                            and _is_known_constituent(index_base, const_stds))
+    is_framework_name    = (std_name in _FRAMEWORK_CONST_STDS
+                            or is_constituent_index)
 
     # Rule (b): an UNFLAGGED consumer of a name that some scheme declares as a
     # constituent -- a base constituent (``advected``, read via vars_layer) or a
@@ -2182,16 +2255,34 @@ def _resolve_constituent_arg(
     ):
         return None
 
+    # A constituent index is a framework-owned module integer bound by
+    # ``%const_index``, so a scheme may only read it. Placed after the
+    # host/suite gate so a host-declared index stays an ordinary variable.
+    if is_constituent_index and intent in ('out', 'inout'):
+        raise CCPPError(
+            "Scheme arg '{}' (standard_name='{}', scheme='{}', phase='{}') "
+            "has intent={}, but '{}' indexes a constituent: schemes may "
+            "only read it".format(
+                local, std_name, scheme_name, phase, intent, index_base
+            )
+        )
+
     # A scheme that OUTPUTS ``index_of_<X>`` is producing an ordinary index
     # variable (e.g. ``rrtmgp_inputs_setup`` computing the diagnostic
-    # shortwave band index), NOT a constituent index -- constituent indices
-    # are read-only module integers bound by ``%const_index`` and are never
-    # written by a scheme.  Defer so it becomes a suite var that later-phase
+    # shortwave band index), NOT a constituent index -- those are rejected
+    # above.  Defer so it becomes a suite var that later-phase
     # consumers resolve via the gate above.  (Index names produced by some
     # OTHER scheme but consumed here have already been caught by the
     # suite_vars branch above; this handles the producing arg itself, whose
     # name is not yet in suite_vars on first occurrence.)
-    if is_index_name and intent == 'out':
+    if has_index_prefix and intent == 'out':
+        return None
+
+    # Unevidenced ``index_of_*`` (``index_of_shortwave_band``,
+    # ``index_of_timestep``, ...) is an ORDINARY index variable, not tied
+    # to a constituent. Defer so the host or an earlier scheme provides it,
+    # or the caller raises the missing-provider error.
+    if has_index_prefix and not is_constituent_index:
         return None
 
     constituent_module = _constituent_module_name(suite_name)
@@ -2242,12 +2333,10 @@ def _resolve_constituent_arg(
         )
 
     # ---- Path 1a: index_of_<X> — module-level integer, no per-instance --
-    if is_index_name:
+    # Reached only when X is a KNOWN constituent (see is_constituent_index).
+    if is_constituent_index:
         # Mangle long std_names down to a Fortran-legal 63-char symbol;
         # identity for short names, so existing fixtures are unaffected.
-        # ``_INDEX_PREFIX`` is already part of std_name -- strip then
-        # re-add via the helper for uniform truncation.
-        index_base = std_name[len(_INDEX_PREFIX):]
         index_sym = _index_symbol_name(index_base)
         return ResolvedArg(**_common_kwargs(
             base_expr=index_sym, subscript='', call_expr=index_sym,
@@ -2527,6 +2616,11 @@ def resolve_suite(
                     # subscript at run time.
                     index_names.update(arg.constituent_index_std_names)
     constituent_index_names = sorted(index_names)
+
+    _check_constituent_index_evidence(
+        suite.name, constituent_index_names,
+        scheme_store.constituent_stdnames(),
+    )
 
     # Under option A the constituent object is generator-owned (lives in
     # the ccpp_host_constituents module), so the host is no longer

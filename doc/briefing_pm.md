@@ -7,30 +7,40 @@ program managers; it summarises the case for `capgen` in terms of
 product risk, schedule, and cross-organization impact rather than
 implementation detail.*
 
-*Last revised: 2026-06-05.*
+*Last revised: 2026-09-01.*
 
 ---
 
 ## TL;DR
 
-The CCPP Framework today ships **two** code generators that solve the
+**Status as of 2026-09-01: three of the four host models have
+transitioned to `capgen`.**  NOAA UFS, Navy NEPTUNE and CCPP-SCM — all
+previously on `ccpp-prebuild` — now build with the new generator.
+**CAM-SIMA is the one remaining transition**, and it is the gate on
+finishing the job: the plan of record is to merge `capgen` into
+`develop` and delete *both* older generators when/after CAM-SIMA
+moves.  The rest of this section is the situation that motivated the
+work.
+
+The CCPP Framework shipped **two** code generators that solved the
 same problem differently:
 
-- **`ccpp-prebuild`** powers NOAA UFS, Navy NEPTUNE, and CCPP-SCM.
+- **`ccpp-prebuild`** powered NOAA UFS, Navy NEPTUNE, and CCPP-SCM.
   Simple and reliable, but feature-light — does not support features
   CAM-SIMA needs (constituents, framework-owned variables,
-  introspection).
+  introspection).  **No longer has a production consumer.**
 - **`ccpp-capgen`** powers NCAR CAM-SIMA.  Feature-rich, but built on
   technical choices that **do not scale** to UFS or NEPTUNE and that
-  **do not support multi-instance hosts** at all.
+  **do not support multi-instance hosts** at all.  **Still in
+  production for CAM-SIMA.**
 
-Neither generator can be the basis for a single shared toolchain.
+Neither generator could be the basis for a single shared toolchain.
 **`capgen`** is a third generator, started in early May 2026,
 designed to do everything both other generators do, in code small
 enough for a few people to own, with the architectural choices that
-make it work at UFS/NEPTUNE scale and beyond.  The redesign is
-running on the SCM as proving ground; UFS / NEPTUNE / CAM-SIMA
-re-integration is sequenced behind that.
+make it work at UFS/NEPTUNE scale and beyond.  The SCM was the proving
+ground; UFS and NEPTUNE followed and are now transitioned, and
+CAM-SIMA re-integration is the remaining step.
 
 This document explains, in plain language, **why we did not extend
 capgen instead**, what risks the redesign retires, and where things
@@ -265,27 +275,45 @@ Features that exist only in capgen (some exist in prebuild):
 
 ---
 
-## 6. Where things stand right now (2026-06-05)
+## 6. Where things stand right now (2026-09-01)
 
-- **Unit tests**: 1516 passing.  No known failures.
-- **End-to-end tests**: 12 passing — `advection`,
+- **Three of four host models have transitioned to capgen.**  NEPTUNE,
+  CCPP-SCM and the UFS Weather Model — the entire `ccpp-prebuild` user
+  base — now build with the new generator and track its development
+  branch directly.  `ccpp-prebuild` has no production consumer left.
+  **CAM-SIMA is the remaining transition** and is still on the older
+  `ccpp-capgen`.
+- **The endgame is defined and has a single trigger.**  When/after
+  CAM-SIMA transitions, capgen merges into `develop` and *both* older
+  generators are deleted from the tree — one operation.  That makes
+  CAM-SIMA's transition the critical path for the whole programme, and
+  promotes its two gating items (the constituent-ordering re-baseline
+  and the retirement of the CAM-SIMA compatibility layer) to
+  programme-level blockers rather than CAM-SIMA-local work.  Schedule
+  risk concentrates there; see §8.
+- **Unit tests**: 1564 passing.  No known failures.
+- **End-to-end tests**: 13 passing — `advection`,
   `advection_auto_clone` (CAM-SIMA advection_test port exercising the
-  auto-clone shim), `capgen`, `chunked_data`, `constituents_dim`,
-  `ddthost`, `instances`, `instances_advection`
+  auto-clone shim), `capgen`, `capgen_ng`, `chunked_data`,
+  `constituents_dim`, `ddthost`, `instances`, `instances_advection`
   (multi-instance + constituents), `nested_suite`, `opt_arg`,
-  `suite_allocate`, `var_compat`.  The two newest (`constituents_dim`,
-  `suite_allocate`) were added while hardening the CAM-SIMA HPC build.
+  `suite_allocate`, `var_compat`.  `constituents_dim` and
+  `suite_allocate` were added while hardening the CAM-SIMA HPC build.
 - **Code size**: ~17.8k lines of Python under `capgen/` including
   inline comments and the three transient shim modules; ~18k lines of
   unit/doctest under `unit-tests/`.  Still procedural; still flat
   data classes; still well below capgen.
-- **CCPP-SCM**: actively driving development.  Each build / runtime
-  issue surfaced this month landed as a fix in capgen rather than
-  a host-side workaround.  All available suites in CCPP-SCM now
-  build and run end-to-end via `--legacy-mode` + `--gfs-dim-aliases`.
+- **CCPP-SCM**: **transitioned.**  It drove most of the generator's
+  hardening — each build / runtime issue it surfaced landed as a fix in
+  capgen rather than a host-side workaround, which is why it was the
+  proving ground for the other prebuild hosts.  All available suites
+  build and run end-to-end, via `--legacy-mode` + `--gfs-dim-aliases`.
 - **Three transient migration shims in place** (see §5).  Each is
-  isolated in its own module with a single grep tag, so removal once
-  hosts migrate is a single cleanup pass.
+  isolated in its own module with a single grep tag, so the
+  framework-side removal is a single cleanup pass.  **The hosts
+  transitioned *with* these shims rather than migrating their metadata
+  first**, so retiring one is now a coordinated host-side migration —
+  a scheduling item, not a cleanup.  It does not block the merge.
 - **Auto-clone shim landed 2026-05-21**.  Reinstates original capgen's
   auto-clone path behind `--legacy-auto-clone-constituents`.  This is
   the no-decision-needed bridge for CAM-SIMA — the ~16 schemes that
@@ -297,26 +325,34 @@ Features that exist only in capgen (some exist in prebuild):
   bug; the fix moves the per-suite dynamic-constituents buffer
   per-instance.  No coordination with CAM-SIMA / UFS / NEPTUNE
   required (host-facing API unchanged).
-- **NEPTUNE**: Final cleanup and acceptance testing in progress.
-  All regression tests (~300) pass with the three mandatory
-  compilers (Intel LLVM, GCC, LLVM native) for regular physics,
-  mid-altitude, and high-altitude physics (feature-complete).
-- **UFS Weather Model**: not yet attempted; SCM is the proving
-  ground first.  Expecting updates due to the "fast physics"
-  called directly from the FV3 dynamical core as separate group.
-- **CAM-SIMA**: **re-connected (2026-06-03 → 06-05).**  capgen now
-  drives the production CAM-SIMA build on the Derecho supercomputer
-  through a small compatibility layer that lets CAM-SIMA's existing
-  build scripts call capgen without being rewritten.  Three
-  configurations build **and run to completion under both the Intel and
-  GNU compilers**, with bit-comparable results: `kessler`, `rrtmgp`,
-  and `se_cslam`/CSLAM — the last being the full CAM7 physics suite
+- **NEPTUNE**: **transitioned.**  All regression tests (~300) pass with
+  the three mandatory compilers (Intel LLVM, GCC, LLVM native) for
+  regular physics, mid-altitude, and high-altitude physics
+  (feature-complete).  High-altitude physics — the last acceptance item
+  outstanding in June — works with capgen as expected.
+- **UFS Weather Model**: **transitioned.**  The largest of the hosts,
+  and the one the older capgen could never have served (§3.1).  The
+  anticipated complication was the "fast physics" called directly from
+  the FV3 dynamical core as a separate group; that group works as
+  expected and needed no special handling.
+- **CAM-SIMA**: **not yet transitioned — still on the older
+  `ccpp-capgen`, and the critical path (see above).**  capgen v1
+  support lives on branches maintained for testing and review; the
+  production configuration has not moved.  On those branches, capgen
+  drives the real CAM-SIMA build on the Derecho supercomputer through a
+  small compatibility layer that lets CAM-SIMA's existing build scripts
+  call capgen without being rewritten.  Three configurations build
+  **and run to completion under both the Intel and GNU compilers**,
+  with bit-comparable results: `kessler`, `rrtmgp`, and
+  `se_cslam`/CSLAM — the last being the full CAM7 physics suite
   (deep + shallow convection, stratiform microphysics, RRTMGP
   radiation, gravity-wave drag) on a cubed-sphere/CSLAM-advection
-  configuration.  This is the first time the redesigned generator has
-  produced a complete, running CAM-SIMA model.  The constituent
-  overhaul decision (see §7) remains a separate track and was not on
-  the critical path for this milestone.
+  configuration.  That was the first time the redesigned generator
+  produced a complete, running CAM-SIMA model.  Remaining before
+  transition: a re-baseline caused by a change in constituent ordering
+  (a known, understood floating-point difference, not a defect) and
+  retirement of the compatibility layer.  The constituent overhaul
+  decision (see §7) remains a separate track.
 
 ---
 
@@ -356,10 +392,11 @@ proposals are implementable on top of it.
 | capgen diverges from capgen feature set | LOW | Cross-checked by `doc/redesign_analysis.md`; the feature comparison table in §4 / §5 is exhaustive |
 | Host metadata break for UFS / NEPTUNE / CAM-SIMA | LOW | Three transient shims (`--legacy-mode`, `--gfs-dim-aliases`, `--legacy-auto-clone-constituents`) together cover the known-incompatible standard-name pair, the GFS radiation/composition vertical-dim spellings, and original capgen's auto-clone registration path.  Remaining required changes (e.g., `_finalize` → `_final`) are mechanical and listed in `doc/migration.md` §3 |
 | Constituent overhaul stalls | LOW | Proposal A unblocks the immediate bug; capgen works with the current framework today; `--legacy-auto-clone-constituents` lets CAM-SIMA's atmospheric_physics build without an overhaul decision; the overhaul is a separate decision track |
-| Bus-factor on capgen itself | MEDIUM | Procedural code style + flat data classes + 1426-test safety net; significantly lower than capgen's bus factor |
+| Bus-factor on capgen itself | MEDIUM | Procedural code style + flat data classes + 1564-test safety net; significantly lower than capgen's bus factor |
+| **CAM-SIMA transition slips, delaying the whole programme** | **MEDIUM — the main schedule risk as of 2026-09-01** | The `develop` merge and the deletion of both older generators are gated on this one transition (§6), so its two remaining items — the constituent-ordering re-baseline and retirement of the compatibility layer — are programme-level blockers.  Both are understood and scoped; neither is a defect.  Mitigation is to track them as such rather than as CAM-SIMA-local work, and to decide the auto-clone shim's fate as part of the transition |
 | Two host call-shape conventions (prebuild-style vs capgen-style) coexist forever | LOW | capgen emits one shape; downstream host conversions are tracked in `doc/migration.md` |
-| Regression discovered during NEPTUNE / UFS testing | EXPECTED | SCM proving ground catches most; remaining issues become capgen tickets, not host-side patches |
-| ccpp-prebuild end-of-life requires a sunset plan | OPEN | Not yet scoped; both generators currently coexist in the framework repo |
+| Regression discovered during NEPTUNE / UFS testing | LARGELY RETIRED (2026-09-01) | Both models have transitioned; NEPTUNE passes ~300 regression tests on three compilers including high-altitude physics, and the anticipated UFS FV3 fast-physics complication did not materialise.  The SCM proving-ground approach worked as intended — issues became capgen fixes, not host-side patches |
+| ccpp-prebuild end-of-life requires a sunset plan | SCOPED (2026-09-01) | Decided: `ccpp-prebuild` **and** the older `ccpp-capgen` are both deleted from the framework repo in the same operation that merges capgen into `develop`, triggered when/after CAM-SIMA transitions.  prebuild already has no production consumer.  The residual risk is schedule, not scope — see the CAM-SIMA row above |
 
 ---
 

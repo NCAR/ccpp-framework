@@ -1520,7 +1520,8 @@ class TestAttributeOwnership(unittest.TestCase):
 class TestConstituentAttributes(unittest.TestCase):
     """Parsing and is_constituent rollup for scheme-only constituent hints."""
 
-    def _scheme_var(self, *, extra_attrs: str = '') -> MetaVar:
+    def _scheme_var(self, *, extra_attrs: str = '',
+                    std_name: str = 'foo') -> MetaVar:
         text = """
             [ccpp-table-properties]
               name = my_scheme
@@ -1530,13 +1531,13 @@ class TestConstituentAttributes(unittest.TestCase):
               name = my_scheme_run
               type = scheme
             [ x ]
-              standard_name = foo
+              standard_name = {std}
               units = kg kg-1
               dimensions = ()
               type = real
               intent = inout
               {extra}
-        """.format(extra=extra_attrs)
+        """.format(extra=extra_attrs, std=std_name)
         tables = _parse_text(text)
         return tables[0].sections()[0].variables[0]
 
@@ -1565,6 +1566,14 @@ class TestConstituentAttributes(unittest.TestCase):
     def test_negative_molar_mass_rejected(self):
         with self.assertRaises((CCPPError, ParseSyntaxError)):
             self._scheme_var(extra_attrs='molar_mass = -1.0')
+
+    def test_index_of_cannot_be_a_constituent(self):
+        for flag in ('constituent = True', 'advected = .true.',
+                     'molar_mass = 18.0'):
+            with self.subTest(flag=flag):
+                with self.assertRaises(CCPPError):
+                    self._scheme_var(extra_attrs=flag,
+                                     std_name='index_of_shortwave_band')
 
 
 ########################################################################
