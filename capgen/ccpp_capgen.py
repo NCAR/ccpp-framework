@@ -638,6 +638,7 @@ def _load_metadata_files(
     file_list: List[str],
     expected_types: frozenset,
     label: str,
+    logger=None,
 ) -> List[MetadataTable]:
     """Load and validate a list of metadata files.
 
@@ -651,6 +652,8 @@ def _load_metadata_files(
     label : str
         Human-readable description (``'host'`` or ``'scheme'``) used in
         error messages.
+    logger : logging.Logger, optional
+        Logger to use.  Defaults to the module-level logger.
 
     Returns
     -------
@@ -662,9 +665,10 @@ def _load_metadata_files(
     CCPPError
         On any parse error or unexpected table type.
     """
+    log = logger or _LOGGER
     tables: List[MetadataTable] = []
     for fpath in file_list:
-        _LOGGER.info("Reading %s metadata: %s", label, fpath)
+        log.info("Reading %s metadata: %s", label, fpath)
         file_tables = parse_metadata_file(fpath)
         for tbl in file_tables:
             if tbl.table_type not in expected_types:
@@ -921,6 +925,7 @@ def capgen(
         framework_meta + list(host_files),
         expected_types=frozenset({'host', 'control', 'ddt'}),
         label='host',
+        logger=log,
     )
     log.info("Loaded %d host/control/ddt tables", len(host_tables))
 
@@ -930,6 +935,7 @@ def capgen(
         scheme_files,
         expected_types=frozenset({'scheme', 'ddt'}),
         label='scheme',
+        logger=log,
     )
     log.info("Loaded %d scheme/ddt tables", len(scheme_tables))
 
