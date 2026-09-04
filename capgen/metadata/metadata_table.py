@@ -802,6 +802,14 @@ class MetaVar:
                 "Variable '{}' is marked protected but is intent {}, "
                 "at {}".format(self.local_name, self.intent, context)
             )
+        if self.is_constituent and self.standard_name.startswith('index_of_'):
+            raise CCPPError(
+                "Variable '{}' (standard_name='{}') is flagged as a "
+                "constituent (advected/constituent/molar_mass), but "
+                "'index_of_' names an index, not a field, at {}".format(
+                    self.local_name, self.standard_name, context
+                )
+            )
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:

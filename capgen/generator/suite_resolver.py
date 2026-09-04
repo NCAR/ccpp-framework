@@ -2279,10 +2279,9 @@ def _resolve_constituent_arg(
         return None
 
     # Unevidenced ``index_of_*`` (``index_of_shortwave_band``,
-    # ``index_of_timestep``, ...) is an ORDINARY index variable: defer so the
-    # host or an earlier scheme provides it, or the caller raises the
-    # missing-provider error.  Returning None BEFORE the ``is_constituent``
-    # check keeps that uniform however the consumer flags its own arg.
+    # ``index_of_timestep``, ...) is an ORDINARY index variable, not tied
+    # to a constituent. Defer so the host or an earlier scheme provides it,
+    # or the caller raises the missing-provider error.
     if has_index_prefix and not is_constituent_index:
         return None
 
