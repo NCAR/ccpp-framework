@@ -1,0 +1,47 @@
+# Host metadata declaring file dependencies via the table-properties
+# block.  Used to verify that host-table dependencies make it into
+# datatable.xml's <dependencies> section (regression test for a bug
+# where the generator only walked scheme_tables for deps).
+
+[ccpp-table-properties]
+  name = host_with_deps
+  type = host
+  dependencies_path = /tmp/fake_phys
+  dependencies = mp/some_mp_params.F90, radiation/some_rad_param.f
+  dependencies = chemistry/some_chem.F90
+
+[ccpp-arg-table]
+  name = host_with_deps
+  type = host
+[ ncols ]
+  standard_name = horizontal_dimension
+  long_name = full horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ nlev ]
+  standard_name = vertical_layer_dimension
+  long_name = number of vertical layers
+  units = count
+  dimensions = ()
+  type = integer
+[ nlevp1 ]
+  standard_name = vertical_interface_dimension
+  long_name = number of vertical layer interfaces
+  units = count
+  dimensions = ()
+  type = integer
+[ dt ]
+  standard_name = time_step_for_physics
+  long_name = physics time step
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+[ gt0 ]
+  standard_name = air_temperature
+  long_name = model layer mean temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys

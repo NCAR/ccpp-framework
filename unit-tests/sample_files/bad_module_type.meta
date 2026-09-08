@@ -1,0 +1,15 @@
+# This file uses the old 'type = module' which must be rejected.
+# The generator should emit a helpful error directing the user to 'type = host'.
+
+[ccpp-table-properties]
+  name = physics_module
+  type = module
+
+[ccpp-arg-table]
+  name = physics_module
+  type = module
+[ im ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer

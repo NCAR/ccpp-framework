@@ -1,0 +1,18 @@
+# Control table that is missing all required variables except suite_name.
+# Used to test that the generator reports all missing vars in one pass.
+
+[ccpp-table-properties]
+  name = incomplete_ctrl
+  type = control
+
+[ccpp-arg-table]
+  name = incomplete_ctrl
+  type = control
+
+[ suite_name_var ]
+  standard_name = suite_name
+  long_name = name of the CCPP suite
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256

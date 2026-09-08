@@ -1,0 +1,43 @@
+# Single-instance host data: same vars as host_full.meta minus
+# number_of_instances.  Pairs with control_no_instance.meta (which
+# omits instance_number).
+[ccpp-table-properties]
+  name = host_phys
+  type = host
+
+[ccpp-arg-table]
+  name = host_phys
+  type = host
+
+[ ncols ]
+  standard_name = horizontal_dimension
+  long_name = full horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ nlev ]
+  standard_name = vertical_layer_dimension
+  long_name = number of vertical layers
+  units = count
+  dimensions = ()
+  type = integer
+[ nlevp1 ]
+  standard_name = vertical_interface_dimension
+  long_name = number of vertical layer interfaces
+  units = count
+  dimensions = ()
+  type = integer
+[ dt ]
+  standard_name = time_step_for_physics
+  long_name = physics time step
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+[ gt0 ]
+  standard_name = air_temperature
+  long_name = model layer mean temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys

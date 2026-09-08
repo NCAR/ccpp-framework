@@ -1,0 +1,18 @@
+# Supplementary host metadata: adds num_subcycles_for_test (used as a
+# subcycle loop=<stdname> bound in suite_subcycle_stdname.xml).  Pairs
+# with host_full.meta / control_full.meta which provide all the other
+# required vars (loop bounds, errflg, errmsg, etc.).
+
+[ccpp-table-properties]
+  name = host_phys_subcycle_helper
+  type = host
+
+[ccpp-arg-table]
+  name = host_phys_subcycle_helper
+  type = host
+[ n_sub ]
+  standard_name = num_subcycles_for_test
+  long_name = number of subcycles for the test scheme
+  units = count
+  dimensions = ()
+  type = integer

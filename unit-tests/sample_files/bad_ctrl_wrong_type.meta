@@ -1,0 +1,66 @@
+# Control table where horizontal_loop_begin is declared as real instead of integer.
+
+[ccpp-table-properties]
+  name = wrong_type_ctrl
+  type = control
+
+[ccpp-arg-table]
+  name = wrong_type_ctrl
+  type = control
+
+[ suite_name_var ]
+  standard_name = suite_name
+  long_name = name of the CCPP suite
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256
+[ lb ]
+  standard_name = horizontal_loop_begin
+  long_name = start of horizontal range
+  units = index
+  dimensions = ()
+  type = real
+[ ub ]
+  standard_name = horizontal_loop_end
+  long_name = end of horizontal range
+  units = index
+  dimensions = ()
+  type = integer
+[ thread_num ]
+  standard_name = thread_number
+  long_name = current thread number
+  units = 1
+  dimensions = ()
+  type = integer
+[ nthreads ]
+  standard_name = number_of_threads
+  long_name = total number of threads
+  units = 1
+  dimensions = ()
+  type = integer
+[ nphys_threads ]
+  standard_name = number_of_physics_threads
+  long_name = physics thread budget
+  units = 1
+  dimensions = ()
+  type = integer
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = error message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = error flag
+  units = 1
+  dimensions = ()
+  type = integer
+[ inst_num ]
+  standard_name = instance_number
+  long_name = current model instance number
+  units = 1
+  dimensions = ()
+  type = integer

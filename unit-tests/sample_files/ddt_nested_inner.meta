@@ -1,0 +1,22 @@
+# Inner DDT used as a field inside ddt_nested_outer.meta.
+
+[ccpp-table-properties]
+  name = ddt_inner_type
+  type = ddt
+
+[ccpp-arg-table]
+  name = ddt_inner_type
+  type = ddt
+[ inner_value ]
+  standard_name = inner_real_value
+  long_name = a real value inside the inner DDT
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+[ inner_flag ]
+  standard_name = inner_integer_flag
+  long_name = an integer flag inside the inner DDT
+  units = flag
+  dimensions = ()
+  type = integer

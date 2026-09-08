@@ -1,0 +1,16 @@
+# Host table with an instance of ddt_outer_type, which itself contains a
+# ddt_inner_type field.  Used to test recursive DDT flattening.
+
+[ccpp-table-properties]
+  name = nested_host_mod
+  type = host
+
+[ccpp-arg-table]
+  name = nested_host_mod
+  type = host
+[ outer_inst ]
+  standard_name = outer_ddt_instance
+  long_name = instance of the outer DDT (scalar, no instance dimension)
+  units = none
+  dimensions = ()
+  type = ddt_outer_type

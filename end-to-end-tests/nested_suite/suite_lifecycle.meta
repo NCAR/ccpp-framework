@@ -1,0 +1,49 @@
+[ccpp-table-properties]
+  name = suite_lifecycle
+  type = scheme
+
+[ccpp-arg-table]
+  name = suite_lifecycle_init
+  type = scheme
+[counter]
+  standard_name = lifecycle_counter
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = inout
+[errmsg]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-arg-table]
+  name = suite_lifecycle_final
+  type = scheme
+[counter]
+  standard_name = lifecycle_counter
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = inout
+[errmsg]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
