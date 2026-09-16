@@ -7,13 +7,15 @@ The suite cap:
 * Imports all group cap modules and the constituent property module.
 * Exposes eight public entry points:
 
-  - ``<suite>_register`` — calls each scheme's ``_register`` to populate
-    the host-owned ``ccpp_model_constituents_t`` object.
-  - ``<suite>_init`` / ``<suite>_final`` — framework setup / teardown.
-  - ``<suite>_physics_init``, ``<suite>_physics_timestep_init``,
-    ``<suite>_physics_run``, ``<suite>_physics_timestep_final``,
-    ``<suite>_physics_final`` — dispatch by ``group_name`` to the
-    appropriate group cap subroutine.
+  - ``suite_register`` — calls each scheme's ``_register``.
+  - ``suite_init`` / ``suite_final`` — framework setup / teardown.
+  - ``suite_physics_init``, ``suite_physics_timestep_init``,
+    ``suite_physics_run``, ``suite_physics_timestep_final``,
+    ``suite_physics_final`` — dispatch by ``group_name`` to the
+    appropriate group cap subroutine.  These carry no suite prefix: the
+    module name already supplies it, and repeating it overran Intel's
+    mangled-global-name limit for long suite names (issue #786).  The
+    host cap renames them back to ``<suite>_<what>`` on import.
 
 The static API (``<host>_ccpp_cap.F90``) dispatches by ``suite_name`` to
 these subroutines.
@@ -23,7 +25,7 @@ import logging
 import os
 from typing import Dict, List, Optional, Set
 
-from metadata.parse_tools import open_if_changed
+from metadata.parse_tools import CCPPError, open_if_changed
 from metadata.variable_resolver import HostVarEntry, SchemeStore
 from generator.suite_resolver import (
     ResolvedArg,
@@ -56,6 +58,14 @@ _INDENT = '  '
 
 # Canonical set of physics phases, always dispatched by the suite cap.
 _PHYSICS_PHASES = ('init', 'timestep_init', 'run', 'timestep_final', 'final')
+
+# Suite-cap subroutines whose names carry no suite prefix (issue #786).
+# A group cap exporting any of these would collide on use-association.
+_SUITE_CAP_OWN_SYMS = frozenset(
+    ['suite_physics_{}'.format(_p) for _p in _PHYSICS_PHASES]
+    + ['suite_register', 'suite_init', 'suite_final',
+       'suite_state_alloc', 'suite_state_dealloc']
+)
 
 # Constituent type / module constants.
 _CONST_MOD          = 'ccpp_constituent_prop_mod'
@@ -405,7 +415,8 @@ def _register_lines(
     Minimal signature: ``(instance_number, number_of_instances, errmsg,
     errflg)`` (the instance pair is included only when the host declares it).
     """
-    sub_name = '{}_register'.format(suite_name)
+    sub_name  = 'suite_register'
+    sub_label = '{}_register'.format(suite_name)
     i1 = _INDENT
     i2 = _INDENT * 2
 
@@ -482,7 +493,7 @@ def _register_lines(
     # compilers don't flag intent(in) args as unused when the gate is off.
     extra_in = [ninstances_local] if ninstances_local else None
     trace_lines = emit_trace_block(
-        sub_name, [], i2,
+        sub_label, [], i2,
         instance_local=inst_local, extra_in_names=extra_in,
     )
     if trace_lines:
@@ -497,7 +508,7 @@ def _register_lines(
     ]
 
     # Allocate state and DDT array on first call (idempotent).
-    suite_alloc_sub = '{}_suite_state_alloc'.format(suite_name)
+    suite_alloc_sub = 'suite_state_alloc'
     lines.append('{}call {}({}, {}, {})'.format(
         i2, suite_alloc_sub, ninstances_arg, errmsg_local, errflg_local
     ))
@@ -652,7 +663,8 @@ def _init_lines(
     Minimal signature: ``(instance_number, number_of_instances, errmsg,
     errflg)`` -- the instance pair is included only when the host declares it.
     """
-    sub_name = '{}_init'.format(suite_name)
+    sub_name  = 'suite_init'
+    sub_label = '{}_init'.format(suite_name)
     i1 = _INDENT
     i2 = _INDENT * 2
 
@@ -704,7 +716,7 @@ def _init_lines(
     ]
     extra_in = [ninstances_local] if ninstances_local else None
     trace_lines = emit_trace_block(
-        sub_name, [], i2,
+        sub_label, [], i2,
         instance_local=inst_local, extra_in_names=extra_in,
     )
     if trace_lines:
@@ -718,7 +730,6 @@ def _init_lines(
     ]
 
     # State guard: must be in REGISTERED state (or already INITIALIZED — idempotent).
-    sub_label = '{}_init'.format(suite_name)
     lines += [
         '{}if (.not. allocated(ccpp_suite_state)) then'.format(i2),
         "{}  {} = '{}: ccpp_register has not been called'".format(
@@ -811,7 +822,8 @@ def _final_lines(
     symmetry with ``<suite>_register`` / ``<suite>_init``; the framework
     does not consume it at final time.
     """
-    sub_name = '{}_final'.format(suite_name)
+    sub_name  = 'suite_final'
+    sub_label = '{}_final'.format(suite_name)
     i1 = _INDENT
     i2 = _INDENT * 2
 
@@ -865,7 +877,7 @@ def _final_lines(
     ]
     extra_in = [ninstances_local] if ninstances_local else None
     trace_lines = emit_trace_block(
-        sub_name, [], i2,
+        sub_label, [], i2,
         instance_local=inst_local, extra_in_names=extra_in,
     )
     if trace_lines:
@@ -926,7 +938,7 @@ def _final_lines(
             i2, dealloc_sub, errmsg_local, errflg_local
         ))
         lines.append('{}  if ({} /= 0) return'.format(i2, errflg_local))
-    suite_dealloc_sub = '{}_suite_state_dealloc'.format(suite_name)
+    suite_dealloc_sub = 'suite_state_dealloc'
     lines.append('{}  call {}({}, {})'.format(
         i2, suite_dealloc_sub, errmsg_local, errflg_local
     ))
@@ -958,7 +970,7 @@ def _physics_dispatch_lines(
     suite_res: SuiteResolution,
     host_dict=None,
 ) -> List[str]:
-    """Generate a ``<suite>_physics_<phase>`` dispatch subroutine.
+    """Generate a ``suite_physics_<phase>`` dispatch subroutine.
 
     The subroutine signature is derived entirely from the host's ``type=control``
     metadata (all control variables except ``suite_name``, which is consumed at the
@@ -966,7 +978,8 @@ def _physics_dispatch_lines(
     body uses a ``select case`` dispatch; otherwise all groups are called
     unconditionally.
     """
-    sub_name = '{}_physics_{}'.format(suite_name, phase)
+    sub_name  = 'suite_physics_{}'.format(phase)
+    sub_label = '{}_physics_{}'.format(suite_name, phase)
     i1 = _INDENT
     i2 = _INDENT * 2
     i3 = _INDENT * 3
@@ -1014,7 +1027,7 @@ def _physics_dispatch_lines(
 
     # Trace block: references every intent(in)/inout control dummy so that
     # strict compilers don't flag any of them as unused.
-    trace_lines = emit_trace_block(sub_name, ctrl_entries, i2)
+    trace_lines = emit_trace_block(sub_label, ctrl_entries, i2)
     if trace_lines:
         lines.append('')
         lines.extend(trace_lines)
@@ -1031,7 +1044,6 @@ def _physics_dispatch_lines(
         lines.append('')
 
         inst_idx = _instance_idx(host_dict)
-        sub_label = '{}_physics_{}'.format(suite_name, phase)
         if phase == 'final':
             # ``physics_final`` is silently idempotent: a repeat call (or a
             # call issued after ``ccpp_final``) must return cleanly with
@@ -1107,7 +1119,6 @@ def _physics_dispatch_lines(
         # control table there's nowhere to write the message, so skip
         # emission rather than silently swallow.
         if errflg_local and errmsg_local:
-            sub_label = '{}_physics_{}'.format(suite_name, phase)
             lines.append('{}case default'.format(i2))
             lines.append('{}{} = 1'.format(i3, errflg_local))
             lines.append(
@@ -1131,7 +1142,7 @@ def _suite_state_alloc_lines(
     suite_name: str,
     has_suite_vars: bool,
 ) -> List[str]:
-    """Generate the ``<suite>_suite_state_alloc`` subroutine.
+    """Generate the ``suite_state_alloc`` subroutine.
 
     Idempotent allocator for the per-instance suite state array and the
     suite-owned DDT array.  Inner allocatable fields inside the DDT are NOT
@@ -1139,7 +1150,7 @@ def _suite_state_alloc_lines(
     called from ``<suite>_init`` after register-phase scheme calls have set
     any suite-owned scalar dimensions.
     """
-    sub_name    = '{}_suite_state_alloc'.format(suite_name)
+    sub_name    = 'suite_state_alloc'
     data_alloc  = 'suite_data_alloc'
     data_mod    = 'ccpp_{}_data'.format(suite_name)
     i1 = _INDENT
@@ -1178,8 +1189,8 @@ def _suite_state_dealloc_lines(
     suite_name: str,
     has_suite_vars: bool,
 ) -> List[str]:
-    """Generate the ``<suite>_suite_state_dealloc`` subroutine."""
-    sub_name      = '{}_suite_state_dealloc'.format(suite_name)
+    """Generate the ``suite_state_dealloc`` subroutine."""
+    sub_name      = 'suite_state_dealloc'
     data_dealloc  = 'suite_data_dealloc'
     data_mod      = 'ccpp_{}_data'.format(suite_name)
     i1 = _INDENT
@@ -1264,6 +1275,19 @@ def _generate_suite_cap(
         ]
         syms_list.append('{}_state_alloc'.format(resolved_group.group_name))
         syms_list.append('{}_state_dealloc'.format(resolved_group.group_name))
+        # This module's own symbols are suite-name-free (issue #786), so a
+        # group named e.g. ``suite`` or ``suite_physics`` would export the
+        # same names it defines.
+        clash = sorted(set(syms_list) & _SUITE_CAP_OWN_SYMS)
+        if clash:
+            raise CCPPError(
+                "Suite '{}' has a group named '{}' whose cap exports {}, "
+                "colliding with the suite cap's own subroutine(s); rename "
+                "the group".format(
+                    suite_name, resolved_group.group_name,
+                    ', '.join(repr(c) for c in clash),
+                )
+            )
         use_lines.append('{}use {}, only: {}'.format(
             _INDENT, group_cap_mod, ', '.join(syms_list)
         ))
@@ -1281,13 +1305,13 @@ def _generate_suite_cap(
     # points are always emitted.  ``ccpp_register`` is mandatory in the new
     # design — even an empty register phase fires the state transition.
     pub_subs = []
-    pub_subs.append('{}_register'.format(suite_name))
-    pub_subs.append('{}_init'.format(suite_name))
+    pub_subs.append('suite_register')
+    pub_subs.append('suite_init')
     for phase in _PHYSICS_PHASES:
-        pub_subs.append('{}_physics_{}'.format(suite_name, phase))
-    pub_subs.append('{}_final'.format(suite_name))
-    pub_subs.append('{}_suite_state_alloc'.format(suite_name))
-    pub_subs.append('{}_suite_state_dealloc'.format(suite_name))
+        pub_subs.append('suite_physics_{}'.format(phase))
+    pub_subs.append('suite_final')
+    pub_subs.append('suite_state_alloc')
+    pub_subs.append('suite_state_dealloc')
 
     for sub in pub_subs:
         lines.append('{}public :: {}'.format(_INDENT, sub))

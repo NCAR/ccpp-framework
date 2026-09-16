@@ -3638,7 +3638,7 @@ class TestSuiteCapStateCalls(unittest.TestCase):
         )
 
     def test_init_subroutine_has_ninstances_arg(self):
-        init_sub = self.text.split('subroutine test_simple_init')[1].split('end subroutine')[0]
+        init_sub = self.text.split('subroutine suite_init')[1].split('end subroutine')[0]
         self.assertIn('ninstances', init_sub)
 
     def test_final_calls_state_dealloc(self):
@@ -3674,7 +3674,7 @@ class TestSuiteCapStateCallsSingleInstance(unittest.TestCase):
         )
 
     def test_init_subroutine_has_no_ninstances_arg(self):
-        init_sub = self.text.split('subroutine test_simple_init')[1].split('end subroutine')[0]
+        init_sub = self.text.split('subroutine suite_init')[1].split('end subroutine')[0]
         self.assertNotIn('number_of_instances', init_sub)
 
 
@@ -3753,8 +3753,8 @@ class TestRegisterPhaseSuiteCapEmission(unittest.TestCase):
         )
 
     def test_register_subroutine_emits_scheme_call(self):
-        register_body = self.text.split('subroutine reg_dim_register')[1].split(
-            'end subroutine reg_dim_register'
+        register_body = self.text.split('subroutine suite_register')[1].split(
+            'end subroutine suite_register'
         )[0]
         self.assertIn('call register_dim_producer_register', register_body)
 
@@ -3767,8 +3767,8 @@ class TestRegisterPhaseSuiteCapEmission(unittest.TestCase):
         self.assertIn('use ccpp_reg_dim_data', self.text)
 
     def test_state_transitions_to_registered(self):
-        register_body = self.text.split('subroutine reg_dim_register')[1].split(
-            'end subroutine reg_dim_register'
+        register_body = self.text.split('subroutine suite_register')[1].split(
+            'end subroutine suite_register'
         )[0]
         self.assertIn(
             'ccpp_suite_state(inst_num) = CCPP_SUITE_REGISTERED',
@@ -3895,8 +3895,8 @@ class TestRegisterConstituentsSuiteCap(unittest.TestCase):
         self.assertNotIn('%new_field', self.text)
 
     def test_register_called_once_per_scheme(self):
-        register_body = self.text.split('subroutine reg_consts_register')[1].split(
-            'end subroutine reg_consts_register'
+        register_body = self.text.split('subroutine suite_register')[1].split(
+            'end subroutine suite_register'
         )[0]
         # Single-pass append: each constituent scheme's _register is called
         # EXACTLY ONCE (the old count+copy two-pass called it twice and broke
@@ -3929,8 +3929,8 @@ class TestRegisterConstituentsSuiteCap(unittest.TestCase):
         # suite-cap lifecycle: filled in <suite>_register, torn down in
         # <suite>_final's last-to-leave block.  ccpp_deallocate_dynamic_
         # constituents must NOT touch it (would break re-register).
-        final_body = self.text.split('subroutine reg_consts_final')[1].split(
-            'end subroutine reg_consts_final'
+        final_body = self.text.split('subroutine suite_final')[1].split(
+            'end subroutine suite_final'
         )[0]
         self.assertIn(
             'use ccpp_host_constituents, only: reg_consts_dynamic_constituents',
@@ -3946,8 +3946,8 @@ class TestRegisterConstituentsSuiteCap(unittest.TestCase):
 
     def test_scheme_consts_temp_declared(self):
         # Local temporary in the register subroutine.
-        register_body = self.text.split('subroutine reg_consts_register')[1].split(
-            'end subroutine reg_consts_register'
+        register_body = self.text.split('subroutine suite_register')[1].split(
+            'end subroutine suite_register'
         )[0]
         self.assertIn(
             'type(ccpp_constituent_properties_t), allocatable :: scheme_consts(:)',

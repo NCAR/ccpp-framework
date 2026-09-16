@@ -45,6 +45,7 @@ import os
 from typing import Dict, List, Optional, Set, Tuple
 
 from metadata.parse_tools import CCPPError, open_if_changed
+from metadata.metadata_table import FORTRAN_MAX_IDENT_LEN
 from metadata.variable_resolver import SchemeStore
 from generator.suite_resolver import (
     ResolvedArg,
@@ -1026,14 +1027,29 @@ def _generate_host_cap(
     use_lines: List[str] = []
     for sname in suite_names:
         suite_cap_mod = 'ccpp_{}_cap'.format(sname)
+        # Suite cap symbols carry no suite prefix (issue #786), so every
+        # suite cap exports the same names.  Rename on import to keep the
+        # N suites in this scope distinct.
         suite_subs = []
-        suite_subs.append('{}_register'.format(sname))
-        suite_subs.append('{}_init'.format(sname))
-        for phase in _PHYSICS_PHASES:
-            suite_subs.append('{}_physics_{}'.format(sname, phase))
-        suite_subs.append('{}_final'.format(sname))
-        syms = ', '.join(suite_subs)
-        use_lines.append('{}use {}, only: {}'.format(_INDENT, suite_cap_mod, syms))
+        aliased = [('{}_register'.format(sname), 'suite_register'),
+                   ('{}_init'.format(sname), 'suite_init')]
+        aliased += [('{}_physics_{}'.format(sname, p), 'suite_physics_{}'.format(p))
+                    for p in _PHYSICS_PHASES]
+        aliased.append(('{}_final'.format(sname), 'suite_final'))
+        for alias, target in aliased:
+            if len(alias) > FORTRAN_MAX_IDENT_LEN:
+                raise CCPPError(
+                    "Suite name '{}' is too long: the host cap imports the "
+                    "suite cap's '{}' as '{}' ({} characters), over Fortran's "
+                    "{}-character limit for names".format(
+                        sname, target, alias, len(alias), FORTRAN_MAX_IDENT_LEN
+                    )
+                )
+            suite_subs.append('{} => {}'.format(alias, target))
+        use_lines.append('{}use {}, only: &'.format(_INDENT, suite_cap_mod))
+        for i, sym in enumerate(suite_subs):
+            sep = ', &' if i < len(suite_subs) - 1 else ''
+            use_lines.append('{}{}{}'.format(_INDENT * 2, sym, sep))
     ensure_error_unit_use(use_lines, _INDENT)
     lines.extend(use_lines)
 

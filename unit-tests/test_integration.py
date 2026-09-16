@@ -449,16 +449,16 @@ class TestSuiteCapContent(unittest.TestCase):
     def test_register_subroutine_always_present(self):
         # <suite>_register is mandatory in the new design — emitted even when
         # no scheme has a register phase (state-transition skeleton only).
-        self.assertIn('subroutine test_simple_register', self.text)
+        self.assertIn('subroutine suite_register', self.text)
 
     def test_init_subroutine(self):
-        self.assertIn('subroutine test_simple_init', self.text)
+        self.assertIn('subroutine suite_init', self.text)
 
     def test_final_subroutine(self):
-        self.assertIn('subroutine test_simple_final', self.text)
+        self.assertIn('subroutine suite_final', self.text)
 
     def test_physics_run_subroutine(self):
-        self.assertIn('subroutine test_simple_physics_run', self.text)
+        self.assertIn('subroutine suite_physics_run', self.text)
 
     def test_dispatches_to_group(self):
         self.assertIn("case('physics')", self.text)
@@ -723,7 +723,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'subroutine test_simple_init(inst_num, ninstances, errmsg, errflg)',
+            'subroutine suite_init(inst_num, ninstances, errmsg, errflg)',
             text,
         )
 
@@ -733,7 +733,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'call test_simple_suite_state_alloc(ninstances, errmsg, errflg)',
+            'call suite_state_alloc(ninstances, errmsg, errflg)',
             text,
         )
 
@@ -790,7 +790,7 @@ class TestMultiInstanceIntegration(unittest.TestCase):
     def test_suite_cap_dispatches_inst_num_to_group_init(self):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
-        physics_init = text.split('subroutine test_simple_physics_init')[1]
+        physics_init = text.split('subroutine suite_physics_init')[1]
         physics_init = physics_init.split('end subroutine')[0]
         self.assertIn('inst_num', physics_init)
 
@@ -851,13 +851,13 @@ class TestSingleInstanceIntegration(unittest.TestCase):
     def test_suite_init_omits_inst_num(self):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
-        self.assertIn('subroutine test_simple_init(errmsg, errflg)', text)
+        self.assertIn('subroutine suite_init(errmsg, errflg)', text)
 
     def test_register_passes_literal_one_to_state_alloc(self):
         with open(os.path.join(self._tmpdir, 'ccpp_test_simple_cap.F90')) as fh:
             text = fh.read()
         self.assertIn(
-            'call test_simple_suite_state_alloc(1, errmsg, errflg)', text,
+            'call suite_state_alloc(1, errmsg, errflg)', text,
         )
 
     def test_suite_state_indexing_uses_literal_one(self):
@@ -1504,19 +1504,19 @@ class TestSuiteInitFinalEmission(unittest.TestCase):
         shutil.rmtree(self._tmpdir)
 
     def test_suite_init_calls_init_scheme(self):
-        sub = self.text.split('subroutine with_init_final_suite_init')[1]
+        sub = self.text.split('subroutine suite_init')[1]
         sub = sub.split('end subroutine')[0]
         self.assertIn('call suite_init_final_scheme_init', sub)
 
     def test_suite_final_calls_final_scheme(self):
-        sub = self.text.split('subroutine with_init_final_suite_final')[1]
+        sub = self.text.split('subroutine suite_final')[1]
         sub = sub.split('end subroutine')[0]
         self.assertIn('call suite_init_final_scheme_final', sub)
 
     def test_init_call_uses_scheme_module(self):
         """The scheme module is USE'd inside ``<suite>_init`` so the
         init subroutine is in scope."""
-        sub = self.text.split('subroutine with_init_final_suite_init')[1]
+        sub = self.text.split('subroutine suite_init')[1]
         sub = sub.split('end subroutine')[0]
         self.assertIn(
             'use suite_init_final_scheme, only:', sub,
@@ -1524,7 +1524,7 @@ class TestSuiteInitFinalEmission(unittest.TestCase):
         self.assertIn('suite_init_final_scheme_init', sub)
 
     def test_final_call_uses_scheme_module(self):
-        sub = self.text.split('subroutine with_init_final_suite_final')[1]
+        sub = self.text.split('subroutine suite_final')[1]
         sub = sub.split('end subroutine')[0]
         self.assertIn(
             'use suite_init_final_scheme, only:', sub,
@@ -1535,7 +1535,7 @@ class TestSuiteInitFinalEmission(unittest.TestCase):
         """The init scheme is called BEFORE the FRAMEWORK_INITIALIZED
         state transition — failures during the suite-init scheme stop
         the state transition from firing."""
-        sub = self.text.split('subroutine with_init_final_suite_init')[1]
+        sub = self.text.split('subroutine suite_init')[1]
         sub = sub.split('end subroutine')[0]
         call_pos = sub.index('call suite_init_final_scheme_init')
         state_pos = sub.index('CCPP_SUITE_FRAMEWORK_INITIALIZED')
@@ -1549,7 +1549,7 @@ class TestSuiteInitFinalEmission(unittest.TestCase):
         self.assertLess(call_pos, state_set)
 
     def test_final_call_precedes_unregister_transition(self):
-        sub = self.text.split('subroutine with_init_final_suite_final')[1]
+        sub = self.text.split('subroutine suite_final')[1]
         sub = sub.split('end subroutine')[0]
         call_pos = sub.index('call suite_init_final_scheme_final')
         state_set = sub.index(
@@ -2060,24 +2060,24 @@ class TestInterstitialSuiteData(unittest.TestCase):
         self.assertIn('suite_data_final_fields', self._data())
 
     def test_suite_cap_has_suite_state_alloc(self):
-        self.assertIn('interstitial_suite_state_alloc', self._suite_cap())
+        self.assertIn('suite_state_alloc', self._suite_cap())
 
     def test_suite_cap_register_calls_suite_state_alloc(self):
         # State + DDT-array allocation has moved from <suite>_init into
         # <suite>_register so register can be the first lifecycle entry point.
         text = self._suite_cap()
-        register_body = text.split('subroutine interstitial_register')[1].split('end subroutine')[0]
-        self.assertIn('interstitial_suite_state_alloc', register_body)
+        register_body = text.split('subroutine suite_register')[1].split('end subroutine')[0]
+        self.assertIn('suite_state_alloc', register_body)
 
     def test_suite_state_alloc_calls_suite_data_alloc(self):
         text = self._suite_cap()
-        alloc_body = text.split('subroutine interstitial_suite_state_alloc')[1].split('end subroutine')[0]
+        alloc_body = text.split('subroutine suite_state_alloc')[1].split('end subroutine')[0]
         self.assertIn('suite_data_alloc', alloc_body)
 
     def test_suite_init_calls_init_fields(self):
         # <suite>_init triggers per-instance inner allocations.
         text = self._suite_cap()
-        init_body = text.split('subroutine interstitial_init')[1].split('end subroutine')[0]
+        init_body = text.split('subroutine suite_init')[1].split('end subroutine')[0]
         self.assertIn('suite_data_init_fields', init_body)
 
     def test_suite_state_alloc_allocates_state_array(self):
@@ -2085,8 +2085,8 @@ class TestInterstitialSuiteData(unittest.TestCase):
 
     def test_suite_cap_final_calls_suite_state_dealloc(self):
         text = self._suite_cap()
-        final_body = text.split('subroutine interstitial_final')[1].split('end subroutine')[0]
-        self.assertIn('interstitial_suite_state_dealloc', final_body)
+        final_body = text.split('subroutine suite_final')[1].split('end subroutine')[0]
+        self.assertIn('suite_state_dealloc', final_body)
 
     def test_group_cap_uses_suite_data_module(self):
         self.assertIn('use ccpp_interstitial_data', self._group_cap())
@@ -2107,7 +2107,7 @@ class TestInterstitialSuiteData(unittest.TestCase):
     def test_suite_cap_passes_inst_num_to_group_run(self):
         """Suite cap physics_run dispatch must pass inst_num to group run."""
         text = self._suite_cap()
-        physics_run = text.split('subroutine interstitial_physics_run')[1]
+        physics_run = text.split('subroutine suite_physics_run')[1]
         physics_run = physics_run.split('end subroutine')[0]
         self.assertIn('inst_num', physics_run)
         self.assertIn('call diag_group_run', physics_run)
