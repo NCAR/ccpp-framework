@@ -500,8 +500,7 @@ def _join_continuation(
 
     result: List[str] = []
     buf = ''
-    # (physical line number, text) for each piece in ``buf``, so a run-on
-    # can name the line the stray ``&`` is on rather than the joined blob.
+    # (physical line number, text) for each piece in ``buf``
     segs: List[Tuple[int, str]] = []
     for i, stripped in enumerate(norm):
         if buf and not stripped.strip():
@@ -552,8 +551,7 @@ def _decl_separator_count(line: str) -> int:
 
     String literals and bracketed array constructors are blanked first, so
     the typed-constructor form ``[character(len=128) :: 'a', 'b']`` — the
-    only legitimate second ``::`` in the CCPP physics corpus — is not
-    counted.
+    only legitimate second ``::`` is not counted.
 
     >>> _decl_separator_count('real :: a, b')
     1
@@ -582,9 +580,7 @@ def _check_statement_run_on(
     A Fortran declaration carries exactly one ``::``.  Two means a
     continuation ran past the end of its statement — almost always a stray
     trailing ``&`` — which silently attributes the second declaration's
-    entities to the first one's type and attributes.  Left undetected this
-    surfaces much later as intent/optional mismatches on innocent variables
-    (NCAR/ccpp-framework#788), so fail here, naming the offending line.
+    entities to the first one's type and attributes.
     """
     joined = ''.join(text for _, text in segs)
     if joined.count('::') < 2 or _decl_separator_count(joined) < 2:
