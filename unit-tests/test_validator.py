@@ -236,6 +236,75 @@ class TestJoinContinuation(unittest.TestCase):
         self.assertIn(':2:', msg)  # decoration is on line 2 of src_lines
 
 
+
+class TestStatementRunOn(unittest.TestCase):
+    """A continuation that runs past the end of its statement is a parse
+    error naming the stray ``&``, not a silent mis-parse that resurfaces
+    later as attribute mismatches on unrelated arguments (issue #788)."""
+
+    # The shape reported in #788: the last continuation line of an
+    # ``optional`` declaration gains a stray trailing ``&``, so the next
+    # declaration's entities inherit its type, intent and optionality.
+    _SRC = (
+        '      subroutine s(edmf_a, t3d, qgrs_snow)\n'
+        '      real, dimension(:,:), intent(inout), optional ::        &\n'
+        '     &        edmf_a{amp}\n'
+        '      real, dimension(:,:), intent(in) ::                     &\n'
+        '     &        t3d, qgrs_snow\n'
+        '      end subroutine s\n'
+    )
+
+    def test_clean_source_parses(self):
+        subs = _parse_subroutines(self._SRC.format(amp=''), 'w.F90')
+        self.assertEqual(subs['s'].optional, {'edmf_a'})
+
+    def test_stray_trailing_amp_raises_naming_the_line(self):
+        src = self._SRC.format(amp='                          &')
+        with self.assertRaises(CCPPError) as ctx:
+            _parse_subroutines(src, 'w.F90')
+        msg = str(ctx.exception)
+        self.assertIn('w.F90:4', msg)          # second declaration starts here
+        self.assertIn('line 2', msg)           # first declaration started here
+        self.assertIn("stray trailing '&' on line 3", msg)
+
+    def test_typed_array_constructor_is_not_a_run_on(self):
+        """``[character(len=*) :: ...]`` legitimately carries a second
+        ``::`` — the only such construct in the CCPP physics corpus."""
+        src = (
+            '      subroutine s(a)\n'
+            "      character(len=*), parameter :: names(*) =              &\n"
+            "     &     [character(len=8) :: 'alpha', 'beta']\n"
+            '      real :: a\n'
+            '      end subroutine s\n'
+        )
+        subs = _parse_subroutines(src, 'w.F90')
+        self.assertIn('s', subs)
+
+    def test_two_separators_on_one_line_is_reported_as_malformed(self):
+        """No continuation involved — do not blame a stray ``&``."""
+        src = (
+            '      subroutine s(this)\n'
+            '      class(t) :: intent(in) :: this\n'
+            '      end subroutine s\n'
+        )
+        with self.assertRaises(CCPPError) as ctx:
+            _parse_subroutines(src, 'w.F90')
+        msg = str(ctx.exception)
+        self.assertIn('malformed', msg)
+        self.assertIn('w.F90:2', msg)
+        self.assertNotIn('&', msg)
+
+    def test_unterminated_continuation_at_eof_raises(self):
+        src = (
+            '      subroutine s(a)\n'
+            '      real :: a                                            &\n'
+        )
+        with self.assertRaises(CCPPError) as ctx:
+            _parse_subroutines(src, 'w.F90')
+        self.assertIn('unterminated', str(ctx.exception))
+        self.assertIn('w.F90:2', str(ctx.exception))
+
+
 class TestParseSubroutines(unittest.TestCase):
 
     def test_simple_subroutine(self):
