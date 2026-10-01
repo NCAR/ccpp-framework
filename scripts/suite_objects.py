@@ -1429,7 +1429,15 @@ class Subcycle(SuiteObject):
             # end if
             name = f"loop{loop_count}_{self._loop_extent}"[0:63]
             super().__init__(name, context, parent, run_env, active_call_list=True)
-            parent.add_call_list_variable(lvar, exists_ok=True)
+            # The loop statement uses the host local name,
+            # so the variable must be a dummy argument of the enclosing Group.
+            # A parent Subcycle with a variable trip count has its own call list,
+            # which is not propagated to the Group argument list.
+            group = parent
+            while not isinstance(group, Group):
+                group = group.parent
+            # end while
+            group.add_call_list_variable(lvar, exists_ok=True)
             loop_count = loop_count + 1
         # end try
         for item in sub_xml:
