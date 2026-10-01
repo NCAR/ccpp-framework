@@ -59,8 +59,6 @@ _INDENT = '  '
 # Canonical set of physics phases, always dispatched by the suite cap.
 _PHYSICS_PHASES = ('init', 'timestep_init', 'run', 'timestep_final', 'final')
 
-# Suite-cap subroutines whose names carry no suite prefix (issue #786).
-# A group cap exporting any of these would collide on use-association.
 _SUITE_CAP_OWN_SYMS = frozenset(
     ['suite_physics_{}'.format(_p) for _p in _PHYSICS_PHASES]
     + ['suite_register', 'suite_init', 'suite_final',
