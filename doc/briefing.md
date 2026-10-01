@@ -289,6 +289,14 @@ The headline items for a reader of this brief:
   gating the framework setter additions.  `followups.md` FU-020, FU-003.
 - **Codegen-time scheme-registration cross-check** — today's check is at
   runtime.  FU-002.
+- **Group-cap symbol-length budget** — the suite cap is guarded and
+  tested at its ceiling; the group cap's joint `suite`/`group` budget
+  is not.  FU-037.
+- **What the constituent metadata flags may legally be attached to** —
+  only a deliberately thin guard is enforced today (`index_of_*` may
+  not carry one).  A stricter shape rule was written and rejected: it
+  would have encoded today's constituent storage in the metadata
+  parser.  FU-036.
 - **Nested-subcycle `ccpp_loop_counter` semantics** — resolves to the
   outermost counter.  FU-001.
 - **Transient shims** — `--legacy-mode`, `--gfs-dim-aliases`,
@@ -417,8 +425,8 @@ don't rebuild downstream objects unless something actually moved.
   - The three incoming hosts **still rely on the transient migration
     shims** (§6.3b).  Adoption did *not* retire them — it pinned
     them.  See the note in that section and FU-010/FU-011.
-- **Unit tests**: 1564 passing on `feature/capgen-v1` (verified
-  2026-09-01, `python unit-tests/run_tests.py`).
+- **Unit tests**: 1577 passing on `feature/capgen-v1` (verified
+  2026-09-16, `python unit-tests/run_tests.py`).
 - **End-to-end tests passing** (13): `advection`,
   `advection_auto_clone`, `capgen`, `capgen_ng`, `chunked_data`,
   `constituents_dim`, `ddthost`, `instances`, `instances_advection`,
@@ -484,7 +492,13 @@ don't rebuild downstream objects unless something actually moved.
   served (§1).  The anticipated complication was "fast physics"
   called directly from the FV3 dynamical core as a separate group;
   **that group works with v1 as expected**, so no special handling
-  was needed.
+  was needed.  First production defect report arrived 2026-09-16
+  (issue #786): Intel rejected the generated suite-cap symbols as
+  `Global name too long` under `WARN_AS_ERROR`.  The code was
+  standard-conforming, but capgen v1 had spent 11 characters of
+  linker-symbol budget that `ccpp-prebuild` did not, so a suite name
+  that used to build no longer did.  Fixed the same day by removing
+  the suite name from the suite-cap subroutines; `followups.md` §5.
 - **CAM-SIMA**: **still on capgen v0 — the remaining transition, and
   the critical path.**  As of 2026-09-01 CAM-SIMA production builds
   with the original ccpp-capgen; capgen v1 support lives on

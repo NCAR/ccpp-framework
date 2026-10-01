@@ -1136,7 +1136,7 @@ def _generate_state_alloc(suite_name: str, group_name: str) -> List[str]:
     so when multiple instances initialize, only the first allocates and
     initialises the state array; subsequent calls return immediately to
     avoid clobbering peer-instance state slots.  Matches the
-    ``<suite>_suite_state_alloc`` pattern.
+    ``suite_state_alloc`` pattern.
     """
     # Short Fortran symbol; the module ``ccpp_<suite>_<group>_cap``
     # already namespaces this routine at link time.

@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from metadata.metadata_table import parse_metadata_file
+from metadata.parse_tools import CCPPError
 from metadata.variable_resolver import build_flat_host_dict, SchemeStore
 from generator.suite_resolver import resolve_suite, ResolvedGroup
 from generator.suite_cap import (
@@ -35,6 +36,130 @@ def _resolve():
 def _generate():
     suite_resolution, store = _resolve()
     return _generate_suite_cap('test_simple', suite_resolution, store)
+
+
+# Intel truncates the mangled global name ``<module>_mp_<SUBROUTINE>`` at
+# 90 characters (NCAR/ccpp-framework#786).  The Fortran standard caps *names*
+# at 63 and says nothing about the linker symbol, so nothing but a test keeps
+# the emitted symbols inside a real linker's budget.
+_MANGLED_GLOBAL_LIMIT = 90
+
+
+def _mangled(mod_name, sub_name):
+    """Intel's module-procedure linker symbol for ``sub_name`` in ``mod_name``."""
+    return '{}_mp_{}'.format(mod_name.lower(), sub_name.upper())
+
+
+class TestMangledGlobalNameLength(unittest.TestCase):
+    """Every emitted subroutine must fit a real linker's global-name budget.
+
+    Regression for #786: a 29-character suite name produced a 94-character
+    global because the suite name appeared in BOTH the module name and the
+    subroutine name.  Generated at the documented ceiling rather than at any
+    real suite's length -- the first version of this test used a 29-character
+    name and so missed ``<suite>_suite_state_dealloc`` (91) and
+    ``<suite>_register`` (which caps suite names at 34 if left prefixed).
+    """
+
+    # Longest suite name capgen supports, bounded by the host cap's
+    # use-rename alias ``<suite>_physics_timestep_final`` against Fortran's
+    # 63-char name limit rather than by the mangled global.  NOTE this is
+    # the SUITE-CAP ceiling only: the group cap's global is
+    # ``ccpp_<suite>_<group>_cap_mp_<GROUP>_TIMESTEP_FINAL``, a joint
+    # constraint ``len(suite) + 2*len(group) <= 61``.  Both hold comfortably
+    # today (29 + 2*12 = 53 for the longest UFS suite/group pair) but a
+    # 40-char suite name needs group names of 10 or fewer.
+    MAX_SUITE_LEN = 40
+    SUITE = 'a' * MAX_SUITE_LEN
+
+    def _text(self, suite=None):
+        suite_resolution, store = _resolve()
+        return '\n'.join(_generate_suite_cap(
+            suite or self.SUITE, suite_resolution, store,
+            _load_full_host_dict(),
+        ))
+
+    @staticmethod
+    def _subs(text):
+        return [ln.split('subroutine', 1)[1].split('(')[0].strip()
+                for ln in text.splitlines()
+                if ln.strip().startswith('subroutine ')]
+
+    def test_suite_cap_globals_fit(self):
+        text = self._text()
+        mod  = 'ccpp_{}_cap'.format(self.SUITE)
+        subs = self._subs(text)
+        self.assertTrue(subs, 'no subroutines emitted')
+        for sub in subs:
+            with self.subTest(sub=sub):
+                self.assertLessEqual(
+                    len(_mangled(mod, sub)), _MANGLED_GLOBAL_LIMIT,
+                    msg='{} in {} exceeds the mangled-global budget'.format(
+                        sub, mod),
+                )
+
+    def test_no_emitted_symbol_repeats_the_suite_name(self):
+        """The suite name lives in the module name; repeating it in a
+        subroutine name is what blew the budget."""
+        for sub in self._subs(self._text()):
+            with self.subTest(sub=sub):
+                self.assertNotIn(self.SUITE, sub)
+
+    def test_trace_and_error_strings_keep_the_suite_name(self):
+        """Shortening the symbol must not shorten the human-readable label:
+        trace lines and runtime error strings stay fully qualified."""
+        text = self._text()
+        for phase in ('init', 'timestep_init', 'run',
+                      'timestep_final', 'final'):
+            with self.subTest(phase=phase):
+                self.assertIn(
+                    "'CCPP TRACE {}_physics_{}:'".format(self.SUITE, phase),
+                    text,
+                )
+        for what in ('init', 'final'):
+            with self.subTest(sub=what):
+                self.assertIn(
+                    "'CCPP TRACE {}_{}:'".format(self.SUITE, what), text)
+
+
+class TestHostCapSuiteAliasLength(unittest.TestCase):
+    """The host cap use-renames each suite cap's symbols back to
+    ``<suite>_<what>``; that alias is a Fortran name and is what actually
+    caps the supported suite-name length (#786)."""
+
+    def _host_cap(self, suite_name):
+        from generator.host_cap import _generate_host_cap
+        suite_resolution, store = _resolve()
+        return '\n'.join(_generate_host_cap(
+            'test_host', [suite_name], [suite_resolution],
+            _load_full_host_dict(), store,
+        ))
+
+    def test_alias_at_the_ceiling_is_accepted(self):
+        suite = 'a' * TestMangledGlobalNameLength.MAX_SUITE_LEN
+        text = self._host_cap(suite)
+        self.assertIn('{}_physics_run => suite_physics_run'.format(suite), text)
+
+    def test_alias_over_the_ceiling_raises(self):
+        suite = 'a' * (TestMangledGlobalNameLength.MAX_SUITE_LEN + 1)
+        with self.assertRaises(CCPPError) as ctx:
+            self._host_cap(suite)
+        self.assertIn('too long', str(ctx.exception))
+
+
+class TestSuitePhysicsGroupNameCollision(unittest.TestCase):
+    """A group named ``suite_physics`` would export the same symbols the
+    suite cap defines for its own dispatch."""
+
+    def test_colliding_group_name_raises(self):
+        for gname in ('suite_physics', 'suite'):
+            with self.subTest(group=gname):
+                suite_resolution, store = _resolve()
+                suite_resolution.groups[0].group_name = gname
+                with self.assertRaises(CCPPError) as ctx:
+                    _generate_suite_cap('test_simple', suite_resolution,
+                                        store, _load_full_host_dict())
+                self.assertIn('colliding', str(ctx.exception))
 
 
 class TestAllSuiteSchemeNames(unittest.TestCase):
@@ -113,16 +238,16 @@ class TestGenerateSuiteCapModule(unittest.TestCase):
 
     def test_public_register_always_emitted(self):
         # <suite>_register is mandatory in the new design — always public.
-        self.assertIn('public :: test_simple_register', self.text)
+        self.assertIn('public :: suite_register', self.text)
 
     def test_public_init_final(self):
-        self.assertIn('public :: test_simple_init', self.text)
-        self.assertIn('public :: test_simple_final', self.text)
+        self.assertIn('public :: suite_init', self.text)
+        self.assertIn('public :: suite_final', self.text)
 
     def test_public_all_physics_phases(self):
         for phase in ('init', 'timestep_init', 'run', 'timestep_final', 'final'):
             self.assertIn(
-                'public :: test_simple_physics_{}'.format(phase), self.text
+                'public :: suite_physics_{}'.format(phase), self.text
             )
 
     def test_contains_block(self):
@@ -139,8 +264,8 @@ class TestRegisterSubroutineAlwaysEmitted(unittest.TestCase):
         self.text = '\n'.join(lines)
 
     def test_register_subroutine_present(self):
-        self.assertIn('subroutine test_simple_register', self.text)
-        self.assertIn('end subroutine test_simple_register', self.text)
+        self.assertIn('subroutine suite_register', self.text)
+        self.assertIn('end subroutine suite_register', self.text)
 
     def test_no_constituents_arg(self):
         # Constituents are now opt-in via type=host; not in the cap at all
@@ -154,7 +279,7 @@ class TestRegisterSubroutineAlwaysEmitted(unittest.TestCase):
 
     def test_state_alloc_called(self):
         # Register always allocates state (idempotent) on first call.
-        self.assertIn('call test_simple_suite_state_alloc', self.text)
+        self.assertIn('call suite_state_alloc', self.text)
 
     def test_idempotent_guard(self):
         # Per-instance idempotent skip if already at REGISTERED or beyond.
@@ -170,12 +295,12 @@ class TestInitFinalSubroutines(unittest.TestCase):
         self.text = '\n'.join(_generate())
 
     def test_init_subroutine(self):
-        self.assertIn('subroutine test_simple_init(errmsg, errflg)', self.text)
-        self.assertIn('end subroutine test_simple_init', self.text)
+        self.assertIn('subroutine suite_init(errmsg, errflg)', self.text)
+        self.assertIn('end subroutine suite_init', self.text)
 
     def test_final_subroutine(self):
-        self.assertIn('subroutine test_simple_final(errmsg, errflg)', self.text)
-        self.assertIn('end subroutine test_simple_final', self.text)
+        self.assertIn('subroutine suite_final(errmsg, errflg)', self.text)
+        self.assertIn('end subroutine suite_final', self.text)
 
     def test_init_calls_group_state_alloc(self):
         # No host_dict passed → single-instance → literal 1 for ninstances.
@@ -188,7 +313,7 @@ class TestInitFinalSubroutines(unittest.TestCase):
         # Suite state allocation happens in <suite>_register, not <suite>_init.
         # No host_dict → single-instance → literal 1 for ninstances.
         self.assertIn(
-            'call test_simple_suite_state_alloc(1, errmsg, errflg)',
+            'call suite_state_alloc(1, errmsg, errflg)',
             self.text,
         )
 
@@ -203,8 +328,8 @@ class TestPhysicsDispatch(unittest.TestCase):
 
     def test_run_dispatch_present(self):
         # No control vars in test setup → no-arg signature.
-        self.assertIn('subroutine test_simple_physics_run()', self.text)
-        self.assertIn('end subroutine test_simple_physics_run', self.text)
+        self.assertIn('subroutine suite_physics_run()', self.text)
+        self.assertIn('end subroutine suite_physics_run', self.text)
 
     def test_run_dispatches_to_group_cap(self):
         # No group_name control var → unconditional call, no select case.
@@ -220,11 +345,11 @@ class TestPhysicsDispatch(unittest.TestCase):
         # Group phase subroutines are always emitted so the state machine
         # transitions through every phase, even when no scheme has a routine
         # for that phase — so the dispatch must always call into the group cap.
-        self.assertIn('subroutine test_simple_physics_timestep_init()', self.text)
+        self.assertIn('subroutine suite_physics_timestep_init()', self.text)
         self.assertIn('call physics_timestep_init()', self.text)
 
     def test_timestep_final_dispatches_to_group_cap(self):
-        self.assertIn('subroutine test_simple_physics_timestep_final()', self.text)
+        self.assertIn('subroutine suite_physics_timestep_final()', self.text)
         self.assertIn('call physics_timestep_final()', self.text)
 
     def test_no_select_case_without_group_name_ctrl(self):
@@ -248,9 +373,9 @@ class TestGroupDispatchUnknownGroupError(unittest.TestCase):
         )
 
     def _phase_block(self, phase):
-        sub = 'subroutine test_simple_physics_{}'.format(phase)
+        sub = 'subroutine suite_physics_{}'.format(phase)
         start = self.text.index(sub)
-        end   = self.text.index('end subroutine test_simple_physics_{}'.format(phase), start)
+        end   = self.text.index('end subroutine suite_physics_{}'.format(phase), start)
         return self.text[start:end]
 
     def test_run_dispatch_has_case_default(self):
@@ -308,7 +433,7 @@ class TestGroupDispatchErrorPropagation(unittest.TestCase):
         text = '\n'.join(
             _generate_suite_cap('test_simple', sr, store, _load_full_host_dict())
         )
-        sub = 'subroutine test_simple_physics_run'
+        sub = 'subroutine suite_physics_run'
         s = text.index(sub)
         e = text.index('end ' + sub, s)
         block = text[s:e]
@@ -347,7 +472,7 @@ class TestWriteSuiteCap(unittest.TestCase):
                 content = fh.read()
             self.assertIn('module ccpp_test_simple_cap', content)
             # Register subroutine is always emitted now.
-            self.assertIn('subroutine test_simple_register', content)
+            self.assertIn('subroutine suite_register', content)
             self.assertTrue(content.endswith('\n'))
 
     def test_creates_output_dir(self):
@@ -418,8 +543,8 @@ class TestSuiteCapNoConstituentDeclarations(unittest.TestCase):
         self.assertNotIn('index_of_cloud_liquid_water_mixing_ratio', self.text)
 
     def test_no_const_index_call_in_init(self):
-        init_body = self.text.split('subroutine consume_consts_init')[1].split(
-            'end subroutine consume_consts_init'
+        init_body = self.text.split('subroutine suite_init')[1].split(
+            'end subroutine suite_init'
         )[0]
         self.assertNotIn('%const_index(', init_body)
         self.assertNotIn('%vars_layer', init_body)
@@ -588,8 +713,8 @@ class TestRegisterHostDimensionImported(unittest.TestCase):
                                     skip_validation=True)
             sr = resolve_suite(suite, store, hd)
         cls.text = '\n'.join(_generate_suite_cap('gasreg', sr, store, hd))
-        cls.reg = cls.text.split('subroutine gasreg_register')[1].split(
-            'end subroutine gasreg_register')[0]
+        cls.reg = cls.text.split('subroutine suite_register')[1].split(
+            'end subroutine suite_register')[0]
 
     def test_call_slices_array_by_dimension(self):
         # The call subscript references the host dimension's local name.
