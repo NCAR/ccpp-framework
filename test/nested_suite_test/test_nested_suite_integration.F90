@@ -11,7 +11,7 @@ program test_nested_suite_integration
       'rad_lw_group    ', &
       'rad_sw_group    '/)
 
-  character(len=cm), target :: test_invars1(18) = (/ &
+  character(len=cm), target :: test_invars1(19) = (/ &
       'effective_radius_of_stratiform_cloud_rain_particle        ', &
       'effective_radius_of_stratiform_cloud_liquid_water_particle', &
       'effective_radius_of_stratiform_cloud_snow_particle        ', &
@@ -25,6 +25,7 @@ program test_nested_suite_integration
       'scalar_variable_for_testing_c                             ', &
       'scheme_order_in_suite                                     ', &
       'num_subcycles_for_effr                                    ', &
+      'num_inner_subcycles_for_effr                              ', &
       'flag_indicating_cloud_microphysics_has_graupel            ', &
       'flag_indicating_cloud_microphysics_has_ice                ', &
       'surface_downwelling_shortwave_radiation_flux              ', &
@@ -47,7 +48,7 @@ program test_nested_suite_integration
       'turbulent_kinetic_energy2                                 ', &
       'longwave_radiation_fluxes                                 '/)
 
-  character(len=cm), target :: test_reqvars1(22) = (/ &
+  character(len=cm), target :: test_reqvars1(23) = (/ &
       'ccpp_error_code                                           ', &
       'ccpp_error_message                                        ', &
       'effective_radius_of_stratiform_cloud_rain_particle        ', &
@@ -65,6 +66,7 @@ program test_nested_suite_integration
       'scalar_variable_for_testing_c                             ', &
       'scheme_order_in_suite                                     ', &
       'num_subcycles_for_effr                                    ', &
+      'num_inner_subcycles_for_effr                              ', &
       'flag_indicating_cloud_microphysics_has_graupel            ', &
       'flag_indicating_cloud_microphysics_has_ice                ', &
       'surface_downwelling_shortwave_radiation_flux              ', &

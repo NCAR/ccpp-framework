@@ -32,6 +32,13 @@
 [ccpp-arg-table]
   name = effr_post_run
   type = scheme
+[ ncyc ]
+  standard_name = num_inner_subcycles_for_effr
+  long_name = Number of times to subcycle effr_post inside each effr subcycle
+  units = None
+  dimensions = ()
+  type = integer
+  intent = in
 [effrr_inout]
   standard_name = effective_radius_of_stratiform_cloud_rain_particle
   long_name = effective radius of cloud rain particle in micrometer

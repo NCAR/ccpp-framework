@@ -118,6 +118,12 @@
   units = None
   dimensions = ()
   type = integer
+[num_inner_subcycles]
+  standard_name = num_inner_subcycles_for_effr
+  long_name = Number of times to subcycle effr_post inside each effr subcycle
+  units = None
+  dimensions = ()
+  type = integer
 
 [ccpp-table-properties]
   name = test_host_data

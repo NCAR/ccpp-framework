@@ -9,7 +9,9 @@
           <scheme>effr_calc</scheme>
         </subcycle>
       </subcycle>
-      <scheme>effr_post</scheme>
+      <subcycle loop="num_inner_subcycles_for_effr">
+        <scheme>effr_post</scheme>
+      </subcycle>
     </subcycle>
     <nested_suite name="radiation2_suite" group="effrs_calc" file="radiation2_suite.xml"/>
   </group>

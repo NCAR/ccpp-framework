@@ -28,6 +28,7 @@ module test_host_data
     integer :: scalar_varc
     integer :: scheme_order
     integer :: num_subcycles
+    integer :: num_inner_subcycles
   end type physics_state
 
   public :: physics_state
@@ -97,6 +98,7 @@ contains
     state%scheme_order = 1
     ! Initialize subcycle counter.
     state%num_subcycles = 3
+    state%num_inner_subcycles = 2
 
   end subroutine allocate_physics_state
 

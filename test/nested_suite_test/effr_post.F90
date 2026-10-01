@@ -36,8 +36,9 @@ contains
   !> \section arg_table_effr_post_run  Argument Table
   !! \htmlinclude arg_table_effr_post_run.html
   !!
-  subroutine effr_post_run(effrr_inout, scalar_var, errmsg, errflg)
+  subroutine effr_post_run(ncyc, effrr_inout, scalar_var, errmsg, errflg)
 
+    integer, intent(in) :: ncyc
     real(kind=kind_phys), intent(inout) :: effrr_inout(:, :)
     real(kind=kind_phys), intent(in) :: scalar_var
     character(len=512), intent(out) :: errmsg
@@ -54,6 +55,11 @@ contains
     if (scalar_var /= 1013.0) then
       errmsg	= 'ERROR: effr_post_run():  scalar_var should be 1013.0'
       errflg	= 1
+    end if
+
+    if (ncyc /= 2) then
+      errmsg = 'ERROR: effr_post_run():  ncyc should be 2'
+      errflg = 1
     end if
 
   end subroutine effr_post_run
