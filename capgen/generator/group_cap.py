@@ -180,8 +180,6 @@ def _dim_decl_local(dimensions: List[str], host_dict) -> str:
             locals_.append('{}:{}'.format(lb, ub))
         else:
             entry = host_dict.get(std_name) if host_dict else None
-            # ``access_path``, not ``local_name`` so that a DDT-component dimension
-            # (``GFS_Control%levs`` for ``vertical_layer_dimension``) is resolved.
             locals_.append(
                 _render_value_expr(entry, host_dict)
                 if entry is not None else std_name
