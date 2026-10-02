@@ -33,6 +33,7 @@ from generator.suite_resolver import (
     ResolvedCall,
     ResolvedGroup,
     ResolvedSubcycle,
+    _render_value_expr,
     _root_symbol,
     iter_phase_calls,
     iter_phase_subcycles,
@@ -179,7 +180,10 @@ def _dim_decl_local(dimensions: List[str], host_dict) -> str:
             locals_.append('{}:{}'.format(lb, ub))
         else:
             entry = host_dict.get(std_name) if host_dict else None
-            locals_.append(entry.local_name if entry is not None else std_name)
+            locals_.append(
+                _render_value_expr(entry, host_dict)
+                if entry is not None else std_name
+            )
     return ', dimension({})'.format(', '.join(locals_))
 
 
