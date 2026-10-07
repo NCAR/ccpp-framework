@@ -2693,10 +2693,29 @@ class TestDimDeclLocal(unittest.TestCase):
         )
 
     def test_vertical_dim_uses_local_name(self):
-        # No special case for vertical dims — host's local name only.
+        # No special case for vertical dims.  For a plain module-level host
+        # var the access path and the local name are the same string.
         self.assertEqual(
             _dim_decl_local(['vertical_layer_dimension'], self.hd),
             ', dimension(nlev)',
+        )
+
+    def test_ddt_component_dim_uses_full_access_path(self):
+        """A DDT-component dimension must be declared with the full DDT
+        walk.  ``local_name`` alone (``levs``) names nothing in the group
+        cap's scope, so the temp is sized from an undefined symbol — the
+        transform's assignments were right and only its declaration wrong."""
+        from metadata.variable_resolver import HostVarEntry
+        hd = dict(self.hd)
+        hd['vertical_layer_dimension'] = HostVarEntry(
+            'vertical_layer_dimension', 'levs', 'GFS_Control%levs',
+            None, 'integer', '', 'count', [], False, False, '',
+        )
+        self.assertEqual(
+            _dim_decl_local(
+                ['horizontal_dimension', 'vertical_layer_dimension'], hd,
+            ),
+            ', dimension(lb:ub, GFS_Control%levs)',
         )
 
     def test_mixed_horiz_vert(self):
