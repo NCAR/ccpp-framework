@@ -1188,7 +1188,7 @@ subroutine ccpp_<suite>_<group>_init(inst_num, ...)
 
 This injection does **not** happen for `_run`, `_timestep_init`, or `_timestep_final`
 unless a scheme in those phases explicitly requests `instance_number`. The suite cap's
-`<suite>_physics_init` and `<suite>_physics_final` dispatch subroutines similarly pass
+`suite_physics_init` and `suite_physics_final` dispatch subroutines similarly pass
 `instance_number` to the group cap calls when the host provides it.
 
 **Control variable validation — flat unconditional required set.**  
@@ -1232,7 +1232,7 @@ Symmetric to `ccpp_physics_init`'s silent skip when already `INITIALIZED`,
 both final-path entry points return cleanly with `errflg=0` on every repeat
 invocation. Three cap levels participate:
 
-- The suite-cap `<suite>_physics_final` dispatcher silent-returns when
+- The suite-cap `suite_physics_final` dispatcher silent-returns when
   `ccpp_suite_state` is unallocated (last-instance post-`ccpp_final` deallocation)
   or `ccpp_suite_state(inst_num) == CCPP_SUITE_UNREGISTERED` (any other
   instance post-`ccpp_final`). The `state /= FRAMEWORK_INITIALIZED` error is
