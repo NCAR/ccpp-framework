@@ -1,0 +1,47 @@
+--- capgen/src/ccpp_constituent_prop_mod.F90
++++ capgen/src/ccpp_constituent_prop_mod.F90
+@@ -1392,6 +1392,17 @@
+     type(ccpp_constituent_properties_t), pointer :: cprop
+     character(len=dimname_len) :: dimname
+     character(len=*), parameter :: subname = 'ccp_model_const_table_lock'
++    ! === ONE-OFF cam4 constituent-reorder experiment ===
++    ! When .true., force the cam4 advected water species into original-capgen
++    ! order [cloud_liquid=1, cloud_ice=2, water_vapor=3] instead of hash-table
++    ! order, to prove the FWAUT b4b diff is driven purely by constituent order.
++    ! Only the 3 cam4 water-species std-names are remapped; everything else keeps
++    ! its normal hash-order index, so other suites are unaffected unless they
++    ! advect exactly these names.  Flip to .false. (or delete) to restore.
++    logical, parameter :: l_const_reorder = .true.
++    integer            :: const_pos
++    character(len=512) :: sname_reorder
++    ! === end experiment ===
+ 
+     astat = 0
+     errcode_local = 0
+@@ -1460,9 +1471,24 @@
+                   errcode_local = errcode_local + 1
+                   exit
+                 end if
+-                call cprop%set_const_index(index_advect, &
++                ! === ONE-OFF cam4 constituent-reorder experiment ===
++                const_pos = index_advect
++                if (l_const_reorder) then
++                  call cprop%standard_name(sname_reorder, &
++                      errcode=errcode, errmsg=errmsg)
++                  select case (trim(sname_reorder))
++                  case ('cloud_liquid_water_mixing_ratio_wrt_moist_air_and_condensed_water')
++                    const_pos = 1
++                  case ('cloud_ice_mixing_ratio_wrt_moist_air_and_condensed_water')
++                    const_pos = 2
++                  case ('water_vapor_mixing_ratio_wrt_moist_air_and_condensed_water')
++                    const_pos = 3
++                  end select
++                end if
++                call cprop%set_const_index(const_pos, &
+                     errcode=errcode, errmsg=errmsg)
+-                call this%const_metadata(index_advect)%set(cprop)
++                call this%const_metadata(const_pos)%set(cprop)
++                ! === end experiment ===
+               else
+                 index_const = index_const + 1
+                 if (index_const > num_vars) then

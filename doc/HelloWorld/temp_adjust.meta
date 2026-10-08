@@ -5,7 +5,7 @@
   name = temp_adjust_run
   type = scheme
 [ nbox ]
-  standard_name = horizontal_loop_extent
+  standard_name = horizontal_dimension
   type = integer
   units = count
   dimensions = ()
@@ -19,7 +19,7 @@
 [ temp_layer ]
   standard_name = potential_temperature
   units = K
-  dimensions = (horizontal_loop_extent, vertical_layer_dimension)
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = inout

@@ -1,0 +1,48 @@
+# auto-clone-constituents: fixture for the legacy auto-clone shim
+# test.  Two is_constituent consumer args (no register-phase source)
+# that exercise the full set of legacy attrs the shim accepts:
+# default_value, min_value, water_species, mixing_ratio_type.
+
+[ccpp-table-properties]
+  name = auto_clone_consumer
+  type = scheme
+
+[ccpp-arg-table]
+  name = auto_clone_consumer_run
+  type = scheme
+[ qv ]
+  standard_name = water_vapor_specific_humidity
+  long_name = base constituent water vapor
+  diagnostic_name = QV
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = inout
+  advected = .true.
+  default_value = 1.0e-12
+  min_value = 0.0
+  water_species = .true.
+  mixing_ratio_type = wrt_moist
+[ qc ]
+  standard_name = cloud_liquid_dry_mixing_ratio
+  long_name = cloud liquid water
+  diagnostic_name = CLDLIQ
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = in
+  advected = .true.
+  default_value = 0.0
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

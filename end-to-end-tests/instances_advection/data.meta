@@ -1,0 +1,83 @@
+[ccpp-table-properties]
+  name = physics_state
+  type = ddt
+[ccpp-arg-table]
+  name = physics_state
+  type = ddt
+[ps]
+  standard_name = surface_air_pressure
+  units = hPa
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+[temp]
+  standard_name = temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+[q]
+  standard_name = state_constituent_mixing_ratio
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_ccpp_constituents)
+  type = real
+  kind = kind_phys
+[q(:,:,index_of_water_vapor_specific_humidity)]
+  standard_name = water_vapor_specific_humidity
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+
+
+[ccpp-table-properties]
+  name = data
+  type = host
+  dependencies =
+
+[ccpp-arg-table]
+  name = data
+  type = host
+[ncols]
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+  protected = True
+[pver]
+  standard_name = vertical_layer_dimension
+  long_name = vertical layer dimension
+  units = count
+  dimensions = ()
+  type = integer
+  protected = True
+[dt]
+  standard_name = time_step_for_physics
+  long_name = time step for physics
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  protected = True
+[tfreeze]
+  standard_name = water_temperature_at_freezing
+  long_name = freezing temperature of water at sea level
+  units = K
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  protected = True
+[index_qv]
+  standard_name = index_of_water_vapor_specific_humidity
+  long_name = index of water vapor specific humidity in the constituent array
+  units = index
+  dimensions = ()
+  type = integer
+  protected = True
+[phys_state]
+  standard_name = physics_state_derived_type
+  long_name = per-instance physics state DDT
+  units = none
+  dimensions = (number_of_instances)
+  type = physics_state

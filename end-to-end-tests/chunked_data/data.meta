@@ -1,0 +1,33 @@
+[ccpp-table-properties]
+  name = chunked_data_type
+  type = ddt
+  dependencies =
+[ccpp-arg-table]
+  name = chunked_data_type
+  type = ddt
+[array_data]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (ccpp_constant_one:horizontal_dimension)
+  type = integer
+
+[ccpp-table-properties]
+  name = data
+  type = host
+  dependencies =
+[ccpp-arg-table]
+  name = data
+  type = host
+[ncols]
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[chunked_data_instance]
+  standard_name = chunked_data_type_instance
+  long_name = instance of derived data type chunked_data_type
+  units = DDT
+  dimensions = ()
+  type = chunked_data_type

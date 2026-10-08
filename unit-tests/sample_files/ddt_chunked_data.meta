@@ -1,0 +1,16 @@
+# DDT definition for the chunked_data integration test.
+
+[ccpp-table-properties]
+  name = chunked_data_type
+  type = ddt
+
+[ccpp-arg-table]
+  name = chunked_data_type
+  type = ddt
+
+[ array_data ]
+  standard_name = chunked_data_array
+  long_name = chunked data array
+  units = 1
+  dimensions = (horizontal_dimension)
+  type = integer

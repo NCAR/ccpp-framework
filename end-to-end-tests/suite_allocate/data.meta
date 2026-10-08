@@ -1,0 +1,14 @@
+[ccpp-table-properties]
+  name = data
+  type = host
+  dependencies =
+[ccpp-arg-table]
+  name = data
+  type = host
+[checksum]
+  standard_name = workspace_checksum
+  long_name = sum of the suite-owned scratch workspace
+  units = 1
+  dimensions = ()
+  type = real
+  kind = kind_phys

@@ -1,0 +1,39 @@
+[ccpp-table-properties]
+  name = make_workspace
+  type = scheme
+  dependencies =
+
+[ccpp-arg-table]
+  name = make_workspace_run
+  type = scheme
+[nw]
+  standard_name = workspace_dimension
+  long_name = size of the scratch workspace
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[work]
+  standard_name = scratch_workspace_field
+  long_name = suite-owned scratch workspace allocated by the producing scheme
+  units = 1
+  dimensions = (workspace_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  allocatable = True
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

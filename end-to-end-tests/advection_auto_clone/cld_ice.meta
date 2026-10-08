@@ -1,0 +1,137 @@
+# cld_ice is a scheme that produces a cloud ice amount
+[ccpp-table-properties]
+  name = cld_ice
+  type = scheme
+
+[ccpp-arg-table]
+  name = cld_ice_register
+  type = scheme
+[ dyn_const_ice ]
+  standard_name = dynamic_constituents_for_cld_ice
+  units = none
+  dimensions = (:)
+  allocatable = True
+  type = ccpp_constituent_properties_t
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errcode ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-arg-table]
+  name = cld_ice_run
+  type = scheme
+[ ncol ]
+  standard_name = horizontal_dimension
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ timestep ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = in
+[ temp ]
+  standard_name = temperature
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ qv ]
+  standard_name = water_vapor_specific_humidity
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ ps ]
+  standard_name = surface_air_pressure
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_dimension)
+  intent = in
+[ cld_ice_array ]
+  standard_name = cloud_ice_dry_mixing_ratio
+  advected = .true.
+  default_value = 0.0_kind_phys
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real |  kind = kind_phys
+  intent = inout
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errcode ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-arg-table]
+  name = cld_ice_init
+  type = scheme
+[ tfreeze ]
+  standard_name = water_temperature_at_freezing
+  long_name = Freezing temperature of water at sea level
+  units = K
+  dimensions = ()
+  type = real | kind = kind_phys
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errcode ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-arg-table]
+  name = cld_ice_final
+  type = scheme
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errcode ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

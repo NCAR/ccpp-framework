@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- auto-clone-constituents: fixture for the legacy auto-clone shim
+     test.  One scheme with is_constituent consumers and no
+     register-phase source. -->
+<suite name="auto_clone_suite" version="1.0">
+  <group name="phys">
+    <scheme>auto_clone_consumer</scheme>
+  </group>
+</suite>

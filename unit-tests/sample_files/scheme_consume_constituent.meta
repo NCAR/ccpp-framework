@@ -1,0 +1,41 @@
+# cam-sima-style scheme that consumes a base constituent and produces
+# a tendency.  No host or earlier-scheme provider for either — both
+# are auto-resolved by capgen via the ccpp_constituents /
+# ccpp_constituent_tendencies arrays owned by the suite cap.
+
+[ccpp-table-properties]
+  name = consume_constituent
+  type = scheme
+
+[ccpp-arg-table]
+  name = consume_constituent_run
+  type = scheme
+[ cldliq ]
+  standard_name = cloud_liquid_water_mixing_ratio
+  long_name = base constituent (read-only)
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = in
+  advected = .true.
+[ tend_cldliq ]
+  standard_name = tendency_of_cloud_liquid_water_mixing_ratio
+  long_name = tendency of base constituent
+  units = kg kg-1 s-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real | kind = kind_phys
+  intent = out
+  constituent = .true.
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
