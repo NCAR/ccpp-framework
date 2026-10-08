@@ -97,6 +97,8 @@ _LEAD_CONT_RE = re.compile(r'^\s*&\s?')
 # trailing ``&``" (safe to drop) from "real tokens past a ``&``"
 # (leave alone so the parser surfaces a real error).
 _IDENT_CHAR_RE = re.compile(r'[A-Za-z_0-9]')
+_STRING_LIT_RE = re.compile(r"'[^']*'|\"[^\"]*\"")
+_DECL_SEP_RE = re.compile(r'::')
 
 
 class _ArgAttrs(NamedTuple):
@@ -498,6 +500,8 @@ def _join_continuation(
 
     result: List[str] = []
     buf = ''
+    # (physical line number, text) for each piece in ``buf``
+    segs: List[Tuple[int, str]] = []
     for i, stripped in enumerate(norm):
         if buf and not stripped.strip():
             # Mid-continuation, and this line is blank or a pure
@@ -512,7 +516,9 @@ def _join_continuation(
             stripped = _LEAD_CONT_RE.sub('', stripped, count=1)
         has_trailing = bool(_CONT_RE.search(stripped))
         if has_trailing:
-            buf += _CONT_RE.sub('', stripped)
+            piece = _CONT_RE.sub('', stripped)
+            buf += piece
+            segs.append((i + 1, piece))
             continue
         # No trailing ``&`` — but a fixed-form continuation may still
         # be implied by the next line's column-6 ``&``.  If so, keep
@@ -523,13 +529,85 @@ def _join_continuation(
         if _next_starts_with_lead_cont(i):
             stripped = _repair_decorated_trailing_amp(stripped, filename, i + 1)
             buf += stripped
+            segs.append((i + 1, stripped))
             continue
         buf += stripped
+        segs.append((i + 1, stripped))
+        _check_statement_run_on(segs, filename)
         result.append(buf)
         buf = ''
+        segs = []
     if buf:
-        result.append(buf)
+        raise CCPPError(
+            "{}:{}: unterminated Fortran line continuation — the file ends "
+            "while the statement started here is still continued by a "
+            "trailing '&'".format(filename or '<unknown>', segs[0][0])
+        )
     return result
+
+
+def _decl_separator_count(line: str) -> int:
+    """Count ``::`` in *line* that separate a declaration from its entities.
+
+    String literals and bracketed array constructors are blanked first, so
+    the typed-constructor form ``[character(len=128) :: 'a', 'b']`` — the
+    only legitimate second ``::`` is not counted.
+
+    >>> _decl_separator_count('real :: a, b')
+    1
+    >>> _decl_separator_count("character(*), parameter :: n(*) = [character(len=4) :: 'ab']")
+    1
+    >>> _decl_separator_count('real :: a   integer :: b')
+    2
+    """
+    blanked = _STRING_LIT_RE.sub('', line)
+    out, depth = [], 0
+    for ch in blanked:
+        if ch == '[':
+            depth += 1
+        elif ch == ']':
+            depth = max(0, depth - 1)
+        out.append(' ' if depth else ch)
+    return len(_DECL_SEP_RE.findall(''.join(out)))
+
+
+def _check_statement_run_on(
+    segs: List[Tuple[int, str]],
+    filename: Optional[str],
+) -> None:
+    """Reject a logical line that joined two or more declarations.
+
+    A Fortran declaration carries exactly one ``::``.  Two means a
+    continuation ran past the end of its statement — almost always a stray
+    trailing ``&`` — which silently attributes the second declaration's
+    entities to the first one's type and attributes.
+    """
+    joined = ''.join(text for _, text in segs)
+    if joined.count('::') < 2 or _decl_separator_count(joined) < 2:
+        return
+    # Walk the pieces to find the one that opened the second declaration;
+    # the stray ``&`` is on the preceding piece.
+    running = ''
+    for idx, (line_no, text) in enumerate(segs):
+        running += text
+        if _decl_separator_count(running) < 2:
+            continue
+        if idx == 0:
+            # No continuation involved — the physical line itself carries
+            # two ``::`` (e.g. ``class(t) :: intent(in) :: this``).
+            raise CCPPError(
+                "{}:{}: malformed Fortran declaration — two '::' in one "
+                "statement".format(filename or '<unknown>', line_no)
+            )
+        raise CCPPError(
+            "{}:{}: Fortran statement continues past its end — the "
+            "declaration starting at line {} was joined with the one "
+            "starting here.  Check for a stray trailing '&' on line "
+            "{}".format(
+                filename or '<unknown>', line_no, segs[0][0],
+                segs[idx - 1][0],
+            )
+        )
 
 
 def _repair_decorated_trailing_amp(
