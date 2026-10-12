@@ -425,8 +425,8 @@ don't rebuild downstream objects unless something actually moved.
   - The three incoming hosts **still rely on the transient migration
     shims** (§6.3b).  Adoption did *not* retire them — it pinned
     them.  See the note in that section and FU-010/FU-011.
-- **Unit tests**: 1577 passing on `feature/capgen-v1` (verified
-  2026-09-16, `python unit-tests/run_tests.py`).
+- **Unit tests**: 1578 passing on `feature/capgen-v1` (verified
+  2026-10-12, `python unit-tests/run_tests.py`).
 - **End-to-end tests passing** (13): `advection`,
   `advection_auto_clone`, `capgen`, `capgen_ng`, `chunked_data`,
   `constituents_dim`, `ddthost`, `instances`, `instances_advection`,

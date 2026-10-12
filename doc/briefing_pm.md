@@ -291,7 +291,7 @@ Features that exist only in capgen (some exist in prebuild):
   and the retirement of the CAM-SIMA compatibility layer) to
   programme-level blockers rather than CAM-SIMA-local work.  Schedule
   risk concentrates there; see §8.
-- **Unit tests**: 1577 passing.  No known failures.
+- **Unit tests**: 1578 passing.  No known failures.
 - **End-to-end tests**: 13 passing — `advection`,
   `advection_auto_clone` (CAM-SIMA advection_test port exercising the
   auto-clone shim), `capgen`, `capgen_ng`, `chunked_data`,
@@ -392,7 +392,7 @@ proposals are implementable on top of it.
 | capgen diverges from capgen feature set | LOW | Cross-checked by `doc/redesign_analysis.md`; the feature comparison table in §4 / §5 is exhaustive |
 | Host metadata break for UFS / NEPTUNE / CAM-SIMA | LOW | Three transient shims (`--legacy-mode`, `--gfs-dim-aliases`, `--legacy-auto-clone-constituents`) together cover the known-incompatible standard-name pair, the GFS radiation/composition vertical-dim spellings, and original capgen's auto-clone registration path.  Remaining required changes (e.g., `_finalize` → `_final`) are mechanical and listed in `doc/migration.md` §3 |
 | Constituent overhaul stalls | LOW | Proposal A unblocks the immediate bug; capgen works with the current framework today; `--legacy-auto-clone-constituents` lets CAM-SIMA's atmospheric_physics build without an overhaul decision; the overhaul is a separate decision track |
-| Bus-factor on capgen itself | MEDIUM | Procedural code style + flat data classes + 1577-test safety net; significantly lower than capgen's bus factor |
+| Bus-factor on capgen itself | MEDIUM | Procedural code style + flat data classes + 1578-test safety net; significantly lower than capgen's bus factor |
 | **CAM-SIMA transition slips, delaying the whole programme** | **MEDIUM — the main schedule risk as of 2026-09-01** | The `develop` merge and the deletion of both older generators are gated on this one transition (§6), so its two remaining items — the constituent-ordering re-baseline and retirement of the compatibility layer — are programme-level blockers.  Both are understood and scoped; neither is a defect.  Mitigation is to track them as such rather than as CAM-SIMA-local work, and to decide the auto-clone shim's fate as part of the transition |
 | Two host call-shape conventions (prebuild-style vs capgen-style) coexist forever | LOW | capgen emits one shape; downstream host conversions are tracked in `doc/migration.md` |
 | First production defect from a transitioned host | CLOSED (2026-09-16) | UFS reported issue #786 — Intel rejected generated symbol names as too long when the UFS build turned on warnings-as-errors.  Diagnosed, fixed and tested the same day.  Notable for two reasons: the generated code was standard-conforming (an Intel linker limit, not a Fortran violation), **and** it was a regression against `ccpp-prebuild`, which had used shorter names — so the transition, not the compiler, was the trigger.  The class is now guarded by a test that generates at the supported limit rather than at any one model's suite name |
