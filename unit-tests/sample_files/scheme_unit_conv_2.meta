@@ -1,0 +1,45 @@
+# Scheme 2 for the unit_conv integration test.
+# Expects data_array in km (unit conversion m→km — Case 3) and
+# data_array_opt in km (optional + unit conversion — Case 4).
+
+[ccpp-table-properties]
+  name = unit_conv_scheme_2
+  type = scheme
+
+########################################################################
+[ccpp-arg-table]
+  name = unit_conv_scheme_2_run
+  type = scheme
+
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = error message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = error flag
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ data_array ]
+  standard_name = data_array
+  long_name = data array in km
+  units = km
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ data_array_opt ]
+  standard_name = data_array_opt
+  long_name = optional data array in km
+  units = km
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = True

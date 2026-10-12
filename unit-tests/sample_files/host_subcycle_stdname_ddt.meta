@@ -1,0 +1,19 @@
+# Supplementary host metadata: declares an instance of the
+# physics_state_subcycle DDT, which exposes num_subcycles_for_test as a
+# component.  The subcycle bound in suite_subcycle_stdname_ddt.xml
+# resolves to ``phys_state%n_sub`` (access path), not the bare
+# component name.
+
+[ccpp-table-properties]
+  name = test_host_with_ddt_mod
+  type = host
+
+[ccpp-arg-table]
+  name = test_host_with_ddt_mod
+  type = host
+[ phys_state ]
+  standard_name = physics_state_subcycle_ddt_instance
+  long_name = physics state DDT instance carrying the subcycle counter
+  units = ddt
+  dimensions = ()
+  type = physics_state_subcycle

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="top_at_one_suite" version="1.0">
+  <group name="physics">
+    <scheme>top_at_one_scheme</scheme>
+  </group>
+</suite>

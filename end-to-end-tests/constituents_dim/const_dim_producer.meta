@@ -1,0 +1,73 @@
+[ccpp-table-properties]
+  name = const_dim_producer
+  type = scheme
+  dependencies =
+
+[ccpp-arg-table]
+  name = const_dim_producer_run
+  type = scheme
+[coupler_flux]
+  standard_name = surface_upward_test_constituent_flux
+  long_name = host array dimensioned by the constituent count (Case 1)
+  units = kg m-2 s-1
+  dimensions = (horizontal_dimension, number_of_ccpp_constituents)
+  type = real
+  kind = kind_phys
+  intent = in
+[cwork]
+  standard_name = test_constituent_workspace
+  long_name = non-allocatable suite workspace dimensioned by the count (Case 2a)
+  units = 1
+  dimensions = (number_of_ccpp_constituents)
+  type = real
+  kind = kind_phys
+  intent = out
+[n_const]
+  standard_name = number_of_ccpp_constituents
+  long_name = number of CCPP constituents
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[awork]
+  standard_name = test_allocatable_constituent_workspace
+  long_name = allocatable suite workspace dimensioned by the count (Case 2b)
+  units = 1
+  dimensions = (number_of_ccpp_constituents)
+  type = real
+  kind = kind_phys
+  intent = out
+  allocatable = True
+[qbase]
+  standard_name = test_constituent_one
+  long_name = base constituent modified in place (rule b producer; advected)
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  advected = True
+[qtend]
+  standard_name = tendency_of_test_constituent_one
+  long_name = constituent tendency produced into the framework tendency array
+  units = kg kg-1 s-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  constituent = True
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errcode]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
