@@ -180,10 +180,21 @@ and host-module bounds are USE'd by the root of their access path
 Verified by generating a two-level variable-count SDF: both bounds (`nlev`,
 `nlevp1`) are USE'd and both `do` statements are in scope.  Distinct from
 FU-001, which is about *counter semantics* in nested subcycles, not about the
-bound's declaration.  **Caveat:** no unit test nests a *variable*-count
-subcycle — `TestNestedSubcycleResolution` uses literal counts only — so the
-behaviour is correct but unprotected against regression.  A test would close
-that.
+bound's declaration.  **Now protected (2026-10-19).**  @peverwhee closed #792
+asking that the test, and only the test, come over to v1 (nothing to port on
+the code side — the v0 fix was in `scripts/suite_objects.py`), so it is ported
+into the end-to-end fixture `end-to-end-tests/nested_suite`: `main_suite.xml`
+nests `<subcycle loop="num_inner_subcycles_for_effr">` inside the existing
+variable-count subcycle, `effr_post` takes that count as an argument and
+errors unless it is 2, and the host declares it in `physics_state`.  The
+generated cap puts `do ccpp_loop_counter_2 = 1, phys_state%num_inner_subcycles`
+inside `do ccpp_loop_counter = 1, phys_state%num_subcycles`, with `phys_state`
+imported once at module scope — the v0 failure would have left the inner bound
+undeclared.  CI builds and runs this fixture on every PR to
+`feature/capgen-v1` (`.github/workflows/end-to-end-tests.yaml`).  The *unit*
+tests still use literal counts only (`TestNestedSubcycleResolution`); a
+resolver-level test would be cheaper than the e2e one, and is the only part of
+that caveat left.
 
 **Suite-owned storage has one owner and one lifetime.**  A suite variable
 lives in the suite data module for the whole run, per instance
