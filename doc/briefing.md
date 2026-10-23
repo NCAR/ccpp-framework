@@ -340,6 +340,10 @@ A deliberate design choice across capgen: **errors are loud,
 specific, and actionable**.  Examples surfaced during the SCM
 shake-down:
 
+- Fortran line past column 132 → error names the file, the line and
+  how far it overruns, raised before any parsing so the misleading
+  downstream errors of #788 never appear.  Scheme source errors; host
+  source warns (`migration.md` §7.5, FU-038).
 - Empty `units =` line → error names file, line, variable,
   attribute, raw value, AND inner reason.
 - Scheme metadata file passed via `--scheme-files` but missing from
