@@ -51,7 +51,8 @@ stand.
 ## 1. The three generators in one paragraph each
 
 **`ccpp-prebuild`** (NOAA/NAVY/DTC, in production for UFS/NEPTUN/SCM).
-Procedural Python; reads metadata; emits Fortran caps; passes
+Procedural Python (~14.9k lines); reads metadata; emits Fortran
+caps; passes
 host-defined derived-type (DDT) arguments to scheme call sites.  In
 production for several years; bug rate is low; the team understands
 it (those who worked with it).  What it doesn't do: framework-owned
@@ -60,8 +61,8 @@ introspection.  Treated as the **baseline for simplicity and
 reliability**.
 
 **`ccpp-capgen`** (NCAR, in production for CAM-SIMA).  Heavy
-object-oriented Python (deep class hierarchy, ~tens of thousands of
-lines); reads metadata; emits Fortran caps that pass **flat scalar
+object-oriented Python (deep class hierarchy, ~19.6k lines); reads
+metadata; emits Fortran caps that pass **flat scalar
 fields** to scheme call sites instead of DDTs; supports the
 constituent mechanism, suite-owned variables, introspection, and a
 few other features prebuild lacks.  **It is the only existing
@@ -70,9 +71,10 @@ limits that make it impractical for UFS, NEPTUNE, or multi-instance
 hosts, and the implementation is concentrated enough that few people
 can extend it safely (if at all - primary developer gone).
 
-**`capgen`** (new, 2026-05).  Procedural Python (~17.8k lines
-including inline comments and the three transient shim modules; flat
-data classes); reads the same metadata format; passes
+**`capgen`** (new, 2026-05).  Procedural Python (~19.2k lines
+including docstrings, inline comments and the three transient shim
+modules — 9.7k of it executable code; flat data classes); reads the
+same metadata format; passes
 arguments like prebuild; supports the features capgen pioneered
 (constituents, suite-owned variables, introspection); supports
 multi-instance, an integer state machine, six explicit scheme
@@ -216,25 +218,34 @@ in performance to `prebuild`.
 
 ### 3.6 Code volume and team coverage
 
-capgen is roughly an order of magnitude larger than prebuild, with a
-deeply layered class hierarchy.  This is not a moral failing — it
-reflects the feature set — but the practical consequence is that
-the maintenance burden falls on a small subset of the framework
-team.  capgen is comparable to prebuild in *shape* (procedural
-Python with small data classes — no deep class hierarchy), and the
-generator itself sits at ~17.8k lines.
-The "who can fix this" pool is closer to "anyone with
-framework context".  capgen comes with ~1.4k docstring + unit
-tests (~18k lines of test code), plus an end-to-end test suite of
-12 fixtures that covers all of prebuild's and capgen's existing
-end-to-end tests and adds new ones for multi-instance + constituents
-(`instances_advection`), the auto-clone-constituents shim
-(`advection_auto_clone`), constituent-count dimensions
-(`constituents_dim`), and suite-owned allocatable interstitials
-(`suite_allocate`).  Including these tests and the rich inline
-comments puts capgen's full tree on the same order of magnitude as
-capgen — about half of which is test coverage and human-readable
-prose, not load-bearing logic.
+The three generators are closer in size than their reputations
+suggest.  Measured 2026-10-14 over `scripts/` on `develop`
+(`9bee9e1`), attributed to each generator by the import closure of
+its entry point: **prebuild ~14.9k lines, capgen v0 ~19.6k**, the
+two sharing ~9.9k lines of metadata-parsing infrastructure (which is
+why that tree totals 25.3k and not 34k).  **capgen v1 is ~19.2k
+lines**, of which 9.7k is executable code and the rest docstrings,
+doctests and inline comments.
+
+So volume was never the real problem — capgen v0 is ~1.3x prebuild,
+not an order of magnitude — and capgen v1 does not undercut either
+on raw line count.  What differs is *shape*: v0 is a deeply layered
+class hierarchy, which is not a moral failing (it reflects the
+feature set) but does mean the maintenance burden falls on a small
+subset of the framework team.  capgen v1 is procedural Python with
+small flat data classes, which puts the "who can fix this" pool
+closer to "anyone with framework context".  Counting executable
+code only, v1's 9.7k covers what prebuild and v0 need 15.0k to do
+between them.
+
+capgen v1 comes with 1578 unit + doctest tests (21.6k lines of test
+Python, against 3.8k for both predecessors combined), plus an
+end-to-end test suite of 12 fixtures that covers all of prebuild's
+and capgen v0's existing end-to-end tests and adds new ones for
+multi-instance + constituents (`instances_advection`), the
+auto-clone-constituents shim (`advection_auto_clone`),
+constituent-count dimensions (`constituents_dim`), and suite-owned
+allocatable interstitials (`suite_allocate`).
 
 ---
 
@@ -291,18 +302,20 @@ Features that exist only in capgen (some exist in prebuild):
   and the retirement of the CAM-SIMA compatibility layer) to
   programme-level blockers rather than CAM-SIMA-local work.  Schedule
   risk concentrates there; see §8.
-- **Unit tests**: 1577 passing.  No known failures.
-- **End-to-end tests**: 13 passing — `advection`,
+- **Unit tests**: 1578 passing.  No known failures.
+- **End-to-end tests**: 12 passing — `advection`,
   `advection_auto_clone` (CAM-SIMA advection_test port exercising the
-  auto-clone shim), `capgen`, `capgen_ng`, `chunked_data`,
+  auto-clone shim), `capgen`, `chunked_data`,
   `constituents_dim`, `ddthost`, `instances`, `instances_advection`
   (multi-instance + constituents), `nested_suite`, `opt_arg`,
   `suite_allocate`, `var_compat`.  `constituents_dim` and
   `suite_allocate` were added while hardening the CAM-SIMA HPC build.
-- **Code size**: ~17.8k lines of Python under `capgen/` including
-  inline comments and the three transient shim modules; ~18k lines of
-  unit/doctest under `unit-tests/`.  Still procedural; still flat
-  data classes; still well below capgen.
+- **Code size**: ~19.2k lines of Python under `capgen/` — 9.7k of it
+  executable code — including docstrings, inline comments and the
+  three transient shim modules; ~21.6k lines of unit/doctest under
+  `unit-tests/`.  Still procedural; still flat data classes.  On
+  executable code it sits below capgen v0 (9.7k vs ~11.0k) and below
+  prebuild + v0 combined (15.0k); see §3.6.
 - **CCPP-SCM**: **transitioned.**  It drove most of the generator's
   hardening — each build / runtime issue it surfaced landed as a fix in
   capgen rather than a host-side workaround, which is why it was the
@@ -354,6 +367,20 @@ Features that exist only in capgen (some exist in prebuild):
   retirement of the compatibility layer.  The constituent overhaul
   decision (see §7) remains a separate track.
 
+- **GPU support: a contributed branch under review (2026-10-16).**  An
+  NCAR colleague has a branch on top of capgen v1 that generates
+  OpenACC/OpenMP device data movement and adds support for schemes
+  written in C++.  It is the first substantial outside feature
+  contribution to the new generator, and the direction is one the
+  programme wants.  It is **not merged.**  The review confirmed the
+  branch does what it claims — and that it is careful, refusing
+  anything it cannot place on the device rather than guessing — then
+  set the conditions for taking it: the GPU path has to cover
+  multi-instance hosts (NEPTUNE) and blocked host data (UFS), on both
+  of which it is currently switched off, and two changes that alter
+  behaviour for every host, GPU or not, have to become opt-in or come
+  out.  Framework-side detail: FU-054.
+
 ---
 
 ## 7. What is intentionally NOT decided yet
@@ -392,7 +419,7 @@ proposals are implementable on top of it.
 | capgen diverges from capgen feature set | LOW | Cross-checked by `doc/redesign_analysis.md`; the feature comparison table in §4 / §5 is exhaustive |
 | Host metadata break for UFS / NEPTUNE / CAM-SIMA | LOW | Three transient shims (`--legacy-mode`, `--gfs-dim-aliases`, `--legacy-auto-clone-constituents`) together cover the known-incompatible standard-name pair, the GFS radiation/composition vertical-dim spellings, and original capgen's auto-clone registration path.  Remaining required changes (e.g., `_finalize` → `_final`) are mechanical and listed in `doc/migration.md` §3 |
 | Constituent overhaul stalls | LOW | Proposal A unblocks the immediate bug; capgen works with the current framework today; `--legacy-auto-clone-constituents` lets CAM-SIMA's atmospheric_physics build without an overhaul decision; the overhaul is a separate decision track |
-| Bus-factor on capgen itself | MEDIUM | Procedural code style + flat data classes + 1577-test safety net; significantly lower than capgen's bus factor |
+| Bus-factor on capgen itself | MEDIUM | Procedural code style + flat data classes + 1578-test safety net; significantly lower than capgen's bus factor |
 | **CAM-SIMA transition slips, delaying the whole programme** | **MEDIUM — the main schedule risk as of 2026-09-01** | The `develop` merge and the deletion of both older generators are gated on this one transition (§6), so its two remaining items — the constituent-ordering re-baseline and retirement of the compatibility layer — are programme-level blockers.  Both are understood and scoped; neither is a defect.  Mitigation is to track them as such rather than as CAM-SIMA-local work, and to decide the auto-clone shim's fate as part of the transition |
 | Two host call-shape conventions (prebuild-style vs capgen-style) coexist forever | LOW | capgen emits one shape; downstream host conversions are tracked in `doc/migration.md` |
 | First production defect from a transitioned host | CLOSED (2026-09-16) | UFS reported issue #786 — Intel rejected generated symbol names as too long when the UFS build turned on warnings-as-errors.  Diagnosed, fixed and tested the same day.  Notable for two reasons: the generated code was standard-conforming (an Intel linker limit, not a Fortran violation), **and** it was a regression against `ccpp-prebuild`, which had used shorter names — so the transition, not the compiler, was the trigger.  The class is now guarded by a test that generates at the supported limit rather than at any one model's suite name |
