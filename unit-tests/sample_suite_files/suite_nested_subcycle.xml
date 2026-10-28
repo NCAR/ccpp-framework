@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="nested_subcycle_suite" version="2.0">
+  <group name="physics">
+    <subcycle loop="3">
+      <subcycle loop="2">
+        <scheme>temp_calc_adjust</scheme>
+      </subcycle>
+    </subcycle>
+  </group>
+</suite>

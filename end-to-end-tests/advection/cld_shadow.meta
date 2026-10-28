@@ -1,0 +1,46 @@
+[ccpp-table-properties]
+  name = cld_shadow
+  type = scheme
+[ccpp-arg-table]
+  name = cld_shadow_run
+  type = scheme
+[ ncol ]
+  standard_name = horizontal_dimension
+  type = integer
+  units = count
+  dimensions = ()
+  intent = in
+[ timestep ]
+  standard_name = time_step_for_physics
+  long_name = time step
+  units = s
+  dimensions = ()
+  type = real | kind = kind_phys
+  intent = in
+[ cld_ice_array ]
+  standard_name = cld_shadow_scratch_array
+  units = s
+  type = real | kind = kind_phys
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  intent = out
+[ ncols ]
+  standard_name = cld_shadow_column_scratch
+  units = count
+  type = real | kind = kind_phys
+  dimensions = (horizontal_dimension)
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

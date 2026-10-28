@@ -1,0 +1,33 @@
+# Scheme variable that uses horizontal_loop_begin as a dimension — forbidden.
+
+[ccpp-table-properties]
+  name = bad_dim_scheme
+  type = scheme
+
+[ccpp-arg-table]
+  name = bad_dim_scheme_run
+  type = scheme
+
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = error message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = error flag
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+[ data ]
+  standard_name = some_data
+  long_name = data array with forbidden dimension
+  units = 1
+  dimensions = (horizontal_loop_begin)
+  type = real
+  kind = kind_phys
+  intent = in

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="test_subcycle" version="1.0">
+  <group name="physics">
+    <subcycle loop="3">
+      <scheme>temp_calc_adjust</scheme>
+    </subcycle>
+  </group>
+</suite>

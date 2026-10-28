@@ -1,0 +1,14 @@
+# Table with 'type = banana' — must be rejected with a clear error.
+
+[ccpp-table-properties]
+  name = bad_table
+  type = banana
+
+[ccpp-arg-table]
+  name = bad_table
+  type = banana
+[ im ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer

@@ -1,0 +1,32 @@
+# Scheme that produces a suite-owned interstitial variable.
+
+[ccpp-table-properties]
+  name = interstitial_producer
+  type = scheme
+
+[ccpp-arg-table]
+  name = interstitial_producer_run
+  type = scheme
+[ diag_out ]
+  standard_name = diagnostic_interstitial_field
+  long_name = suite-owned diagnostic field
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = error message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = error flag
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

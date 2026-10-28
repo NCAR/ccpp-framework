@@ -1,0 +1,42 @@
+# Scheme used for the suite-level <init>/<final> integration test.
+# Declares minimal init and final phases with only the standard error
+# args, so the resolved suite-init/-final calls don't pull in any
+# host-side state and the generated cap stays compact.
+
+[ccpp-table-properties]
+  name = suite_init_final_scheme
+  type = scheme
+
+[ccpp-arg-table]
+  name = suite_init_final_scheme_init
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
+
+[ccpp-arg-table]
+  name = suite_init_final_scheme_final
+  type = scheme
+[errmsg]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[errflg]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

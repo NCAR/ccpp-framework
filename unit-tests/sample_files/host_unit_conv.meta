@@ -1,0 +1,39 @@
+# Host metadata for the unit_conv integration test.
+# Provides horizontal loop variables, data_array in m (mandatory),
+# and data_array_opt in m (optional, controlled by flag_for_opt_array).
+
+[ccpp-table-properties]
+  name = unit_conv_data
+  type = host
+
+[ccpp-arg-table]
+  name = unit_conv_data
+  type = host
+
+[ ncols ]
+  standard_name = horizontal_dimension
+  long_name = full horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ data_array ]
+  standard_name = data_array
+  long_name = mandatory data array in m
+  units = m
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+[ data_array_opt ]
+  standard_name = data_array_opt
+  long_name = optional data array in m
+  units = m
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  active = flag_for_opt_array
+[ flag_for_opt_array ]
+  standard_name = flag_for_opt_array
+  long_name = flag controlling whether optional array is present
+  units = flag
+  dimensions = ()
+  type = logical

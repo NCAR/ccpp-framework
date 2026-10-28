@@ -1,0 +1,21 @@
+[ccpp-table-properties]
+  name = gfs_statein_type
+  type = ddt
+
+[ccpp-arg-table]
+  name = gfs_statein_type
+  type = ddt
+[ phii ]
+  standard_name = geopotential_at_interface
+  long_name = geopotential at model layer interfaces
+  units = m2 s-2
+  dimensions = (horizontal_dimension, vertical_interface_dimension)
+  type = real
+  kind = kind_phys
+[ phil ]
+  standard_name = geopotential
+  long_name = geopotential at model layer centers
+  units = m2 s-2
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
