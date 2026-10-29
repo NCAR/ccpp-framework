@@ -429,20 +429,45 @@ don't rebuild downstream objects unless something actually moved.
   - The three incoming hosts **still rely on the transient migration
     shims** (§6.3b).  Adoption did *not* retire them — it pinned
     them.  See the note in that section and FU-010/FU-011.
-- **Unit tests**: 1577 passing on `feature/capgen-v1` (verified
-  2026-09-16, `python unit-tests/run_tests.py`).
-- **End-to-end tests passing** (13): `advection`,
-  `advection_auto_clone`, `capgen`, `capgen_ng`, `chunked_data`,
+- **Unit tests**: 1578 passing on `feature/capgen-v1` (verified
+  2026-10-14, `python unit-tests/run_tests.py`).
+- **End-to-end tests passing** (12): `advection`,
+  `advection_auto_clone`, `capgen`, `chunked_data`,
   `constituents_dim`, `ddthost`, `instances`, `instances_advection`,
   `nested_suite`, `opt_arg`, `suite_allocate`, `var_compat`.
   `constituents_dim` (a variable dimensioned by
   `number_of_ccpp_constituents`) and `suite_allocate` (suite-owned
   allocatable interstitials sized by a scheme-written dimension) were
   added while hardening the CAM-SIMA HPC build.
-- **Code size**: ~17.8k LOC of Python under `capgen/` (includes
-  docstrings, inline comments, and the three transient shim modules)
-  + ~18k LOC of unit/doctest under `unit-tests/`.  Still procedural,
-  still flat data classes.
+- **Code size**: **19.2k lines of Python under `capgen/`** — 9.7k
+  executable code, 5.0k docstring prose, 1.0k doctest, 2.0k inline
+  comment (includes the three transient shim modules) — plus 21.6k
+  lines under `unit-tests/` (15.7k code, 1508 `def test*`).  Still
+  procedural, still flat data classes.
+- **Code size against the two generators it replaces.**  Counted
+  2026-10-14 with an AST classifier (executable code / docstring
+  prose / doctest / inline comment) over `scripts/` on `develop`
+  (`9bee9e1`): 41 files, 25.3k lines, 15.0k code.  That one tree
+  holds `ccpp-prebuild`, capgen v0, **and a block they share**, so
+  the per-generator figures come from the import closure of each
+  entry point:
+
+  | Attribution (import closure) | files | total lines | code |
+  |------------------------------|-------|-------------|-------|
+  | `ccpp_prebuild.py` only      | 6     | 5,032       | 3,600 |
+  | `ccpp_capgen.py` (v0) only   | 14    | 9,655       | 6,022 |
+  | shared by both               | 17    | 9,917       | 4,969 |
+  | neither (standalone tools)   | 4     | 698         | 441   |
+
+  As shipping tools that makes prebuild ~14.9k lines and capgen v0
+  ~19.6k, overlapping by 9.9k: the new-format metadata parser is
+  common ground — prebuild's `metadata_parser.py` imports
+  `metadata_table`, `metavar`, `parse_tools`, `parse_fortran` and
+  `framework_env`.  **capgen v1's 9.7k lines of executable code
+  replace the predecessors' 15.0k — about 35% less — while covering
+  what both generators did.**  Test volume went the other way: 1508
+  test functions against 119, and 21.6k lines of test Python against
+  3.8k in `test/` + `test_prebuild/`.
 - **Three transient migration shims now live** (see §6.3b):
   `--legacy-mode` (2026-05-13), `--gfs-dim-aliases` (2026-05-21),
   and `--legacy-auto-clone-constituents` (2026-05-21).  Each is
@@ -536,6 +561,21 @@ don't rebuild downstream objects unless something actually moved.
   (`doc/constituents_overhaul.md` §4.15), and `module_name` overrides
   are required wherever a Fortran module name differs from its
   `.meta` table name (`doc/migration.md` §3.3).
+
+- **GPU data movement and C++ schemes: a contributed branch under
+  review (2026-10-16).**  Brian Dobbins (NCAR) has a branch on top of
+  capgen v1 that adds `--directive acc`/`omp` device data movement and
+  C++ scheme support, with a device-residency planner that refuses,
+  naming the variable, rather than guessing at anything it cannot place
+  on the device.  It is not on `feature/capgen-v1` yet.  The review
+  (2026-10-16) checked the branch itself rather than its write-up and
+  recorded what it needs first: the two host-coverage gaps that
+  currently switch the GPU path off for NEPTUNE and for UFS, and two
+  default-on changes that would alter v1 behaviour for every host,
+  directives or not.  Conditions, the help offered, and the open
+  question about C++ test depth are **FU-054**; the suite-owned-storage
+  ownership rule that one of those changes turns on is `followups.md`
+  §5.
 
 ---
 

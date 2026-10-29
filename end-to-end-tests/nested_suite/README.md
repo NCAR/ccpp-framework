@@ -6,6 +6,7 @@ Tests the capability to process nested suites:
 - Parse new XML schema 2.0
 - Expand nested suites at the group level and inside groups
 - Test single init and final schemes in suite
+- Nest a variable-count subcycle inside another variable-count subcycle
 
 ## Building/Running
 
