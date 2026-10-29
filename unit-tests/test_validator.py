@@ -2136,12 +2136,101 @@ class TestLineLengthLimit(unittest.TestCase):
           type = integer
     """)
 
+    # A host file whose only metadata table is type = control, as in
+    # end-to-end-tests/opt_arg (NCAR/ccpp-framework#794 review).
+    CTRL_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = c788
+          type = control
+        [ccpp-arg-table]
+          name = c788
+          type = control
+        [ errflg ]
+          standard_name = ccpp_error_code
+          units = 1
+          dimensions = ()
+          type = integer
+    """)
+
+    CTRL_F90 = (
+        "module c788\n"
+        "  implicit none\n"
+        "  integer :: errflg" + " " * 130 + "! a long trailing comment\n"
+        "end module c788\n"
+    )
+
+    # type = ddt is the only type accepted on either side: a scheme's
+    # co-located DDT is CCPP's code, a host DDT is the host's.
+    DDT_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = d788_t
+          type = ddt
+        [ccpp-arg-table]
+          name = d788_t
+          type = ddt
+        [ n ]
+          standard_name = vertical_layer_dimension
+          units = count
+          dimensions = ()
+          type = integer
+    """)
+
+    DDT_F90 = (
+        "module d788\n"
+        "  implicit none\n"
+        "  type :: d788_t\n"
+        "    integer :: n" + " " * 120 + "! a long trailing comment\n"
+        "  end type d788_t\n"
+        "end module d788\n"
+    )
+    DDT_LINE_NO = 4
+
+    # A scheme that stays inside the limit, so a combined scheme + host run
+    # reaches the file under test.
+    CLEAN_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = clean788
+          type = scheme
+        [ccpp-arg-table]
+          name = clean788_run
+          type = scheme
+        [ errmsg ]
+          standard_name = ccpp_error_message
+          units = none
+          dimensions = ()
+          type = character
+          kind = len=512
+          intent = out
+        [ errflg ]
+          standard_name = ccpp_error_code
+          units = 1
+          dimensions = ()
+          type = integer
+          intent = out
+    """)
+
+    CLEAN_F90 = (
+        "module clean788\n"
+        "contains\n"
+        "  subroutine clean788_run(errmsg, errflg)\n"
+        "    character(len=512), intent(out) :: errmsg\n"
+        "    integer, intent(out) :: errflg\n"
+        "  end subroutine clean788_run\n"
+        "end module clean788\n"
+    )
+
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.scheme_meta = self._write('s788.meta', self.SCHEME_META)
         self.scheme_f90  = self._write('s788.F90', self.SCHEME_F90)
         self.host_meta   = self._write('h788.meta', self.HOST_META)
         self.host_f90    = self._write('h788.F90', self.HOST_F90)
+        self.ctrl_meta   = self._write('c788.meta', self.CTRL_META)
+        self.ctrl_f90    = self._write('c788.F90', self.CTRL_F90)
+        self.ddt_meta    = self._write('d788.meta', self.DDT_META)
+        self.ddt_f90     = self._write('d788.F90', self.DDT_F90)
+        self.clean_meta  = self._write('clean788.meta', self.CLEAN_META)
+        self.clean_f90   = self._write('clean788.F90', self.CLEAN_F90)
 
     def tearDown(self):
         import shutil
@@ -2180,6 +2269,23 @@ class TestLineLengthLimit(unittest.TestCase):
             val_mod._LINE_LENGTH_SEVERITY.update(saved)
         self.assertTrue([e for e in errors if 'h788.F90:3' in e])
 
+    def test_control_table_file_is_host_code_in_a_combined_run(self):
+        with self.assertLogs(val_mod._LOGGER, level='WARNING') as caught:
+            errors = validate([self.clean_meta],
+                              [self.clean_f90, self.ctrl_f90],
+                              host_files=[self.ctrl_meta])
+        self.assertEqual(errors, [])
+        self.assertTrue([m for m in caught.output if 'c788.F90:3' in m])
+
+    def test_a_ddt_follows_the_flag_it_arrived_on(self):
+        where = 'd788.F90:{}'.format(self.DDT_LINE_NO)
+        errors = validate([self.ddt_meta], [self.ddt_f90])
+        self.assertTrue([e for e in errors if where in e])
+        with self.assertLogs(val_mod._LOGGER, level='WARNING') as caught:
+            errors = validate([], [self.ddt_f90], host_files=[self.ddt_meta])
+        self.assertEqual(errors, [])
+        self.assertTrue([m for m in caught.output if where in m])
+
     def test_trailing_blanks_are_not_a_violation(self):
         padded = self._write('padded.F90', (
             "module padded\n"
@@ -2188,12 +2294,11 @@ class TestLineLengthLimit(unittest.TestCase):
         ))
         self.assertEqual(val_mod._line_length_violations(padded), [])
 
-    def test_violation_reports_line_columns_and_excess(self):
+    def test_violation_reports_line_and_columns(self):
         violations = val_mod._line_length_violations(self.scheme_f90)
         self.assertEqual(len(violations), 1)
-        line_no, columns, excess = violations[0]
-        self.assertEqual((line_no, columns, excess.strip()),
-                         (self.LONG_LINE_NO, 146, '&'))
+        line_no, columns = violations[0]
+        self.assertEqual((line_no, columns), (self.LONG_LINE_NO, 146))
 
 
 def load_tests(loader, tests, ignore):

@@ -1297,7 +1297,13 @@ of 132.  Wrap the line.
 
 Scheme source errors, host source warns: #788 settled the rule for code
 CCPP owns, not for host model source.  The severity is one table,
-`_LINE_LENGTH_SEVERITY` in `ccpp_validator.py`.
+`_LINE_LENGTH_SEVERITY` in `ccpp_validator.py`.  Which side a file is on
+comes from the metadata tables: `--scheme-files` claims its Fortran as
+scheme source and `--host-files` as host source, and `type = ddt` — the
+one type accepted on either flag — follows the flag it arrived on.  A
+`type = control` or `type = suite` table claims its file too, even though
+no Fortran is validated against it; an entry no table claims falls back to
+the side the invocation implies.
 
 The limit is the standard's number, not a CCPP preference, so it is not
 configurable; a group with a stricter convention (NEPTUNE uses 120)

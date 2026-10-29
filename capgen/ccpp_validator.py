@@ -89,7 +89,7 @@ _LINE_LENGTH_SEVERITY = {
 }
 
 
-def _line_length_violations(fpath: str) -> List[Tuple[int, int, str]]:
+def _line_length_violations(fpath: str) -> List[Tuple[int, int]]:
     """Return the lines of one Fortran file past :data:`FREE_FORM_MAX_COLUMNS`.
 
     Trailing blanks are measured out, and a tab counts as one character,
@@ -103,7 +103,7 @@ def _line_length_violations(fpath: str) -> List[Tuple[int, int, str]]:
     Returns
     -------
     list of tuple
-        ``(line_number, columns, text_past_the_limit)``, one per violation.
+        ``(line_number, columns)``, one per violation.
     """
     violations = []
     with open(fpath) as fh:
@@ -111,7 +111,7 @@ def _line_length_violations(fpath: str) -> List[Tuple[int, int, str]]:
             text = line.rstrip()
             if len(text) > FREE_FORM_MAX_COLUMNS:
                 violations.append(
-                    (line_no, len(text), text[FREE_FORM_MAX_COLUMNS:]),
+                    (line_no, len(text)),
                 )
     return violations
 
@@ -141,7 +141,7 @@ def _check_line_lengths(
     for fpath in source_files:
         side = side_map.get(os.path.realpath(fpath), default_side)
         severity = _LINE_LENGTH_SEVERITY[side]
-        for line_no, columns, excess in _line_length_violations(fpath):
+        for line_no, columns in _line_length_violations(fpath):
             where = "{}:{}: line is {} columns, {} past the limit of {}".format(
                 fpath, line_no, columns,
                 columns - FREE_FORM_MAX_COLUMNS, FREE_FORM_MAX_COLUMNS,
@@ -171,8 +171,6 @@ def _source_side_map(scheme_tables, host_tables) -> Dict[str, str]:
     sides: Dict[str, str] = {}
     for tables, side in ((host_tables, 'host'), (scheme_tables, 'scheme')):
         for tbl in tables:
-            if tbl.table_type == 'control':
-                continue
             fort = _fortran_file_for_table(tbl)
             if fort:
                 sides[os.path.realpath(fort)] = side
