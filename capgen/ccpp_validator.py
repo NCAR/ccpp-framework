@@ -20,6 +20,12 @@ corresponding Fortran subroutine:
    rejected there outright (a concrete ``len=N`` required); see
    :func:`_check_definition_character_lengths`.  Control tables are exempt.
 
+Before any of that, every Fortran file is checked against the 132-column
+free-form limit: by default, a compiler ignores whatever follows column 132
+while this parser does not, so text past it makes the two read different code.
+Over-long scheme source is an error; over-long host source is a warning (see
+_LINE_LENGTH_SEVERITY below).
+
 Asymmetric treatment of ``optional``:
 
 * Fortran-declared optional argument **absent** from metadata → silently
@@ -70,6 +76,103 @@ from metadata.variable_resolver import SchemeStore
 from metadata.metadata_table import parse_metadata_file
 
 _LOGGER = init_log('ccpp_validator')
+
+# Line-length limit (NCAR/ccpp-framework#788)
+FREE_FORM_MAX_COLUMNS = 132
+
+# Severity of a line-length limit violation. Scheme source is CCPP's own
+# code, so an over-long line is an error. Host source belongs to the host
+# model, so it warns for now.
+_LINE_LENGTH_SEVERITY = {
+    'scheme': 'error',
+    'host': 'warning',
+}
+
+
+def _line_length_violations(fpath: str) -> List[Tuple[int, int]]:
+    """Return the lines of one Fortran file past :data:`FREE_FORM_MAX_COLUMNS`.
+
+    Trailing blanks are measured out, and a tab counts as one character,
+    as it does for the standard's column count.
+
+    Parameters
+    ----------
+    fpath : str
+        Path to a Fortran source file.
+
+    Returns
+    -------
+    list of tuple
+        ``(line_number, columns)``, one per violation.
+    """
+    violations = []
+    with open(fpath) as fh:
+        for line_no, line in enumerate(fh, start=1):
+            text = line.rstrip()
+            if len(text) > FREE_FORM_MAX_COLUMNS:
+                violations.append(
+                    (line_no, len(text)),
+                )
+    return violations
+
+
+def _check_line_lengths(
+    source_files: List[str],
+    side_map: Dict[str, str],
+    default_side: str,
+    log: logging.Logger,
+) -> List[str]:
+    """Enforce the line-length limit over *source_files* before parsing.
+
+    Each file is attributed to a side via *side_map* (keyed by real path),
+    falling back to *default_side*; :data:`_LINE_LENGTH_SEVERITY` then decides
+    whether a violation is an error or a warning.  Warnings are logged here;
+    errors are returned so the caller can report them and stop before parsing.
+
+    Returns
+    -------
+    list of str
+        Empty when nothing exceeded the limit on a side that errors.  The
+        first message states the rule; each later message names one line.
+    """
+    errors: List[str] = []
+    for fpath in source_files:
+        side = side_map.get(os.path.realpath(fpath), default_side)
+        severity = _LINE_LENGTH_SEVERITY[side]
+        for line_no, columns in _line_length_violations(fpath):
+            where = "{}:{}: line is {} columns, {} past the limit of {}".format(
+                fpath, line_no, columns,
+                columns - FREE_FORM_MAX_COLUMNS, FREE_FORM_MAX_COLUMNS,
+            )
+            if severity == 'error':
+                errors.append("{}.  Wrap the line.".format(where))
+            else:
+                log.warning(
+                    "%s.  CCPP requires %d columns or fewer",
+                    where, FREE_FORM_MAX_COLUMNS,
+                )
+    if errors:
+        errors.insert(0, (
+            "Fortran source must be {} columns or fewer.  Nothing was parsed."
+        ).format(FREE_FORM_MAX_COLUMNS))
+    return errors
+
+
+def _source_side_map(scheme_tables, host_tables) -> Dict[str, str]:
+    """Map Fortran source paths to the side of the interface that owns them.
+
+    Built from the metadata tables, so it works whether the Fortran files
+    came from ``--source-files`` or from ``source_path`` auto-discovery.  A
+    file backing both a scheme table and a host / DDT table is CCPP's own
+    code, so scheme wins the tie.
+    """
+    sides: Dict[str, str] = {}
+    for tables, side in ((host_tables, 'host'), (scheme_tables, 'scheme')):
+        for tbl in tables:
+            fort = _fortran_file_for_table(tbl)
+            if fort:
+                sides[os.path.realpath(fort)] = side
+    return sides
 
 # ---------------------------------------------------------------------------
 # Fortran source parsing helpers
@@ -1641,6 +1744,20 @@ def validate(
                     "(source_path='%s')",
                     tbl.table_type, tbl.table_name, tbl.source_path,
                 )
+    # Check line-length limit violations first
+    line_errors = _check_line_lengths(
+        resolved_sources,
+        _source_side_map(scheme_tables, host_tables),
+        'scheme' if scheme_files else 'host',
+        log,
+    )
+    if line_errors:
+        log.warning(
+            "%d line(s) over the %d-column limit; stopping before the "
+            "Fortran parse.", len(line_errors) - 1, FREE_FORM_MAX_COLUMNS,
+        )
+        return line_errors
+
     subroutine_tree = _load_source_tree(resolved_sources)
     log.info("Found %d subroutine definitions", len(subroutine_tree))
 
