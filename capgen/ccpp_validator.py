@@ -127,9 +127,7 @@ def _check_line_lengths(
     Each file is attributed to a side via *side_map* (keyed by real path),
     falling back to *default_side*; :data:`_LINE_LENGTH_SEVERITY` then decides
     whether a violation is an error or a warning.  Warnings are logged here;
-    errors are returned so the caller can report them and stop before parsing
-    anything, because parsing text the compiler never saw is what produced the
-    misleading errors of #788 in the first place.
+    errors are returned so the caller can report them and stop before parsing.
 
     Returns
     -------
