@@ -1119,6 +1119,10 @@ contains
       end if
     end do
 
+    ! The constituent tables hold pointers into the per-suite dynamic
+    ! constituent buffers, which ccpp_final frees - tear down first.
+    call ccpp_deallocate_dynamic_constituents()
+
     do sind = 1, num_suites
       if (errcode == 0) then
         call ccpp_final(suite_name=test_suites(sind)%suite_name, &
@@ -1133,7 +1137,6 @@ contains
       end if
     end do
 
-    call ccpp_deallocate_dynamic_constituents()
     deallocate(host_constituents)
 
     if (errcode == 0) then

@@ -234,6 +234,11 @@ program test_instances_advection
   !-----------------------------------------------------------------
   ! 10. Teardown.
   !-----------------------------------------------------------------
+  ! The constituent tables hold pointers into the per-suite dynamic
+  ! constituent buffers, which ccpp_final frees - tear down first.
+  do ins = 1, ninstances
+    call ccpp_deallocate_dynamic_constituents(instance=ins)
+  end do
   do ins = 1, ninstances
     call ccpp_final(suite_name=ccpp_suite, &
         instance=ins, ninstances=ninstances, &
@@ -243,9 +248,6 @@ program test_instances_advection
           ins, ': ', trim(errmsg)
       stop 1
     end if
-  end do
-  do ins = 1, ninstances
-    call ccpp_deallocate_dynamic_constituents(instance=ins)
   end do
   deallocate(host_consts)
 
