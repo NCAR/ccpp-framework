@@ -40,7 +40,8 @@ jobs:
         which pytest
     - name: Run end-to-end tests
       run: |
-        cmake --fresh -S./end-to-end-tests -B./build
+        cmake --fresh -S./end-to-end-tests -B./build \
+          -DCMAKE_Fortran_COMPILER=${{matrix.fortran-compiler}}
         cd build
         make
         ctest --rerun-failed --output-on-failure .
@@ -74,6 +75,7 @@ jobs:
         ASAN_OPTIONS: "detect_leaks=0"
       run: |
         cmake --fresh -S./end-to-end-tests -B./build \
+          -DCMAKE_Fortran_COMPILER=gfortran-12 \
           -DCMAKE_Fortran_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
         cd build
