@@ -58,24 +58,23 @@ program test_instances_advection
 
   !-----------------------------------------------------------------
   ! 2. Build the host-registered constituent list (specific_humidity)
-  !    and call ccpp_register_constituents per instance.  Each call
-  !    consumes the host_consts array (new_field sets const_index on
-  !    the input objects), so we re-instantiate per instance.
+  !    once and call ccpp_register_constituents per instance.
+  !    host_consts must outlive the constituent tables, which keep
+  !    pointers into it -- hence the deallocate after teardown.
   !-----------------------------------------------------------------
+  allocate(host_consts(1))
+  call host_consts(1)%instantiate( &
+      std_name='water_vapor_specific_humidity', &
+      long_name='Water vapor specific humidity', &
+      diag_name='QV', units='kg kg-1', &
+      vertical_dim='vertical_layer_dimension', advected=.true., &
+      default_value=0.0_kind_phys, mixing_ratio_type='wet', &
+      errcode=errcode, errmsg=errmsg)
+  if (errcode /= 0) then
+    write(error_unit, '(2a)') 'instantiate failed: ', trim(errmsg)
+    stop 1
+  end if
   do ins = 1, ninstances
-    if (allocated(host_consts)) deallocate(host_consts)
-    allocate(host_consts(1))
-    call host_consts(1)%instantiate( &
-        std_name='water_vapor_specific_humidity', &
-        long_name='Water vapor specific humidity', &
-        diag_name='QV', units='kg kg-1', &
-        vertical_dim='vertical_layer_dimension', advected=.true., &
-        default_value=0.0_kind_phys, mixing_ratio_type='wet', &
-        errcode=errcode, errmsg=errmsg)
-    if (errcode /= 0) then
-      write(error_unit, '(2a)') 'instantiate failed: ', trim(errmsg)
-      stop 1
-    end if
     call ccpp_register_constituents(host_constituents=host_consts, &
         instance=ins, ninstances=ninstances, &
         errmsg=errmsg, errcode=errcode)

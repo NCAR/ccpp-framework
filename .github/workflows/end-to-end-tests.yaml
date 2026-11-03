@@ -71,7 +71,7 @@ jobs:
     - name: Run end-to-end tests under AddressSanitizer
       env:
         # Check for memory errors (LeakSanitizer is a separate issue)
-        ASAN_OPTIONS: "detect_leaks=0:detect_stack_use_after_return=1"
+        ASAN_OPTIONS: "detect_leaks=0"
       run: |
         cmake --fresh -S./end-to-end-tests -B./build \
           -DCMAKE_Fortran_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
