@@ -2061,6 +2061,246 @@ class TestValidateRequiresAtLeastOneInputs(unittest.TestCase):
             validate([], [])
 
 
+class TestLineLengthLimit(unittest.TestCase):
+    """The 132-column limit of NCAR/ccpp-framework#788."""
+
+    # The shape of #788: a stray '&' past column 132 ends an
+    # "intent(inout), optional" declaration, so the parser joins the next
+    # declaration onto it and reports a mismatch on an argument that is fine.
+    SCHEME_F90 = (
+        "module s788\n"
+        "contains\n"
+        "  subroutine s788_run(t3d, qgrs, errmsg, errflg)\n"
+        "    real, intent(inout), optional :: t3d(:,:)" + " " * 100 + "&\n"
+        "    real, intent(in) :: qgrs(:,:)\n"
+        "    character(len=512), intent(out) :: errmsg\n"
+        "    integer, intent(out) :: errflg\n"
+        "  end subroutine s788_run\n"
+        "end module s788\n"
+    )
+    LONG_LINE_NO = 4
+
+    SCHEME_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = s788
+          type = scheme
+        [ccpp-arg-table]
+          name = s788_run
+          type = scheme
+        [ t3d ]
+          standard_name = air_temperature
+          units = K
+          dimensions = (horizontal_dimension,vertical_layer_dimension)
+          type = real
+          intent = inout
+          optional = True
+        [ qgrs ]
+          standard_name = specific_humidity
+          units = kg kg-1
+          dimensions = (horizontal_dimension,vertical_layer_dimension)
+          type = real
+          intent = in
+        [ errmsg ]
+          standard_name = ccpp_error_message
+          units = none
+          dimensions = ()
+          type = character
+          kind = len=512
+          intent = out
+        [ errflg ]
+          standard_name = ccpp_error_code
+          units = 1
+          dimensions = ()
+          type = integer
+          intent = out
+    """)
+
+    HOST_F90 = (
+        "module h788\n"
+        "  implicit none\n"
+        "  integer :: nlev" + " " * 130 + "! a long trailing comment\n"
+        "end module h788\n"
+    )
+
+    HOST_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = h788
+          type = host
+        [ccpp-arg-table]
+          name = h788
+          type = host
+        [ nlev ]
+          standard_name = vertical_layer_dimension
+          units = count
+          dimensions = ()
+          type = integer
+    """)
+
+    # A host file whose only metadata table is type = control, as in
+    # end-to-end-tests/opt_arg (NCAR/ccpp-framework#794 review).
+    CTRL_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = c788
+          type = control
+        [ccpp-arg-table]
+          name = c788
+          type = control
+        [ errflg ]
+          standard_name = ccpp_error_code
+          units = 1
+          dimensions = ()
+          type = integer
+    """)
+
+    CTRL_F90 = (
+        "module c788\n"
+        "  implicit none\n"
+        "  integer :: errflg" + " " * 130 + "! a long trailing comment\n"
+        "end module c788\n"
+    )
+
+    # type = ddt is the only type accepted on either side: a scheme's
+    # co-located DDT is CCPP's code, a host DDT is the host's.
+    DDT_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = d788_t
+          type = ddt
+        [ccpp-arg-table]
+          name = d788_t
+          type = ddt
+        [ n ]
+          standard_name = vertical_layer_dimension
+          units = count
+          dimensions = ()
+          type = integer
+    """)
+
+    DDT_F90 = (
+        "module d788\n"
+        "  implicit none\n"
+        "  type :: d788_t\n"
+        "    integer :: n" + " " * 120 + "! a long trailing comment\n"
+        "  end type d788_t\n"
+        "end module d788\n"
+    )
+    DDT_LINE_NO = 4
+
+    # A scheme that stays inside the limit, so a combined scheme + host run
+    # reaches the file under test.
+    CLEAN_META = textwrap.dedent("""\
+        [ccpp-table-properties]
+          name = clean788
+          type = scheme
+        [ccpp-arg-table]
+          name = clean788_run
+          type = scheme
+        [ errmsg ]
+          standard_name = ccpp_error_message
+          units = none
+          dimensions = ()
+          type = character
+          kind = len=512
+          intent = out
+        [ errflg ]
+          standard_name = ccpp_error_code
+          units = 1
+          dimensions = ()
+          type = integer
+          intent = out
+    """)
+
+    CLEAN_F90 = (
+        "module clean788\n"
+        "contains\n"
+        "  subroutine clean788_run(errmsg, errflg)\n"
+        "    character(len=512), intent(out) :: errmsg\n"
+        "    integer, intent(out) :: errflg\n"
+        "  end subroutine clean788_run\n"
+        "end module clean788\n"
+    )
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.scheme_meta = self._write('s788.meta', self.SCHEME_META)
+        self.scheme_f90  = self._write('s788.F90', self.SCHEME_F90)
+        self.host_meta   = self._write('h788.meta', self.HOST_META)
+        self.host_f90    = self._write('h788.F90', self.HOST_F90)
+        self.ctrl_meta   = self._write('c788.meta', self.CTRL_META)
+        self.ctrl_f90    = self._write('c788.F90', self.CTRL_F90)
+        self.ddt_meta    = self._write('d788.meta', self.DDT_META)
+        self.ddt_f90     = self._write('d788.F90', self.DDT_F90)
+        self.clean_meta  = self._write('clean788.meta', self.CLEAN_META)
+        self.clean_f90   = self._write('clean788.F90', self.CLEAN_F90)
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _write(self, name, text):
+        path = os.path.join(self.tmpdir, name)
+        with open(path, 'w') as fh:
+            fh.write(text)
+        return path
+
+    def test_scheme_over_limit_errors_and_names_the_line(self):
+        joined = '\n'.join(validate([self.scheme_meta], [self.scheme_f90]))
+        self.assertIn('132', joined)
+        self.assertIn('s788.F90:{}'.format(self.LONG_LINE_NO), joined)
+
+    def test_nothing_is_parsed_when_the_limit_is_exceeded(self):
+        # Without the check, the joined declarations give an intent mismatch
+        # on 'qgrs', which is declared correctly.
+        errors = validate([self.scheme_meta], [self.scheme_f90])
+        self.assertFalse([e for e in errors if 'qgrs' in e])
+
+    def test_host_over_limit_warns_and_keeps_going(self):
+        with self.assertLogs(val_mod._LOGGER, level='WARNING') as caught:
+            errors = validate([], [self.host_f90], host_files=[self.host_meta])
+        self.assertEqual(errors, [])
+        self.assertTrue([m for m in caught.output if 'h788.F90:3' in m])
+
+    def test_host_severity_is_one_value_away_from_enforced(self):
+        saved = dict(val_mod._LINE_LENGTH_SEVERITY)
+        val_mod._LINE_LENGTH_SEVERITY['host'] = 'error'
+        try:
+            errors = validate([], [self.host_f90], host_files=[self.host_meta])
+        finally:
+            val_mod._LINE_LENGTH_SEVERITY.clear()
+            val_mod._LINE_LENGTH_SEVERITY.update(saved)
+        self.assertTrue([e for e in errors if 'h788.F90:3' in e])
+
+    def test_control_table_file_is_host_code_in_a_combined_run(self):
+        with self.assertLogs(val_mod._LOGGER, level='WARNING') as caught:
+            errors = validate([self.clean_meta],
+                              [self.clean_f90, self.ctrl_f90],
+                              host_files=[self.ctrl_meta])
+        self.assertEqual(errors, [])
+        self.assertTrue([m for m in caught.output if 'c788.F90:3' in m])
+
+    def test_a_ddt_follows_the_flag_it_arrived_on(self):
+        where = 'd788.F90:{}'.format(self.DDT_LINE_NO)
+        errors = validate([self.ddt_meta], [self.ddt_f90])
+        self.assertTrue([e for e in errors if where in e])
+        with self.assertLogs(val_mod._LOGGER, level='WARNING') as caught:
+            errors = validate([], [self.ddt_f90], host_files=[self.ddt_meta])
+        self.assertEqual(errors, [])
+        self.assertTrue([m for m in caught.output if where in m])
+
+    def test_trailing_blanks_are_not_a_violation(self):
+        padded = self._write('padded.F90', (
+            "module padded\n"
+            "  integer :: i" + " " * 200 + "\n"
+            "end module padded\n"
+        ))
+        self.assertEqual(val_mod._line_length_violations(padded), [])
+
+    def test_violation_reports_line_and_columns(self):
+        violations = val_mod._line_length_violations(self.scheme_f90)
+        self.assertEqual(len(violations), 1)
+        line_no, columns = violations[0]
+        self.assertEqual((line_no, columns), (self.LONG_LINE_NO, 146))
+
+
 def load_tests(loader, tests, ignore):
     tests.addTests(doctest.DocTestSuite(val_mod))
     return tests
