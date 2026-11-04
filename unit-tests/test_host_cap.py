@@ -2,6 +2,7 @@
 
 import doctest
 import os
+import re
 import tempfile
 import unittest
 from unittest.mock import MagicMock
@@ -1303,8 +1304,14 @@ class TestNoHostIntrospectionStubBodies(unittest.TestCase):
             )
             with open(out_path) as fh:
                 text = fh.read()
+        # Unlike the sibling tests, which read the generator's line list
+        # directly, this one reads the written file -- where the stub's
+        # message runs past column 132 and so arrives as a continued
+        # character literal (``generator.fortran_lines``).  Join the
+        # continuation back up before matching the message.
+        joined = re.sub(r'&\n\s*&', '', text)
         self.assertIn('ccpp_physics_suite_variables: ' + self._DISABLED_MSG,
-                      text)
+                      joined)
         self.assertIn(
             'use, intrinsic :: iso_fortran_env, only: error_unit', text,
         )

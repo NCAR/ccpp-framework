@@ -26,6 +26,7 @@ from .parse_checkers import (
     FORTRAN_SCALAR_REF_RE,
 )
 from .fortran_conditional import FORTRAN_CONDITIONAL_REGEX
+from .fortran_source_form import FREE_FORM_MAX_COLUMNS
 from .xml_tools import (
     read_xml_file,
     find_schema_version,
