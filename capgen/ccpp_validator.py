@@ -71,14 +71,16 @@ _PACKAGE_DIR = os.path.dirname(_SCRIPT_DIR)
 if _PACKAGE_DIR not in sys.path:
     sys.path.insert(0, _PACKAGE_DIR)
 
-from metadata.parse_tools import CCPPError, init_log, set_log_level
+from metadata.parse_tools import (
+    CCPPError,
+    FREE_FORM_MAX_COLUMNS,
+    init_log,
+    set_log_level,
+)
 from metadata.variable_resolver import SchemeStore
 from metadata.metadata_table import parse_metadata_file
 
 _LOGGER = init_log('ccpp_validator')
-
-# Line-length limit (NCAR/ccpp-framework#788)
-FREE_FORM_MAX_COLUMNS = 132
 
 # Severity of a line-length limit violation. Scheme source is CCPP's own
 # code, so an over-long line is an error. Host source belongs to the host

@@ -65,7 +65,9 @@ program test_opt_arg
   ! CCPP physics init step                         !
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call ccpp_physics_init(lb=1, ub=1, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_init(lb=1, ub=1, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_init:"
     write(error_unit, '(a)') trim(errmsg)
@@ -81,7 +83,9 @@ program test_opt_arg
   ! CCPP physics timestep init step                !
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call ccpp_physics_timestep_init(lb=1, ub=1, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_timestep_init(lb=1, ub=1, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_timestep_init:"
     write(error_unit, '(a)') trim(errmsg)
@@ -97,7 +101,9 @@ program test_opt_arg
   ! CCPP physics run step                          !
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call ccpp_physics_run(lb=1, ub=1, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_run(lb=1, ub=1, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_run:"
     write(error_unit, '(a)') trim(errmsg)
@@ -116,7 +122,9 @@ program test_opt_arg
   deallocate(opt_arg)
   flag_for_opt_arg = .false.
 
-  call ccpp_physics_timestep_final(lb=1, ub=1, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_timestep_final(lb=1, ub=1, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_timestep_final:"
     write(error_unit, '(a)') trim(errmsg)
@@ -131,7 +139,9 @@ program test_opt_arg
   ! CCPP physics finalize step                     !
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call ccpp_physics_final(lb=1, ub=1, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_final(lb=1, ub=1, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_final:"
     write(error_unit, '(a)') trim(errmsg)

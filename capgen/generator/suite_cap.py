@@ -25,8 +25,9 @@ import logging
 import os
 from typing import Dict, List, Optional, Set
 
-from metadata.parse_tools import CCPPError, open_if_changed
+from metadata.parse_tools import CCPPError
 from metadata.variable_resolver import HostVarEntry, SchemeStore
+from generator.fortran_lines import write_fortran
 from generator.suite_resolver import (
     ResolvedArg,
     ResolvedGroup,
@@ -1377,6 +1378,4 @@ def write_suite_cap(
         suite_name, suite_res, scheme_store, host_dict, trace=trace,
         logger=logger,
     )
-    with open_if_changed(out_path, logger=logger) as fh:
-        fh.write('\n'.join(lines) + '\n')
-    return out_path
+    return write_fortran(out_path, lines, logger=logger)

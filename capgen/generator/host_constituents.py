@@ -31,7 +31,7 @@ import logging
 import os
 from typing import List, Optional, Set, Tuple
 
-from metadata.parse_tools import open_if_changed
+from generator.fortran_lines import write_fortran
 from generator.suite_resolver import SuiteResolution, _index_symbol_name
 
 _INDENT = '  '
@@ -711,6 +711,5 @@ def write_host_constituents(
     if not os.path.isdir(outdir):
         os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, 'ccpp_host_constituents.F90')
-    with open_if_changed(path, logger=logger) as fh:
-        fh.write('\n'.join(lines) + '\n')
+    write_fortran(path, lines, logger=logger)
     return os.path.abspath(path)

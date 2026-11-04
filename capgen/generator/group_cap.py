@@ -25,8 +25,9 @@ import logging
 import os
 from typing import Dict, List, Optional, Set, Tuple
 
-from metadata.parse_tools import CCPPError, FORTRAN_CONDITIONAL_REGEX, open_if_changed
+from metadata.parse_tools import CCPPError, FORTRAN_CONDITIONAL_REGEX
 from metadata.variable_resolver import HostVarEntry
+from generator.fortran_lines import write_fortran
 from generator.suite_types import _ptr_type_name_for_arg
 from generator.suite_resolver import (
     ResolvedArg,
@@ -1439,6 +1440,4 @@ def write_group_cap(
         suite_name, group_name, resolved_group, host_dict, trace=trace,
         logger=logger,
     )
-    with open_if_changed(out_path, logger=logger) as fh:
-        fh.write('\n'.join(lines) + '\n')
-    return out_path
+    return write_fortran(out_path, lines, logger=logger)
