@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="test_simple" version="1.0">
+  <group name="physics">
+    <scheme>temp_calc_adjust</scheme>
+  </group>
+</suite>

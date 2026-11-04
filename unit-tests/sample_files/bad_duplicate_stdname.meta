@@ -1,0 +1,21 @@
+# Scheme with two variables sharing the same standard name — must be rejected.
+
+[ccpp-table-properties]
+  name = dup_scheme
+  type = scheme
+
+[ccpp-arg-table]
+  name = dup_scheme_run
+  type = scheme
+[ a_var ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[ b_var ]
+  standard_name = horizontal_dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in

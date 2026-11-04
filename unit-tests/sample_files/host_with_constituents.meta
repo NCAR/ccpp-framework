@@ -1,0 +1,30 @@
+# Host metadata that exposes the constituent object via the type=host table.
+# Required when at least one register-phase scheme produces dynamic
+# constituents (intent=out type=ccpp_constituent_properties_t).
+
+[ccpp-table-properties]
+  name = host_consts
+  type = host
+
+[ccpp-arg-table]
+  name = host_consts
+  type = host
+
+[ ncols ]
+  standard_name = horizontal_dimension
+  long_name = full horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ nlev ]
+  standard_name = vertical_layer_dimension
+  long_name = number of vertical layers
+  units = count
+  dimensions = ()
+  type = integer
+[ host_consts_obj ]
+  standard_name = ccpp_model_constituents_object
+  long_name = host-owned model constituent object
+  units = none
+  dimensions = ()
+  type = ccpp_model_constituents_t

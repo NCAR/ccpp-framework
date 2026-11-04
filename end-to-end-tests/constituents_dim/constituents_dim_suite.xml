@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="constituents_dim_suite" version="2.0">
+  <group name="const_group">
+    <scheme>register_consts</scheme>
+    <scheme>const_dim_producer</scheme>
+    <scheme>const_dim_consumer</scheme>
+  </group>
+</suite>

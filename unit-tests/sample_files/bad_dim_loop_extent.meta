@@ -1,0 +1,23 @@
+# Host variable that uses horizontal_loop_extent as a dimension — forbidden.
+
+[ccpp-table-properties]
+  name = bad_dim_host
+  type = host
+
+[ccpp-arg-table]
+  name = bad_dim_host
+  type = host
+
+[ ncols ]
+  standard_name = horizontal_dimension
+  long_name = horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ data ]
+  standard_name = some_data
+  long_name = data array dimensioned by loop extent
+  units = 1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys

@@ -1,0 +1,17 @@
+# DDT definition holding the subcycle-count field used by
+# suite_subcycle_stdname_ddt.xml.  The standard name is exposed via the
+# DDT instance declared in host_subcycle_stdname_ddt.meta.
+
+[ccpp-table-properties]
+  name = physics_state_subcycle
+  type = ddt
+
+[ccpp-arg-table]
+  name = physics_state_subcycle
+  type = ddt
+[ n_sub ]
+  standard_name = num_subcycles_for_test
+  long_name = number of subcycles for the test scheme
+  units = count
+  dimensions = ()
+  type = integer

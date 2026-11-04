@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="module_name_override_suite" version="1.0">
+  <group name="physics">
+    <scheme>scheme_alt_name</scheme>
+  </group>
+</suite>

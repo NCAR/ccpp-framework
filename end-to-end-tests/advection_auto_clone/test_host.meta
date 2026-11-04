@@ -1,0 +1,70 @@
+[ccpp-table-properties]
+  name = suite_info
+  type = ddt
+[ccpp-arg-table]
+  name = suite_info
+  type = ddt
+
+[ccpp-table-properties]
+  name = test_host
+  type = control
+[ccpp-arg-table]
+  name = test_host
+  type = control
+[ col_start ]
+  standard_name = horizontal_loop_begin
+  type = integer
+  units = count
+  dimensions = ()
+  protected = True
+[ col_end ]
+  standard_name = horizontal_loop_end
+  type = integer
+  units = count
+  dimensions = ()
+  protected = True
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = Error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+[ errcode ]
+  standard_name = ccpp_error_code
+  long_name = Error flag for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+[ suite_name ]
+  standard_name = suite_name
+  long_name = name of the CCPP suite to dispatch to
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256
+[ group_name ]
+  standard_name = group_name
+  long_name = name of the CCPP group to dispatch to
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256
+[ thread_num ]
+  standard_name = thread_number
+  long_name = current thread number
+  units = index
+  dimensions = ()
+  type = integer
+[ nthreads ]
+  standard_name = number_of_threads
+  long_name = total number of OpenMP threads
+  units = count
+  dimensions = ()
+  type = integer
+[ nphys_threads ]
+  standard_name = number_of_physics_threads
+  long_name = thread budget for physics-internal OpenMP
+  units = count
+  dimensions = ()
+  type = integer

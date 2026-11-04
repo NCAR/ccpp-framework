@@ -1,0 +1,31 @@
+# Scheme that uses the suite-owned scalar dimension produced by
+# register_dim_producer's _register phase to dimension a suite-owned
+# interstitial array.
+
+[ccpp-table-properties]
+  name = register_dim_consumer
+  type = scheme
+
+[ccpp-arg-table]
+  name = register_dim_consumer_run
+  type = scheme
+[ interstitial_var ]
+  standard_name = output_only_interstitial_variable
+  long_name = suite-owned interstitial dimensioned by register-set scalar
+  units = 1
+  dimensions = (dimension_for_interstitial_variable)
+  type = integer
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

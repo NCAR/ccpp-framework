@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<suite name="suite_allocate_suite" version="2.0">
+  <group name="workspace_group">
+    <scheme>make_workspace</scheme>
+    <scheme>use_workspace</scheme>
+  </group>
+</suite>

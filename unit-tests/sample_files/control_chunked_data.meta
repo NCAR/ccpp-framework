@@ -1,0 +1,79 @@
+# Control metadata for the chunked_data integration test.
+
+[ccpp-table-properties]
+  name = chunked_ctrl
+  type = control
+
+[ccpp-arg-table]
+  name = chunked_ctrl
+  type = control
+
+[ suite_name ]
+  standard_name = suite_name
+  long_name = name of the CCPP suite
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256
+[ grp_name ]
+  standard_name = group_name
+  long_name = name of the CCPP group
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256
+[ lb ]
+  standard_name = horizontal_loop_begin
+  long_name = start of horizontal range for this phase
+  units = index
+  dimensions = ()
+  type = integer
+[ ub ]
+  standard_name = horizontal_loop_end
+  long_name = end of horizontal range for this phase
+  units = index
+  dimensions = ()
+  type = integer
+[ thrd_no ]
+  standard_name = thread_number
+  long_name = current thread number
+  units = 1
+  dimensions = ()
+  type = integer
+[ nthreads ]
+  standard_name = number_of_threads
+  long_name = total number of threads
+  units = 1
+  dimensions = ()
+  type = integer
+[ nphys_threads ]
+  standard_name = number_of_physics_threads
+  long_name = thread budget for physics-internal OpenMP
+  units = 1
+  dimensions = ()
+  type = integer
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = error message for CCPP error handling
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = error flag for CCPP error handling
+  units = 1
+  dimensions = ()
+  type = integer
+[ inst_no ]
+  standard_name = instance_number
+  long_name = current model instance index
+  units = 1
+  dimensions = ()
+  type = integer
+[ ninstances ]
+  standard_name = number_of_instances
+  long_name = total number of model instances
+  units = count
+  dimensions = ()
+  type = integer

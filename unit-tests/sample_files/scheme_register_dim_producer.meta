@@ -1,0 +1,32 @@
+# Scheme that declares a suite-owned scalar dimension during _register.
+# Mirrors the temp_calc_adjust_register pattern: an integer scalar set in
+# the register phase that is later used as the upper bound of an
+# interstitial array in another scheme's run phase.
+
+[ccpp-table-properties]
+  name = register_dim_producer
+  type = scheme
+
+[ccpp-arg-table]
+  name = register_dim_producer_register
+  type = scheme
+[ dim_inter ]
+  standard_name = dimension_for_interstitial_variable
+  long_name = size of suite-owned interstitial dimension
+  units = count
+  dimensions = ()
+  type = integer
+  intent = out
+[ errmsg ]
+  standard_name = ccpp_error_message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

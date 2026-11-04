@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="reg_consts" version="1.0">
+  <group name="phys">
+    <scheme>register_constituents</scheme>
+  </group>
+</suite>

@@ -1,0 +1,25 @@
+# Host metadata for the chunked_data integration test.
+# Tests a scheme that accesses a DDT-based data array, called once per
+# chunk by a host that manages chunking externally (the current chunk is
+# passed as a horizontal range, not a control variable).
+
+[ccpp-table-properties]
+  name = chunked_data_mod
+  type = host
+
+[ccpp-arg-table]
+  name = chunked_data_mod
+  type = host
+
+[ ncols ]
+  standard_name = horizontal_dimension
+  long_name = full horizontal dimension
+  units = count
+  dimensions = ()
+  type = integer
+[ chunked_data_instance ]
+  standard_name = chunked_data_type_instance
+  long_name = instance of chunked_data_type
+  units = DDT
+  dimensions = ()
+  type = chunked_data_type

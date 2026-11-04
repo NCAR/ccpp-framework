@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="consume_consts" version="1.0">
+  <group name="phys">
+    <scheme>consume_constituent</scheme>
+  </group>
+</suite>

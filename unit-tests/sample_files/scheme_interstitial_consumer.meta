@@ -1,0 +1,32 @@
+# Scheme that consumes the suite-owned interstitial variable.
+
+[ccpp-table-properties]
+  name = interstitial_consumer
+  type = scheme
+
+[ccpp-arg-table]
+  name = interstitial_consumer_run
+  type = scheme
+[ diag_in ]
+  standard_name = diagnostic_interstitial_field
+  long_name = suite-owned diagnostic field
+  units = K
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+[ errmsg ]
+  standard_name = ccpp_error_message
+  long_name = error message
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[ errflg ]
+  standard_name = ccpp_error_code
+  long_name = error flag
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out
