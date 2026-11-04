@@ -1183,7 +1183,9 @@ number_of_ccpp_constituents)`.  E2e fixture:
 `capgen/ccpp_validator.py` — standalone Fortran-vs-metadata checker.
 Validates **scheme** metadata against scheme Fortran files, and (since
 2026-06-01) **host** and **DDT** metadata against host module-level
-declarations and derived-type definitions.
+declarations and derived-type definitions.  Before it parses any of that
+Fortran it checks the source against the 132-column free-form limit
+(§7.5).
 
 ### 7.1 What the validator checks
 
@@ -1276,6 +1278,38 @@ or a derived-type component, neither of which may be assumed-length),
 `len=*` is rejected there outright — host and DDT character variables
 must declare a concrete `len=N`.  Assumed length is valid only for
 dummy arguments (scheme args and control/lifecycle variables).
+
+### 7.5 Line length: 132 columns (2026-10-23)
+
+Free-form Fortran ends at column 132.  A compiler ignores whatever
+follows; the parser does not, so a character past column 132 means the
+two read different code — NCAR/ccpp-framework#788, where a stray `&` at
+column 135 was dropped by the compiler, honoured by the parser, and
+surfaced as eight attribute mismatches on arguments that were declared
+correctly.  CCPP source must be 132 columns or fewer, checked before any
+Fortran is parsed (lines are measured with trailing blanks removed):
+
+```text
+ERROR: Fortran source must be 132 columns or fewer.  Nothing was parsed.
+ERROR: mynnedmf_wrapper.F90:264: line is 135 columns, 3 past the limit
+of 132.  Wrap the line.
+```
+
+Scheme source errors, host source warns: #788 settled the rule for code
+CCPP owns, not for host model source.  The severity is one table,
+`_LINE_LENGTH_SEVERITY` in `ccpp_validator.py`.  Which side a file is on
+comes from the metadata tables: `--scheme-files` claims its Fortran as
+scheme source and `--host-files` as host source, and `type = ddt` — the
+one type accepted on either flag — follows the flag it arrived on.  A
+`type = control` or `type = suite` table claims its file too, even though
+no Fortran is validated against it; an entry no table claims falls back to
+the side the invocation implies.
+
+The limit is the standard's number, not a CCPP preference, so it is not
+configurable; a group with a stricter convention (NEPTUNE uses 120)
+enforces that with its own linter.  `-ffree-line-length-none` and its
+equivalents are in wide use, so over-long source may compile for you
+today — that is the ambiguity the rule removes.
 
 ---
 
