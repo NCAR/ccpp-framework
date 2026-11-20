@@ -7,6 +7,7 @@ import os
 from typing import Dict, List, Optional
 
 from metadata.parse_tools import CCPPError, open_if_changed
+from generator.fortran_lines import write_fortran
 from generator.suite_resolver import SuiteVar
 
 _INDENT = '  '
@@ -428,9 +429,7 @@ def write_suite_data(
     out_path  = os.path.join(output_root, filename)
     lines = _generate_suite_data(suite_name, suite_vars, host_dict,
                                  ddt_module_map=ddt_module_map)
-    with open_if_changed(out_path, logger=logger) as fh:
-        fh.write('\n'.join(lines) + '\n')
-    return out_path
+    return write_fortran(out_path, lines, logger=logger)
 
 
 def _generate_suite_meta(

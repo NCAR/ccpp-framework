@@ -13,6 +13,7 @@ import unittest
 import xml.etree.ElementTree as ET
 
 from ccpp_capgen import capgen
+from generator.fortran_lines import GENERATED_MAX_COLUMNS
 
 _TESTS_DIR   = os.path.dirname(__file__)
 _SAMPLES_DIR = os.path.join(_TESTS_DIR, 'sample_files')
@@ -2334,6 +2335,52 @@ class TestSuiteMetaOutput(unittest.TestCase):
         self.assertIn('units = K', text)
         self.assertIn('type = real', text)
         self.assertIn('kind = kind_phys', text)
+
+
+# ---------------------------------------------------------------------------
+# Test: generated Fortran respects the free-form column limit
+# ---------------------------------------------------------------------------
+
+class TestGeneratedFortranFitsTheColumnLimit(unittest.TestCase):
+    """Capgen holds the Fortran it reads to 132 columns (FU-038); it has to
+    hold the Fortran it writes to a limit too, or the caps need a compiler
+    flag (``-ffree-line-length-none``) to build.  Output goes to the stricter
+    120 of `.codee-format`, so a cap is never what a future Codee pass has to
+    reflow (FU-005).  Wrapping happens for every writer in
+    ``generator.fortran_lines``; this is the invariant it exists to keep."""
+
+    def _assert_within_limit(self, outdir):
+        checked = 0
+        for name in sorted(os.listdir(outdir)):
+            if not name.endswith('.F90'):
+                continue
+            checked += 1
+            with open(os.path.join(outdir, name)) as fh:
+                for num, line in enumerate(fh.read().splitlines(), 1):
+                    self.assertLessEqual(
+                        len(line.rstrip()), GENERATED_MAX_COLUMNS,
+                        '{}:{} is {} columns:\n{}'.format(
+                            name, num, len(line.rstrip()), line
+                        ),
+                    )
+        self.assertGreater(checked, 0, 'no generated Fortran to check')
+
+    def test_simple_suite(self):
+        with tempfile.TemporaryDirectory() as d:
+            _run_simple(d)
+            self._assert_within_limit(d)
+
+    def test_constituents_suite(self):
+        # The constituent path holds the longest generated lines: the
+        # per-constituent ``errmsg`` runs past 280 columns unwrapped.
+        with tempfile.TemporaryDirectory() as d:
+            _run_with_constituents(d)
+            self._assert_within_limit(d)
+
+    def test_subcycle_suite(self):
+        with tempfile.TemporaryDirectory() as d:
+            _run_subcycle(d)
+            self._assert_within_limit(d)
 
 
 if __name__ == '__main__':

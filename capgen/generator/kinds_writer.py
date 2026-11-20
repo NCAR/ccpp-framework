@@ -46,7 +46,8 @@ import logging
 import os
 from typing import Dict, List, Optional, Tuple
 
-from metadata.parse_tools import CCPPError, open_if_changed
+from metadata.parse_tools import CCPPError
+from generator.fortran_lines import write_fortran
 
 _KINDS_FILENAME = 'ccpp_kinds.F90'
 _KINDS_MODULE   = 'ccpp_kinds'
@@ -91,9 +92,7 @@ def write_ccpp_kinds(
     os.makedirs(output_root, exist_ok=True)
     lines = _generate_ccpp_kinds(kind_types)
     out_path = os.path.join(output_root, _KINDS_FILENAME)
-    with open_if_changed(out_path, logger=logger) as fh:
-        fh.write('\n'.join(lines) + '\n')
-    return out_path
+    return write_fortran(out_path, lines, logger=logger)
 
 
 ########################################################################

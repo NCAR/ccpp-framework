@@ -56,7 +56,9 @@ program test_chunked_data
   ! CCPP physics init step                         !
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call ccpp_physics_init(lb=1, ub=ncols, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_init(lb=1, ub=ncols, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_init:"
     write(error_unit, '(a)') trim(errmsg)
@@ -68,7 +70,9 @@ program test_chunked_data
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !cdata => ccpp_data_domain
-  call ccpp_physics_timestep_init(lb=1, ub=ncols, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_timestep_init(lb=1, ub=ncols, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_timestep_init:"
     write(error_unit, '(a)') trim(errmsg)
@@ -82,7 +86,9 @@ program test_chunked_data
   do nchunk = 1, nchunks
     lb=chunk_begin(nchunk)
     ub=chunk_end(nchunk)
-    call ccpp_physics_run(lb=lb, ub=ub, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+    call ccpp_physics_run(lb=lb, ub=ub, nthreads=1, nphys_threads=1, &
+        thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+        errmsg=errmsg, errflg=errflg)
     if (errflg/=0) then
       write(error_unit, '(a,i3,a)') "An error occurred in ccpp_physics_run for chunk", nchunk, ":"
       write(error_unit, '(a)') trim(errmsg)
@@ -95,7 +101,9 @@ program test_chunked_data
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !cdata => ccpp_data_domain
-  call ccpp_physics_timestep_final(lb=1, ub=ncols, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_timestep_final(lb=1, ub=ncols, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_timestep_finalize:"
     write(error_unit, '(a)') trim(errmsg)
@@ -107,7 +115,9 @@ program test_chunked_data
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !cdata => ccpp_data_domain
-  call ccpp_physics_final(lb=1, ub=ncols, nthreads=1, nphys_threads=1, thread_num=1, suite_name=trim(ccpp_suite), group_name='all', errmsg=errmsg, errflg=errflg)
+  call ccpp_physics_final(lb=1, ub=ncols, nthreads=1, nphys_threads=1, &
+      thread_num=1, suite_name=trim(ccpp_suite), group_name='all', &
+      errmsg=errmsg, errflg=errflg)
   if (errflg/=0) then
     write(error_unit, '(a)') "An error occurred in ccpp_physics_finalize:"
     write(error_unit, '(a)') trim(errmsg)

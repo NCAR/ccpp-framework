@@ -44,9 +44,10 @@ import logging
 import os
 from typing import Dict, List, Optional, Set, Tuple
 
-from metadata.parse_tools import CCPPError, open_if_changed
+from metadata.parse_tools import CCPPError
 from metadata.metadata_table import FORTRAN_MAX_IDENT_LEN
 from metadata.variable_resolver import SchemeStore
+from generator.fortran_lines import write_fortran
 from generator.suite_resolver import (
     ResolvedArg,
     SuiteResolution,
@@ -1205,6 +1206,4 @@ def write_host_cap(
         no_host_introspection=no_host_introspection,
         trace=trace,
     )
-    with open_if_changed(out_path, logger=logger) as fh:
-        fh.write('\n'.join(lines) + '\n')
-    return out_path
+    return write_fortran(out_path, lines, logger=logger)

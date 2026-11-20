@@ -384,7 +384,8 @@ contains
     call ccpp_const_get_index(stdname='dyn_const2_wrt_moist_air', const_index=index_dyn2, errcode=errcode, errmsg=errmsg)
     call check_errcode(subname // ".index_dyn_const2", errcode, errmsg, &
         errcode_final)
-    call ccpp_const_get_index(stdname='dyn_const3_wrt_moist_air_and_condensed_water', const_index=index_dyn3, errcode=errcode, errmsg=errmsg)
+    call ccpp_const_get_index(stdname='dyn_const3_wrt_moist_air_and_condensed_water', &
+        const_index=index_dyn3, errcode=errcode, errmsg=errmsg)
     call check_errcode(subname // ".index_dyn_const3", errcode, errmsg, &
         errcode_final)
 

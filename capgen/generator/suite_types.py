@@ -21,7 +21,8 @@ import os
 import re
 from typing import Dict, List, Optional, Set, Tuple
 
-from metadata.parse_tools import CCPPError, open_if_changed
+from metadata.parse_tools import CCPPError
+from generator.fortran_lines import write_fortran
 from generator.suite_resolver import SuiteResolution, iter_phase_calls
 
 _INDENT = '  '
@@ -510,6 +511,4 @@ def write_suite_types(
     out_path = os.path.join(output_root, filename)
 
     lines = _generate_suite_types(suite_name, combos, ddt_module_map)
-    with open_if_changed(out_path, logger=logger) as fh:
-        fh.write('\n'.join(lines) + '\n')
-    return out_path
+    return write_fortran(out_path, lines, logger=logger)
