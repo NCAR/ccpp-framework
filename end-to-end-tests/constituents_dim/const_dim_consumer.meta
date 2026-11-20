@@ -1,0 +1,55 @@
+[ccpp-table-properties]
+  name = const_dim_consumer
+  type = scheme
+  dependencies =
+
+[ccpp-arg-table]
+  name = const_dim_consumer_run
+  type = scheme
+[cwork]
+  standard_name = test_constituent_workspace
+  long_name = non-allocatable suite workspace dimensioned by the count (Case 2a)
+  units = 1
+  dimensions = (number_of_ccpp_constituents)
+  type = real
+  kind = kind_phys
+  intent = in
+[awork]
+  standard_name = test_allocatable_constituent_workspace
+  long_name = allocatable suite workspace dimensioned by the count (Case 2b)
+  units = 1
+  dimensions = (number_of_ccpp_constituents)
+  type = real
+  kind = kind_phys
+  intent = in
+[qbase]
+  standard_name = test_constituent_one
+  long_name = base constituent read WITHOUT a constituent flag (rule b consumer)
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+[qtend]
+  standard_name = tendency_of_test_constituent_one
+  long_name = constituent tendency read WITHOUT a constituent flag (rule b consumer)
+  units = kg kg-1 s-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+[errcode]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

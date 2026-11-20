@@ -1,0 +1,31 @@
+[ccpp-table-properties]
+  name = register_consts
+  type = scheme
+  dependencies =
+
+[ccpp-arg-table]
+  name = register_consts_register
+  type = scheme
+[dyn_const]
+  standard_name = dynamic_constituents_for_register_consts
+  long_name = dynamic constituents registered by this test scheme
+  units = none
+  dimensions = (:)
+  type = ccpp_constituent_properties_t
+  intent = out
+  allocatable = True
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=512
+  intent = out
+[errcode]
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
+  dimensions = ()
+  type = integer
+  intent = out

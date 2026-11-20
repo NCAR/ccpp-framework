@@ -1,0 +1,17 @@
+# Host table that declares suite_name — it should be in a control table instead.
+
+[ccpp-table-properties]
+  name = misplaced_host
+  type = host
+
+[ccpp-arg-table]
+  name = misplaced_host
+  type = host
+
+[ suite_name_var ]
+  standard_name = suite_name
+  long_name = name of the CCPP suite
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=256

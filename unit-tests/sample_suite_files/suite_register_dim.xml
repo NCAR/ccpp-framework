@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="reg_dim" version="1.0">
+  <group name="phys">
+    <scheme>register_dim_producer</scheme>
+    <scheme>register_dim_consumer</scheme>
+  </group>
+</suite>

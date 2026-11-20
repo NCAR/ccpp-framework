@@ -1,0 +1,16 @@
+# Host table that declares a DDT instance (tests the DDT instance pattern).
+# The type 'gfs_statein_type' references the DDT defined in ddt_simple.meta.
+
+[ccpp-table-properties]
+  name = CCPP_data
+  type = host
+
+[ccpp-arg-table]
+  name = CCPP_data
+  type = host
+[ gfs_statein ]
+  standard_name = gfs_statein
+  long_name = GFS state-in DDT instance
+  units = none
+  dimensions = (number_of_instances)
+  type = gfs_statein_type

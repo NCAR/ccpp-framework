@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="subcycle_stdname_ddt_suite" version="1.0">
+  <group name="physics">
+    <subcycle loop="num_subcycles_for_test">
+      <scheme>temp_calc_adjust</scheme>
+    </subcycle>
+  </group>
+</suite>

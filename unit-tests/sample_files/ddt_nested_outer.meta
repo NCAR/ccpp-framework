@@ -1,0 +1,22 @@
+# Outer DDT whose second field is itself a DDT (tests nested DDT flattening).
+# Field 'inner_ddt' is of type 'ddt_inner_type', defined in ddt_nested_inner.meta.
+
+[ccpp-table-properties]
+  name = ddt_outer_type
+  type = ddt
+
+[ccpp-arg-table]
+  name = ddt_outer_type
+  type = ddt
+[ scalar_field ]
+  standard_name = outer_scalar_field
+  long_name = a scalar field on the outer DDT
+  units = 1
+  dimensions = ()
+  type = integer
+[ inner_ddt ]
+  standard_name = inner_ddt_instance
+  long_name = nested inner DDT
+  units = none
+  dimensions = ()
+  type = ddt_inner_type

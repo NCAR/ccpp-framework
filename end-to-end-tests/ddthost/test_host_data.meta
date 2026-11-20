@@ -1,0 +1,46 @@
+[ccpp-table-properties]
+  name = physics_state
+  type = ddt
+[ccpp-arg-table]
+  name = physics_state
+  type = ddt
+[ ps ]
+  standard_name = surface_air_pressure
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_dimension)
+[ u ]
+  standard_name = eastward_wind
+  long_name = Zonal wind
+  type = real
+  kind = kind_phys
+  units = m s-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+[ v ]
+  standard_name = northward_wind
+  long_name = Meridional wind
+  type = real
+  kind = kind_phys
+  units = m s-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+[ pmid ]
+  standard_name = air_pressure
+  long_name = Midpoint air pressure
+  type = real
+  kind = kind_phys
+  units = Pa
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+[ q ]
+  standard_name = constituent_mixing_ratio
+  type = real
+  kind = kind_phys
+  units = kg kg-1 moist or dry air depending on type
+  dimensions = (horizontal_dimension, vertical_layer_dimension, number_of_tracers)
+[ q(:,:,index_of_water_vapor_specific_humidity) ]
+  standard_name = water_vapor_specific_humidity
+  type = real
+  kind = kind_phys
+  units = kg kg-1
+  dimensions = (horizontal_dimension, vertical_layer_dimension)
+  active = (index_of_water_vapor_specific_humidity > 0)
