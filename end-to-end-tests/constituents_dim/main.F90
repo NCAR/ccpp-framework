@@ -98,11 +98,14 @@ program test_constituents_dim
       errmsg=errmsg, errcode=errcode)
   call check('ccpp_physics_final')
 
+  ! The constituent tables hold pointers into the per-suite dynamic
+  ! constituent buffers, which ccpp_final frees - tear down first.
+  call ccpp_deallocate_dynamic_constituents()
+
   ! ccpp_final -> suite_data_final_fields frees both suite workspaces (guarded).
   call ccpp_final(suite_name=trim(ccpp_suite), errmsg=errmsg, errcode=errcode)
   call check('ccpp_final')
 
-  call ccpp_deallocate_dynamic_constituents()
   deallocate(host_constituents)
   if (allocated(coupler_flux)) deallocate(coupler_flux)
 

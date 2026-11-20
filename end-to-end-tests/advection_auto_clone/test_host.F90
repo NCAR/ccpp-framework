@@ -1119,6 +1119,21 @@ contains
       end if
     end do
 
+    if (errcode == 0) then
+      ! Run finished without error, check answers. phys_state%q points into the
+      ! constituent array, so this has to happen before the teardown below.
+      if (compare_data(num_advected)) then
+        write(6, *) 'Answers are correct!'
+      else
+        write(6, *) 'Answers are not correct!'
+        errcode_final = -1
+      end if
+    end if
+
+    ! The constituent tables hold pointers into the per-suite dynamic
+    ! constituent buffers, which ccpp_final frees - tear down first.
+    call ccpp_deallocate_dynamic_constituents()
+
     do sind = 1, num_suites
       if (errcode == 0) then
         call ccpp_final(suite_name=test_suites(sind)%suite_name, &
@@ -1133,19 +1148,7 @@ contains
       end if
     end do
 
-    call ccpp_deallocate_dynamic_constituents()
     deallocate(host_constituents)
-
-    if (errcode == 0) then
-      ! Run finished without error, check answers
-      if (compare_data(num_advected)) then
-        write(6, *) 'Answers are correct!'
-        errcode = 0
-      else
-        write(6, *) 'Answers are not correct!'
-        errcode = -1
-      end if
-    end if
 
     ! Make sure "final" flag is non-zero if "errcode" is:
     if (errcode /= 0) then

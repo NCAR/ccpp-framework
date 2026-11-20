@@ -40,23 +40,44 @@ jobs:
         which pytest
     - name: Run end-to-end tests
       run: |
-        cmake --fresh -S./end-to-end-tests -B./build
+        cmake --fresh -S./end-to-end-tests -B./build \
+          -DCMAKE_Fortran_COMPILER=${{matrix.fortran-compiler}}
         cd build
         make
         ctest --rerun-failed --output-on-failure .
 
-#    - name: Run python tests
-#      run: |
-#        BUILD_DIR=./build \
-#        PYTHONPATH=test/:scripts/ \
-#          pytest \
-#            test/capgen_test/capgen_test_reports.py \
-#            test/advection_test/advection_test_reports.py \
-#            test/ddthost_test/ddthost_test_reports.py \
-#            test/var_compatibility_test/var_compatibility_test_reports.py
-#
-#    - name: Run Fortran to metadata test
-#      run: cd test && ./test_fortran_to_metadata.sh
-#
-#    - name: Run offline metadata parser test
-#      run: cd test && ./test_offline_metadata_checker.sh
+  # End to end tests with memory-error detection enabled
+  end-to-end-tests-asan:
+    needs: end-to-end-tests
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+    - name: Update repos and install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libopenmpi-dev \
+          gfortran-12 \
+          cmake \
+          python3 \
+          git \
+          libxml2-utils
+        python -m pip install --upgrade pip
+        pip install pytest
+    - name: Run end-to-end tests under AddressSanitizer
+      env:
+        # Check for memory errors (LeakSanitizer is a separate issue)
+        ASAN_OPTIONS: "detect_leaks=0"
+      run: |
+        cmake --fresh -S./end-to-end-tests -B./build \
+          -DCMAKE_Fortran_COMPILER=gfortran-12 \
+          -DCMAKE_Fortran_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+        cd build
+        make
+        ctest --rerun-failed --output-on-failure .
